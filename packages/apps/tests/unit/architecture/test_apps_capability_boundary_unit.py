@@ -52,6 +52,31 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
                 "ditto_features.compile_cache",
             }
         ),
+        "packages/apps/src/ditto_apps/scripts/q2_live_market_context.py": frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.metadata",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        "packages/apps/src/ditto_apps/scripts/q3_live_discovery.py": frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        "packages/apps/src/ditto_apps/scripts/q3_live_discovery_support.py": frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        "packages/apps/src/ditto_apps/scripts/q5_live_agent_author_support.py": (
+            frozenset({"ditto_strategy.models"})
+        ),
         "packages/apps/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py": (
             frozenset(
                 {
@@ -69,6 +94,15 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
     assert allowances
     assert all(allowance.owner for allowance in allowances)
     assert all(allowance.reason for allowance in allowances)
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/fresh_runtime.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.storage.sqlite.experiments",
+            "ditto_data.config.data_store",
+            "ditto_execution.di",
+        }
+    )
     assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
         "packages/apps/src/ditto_apps/registry/agent/provider.py"
     ] == frozenset({"ditto_analysis.experiments.campaign_persistence"})
@@ -118,6 +152,7 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
         {
             "ditto_data.catalog",
             "ditto_data.catalog.fallback_policy",
+            "ditto_data.catalog.provider_payload",
             "ditto_data.ingestion.freeze_store",
             "ditto_data.ingestion.ingestion_cursor_store",
             "ditto_data.ingestion.ingestion_log_store",
@@ -148,6 +183,9 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
     assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
         "packages/apps/src/ditto_apps/registry/infra/risk_persistence.py"
     ] == frozenset({"ditto_risk.continuous_gate"})
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/live/q4_live_account_acceptance_store.py"
+    ] == frozenset({"ditto_execution.storage.sqlite.account_journal"})
 
 
 def test_apps_capability_import_guard_reports_non_registry_routes() -> None:

@@ -1,5 +1,5 @@
 """
-交易闭环 API 路由（facade）.
+Manual 账本 API 路由（facade）.
 
 聚合子模块路由，对外暴露统一的 router 对象。
 端点详情见 trade_command_routes / trade_query_routes。
@@ -21,7 +21,7 @@ from ditto_apps.api.routes.trade_query_routes import (
     to_position_response,
 )
 
-router = APIRouter(prefix="/trade", tags=["trade"])
+router = APIRouter(prefix="/manual", tags=["manual"])
 
 # 导入子路由
 from ditto_apps.api.routes.trade_command_routes import (  # noqa: E402

@@ -41,6 +41,7 @@ from ditto_application.processes.experiments.execution_contracts import (
 from ditto_application.processes.experiments.research_data_feed import (
     research_data_feed_manifest_hash,
 )
+from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
 from ditto_features.expression.contracts import CompileIdentity
 from ditto_strategy.alpha.parameters import CandidateParameter
 
@@ -265,6 +266,31 @@ def _semantics() -> ResearchExecutionSemantics:
             environment_lock_hash=_sha("e"),
         ),
     )
+
+
+def _context_ref(*, as_of: str) -> ReplayContextInputRef:
+    return ReplayContextInputRef(
+        context_kind=ContextInputKind.MARKET_CONTEXT,
+        context_id=f"market-context-{as_of}",
+        content_hash=_sha("6"),
+        as_of=as_of,
+        knowledge_cutoff=as_of,
+        publication_cutoff=as_of,
+        source_snapshot_ids=("provider-snapshot-1",),
+    )
+
+
+def test_execution_semantics_rejects_mixed_replay_context_boundaries() -> None:
+    first = _context_ref(as_of="2026-08-31T07:00:00Z")
+    second = replace(
+        _context_ref(as_of="2026-08-30T07:00:00Z"),
+        context_kind=ContextInputKind.TECHNICAL_ANALYSIS,
+    )
+
+    with pytest.raises(AppProcessError) as caught:
+        replace(_semantics(), context_input_refs=(first, second))
+
+    assert caught.value.details["reason"] == "invalid_replay_context_inputs"
 
 
 def _snapshot_without_factors(

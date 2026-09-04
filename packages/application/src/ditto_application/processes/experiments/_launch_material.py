@@ -36,6 +36,9 @@ from ditto_analysis.experiments import (
 )
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.replay_context_inputs import (
+    replay_context_inputs_payload,
+)
 from ditto_application.processes.experiments._baseline_runtime_evidence import (
     baseline_runtime_payload,
 )
@@ -497,7 +500,7 @@ def _plan_preimage(
     )
     request_hash = planning_request_hash(request)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "launch_spec_hash": str(spec_payload.content_hash),
         "gate_payload_hashes": [str(gate.payload_hash) for gate in gates],
         "fold_payload_hashes": [str(fold.payload_hash) for fold in folds],
@@ -508,6 +511,7 @@ def _plan_preimage(
         "dataset_requirements": [
             item.as_payload() for item in request.dataset_requirements
         ],
+        "context_input_refs": replay_context_inputs_payload(request.context_input_refs),
         "validation": validation_payload,
         "validation_authority": {
             "payload_hash": authority.payload_hash,

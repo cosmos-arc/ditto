@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-09-01T17:08:19+08:00",
+  "status": "passed_with_fail_closed_vintage_boundary",
+  "provider": "tushare",
+  "provider_sample_sha256": "sha256:daab1f4459da919571e07b7baf4291db815e1a31de2a7a1137d2dc1227c0428a",
+  "provider_snapshot_retrieved_on": "2026-09-01",
+  "evidence_minimized": true,
+  "groups": [
+    {
+      "group": "growth",
+      "samples": [
+        {
+          "indicator_code": "CN_GDP_YOY",
+          "period": "2024-Q1",
+          "official_published_on": "2024-04-29",
+          "official_initial_value": 5.3,
+          "provider_current_value": 5.3,
+          "unit": "%",
+          "initial_matches_current": true
+        }
+      ],
+      "official_release": "https://www.stats.gov.cn/sj/zxfb/202404/t20240429_1948771.html",
+      "revision_reference": "https://www.stats.gov.cn/sj/zxfb/202512/t20251226_1962144.html",
+      "revision_check": "NBS publishes later final GDP verification, but Tushare cn_gdp exposes only the current quarterly series without publication or vintage fields. Historical values are therefore not backdated."
+    },
+    {
+      "group": "prices",
+      "samples": [
+        {
+          "indicator_code": "CN_CPI_YOY",
+          "period": "2024-01",
+          "official_published_on": "2024-02-08",
+          "official_initial_value": -0.8,
+          "provider_current_value": -0.8,
+          "unit": "%",
+          "initial_matches_current": true
+        },
+        {
+          "indicator_code": "CN_PPI_YOY",
+          "period": "2024-01",
+          "official_published_on": "2024-02-08",
+          "official_initial_value": -2.5,
+          "provider_current_value": -2.5,
+          "unit": "%",
+          "initial_matches_current": true
+        }
+      ],
+      "official_releases": [
+        "https://www.stats.gov.cn/sj/zxfb/202402/t20240208_1947623.html",
+        "https://www.stats.gov.cn/sj/zxfb/202402/t20240208_1947624.html"
+      ],
+      "revision_check": "The current provider snapshot matches both named initial releases. The provider does not expose historical vintages, so absence of a visible difference is not treated as proof that no revision occurred."
+    },
+    {
+      "group": "money",
+      "samples": [
+        {
+          "indicator_code": "CN_M2_YOY",
+          "period": "2024-01",
+          "official_published_on": "2024-02-09",
+          "official_initial_value": 8.7,
+          "provider_current_value": 8.7,
+          "unit": "%",
+          "initial_matches_current": true
+        }
+      ],
+      "official_release": "https://www.pbc.gov.cn/diaochatongjisi/116219/116225/a46e2ace126b4c4391b512bf4bde01f9/index.html",
+      "revision_reference": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2025092212541167451/index.html",
+      "revision_check": "PBOC documents that broad-money statistical scope can be revised. Tushare cn_m has no publication or vintage columns, so the current historical series is visible only from retrieval."
+    },
+    {
+      "group": "survey",
+      "samples": [
+        {
+          "indicator_code": "CN_PMI_MFG",
+          "period": "2024-01",
+          "official_published_on": "2024-01-31",
+          "official_initial_value": 49.2,
+          "provider_current_value": 49.2,
+          "unit": "index",
+          "initial_matches_current": true
+        }
+      ],
+      "official_release": "https://www.stats.gov.cn/sj/zxfb/202401/t20240131_1947009.html",
+      "revision_check": "The current provider snapshot matches the named initial release. No provider vintage timestamp exists, so the observation is not made visible before retrieval."
+    }
+  ],
+  "provider_time_fields": {
+    "period_field": true,
+    "publication_timestamp": false,
+    "vintage_timestamp": false
+  },
+  "pit_decision": {
+    "historical_bootstrap_knowledge_date": "actual_retrieval_date",
+    "release_lag_metadata_used_as_visibility_truth": false,
+    "unchanged_later_snapshot_creates_revision": false,
+    "changed_later_snapshot_creates_revision": true
+  },
+  "conclusion": "Four independent macro groups were manually checked against primary official releases. The values match the named initial samples, while missing provider vintage metadata is isolated by fail-closed retrieval-date visibility and change-only revision storage."
+}

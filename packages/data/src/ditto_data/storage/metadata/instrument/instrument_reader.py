@@ -370,7 +370,10 @@ class InstrumentReader:
         if not rows:
             return pl.DataFrame()
 
-        return pl.DataFrame([dict(r) for r in rows])
+        return pl.DataFrame(
+            [dict(r) for r in rows],
+            infer_schema_length=None,
+        )
 
     def list_instrument_ids(
         self,
@@ -676,4 +679,7 @@ class InstrumentReader:
         if not rows:
             return pl.DataFrame()
 
-        return pl.DataFrame([dict(r) for r in rows])
+        return pl.DataFrame(
+            [dict(r) for r in rows],
+            infer_schema_length=None,
+        )

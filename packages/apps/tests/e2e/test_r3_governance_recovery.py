@@ -66,8 +66,10 @@ def test_fixture_governance_recovery(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_fixture_hard_gate_paths_are_zero_write(tmp_path: Path) -> None:
-    """Call both public mutation paths and prove the fixture gate writes nothing."""
+async def test_fixture_global_release_evidence_is_scoped_and_hard_gate_is_zero_write(
+    tmp_path: Path,
+) -> None:
+    """Keep global release evidence advisory and target identity fail closed."""
     submit = publish_support._build_harness(
         tmp_path / "submit-review",
         r2_live_gate=None,
@@ -79,45 +81,38 @@ async def test_fixture_hard_gate_paths_are_zero_write(tmp_path: Path) -> None:
             submit.strategy_id,
             submit.candidate_version,
         )
-        history_before = publish_support._governance_history(
-            submit.governance_pool,
-            submit.strategy_id,
-        )
         response = await publish_support._submit_review(
             submit,
             bundle_hash=str(submit.packet.bundle_hash),
             idempotency_key="r3-acceptance-submit-hard-gate",
         )
 
-        assert response.status_code == 422
-        assert response.json()["error_code"] == "HARD_GATE_FAILED"
+        assert response.status_code == 200
         assert (
             submit.governance_store.get_active_pointer(submit.strategy_id)
             == pointer_before
         )
-        assert (
-            submit.governance_store.get_state(
-                submit.strategy_id,
-                submit.candidate_version,
-            )
-            == state_before
+        state_after = submit.governance_store.get_state(
+            submit.strategy_id,
+            submit.candidate_version,
         )
-        assert (
-            publish_support._governance_history(
-                submit.governance_pool,
-                submit.strategy_id,
-            )
-            == history_before
-        )
+        assert state_after is not None
+        assert state_before is not None
+        assert state_after.state.value == "review"
+        assert state_after.review_outcome.value == "pending"
+        assert state_after.state_revision == state_before.state_revision + 1
     finally:
         await submit.close()
 
-    publish = publish_support._build_harness(tmp_path / "publish-promotion")
+    publish = publish_support._build_harness(
+        tmp_path / "publish-promotion",
+        drift_launch_identity=True,
+    )
     try:
         await publish_support._assert_typed_zero_write_rejection(
             publish,
             expected_status=422,
-            expected_error_code="hard_gate_blocked",
+            expected_error_code="evidence_target_mismatch",
         )
     finally:
         await publish.close()

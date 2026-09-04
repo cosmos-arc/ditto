@@ -38,6 +38,11 @@ class MacroCategory(StrEnum):
     MONEY_SUPPLY = "money_supply"
     PRICES = "prices"
     EMPLOYMENT = "employment"
+    CREDIT = "credit"
+    SURVEY = "survey"
+    COMMODITY = "commodity"
+    VIX = "vix"
+    DOLLAR_INDEX = "dollar_index"
 
 
 class MacroFrequency(StrEnum):

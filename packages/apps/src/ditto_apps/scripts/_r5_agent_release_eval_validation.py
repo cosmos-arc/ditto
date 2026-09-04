@@ -97,7 +97,7 @@ def performance_valid(payload: Mapping[str, object]) -> bool:
             return False
         cohorts[cast(str, item["cohort"])] = item
     expected = {
-        "read": (("grounded",), 30, 30_000, Decimal("0.25")),
+        "read": (("grounded",), 41, 30_000, Decimal("0.25")),
         "complex": (
             ("author", "permission", "sandbox", "shadow"),
             60,

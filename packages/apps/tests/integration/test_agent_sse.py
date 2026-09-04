@@ -28,6 +28,7 @@ from ditto_agent.runtime.service import (
     AgentRuntimeUnavailable,
     AgentSessionCreateCommand,
 )
+from ditto_agent.tools.registry import EvidenceToolRegistry
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.agent_routes import encode_agent_sse, router
 from ditto_apps.middleware import api_error_handler
@@ -35,6 +36,7 @@ from ditto_apps.registry.agent.database_provider import (
     AgentDatabaseBundle,
     build_agent_database,
 )
+from ditto_apps.registry.agent.model_provider import AgentModelProviderSettings
 from ditto_apps.registry.agent.provider import (
     AgentRuntimeProvider,
     AgentRuntimeResources,
@@ -212,6 +214,8 @@ async def test_default_http_runtime_returns_structured_unavailable() -> None:
     provider = AgentRuntimeProvider()
     runtime = provider.runtime(
         AgentFeatureSettings.from_environment({}),
+        AgentModelProviderSettings(),
+        EvidenceToolRegistry(tools=()),
         AgentRuntimeResources(None, None, None),
     )
     app, container = _http_app(runtime)
@@ -253,11 +257,18 @@ async def test_run_create_accepts_lossless_decimal_json_from_public_http_client(
                 json={
                     "session_id": session_id,
                     "objective": "Verify the public JSON request contract.",
-                    "authority_hash": _HASH,
                     "max_model_tokens": 4096,
                     "max_model_spend_usd": "3.00",
                     "model_profile": "balanced",
                     "context": None,
+                    "execution_scope": {
+                        "decision_time": "2026-08-30T08:00:00Z",
+                        "knowledge_cutoff": "2026-08-30T07:00:00Z",
+                        "publication_cutoff": "2026-08-30T06:00:00Z",
+                        "source_snapshot_id": "snapshot-certified-2026-08-29",
+                        "allowed_universe": ["510300.SH"],
+                        "max_output_tokens": 1024,
+                    },
                 },
             )
 

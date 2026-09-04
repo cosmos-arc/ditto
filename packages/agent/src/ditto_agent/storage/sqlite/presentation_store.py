@@ -18,7 +18,13 @@ from ditto_platform.foundation.db.sqlite_pool import SQLitePool
 
 from ditto_agent._canonical import canonical_bytes
 from ditto_agent.contracts._validation import normalized_text
+from ditto_agent.contracts.execution import AgentRunExecutionPlan
 from ditto_agent.contracts.runtime import RunStatus
+from ditto_agent.contracts.temporal import (
+    EgressClass,
+    TemporalContextInput,
+    TemporalToolContext,
+)
 from ditto_agent.presentation import (
     AgentContextPresentation,
     AgentGuardrailPresentation,
@@ -246,6 +252,93 @@ def _decode_context(value: object) -> AgentContextPresentation | None:
     )
 
 
+def _decode_datetime(value: object, *, field: str) -> datetime:
+    raw = _string(value, field=field)
+    return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+
+
+def _decode_execution_plan(value: object) -> AgentRunExecutionPlan | None:
+    if value is None:
+        return None
+    raw = _exact(
+        value,
+        field="execution_plan",
+        fields=frozenset(
+            {
+                "temporal_context",
+                "allowed_tools",
+                "max_output_tokens",
+                "authority_hash",
+            }
+        ),
+    )
+    temporal = _exact(
+        raw["temporal_context"],
+        field="temporal_context",
+        fields=frozenset(
+            {
+                "decision_time",
+                "knowledge_cutoff",
+                "publication_cutoff",
+                "source_snapshot_id",
+                "execution_eligible_at",
+                "allowed_universe",
+                "license_class",
+                "egress_class",
+                "campaign_authorization_id",
+                "campaign_authority_hash",
+            }
+        ),
+    )
+    execution_raw = temporal["execution_eligible_at"]
+    execution_eligible_at = (
+        "not_applicable"
+        if execution_raw == "not_applicable"
+        else _decode_datetime(execution_raw, field="execution_eligible_at")
+    )
+    campaign_authorization_id = _optional_string(
+        temporal["campaign_authorization_id"],
+        field="campaign_authorization_id",
+    )
+    campaign_authority_hash = _optional_string(
+        temporal["campaign_authority_hash"],
+        field="campaign_authority_hash",
+    )
+    plan = AgentRunExecutionPlan(
+        temporal_context=TemporalToolContext.from_host(
+            TemporalContextInput(
+                decision_time=_decode_datetime(
+                    temporal["decision_time"], field="decision_time"
+                ),
+                knowledge_cutoff=_decode_datetime(
+                    temporal["knowledge_cutoff"], field="knowledge_cutoff"
+                ),
+                publication_cutoff=_decode_datetime(
+                    temporal["publication_cutoff"], field="publication_cutoff"
+                ),
+                source_snapshot_id=_string(
+                    temporal["source_snapshot_id"], field="source_snapshot_id"
+                ),
+                execution_eligible_at=execution_eligible_at,
+                allowed_universe=_text_tuple(
+                    temporal["allowed_universe"], field="allowed_universe"
+                ),
+                license_class=_string(temporal["license_class"], field="license_class"),
+                egress_class=EgressClass(
+                    _string(temporal["egress_class"], field="egress_class")
+                ),
+                campaign_authorization_id=campaign_authorization_id,
+                campaign_authority_hash=campaign_authority_hash,
+            )
+        ),
+        allowed_tools=_text_tuple(raw["allowed_tools"], field="allowed_tools"),
+        max_output_tokens=_integer(raw["max_output_tokens"], field="max_output_tokens"),
+    )
+    if plan.authority_hash != _string(raw["authority_hash"], field="authority_hash"):
+        raise ValueError("execution_plan authority hash is invalid")
+    return plan
+
+
 def _decode_tool(value: object) -> AgentToolPresentation:
     fields = frozenset(
         {
@@ -323,11 +416,11 @@ def _decode_usage(value: object) -> AgentUsagePresentation | None:
 
 
 def _decode_projection(payload: bytes) -> AgentRunPresentation:
-    raw = _exact(
-        orjson.loads(payload),
-        field="presentation",
-        fields=frozenset(AgentRunPresentation.__dataclass_fields__),
-    )
+    raw = _mapping(orjson.loads(payload), field="presentation")
+    current_fields = frozenset(AgentRunPresentation.__dataclass_fields__)
+    legacy_fields = current_fields - {"execution_plan"}
+    if frozenset(raw) not in {current_fields, legacy_fields}:
+        raise ValueError("presentation fields are invalid")
     status = RunStatus(_string(raw["status"], field="status"))
     updated_at_raw = _string(raw["updated_at"], field="updated_at")
     updated_at = datetime.fromisoformat(updated_at_raw.replace("Z", "+00:00"))
@@ -348,8 +441,9 @@ def _decode_projection(payload: bytes) -> AgentRunPresentation:
         ),
         updated_at=updated_at,
         event_cursor=_integer(raw["event_cursor"], field="event_cursor"),
+        execution_plan=_decode_execution_plan(raw.get("execution_plan")),
     )
-    if canonical_bytes(projection) != payload:
+    if canonical_bytes(raw) != payload:
         raise ValueError("presentation payload is not canonical")
     return projection
 

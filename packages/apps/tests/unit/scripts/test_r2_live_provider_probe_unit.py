@@ -41,15 +41,26 @@ def test_probe_covers_all_hard_products_and_four_benchmarks() -> None:
     )
 
     assert isinstance(evidence, LiveProviderProbeEvidence)
-    assert len(evidence.provider_access) == 19
+    assert len(evidence.provider_access) == 23
     assert all(item.entitled for item in evidence.provider_access)
+    assert {
+        "tushare:cn_macro",
+        "tushare:index_global",
+        "tushare:index_classify",
+        "tushare:index_member_all",
+        "tushare:sw_daily",
+    }.issubset({item.provider_dataset for item in evidence.provider_access})
     assert {item.dataset_id for item in evidence.benchmarks} == {
         "stock_daily",
         "index_daily",
         "adj_factor",
         "fund_adj",
     }
-    assert len(source.calls) == 19
+    assert len(source.calls) == 23
+    assert "fetch_macro_indicators_by_codes" in source.calls
+    assert "fetch_global_index_daily" in source.calls
+    assert "fetch_sw_industry" in source.calls
+    assert "fetch_sw_industry_concepts" in source.calls
 
 
 @pytest.mark.unit

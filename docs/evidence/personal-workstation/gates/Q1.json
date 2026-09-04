@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-01T12:22:00Z",
+  "gate": "Q1",
+  "gate_status": "passed",
+  "engineering_status": "PROVEN",
+  "decision": "Q1 passes for the bounded first-batch data-truth scope: licensed live Tushare/FRED retrieval, PIT and market-semantics checks, provider outage fail-closed behavior, replay, backup/restore, and mock-disabled Data Products UI are authenticated. This does not promote the separate 22-product historical R2 bundle, whose UI correctly remains blocked with zero active certifications.",
+  "evidence": [
+    "docs/evidence/personal-workstation/q1/provider-probe-20260901.json",
+    "docs/evidence/personal-workstation/q1/provider-license-review-20260901.json",
+    "docs/evidence/personal-workstation/q1/provider-outage-20260901.json",
+    "docs/evidence/personal-workstation/q1/macro-manual-verification-20260901.json",
+    "docs/evidence/personal-workstation/q1/fred-pit-live-20260901.json",
+    "docs/evidence/personal-workstation/q1/market-semantics-20260901.json",
+    "docs/evidence/personal-workstation/q1/live-replay-20260901.json",
+    "docs/evidence/personal-workstation/q1/backup-restore-20260901.json",
+    "docs/evidence/personal-workstation/q1/ui-live-20260901.json",
+    "docs/evidence/personal-workstation/q1/verification-20260901.json"
+  ],
+  "blockers": [],
+  "owners": [
+    "DATA_PROVIDER_OWNER",
+    "PRODUCT_ACCEPTANCE_OWNER"
+  ],
+  "unblock_conditions": []
+}

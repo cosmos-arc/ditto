@@ -339,7 +339,7 @@ class LocalEvalRunner:
         profile: str,
         run_identity: ReleaseEvalRunIdentity | None = None,
     ) -> ReleaseEvalReport:
-        """Run each frozen suite once and produce the aggregate 120-case gate."""
+        """Run each frozen suite once and produce the aggregate release gate."""
         self.preflight_release_cases(cases=cases, seed=seed)
         identity = run_identity or ReleaseEvalRunIdentity.fixture(
             provider_id=self._provider.provider_id,

@@ -18,8 +18,8 @@ from ditto_application.processes.experiments.planning_probes import (
     R3_RESEARCH_CERTIFICATION_PROFILE,
 )
 from ditto_application.queries.data_products import (
-    DataProductOverview,
     DataProductsQueryFacade,
+    DataProductView,
 )
 
 from ditto_apps.registry.container import make_app_container
@@ -37,7 +37,7 @@ __all__ = [
 type Clock = Callable[[], float]
 type RuntimeEvidence = dict[str, object]
 
-_EXPECTED_PRODUCT_COUNT = 19
+_EXPECTED_PRODUCT_COUNT = 22
 
 
 def _snapshot_payload(value: R2IdempotencySnapshot) -> dict[str, object]:
@@ -78,7 +78,7 @@ def collect_live_runtime_evidence(
     products = query_workbench()
     query_elapsed = max(clock() - started, 0.0)
     if len(products) != _EXPECTED_PRODUCT_COUNT:
-        raise ValueError("R2 workbench query did not return exactly 19 products")
+        raise ValueError("R2 workbench query did not return exactly 22 products")
 
     return {
         "provider_access": provider_evidence["provider_access"],
@@ -142,7 +142,7 @@ def _run_incremental(
         )
 
 
-def _query_workbench() -> tuple[DataProductOverview, ...]:
+def _query_workbench() -> tuple[DataProductView, ...]:
     container = make_app_container()
     try:
         facade = container.get(DataProductsQueryFacade)

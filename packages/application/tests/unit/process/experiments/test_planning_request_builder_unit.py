@@ -468,6 +468,29 @@ def test_builder_decodes_every_field_into_the_exact_planning_contract() -> None:
     assert request.created_at == _NOW
 
 
+def test_builder_freezes_replay_context_inputs_into_request_identity() -> None:
+    without_context = _planning_document()
+    document = _planning_document()
+    document["context_input_refs"] = [
+        {
+            "context_kind": "market_context",
+            "context_id": "market-regime:sha256:q5",
+            "content_hash": "a" * 64,
+            "as_of": "2026-07-30T00:00:00Z",
+            "knowledge_cutoff": "2026-07-30T00:00:00Z",
+            "publication_cutoff": "2026-07-30T00:00:00Z",
+            "source_snapshot_ids": ["snapshot:tushare:index_daily:sha256:q5"],
+        }
+    ]
+
+    request = build_experiment_planning_request(document)
+
+    assert request.context_input_refs[0].context_id == "market-regime:sha256:q5"
+    assert planning_request_hash(request) != planning_request_hash(
+        build_experiment_planning_request(without_context)
+    )
+
+
 @pytest.mark.parametrize(
     "mutate",
     [

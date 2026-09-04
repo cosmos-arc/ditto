@@ -34,6 +34,9 @@ from ditto_portfolio.observability import (
 from ditto_risk.observability.metrics import METRIC_DEFINITIONS as RISK_METRICS
 from ditto_strategy.observability.metrics import METRIC_DEFINITIONS as STRATEGY_METRICS
 
+from ditto_apps.operations.workstation_metrics import (
+    WORKSTATION_METRIC_DEFINITIONS,
+)
 from ditto_apps.registry.infra.config import RuntimeFlags
 
 __all__ = ["ObservabilityProvider", "register_app_metric_definitions"]
@@ -120,6 +123,7 @@ def _register_app_metric_definitions() -> None:
         BACKTEST_METRICS,
         EXECUTION_METRICS,
         AGENT_METRICS,
+        WORKSTATION_METRIC_DEFINITIONS,
     ):
         register_metric_definitions(definitions)
 

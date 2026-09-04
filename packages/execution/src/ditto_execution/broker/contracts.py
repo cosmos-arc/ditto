@@ -1,8 +1,8 @@
 """
 Broker gateway contracts.
 
-BrokerGateway is the low-level broker-system gateway port for paper or future
-external broker systems. It defines operations such as submit_order and
+BrokerGateway is the low-level simulated broker-system gateway port for Paper.
+It defines operations such as submit_order and
 query_fills; simulation-time process_pending belongs to the runtime-facing
 Brokerage port. The protocol defines the seam and does not implement real
 broker adapters.
@@ -34,7 +34,7 @@ __all__ = [
 
 BROKER_GATEWAY_CONTRACT_VERSION = "broker-gateway-v1"
 
-type BrokerGatewayMode = Literal["paper", "recording", "external"]
+type BrokerGatewayMode = Literal["paper", "recording"]
 type BrokerGatewayCapability = Literal[
     "connect",
     "get_account",
@@ -65,8 +65,8 @@ class BrokerGatewayDescriptor:
     """
     Stable capability descriptor every BrokerGateway implementation must expose.
 
-    It is a protocol-level contract for paper and future external adapters, not
-    a real-broker integration point. Composition roots and conformance tests can
+    It is a protocol-level contract for Paper and its recording wrapper, not a
+    real-broker integration point. Composition roots and conformance tests
     validate the descriptor before wiring an adapter into execution workflows.
     """
 
@@ -90,6 +90,9 @@ def validate_broker_gateway_descriptor(
             f"Unsupported BrokerGateway contract version: {descriptor.contract_version}"
         )
         raise ValueError(msg)
+    if descriptor.mode not in ("paper", "recording"):
+        msg = f"Unsupported BrokerGateway mode: {descriptor.mode}"
+        raise ValueError(msg)
     missing = REQUIRED_BROKER_GATEWAY_CAPABILITIES.difference(descriptor.capabilities)
     if missing:
         msg = "BrokerGatewayDescriptor missing required capabilities: "
@@ -105,11 +108,11 @@ def validate_broker_gateway_descriptor(
 @runtime_checkable
 class BrokerGateway(Protocol):
     """
-    Broker-system gateway port for paper or future broker systems.
+    Simulated broker-system gateway port for Paper workflows.
 
     The gateway submits orders and queries broker fills. It does not own
-    execution-loop pending-order processing and does not implement real broker
-    adapters.
+    execution-loop pending-order processing, does not implement real broker
+    adapters, and cannot represent one.
     """
 
     def describe(self) -> BrokerGatewayDescriptor:

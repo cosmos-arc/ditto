@@ -17,6 +17,7 @@ from ditto_application.processes.materialization.publication_facade import (
 )
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.source import SourceDataPort
+from ditto_application.research_case_contracts import ResearchCaseFactory
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.infra import NotificationProvider
 from ditto_data.di import (
@@ -102,6 +103,10 @@ class _ProtocolAdapterProvider(Provider):
         return MagicMock(spec=SQLiteCompileCacheBackend)
 
     @provide
+    def research_case_factory(self) -> ResearchCaseFactory:
+        return MagicMock(spec=ResearchCaseFactory)
+
+    @provide
     def source_data_port(self) -> SourceDataPort:
         return MagicMock(spec=SourceDataPort)
 
@@ -116,7 +121,7 @@ def _make_full_container():
     """构建包含 Data + App 层 Provider 的完整容器。"""
     from ditto_application.providers import get_app_providers
     from ditto_execution.di import ExecutionStorageProvider
-    from ditto_strategy.di import StrategyStorageProvider
+    from ditto_strategy.di import StrategyDomainProvider, StrategyStorageProvider
 
     return make_container(
         ConfigProvider(),
@@ -135,6 +140,7 @@ def _make_full_container():
         AnalysisStorageProvider(),
         ExecutionStorageProvider(),
         NotificationProvider(),
+        StrategyDomainProvider(),
         StrategyStorageProvider(),
         *get_app_providers(),
     )

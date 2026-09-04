@@ -23,7 +23,6 @@ from ditto_analysis.errors import (
 from ditto_analysis.storage.sqlite.experiments import schema
 
 _INITIALIZE_LOCK = Lock()
-_MARKER_COUNT = 2
 
 
 def _schema_error(
@@ -126,15 +125,8 @@ class ResearchExperimentDatabase:
             rows = schema.schema_rows(connection)
 
             if application_id == 0 and user_version == 0 and not rows:
-                statements = schema.schema_body_statements(schema.load_v1_schema_sql())
-                if len(statements) < _MARKER_COUNT:
-                    raise _schema_error(
-                        "approved base schema is unexpectedly empty",
-                        "research_schema_marker_order_invalid",
-                    )
-                for statement in statements:
+                for statement in schema.fresh_schema_body_statements():
                     connection.execute(statement)
-                self._apply_v2_migration(connection)
                 connection.execute(f"PRAGMA application_id={schema.APPLICATION_ID}")
                 connection.execute(f"PRAGMA user_version={schema.USER_VERSION}")
                 self._verify_current_schema(connection)

@@ -1,0 +1,33 @@
+{
+  "acceptance_mode": "accelerated_real_provider_replay",
+  "approved_at": "2026-09-02T23:02:52.427289Z",
+  "live_day_anchor": {
+    "approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "day_evidence_hash": "52bf2838ebf8fc7a66a72302c19593561f9d67859f5dc841001aff97b1e1358d"
+  },
+  "operator_id": "workspace-user",
+  "paper": {
+    "account_id": "paper-pap09-accelerated-acceptance",
+    "account_status": "created",
+    "opening_cash": "1000000",
+    "opening_event_id": "account-event:d6a6167b4830b2f5218146faf1c66933",
+    "opening_trade_date": "2026-08-06"
+  },
+  "qualifies_as_release_acceptance": true,
+  "qualifies_as_wall_clock_soak": false,
+  "request_hash": "4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b",
+  "safety": {
+    "broker_connections": 0,
+    "paper_only": true,
+    "real_orders": 0
+  },
+  "schema": "ditto.pap09-accelerated-provider-replay-bootstrap.v1",
+  "signature": {
+    "algorithm": "hmac-sha256",
+    "approval_hash": "4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b",
+    "payload_hash": "1aaca43751335f55d220e781738cdaae7a6a4457f8e0dba4df51f1380f5b45c4",
+    "previous_signature": null,
+    "value": "bad6c47b4424e971fe38c7eb004b8d1537696bfc07a01b348a1b59f19bccd1b0"
+  },
+  "status": "passed"
+}

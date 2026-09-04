@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from ditto_agent._canonical import canonical_sha256
 from ditto_agent.contracts.evidence import EvidenceEnvelope
 from ditto_agent.contracts.temporal import (
     EgressClass,
@@ -80,6 +81,21 @@ class _EvidenceTool:
         )
 
 
+class _OtherEvidenceTool(_EvidenceTool):
+    spec = ModelToolSpec(
+        kind=ModelToolKind.FUNCTION,
+        name="risk_evidence",
+        description="Read risk evidence.",
+        input_schema={
+            "type": "object",
+            "properties": {"portfolio_id": {"type": "string"}},
+            "required": ["portfolio_id"],
+            "additionalProperties": False,
+        },
+        requires_approval=False,
+    )
+
+
 def _budget() -> BudgetLedger:
     return BudgetLedger(
         limits=BudgetLimits(
@@ -139,6 +155,38 @@ async def test_guardrail_validates_authority_context_and_returns_sealed_payload(
     assert executor.executions[0].call_id == "call-001"
     assert executor.executions[0].evidence.verify_integrity()
     assert tool.invocations == 1
+
+
+def test_manifest_schema_hash_covers_registry_while_model_specs_stay_restricted() -> (
+    None
+):
+    selected = _EvidenceTool()
+    registry = EvidenceToolRegistry(tools=(selected, _OtherEvidenceTool()))
+    executor = GuardedEvidenceToolExecutor(
+        registry=registry,
+        context=_context(),
+        authority_hash="a" * 64,
+        allowed_tools=(selected.spec.name,),
+        egress_policy=EvidenceEgressPolicy(
+            approved_license_classes=("approved-research",)
+        ),
+        budget=_budget(),
+    )
+    expected_manifest_hash = canonical_sha256(
+        tuple(
+            {
+                "kind": spec.kind,
+                "name": spec.name,
+                "description": spec.description,
+                "input_schema": spec.input_schema,
+                "requires_approval": spec.requires_approval,
+            }
+            for spec in registry.specs
+        )
+    )
+
+    assert executor.tool_schema_hash == expected_manifest_hash
+    assert tuple(spec.name for spec in executor.specs) == (selected.spec.name,)
 
 
 @pytest.mark.pit

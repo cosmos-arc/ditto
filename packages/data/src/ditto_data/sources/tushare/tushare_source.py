@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 import polars as pl
 
 from ditto_data.config import DataSourceSettings
@@ -11,6 +13,7 @@ from ditto_data.sources.tushare._announcement_range import (
 from ditto_data.sources.tushare._announcement_range import (
     fetch_dividend_range as _fetch_dividend_range,
 )
+from ditto_data.sources.tushare._macro_facade import MacroFacade as _MacroFacade
 from ditto_data.sources.tushare._market_facades import (
     EtfIndexFacade as _EtfIndexFacade,
 )
@@ -30,9 +33,11 @@ from ditto_data.sources.tushare.etf_index_source import (
     fetch_etf_basic,
     fetch_etf_daily,
     fetch_fund_adj,
+    fetch_global_index_daily,
     fetch_index_basic,
     fetch_index_daily,
     fetch_sw_industry,
+    fetch_sw_industry_concepts,
 )
 from ditto_data.sources.tushare.fundamental_source import (
     fetch_balance_sheet,
@@ -48,6 +53,7 @@ from ditto_data.sources.tushare.macro_source import (
     fetch_commodities,
     fetch_fx_daily,
     fetch_macro_indicators,
+    fetch_macro_indicators_by_codes,
     fetch_macro_indicators_range,
     fetch_metal_daily,
 )
@@ -254,69 +260,6 @@ class _FundamentalFacade:
         )
 
 
-class _MacroFacade:
-    """宏观/外汇/商品数据域 facade."""
-
-    def __init__(
-        self,
-        macro: MacroTushareAdapter,
-        fx: FxTushareAdapter,
-        metal: MetalTushareAdapter,
-    ) -> None:
-        self._macro = macro
-        self._fx = fx
-        self._metal = metal
-
-    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
-        """获取宏观指标数据."""
-        return fetch_macro_indicators(self._macro, trade_date)
-
-    def fetch_macro_indicators_range(
-        self,
-        start_date: str,
-        end_date: str,
-    ) -> pl.DataFrame:
-        """获取宏观指标区间数据."""
-        return fetch_macro_indicators_range(self._macro, start_date, end_date)
-
-    def fetch_fx_daily(
-        self,
-        ts_codes: list[str],
-        start_date: str,
-        end_date: str,
-    ) -> pl.DataFrame:
-        """获取外汇日线数据."""
-        return fetch_fx_daily(
-            self._fx,
-            ts_codes=ts_codes,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-    def fetch_metal_daily(
-        self,
-        codes: list[str],
-        start_date: str,
-        end_date: str,
-    ) -> pl.DataFrame:
-        """获取贵金属日线数据."""
-        return fetch_metal_daily(
-            self._metal,
-            codes=codes,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-    def fetch_commodities(
-        self,
-        codes: list[str],
-        start_date: str,
-        end_date: str,
-    ) -> pl.DataFrame:
-        """Tushare 不支持商品数据."""
-        return fetch_commodities(codes, start_date, end_date)
-
-
 # ── 主入口 ───────────────────────────────────────────────────────────
 
 
@@ -503,6 +446,38 @@ class TushareSource:
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
         """获取申万行业分类. 委托给 etf_index_source.fetch_sw_industry."""
         return fetch_sw_industry(self._industry, level)
+
+    def fetch_global_index_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_at: datetime | None = None,
+    ) -> pl.DataFrame:
+        """Fetch PIT-safe global index daily bars."""
+        return fetch_global_index_daily(
+            self._index,
+            codes,
+            start_date,
+            end_date,
+            observed_at=observed_at,
+        )
+
+    def fetch_sw_industry_concepts(
+        self,
+        asof_date: str | None = None,
+        level: int = 1,
+        *,
+        knowledge_date: date | None = None,
+    ) -> pl.DataFrame:
+        """Fetch effective-dated SW industry memberships."""
+        return fetch_sw_industry_concepts(
+            self._industry,
+            asof_date=asof_date,
+            level=level,
+            knowledge_date=knowledge_date,
+        )
 
     # ── Fundamental + Capital（向后兼容委托）─────────────────────────
 
@@ -696,6 +671,23 @@ class TushareSource:
     ) -> pl.DataFrame:
         """Fetch macro indicator observations over a bounded interval."""
         return fetch_macro_indicators_range(self._macro, start_date, end_date)
+
+    def fetch_macro_indicators_by_codes(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_on: date | None = None,
+    ) -> pl.DataFrame:
+        """Fetch a bounded China macro provider snapshot by unified code."""
+        return fetch_macro_indicators_by_codes(
+            self._macro,
+            codes,
+            start_date,
+            end_date,
+            observed_on=observed_on,
+        )
 
     def fetch_fx_daily(
         self,

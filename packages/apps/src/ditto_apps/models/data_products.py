@@ -9,9 +9,9 @@ from ditto_application.queries.data_products import (
     DataProductCoverageView,
     DataProductEvidenceView,
     DataProductLicenseView,
-    DataProductOverview,
     DataProductQualityView,
     DataProductRunView,
+    DataProductView,
 )
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,26 +20,30 @@ __all__ = [
     "DataProductCoverageResponse",
     "DataProductEvidenceResponse",
     "DataProductLicenseResponse",
-    "DataProductOverviewResponse",
     "DataProductQualityResponse",
     "DataProductRunResponse",
+    "DataProductViewResponse",
     "to_data_product_coverage",
     "to_data_product_evidence",
     "to_data_product_license",
-    "to_data_product_overview",
     "to_data_product_quality",
     "to_data_product_run",
+    "to_data_product_view",
 ]
 
 
-class DataProductOverviewResponse(BaseModel):
-    """Static product contract plus active certification identity."""
+class DataProductViewResponse(BaseModel):
+    """Static dataset spec plus active certification identity."""
 
     dataset_id: str = Field(description="Canonical dataset identifier")
     r2_scope: str = Field(description="R2 scope classification")
     maturity: str = Field(description="Effective catalog maturity")
     schedule: str = Field(description="Expected partition schedule")
     owner: str = Field(description="Accountable data-product owner")
+    schema_version: str = Field(description="Canonical dataset schema version")
+    frequency: str = Field(description="Expected observation frequency")
+    timezone: str = Field(description="Canonical dataset timezone")
+    currency: str | None = Field(description="Canonical or mixed dataset currency")
     raw_target_from: str | None = Field(description="Raw history target")
     certified_target_from: str | None = Field(description="Certification target")
     active_certification_report_id: str | None = Field(
@@ -134,14 +138,18 @@ class DataProductLicenseResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
-def to_data_product_overview(value: DataProductOverview) -> DataProductOverviewResponse:
-    """Map the application overview projection to the public API model."""
-    return DataProductOverviewResponse(
+def to_data_product_view(value: DataProductView) -> DataProductViewResponse:
+    """Map the application dataset projection to the public API model."""
+    return DataProductViewResponse(
         dataset_id=value.dataset_id,
         r2_scope=value.r2_scope,
         maturity=value.maturity,
         schedule=value.schedule,
         owner=value.owner,
+        schema_version=value.schema_version,
+        frequency=value.frequency,
+        timezone=value.timezone,
+        currency=value.currency,
         raw_target_from=value.raw_target_from,
         certified_target_from=value.certified_target_from,
         active_certification_report_id=value.active_certification_report_id,

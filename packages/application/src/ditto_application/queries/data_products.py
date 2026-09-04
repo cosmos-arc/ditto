@@ -18,22 +18,26 @@ __all__ = [
     "DataProductCoverageView",
     "DataProductEvidenceView",
     "DataProductLicenseView",
-    "DataProductOverview",
     "DataProductQualityView",
     "DataProductRunView",
+    "DataProductView",
     "DataProductsQueryFacade",
 ]
 
 
 @dataclass(frozen=True, slots=True)
-class DataProductOverview:
-    """One product contract and its currently approved report identity."""
+class DataProductView:
+    """One dataset spec and its currently approved certification identity."""
 
     dataset_id: str
     r2_scope: str
     maturity: str
     schedule: str
     owner: str
+    schema_version: str
+    frequency: str
+    timezone: str
+    currency: str | None
     raw_target_from: str | None
     certified_target_from: str | None
     active_certification_report_id: str | None
@@ -124,11 +128,11 @@ class DataProductsQueryFacade:
     def __init__(self, certification_reader: CertificationReader) -> None:
         self._certification_reader = certification_reader
 
-    def list_products(self, *, profile: str) -> tuple[DataProductOverview, ...]:
-        """List the 19 hard-scope products with independent active reports."""
-        products: list[DataProductOverview] = []
+    def list_products(self, *, profile: str) -> tuple[DataProductView, ...]:
+        """List the 22 hard-scope products with independent active reports."""
+        products: list[DataProductView] = []
         for metadata in default_dataset_metadata().values():
-            contract = metadata.product_contract
+            contract = metadata.dataset_spec
             if contract is None or contract.r2_scope != "hard":
                 continue
             active = self._certification_reader.get_active_report(
@@ -136,12 +140,16 @@ class DataProductsQueryFacade:
                 profile,
             )
             products.append(
-                DataProductOverview(
+                DataProductView(
                     dataset_id=metadata.dataset_id,
                     r2_scope=contract.r2_scope,
                     maturity=metadata.maturity,
                     schedule=metadata.schedule,
                     owner=contract.owner,
+                    schema_version=contract.schema_version,
+                    frequency=contract.frequency,
+                    timezone=contract.timezone,
+                    currency=contract.currency,
                     raw_target_from=contract.raw_target_from,
                     certified_target_from=contract.certified_target_from,
                     active_certification_report_id=getattr(
@@ -249,8 +257,8 @@ class DataProductsQueryFacade:
         *,
         profile: str,
     ) -> DataProductEvidenceView | None:
-        """Return source and provenance evidence from the latest report."""
-        report = self._latest_report(dataset_id, profile)
+        """Return source provenance from the currently approved report."""
+        report = self._certification_reader.get_active_report(dataset_id, profile)
         if report is None:
             return None
         evidence = report.evidence

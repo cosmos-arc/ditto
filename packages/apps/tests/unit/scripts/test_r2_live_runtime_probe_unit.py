@@ -42,7 +42,7 @@ def test_collect_live_runtime_evidence_binds_two_runs_and_workbench_query() -> N
         provider_evidence=_provider_evidence(),
         run_incremental=run,
         observe=lambda: next(observations),
-        query_workbench=lambda: tuple(range(19)),
+        query_workbench=lambda: tuple(range(22)),
         clock=lambda: next(ticks),
     )
 
@@ -71,7 +71,7 @@ def test_collect_live_runtime_evidence_rejects_second_run_write() -> None:
             provider_evidence=_provider_evidence(),
             run_incremental=lambda: None,
             observe=lambda: next(observations),
-            query_workbench=lambda: tuple(range(19)),
+            query_workbench=lambda: tuple(range(22)),
             clock=lambda: next(ticks),
         )
 

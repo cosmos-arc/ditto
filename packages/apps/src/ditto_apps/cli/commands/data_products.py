@@ -64,6 +64,7 @@ class DataProductOperationOptions:
     redistribution: str | None = None
     notes: str | None = None
     profile: str | None = None
+    target_from: str | None = None
     target_to: str | None = None
     expected_dates_file: str | None = None
     snapshot_ids_file: str | None = None
@@ -269,6 +270,11 @@ def execute_data_product_operation(
                 CertificationBuildRequest(
                     dataset_id=dataset_id,
                     profile=_required(options.profile, "--profile", operation),
+                    target_from=_optional_date(
+                        options.target_from,
+                        "--target-from",
+                        operation,
+                    ),
                     target_to=_date(options.target_to, "--target-to", operation),
                     expected_dates=_expected_dates(
                         options.expected_dates_file,
@@ -467,6 +473,7 @@ def license_review(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注�
 def build_certification(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
     dataset_id: str = typer.Argument(..., help="R2 数据产品 ID"),
     profile: str | None = typer.Option(None, "--profile"),
+    target_from: str | None = typer.Option(None, "--target-from"),
     target_to: str | None = typer.Option(None, "--target-to"),
     expected_dates_file: str | None = typer.Option(None, "--expected-dates-file"),
     snapshot_ids_file: str | None = typer.Option(None, "--snapshot-ids-file"),
@@ -489,6 +496,7 @@ def build_certification(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer
         confirm,
         DataProductOperationOptions(
             profile=profile,
+            target_from=target_from,
             target_to=target_to,
             expected_dates_file=expected_dates_file,
             snapshot_ids_file=snapshot_ids_file,

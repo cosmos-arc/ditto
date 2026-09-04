@@ -92,6 +92,7 @@ from ditto_application.processes.experiments.worker import (
 )
 from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
 from ditto_backtest.brokerage import BacktestBrokerage
+from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
 from ditto_backtest.result import (
     BacktestAccountStateSnapshot,
     BacktestFrozenQuantitySnapshot,
@@ -951,6 +952,33 @@ def test_factory_builds_real_service_and_attests_constructed_objects() -> None:
             if item.artifact_kind == "instrument_rules"
         )
     ]
+
+
+def test_factory_propagates_frozen_product_context_into_backtest_config() -> None:
+    factory, audit, *_ = _fixture()
+    context_ref = ReplayContextInputRef(
+        context_kind=ContextInputKind.MARKET_CONTEXT,
+        context_id="market-regime:sha256:q5",
+        content_hash=_sha("c"),
+        as_of="2026-09-01T16:21:00Z",
+        knowledge_cutoff="2026-09-01T16:21:00Z",
+        publication_cutoff="2026-09-01T16:21:00Z",
+        source_snapshot_ids=("snapshot:tushare:index_daily:sha256:q5",),
+    )
+    semantics = replace(audit.semantics, context_input_refs=(context_ref,))
+    bound_audit = ResearchExecutionAudit.create(
+        semantics=semantics,
+        attempt_id=audit.attempt_id,
+        attempt_ordinal=audit.attempt_ordinal,
+        backtest_run_id=audit.backtest_run_id,
+        parent_attempt_id=audit.parent_attempt_id,
+        resume_from_run_id=audit.resume_from_run_id,
+        created_at=audit.created_at,
+    )
+
+    result = factory.build(bound_audit, external_should_stop=_never_stop)
+
+    assert result.service._config.context_input_refs == (context_ref,)
 
 
 def test_factory_wires_one_fresh_selection_evidence_collector_per_build() -> None:

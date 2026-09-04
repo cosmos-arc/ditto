@@ -396,6 +396,18 @@ class _InstrumentLookup:
             return {"ticker": "510500", "exchange": "XSHG"}
         return None
 
+    def get_source_ticker(
+        self,
+        instrument_id: int,
+        source: str,
+        as_of: str | None = None,
+    ) -> str | None:
+        _ = (source, as_of)
+        return {
+            2_000_001: "510300.XSHG",
+            2_000_002: "510500.XSHG",
+        }.get(instrument_id)
+
 
 class _MetadataServiceStub:
     instrument = _InstrumentLookup()

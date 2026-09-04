@@ -10,6 +10,7 @@ Consumers depend only on the Protocols they need, not the full DataSource.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Protocol
 
 import polars as pl
@@ -36,6 +37,16 @@ class MetadataFetcher(Protocol):
 
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
         """获取申万行业分类."""
+        ...
+
+    def fetch_sw_industry_concepts(
+        self,
+        asof_date: str | None = None,
+        level: int = 1,
+        *,
+        knowledge_date: date | None = None,
+    ) -> pl.DataFrame:
+        """获取 effective-dated 申万行业成分."""
         ...
 
 
@@ -71,6 +82,17 @@ class MarketFetcher(Protocol):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取指数日线行情."""
+        ...
+
+    def fetch_global_index_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_at: datetime | None = None,
+    ) -> pl.DataFrame:
+        """获取带显式可见时间的全球指数日线行情."""
         ...
 
     def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
@@ -198,6 +220,17 @@ class MacroFetcher(Protocol):
 
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         """获取宏观指标."""
+        ...
+
+    def fetch_macro_indicators_by_codes(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_on: date | None = None,
+    ) -> pl.DataFrame:
+        """获取带实际抓取日的中国宏观快照."""
         ...
 
     def fetch_fx_daily(

@@ -42,6 +42,8 @@ def mock_metadata_service(mocker):
     service.instrument.register_instruments_batch = mocker.Mock()
     service.instrument.resolve_or_create_instruments_batch = mocker.Mock()
     service.instrument.resolve_instrument_ids_batch = mocker.Mock(return_value={})
+    service.instrument.save_industry_classification = mocker.Mock(return_value=1)
+    service.instrument.save_industry_mapping = mocker.Mock(return_value=1)
 
     def register_side_effect(df, source, asset_class, **kwargs):
         _ = df, source, kwargs
@@ -68,7 +70,76 @@ def mock_market_write_service(mocker):
     service.save_adj_factor.return_value = 1
     service.save_fund_adj.return_value = 1
     service.save_stock_status.return_value = 1
+    service.save_global_index_bars.return_value = 1
     return service
+
+
+@pytest.mark.unit
+def test_global_index_daily_uses_dedicated_pit_writer(
+    data_writer,
+    mock_market_write_service,
+) -> None:
+    df = pl.DataFrame(
+        {
+            "source_ticker": ["SPX"],
+            "trade_date": [date(2024, 3, 28)],
+            "knowledge_date": [date(2026, 9, 1)],
+            "close": [5254.35],
+        }
+    )
+
+    result = data_writer.write_data("global_index_daily", df, "2024-03-28")
+
+    assert result.file_path == "global_index_daily/2024"
+    mock_market_write_service.save_global_index_bars.assert_called_once()
+    mock_market_write_service.save_bars.assert_not_called()
+
+
+@pytest.mark.unit
+def test_calendar_write_enriches_adjacent_trading_days(
+    data_writer,
+    mock_metadata_service,
+) -> None:
+    df = pl.DataFrame(
+        {
+            "trade_date": [date(2024, 1, 1), date(2024, 1, 2), date(2024, 1, 3)],
+            "is_open": [False, True, True],
+            "exchange": ["SSE", "SSE", "SSE"],
+        }
+    )
+
+    data_writer.write_data("calendar", df, "2024-03-29")
+
+    mock_metadata_service.calendar.save_calendar.assert_called_once()
+    mock_metadata_service.calendar.enrich_calendar.assert_called_once_with(
+        "2024-01-01",
+        "2024-01-03",
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("dataset", "method_name"),
+    [
+        ("industry_classification", "save_industry_classification"),
+        ("industry_mapping", "save_industry_mapping"),
+    ],
+)
+def test_industry_products_use_metadata_read_model_writer(
+    data_writer,
+    mock_metadata_service,
+    dataset,
+    method_name,
+) -> None:
+    df = pl.DataFrame({"knowledge_date": [date(2026, 9, 1)]})
+
+    result = data_writer.write_data(dataset, df, "2026-09-01")
+
+    assert result.file_path == f"{dataset}/0"
+    getattr(mock_metadata_service.instrument, method_name).assert_called_once_with(
+        df,
+        source="tushare",
+    )
 
 
 @pytest.mark.unit
@@ -93,6 +164,45 @@ def test_fund_adj_uses_etf_writer_and_logical_catalog_uri(
     assert result.file_path == "fund_adj/2024"
     mock_market_write_service.save_fund_adj.assert_called_once()
     mock_market_write_service.save_adj_factor.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("dataset", "write_method"),
+    [
+        ("stock_daily", "save_bars"),
+        ("etf_daily", "save_bars"),
+        ("index_daily", "save_bars"),
+        ("stock_status", "save_stock_status"),
+        ("adj_factor", "save_adj_factor"),
+        ("fund_adj", "save_fund_adj"),
+    ],
+)
+def test_instrument_scoped_writers_drop_unresolved_provider_rows(
+    data_writer,
+    mock_metadata_service,
+    mock_market_write_service,
+    dataset,
+    write_method,
+) -> None:
+    """Unknown provider identifiers must never reach a durable FK writer."""
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "600000.SH": 1_000_001
+    }
+    df = pl.DataFrame(
+        {
+            "source_ticker": ["600000.SH", "T00018.SH"],
+            "trade_date": [date(2024, 3, 29), date(2024, 3, 29)],
+            "close": [10.0, 1.0],
+        }
+    )
+
+    data_writer.write_data(dataset, df, "2024-03-29")
+
+    method = getattr(mock_market_write_service, write_method)
+    written = method.call_args.kwargs["df"]
+    assert written["source_ticker"].to_list() == ["600000.SH"]
+    assert written["instrument_id"].null_count() == 0
 
 
 @pytest.fixture

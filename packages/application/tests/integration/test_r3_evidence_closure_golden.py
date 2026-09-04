@@ -73,11 +73,8 @@ from ditto_application.commands.candidate_selection import (
 from ditto_application.commands.strategy_governance import (
     PublishStrategyVersionCommand,
     PublishStrategyVersionHandler,
-    ReactivateStrategyCommand,
-    ReactivateStrategyHandler,
-    reactivate_confirmation_phrase,
 )
-from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.exceptions import AppProcessError
 from ditto_application.mutation_idempotency import build_mutation_idempotency
 from ditto_application.processes.execution.factor_bridge import (
     FactorBridge,
@@ -1156,36 +1153,14 @@ def _governance_record(
     return replace(base, spec_hash=canonical_spec_hash_for_record(base))
 
 
-def _governance_event_snapshot(
-    pool: SQLitePool,
-    strategy_id: str,
-) -> tuple[tuple[tuple[object, ...], ...], tuple[tuple[object, ...], ...]]:
-    connection = pool.get_connection()
-    decision_rows = connection.execute(
-        "SELECT event_id, version, decision, actor, reason, decided_at "
-        "FROM strategy_decision_event WHERE strategy_id = ? ORDER BY rowid",
-        (strategy_id,),
-    ).fetchall()
-    activation_rows = connection.execute(
-        "SELECT event_id, target_version, activation_kind, actor, reason, "
-        "activated_at FROM strategy_activation_event "
-        "WHERE strategy_id = ? ORDER BY rowid",
-        (strategy_id,),
-    ).fetchall()
-    return (
-        tuple(tuple(row) for row in decision_rows),
-        tuple(tuple(row) for row in activation_rows),
-    )
-
-
-def _assert_deterministic_promotion_is_blocked(
+def _assert_deterministic_promotion_uses_exact_snapshot_gates(
     *,
     tmp_path: Path,
     lane: golden_support.GoldenLaneSpec,
     packet: ReviewPacket,
     reader: SQLiteExperimentReader,
 ) -> None:
-    """Prove one real deterministic packet cannot change production state."""
+    """Prove exact experiment gates promote without the global R2 release."""
     pool = SQLitePool(str(tmp_path / f"{lane.lane_id}-governance.sqlite"))
     spec_writer = SQLiteStrategySpecWriter(pool)
     spec_writer.init_schema()
@@ -1245,23 +1220,7 @@ def _assert_deterministic_promotion_is_blocked(
             reason="ready except live gate",
             decided_at="2026-07-27T00:00:12Z",
         )
-        pointer_before = governance_store.get_active_pointer(lane.strategy_id)
-        candidate_before = governance_store.get_state(
-            lane.strategy_id,
-            lane.strategy_version,
-        )
-        events_before = _governance_event_snapshot(pool, lane.strategy_id)
-        active_spec_before = catalog.get_active_published(lane.strategy_id)
         reloaded_before = reader.get_review_packet(str(packet.bundle_hash))
-        assert pointer_before is not None
-        assert pointer_before.active_version == 1
-        assert candidate_before is not None
-        assert candidate_before.state.value == "review"
-        assert candidate_before.review_outcome.value == "approved"
-        assert active_spec_before is not None
-        assert active_spec_before.strategy_id == active_record.strategy_id
-        assert active_spec_before.version == active_record.version
-        assert active_spec_before.spec_hash == active_record.spec_hash
         assert reloaded_before == packet
         launch = reader.get_launch_spec(ExperimentId(packet.lineage.experiment_id))
         assert launch is not None
@@ -1272,42 +1231,25 @@ def _assert_deterministic_promotion_is_blocked(
             StrategyPromotionProcess(governance),
             reader,
         )
-        with pytest.raises(AppCommandError) as captured:
-            handler.handle(
-                PublishStrategyVersionCommand(
-                    strategy_id=lane.strategy_id,
-                    version=lane.strategy_version,
-                    bundle_hash=str(packet.bundle_hash),
-                    actor="golden-publisher",
-                    reason="attempt deterministic promotion",
-                )
+        result = handler.handle(
+            PublishStrategyVersionCommand(
+                strategy_id=lane.strategy_id,
+                version=lane.strategy_version,
+                bundle_hash=str(packet.bundle_hash),
+                actor="golden-publisher",
+                reason="promote exact certified experiment evidence",
             )
-
-        assert captured.value.details["reason"] == "hard_gate_blocked"
-        with pytest.raises(AppCommandError) as reactivation:
-            ReactivateStrategyHandler(governance).handle(
-                ReactivateStrategyCommand(
-                    strategy_id=lane.strategy_id,
-                    version=lane.strategy_version,
-                    actor="golden-operator",
-                    reason="attempt to bypass the live gate",
-                    confirmation=reactivate_confirmation_phrase(
-                        lane.strategy_id,
-                        lane.strategy_version,
-                        pointer_before.pointer_revision,
-                    ),
-                    impact_summary="replace the active R1 strategy with the candidate",
-                    expected_pointer_revision=pointer_before.pointer_revision,
-                )
-            )
-        assert reactivation.value.details["code"] == "STRATEGY_INVALID_TRANSITION"
-        assert governance_store.get_active_pointer(lane.strategy_id) == pointer_before
-        assert (
-            governance_store.get_state(lane.strategy_id, lane.strategy_version)
-            == candidate_before
         )
-        assert _governance_event_snapshot(pool, lane.strategy_id) == events_before
-        assert catalog.get_active_published(lane.strategy_id) == active_spec_before
+
+        assert result.active_version == lane.strategy_version
+        candidate_after = governance_store.get_state(
+            lane.strategy_id, lane.strategy_version
+        )
+        assert candidate_after is not None
+        assert candidate_after.state.value == "published"
+        active_spec_after = catalog.get_active_published(lane.strategy_id)
+        assert active_spec_after is not None
+        assert active_spec_after.version == lane.strategy_version
         assert reader.get_review_packet(str(packet.bundle_hash)) == packet
     finally:
         pool.close_all()
@@ -1809,7 +1751,7 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(  # noqa:
         expected_trace_refs=expected_trace_refs,
     )
     if not cost_drift:
-        _assert_deterministic_promotion_is_blocked(
+        _assert_deterministic_promotion_uses_exact_snapshot_gates(
             tmp_path=tmp_path,
             lane=lane,
             packet=persisted_packet,
@@ -1846,14 +1788,13 @@ def _assert_packet_shape(
         if gate.layer is GateLayer.HARD
     }
     assert hard_rule_ids == HARD_GATE_RULE_IDS
-    # Live R2 evidence is intentionally not inferred from this deterministic
-    # tmp_path fixture. Cost assumptions are real execution-policy hashes, while
-    # G2 promotion readiness remains explicitly NOT_EVALUATED.
-    assert hard_gates["r2_live_gate"].outcome is GateOutcome.NOT_EVALUATED
+    # Global G2/R2 release status remains visible evidence but is not a
+    # per-strategy hard gate. The exact certified snapshot remains hard.
+    r2_evidence = gate_by_rule["r2_live_gate"]
+    assert r2_evidence.layer is GateLayer.EVIDENCE
+    assert r2_evidence.outcome is GateOutcome.NOT_EVALUATED
     for rule_id, gate in hard_gates.items():
-        if rule_id == "r2_live_gate":
-            assert gate.outcome is GateOutcome.NOT_EVALUATED
-        elif rule_id == "cost_assumptions":
+        if rule_id == "cost_assumptions":
             assert gate.outcome is expected_cost_outcome
         else:
             assert gate.outcome is GateOutcome.PASS

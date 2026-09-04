@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "work_package": "FND-01",
+  "captured_at": "2026-08-31T09:16:15+08:00",
+  "intent": "Freeze the accepted two-repository working baseline before workstation implementation without modifying history or hiding user changes.",
+  "repositories": {
+    "ditto": {
+      "path": "/Users/chevy/Desktop/code/ditto",
+      "branch": "codex/roadmap-completion",
+      "head": "79fc1cd90a28d9d9a5cb4ecad7ab46c547734572",
+      "working_tree": {
+        "modified": 34,
+        "deleted": 0,
+        "untracked": 16,
+        "diff_shortstat": "34 files changed, 2094 insertions(+), 482 deletions(-)",
+        "status_sha256": "a0072b6ac7745e472df6610064e712fc979f9ce053c9987db5bbfdcc08dd433c",
+        "tracked_patch_sha256": "70f81378da5d4be5ad723523eb0baa66dbc58be803ae5a2c412ba4c8f86551bc",
+        "modified_and_untracked_content_sha256": "13a01c049d11712df74a585183e5153ab2389a0622362d48057d789061a73e78"
+      },
+      "accepted_scope": [
+        "R5 governed-agent and presentation persistence completion",
+        "product-beta evidence and runbooks",
+        "personal quant workstation design, roadmap, and implementation plan"
+      ]
+    },
+    "ditto_app": {
+      "path": "/Users/chevy/Desktop/code/ditto-app",
+      "branch": "codex/roadmap-completion",
+      "head": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+      "working_tree": {
+        "modified": 241,
+        "deleted": 40,
+        "untracked": 84,
+        "diff_shortstat": "281 files changed, 17047 insertions(+), 8533 deletions(-)",
+        "status_sha256": "222adb2cf8c11016370bd10ff64ee58a5e8ea60c82e1dadbf590d875cb67a87c",
+        "tracked_patch_sha256": "6e7955061b7663e646ae5fd2d92ef4f50fc1a525f02fe66cac42f3e110ecd742",
+        "modified_and_untracked_content_sha256": "c1d83d5b2664bdb5849c8e18ccc0a8559fe863d83ba00be8f3502c1e4e74daa3"
+      },
+      "accepted_scope": [
+        "product positioning, information architecture, and page-contract refresh",
+        "live-boundary React work and product-beta evidence",
+        "existing visual-audit artifacts and local workspace outputs"
+      ]
+    }
+  },
+  "cross_repository_contract": {
+    "backend_openapi_path": "/Users/chevy/Desktop/code/ditto/docs/openapi/v1.json",
+    "backend_openapi_sha256": "4e6ff90dcca5fb57f81433cff833b0473a6648e79d5a9160e446e319a16bfd8b",
+    "frontend_generated_types_path": "/Users/chevy/Desktop/code/ditto-app/src/types/generated/api.d.ts",
+    "frontend_generated_types_sha256": "bb1b1ee47351aae18c5b63e1d15f41251f1f4abac3b4eb62ff5acf2c25f4d2df"
+  },
+  "safeguards": {
+    "new_branch_created": false,
+    "history_rewritten": false,
+    "stash_created": false,
+    "reset_or_clean_used": false,
+    "runtime_data_deleted": false,
+    "baseline_kind": "explicit-dirty-worktree-baseline"
+  }
+}

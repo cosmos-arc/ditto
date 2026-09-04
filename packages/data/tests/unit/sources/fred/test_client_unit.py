@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 import pytest
 from ditto_data.sources.base import (
@@ -42,6 +44,31 @@ class TestFredClientInit:
 
 class TestFredClientGetSeriesObservations:
     """Tests for FredClient.get_series_observations method."""
+
+    def test_api_key_is_redacted_from_httpx_logs(
+        self,
+        respx_mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Provider credentials must never enter observable HTTP client logs."""
+        secret = "unit-test-fred-secret"
+        respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
+            return_value=httpx.Response(
+                200,
+                json={"observations": []},
+            )
+        )
+
+        with caplog.at_level(logging.INFO, logger="httpx"):
+            FredClient(api_key=secret).get_series_observations(
+                series_id="UNRATE",
+                observation_start="2024-01-01",
+                observation_end="2024-01-31",
+            )
+
+        rendered = "\n".join(record.getMessage() for record in caplog.records)
+        assert secret not in rendered
+        assert "api_key=%3Credacted%3E" in rendered
 
     def test_successful_fetch_returns_dataframe(self, respx_mock) -> None:
         """成功获取返回 polars DataFrame."""

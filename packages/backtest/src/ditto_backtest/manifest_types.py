@@ -20,10 +20,15 @@ from ditto_backtest.config import (
     validate_research_snapshot_identity,
     validate_spec_hash,
 )
+from ditto_backtest.context_inputs import (
+    ReplayContextInputRef,
+    normalize_context_input_refs,
+)
 
 __all__ = [
     "InputRef",
     "ReplayArtifactRef",
+    "ReplayContextInputRef",
     "ResearchReplayEvidence",
     "RuleRef",
     "RunManifest",
@@ -241,6 +246,7 @@ class RunManifest:
     effective_parameters: tuple[EffectiveParameter, ...]
     research_snapshot_id: str | None
     research_snapshot_manifest_hash: str | None
+    context_input_refs: tuple[ReplayContextInputRef, ...] = ()
     input_refs: tuple[InstrumentId, ...] = ()
     input_ref_details: tuple[InputRef, ...] = ()
     parameter_overrides: tuple[str, ...] = ()
@@ -269,6 +275,11 @@ class RunManifest:
         validate_research_snapshot_identity(
             self.research_snapshot_id,
             self.research_snapshot_manifest_hash,
+        )
+        object.__setattr__(
+            self,
+            "context_input_refs",
+            normalize_context_input_refs(self.context_input_refs),
         )
         if (
             self.replay_evidence is not None

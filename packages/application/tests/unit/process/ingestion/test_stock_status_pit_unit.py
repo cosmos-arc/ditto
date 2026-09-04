@@ -38,7 +38,7 @@ def test_registry_passes_target_trade_date_to_stock_status_fetcher() -> None:
 
 
 def test_stock_status_certification_cannot_start_before_provider_history() -> None:
-    contract = default_dataset_metadata()["stock_status"].product_contract
+    contract = default_dataset_metadata()["stock_status"].dataset_spec
 
     assert contract.raw_target_from == "2016-01-01"
     assert contract.certified_target_from == "2016-01-01"

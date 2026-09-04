@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from ditto_backtest.config import validate_spec_hash
+from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
 from ditto_backtest.manifest import InputRef, RuleRef, RunManifest, RunMode
 from ditto_backtest.manifest_types import ReplayArtifactRef, ResearchReplayEvidence
 from ditto_strategy.models import StrategyArtifactRecord
@@ -266,6 +267,18 @@ def deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
         )
         for item in raw.get("rule_refs", [])
     )
+    context_inputs = tuple(
+        ReplayContextInputRef(
+            context_kind=ContextInputKind(item["context_kind"]),
+            context_id=item["context_id"],
+            content_hash=item["content_hash"],
+            as_of=item["as_of"],
+            knowledge_cutoff=item["knowledge_cutoff"],
+            publication_cutoff=item["publication_cutoff"],
+            source_snapshot_ids=tuple(item["source_snapshot_ids"]),
+        )
+        for item in raw.get("context_input_refs", [])
+    )
     try:
         return RunManifest(
             run_id=raw.get("run_id", ""),
@@ -290,6 +303,7 @@ def deserialize_manifest(raw: dict[str, Any]) -> RunManifest:
             ),
             research_snapshot_id=raw["research_snapshot_id"],
             research_snapshot_manifest_hash=raw["research_snapshot_manifest_hash"],
+            context_input_refs=context_inputs,
             dependency_versions=tuple(raw.get("dependency_versions", ())),
             random_seed=raw.get("random_seed"),
             pit_time_column=raw.get("pit_time_column", "knowledge_date"),

@@ -167,7 +167,7 @@ def build_factor_bundle[CompiledT: _CompiledExpressionSet](
                 "low",
                 "close",
                 "volume",
-                "trade_date",
+                pl.col("trade_date").cast(pl.String),
             ).to_dicts()
         )
 

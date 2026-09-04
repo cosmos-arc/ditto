@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 
 import polars as pl
 from ditto_platform.foundation import logger, traced
@@ -62,19 +63,30 @@ class MacroTushareAdapter(BaseTushareAdapter):
     """Tushare adapter for macro indicator datasets."""
 
     @traced("source.tushare.fetch_macro_indicators")
-    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+    def fetch_macro_indicators(
+        self,
+        trade_date: str,
+        *,
+        observed_on: date | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch macro indicators for a trade date.
 
         当前实现接入 `shibor` 接口并标准化为统一 macro_indicators SourceSchema。
         """
-        return self.fetch_macro_indicators_range(trade_date, trade_date)
+        return self.fetch_macro_indicators_range(
+            trade_date,
+            trade_date,
+            observed_on=observed_on,
+        )
 
     @traced("source.tushare.fetch_macro_indicators_range")
     def fetch_macro_indicators_range(
         self,
         start_date: str,
         end_date: str,
+        *,
+        observed_on: date | None = None,
     ) -> pl.DataFrame:
         """Fetch the normalized SHIBOR series with one bounded request."""
         compact_start = start_date.replace("-", "")
@@ -122,7 +134,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
                 pl.lit(False).alias("need_pit"),
                 pl.col("date"),
                 pl.col("value"),
-                (pl.col("date") + pl.duration(days=1)).alias("knowledge_date"),
+                pl.lit(observed_on or date.today()).alias("knowledge_date"),
                 pl.lit("tushare").alias("source"),
                 pl.lit("%").alias("unit"),
                 pl.lit("Shanghai interbank offered rate overnight").alias(
@@ -143,6 +155,8 @@ class MacroTushareAdapter(BaseTushareAdapter):
         codes: list[str],
         start_date: str,
         end_date: str,
+        *,
+        observed_on: date | None = None,
     ) -> pl.DataFrame:
         """
         Fetch multiple macro indicators from Tushare.
@@ -151,6 +165,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
             codes: List of unified indicator codes (e.g., ["CN_CPI_YOY", "CN_GDP_YOY"]).
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
+            observed_on: Actual provider observation date; defaults to today.
 
         Returns:
             DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA columns.
@@ -172,13 +187,18 @@ class MacroTushareAdapter(BaseTushareAdapter):
         compact_start = start_date.replace("-", "")
         compact_end = end_date.replace("-", "")
         results = self._fetch_all_api_groups(
-            api_to_indicators, compact_start, compact_end
+            api_to_indicators,
+            compact_start,
+            compact_end,
+            observed_on or date.today(),
         )
 
         if not results:
             return empty_macro_dataframe()
 
-        result = pl.concat(results)
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+        result = pl.concat(results).filter(pl.col("date").is_between(start, end))
         logger.info(
             "Tushare macro indicators by codes fetched",
             event="tushare_macro_indicators_by_codes_complete",
@@ -219,6 +239,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
         api_to_indicators: dict[str, list[TushareMacroIndicator]],
         compact_start: str,
         compact_end: str,
+        observed_on: date,
     ) -> list[pl.DataFrame]:
         """
         Fetch and transform indicators from each API group.
@@ -227,6 +248,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
             api_to_indicators: Mapping from API name to indicators.
             compact_start: Compact start date (YYYYMMDD).
             compact_end: Compact end date (YYYYMMDD).
+            observed_on: Actual provider observation date.
 
         Returns:
             List of non-empty transformed DataFrames.
@@ -236,7 +258,11 @@ class MacroTushareAdapter(BaseTushareAdapter):
 
         for api_name, indicators in api_to_indicators.items():
             dfs = self._fetch_single_api(
-                api_name, indicators, compact_start, compact_end
+                api_name,
+                indicators,
+                compact_start,
+                compact_end,
+                observed_on,
             )
             results.extend(dfs)
 
@@ -248,6 +274,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
         indicators: list[TushareMacroIndicator],
         compact_start: str,
         compact_end: str,
+        observed_on: date,
     ) -> list[pl.DataFrame]:
         """
         Fetch indicators from a single API and transform results.
@@ -257,13 +284,14 @@ class MacroTushareAdapter(BaseTushareAdapter):
             indicators: Indicators to fetch from this API.
             compact_start: Compact start date (YYYYMMDD).
             compact_end: Compact end date (YYYYMMDD).
+            observed_on: Actual provider observation date.
 
         Returns:
             List of non-empty transformed DataFrames for this API.
 
         """
         fields = list({ind.field for ind in indicators})
-        date_field = self._resolve_date_field(indicators[0].frequency)
+        date_field = self._resolve_date_field(indicators[0])
         all_fields = [date_field, *fields]
 
         with tushare_fetch_error_handler("macro_indicators", api_name):
@@ -281,32 +309,42 @@ class MacroTushareAdapter(BaseTushareAdapter):
             for indicator in indicators:
                 if indicator.field not in response.columns:
                     continue
-                df = self._transform_to_schema(response, indicator, date_field)
+                df = self._transform_to_schema(
+                    response,
+                    indicator,
+                    date_field,
+                    observed_on,
+                )
                 if df.height > 0:
                     results.append(df)
             return results
 
     @staticmethod
-    def _resolve_date_field(frequency: str) -> str:
+    def _resolve_date_field(indicator: TushareMacroIndicator) -> str:
         """
         Map indicator frequency to the Tushare date column name.
 
         Args:
-            frequency: Data frequency (daily, monthly, quarterly).
+            indicator: Metadata containing provider date-field and frequency rules.
 
         Returns:
             Column name used by Tushare for dates.
 
         """
-        return {"daily": "date", "monthly": "month", "quarterly": "quarter"}.get(
-            frequency, "date"
-        )
+        if indicator.date_field is not None:
+            return indicator.date_field
+        return {
+            "daily": "date",
+            "monthly": "month",
+            "quarterly": "quarter",
+        }.get(indicator.frequency, "date")
 
     def _transform_to_schema(
         self,
         response: pl.DataFrame,
         indicator: TushareMacroIndicator,
         date_field: str,
+        observed_on: date,
     ) -> pl.DataFrame:
         """
         Transform API response to MACRO_INDICATOR_SOURCE_SCHEMA.
@@ -315,6 +353,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
             response: Raw API response DataFrame.
             indicator: Indicator metadata.
             date_field: Name of the date column in response.
+            observed_on: Actual provider observation date used as knowledge date.
 
         Returns:
             DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA columns.
@@ -348,17 +387,17 @@ class MacroTushareAdapter(BaseTushareAdapter):
         if df.height == 0:
             return empty_macro_dataframe()
 
-        # Add metadata columns and calculate knowledge_date
+        # Tushare's China macro endpoints expose current values without a
+        # historical publication/vintage timestamp. Historical bootstrap is
+        # therefore visible only from the actual retrieval date. Fixed lag
+        # estimates are metadata hints, never PIT evidence.
         result = df.with_columns(
             pl.lit(indicator.code).alias("indicator_code"),
             pl.lit(indicator.name).alias("indicator_name"),
             pl.lit(indicator.category).alias("category"),
             pl.lit(indicator.frequency).alias("frequency"),
             pl.lit(indicator.need_pit).alias("need_pit"),
-            # knowledge_date = date + release_lag_days
-            (pl.col("date") + pl.duration(days=indicator.release_lag_days)).alias(
-                "knowledge_date"
-            ),
+            pl.lit(observed_on).alias("knowledge_date"),
             pl.lit("tushare").alias("source"),
             pl.lit(indicator.unit).alias("unit"),
             pl.lit(indicator.description).alias("description"),

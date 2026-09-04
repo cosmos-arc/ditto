@@ -8,7 +8,12 @@ from pathlib import Path
 import orjson
 import pytest
 from ditto_agent.evals.cases import EvalCase, load_eval_cases
-from ditto_agent.evals.release import EvalCostBasis, ReleaseEvalRunIdentity
+from ditto_agent.evals.release import (
+    RELEASE_SUITE_COUNTS,
+    EvalCostBasis,
+    ReleaseEvalRunIdentity,
+)
+from ditto_agent.evals.runner import bundled_eval_cases
 from ditto_agent.models.port import (
     AgentModelPort,
     ModelRequest,
@@ -28,6 +33,18 @@ from ditto_apps.registry.agent.release_eval_provider import (
 DATASETS = (
     Path(__file__).parents[5] / "agent" / "src" / "ditto_agent" / "evals" / "datasets"
 )
+
+
+def test_every_bundled_release_case_builds_a_complete_provider_request() -> None:
+    cases = (
+        case
+        for suite in RELEASE_SUITE_COUNTS
+        for case in load_eval_cases(bundled_eval_cases(suite)[1])
+    )
+
+    requests = tuple(release_eval_provider._request(case) for case in cases)
+
+    assert len(requests) == sum(RELEASE_SUITE_COUNTS.values())
 
 
 def _identity() -> ReleaseEvalRunIdentity:

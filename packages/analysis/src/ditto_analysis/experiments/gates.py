@@ -40,7 +40,7 @@ __all__ = [
     "review_blocked_by_hard_gates",
 ]
 
-GATE_POLICY_VERSION = "r3.v1"
+GATE_POLICY_VERSION = "r3.v2"
 
 
 def _deep_freeze(value: object) -> object:
@@ -94,7 +94,6 @@ HARD_GATE_RULE_IDS = (
     _TRIAL_DECLARATION,
     _HOLDOUT_CLAIM,
     _ARTIFACT_COMPLETENESS,
-    _R2_LIVE_GATE,
 )
 
 
@@ -156,7 +155,7 @@ def _hard_outcome(satisfied: bool | None) -> GateOutcome:
 
 
 def evaluate_hard_gates(evidence: HardGateEvidence) -> tuple[GateEvaluation, ...]:
-    """Evaluate every hard-correctness gate against typed observed facts."""
+    """Evaluate strategy hard gates plus visible global-release evidence."""
     facts: tuple[tuple[str, GateFact], ...] = (
         (_CERTIFIED_SNAPSHOT, evidence.certified_snapshot),
         (_NINETY_SIX_MONTH, evidence.ninety_six_month),
@@ -168,9 +167,8 @@ def evaluate_hard_gates(evidence: HardGateEvidence) -> tuple[GateEvaluation, ...
         (_TRIAL_DECLARATION, evidence.trial_declaration),
         (_HOLDOUT_CLAIM, evidence.holdout_claim),
         (_ARTIFACT_COMPLETENESS, evidence.artifact_completeness),
-        (_R2_LIVE_GATE, evidence.r2_live_gate),
     )
-    return tuple(
+    hard_evaluations = tuple(
         GateEvaluation(
             rule_id=rule_id,
             layer=GateLayer.HARD,
@@ -180,6 +178,17 @@ def evaluate_hard_gates(evidence: HardGateEvidence) -> tuple[GateEvaluation, ...
         )
         for rule_id, fact in facts
     )
+    r2_release_evidence = GateEvaluation(
+        rule_id=_R2_LIVE_GATE,
+        layer=GateLayer.EVIDENCE,
+        outcome=_hard_outcome(evidence.r2_live_gate.satisfied),
+        observed=evidence.r2_live_gate.detail,
+        policy={
+            "required_for": "g2_daily_research_beta_release",
+            "scope": "global_22_product_bundle",
+        },
+    )
+    return (*hard_evaluations, r2_release_evidence)
 
 
 def review_blocked_by_hard_gates(

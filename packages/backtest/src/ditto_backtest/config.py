@@ -19,6 +19,11 @@ from ditto_strategy.alpha.parameters import (
 )
 from ditto_strategy.errors import StrategySpecError
 
+from ditto_backtest.context_inputs import (
+    ReplayContextInputRef,
+    normalize_context_input_refs,
+)
+
 __all__ = [
     "EngineConfig",
     "EngineMode",
@@ -148,6 +153,7 @@ class EngineConfig:
     effective_parameters: tuple[EffectiveParameter, ...]
     research_snapshot_id: str | None
     research_snapshot_manifest_hash: str | None
+    context_input_refs: tuple[ReplayContextInputRef, ...] = ()
     benchmark_id: InstrumentId | None = None
     mode: EngineMode = EngineMode.BACKTEST
     trade_matching: TradeMatchingMethod = TradeMatchingMethod.FIFO
@@ -171,6 +177,11 @@ class EngineConfig:
         validate_research_snapshot_identity(
             self.research_snapshot_id,
             self.research_snapshot_manifest_hash,
+        )
+        object.__setattr__(
+            self,
+            "context_input_refs",
+            normalize_context_input_refs(self.context_input_refs),
         )
         if self.parameter_overrides:
             msg = (

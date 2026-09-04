@@ -109,11 +109,11 @@ class TestOpenAPIMaturity:
             schema["paths"]["/api/v1/market/bars"]["post"]["x-ditto-maturity"]
             == "initial-focus"
         )
-        trade_operation = schema["paths"]["/api/v1/trade/daily-decision/v2"]["get"]
-        assert trade_operation["x-ditto-maturity"] == "initial-focus"
-        assert "Capability maturity: `initial-focus`" in trade_operation["description"]
-        trade_tag = next(tag for tag in schema["tags"] if tag["name"] == "trade")
-        assert trade_tag["x-ditto-maturity"] == "initial-focus"
+        manual_operation = schema["paths"]["/api/v1/manual/daily-decision/v2"]["get"]
+        assert manual_operation["x-ditto-maturity"] == "initial-focus"
+        assert "Capability maturity: `initial-focus`" in manual_operation["description"]
+        manual_tag = next(tag for tag in schema["tags"] if tag["name"] == "manual")
+        assert manual_tag["x-ditto-maturity"] == "initial-focus"
         assert (
             schema["paths"]["/api/v1/macro/indicators"]["post"]["x-ditto-maturity"]
             == "experimental"

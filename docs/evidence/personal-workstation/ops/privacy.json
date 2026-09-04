@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-01T00:47:00+08:00",
+  "status": "passed",
+  "result": {
+    "passed": 4,
+    "failed": 0
+  },
+  "audits": [
+    {
+      "control": "provider_license_ledger",
+      "test": "packages/application/tests/unit/commands/test_data_product_license_unit.py::test_review_appends_one_content_addressed_record_for_declared_source",
+      "status": "passed"
+    },
+    {
+      "control": "agent_egress_license",
+      "test": "packages/apps/tests/integration/test_agent_run_execution.py::test_unapproved_license_fails_closed_before_evidence_reaches_model",
+      "status": "passed"
+    },
+    {
+      "control": "manual_account_cloud_redaction",
+      "test": "packages/application/tests/unit/query/test_account_event_evidence_unit.py::test_cloud_evidence_omits_free_text_identifiers_and_exact_amounts",
+      "status": "passed"
+    },
+    {
+      "control": "provider_failure_redaction",
+      "test": "packages/apps/tests/unit/scripts/test_r2_live_provider_probe_unit.py::test_probe_failure_is_redacted_and_fail_closed",
+      "status": "passed"
+    }
+  ],
+  "verification": "pixi run -e dev pytest <the four selectors above> -q",
+  "observed_exit_code": 0
+}

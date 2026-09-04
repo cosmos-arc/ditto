@@ -28,6 +28,7 @@ def build_daily_fetch_handlers(
     *,
     fetch_commodity_daily: Callable[[str], pl.DataFrame],
     get_cached_index_codes: Callable[[], list[str]],
+    source_name: str = "tushare",
     registry: DatasetRegistry | None = None,
 ) -> dict[Dataset, Callable[[], pl.DataFrame]]:
     """Build date-level fetch handlers from the dataset registry."""
@@ -38,6 +39,7 @@ def build_daily_fetch_handlers(
             trade_date=trade_date,
             fetch_commodity_daily=fetch_commodity_daily,
             get_cached_index_codes=get_cached_index_codes,
+            source_name=source_name,
         )
     )
 

@@ -10,9 +10,16 @@ from types import MappingProxyType
 from typing import NoReturn, cast
 
 import orjson
+from ditto_backtest.context_inputs import (
+    ReplayContextInputRef,
+    normalize_context_input_refs,
+)
 from ditto_strategy.models import StrategySpecRecord
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.replay_context_inputs import (
+    replay_context_inputs_payload,
+)
 from ditto_application.processes.experiments._planning_values import (
     BaselineInputValue,
 )
@@ -168,6 +175,23 @@ def _validated_matrix_payload(matrix: CandidateMatrixSpec) -> Mapping[str, objec
     return payload
 
 
+def _validated_context_input_refs(value: object) -> tuple[ReplayContextInputRef, ...]:
+    """Require one canonical immutable replay-context tuple."""
+    if type(value) is not tuple:
+        _invalid("invalid_planning_request_graph")
+    items = cast("tuple[object, ...]", value)
+    if any(type(item) is not ReplayContextInputRef for item in items):
+        _invalid("invalid_planning_request_graph")
+    refs = cast("tuple[ReplayContextInputRef, ...]", items)
+    try:
+        normalized = normalize_context_input_refs(refs)
+    except ValueError:
+        _invalid("invalid_planning_request_context_inputs")
+    if normalized != refs:
+        _invalid("noncanonical_planning_request_context_inputs")
+    return refs
+
+
 def _validated_request_graph(
     request: object,
 ) -> tuple[
@@ -188,6 +212,7 @@ def _validated_request_graph(
     requirements = exact_request.dataset_requirements
     cost = exact_request.cost_model
     budget = exact_request.budget
+    _validated_context_input_refs(exact_request.context_input_refs)
     if (
         type(strategy) is not StrategySpecRecord
         or type(snapshot) is not ExperimentSnapshotIdentity
@@ -328,6 +353,7 @@ def _request_payload(request: ExperimentPlanningRequest) -> Mapping[str, object]
                 key=lambda requirement: requirement.dataset_id,
             )
         ],
+        "context_input_refs": replay_context_inputs_payload(request.context_input_refs),
         "cost_model": {
             "bytes_per_run": request.cost_model.bytes_per_run,
             "bytes_per_trading_session": (request.cost_model.bytes_per_trading_session),

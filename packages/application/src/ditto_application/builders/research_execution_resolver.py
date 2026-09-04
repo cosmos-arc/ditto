@@ -28,6 +28,9 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.factor_bridge import (
     compiled_expressions_execution_hash,
 )
+from ditto_application.processes.execution.replay_context_inputs import (
+    decode_replay_context_inputs,
+)
 from ditto_application.processes.experiments._execution_resolution_evidence import (
     DurableLaunchEvidence,
     ExactStrategyVersionReader,
@@ -216,6 +219,9 @@ class DurableResearchExecutionResolver:
             baseline_plan=baseline_plan,
             policy=policy,
             environment=self._environment,
+            context_input_refs=decode_replay_context_inputs(
+                launch.plan_preimage.get("context_input_refs", [])
+            ),
         )
 
     def _strategy_binding(

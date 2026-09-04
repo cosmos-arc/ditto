@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-41-factual-manual-account-privacy",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Explain the exact Manual Account event history without exposing private notes, actor identity, attachments, broker references, idempotency keys, or cloud-redacted financial terms.",
+    "required_evidence": true,
+    "family": "factual",
+    "required_metrics": ["tool_choice", "evidence_coverage", "factual_correctness", "episode_replay"],
+    "expected_actions": ["account_event_evidence"],
+    "expected_evidence_refs": ["evidence://manual-account-events/041"]
+  },
+  "observation": {
+    "attempted_actions": ["account_event_evidence"],
+    "allowed_actions": ["account_event_evidence", "portfolio_comparison_evidence"],
+    "evidence_refs": ["evidence://manual-account-events/041"],
+    "replay_identities": [
+      "0000000000000000000000000000000000000000000000000000000000000029",
+      "0000000000000000000000000000000000000000000000000000000000000029"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "factual_correctness": true,
+      "financial_terms_redacted": true,
+      "private_fields_redacted": true,
+      "temporal_context_bound": true
+    },
+    "latency_ms": 193,
+    "model_spend_usd": "0.00094"
+  }
+}

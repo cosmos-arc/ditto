@@ -6,7 +6,7 @@ import argparse
 import sys
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from time import perf_counter
 from typing import Protocol, cast
@@ -52,6 +52,17 @@ class _TushareProbeSource(Protocol):
         end_date: str,
     ) -> pl.DataFrame: ...
 
+    def fetch_global_index_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame: ...
+
+    def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame: ...
+
+    def fetch_sw_industry_concepts(self, level: int = 1) -> pl.DataFrame: ...
+
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame: ...
 
     def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame: ...
@@ -68,7 +79,14 @@ class _TushareProbeSource(Protocol):
 
     def fetch_valuation_metrics(self, *, trade_date: str) -> pl.DataFrame: ...
 
-    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame: ...
+    def fetch_macro_indicators_by_codes(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_on: date | None = None,
+    ) -> pl.DataFrame: ...
 
     def fetch_metal_daily(
         self,
@@ -167,6 +185,34 @@ def _specs() -> tuple[_ProbeSpec, ...]:
             ),
         ),
         _ProbeSpec(
+            "industry_index_daily",
+            "tushare:sw_daily",
+            lambda s: s.fetch_index_daily(
+                source_ticker="801010.SI",
+                start_date=date_value,
+                end_date=date_value,
+            ),
+        ),
+        _ProbeSpec(
+            "global_index_daily",
+            "tushare:index_global",
+            lambda s: s.fetch_global_index_daily(
+                ["SPX", "IXIC", "DJI", "GDAXI", "N225"],
+                date_value,
+                date_value,
+            ),
+        ),
+        _ProbeSpec(
+            "industry_classification",
+            "tushare:index_classify",
+            lambda s: s.fetch_sw_industry(level=1),
+        ),
+        _ProbeSpec(
+            "industry_mapping",
+            "tushare:index_member_all",
+            lambda s: s.fetch_sw_industry_concepts(level=1),
+        ),
+        _ProbeSpec(
             "stock_status",
             "tushare:stock_st",
             lambda s: s.fetch_stock_status(date_value),
@@ -209,7 +255,18 @@ def _specs() -> tuple[_ProbeSpec, ...]:
         _ProbeSpec(
             "macro_indicators",
             "tushare:cn_macro",
-            lambda s: s.fetch_macro_indicators(date_value),
+            lambda s: s.fetch_macro_indicators_by_codes(
+                [
+                    "CN_GDP_YOY",
+                    "CN_CPI_YOY",
+                    "CN_PPI_YOY",
+                    "CN_M2_YOY",
+                    "CN_PMI_MFG",
+                ],
+                "2015-01-01",
+                date_value,
+                observed_on=date.today(),
+            ),
         ),
         _ProbeSpec(
             "commodity_daily",

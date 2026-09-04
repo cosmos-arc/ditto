@@ -1,15 +1,37 @@
 """ServiceBackedDataProvider 单元测试."""
 
+from datetime import UTC, date, datetime
 from unittest.mock import MagicMock
 
 import polars as pl
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
+from ditto_data.catalog import DataAssetRef, DataCatalogEntry, DataSchemaFingerprint
 from ditto_data.provider import BarQuery, InstrumentQuery
 
 
 def _make_mock_service(name: str) -> MagicMock:
     """创建 mock service."""
     return MagicMock(name=name)
+
+
+def _catalog_entry(
+    *,
+    partition_keys: tuple[str, ...],
+    snapshot_id: str,
+    freshness_at: datetime,
+) -> DataCatalogEntry:
+    return DataCatalogEntry(
+        asset=DataAssetRef(
+            dataset_id="etf_daily",
+            namespace="market",
+            partition_keys=partition_keys,
+        ),
+        storage_uri="etf_daily/2024",
+        schema=DataSchemaFingerprint(schema_hash="schema:sha256:test"),
+        source="tushare",
+        freshness_at=freshness_at,
+        source_snapshot_id=snapshot_id,
+    )
 
 
 class TestServiceBackedDataProvider:
@@ -119,6 +141,106 @@ class TestServiceBackedDataProvider:
         call_args = mocks["market"].find_bars.call_args
         bars_query = call_args[0][0]
         assert bars_query.instrument_ids == [1]
+
+    def test_get_bars_attaches_latest_exact_catalog_source_snapshot(self) -> None:
+        """Provider rows inherit the newest exact ticker/range catalog lineage."""
+        market = _make_mock_service("market")
+        metadata = _make_mock_service("metadata")
+        derived = _make_mock_service("derived")
+        catalog = _make_mock_service("catalog")
+        metadata.instrument.resolve_instrument_ids_batch.return_value = {
+            "518880.SH": 2_001_724,
+        }
+        market.find_bars.return_value = pl.DataFrame(
+            {
+                "instrument_id": [2_001_724, 2_001_724],
+                "trade_date": [date(2024, 1, 2), date(2024, 3, 29)],
+                "source": ["tushare", "tushare"],
+                "source_ticker": ["518880.SH", "518880.SH"],
+                "close": [92.0, 98.0],
+            }
+        )
+        catalog.list_assets.return_value = (
+            _catalog_entry(
+                partition_keys=(
+                    "source_ticker=518880.SH",
+                    "start_date=2022-10-01",
+                    "end_date=2024-03-29",
+                ),
+                snapshot_id="snapshot-old",
+                freshness_at=datetime(2026, 9, 1, 10, tzinfo=UTC),
+            ),
+            _catalog_entry(
+                partition_keys=(
+                    "source_ticker=518880.SH",
+                    "start_date=2023-01-01",
+                    "end_date=2024-03-29",
+                ),
+                snapshot_id="snapshot-current",
+                freshness_at=datetime(2026, 9, 1, 11, tzinfo=UTC),
+            ),
+            _catalog_entry(
+                partition_keys=("trade_date=2024-03-29",),
+                snapshot_id="snapshot-daily-fallback",
+                freshness_at=datetime(2026, 9, 1, 12, tzinfo=UTC),
+            ),
+        )
+        provider = ServiceBackedDataProvider(
+            market_service=market,
+            metadata_service=metadata,
+            derived_service=derived,
+            catalog_reader=catalog,
+        )
+
+        result = provider.get_bars(
+            BarQuery(
+                instruments=["518880.SH"],
+                start="2024-01-01",
+                end="2024-03-29",
+            )
+        )
+
+        assert result["source_snapshot_id"].to_list() == [
+            "snapshot-current",
+            "snapshot-current",
+        ]
+        catalog.list_assets.assert_called_once_with("market")
+
+    def test_get_bars_leaves_unresolved_source_snapshot_null(self) -> None:
+        """The adapter preserves rows so the consuming PIT boundary can fail closed."""
+        market = _make_mock_service("market")
+        metadata = _make_mock_service("metadata")
+        derived = _make_mock_service("derived")
+        catalog = _make_mock_service("catalog")
+        metadata.instrument.resolve_instrument_ids_batch.return_value = {
+            "518880.SH": 2_001_724,
+        }
+        market.find_bars.return_value = pl.DataFrame(
+            {
+                "instrument_id": [2_001_724],
+                "trade_date": [date(2024, 1, 2)],
+                "source": ["tushare"],
+                "source_ticker": ["518880.SH"],
+                "close": [92.0],
+            }
+        )
+        catalog.list_assets.return_value = ()
+        provider = ServiceBackedDataProvider(
+            market_service=market,
+            metadata_service=metadata,
+            derived_service=derived,
+            catalog_reader=catalog,
+        )
+
+        result = provider.get_bars(
+            BarQuery(
+                instruments=["518880.SH"],
+                start="2024-01-01",
+                end="2024-03-29",
+            )
+        )
+
+        assert result["source_snapshot_id"].to_list() == [None]
 
     # --- get_instruments ---
 

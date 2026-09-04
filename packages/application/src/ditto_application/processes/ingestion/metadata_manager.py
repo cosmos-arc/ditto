@@ -20,8 +20,10 @@ from ditto_platform.foundation import ChecksumCompute, logger
 
 from ditto_application.catalog_freshness import (
     PersistedIngestionEvidenceVerifier,
+    catalog_asof_snapshot,
     catalog_entry_for_date,
 )
+from ditto_application.processes.ingestion.sparse_pit import is_sparse_pit_dataset
 
 
 @dataclass(frozen=True)
@@ -198,13 +200,33 @@ class MetadataManager:
             and self._ingestion_log_store is not None
             else None
         )
-        if verifier is None or not verifier.verify_exact_date(
+        verified = verifier is not None and verifier.verify_exact_date(
             dataset=dataset,
             source=source,
             trade_date=trade_date,
             checksum=checksum,
             row_count=row_count,
+        )
+        if (
+            not verified
+            and verifier is not None
+            and self._data_catalog_reader is not None
+            and is_sparse_pit_dataset(dataset)
         ):
+            snapshot = catalog_asof_snapshot(
+                reader=self._data_catalog_reader,
+                dataset=dataset,
+                source=source,
+                signal_date=trade_date,
+            )
+            verified = snapshot is not None and verifier.verify_asof_snapshot(
+                dataset=dataset,
+                source=source,
+                signal_date=trade_date,
+                expected_snapshot_ids=snapshot.source_snapshot_ids,
+                expected_row_count=snapshot.row_count,
+            )
+        if not verified:
             logger.warning(
                 "Previous success lacks matching attested catalog evidence; retrying",
                 event="should_skip_false",

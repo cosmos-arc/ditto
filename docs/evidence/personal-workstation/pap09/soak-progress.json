@@ -1,0 +1,24 @@
+{
+  "approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+  "day_evidence_hashes": [
+    "52bf2838ebf8fc7a66a72302c19593561f9d67859f5dc841001aff97b1e1358d",
+    "c1135e372a3826a55380ae76d94ec4e47cba4a558b5bca2cf1d11735cafca281"
+  ],
+  "pap09_twenty_day_complete": false,
+  "q4_five_day_ready": false,
+  "real_trading_day_count": 2,
+  "remaining_real_trading_days": 18,
+  "safety": {
+    "broker_connections": 0,
+    "paper_only": true,
+    "real_orders": 0
+  },
+  "schema": "ditto.pap09-real-soak-progress.v1",
+  "signature_chain_head": "e8a362e9a1c4382e72759df0542a9d23399dd15d76a2f6cf0a41a0804092d08a",
+  "signature_chain_valid": true,
+  "status": "passed",
+  "trade_dates": [
+    "2026-09-02",
+    "2026-09-03"
+  ]
+}

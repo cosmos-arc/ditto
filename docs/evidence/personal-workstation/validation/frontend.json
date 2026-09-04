@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-02T23:47:00Z",
+  "repository": {
+    "path": "/Users/chevy/Desktop/code/ditto-app",
+    "branch": "codex/roadmap-completion",
+    "head": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+    "worktree_policy": "existing roadmap worktree preserved; dirty state accepted by user; no branch created"
+  },
+  "configuration": {
+    "package_json_sha256": "926162e033245c2687772ae8010a3ddb013c3a367a78489213ef8bc70b67ad5b",
+    "bun_lock_sha256": "191f9918155cb89562cfb3816431da902500588f0b45207c10607e4bae92fb2f",
+    "generated_api_sha256": "9ab8dd16f202cfadbdb7a6f7b2ac1c23392194492d72f8b1316e8a45e87deec1"
+  },
+  "full_ci": {
+    "command": "bun run ci",
+    "status": "passed",
+    "completed_at": "2026-09-02T23:34:00Z",
+    "format_files_checked": 755,
+    "typecheck": "passed",
+    "unit": {
+      "files": 192,
+      "tests": 1507
+    },
+    "coverage": {
+      "files": 190,
+      "tests": 1483,
+      "statements_percent": 82.68,
+      "branches_percent": 75.49,
+      "functions_percent": 82.03,
+      "lines_percent": 85.12
+    },
+    "prototype": {
+      "files": 51,
+      "tests": 710
+    },
+    "architecture": "passed",
+    "product_board": "passed",
+    "route_audit": "passed",
+    "prototype_freeze": "passed",
+    "harness": "passed",
+    "production_build": "passed",
+    "warnings": [
+      "Vite emitted a non-failing chunk-size warning for a bundle larger than 500 kB"
+    ]
+  },
+  "openapi_zero_diff": {
+    "command": "OPENAPI_FILE=/Users/chevy/Desktop/code/ditto/docs/openapi/v1.json OUTPUT_PATH=/tmp/ditto-workstation-api-current-final.d.ts bun run gen:api; cmp generated output with src/types/generated/api.d.ts",
+    "status": "passed"
+  },
+  "ui_07": {
+    "status": "passed",
+    "artifact": "/Users/chevy/Desktop/code/ditto-app/docs/evidence/personal-workstation/ui-07/audit.json",
+    "artifact_sha256": "dc1e3b94bb0a8511321a0b5981c373b9916ecc1852edd04705d8cd112b9b731f",
+    "matrix": "5 routes x 3 viewports (1200, 1366, 1536)",
+    "checks": [
+      "no horizontal overflow",
+      "no console errors",
+      "keyboard focus verified"
+    ],
+    "boundary": "frontend visual audit without a live backend; it does not satisfy UI-08"
+  },
+  "diff_check": {
+    "command": "git diff --check",
+    "status": "passed"
+  }
+}

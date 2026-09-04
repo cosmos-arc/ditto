@@ -1,0 +1,70 @@
+{
+  "schema": "ditto.q5-live-agent-author-submit-review-proposal.v1",
+  "generated_at": "2026-09-02T05:51:46Z",
+  "status": "pending_operator_approval",
+  "strategy": {
+    "strategy_id": "agent_etf_518880_rotation",
+    "version": 1,
+    "state": "draft",
+    "review_outcome": "pending",
+    "spec_hash": "49e7e79197e5a645b79b44cf09b22205ffa73e430558aa70386572a87994c33c"
+  },
+  "research": {
+    "experiment_id": "r3-live-etf-agent-author-etf-context-933d21313ceb59d117d3ac06",
+    "status": "completed",
+    "eligible_month_count": 136,
+    "review_bundle_hash": "30c9ad10847ae91195321628b26bac133093c12afe97c06695e10ba31cbcc62c",
+    "holdout_claim_id": "holdout:e1160452122b41e44f8ca2e4e9f1f4376408e6ab3956cca4d429307238dcb0c0",
+    "holdout_duplicate_blocked": true,
+    "hard_gate_pass_count": 10,
+    "hard_gate_failure_count": 0,
+    "r2_live_gate": {
+      "outcome": "not_evaluated",
+      "reason_code": "r2_live_evidence_unavailable",
+      "scope": "global_22_product_bundle",
+      "is_strategy_review_hard_gate": false
+    }
+  },
+  "lineage": {
+    "selection_run_id": "selection-run:sha256:74e2359173aebd138981f1ed151be8a89a48ac7fb8173160cd3db1b74aff9c9f",
+    "research_case_id": "research-case:sha256:fd781bdc012dbc8353f239ddba1b9a240d12d53fc85fa40c4fbda39ee34f717e",
+    "market_context_feature_set_id": "market-regime:sha256:a99b2576dc18a56a6cee0647b3516dab44c060a147c94fcadb80ec3734f22a77",
+    "technical_snapshot_id": "technical-analysis:sha256:7fd63a1af43abd5647da648c866f1abdb8c471d26c653356fd998ede1a83c028",
+    "planning_document_hash": "7a5446e2dd558aa60c451a96f041bd645cfa1ef2ca6c806919aaf4597e2935c5",
+    "snapshot_manifest_hash": "7a703d92fc9104ff34e5ff5af6b3664934aeae4c4b76ca3bec19d4b3ce4226bf"
+  },
+  "temporal_boundary": {
+    "as_of": "2026-09-01T16:21:00Z",
+    "knowledge_cutoff": "2026-09-01T16:21:00Z",
+    "publication_cutoff": "2026-09-01T16:21:00Z"
+  },
+  "source_snapshot_ids": [
+    "snapshot:tushare:etf_daily:sha256:f4cd80562c8fc5fb7c22b32d68c5cc976cd89a1f07a5095cbaeb2672b6ff195d",
+    "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344",
+    "snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+    "snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812",
+    "snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b",
+    "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13"
+  ],
+  "exact_submit_review_request": {
+    "tool_name": "author_submit_strategy_review",
+    "arguments": {
+      "strategy_id": "agent_etf_518880_rotation",
+      "version": 1,
+      "bundle_hash": "30c9ad10847ae91195321628b26bac133093c12afe97c06695e10ba31cbcc62c",
+      "reason": "Submit completed Q5 Agent Author experiment r3-live-etf-agent-author-etf-context-933d21313ceb59d117d3ac06 to review; no publish or trade authority."
+    },
+    "arguments_hash": "9395302a0fcc0d9c920e58147a7b80886dbf4d86aa1b84409bd9a46518926adb",
+    "evidence_binding_hash": "0007163b364dd652224da598c465d0097934ba20ac09dae782b27ed922bc78d4",
+    "approval_hash": "b65624054ee059f0d49bbe8c747d2b7e711a9860aa8a3a52ddf75e7737e35a04",
+    "requires_exact_approval": true,
+    "status": "pending_operator_approval"
+  },
+  "safety": {
+    "provider_calls": 0,
+    "publishes_strategy": false,
+    "activates_strategy": false,
+    "creates_trade": false,
+    "target_state": "review"
+  }
+}

@@ -95,6 +95,40 @@ class TestConfigProviderData:
         assert settings.tushare_token == ""
         assert settings.fred_api_key == ""
 
+    def test_runtime_secret_preload_populates_parent_memory(self, monkeypatch) -> None:
+        """The server parent resolves both provider secrets before worker fork."""
+        monkeypatch.setattr(config_module, "_PRELOADED_KEYRING_SECRETS", {})
+        monkeypatch.setattr(
+            config_module,
+            "_read_keyring_secret",
+            lambda service, key: f"{service}-{key}-secret",
+        )
+
+        config_module.preload_runtime_secrets()
+
+        assert config_module._PRELOADED_KEYRING_SECRETS == {
+            ("tushare", "token"): "tushare-token-secret",
+            ("fred", "api_key"): "fred-api_key-secret",
+        }
+
+    def test_preloaded_secret_avoids_worker_keychain_io(self, monkeypatch) -> None:
+        """Forked workers inherit parent memory and do not reopen Keychain."""
+        monkeypatch.setattr(
+            config_module,
+            "_PRELOADED_KEYRING_SECRETS",
+            {("tushare", "token"): "parent-resolved-secret"},
+        )
+
+        def fail_read(_service: str, _key: str) -> str | None:
+            raise AssertionError("worker attempted Keychain I/O")
+
+        monkeypatch.setattr(config_module, "_read_keyring_secret", fail_read)
+
+        assert (
+            config_module._load_keyring_secret("tushare", "token")
+            == "parent-resolved-secret"
+        )
+
     def test_file_storage_settings_provider(self, monkeypatch):
         """测试 file_storage_settings provider."""
         # 设置环境

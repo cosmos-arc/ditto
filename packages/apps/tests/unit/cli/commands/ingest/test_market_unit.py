@@ -170,6 +170,50 @@ class TestMarketCommandIntegration:
         result = runner.invoke(app, ["ingest", "market", "index", "2024-01-02"])
         assert result.exit_code == 0
 
+    def test_ingest_market_index_range_preserves_typer_context(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """Instrument-range mode must use the context injected by Typer."""
+        mock_executor = MagicMock()
+        mock_executor.ingest_by_instrument.return_value = {
+            "dataset": "index_daily",
+            "identifier": "3000149",
+            "start_date": "2024-02-01",
+            "end_date": "2024-03-29",
+            "status": "success",
+            "row_count": 41,
+            "message": "成功",
+            "error": None,
+        }
+        mock_create_exec = mocker.patch("ditto_apps.cli.utils.params.create_executor")
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
+
+        result = runner.invoke(
+            app,
+            [
+                "ingest",
+                "market",
+                "index",
+                "--instrument-id",
+                "3000149",
+                "--start",
+                "2024-02-01",
+                "--end",
+                "2024-03-29",
+            ],
+        )
+
+        assert result.exit_code == 0, result.exception
+        mock_executor.ingest_by_instrument.assert_called_once_with(
+            dataset="index_daily",
+            ticker=None,
+            standard_ticker=None,
+            instrument_id=3000149,
+            start_date="2024-02-01",
+            end_date="2024-03-29",
+            force=False,
+        )
+
     def test_ingest_market_etf_success(
         self, runner: CliRunner, mocker: MockerFixture
     ) -> None:

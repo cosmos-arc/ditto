@@ -1,0 +1,128 @@
+{
+  "schema": "ditto.personal-workstation.ui08-final.v1",
+  "generated_at": "2026-09-02T23:24:53Z",
+  "status": "passed",
+  "passed": true,
+  "scope": "Mock-disabled, live-backend browser acceptance using already-published real provider snapshots after market close; no publish, activation, broker connection, or real order was created.",
+  "steps": [
+    {
+      "step": 1,
+      "name": "market and macro context",
+      "state": "passed",
+      "assertions": [
+        "Markets rendered the real cross-market overview from five source snapshots and exposed degraded/missing inputs instead of synthesizing values.",
+        "The page displayed exact as-of, knowledge, publication, and snapshot identities."
+      ]
+    },
+    {
+      "step": 2,
+      "name": "industry rotation and candidate selection",
+      "state": "passed",
+      "assertions": [
+        "Industry rotation rendered the exact content-addressed snapshot with 31 ranked industries.",
+        "Selection rendered included and excluded counts, rank, factor contributions, exclusion reasons, and lineage without latest fallback."
+      ]
+    },
+    {
+      "step": 3,
+      "name": "instrument research, technical evidence, and fundamental boundary",
+      "state": "passed",
+      "assertions": [
+        "The 518880 instrument page bound rank 1 and score 0.8866 to selection-run:sha256:8beae94442ac536626d67165f23cee2990ce1e18bc241c9e4bdc1ead8a44bc1f.",
+        "Daily and weekly technical readings, deterministic levels, missing benchmark inputs, and exact source snapshot identity were visible.",
+        "Fundamental data stayed explicitly unavailable because exact as-of experimental inputs were not enabled; no demonstration valuation was substituted."
+      ]
+    },
+    {
+      "step": 4,
+      "name": "cited GLM SelectionMemo",
+      "state": "passed",
+      "assertions": [
+        "The completed GLM run run-2cc8eb0f66bc50bfab866131dcfab242 rendered its objective, PIT authority, one selection_run_evidence call, citations, artifact identities, guardrail, and completion text.",
+        "The memo preserved the exact rank, score, factor contributions, 15 candidates, 113 exclusions, and no-save/no-publish/no-trade boundary."
+      ]
+    },
+    {
+      "step": 5,
+      "name": "research and model proposal",
+      "state": "passed",
+      "assertions": [
+        "The saved agent_etf_518880_rotation version 1 rendered its exact parameters, factors, constraints, immutable identity, and unavailable-until-bound backtest state.",
+        "Independent evidence receipts bind the exactly approved save and submit-review operations while the strategy remains unpublished, inactive, and non-trading."
+      ]
+    },
+    {
+      "step": 6,
+      "name": "risk and scenario preview",
+      "state": "passed",
+      "assertions": [
+        "Risk rendered blocked with missing ES/VaR, factor-risk, stress, and PIT provenance rather than permitting execution.",
+        "A read-only MODEL scenario with max position weight 0.50, cash reserve 0.10, and market shock -0.05 completed and explicitly wrote no account or target."
+      ]
+    },
+    {
+      "step": 7,
+      "name": "Paper order, fill, and reconciliation",
+      "state": "passed",
+      "assertions": [
+        "The exact approved Paper account and paused session rendered one 100-unit BUY fill at 8.903 against the 8.902 provider close.",
+        "Fill assumptions, slippage, costs, market snapshot, lineage, ledger event, and balanced EOD checksum were traceable; new matching was disabled."
+      ]
+    },
+    {
+      "step": 8,
+      "name": "Manual actual event and correction",
+      "state": "passed",
+      "assertions": [
+        "The exact approved Manual account rebuilt cash and 100 units of instrument 2001724 from four immutable events.",
+        "Opening cash, opening position, deposit, and appended correction remained individually visible; prior events were not overwritten."
+      ]
+    },
+    {
+      "step": 9,
+      "name": "Model, Paper, and Manual comparison",
+      "state": "passed",
+      "assertions": [
+        "MODEL, PAPER, and MANUAL rendered side by side for 2026-09-02 with the same Tushare source snapshot and valuation snapshot.",
+        "Model-to-Paper and Model-to-Manual drift and attribution were visible, and the diagnostic handoff preserved the exact comparison identity."
+      ]
+    },
+    {
+      "step": 10,
+      "name": "EOD Agent Review traceability",
+      "state": "passed",
+      "assertions": [
+        "The completed GLM PortfolioDiagnostic run run-06914af293595b4286f68e36af8e8d12 rendered its exact decision, knowledge, and publication cutoffs plus the Tushare snapshot.",
+        "Evidence Spine showed exactly one portfolio_comparison_evidence call, its evidence reference, passed guardrail, immutable artifacts, numeric claim paths, and completed projection."
+      ]
+    }
+  ],
+  "browser": {
+    "mock_enabled": false,
+    "live_backend": true,
+    "console_error_count": 0,
+    "clean_session_assertions": {
+      "three_ledgers_visible": true,
+      "exact_snapshot_visible": true,
+      "diagnostic_handoff_visible": true,
+      "diagnostic_completed": true,
+      "diagnostic_pit_bound": true,
+      "diagnostic_evidence_visible": true,
+      "diagnostic_tool_call_visible": true
+    }
+  },
+  "evidence_bindings": {
+    "q5_acceptance_hash": "3efe6a0142ed6209581708d31faa5951718e4bf8e70d73f905cc277168bf10ad",
+    "portfolio_diagnostic_hash": "a02d4a903d553cdded78e9a2bb5b61d0033fd6f6ef6f918baf858da4fec4ee16",
+    "readonly_preflight": "docs/evidence/personal-workstation/q5/ui08-readonly-preflight-20260902.json",
+    "selection_memo": "docs/evidence/personal-workstation/q5/ui08-selection-memo-20260902.json",
+    "account_acceptance": "docs/evidence/personal-workstation/q5/ui08-account-acceptance-20260902.json",
+    "live_portfolio_acceptance": "docs/evidence/personal-workstation/q5/live-portfolio-acceptance-20260902.json",
+    "live_portfolio_diagnostic": "docs/evidence/personal-workstation/q5/live-portfolio-diagnostic-20260902.json"
+  },
+  "safety": {
+    "broker_connections": 0,
+    "real_orders": 0
+  },
+  "report_hash": "e25e6423328e01d9a5cadeafc88c36619678e77bc68268f1588fcb419c9294d9"
+}

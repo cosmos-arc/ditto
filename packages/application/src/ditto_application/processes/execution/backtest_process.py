@@ -11,6 +11,10 @@ from typing import Literal
 import orjson
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.config import EngineConfig, EngineMode
+from ditto_backtest.context_inputs import (
+    ReplayContextInputRef,
+    normalize_context_input_refs,
+)
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.engine import (
     EngineLoop,
@@ -73,6 +77,10 @@ from ditto_application.processes.execution.backtest_metrics import (
 )
 from ditto_application.processes.execution.backtest_process_types import (
     BacktestLineageConfig,
+)
+from ditto_application.processes.execution.backtest_runtime_metadata import (
+    model_name,
+    resume_provenance,
 )
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
@@ -152,6 +160,7 @@ class BacktestCatalogRequestConfig:
     candidate_parameters: tuple[CandidateParameter, ...] = ()
     research_snapshot_id: str | None = None
     research_snapshot_manifest_hash: str | None = None
+    context_input_refs: tuple[ReplayContextInputRef, ...] = ()
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
     random_seed: int = 42
@@ -213,6 +222,18 @@ class BacktestCatalogRequestConfig:
             self.research_snapshot_id,
             self.research_snapshot_manifest_hash,
         )
+        try:
+            object.__setattr__(
+                self,
+                "context_input_refs",
+                normalize_context_input_refs(self.context_input_refs),
+            )
+        except ValueError as exc:
+            raise AppProcessError(
+                str(exc),
+                field_name="context_input_refs",
+                reason="invalid_replay_context_inputs",
+            ) from exc
 
 
 @dataclass(frozen=True)
@@ -385,6 +406,18 @@ class BacktestService:
                         "research_snapshot_manifest_hash": (
                             self._config.research_snapshot_manifest_hash
                         ),
+                        "context_input_refs": [
+                            {
+                                "context_kind": item.context_kind.value,
+                                "context_id": item.context_id,
+                                "content_hash": item.content_hash,
+                                "as_of": item.as_of,
+                                "knowledge_cutoff": item.knowledge_cutoff,
+                                "publication_cutoff": item.publication_cutoff,
+                                "source_snapshot_ids": item.source_snapshot_ids,
+                            }
+                            for item in self._config.context_input_refs
+                        ],
                         "rebalance_freq": self._config.rebalance_freq,
                         "random_seed": self._config.random_seed,
                         "execution_delay": self._config.execution_delay,
@@ -519,6 +552,7 @@ class BacktestService:
             research_snapshot_manifest_hash=(
                 self._config.research_snapshot_manifest_hash
             ),
+            context_input_refs=self._config.context_input_refs,
             benchmark_id=self._config.benchmark_id,
             mode=EngineMode.BACKTEST,
             strategy_id=self._config.strategy_id,
@@ -724,7 +758,7 @@ class BacktestService:
                 run_id=run_id,
                 report=report,
                 manifest=manifest,
-                resume_provenance=_resume_provenance_from_config(self._config),
+                resume_provenance=resume_provenance(self._config),
             ),
             ArtifactPersistConfig(
                 strategy_id=self._config.strategy_id,
@@ -748,34 +782,7 @@ class BacktestService:
                 data_catalog_identities=self._config.data_catalog_identities,
                 factor_report_refs=self._config.factor_report_refs,
                 recommendation_status=self._config.recommendation_status,
-                fee_model_name=_model_name(self._options.fee_model),
-                slippage_model_name=_model_name(self._options.slippage_model),
+                fee_model_name=model_name(self._options.fee_model),
+                slippage_model_name=model_name(self._options.slippage_model),
             ),
         )
-
-
-def _resume_provenance_from_config(
-    config: BacktestServiceConfig,
-) -> dict[str, object] | None:
-    """Build normalized checkpoint provenance for restored child-run artifacts."""
-    if not config.resume_from_run_id:
-        return None
-    return {
-        "from_run_id": config.resume_from_run_id,
-        "checkpoint_trade_date": config.resume_checkpoint_trade_date,
-        "checkpoint_completed_days": config.resume_checkpoint_completed_days,
-        "checkpoint_total_days": config.resume_checkpoint_total_days,
-        "checkpoint_nav": config.resume_checkpoint_nav,
-        "checkpoint_order_count": config.resume_checkpoint_order_count,
-        "checkpoint_fill_count": config.resume_checkpoint_fill_count,
-        "account_state_hash": config.resume_account_state_hash,
-        "settlement_state_hash": config.resume_settlement_state_hash,
-        "runtime_state_hash": config.resume_runtime_state_hash,
-    }
-
-
-def _model_name(model: object | None) -> str:
-    """Return a stable model class name for artifact metadata."""
-    if model is None:
-        return ""
-    return type(model).__name__

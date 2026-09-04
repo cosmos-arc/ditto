@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-01T00:47:00+08:00",
+  "status": "passed",
+  "runbook": "docs/operations/personal-workstation-operations.md",
+  "scenarios": [
+    {
+      "name": "data_outage",
+      "fail_closed": true,
+      "recovery_requires": ["freshness", "DQ", "license", "PIT sentinel", "snapshot replay"]
+    },
+    {
+      "name": "paper_pause",
+      "fail_closed": true,
+      "recovery_requires": ["four-domain backup", "reconcile", "explicit resume"]
+    },
+    {
+      "name": "agent_unavailable",
+      "fail_closed": true,
+      "recovery_requires": ["license allowlist", "persisted SSE resume", "no re-execution"]
+    },
+    {
+      "name": "manual_correction",
+      "fail_closed": true,
+      "recovery_requires": ["append-only correction", "projection rebuild", "cloud redaction"]
+    }
+  ]
+}

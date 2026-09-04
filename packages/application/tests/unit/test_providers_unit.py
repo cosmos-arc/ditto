@@ -72,11 +72,18 @@ from ditto_application.processes.quality import (
     QualityCompletenessService,
     QualityPatrolService,
 )
+from ditto_application.processes.selection.facade import SelectionWorkspaceFacade
+from ditto_application.processes.selection.run_industry_and_security_selection import (
+    RunIndustryAndSecuritySelection,
+)
 from ditto_application.providers import (
+    AppAccountLedgerProvider,
     AppBuilderFactory,
     AppCommandProvider,
+    AppPaperProvider,
     AppProcessProvider,
     AppResearchExecutionProvider,
+    AppSelectionProvider,
     get_app_providers,
 )
 from ditto_application.providers_market import AppMarketQueryProvider
@@ -85,13 +92,16 @@ from ditto_application.providers_strategy import AppStrategyQueryProvider
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.experiments import ExperimentQueryFacade
+from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_application.queries.remediation import CatalogRemediationQueryFacade
 from ditto_application.queries.research_certification import (
     DataReadinessCertificationProbe,
 )
+from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_application.queries.source import SourceDataPort
+from ditto_application.research_case_contracts import ResearchCaseFactory
 from ditto_application.settings import ResearchExecutionSettings, TradingSettings
 from ditto_data.catalog import InMemoryDataCatalog
 from ditto_data.config.data_source import DataSourceSettings
@@ -275,6 +285,10 @@ class _ProtocolAdapterProvider(Provider):
         return MagicMock(spec=SQLiteCompileCacheBackend)
 
     @provide
+    def research_case_factory(self) -> ResearchCaseFactory:
+        return MagicMock(spec=ResearchCaseFactory)
+
+    @provide
     def source_data_port(self) -> SourceDataPort:
         return MagicMock(spec=SourceDataPort)
 
@@ -293,16 +307,24 @@ class _ProtocolAdapterProvider(Provider):
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
-    def test_get_app_providers_returns_eight_providers(self) -> None:
-        """get_app_providers() 应返回 8 个 Provider 实例."""
+    def test_get_app_providers_returns_eleven_providers(self) -> None:
+        """get_app_providers() 应返回 11 个职责内聚的 Provider 实例."""
         providers = get_app_providers()
-        assert len(providers) == 8
+        assert len(providers) == 11
+        assert any(
+            isinstance(provider, AppAccountLedgerProvider) for provider in providers
+        )
+        assert any(isinstance(provider, AppPaperProvider) for provider in providers)
+        assert any(isinstance(provider, AppSelectionProvider) for provider in providers)
         names = [type(p).__name__ for p in providers]
+        assert "AppAccountLedgerProvider" in names
+        assert "AppPaperProvider" in names
         assert "AppCommandProvider" in names
         assert "AppMarketQueryProvider" in names
         assert "AppStrategyQueryProvider" in names
         assert "AppPortfolioQueryProvider" in names
         assert "AppProcessProvider" in names
+        assert "AppSelectionProvider" in names
         assert "AppBuilderFactory" in names
         assert "AppResearchExecutionProvider" in names
         assert "AppResearchMemoryProvider" in names
@@ -362,6 +384,10 @@ class TestAppProviderStructure:
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
             "daily_decision_query_facade",
+            "portfolio_comparison_evidence_query",
+            "portfolio_comparison_query",
+            "portfolio_comparison_source",
+            "portfolio_scenario_preview_query",
             "trade_query_facade",
             "portfolio_actual_query_facade",
             "signal_query_facade",
@@ -882,7 +908,7 @@ class TestAppProviderIntegration:
         from ditto_analysis.di import AnalysisStorageProvider
         from ditto_execution.di import ExecutionStorageProvider
         from ditto_features.di import FeaturesStorageProvider
-        from ditto_strategy.di.storage import StrategyStorageProvider
+        from ditto_strategy.di import get_strategy_providers
 
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
@@ -903,7 +929,7 @@ class TestAppProviderIntegration:
             FeaturesStorageProvider(),
             AnalysisStorageProvider(),
             ExecutionStorageProvider(),
-            StrategyStorageProvider(),
+            *get_strategy_providers(),
             _notification_provider(),
             _ProtocolAdapterProvider(),
             *get_app_providers(),
@@ -970,6 +996,22 @@ class TestAppProviderIntegration:
         assert isinstance(
             app_container.get(SignalPackagePublisher),
             SignalPackagePublisher,
+        )
+        assert isinstance(
+            app_container.get(RunIndustryAndSecuritySelection),
+            RunIndustryAndSecuritySelection,
+        )
+        assert isinstance(
+            app_container.get(SelectionWorkspaceFacade),
+            SelectionWorkspaceFacade,
+        )
+        assert isinstance(
+            app_container.get(SelectionRunQueryService),
+            SelectionRunQueryService,
+        )
+        assert isinstance(
+            app_container.get(IndustryRotationQueryService),
+            IndustryRotationQueryService,
         )
 
     def test_builder_services_resolved(self, app_container) -> None:
@@ -1075,6 +1117,9 @@ class TestAppProviderIntegration:
         from ditto_application.processes.experiments.execution_bundle import (
             CodeEnvironmentLock,
         )
+        from ditto_application.processes.experiments.regime_diagnostics_reader import (
+            RegimeDiagnosticsReader,
+        )
         from ditto_application.processes.experiments.worker import (
             ExecutionBundleFirstAttemptFactory,
             ExistingBacktestResearchFoldRunner,
@@ -1093,6 +1138,10 @@ class TestAppProviderIntegration:
         assert isinstance(
             app_container.get(CodeEnvironmentLock),
             CodeEnvironmentLock,
+        )
+        assert isinstance(
+            app_container.get(RegimeDiagnosticsReader),
+            RegimeDiagnosticsReader,
         )
         assert isinstance(
             app_container.get(ResearchExecutionRuntimeBuilders),

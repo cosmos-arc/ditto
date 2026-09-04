@@ -2,6 +2,7 @@
 
 from ditto_apps.registry.live.r3_live_planning_builder import (
     LivePlanningArtifact,
+    LivePlanningOptions,
     LivePlanningServices,
     build_live_planning_artifact,
     ensure_research_candidate,
@@ -12,6 +13,7 @@ from ditto_apps.registry.live.r3_live_planning_builder import (
 
 __all__ = [
     "LivePlanningArtifact",
+    "LivePlanningOptions",
     "LivePlanningServices",
     "build_live_planning_artifact",
     "ensure_research_candidate",

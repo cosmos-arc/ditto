@@ -11,6 +11,7 @@
 类型定义在 manifest_types.py，构建函数在 manifest_build.py。
 """
 
+from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
 from ditto_backtest.manifest_build import (
     RuleRefCollector,
     RunManifestInputEvidence,
@@ -26,7 +27,9 @@ from ditto_backtest.manifest_types import (
 )
 
 __all__ = [
+    "ContextInputKind",
     "InputRef",
+    "ReplayContextInputRef",
     "RuleRef",
     "RuleRefCollector",
     "RunManifest",

@@ -11,8 +11,9 @@ Market 域 API 模型.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from enum import StrEnum
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Literal, Self
 
 import polars as pl
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
@@ -135,6 +136,124 @@ class Bar(BaseModel):
     )
 
 
+class RegimeIndicatorResponse(BaseModel):
+    """One normalized input used by the frozen regime model."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    name: str
+    normalized_score: float
+
+
+class RegimeObservationResponse(BaseModel):
+    """One EOD regime observation whose close is visible before cutoff."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    observed_at: date
+    score: float
+    label: Literal["bull", "bear", "neutral"]
+    position_ratio: float
+    indicators: list[RegimeIndicatorResponse]
+
+
+class RegimeTransitionResponse(BaseModel):
+    """One label transition between consecutive eligible observations."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    observed_at: date
+    from_label: Literal["bull", "bear", "neutral"]
+    to_label: Literal["bull", "bear", "neutral"]
+
+
+class RegimeDiagnosticsResponse(BaseModel):
+    """PIT-safe regime diagnostics and their complete immutable evidence identity."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    snapshot_id: str
+    snapshot_manifest_hash: str
+    dataset_id: str
+    source_snapshot_ids: list[str]
+    builder_version: str
+    known_at_policy: str
+    benchmark_instrument_id: int
+    start_date: date
+    end_date: date
+    knowledge_cutoff: date
+    model_id: str
+    lookback_observations: int
+    bear_threshold: float
+    bull_threshold: float
+    bars_input_id: str
+    bars_content_hash: str
+    bars_schema_hash: str
+    current: RegimeObservationResponse
+    observations: list[RegimeObservationResponse]
+    transitions: list[RegimeTransitionResponse]
+
+
+class MarketContextDriverResponse(BaseModel):
+    """One ordered contribution to the current market regime."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    name: str
+    category: str
+    contribution: float
+    direction: Literal["supportive", "pressuring", "neutral"]
+
+
+class MarketContextMetricResponse(BaseModel):
+    """One observed market fact with direct immutable evidence lineage."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    name: str
+    category: Literal["a_share", "style", "global", "rates", "fx", "commodity", "macro"]
+    value: float
+    unit: str
+    trend: Literal["rising", "falling", "flat", "mixed", "unknown"]
+    freshness: Literal["fresh", "stale", "missing"]
+    evidence_ref: str
+
+
+class MarketContextImpactResponse(BaseModel):
+    """One deterministic implication for a downstream decision domain."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    target_domain: Literal["industry", "selection", "portfolio", "risk"]
+    target: str
+    direction: Literal["supportive", "pressuring", "neutral"]
+    rationale_driver: str
+
+
+class MarketContextResponse(BaseModel):
+    """Exact PIT market context shared by Markets, Today, and Agent."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    as_of: datetime
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    source_snapshot_ids: list[str]
+    source_snapshot_set_id: str
+    status: Literal["ready", "degraded", "blocked"]
+    feature_set_id: str
+    feature_version: str
+    regime_label: Literal["risk_on", "balanced", "risk_off"] | None
+    regime_score: float | None
+    drivers: list[MarketContextDriverResponse]
+    metrics: list[MarketContextMetricResponse]
+    impacts: list[MarketContextImpactResponse]
+    missing_inputs: list[str]
+    data_conflicts: list[str]
+    uncertainties: list[str]
+    evidence_refs: list[str]
+
+
 def to_bar(row: dict[str, Any]) -> Bar:
     """
     将数据库行转换为 Bar 模型.
@@ -185,6 +304,14 @@ __all__ = [
     "Adjustment",
     "Bar",
     "BarsQuery",
+    "MarketContextDriverResponse",
+    "MarketContextImpactResponse",
+    "MarketContextMetricResponse",
+    "MarketContextResponse",
+    "RegimeDiagnosticsResponse",
+    "RegimeIndicatorResponse",
+    "RegimeObservationResponse",
+    "RegimeTransitionResponse",
     "to_bar",
     "to_bar_list",
 ]

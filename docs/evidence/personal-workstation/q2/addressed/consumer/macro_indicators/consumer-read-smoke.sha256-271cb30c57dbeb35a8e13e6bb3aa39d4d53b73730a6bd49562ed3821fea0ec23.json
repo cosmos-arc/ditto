@@ -1,0 +1,1 @@
+{"dataset_id":"macro_indicators","probe":{"kind":"sqlite","object":"macro_indicator_data","row_count":481},"schema":"ditto.q2-consumer-evidence.v1","snapshot_ids":["snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b"],"target_from":"2024-03-29","target_to":"2024-03-29"}

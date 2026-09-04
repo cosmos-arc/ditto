@@ -77,39 +77,99 @@ class IndicatorWriter:
         logger.info("Starting macro indicator data write", record_count=len(df))
 
         try:
-            records = df.to_dicts()
-            processed_records: list[list[Any] | tuple[Any, ...]] = []
-
-            for r in records:
-                effective_from = self._get_effective_from(r)
-                processed_records.append(
-                    (
-                        r["indicator_id"],
-                        r["date"],
-                        r["value"],
-                        r.get("knowledge_date"),
-                        effective_from,
-                        None,  # effective_to
-                    )
-                )
-
-            self._client.executemany(
-                """INSERT INTO macro_indicator_data
-                (indicator_id, date, value, knowledge_date,
-                 effective_from, effective_to)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT DO NOTHING""",
-                processed_records,
+            records = sorted(
+                df.to_dicts(),
+                key=lambda row: (
+                    row["indicator_id"],
+                    row["date"],
+                    self._get_effective_from(row),
+                ),
             )
+            written = 0
+
+            for row in records:
+                written += self._write_revision(row)
+
             self._client.commit()
 
             logger.info(
                 "Macro indicator data written successfully",
-                record_count=len(records),
+                record_count=written,
+                attempted_count=len(records),
             )
-            return len(records)
+            return written
 
         except Exception as e:
             self._client.rollback()
             logger.error("Macro indicator write failed", error=str(e))
             raise
+
+    def _write_revision(self, row: dict[str, Any]) -> int:
+        """Write one value change while maintaining left-closed PIT intervals."""
+        indicator_id = row["indicator_id"]
+        observation_date = row["date"]
+        value = row["value"]
+        knowledge_date = row.get("knowledge_date")
+        effective_from = self._get_effective_from(row)
+        identity = [indicator_id, observation_date]
+
+        exact = self._client.fetchone(
+            """SELECT value FROM macro_indicator_data
+            WHERE indicator_id = ? AND date = ? AND effective_from = ?""",
+            [*identity, effective_from],
+        )
+        if exact is not None:
+            if exact["value"] == value:
+                return 0
+            cursor = self._client.execute(
+                """UPDATE macro_indicator_data
+                SET value = ?, knowledge_date = ?
+                WHERE indicator_id = ? AND date = ? AND effective_from = ?""",
+                [value, knowledge_date, *identity, effective_from],
+            )
+            return cursor.rowcount
+
+        predecessor = self._client.fetchone(
+            """SELECT value, effective_from FROM macro_indicator_data
+            WHERE indicator_id = ? AND date = ? AND effective_from < ?
+            ORDER BY effective_from DESC LIMIT 1""",
+            [*identity, effective_from],
+        )
+        if predecessor is not None and predecessor["value"] == value:
+            # Tushare China macro endpoints expose retrieval snapshots rather
+            # than provider vintages. A later retrieval date with an unchanged
+            # value must not manufacture a revision.
+            return 0
+
+        successor = self._client.fetchone(
+            """SELECT effective_from FROM macro_indicator_data
+            WHERE indicator_id = ? AND date = ? AND effective_from > ?
+            ORDER BY effective_from ASC LIMIT 1""",
+            [*identity, effective_from],
+        )
+        effective_to = successor["effective_from"] if successor is not None else None
+        self._client.execute(
+            """INSERT INTO macro_indicator_data
+            (indicator_id, date, value, knowledge_date, effective_from, effective_to)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            [
+                indicator_id,
+                observation_date,
+                value,
+                knowledge_date,
+                effective_from,
+                effective_to,
+            ],
+        )
+        if predecessor is not None:
+            self._client.execute(
+                """UPDATE macro_indicator_data SET effective_to = ?
+                WHERE indicator_id = ? AND date = ? AND effective_from = ?""",
+                [
+                    effective_from,
+                    indicator_id,
+                    observation_date,
+                    predecessor["effective_from"],
+                ],
+            )
+        return 1

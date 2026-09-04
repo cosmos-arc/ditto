@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+import orjson
 import pytest
+from ditto_agent._canonical import canonical_bytes
 from ditto_agent.contracts.runtime import RunStatus
 from ditto_agent.presentation import (
     AgentContextPresentation,
@@ -116,5 +119,41 @@ def test_corrupt_presentation_payload_fails_closed(tmp_path: Path) -> None:
 
         with pytest.raises(AgentPresentationError):
             AgentPresentationReader(database).get("run-presentation-1")
+    finally:
+        database.close()
+
+
+def test_legacy_projection_without_execution_plan_remains_readable(
+    tmp_path: Path,
+) -> None:
+    database = AgentPresentationDatabase(tmp_path)
+    database.initialize()
+    writer = AgentPresentationWriter(database)
+    try:
+        writer.put(_projection())
+        row = database.connection.execute(
+            "SELECT payload_json FROM agent_run_presentation WHERE run_id=?",
+            ("run-presentation-1",),
+        ).fetchone()
+        raw = orjson.loads(row["payload_json"])
+        raw.pop("execution_plan")
+        legacy_payload = canonical_bytes(raw)
+        database.connection.execute(
+            """
+            UPDATE agent_run_presentation
+            SET payload_hash=?, payload_json=?
+            WHERE run_id=?
+            """,
+            (
+                hashlib.sha256(legacy_payload).hexdigest(),
+                legacy_payload,
+                "run-presentation-1",
+            ),
+        )
+        database.connection.commit()
+
+        assert (
+            AgentPresentationReader(database).get("run-presentation-1") == _projection()
+        )
     finally:
         database.close()

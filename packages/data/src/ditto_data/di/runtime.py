@@ -43,6 +43,11 @@ from ditto_data.catalog.promotion_store import (
     SQLiteDatasetMaturityPromotionStore,
     SQLiteDatasetPromotionEvidenceStore,
 )
+from ditto_data.catalog.provider_payload import (
+    FilesystemProviderPayloadStore,
+    ProviderPayloadReader,
+    ProviderPayloadWriter,
+)
 from ditto_data.catalog.remediation import (
     CatalogRemediationApprovalReader,
     CatalogRemediationApprovalWriter,
@@ -169,6 +174,30 @@ class RuntimeProvider(Provider):
     ) -> ProviderSnapshotReader:
         """Provider snapshot read port."""
         return provider_snapshot_store
+
+    @provide
+    def provider_payload_store(
+        self,
+        settings: DataStoreSettings,
+    ) -> FilesystemProviderPayloadStore:
+        """Content-addressed immutable provider response store."""
+        return FilesystemProviderPayloadStore(settings.data_root)
+
+    @provide
+    def provider_payload_writer(
+        self,
+        provider_payload_store: FilesystemProviderPayloadStore,
+    ) -> ProviderPayloadWriter:
+        """Provider payload retention port."""
+        return provider_payload_store
+
+    @provide
+    def provider_payload_reader(
+        self,
+        provider_payload_store: FilesystemProviderPayloadStore,
+    ) -> ProviderPayloadReader:
+        """Exact provider payload read port."""
+        return provider_payload_store
 
     @provide
     def dataset_license_store(

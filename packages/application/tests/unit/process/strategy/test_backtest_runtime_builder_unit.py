@@ -199,6 +199,10 @@ class TestBacktestRuntimeBuilder:
             "ticker": "510300",
             "exchange": "XSHG",
         }
+        metadata_service.instrument.get_source_ticker.side_effect = (
+            "510300.SH",
+            "518880.SH",
+        )
         data_provider = MagicMock(spec=DataProvider)
         builder = BacktestRuntimeBuilder(
             strategy_runtime_builder=strategy_runtime_builder,
@@ -230,6 +234,14 @@ class TestBacktestRuntimeBuilder:
         assert isinstance(runtime.pre_trade_check, CompositePreTradeCheck)
         assert isinstance(runtime.fee_model, AShareFeeModel)
         assert runtime.brokerage.get_account().cash.available == 2_000_000.0
+        assert runtime.data_feed._tickers == ("510300.SH", "518880.SH")
+        assert [
+            item.args
+            for item in metadata_service.instrument.get_source_ticker.call_args_list
+        ] == [
+            (2_000_001, "tushare", "2026-01-10"),
+            (2_000_002, "tushare", "2026-01-10"),
+        ]
         fill_model = runtime.brokerage._model.fill_model
         assert isinstance(fill_model, AShareFillModel)
         assert fill_model.participation_rate == pytest.approx(0.05)

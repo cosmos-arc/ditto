@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 from functools import cache
 from typing import Literal
@@ -38,6 +39,7 @@ class DailyFetchContext:
     trade_date: str
     fetch_commodity_daily: Callable[[str], pl.DataFrame]
     get_cached_index_codes: Callable[[], list[str]]
+    source_name: str = "tushare"
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,9 @@ class WriteKind(StrEnum):
     MACRO = "macro"
     CALENDAR = "calendar"
     BASIC = "basic"
+    GLOBAL_INDEX_BARS = "global_index_bars"
+    INDUSTRY_CLASSIFICATION = "industry_classification"
+    INDUSTRY_MAPPING = "industry_mapping"
 
 
 @dataclass(frozen=True)
@@ -274,6 +279,58 @@ def _index_weight_instrument_fetch(
     )
 
 
+_GLOBAL_CONTEXT_INDEX_CODES = ["SPX", "IXIC", "DJI", "GDAXI", "N225"]
+
+
+def _global_index_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    return lambda: ctx.fetchers.market.fetch_global_index_daily(
+        _GLOBAL_CONTEXT_INDEX_CODES,
+        ctx.trade_date,
+        ctx.trade_date,
+    )
+
+
+def _industry_classification_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    def fetch() -> pl.DataFrame:
+        frame = ctx.fetchers.metadata.fetch_sw_industry(level=1)
+        return frame.rename({"source_ticker": "industry_id"}).with_columns(
+            pl.lit(date.today()).alias("knowledge_date"),
+            pl.lit("SW2021").alias("classification_version"),
+            pl.lit("sw").alias("source"),
+        )
+
+    return fetch
+
+
+def _industry_mapping_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    return lambda: ctx.fetchers.metadata.fetch_sw_industry_concepts(
+        asof_date=ctx.trade_date,
+        level=1,
+        knowledge_date=date.today(),
+    )
+
+
+_CHINA_MACRO_CODES = [
+    "CN_GDP_YOY",
+    "CN_CPI_YOY",
+    "CN_PPI_YOY",
+    "CN_M2_YOY",
+    "CN_PMI_MFG",
+]
+
+
+def _macro_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
+    """Use the bounded China batch only for Tushare; preserve other providers."""
+    if ctx.source_name == "tushare":
+        return lambda: ctx.fetchers.macro.fetch_macro_indicators_by_codes(
+            _CHINA_MACRO_CODES,
+            "2015-01-01",
+            ctx.trade_date,
+            observed_on=date.today(),
+        )
+    return lambda: ctx.fetchers.macro.fetch_macro_indicators(ctx.trade_date)
+
+
 # ---------------------------------------------------------------------------
 # Domain-grouped registration sub-lists（模块级常量）
 # ---------------------------------------------------------------------------
@@ -341,6 +398,29 @@ _TRADED_BARS_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
             )
         ),
         instrument_fetch_factory=_instrument_fetch("market", "fetch_index_daily"),
+    ),
+    DatasetRegistration(
+        dataset=Dataset.GLOBAL_INDEX_DAILY,
+        write_kind=WriteKind.GLOBAL_INDEX_BARS,
+        date_schedule=DateScheduleType.SOURCE_DEFINED,
+        daily_fetch_factory=_global_index_fetch,
+    ),
+)
+
+_INDUSTRY_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
+    DatasetRegistration(
+        dataset=Dataset.INDUSTRY_CLASSIFICATION,
+        write_kind=WriteKind.INDUSTRY_CLASSIFICATION,
+        date_schedule=DateScheduleType.SOURCE_DEFINED,
+        metadata_dataset=True,
+        daily_fetch_factory=_industry_classification_fetch,
+    ),
+    DatasetRegistration(
+        dataset=Dataset.INDUSTRY_MAPPING,
+        write_kind=WriteKind.INDUSTRY_MAPPING,
+        date_schedule=DateScheduleType.SOURCE_DEFINED,
+        metadata_dataset=True,
+        daily_fetch_factory=_industry_mapping_fetch,
     ),
 )
 
@@ -445,7 +525,7 @@ _MACRO_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         dataset=Dataset.MACRO_INDICATORS,
         write_kind=WriteKind.MACRO,
         date_schedule=DateScheduleType.SOURCE_DEFINED,
-        daily_fetch_factory=_daily_fetch("macro", "fetch_macro_indicators"),
+        daily_fetch_factory=_macro_fetch,
     ),
 )
 
@@ -488,6 +568,7 @@ _PLACEHOLDER_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
 _ALL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     _METADATA_REGISTRATIONS
     + _TRADED_BARS_REGISTRATIONS
+    + _INDUSTRY_REGISTRATIONS
     + _MARKET_REGISTRATIONS
     + _ADJ_FACTOR_REGISTRATIONS
     + _FUNDAMENTAL_REGISTRATIONS

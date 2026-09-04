@@ -94,7 +94,11 @@ def create_instrument_command(
                 end=end,
                 force=force,
             )
-            run_instrument_ingest(dataset, params)
+            run_instrument_ingest(
+                dataset,
+                params,
+                verbose=bool(ctx.obj["verbose"]),
+            )
         else:
             return daily_impl(ctx, date or "", force)
 

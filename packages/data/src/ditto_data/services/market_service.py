@@ -183,6 +183,14 @@ class MarketService:
 
         return df
 
+    @traced("market.get_global_index_bars")
+    def get_global_index_bars(self, start: str, end: str) -> pl.DataFrame:
+        """Read global-index observations with their explicit PIT timestamps."""
+        reader = self._read_ports.global_index_bars
+        if reader is None:
+            raise ValueError("global_index_daily reader not configured")
+        return reader.read(start_date=start, end_date=end)
+
     @traced("market.get_adj_factors")
     def get_adj_factors(self, start: str, end: str) -> pl.DataFrame:
         """

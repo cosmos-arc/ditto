@@ -167,6 +167,37 @@ def test_research_candidate_is_created_once_then_reused() -> None:
 
 
 @pytest.mark.unit
+def test_explicit_research_candidate_is_exact_draft_and_never_mutated() -> None:
+    draft = _seed_record("seed_etf_industry_rotation", 2)
+
+    class _Catalog:
+        def get_spec(
+            self, requested_id: str, version: int | None = None
+        ) -> StrategySpecRecord | None:
+            assert requested_id == draft.strategy_id
+            assert version == draft.version
+            return draft
+
+        def get_version_state(self, requested_id: str, version: int) -> str | None:
+            assert (requested_id, version) == (draft.strategy_id, draft.version)
+            return "draft"
+
+    class _Update:
+        def handle(self, _command: UpdateStrategyCommand) -> object:
+            raise AssertionError("explicit research candidate must be read-only")
+
+    resolved = ensure_research_candidate(
+        lane="etf",
+        catalog=cast("StrategyCatalogService", _Catalog()),
+        update_handler=cast("UpdateStrategyHandler", _Update()),
+        strategy_id=draft.strategy_id,
+        strategy_version=draft.version,
+    )
+
+    assert resolved == draft
+
+
+@pytest.mark.unit
 def test_planning_document_thaws_frozen_strategy_json(mocker) -> None:
     mocker.patch(
         "ditto_apps.registry.live.r3_live_planning_builder."
@@ -205,6 +236,7 @@ def test_planning_document_thaws_frozen_strategy_json(mocker) -> None:
         matrix_spec=object(),
         promotion_objective=object(),
         dataset_requirements=(),
+        context_input_refs=(),
         cost_model=ResourceCostModel(1, 1),
         budget=ExperimentBudgetSpec(1, 1, 1, 1),
         seed=1,

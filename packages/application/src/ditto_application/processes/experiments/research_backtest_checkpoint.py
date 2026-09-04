@@ -195,6 +195,7 @@ def build_research_backtest_config(
             for item in snapshot.inputs
         ),
         factor_report_refs=strategy.factor_report_refs,
+        context_input_refs=semantics.context_input_refs,
         recommendation_status="research",
         participation_rate=(semantics.backtest.participation_rate_ppm / 1_000_000),
         fill_mode=semantics.backtest.fill_mode.value,

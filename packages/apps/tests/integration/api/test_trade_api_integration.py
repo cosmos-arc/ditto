@@ -340,7 +340,7 @@ class TestAccountBaseline:
         )
 
         response = client.post(
-            "/api/v1/trade/account-baseline",
+            "/api/v1/manual/account-baseline",
             json={
                 "account_id": "acct",
                 "strategy_id": "strat-a",
@@ -367,7 +367,7 @@ class TestAccountBaseline:
         self, client: TC, mock_account_handler: MC
     ) -> None:
         response = client.post(
-            "/api/v1/trade/account-baseline",
+            "/api/v1/manual/account-baseline",
             json={
                 "account_id": "acct",
                 "strategy_id": "strat-a",
@@ -403,7 +403,7 @@ class TestAccountBaseline:
             "positions": [],
         }
 
-        response = client.post("/api/v1/trade/account-baseline", json=payload)
+        response = client.post("/api/v1/manual/account-baseline", json=payload)
 
         assert response.status_code == 200
         assert response.json()["data"]["status"] == "unchanged"
@@ -418,7 +418,7 @@ class TestAccountBaseline:
         )
 
         response = client.post(
-            "/api/v1/trade/account-baseline",
+            "/api/v1/manual/account-baseline",
             json={
                 "account_id": "acct",
                 "strategy_id": "strat-a",
@@ -441,7 +441,7 @@ class TestAccountBaseline:
         self, client: TC, mock_account_handler: MC
     ) -> None:
         response = client.post(
-            "/api/v1/trade/account-baseline",
+            "/api/v1/manual/account-baseline",
             json={
                 "account_id": "acct",
                 "strategy_id": "strat-a",
@@ -495,7 +495,7 @@ class TestAccountBaseline:
         )
 
         response = client.get(
-            "/api/v1/trade/account-baseline",
+            "/api/v1/manual/account-baseline",
             params={
                 "account_id": "acct",
                 "strategy_id": "strat-a",
@@ -611,7 +611,7 @@ def _make_daily_decision_report(**overrides: object) -> DailyDecisionReport:
 class TestListIntents:
     def test_returns_intents(self, client: TC, mock_trade_facade: MC) -> None:
         mock_trade_facade.list_intents.return_value = [_make_intent()]
-        resp = client.get("/api/v1/trade/intents", params={"strategy_id": "strat-a"})
+        resp = client.get("/api/v1/manual/intents", params={"strategy_id": "strat-a"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert len(data) == 1
@@ -619,7 +619,7 @@ class TestListIntents:
 
     def test_empty_list(self, client: TC, mock_trade_facade: MC) -> None:
         mock_trade_facade.list_intents.return_value = []
-        resp = client.get("/api/v1/trade/intents", params={"strategy_id": "strat-a"})
+        resp = client.get("/api/v1/manual/intents", params={"strategy_id": "strat-a"})
         assert resp.status_code == 200
         assert resp.json()["data"] == []
 
@@ -629,7 +629,7 @@ class TestUpdateIntentStatus:
     def test_update_success(self, client: TC, mock_status_handler: MC) -> None:
         mock_status_handler.handle.return_value = True
         resp = client.put(
-            "/api/v1/trade/intents/int-001/status",
+            "/api/v1/manual/intents/int-001/status",
             json={"status": "cancelled"},
         )
         assert resp.status_code == 200
@@ -647,7 +647,7 @@ class TestRecordFill:
         fill = _make_fill()
         mock_fill_handler.handle.return_value = fill
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={
                 "fill_id": "fill-001",
                 "intent_id": "int-001",
@@ -671,7 +671,7 @@ class TestListFills:
     def test_returns_fills(self, client: TC, mock_portfolio_facade: MC) -> None:
         fill = _make_fill()
         mock_portfolio_facade.get_fills.return_value = [fill]
-        resp = client.get("/api/v1/trade/fills", params={"strategy_id": "strat-a"})
+        resp = client.get("/api/v1/manual/fills", params={"strategy_id": "strat-a"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert len(data) == 1
@@ -684,7 +684,7 @@ class TestListFills:
         mock_portfolio_facade.get_effective_fills.return_value = [_make_fill()]
 
         resp = client.get(
-            "/api/v1/trade/fills/effective",
+            "/api/v1/manual/fills/effective",
             params={"strategy_id": "strat-a"},
         )
 
@@ -709,7 +709,7 @@ class TestListFills:
         ]
 
         resp = client.get(
-            "/api/v1/trade/fill-adjustments",
+            "/api/v1/manual/fill-adjustments",
             params={
                 "strategy_id": "strat-a",
                 "fill_id": "fill-001",
@@ -736,7 +736,7 @@ class TestFillAdjustments:
         mock_void_fill_handler.handle.return_value = _make_adjustment()
 
         resp = client.post(
-            "/api/v1/trade/fills/fill-001/void",
+            "/api/v1/manual/fills/fill-001/void",
             json={"adjustment_id": "adj-001", "reason": "duplicate fill"},
         )
 
@@ -758,7 +758,7 @@ class TestFillAdjustments:
         )
 
         resp = client.post(
-            "/api/v1/trade/fills/fill-001/replace",
+            "/api/v1/manual/fills/fill-001/replace",
             json={
                 "adjustment_id": "adj-001",
                 "replacement_fill_id": "fill-002",
@@ -789,7 +789,7 @@ class TestListPositions:
     def test_returns_positions(self, client: TC, mock_portfolio_facade: MC) -> None:
         pos = _make_position()
         mock_portfolio_facade.get_position_history.return_value = [pos]
-        resp = client.get("/api/v1/trade/positions", params={"strategy_id": "strat-a"})
+        resp = client.get("/api/v1/manual/positions", params={"strategy_id": "strat-a"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert len(data) == 1
@@ -811,7 +811,7 @@ class TestComputePnl:
             net_pnl=40.0,
         )
         resp = client.get(
-            "/api/v1/trade/pnl",
+            "/api/v1/manual/pnl",
             params={"strategy_id": "strat-a", "snapshot_date": "2024-01-16"},
         )
         assert resp.status_code == 200
@@ -829,7 +829,7 @@ class TestLatestSignals:
     def test_returns_latest(self, client: TC, mock_signal_facade: MC) -> None:
         mock_signal_facade.get_latest_intents.return_value = [_make_intent()]
         resp = client.get(
-            "/api/v1/trade/signals/latest",
+            "/api/v1/manual/signals/latest",
             params={"strategy_id": "strat-a"},
         )
         assert resp.status_code == 200
@@ -841,7 +841,7 @@ class TestSignalIntentsByDate:
     def test_returns_by_date(self, client: TC, mock_signal_facade: MC) -> None:
         mock_signal_facade.get_intents_by_date.return_value = [_make_intent()]
         resp = client.get(
-            "/api/v1/trade/signals/2024-01-15/intents",
+            "/api/v1/manual/signals/2024-01-15/intents",
             params={"strategy_id": "strat-a"},
         )
         assert resp.status_code == 200
@@ -922,7 +922,7 @@ class TestDailyDecision:
         )
 
         response = client.get(
-            "/api/v1/trade/daily-decision/v2",
+            "/api/v1/manual/daily-decision/v2",
             params={
                 "strategy_id": "strat-a",
                 "trade_date": "2024-01-15",
@@ -1031,7 +1031,7 @@ class TestDailyDecision:
         )
 
         response = client.get(
-            "/api/v1/trade/daily-decision/v3",
+            "/api/v1/manual/daily-decision/v3",
             params={
                 "strategy_id": "strat-a",
                 "trade_date": "2024-01-15",
@@ -1065,7 +1065,7 @@ class TestDailyDecision:
         )
 
         resp = client.get(
-            "/api/v1/trade/daily-decision",
+            "/api/v1/manual/daily-decision",
             params={"strategy_id": "strat-a", "trade_date": "2024-01-15"},
         )
 
@@ -1102,7 +1102,7 @@ class TestDailyDecision:
         )
 
         resp = client.get(
-            "/api/v1/trade/daily-decision",
+            "/api/v1/manual/daily-decision",
             params={"strategy_id": "strat-a"},
         )
 
@@ -1149,7 +1149,7 @@ class TestComparison:
         )
         mock_comparison_facade.get_comparison.return_value = metrics
         resp = client.get(
-            "/api/v1/trade/comparison",
+            "/api/v1/manual/comparison",
             params={"strategy_id": "strat-a", "run_id": "run-001"},
         )
         assert resp.status_code == 200
@@ -1160,7 +1160,7 @@ class TestComparison:
     def test_not_found(self, client: TC, mock_comparison_facade: MC) -> None:
         mock_comparison_facade.get_comparison.return_value = None
         resp = client.get(
-            "/api/v1/trade/comparison",
+            "/api/v1/manual/comparison",
             params={"strategy_id": "strat-a", "run_id": "run-999"},
         )
         assert resp.status_code == 404
@@ -1179,28 +1179,28 @@ class TestMissingRequiredParams:
         self, client: TC, mock_trade_facade: MC
     ) -> None:
         """list_intents 缺少 strategy_id → 422."""
-        resp = client.get("/api/v1/trade/intents")
+        resp = client.get("/api/v1/manual/intents")
         assert resp.status_code == 422
 
     def test_list_fills_missing_strategy_id(
         self, client: TC, mock_portfolio_facade: MC
     ) -> None:
         """list_fills 缺少 strategy_id → 422."""
-        resp = client.get("/api/v1/trade/fills")
+        resp = client.get("/api/v1/manual/fills")
         assert resp.status_code == 422
 
     def test_list_positions_missing_strategy_id(
         self, client: TC, mock_portfolio_facade: MC
     ) -> None:
         """list_positions 缺少 strategy_id → 422."""
-        resp = client.get("/api/v1/trade/positions")
+        resp = client.get("/api/v1/manual/positions")
         assert resp.status_code == 422
 
     def test_compute_pnl_missing_params(
         self, client: TC, mock_portfolio_facade: MC
     ) -> None:
         """compute_pnl 缺少 strategy_id 和 snapshot_date → 422."""
-        resp = client.get("/api/v1/trade/pnl")
+        resp = client.get("/api/v1/manual/pnl")
         assert resp.status_code == 422
 
     def test_compute_pnl_missing_snapshot_date(
@@ -1208,7 +1208,7 @@ class TestMissingRequiredParams:
     ) -> None:
         """compute_pnl 缺少 snapshot_date → 422."""
         resp = client.get(
-            "/api/v1/trade/pnl",
+            "/api/v1/manual/pnl",
             params={"strategy_id": "strat-a"},
         )
         assert resp.status_code == 422
@@ -1217,34 +1217,34 @@ class TestMissingRequiredParams:
         self, client: TC, mock_comparison_facade: MC
     ) -> None:
         """comparison 缺少 strategy_id 和 run_id → 422."""
-        resp = client.get("/api/v1/trade/comparison")
+        resp = client.get("/api/v1/manual/comparison")
         assert resp.status_code == 422
 
     def test_signals_latest_missing_strategy_id(
         self, client: TC, mock_signal_facade: MC
     ) -> None:
         """signals/latest 缺少 strategy_id → 422."""
-        resp = client.get("/api/v1/trade/signals/latest")
+        resp = client.get("/api/v1/manual/signals/latest")
         assert resp.status_code == 422
 
     def test_signal_intents_missing_strategy_id(
         self, client: TC, mock_signal_facade: MC
     ) -> None:
         """signals/{date}/intents 缺少 strategy_id → 422."""
-        resp = client.get("/api/v1/trade/signals/2024-01-15/intents")
+        resp = client.get("/api/v1/manual/signals/2024-01-15/intents")
         assert resp.status_code == 422
 
     def test_daily_decision_missing_strategy_id(self, client: TC) -> None:
         """daily-decision 缺少 strategy_id → 422."""
-        resp = client.get("/api/v1/trade/daily-decision")
+        resp = client.get("/api/v1/manual/daily-decision")
         assert resp.status_code == 422
 
     def test_effective_fills_missing_strategy_id(self, client: TC) -> None:
-        resp = client.get("/api/v1/trade/fills/effective")
+        resp = client.get("/api/v1/manual/fills/effective")
         assert resp.status_code == 422
 
     def test_fill_adjustments_missing_strategy_id(self, client: TC) -> None:
-        resp = client.get("/api/v1/trade/fill-adjustments")
+        resp = client.get("/api/v1/manual/fill-adjustments")
         assert resp.status_code == 422
 
 
@@ -1255,20 +1255,20 @@ class TestInvalidRequestBody:
     def test_record_fill_missing_required_fields(self, client: TC) -> None:
         """record_fill 缺少必需字段 → 422."""
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={"fill_id": "fill-001"},  # 缺少大量必需字段
         )
         assert resp.status_code == 422
 
     def test_record_fill_empty_body(self, client: TC) -> None:
         """record_fill 空请求体 → 422."""
-        resp = client.post("/api/v1/trade/fills", json={})
+        resp = client.post("/api/v1/manual/fills", json={})
         assert resp.status_code == 422
 
     def test_record_fill_invalid_direction(self, client: TC) -> None:
         """record_fill direction 不在 buy/sell 枚举中 → 422."""
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={
                 "fill_id": "fill-001",
                 "intent_id": "int-001",
@@ -1285,7 +1285,7 @@ class TestInvalidRequestBody:
     def test_record_fill_invalid_quantity_type(self, client: TC) -> None:
         """record_fill quantity 为字符串 → 422 (strict mode)."""
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={
                 "fill_id": "fill-001",
                 "intent_id": "int-001",
@@ -1305,7 +1305,7 @@ class TestInvalidRequestBody:
         mock_fill_handler: MC,
     ) -> None:
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={
                 "fill_id": "fill-001",
                 "intent_id": "int-001",
@@ -1324,7 +1324,7 @@ class TestInvalidRequestBody:
     def test_update_status_invalid_value(self, client: TC) -> None:
         """update_intent_status status 不在有效枚举中 → 422."""
         resp = client.put(
-            "/api/v1/trade/intents/int-001/status",
+            "/api/v1/manual/intents/int-001/status",
             json={"status": "executing"},
         )
         assert resp.status_code == 422
@@ -1332,21 +1332,21 @@ class TestInvalidRequestBody:
     def test_update_status_empty_body(self, client: TC) -> None:
         """update_intent_status 空请求体 → 422."""
         resp = client.put(
-            "/api/v1/trade/intents/int-001/status",
+            "/api/v1/manual/intents/int-001/status",
             json={},
         )
         assert resp.status_code == 422
 
     def test_void_fill_blank_reason(self, client: TC) -> None:
         resp = client.post(
-            "/api/v1/trade/fills/fill-001/void",
+            "/api/v1/manual/fills/fill-001/void",
             json={"adjustment_id": "adj-001", "reason": ""},
         )
         assert resp.status_code == 422
 
     def test_replace_fill_invalid_economics(self, client: TC) -> None:
         resp = client.post(
-            "/api/v1/trade/fills/fill-001/replace",
+            "/api/v1/manual/fills/fill-001/replace",
             json={
                 "adjustment_id": "adj-001",
                 "replacement_fill_id": "fill-002",
@@ -1364,7 +1364,7 @@ class TestInvalidRequestBody:
         mock_replace_fill_handler: MC,
     ) -> None:
         resp = client.post(
-            "/api/v1/trade/fills/fill-001/replace",
+            "/api/v1/manual/fills/fill-001/replace",
             json={
                 "adjustment_id": "adj-001",
                 "replacement_fill_id": "fill-002",
@@ -1394,7 +1394,7 @@ class TestBusinessRuleErrors:
         """更新不存在的 intent 状态 → 404."""
         mock_status_handler.handle.side_effect = ValueError("Intent not found: int-999")
         resp = client.put(
-            "/api/v1/trade/intents/int-999/status",
+            "/api/v1/manual/intents/int-999/status",
             json={"status": "cancelled"},
         )
         assert resp.status_code == 404
@@ -1407,7 +1407,7 @@ class TestBusinessRuleErrors:
             "Invalid transition: 'filled' -> 'pending'"
         )
         resp = client.put(
-            "/api/v1/trade/intents/int-001/status",
+            "/api/v1/manual/intents/int-001/status",
             json={"status": "pending"},
         )
         assert resp.status_code == 409
@@ -1418,7 +1418,7 @@ class TestBusinessRuleErrors:
         """录入成交时 intent 不存在 → 404."""
         mock_fill_handler.handle.side_effect = ValueError("Intent not found: int-999")
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={
                 "fill_id": "fill-001",
                 "intent_id": "int-999",
@@ -1440,7 +1440,7 @@ class TestBusinessRuleErrors:
             "Strategy mismatch: intent=strat-a, command=strat-b"
         )
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={
                 "fill_id": "fill-002",
                 "intent_id": "int-001",
@@ -1463,7 +1463,7 @@ class TestBusinessRuleErrors:
             " expected 'pending' or 'partially_filled'"
         )
         resp = client.post(
-            "/api/v1/trade/fills",
+            "/api/v1/manual/fills",
             json={
                 "fill_id": "fill-003",
                 "intent_id": "int-001",
@@ -1487,7 +1487,7 @@ class TestBusinessRuleErrors:
         )
 
         resp = client.post(
-            "/api/v1/trade/fills/fill-missing/void",
+            "/api/v1/manual/fills/fill-missing/void",
             json={"adjustment_id": "adj-001", "reason": "duplicate fill"},
         )
 
@@ -1504,7 +1504,7 @@ class TestBusinessRuleErrors:
         )
 
         resp = client.post(
-            "/api/v1/trade/fills/fill-001/replace",
+            "/api/v1/manual/fills/fill-001/replace",
             json={
                 "adjustment_id": "adj-002",
                 "replacement_fill_id": "fill-002",
@@ -1533,7 +1533,7 @@ class TestPositionsPagination:
     ) -> None:
         """positions 响应应包含 pagination 字段."""
         mock_portfolio_facade.get_position_history.return_value = [_make_position()]
-        resp = client.get("/api/v1/trade/positions", params={"strategy_id": "strat-a"})
+        resp = client.get("/api/v1/manual/positions", params={"strategy_id": "strat-a"})
         assert resp.status_code == 200
         body = resp.json()
         assert "pagination" in body
@@ -1548,7 +1548,7 @@ class TestPositionsPagination:
         positions = [_make_position(snapshot_id=f"snap-{i}") for i in range(5)]
         mock_portfolio_facade.get_position_history.return_value = positions
         resp = client.get(
-            "/api/v1/trade/positions",
+            "/api/v1/manual/positions",
             params={"strategy_id": "strat-a", "limit": 2, "offset": 1},
         )
         assert resp.status_code == 200
@@ -1567,7 +1567,7 @@ class TestSignalsLatestPagination:
         """signals/latest 响应应包含 pagination 字段."""
         mock_signal_facade.get_latest_intents.return_value = [_make_intent()]
         resp = client.get(
-            "/api/v1/trade/signals/latest",
+            "/api/v1/manual/signals/latest",
             params={"strategy_id": "strat-a"},
         )
         assert resp.status_code == 200
@@ -1584,7 +1584,7 @@ class TestSignalIntentsPagination:
         """signals/{date}/intents 响应应包含 pagination 字段."""
         mock_signal_facade.get_intents_by_date.return_value = [_make_intent()]
         resp = client.get(
-            "/api/v1/trade/signals/2024-01-15/intents",
+            "/api/v1/manual/signals/2024-01-15/intents",
             params={"strategy_id": "strat-a"},
         )
         assert resp.status_code == 200
@@ -1632,7 +1632,7 @@ class TestDeviation:
             ),
         )
         resp = client.get(
-            "/api/v1/trade/deviation",
+            "/api/v1/manual/deviation",
             params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
         )
         assert resp.status_code == 200
@@ -1669,7 +1669,7 @@ class TestDeviation:
         """所有信号均已成交."""
         mock_deviation_facade.get_deviation.return_value = _make_deviation_report()
         resp = client.get(
-            "/api/v1/trade/deviation",
+            "/api/v1/manual/deviation",
             params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
         )
         assert resp.status_code == 200
@@ -1690,7 +1690,7 @@ class TestDeviation:
             items=(),
         )
         resp = client.get(
-            "/api/v1/trade/deviation",
+            "/api/v1/manual/deviation",
             params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
         )
         assert resp.status_code == 200
@@ -1702,10 +1702,10 @@ class TestDeviation:
 
     def test_missing_required_params(self, client: TC) -> None:
         """缺少必需参数 → 422."""
-        resp = client.get("/api/v1/trade/deviation", params={"strategy_id": "strat-a"})
+        resp = client.get("/api/v1/manual/deviation", params={"strategy_id": "strat-a"})
         assert resp.status_code == 422
 
         resp = client.get(
-            "/api/v1/trade/deviation", params={"signal_date": "2024-01-15"}
+            "/api/v1/manual/deviation", params={"signal_date": "2024-01-15"}
         )
         assert resp.status_code == 422

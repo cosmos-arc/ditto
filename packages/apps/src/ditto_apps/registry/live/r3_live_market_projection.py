@@ -12,6 +12,7 @@ type LiveLane = Literal["stock", "etf"]
 
 _END = date(2026, 7, 31)
 _BENCHMARK_INSTRUMENT_ID = 3_000_149
+_BAR_KEY = ("trade_date", "instrument_id")
 
 
 def _scan_bars(data_root: Path, asset_class: str) -> pl.LazyFrame:
@@ -89,6 +90,18 @@ def _bar_history_grid(
     return _membership_with_observed_bar_history(raw, requested)
 
 
+def _deduplicate_physical_bars(raw: pl.DataFrame) -> pl.DataFrame:
+    """Collapse identical partition overlap and reject ambiguous market truth."""
+    unique_rows = raw.unique(maintain_order=True)
+    conflicting_keys = (
+        unique_rows.group_by(_BAR_KEY).len().filter(pl.col("len") > 1).sort(_BAR_KEY)
+    )
+    if not conflicting_keys.is_empty():
+        sample = conflicting_keys.select(*_BAR_KEY).head(3)
+        raise ValueError(f"conflicting live bar duplicates: {sample}")
+    return unique_rows.sort(_BAR_KEY)
+
+
 def _normalized_bars(
     raw: pl.DataFrame,
     membership: pl.DataFrame,
@@ -96,6 +109,7 @@ def _normalized_bars(
     authority_snapshot_id: str,
 ) -> pl.DataFrame:
     """Project a complete membership grid with suspension-safe carried prices."""
+    raw = _deduplicate_physical_bars(raw)
     selected = raw.select(
         "trade_date",
         "instrument_id",

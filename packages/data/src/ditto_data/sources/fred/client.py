@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import re
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
@@ -22,6 +25,38 @@ from ditto_data.sources.base import (
 
 FRED_API_BASE_URL = "https://api.stlouisfed.org/fred"
 HTTP_UNAUTHORIZED = 401
+_REDACTED_QUERY_VALUE = "%3Credacted%3E"
+_SENSITIVE_QUERY_PARAMETER = re.compile(r"(?i)([?&]api_key=)[^&\s\"]+")
+
+
+class _FREDHTTPLogFilter(logging.Filter):
+    """Remove FRED credentials from HTTPX's rendered request URL."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Redact query credentials before any logger handler sees the record."""
+        if isinstance(record.args, tuple):
+            record.args = tuple(_redact_log_argument(value) for value in record.args)
+        elif isinstance(record.args, Mapping):
+            record.args = {
+                key: _redact_log_argument(value) for key, value in record.args.items()
+            }
+        return True
+
+
+def _redact_log_argument(value: object) -> object:
+    rendered = str(value)
+    if not _SENSITIVE_QUERY_PARAMETER.search(rendered):
+        return value
+    return _SENSITIVE_QUERY_PARAMETER.sub(
+        rf"\1{_REDACTED_QUERY_VALUE}",
+        rendered,
+    )
+
+
+def _install_http_log_filter() -> None:
+    httpx_logger = logging.getLogger("httpx")
+    if not any(isinstance(value, _FREDHTTPLogFilter) for value in httpx_logger.filters):
+        httpx_logger.addFilter(_FREDHTTPLogFilter())
 
 
 class FredClient:
@@ -61,6 +96,7 @@ class FredClient:
                 env_var="FRED_API_KEY",
             )
 
+        _install_http_log_filter()
         self._client = httpx.Client(
             base_url=FRED_API_BASE_URL,
             timeout=30.0,

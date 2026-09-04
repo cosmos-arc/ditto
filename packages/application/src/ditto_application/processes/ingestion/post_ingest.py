@@ -15,7 +15,12 @@ from ditto_data.catalog import (
     DataCatalogReader,
     DataCatalogWriter,
 )
+from ditto_data.catalog.provider_payload import (
+    ProviderPayloadArtifact,
+    ProviderPayloadWriter,
+)
 from ditto_data.errors import (
+    DataSourceError,
     NetworkError,
     SourceFetchError,
 )
@@ -66,6 +71,7 @@ __all__ = [
     "record_data_catalog_entry",
     "record_ingestion_lineage",
     "resolve_sparse_asof_snapshot",
+    "retain_provider_payload",
     "run_list_date_inference",
     "run_post_ingest_hooks",
     "safe_side_effect",
@@ -101,6 +107,7 @@ class PostIngestContext:
     lineage_recorder: DataLineageRecorder | None = None
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
+    provider_payload_writer: ProviderPayloadWriter | None = None
     license_record_id: str | None = None
 
 
@@ -109,14 +116,14 @@ def run_list_date_inference(
     dataset: str,
 ) -> None:
     """
-    在 basic 数据摄取后执行 list_date 推断补偿。
+    在股票和 ETF basic 数据摄取后执行 list_date 推断补偿。
 
     针对 list_date 为 NULL 的证券，从历史行情数据推断上市日期。
+    指数主数据规模大且 provider 历史接口按标的调用，不在摄取热路径逐一回溯。
     """
     asset_class_map = {
         "stock_basic": "stock",
         "etf_basic": "etf",
-        "index_basic": "index",
     }
 
     asset_class = asset_class_map.get(dataset)
@@ -250,6 +257,19 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     if quality_failure is not None:
         return quality_failure
 
+    provider_payload: ProviderPayloadArtifact | None = None
+    if ctx.evidence_committer is not None:
+        retained = retain_provider_payload(
+            df,
+            dataset=dataset,
+            trade_date=trade_date,
+            source_name=ctx.source_name,
+            writer=ctx.provider_payload_writer,
+        )
+        if isinstance(retained, IngestionResult):
+            return retained
+        provider_payload = retained
+
     on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
     write_result = write_data_safe(
@@ -277,6 +297,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         end_date=request_end,
         l1_l2_attested=ctx.quality_checker is not None,
         chunk_id=chunk_id,
+        provider_payload=provider_payload,
     )
     snapshot_evidence: IngestionSnapshotEvidence | None = None
     if ctx.evidence_committer is not None:
@@ -331,7 +352,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         dataset,
         processing_date,
         cursor_store=ctx.cursor_store,
-        freeze_store=ctx.freeze_store,
+        freeze_store=(None if ctx.evidence_committer is not None else ctx.freeze_store),
         source_name=ctx.source_name,
     )
 
@@ -467,6 +488,45 @@ def _commit_empty_provider_observation(
             row_count=0,
         ),
     )
+
+
+def retain_provider_payload(
+    df: pl.DataFrame,
+    *,
+    dataset: str,
+    trade_date: str,
+    source_name: str,
+    writer: ProviderPayloadWriter | None,
+) -> ProviderPayloadArtifact | IngestionResult:
+    """Retain exact normalized provider bytes or fail before canonical mutation."""
+    if writer is None:
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="R2_PROVIDER_PAYLOAD_STORE_REQUIRED",
+            message="R2 证据模式缺少不可变 provider payload store",
+        )
+    try:
+        return writer.retain_payload(
+            dataset_id=dataset,
+            source=source_name,
+            payload=df,
+        )
+    except (OSError, ValueError, pl.exceptions.PolarsError):
+        logger.exception(
+            "provider_payload_retention_failed",
+            event="provider_payload_retention_error",
+            dataset=dataset,
+            trade_date=trade_date,
+        )
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="R2_PROVIDER_PAYLOAD_RETENTION_FAILED",
+            message="R2 provider payload 不可变归档失败",
+        )
 
 
 def record_data_catalog_entry(
@@ -697,8 +757,21 @@ def handle_fetch_error(
         )
         return result_handler.handle_fetch_error(dataset, date_identifier, fetch_error)
 
-    if isinstance(error, SourceFetchError):
-        return result_handler.handle_fetch_error(dataset, date_identifier, error)
+    if isinstance(error, DataSourceError):
+        fetch_error = (
+            error
+            if isinstance(error, SourceFetchError)
+            else SourceFetchError(
+                message=str(error),
+                source=source_name,
+                cause=error,
+            )
+        )
+        return result_handler.handle_fetch_error(
+            dataset,
+            date_identifier,
+            fetch_error,
+        )
 
     logger.exception(
         f"unexpected_error_{log_tag}",

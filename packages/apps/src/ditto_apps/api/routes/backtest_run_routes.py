@@ -94,6 +94,8 @@ def build_flow_params(
         "parameter_overrides": command.parameter_overrides,
         "allow_experimental_data": command.allow_experimental_data,
     }
+    if result.strategy_version is not None:
+        params["strategy_version"] = result.strategy_version
     if result.cost_config is not None:
         params["cost_config"] = dataclasses.asdict(result.cost_config)
     return params
@@ -126,6 +128,7 @@ def restore_flow_params_from_config(
     for key in (
         "start_date",
         "end_date",
+        "strategy_version",
         "initial_cash",
         "parameter_overrides",
         "allow_experimental_data",

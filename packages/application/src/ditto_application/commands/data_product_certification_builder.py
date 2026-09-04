@@ -81,6 +81,7 @@ class CertificationBuildRequest:
     generated_at: datetime
     recovery_evidence: AddressedCertificationEvidence
     consumer_evidence: AddressedCertificationEvidence
+    target_from: date | None = None
     exceptions: tuple[CoverageException, ...] = ()
     snapshot_ids: tuple[str, ...] = ()
 
@@ -104,7 +105,7 @@ class DataProductCertificationBuilder:
     def build(self, request: CertificationBuildRequest) -> DatasetCertificationReport:
         """Verify coverage and evidence closure, then create an immutable report."""
         metadata = default_dataset_metadata().get(request.dataset_id)
-        if metadata is None or metadata.product_contract is None:
+        if metadata is None or metadata.dataset_spec is None:
             raise AppProcessError(
                 f"dataset has no product contract: {request.dataset_id}"
             )
@@ -115,6 +116,7 @@ class DataProductCertificationBuilder:
             self._snapshot_reader,
         ).collect(
             request.dataset_id,
+            target_from=request.target_from,
             target_to=request.target_to,
             expected_dates=request.expected_dates,
             exceptions=request.exceptions,
@@ -296,8 +298,13 @@ class DataProductCertificationBuilder:
             entry = assets.get(snapshot.canonical_asset)
             if entry is None:
                 raise AppProcessError("provider snapshot canonical asset is missing")
-            if entry.schema.row_count != snapshot.row_count:
-                raise AppProcessError("provider snapshot/catalog row count mismatch")
+            canonical_row_count = entry.schema.row_count
+            if canonical_row_count is None:
+                raise AppProcessError("provider snapshot catalog row count is missing")
+            if canonical_row_count > snapshot.row_count:
+                raise AppProcessError(
+                    "canonical row count exceeds provider payload row count"
+                )
             if entry.schema.schema_version != snapshot.schema_version:
                 raise AppProcessError("provider snapshot/catalog schema mismatch")
             license_record = self._license_reader.get_license(

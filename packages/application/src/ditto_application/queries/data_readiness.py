@@ -42,11 +42,14 @@ R2_P0_DATASETS: tuple[str, ...] = (
     "stock_daily",
     "etf_daily",
     "index_daily",
+    "global_index_daily",
     "adj_factor",
     "fund_adj",
     "stock_status",
     "index_weight",
     "corporate_actions",
+    "industry_classification",
+    "industry_mapping",
 )
 
 R2_P1_DATASETS: tuple[str, ...] = (

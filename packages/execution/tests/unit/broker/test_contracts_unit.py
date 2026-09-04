@@ -1,6 +1,6 @@
 """BrokerGateway Protocol tests."""
 
-from typing import Protocol, get_type_hints
+from typing import Protocol, cast, get_type_hints
 
 import pytest
 from ditto_execution.broker.contracts import (
@@ -8,6 +8,7 @@ from ditto_execution.broker.contracts import (
     REQUIRED_BROKER_GATEWAY_CAPABILITIES,
     BrokerGateway,
     BrokerGatewayDescriptor,
+    BrokerGatewayMode,
     validate_broker_gateway_descriptor,
 )
 from ditto_execution.models import STANDARD_BROKER_EVENT_TYPES
@@ -59,4 +60,16 @@ def test_broker_gateway_descriptor_rejects_unknown_event_types() -> None:
     )
 
     with pytest.raises(ValueError, match="Unsupported broker event type"):
+        validate_broker_gateway_descriptor(descriptor)
+
+
+def test_broker_gateway_descriptor_rejects_external_mode() -> None:
+    descriptor = BrokerGatewayDescriptor(
+        gateway_id="external",
+        mode=cast("BrokerGatewayMode", "external"),
+        capabilities=REQUIRED_BROKER_GATEWAY_CAPABILITIES,
+        supported_event_types=STANDARD_BROKER_EVENT_TYPES,
+    )
+
+    with pytest.raises(ValueError, match="Unsupported BrokerGateway mode: external"):
         validate_broker_gateway_descriptor(descriptor)

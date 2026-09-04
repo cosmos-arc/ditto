@@ -119,6 +119,7 @@ _W5_REQUIRED_OPERATION_IDS = frozenset(
         "strategies_deprecate_strategy_version",
         "strategies_publish_strategy_version",
         "strategies_reactivate_strategy_version",
+        "strategies_preview_strategy_author",
         "research_list_research_experiments",
         "research_get_experiment",
         "research_list_experiment_candidates",

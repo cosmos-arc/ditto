@@ -28,6 +28,7 @@ from ditto_analysis.experiments.trial_family import (
     TrialKind,
 )
 from ditto_analysis.experiments.trial_ledger import PromotionObjective
+from ditto_backtest.context_inputs import ReplayContextInputRef
 from ditto_strategy.models import StrategySpecRecord
 
 from ditto_application.exceptions import AppProcessError
@@ -206,6 +207,7 @@ class ExperimentPlanningRequest:
     worker_count: int
     failure_policy: ExperimentFailurePolicy
     created_at: datetime
+    context_input_refs: tuple[ReplayContextInputRef, ...] = ()
 
 
 def seal_promotion_objective(

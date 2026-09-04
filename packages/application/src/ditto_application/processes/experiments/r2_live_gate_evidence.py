@@ -42,7 +42,7 @@ _REPORT_STATUSES = frozenset(
         "acceptance_failed",
     }
 )
-_EXPECTED_CONTRACT_COUNT = 19
+_EXPECTED_CONTRACT_COUNT = 22
 _SHA256_HEX_LENGTH = 64
 _SHA256_URN_LENGTH = len("sha256:") + _SHA256_HEX_LENGTH
 _MAX_EVIDENCE_BYTES = 16 * 1024 * 1024
@@ -55,6 +55,7 @@ _R2_HARD_DATASET_PROVIDER_CONTRACTS = {
     "stock_daily": ("tushare:daily", "local_tdx:day"),
     "etf_daily": ("tushare:fund_daily", "local_tdx:day"),
     "index_daily": ("tushare:index_daily", "local_tdx:day"),
+    "global_index_daily": ("tushare:index_global",),
     "stock_status": ("tushare:stock_st", "tushare:suspend_d", "tushare:bak_basic"),
     "adj_factor": ("tushare:adj_factor",),
     "fund_adj": ("tushare:fund_adj",),
@@ -71,6 +72,8 @@ _R2_HARD_DATASET_PROVIDER_CONTRACTS = {
     "commodity_daily": ("fred:commodity_series", "tushare:commodity_reference"),
     "corporate_actions": ("tushare:corporate_actions",),
     "index_weight": ("tushare:index_weight",),
+    "industry_classification": ("tushare:index_classify",),
+    "industry_mapping": ("tushare:index_member_all",),
 }
 _REPRESENTATIVE_DATASETS = frozenset(
     {"stock_daily", "index_daily", "adj_factor", "fund_adj"}
@@ -83,7 +86,15 @@ _MAX_CERTIFICATION_LAG_DAYS = 7
 _R2_REQUIRED_CERTIFIED_FROM = {
     dataset_id: "2015-01-01"
     for dataset_id in _R2_HARD_DATASET_PROVIDER_CONTRACTS
-    if dataset_id not in {"macro_indicators", "commodity_daily", "index_weight"}
+    if dataset_id
+    not in {
+        "macro_indicators",
+        "commodity_daily",
+        "index_weight",
+        "global_index_daily",
+        "industry_classification",
+        "industry_mapping",
+    }
 } | {"stock_basic": "2016-01-01", "stock_status": "2016-01-01"}
 _VERIFIED_EVIDENCE_TOKEN = object()
 

@@ -1,0 +1,295 @@
+{
+  "artifact_bindings": [
+    {
+      "path": "docs/evidence/personal-workstation/q1/provider-probe-20260901.json",
+      "sha256": "012681ecde924ef29e3a70a99274d13d47f4ceb5dd541a34bb821af90675595a"
+    },
+    {
+      "path": "docs/evidence/personal-workstation/q1/provider-license-review-20260901.json",
+      "sha256": "7be5f5ce7277a9cd9c1aa75e5c6861dabad93c7d6e087098c2a4cc53453d4689"
+    },
+    {
+      "path": "docs/evidence/personal-workstation/q1/macro-manual-verification-20260901.json",
+      "sha256": "62be41014a60d9ee170497f67dd3b545c0830f2c11ef2002cd69cfbb66321d35"
+    },
+    {
+      "path": "docs/evidence/personal-workstation/q1/fred-pit-live-20260901.json",
+      "sha256": "6f270ad5673a0984e3a2c6c78e3986b59714c14751be4d7d44bb25b748aa931e"
+    },
+    {
+      "path": "docs/evidence/personal-workstation/q1/live-replay-20260901.json",
+      "sha256": "7e9068e04730fbed32c90c5272a97965169b21c29e4aeede636a0e1fbe9e708d"
+    },
+    {
+      "path": "docs/evidence/personal-workstation/q1/provider-outage-20260901.json",
+      "sha256": "cb35ad264c6963fc3d783ba32e37b8264eef4a3ab2ba35365c64dbe6c8ddd96b"
+    },
+    {
+      "path": "docs/evidence/personal-workstation/q1/backup-restore-20260901.json",
+      "sha256": "87a9f1f1eba6578f95242e267367b57a6c0e41473171d328b94796337840e575"
+    }
+  ],
+  "calendar": {
+    "boundary_missing_next_rows": 1,
+    "boundary_missing_prev_rows": 1,
+    "calendar_rows": 366,
+    "first_open_day": "2024-01-02",
+    "holiday_and_weekend_samples": [
+      {
+        "is_open": 0,
+        "next_trade_date": null,
+        "prev_trade_date": null,
+        "trade_date": "2024-02-09"
+      },
+      {
+        "is_open": 0,
+        "next_trade_date": null,
+        "prev_trade_date": null,
+        "trade_date": "2024-02-12"
+      },
+      {
+        "is_open": 1,
+        "next_trade_date": "2024-02-20",
+        "prev_trade_date": "2024-02-08",
+        "trade_date": "2024-02-19"
+      },
+      {
+        "is_open": 1,
+        "next_trade_date": "2024-04-01",
+        "prev_trade_date": "2024-03-28",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "is_open": 0,
+        "next_trade_date": null,
+        "prev_trade_date": null,
+        "trade_date": "2024-03-30"
+      }
+    ],
+    "internal_link_mismatch_rows": 0,
+    "last_open_day": "2024-12-31",
+    "open_days": 242
+  },
+  "claim_boundary": {
+    "corporate_actions_partition": "2024-03-28",
+    "excluded": "full 2015-present historical coverage certification and 20-day Paper soak",
+    "historical_provider_retrieval_date": "2026-09-01",
+    "included": "Q1 first-batch real-provider data truth and PIT sample semantics",
+    "sample_trade_date": "2024-03-29"
+  },
+  "corporate_actions": {
+    "duplicate_natural_keys": 0,
+    "knowledge_date_max": "2024-03-28",
+    "knowledge_date_min": "2024-03-28",
+    "missing_knowledge_date_rows": 0,
+    "rows": 50,
+    "visible_before_partition_knowledge_date_rows": 0,
+    "visible_on_partition_knowledge_date_rows": 50
+  },
+  "generated_at": "2026-09-01T11:55:33+00:00",
+  "global_context": {
+    "available_before_event_rows": 0,
+    "currencies": [
+      "JPY"
+    ],
+    "missing_available_at_rows": 0,
+    "missing_event_time_rows": 0,
+    "rows": 1,
+    "timezones": [
+      "Asia/Tokyo"
+    ],
+    "visible_as_of_2024_03_29_rows": 0
+  },
+  "ingestion": {
+    "canonical_never_exceeds_provider": true,
+    "catalog_entries": 15,
+    "complete_partition_checkpoints": 15,
+    "license_records": 16,
+    "lineage_events": 15,
+    "lineage_inputs": 15,
+    "lineage_outputs": 15,
+    "non_success_ingestion_logs": 0,
+    "provider_snapshots": 15,
+    "provider_to_canonical_counts": [
+      {
+        "canonical_filter_rows": 1,
+        "canonical_rows": 5382,
+        "dataset": "adj_factor",
+        "provider_rows": 5383
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 366,
+        "dataset": "calendar",
+        "provider_rows": 366
+      },
+      {
+        "canonical_filter_rows": 76,
+        "canonical_rows": 50,
+        "dataset": "corporate_actions",
+        "provider_rows": 126
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 1799,
+        "dataset": "etf_basic",
+        "provider_rows": 1799
+      },
+      {
+        "canonical_filter_rows": 366,
+        "canonical_rows": 933,
+        "dataset": "etf_daily",
+        "provider_rows": 1299
+      },
+      {
+        "canonical_filter_rows": 432,
+        "canonical_rows": 943,
+        "dataset": "fund_adj",
+        "provider_rows": 1375
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 1,
+        "dataset": "global_index_daily",
+        "provider_rows": 1
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 8000,
+        "dataset": "index_basic",
+        "provider_rows": 8000
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 173,
+        "dataset": "index_daily",
+        "provider_rows": 173
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 31,
+        "dataset": "industry_classification",
+        "provider_rows": 31
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 5370,
+        "dataset": "industry_mapping",
+        "provider_rows": 5370
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 481,
+        "dataset": "macro_indicators",
+        "provider_rows": 481
+      },
+      {
+        "canonical_filter_rows": 0,
+        "canonical_rows": 5892,
+        "dataset": "stock_basic",
+        "provider_rows": 5892
+      },
+      {
+        "canonical_filter_rows": 1,
+        "canonical_rows": 5355,
+        "dataset": "stock_daily",
+        "provider_rows": 5356
+      },
+      {
+        "canonical_filter_rows": 2,
+        "canonical_rows": 5361,
+        "dataset": "stock_status",
+        "provider_rows": 5363
+      }
+    ],
+    "retained_provider_snapshots": 15,
+    "single_attempt_ingestion_logs": 15,
+    "successful_ingestion_logs": 15
+  },
+  "macro": {
+    "knowledge_date_from": "2026-09-01",
+    "knowledge_date_through": "2026-09-01",
+    "manual_primary-source_groups": 4,
+    "missing_knowledge_date_rows": 0,
+    "period_from": "2015-01-01",
+    "period_through": "2024-03-01",
+    "tushare_rows": 481,
+    "visibility_policy": "fail closed at actual retrieval date because provider exposes no publication/vintage timestamp",
+    "visible_as_of_2024_03_29_rows": 0
+  },
+  "market_data_quality": {
+    "etf_adjustment_factors": {
+      "duplicate_instrument_trade_dates": 0,
+      "missing_knowledge_date_rows": 0,
+      "non_positive_factor_rows": 0,
+      "rows": 943,
+      "unknown_instrument_rows": 0
+    },
+    "etf_bars": {
+      "duplicate_instrument_trade_dates": 0,
+      "invalid_ohlcv_rows": 0,
+      "missing_knowledge_date_rows": 0,
+      "rows": 933,
+      "unknown_instrument_rows": 0,
+      "visible_on_or_before_trade_date_rows": 0
+    },
+    "index_bars": {
+      "duplicate_instrument_trade_dates": 0,
+      "invalid_ohlcv_rows": 0,
+      "missing_knowledge_date_rows": 0,
+      "rows": 173,
+      "unknown_instrument_rows": 0,
+      "visible_on_or_before_trade_date_rows": 0
+    },
+    "stock_adjustment_factors": {
+      "duplicate_instrument_trade_dates": 0,
+      "missing_knowledge_date_rows": 0,
+      "non_positive_factor_rows": 0,
+      "rows": 5382,
+      "unknown_instrument_rows": 0
+    },
+    "stock_bars": {
+      "duplicate_instrument_trade_dates": 0,
+      "invalid_ohlcv_rows": 0,
+      "missing_knowledge_date_rows": 0,
+      "rows": 5355,
+      "unknown_instrument_rows": 0,
+      "visible_on_or_before_trade_date_rows": 0
+    },
+    "stock_status": {
+      "duplicate_instrument_trade_dates": 0,
+      "rows": 5361,
+      "st_rows": 111,
+      "suspended_rows": 857,
+      "unknown_instrument_rows": 0
+    }
+  },
+  "passed": true,
+  "profile": "q1-real-provider-first-batch-sample",
+  "runtime": {
+    "data_root": "/private/tmp/ditto-q1-certified-20260901.v7",
+    "foreign_key_violation_count": 0,
+    "sqlite_integrity": "ok"
+  },
+  "schema": "ditto.q1-market-semantics.v1",
+  "secret_material_recorded": false,
+  "security_master": {
+    "asset_classes": {
+      "etf": {
+        "missing_list_date_rows": 0,
+        "rows": 1799
+      },
+      "index": {
+        "missing_list_date_rows": 5,
+        "rows": 8000
+      },
+      "stock": {
+        "missing_list_date_rows": 0,
+        "rows": 5892
+      }
+    },
+    "industry_classifications": 31,
+    "industry_mappings": 5370
+  },
+  "status": "passed"
+}

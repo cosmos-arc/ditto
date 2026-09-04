@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from ditto_backtest.manifest import InputRef, RunManifest
+from ditto_backtest.manifest import InputRef, ReplayContextInputRef, RunManifest
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.lineage.contracts import (
     DataLineageRecorder,
@@ -63,6 +63,23 @@ def _market_input_asset(ref: InputRef) -> DataAssetRef:
     )
 
 
+def _context_input_asset(ref: ReplayContextInputRef) -> DataAssetRef:
+    return DataAssetRef(
+        dataset_id=ref.context_id,
+        namespace="backtest_context_input",
+        partition_keys=(
+            f"content_hash={ref.content_hash}",
+            f"as_of={ref.as_of}",
+            f"knowledge_cutoff={ref.knowledge_cutoff}",
+            f"publication_cutoff={ref.publication_cutoff}",
+            *(
+                f"source_snapshot_id={snapshot_id}"
+                for snapshot_id in ref.source_snapshot_ids
+            ),
+        ),
+    )
+
+
 def _output_asset(run_id: str, config: BacktestLineageConfig) -> DataAssetRef:
     return DataAssetRef(
         dataset_id="backtest_report",
@@ -91,6 +108,13 @@ def _lineage_inputs(
                 role="market_data",
             )
             for input_ref in manifest.input_ref_details
+        ),
+        *(
+            LineageInputRef(
+                asset=_context_input_asset(context_ref),
+                role=context_ref.context_kind.value,
+            )
+            for context_ref in manifest.context_input_refs
         ),
     )
 

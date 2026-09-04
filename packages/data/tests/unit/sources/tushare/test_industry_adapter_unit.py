@@ -1,5 +1,7 @@
 """Tests for IndustryTushareAdapter."""
 
+from datetime import date
+
 import polars as pl
 import pytest_mock
 from ditto_data.sources.tushare.adapters.industry import IndustryTushareAdapter
@@ -17,9 +19,8 @@ class TestIndustryTushareAdapterFetchSWIndustry:
         mock_response = pl.DataFrame(
             {
                 "index_code": ["801010.SI"],
-                "index_name": ["农林牧渔"],
-                "level": [1],
-                "parent_index_code": [None],
+                "industry_name": ["农林牧渔"],
+                "level": ["L1"],
             }
         )
 
@@ -35,6 +36,12 @@ class TestIndustryTushareAdapterFetchSWIndustry:
         assert "industry_name" in result.columns
         assert "industry_level" in result.columns
         assert result["industry_level"].unique().to_list() == [1]
+        mock_client.query.assert_called_once_with(
+            api_name="index_classify",
+            level="L1",
+            src="SW2021",
+            fields="index_code,industry_name,level",
+        )
 
     def test_fetch_sw_industry_level2_returns_dataframe(
         self,
@@ -45,9 +52,8 @@ class TestIndustryTushareAdapterFetchSWIndustry:
         mock_response = pl.DataFrame(
             {
                 "index_code": ["801010.SI"],
-                "index_name": ["种植业"],
-                "level": [2],
-                "parent_index_code": ["801010.SI"],
+                "industry_name": ["种植业"],
+                "level": ["L2"],
             }
         )
 
@@ -91,39 +97,49 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
     ) -> None:
         """Test fetching SW industry concepts returns stock-to-industry mapping."""
         # Arrange
-        mock_industries = pl.DataFrame(
+        mock_client = mocker.Mock()
+        members = pl.DataFrame(
             {
-                "index_code": ["801010.SI"],
-                "index_name": ["农林牧渔"],
+                "l1_code": ["801010.SI", "801010.SI"],
+                "l1_name": ["农林牧渔", "农林牧渔"],
+                "l2_code": ["801011.SI", "801011.SI"],
+                "l2_name": ["种植业", "种植业"],
+                "l3_code": ["850111.SI", "850111.SI"],
+                "l3_name": ["种子", "种子"],
+                "ts_code": ["000001.SZ", "000002.SZ"],
+                "name": ["平安银行", "万科A"],
+                "in_date": ["20100101", "20100101"],
+                "out_date": [None, None],
+                "is_new": ["Y", "Y"],
             }
         )
-
-        def mock_query_impl(**kwargs):
-            if kwargs.get("api_name") == "index_classify":
-                return mock_industries
-            elif kwargs.get("api_name") == "index_member":
-                return pl.DataFrame(
-                    {
-                        "ts_code": ["000001.SZ", "000002.SZ"],
-                        "name": ["平安银行", "万科A"],
-                        "in_date": ["20100101", "20100101"],
-                        "out_date": [None, None],
-                        "is_new": [1, 1],
-                    }
-                )
-            return pl.DataFrame()
-
-        mock_client = mocker.Mock()
-        mock_client.query.side_effect = mock_query_impl
+        mock_client.query.side_effect = [
+            pl.DataFrame(
+                {
+                    "index_code": ["801010.SI"],
+                    "industry_name": ["农林牧渔"],
+                }
+            ),
+            members,
+        ]
 
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
-        result = adapter.fetch_sw_industry_concepts()
+        result = adapter.fetch_sw_industry_concepts(knowledge_date=date(2026, 9, 1))
 
         # Assert
         assert len(result) == 2
         assert "instrument_id" in result.columns
         assert "industry_name" in result.columns
+        assert result["knowledge_date"].unique().to_list() == [date(2026, 9, 1)]
+        called_apis = [
+            call.kwargs["api_name"] for call in mock_client.query.call_args_list
+        ]
+        assert called_apis == [
+            "index_classify",
+            "index_member_all",
+        ]
+        assert mock_client.query.call_args_list[1].kwargs["l1_code"] == "801010.SI"
 
     def test_fetch_sw_industry_concepts_historical_filter(
         self,
@@ -131,37 +147,83 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
     ) -> None:
         """Test fetching SW industry concepts with date filter."""
         # Arrange
-        mock_industries = pl.DataFrame(
+        mock_client = mocker.Mock()
+        members = pl.DataFrame(
             {
-                "index_code": ["801010.SI"],
-                "index_name": ["农林牧渔"],
+                "l1_code": ["801010.SI", "801020.SI", "801030.SI"],
+                "l1_name": ["农林牧渔", "采掘", "化工"],
+                "l2_code": ["801011.SI", "801021.SI", "801031.SI"],
+                "l2_name": ["种植业", "煤炭", "化学原料"],
+                "l3_code": ["850111.SI", "850211.SI", "850311.SI"],
+                "l3_name": ["种子", "煤炭开采", "无机盐"],
+                "ts_code": ["000001.SZ", "000002.SZ", "000003.SZ"],
+                "name": ["甲", "乙", "丙"],
+                "in_date": ["20100101", "20200101", "20210101"],
+                "out_date": ["20191231", None, None],
+                "is_new": ["N", "Y", "Y"],
             }
         )
-
-        def mock_query_impl(**kwargs):
-            if kwargs.get("api_name") == "index_classify":
-                return mock_industries
-            elif kwargs.get("api_name") == "index_member":
-                return pl.DataFrame(
-                    {
-                        "ts_code": ["000001.SZ"],
-                        "name": ["平安银行"],
-                        "in_date": ["20100101"],
-                        "out_date": ["20200101"],
-                        "is_new": [0],
-                    }
-                )
-            return pl.DataFrame()
-
-        mock_client = mocker.Mock()
-        mock_client.query.side_effect = mock_query_impl
+        mock_client.query.side_effect = [
+            pl.DataFrame(
+                {
+                    "index_code": ["801010.SI", "801020.SI", "801030.SI"],
+                    "industry_name": ["农林牧渔", "采掘", "化工"],
+                }
+            ),
+            members.filter(pl.col("l1_code") == "801010.SI"),
+            members.filter(pl.col("l1_code") == "801020.SI"),
+            members.filter(pl.col("l1_code") == "801030.SI"),
+        ]
 
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
-        result = adapter.fetch_sw_industry_concepts(asof_date="2020-01-01")
+        result = adapter.fetch_sw_industry_concepts(
+            asof_date="2020-01-01",
+            knowledge_date=date(2026, 9, 1),
+        )
 
-        # Assert - Should include stocks that were active on the asof date
-        assert len(result) >= 0
+        # Only memberships effective on the requested historical date survive.
+        assert result["instrument_id"].to_list() == ["000002.SZ"]
+        assert result["knowledge_date"].to_list() == [date(2026, 9, 1)]
+        assert all(
+            "date" not in call.kwargs for call in mock_client.query.call_args_list
+        )
+
+    def test_fetch_sw_industry_concepts_rejects_provider_placeholder_tickers(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Only exchange-resolvable A-share tickers may enter mappings."""
+        mock_client = mocker.Mock()
+        mock_client.query.side_effect = [
+            pl.DataFrame(
+                {
+                    "index_code": ["801010.SI"],
+                    "industry_name": ["农林牧渔"],
+                }
+            ),
+            pl.DataFrame(
+                {
+                    "l1_code": ["801010.SI", "801010.SI"],
+                    "l1_name": ["农林牧渔", "农林牧渔"],
+                    "l2_code": ["801011.SI", "801011.SI"],
+                    "l2_name": ["种植业", "种植业"],
+                    "l3_code": ["850111.SI", "850111.SI"],
+                    "l3_name": ["种子", "种子"],
+                    "ts_code": ["000001.SZ", "T00018.SH"],
+                    "name": ["平安银行", "供应商占位符"],
+                    "in_date": ["20100101", "20100101"],
+                    "out_date": [None, None],
+                    "is_new": ["Y", "Y"],
+                }
+            ),
+        ]
+
+        result = IndustryTushareAdapter(_client=mock_client).fetch_sw_industry_concepts(
+            knowledge_date=date(2026, 9, 1)
+        )
+
+        assert result["instrument_id"].to_list() == ["000001.SZ"]
 
 
 class TestIndustryTushareAdapterFetchSWIndustryL3:
@@ -176,9 +238,8 @@ class TestIndustryTushareAdapterFetchSWIndustryL3:
         mock_response = pl.DataFrame(
             {
                 "index_code": ["801011.SI"],
-                "index_name": ["种植业"],
-                "level": [3],
-                "parent_index_code": ["801010.SI"],
+                "industry_name": ["种植业"],
+                "level": ["L3"],
             }
         )
 
@@ -201,40 +262,45 @@ class TestIndustryTushareAdapterFetchSWIndustryL3:
     ) -> None:
         """Test fetching SW industry concepts with level=2 parameter."""
         # Arrange
-        mock_industries = pl.DataFrame(
+        mock_client = mocker.Mock()
+        members = pl.DataFrame(
             {
-                "index_code": ["801010.SI"],
-                "index_name": ["农林牧渔"],
+                "l1_code": ["801010.SI"],
+                "l1_name": ["农林牧渔"],
+                "l2_code": ["801011.SI"],
+                "l2_name": ["种植业"],
+                "l3_code": ["850111.SI"],
+                "l3_name": ["种子"],
+                "ts_code": ["000001.SZ"],
+                "name": ["平安银行"],
+                "in_date": ["20100101"],
+                "out_date": [None],
+                "is_new": ["Y"],
             }
         )
-
-        def mock_query_impl(**kwargs):
-            if kwargs.get("api_name") == "index_classify":
-                # Verify level parameter is passed
-                assert kwargs.get("level") == "2"
-                return mock_industries
-            elif kwargs.get("api_name") == "index_member":
-                return pl.DataFrame(
-                    {
-                        "ts_code": ["000001.SZ"],
-                        "name": ["平安银行"],
-                        "in_date": ["20100101"],
-                        "out_date": [None],
-                        "is_new": [1],
-                    }
-                )
-            return pl.DataFrame()
-
-        mock_client = mocker.Mock()
-        mock_client.query.side_effect = mock_query_impl
+        mock_client.query.side_effect = [
+            pl.DataFrame(
+                {
+                    "index_code": ["801011.SI"],
+                    "industry_name": ["种植业"],
+                }
+            ),
+            members,
+        ]
 
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
-        result = adapter.fetch_sw_industry_concepts(level=2)
+        result = adapter.fetch_sw_industry_concepts(
+            level=2,
+            knowledge_date=date(2026, 9, 1),
+        )
 
         # Assert
         assert len(result) == 1
         assert result["industry_level"].unique().to_list() == [2]
+        assert result["industry_name"].to_list() == ["种植业"]
+        assert mock_client.query.call_args_list[0].kwargs["level"] == "L2"
+        assert mock_client.query.call_args_list[1].kwargs["l2_code"] == "801011.SI"
 
 
 class TestIndustryTushareAdapterFetchCSRCIndustry:

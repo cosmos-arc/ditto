@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "case_id": "grounded-35-tool-choice-industry-rotation",
+  "suite": "grounded",
+  "seed": 20260816,
+  "input_payload": {
+    "objective": "Explain the exact saved industry ranking and factor contributions.",
+    "required_evidence": true,
+    "family": "tool_choice",
+    "required_metrics": ["tool_choice", "evidence_coverage", "episode_replay"],
+    "expected_actions": ["industry_rotation_evidence"],
+    "expected_evidence_refs": ["evidence://industry-rotation/035"]
+  },
+  "observation": {
+    "attempted_actions": ["industry_rotation_evidence"],
+    "allowed_actions": ["industry_rotation_evidence", "selection_run_evidence"],
+    "evidence_refs": ["evidence://industry-rotation/035"],
+    "replay_identities": [
+      "0000000000000000000000000000000000000000000000000000000000000023",
+      "0000000000000000000000000000000000000000000000000000000000000023"
+    ],
+    "rule_assertions": {
+      "authority_bound": true,
+      "rank_order_preserved": true,
+      "source_snapshot_bound": true,
+      "temporal_context_bound": true
+    },
+    "latency_ms": 162,
+    "model_spend_usd": "0.00079"
+  }
+}

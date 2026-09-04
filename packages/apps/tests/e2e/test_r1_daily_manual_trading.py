@@ -77,6 +77,7 @@ from ditto_application.queries.opening_baseline import OpeningBaselineResolver
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
 from ditto_application.queries.signal import SignalQueryFacade
 from ditto_application.queries.strategy import StrategyQueryFacade
+from ditto_apps.scripts.r2_data_acceptance import run_fixture_acceptance
 from ditto_backtest.data_feed import Slice
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_execution.models import FillRecord, SignalRecord
@@ -149,6 +150,19 @@ REFERENCE_PRICE = 10.0
 
 
 @dataclass(frozen=True)
+class _R1Scenario:
+    strategy_id: str = STRATEGY_ID
+    account_id: str = ACCOUNT_ID
+    signal_date: str = SIGNAL_DATE
+    intended_trade_date: str = INTENDED_TRADE_DATE
+    instrument_id: int = INSTRUMENT_ID
+    reference_price: float = REFERENCE_PRICE
+
+
+DEFAULT_SCENARIO = _R1Scenario()
+
+
+@dataclass(frozen=True)
 class _SeedCreateAdapter:
     handler: CreateStrategyHandler
 
@@ -185,6 +199,9 @@ class _SeedPublishAdapter:
 class _DeterministicMarketReader:
     """Exact D-close fixture implementing the application market query port."""
 
+    def __init__(self, scenario: _R1Scenario = DEFAULT_SCENARIO) -> None:
+        self._scenario = scenario
+
     def find_bars(
         self,
         *,
@@ -196,16 +213,16 @@ class _DeterministicMarketReader:
         del allow_experimental_data
         if (
             instrument_ids is None
-            or INSTRUMENT_ID not in instrument_ids
-            or start != SIGNAL_DATE
-            or end != SIGNAL_DATE
+            or self._scenario.instrument_id not in instrument_ids
+            or start != self._scenario.signal_date
+            or end != self._scenario.signal_date
         ):
             return pl.DataFrame()
         return pl.DataFrame(
             {
-                "instrument_id": [INSTRUMENT_ID],
-                "trade_date": [SIGNAL_DATE],
-                "close": [REFERENCE_PRICE],
+                "instrument_id": [self._scenario.instrument_id],
+                "trade_date": [self._scenario.signal_date],
+                "close": [self._scenario.reference_price],
                 "volume": [1_000_000.0],
                 "amount": [10_000_000.0],
                 "is_suspended": [False],
@@ -217,6 +234,7 @@ class _DeterministicMarketReader:
 
 @dataclass
 class _R1Harness:
+    scenario: _R1Scenario
     database: Path
     pool: SQLitePool
     trade: TradeService
@@ -242,21 +260,21 @@ class _R1Harness:
         ).run()
 
     def published_seed(self) -> StrategySpecRecord:
-        record = self.catalog.get_active_published(STRATEGY_ID)
+        record = self.catalog.get_active_published(self.scenario.strategy_id)
         if record is None:
             raise AssertionError("designated R1 seed was not published")
         return record
 
     def import_baseline(self, *, current_weight: float = 0.0) -> str:
         market_value = 100_000.0 * current_weight
-        quantity = int(market_value / REFERENCE_PRICE)
+        quantity = int(market_value / self.scenario.reference_price)
         positions = (
             (
                 PositionBaselineInput(
-                    instrument_id=INSTRUMENT_ID,
+                    instrument_id=self.scenario.instrument_id,
                     quantity=quantity,
                     available_quantity=quantity,
-                    average_cost=REFERENCE_PRICE,
+                    average_cost=self.scenario.reference_price,
                     market_value=market_value,
                 ),
             )
@@ -268,9 +286,9 @@ class _R1Harness:
             position_port=self.trade,
         ).handle(
             ImportAccountBaselineCommand(
-                account_id=ACCOUNT_ID,
-                strategy_id=STRATEGY_ID,
-                snapshot_date=SIGNAL_DATE,
+                account_id=self.scenario.account_id,
+                strategy_id=self.scenario.strategy_id,
+                snapshot_date=self.scenario.signal_date,
                 cash_available=100_000.0 - market_value,
                 cash_settled=100_000.0 - market_value,
                 cash_frozen=0.0,
@@ -288,27 +306,35 @@ class _R1Harness:
         risk_flags: tuple[str, ...] = (),
         finalize: Callable[[SignalPackage], SignalPackage] | None = None,
         run_strategy: Callable[[EodStrategyRequest, str, str], object] | None = None,
+        dataset_snapshot_ids: Mapping[str, str] | None = None,
     ) -> EodStrategyOutcome:
         seed = self.published_seed()
         request = eod_request_from_strategy_spec(seed)
         target = TargetPortfolio(
-            trade_date=SIGNAL_DATE,
-            strategy_id=STRATEGY_ID,
-            run_id=f"eod-{SIGNAL_DATE}-{STRATEGY_ID}-{seed.version}",
-            positions={InstrumentId(INSTRUMENT_ID): target_weight},
+            trade_date=self.scenario.signal_date,
+            strategy_id=self.scenario.strategy_id,
+            run_id=(
+                f"eod-{self.scenario.signal_date}-{self.scenario.strategy_id}-"
+                f"{seed.version}"
+            ),
+            positions={InstrumentId(self.scenario.instrument_id): target_weight},
             cash_target=1.0 - target_weight,
         )
-        dataset_states = _ready_dataset_states(request)
+        dataset_states = _ready_dataset_states(
+            request,
+            signal_date=self.scenario.signal_date,
+            snapshot_ids=dataset_snapshot_ids,
+        )
 
         def publish_signals(
             raw_target: object,
             snapshots: Mapping[str, str],
         ) -> SignalPackage:
             sizing = self.sizing_builder.build(
-                account_id=ACCOUNT_ID,
-                strategy_id=STRATEGY_ID,
-                signal_date=SIGNAL_DATE,
-                instrument_ids=(INSTRUMENT_ID,),
+                account_id=self.scenario.account_id,
+                strategy_id=self.scenario.strategy_id,
+                signal_date=self.scenario.signal_date,
+                instrument_ids=(self.scenario.instrument_id,),
             )
             return self.publisher.publish(
                 SignalPackagePublishRequest(
@@ -317,8 +343,8 @@ class _R1Harness:
                     account_id=sizing.account_id,
                     sleeve_id=sizing.sleeve_id,
                     sizing_contexts=sizing.contexts,
-                    decision_date=SIGNAL_DATE,
-                    intended_trade_date=INTENDED_TRADE_DATE,
+                    decision_date=self.scenario.signal_date,
+                    intended_trade_date=self.scenario.intended_trade_date,
                     required_datasets=request.required_datasets,
                     required_dataset_states=tuple(
                         asdict(dataset_states[dataset])
@@ -327,7 +353,7 @@ class _R1Harness:
                     dataset_snapshot_ids=dict(snapshots),
                     factor_ids=SEED_STRATEGY_SPECS[STRATEGY_ID].signal_expressions,
                     factor_values={
-                        INSTRUMENT_ID: {
+                        self.scenario.instrument_id: {
                             factor_id: float(index)
                             for index, factor_id in enumerate(
                                 SEED_STRATEGY_SPECS[STRATEGY_ID].signal_expressions,
@@ -358,7 +384,7 @@ class _R1Harness:
             run_service=self.runs,
         )
         return coordinator.run(
-            signal_date=SIGNAL_DATE,
+            signal_date=self.scenario.signal_date,
             strategies=(request,),
             dataset_states=dataset_states,
         )[0]
@@ -381,21 +407,26 @@ class _R1Harness:
             strategy_query=StrategyQueryFacade(self.catalog),
             run_reader=self.runs,
         ).get_report_v2(
-            strategy_id=STRATEGY_ID,
-            trade_date=SIGNAL_DATE,
-            account_id=ACCOUNT_ID,
+            strategy_id=self.scenario.strategy_id,
+            trade_date=self.scenario.signal_date,
+            account_id=self.scenario.account_id,
         )
 
 
 def _ready_dataset_states(
     request: EodStrategyRequest,
+    *,
+    signal_date: str = SIGNAL_DATE,
+    snapshot_ids: Mapping[str, str] | None = None,
 ) -> dict[str, DatasetReadiness]:
     return {
         dataset: DatasetReadiness(
             dataset=dataset,
             status="ready",
             snapshot_id=(
-                "sha256:" + sha256(f"{dataset}:{SIGNAL_DATE}".encode()).hexdigest()
+                snapshot_ids[dataset]
+                if snapshot_ids is not None
+                else "sha256:" + sha256(f"{dataset}:{signal_date}".encode()).hexdigest()
             ),
         )
         for dataset in request.required_datasets
@@ -438,7 +469,10 @@ def _trade_service(pool: SQLitePool) -> TradeService:
     )
 
 
-def _harness(database: Path) -> _R1Harness:
+def _harness(
+    database: Path,
+    scenario: _R1Scenario = DEFAULT_SCENARIO,
+) -> _R1Harness:
     pool = SQLitePool(str(database))
     trade = _trade_service(pool)
 
@@ -474,9 +508,11 @@ def _harness(database: Path) -> _R1Harness:
     )
     sizing_builder = ManualSizingContextBuilder(
         account_query=account_query,
-        market_query=_DeterministicMarketReader(),
+        market_query=_DeterministicMarketReader(scenario),
     )
-    resolver = AShareTradeDateResolver(trading_days=(SIGNAL_DATE, INTENDED_TRADE_DATE))
+    resolver = AShareTradeDateResolver(
+        trading_days=(scenario.signal_date, scenario.intended_trade_date)
+    )
     publisher = SignalPackagePublisher(
         snapshot_process=SignalSnapshotProcess(
             position_reader=StoredPositionReader(trade),
@@ -488,6 +524,7 @@ def _harness(database: Path) -> _R1Harness:
         artifact_service=artifacts,
     )
     return _R1Harness(
+        scenario=scenario,
         database=database,
         pool=pool,
         trade=trade,
@@ -552,6 +589,120 @@ def test_builtin_seed_baseline_eod_package_decision_and_identical_rerun(
     assert decision.run_package["checksum_valid"] is True
     assert decision.data["required_datasets"] == tuple(
         sorted(SEED_STRATEGY_SPECS[STRATEGY_ID].required_datasets)
+    )
+
+
+@pytest.mark.e2e
+@pytest.mark.integration
+def test_certified_etf_paper_flow_completes_five_consecutive_trading_days(
+    tmp_path: Path,
+) -> None:
+    """Bind five paper days to one current R2-certified ETF data identity."""
+    certification = run_fixture_acceptance(
+        checked_at=datetime(2026, 8, 30, 8, tzinfo=UTC)
+    )
+    etf_daily = next(
+        product
+        for product in certification.preflight.products
+        if product.dataset_id == "etf_daily"
+    )
+    assert certification.status == "ready"
+    assert etf_daily.ready is True
+    assert etf_daily.certification_report_id is not None
+    assert etf_daily.certification_content_hash is not None
+
+    paper_days = (
+        ("2026-08-24", "2026-08-25", "2026-08-26"),
+        ("2026-08-25", "2026-08-26", "2026-08-27"),
+        ("2026-08-26", "2026-08-27", "2026-08-28"),
+        ("2026-08-27", "2026-08-28", "2026-08-31"),
+        ("2026-08-28", "2026-08-31", "2026-09-01"),
+    )
+    receipts: list[tuple[str, str, str, int]] = []
+    for index, (signal_date, intended_trade_date, settlement_date) in enumerate(
+        paper_days,
+        start=1,
+    ):
+        scenario = _R1Scenario(
+            strategy_id="seed_etf_industry_rotation",
+            account_id=f"product-beta-paper-{index}",
+            signal_date=signal_date,
+            intended_trade_date=intended_trade_date,
+            instrument_id=510300,
+            reference_price=4.0,
+        )
+        snapshot_id = (
+            f"{etf_daily.certification_report_id}:{signal_date}:"
+            f"{etf_daily.certification_content_hash}"
+        )
+        harness = _harness(tmp_path / f"paper-day-{index}.sqlite", scenario)
+        try:
+            harness.bootstrap()
+            harness.import_baseline()
+            outcome = harness.run_eod(
+                target_weight=0.4,
+                dataset_snapshot_ids={"etf_daily": snapshot_id},
+            )
+            intents = harness.trade.list_intents(
+                scenario.strategy_id,
+                signal_date=scenario.signal_date,
+            )
+            assert outcome.status == "completed"
+            assert len(intents) == 1
+            intent = intents[0]
+            RecordFillHandler(
+                intent_port=harness.trade,
+                fill_port=harness.trade,
+                position_port=harness.trade,
+                manual_tracker=ManualTracker(
+                    trading_calendar=(
+                        signal_date,
+                        intended_trade_date,
+                        settlement_date,
+                    )
+                ),
+                opening_baseline_resolver=harness.opening_baseline_resolver(),
+            ).handle(
+                RecordFillCommand(
+                    fill_id=f"product-beta-fill-{index}",
+                    intent_id=intent.intent_id,
+                    strategy_id=scenario.strategy_id,
+                    trade_date=intended_trade_date,
+                    instrument_id=intent.instrument_id,
+                    direction=intent.direction,
+                    quantity=intent.quantity,
+                    fill_price=scenario.reference_price,
+                    fee=1.0,
+                )
+            )
+            decision = harness.decision()
+            effective_fills = decision.execution_review["effective_fills"]
+            assert decision.data["snapshot_ids"] == {"etf_daily": snapshot_id}
+            assert decision.data["freshness"] == "ready"
+            assert decision.data["dq_state"] == "passed"
+            assert decision.run_package["checksum_valid"] is True
+            assert isinstance(effective_fills, tuple)
+            assert len(effective_fills) == 1
+            assert decision.actions[0]["remaining_quantity"] == 0
+            receipts.append(
+                (
+                    signal_date,
+                    outcome.status,
+                    snapshot_id,
+                    len(effective_fills),
+                )
+            )
+        finally:
+            harness.pool.close_all()
+
+    assert tuple(receipt[0] for receipt in receipts) == tuple(
+        day[0] for day in paper_days
+    )
+    assert all(
+        status == "completed"
+        and snapshot.startswith("certification:etf_daily:")
+        and fill_count == 1
+        for _, status, snapshot, fill_count in receipts
     )
 
 

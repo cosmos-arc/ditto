@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-31T18:07:18Z",
+  "gate": "Q0",
+  "gate_status": "passed",
+  "engineering_status": "PROVEN",
+  "decision": "Two-repository baseline, fresh bootstrap/reset dry-run, paper-only execution boundary, D1-D16 decisions, recovery path, full CI, and architecture gates are evidenced.",
+  "evidence": [
+    "docs/evidence/workstation-baseline-20260831.json",
+    "docs/evidence/personal-workstation/validation/backend.json",
+    "docs/evidence/personal-workstation/validation/frontend.json",
+    "docs/evidence/personal-workstation/ops/recovery.json"
+  ],
+  "blockers": [],
+  "owners": [],
+  "unblock_conditions": []
+}

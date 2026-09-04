@@ -19,10 +19,18 @@ READ_EVIDENCE_TOOL_NAMES = frozenset(
         "research_strategy_evidence",
         "research_backtest_evidence",
         "portfolio_evidence",
+        "portfolio_comparison_evidence",
+        "portfolio_scenario_preview",
+        "account_event_evidence",
         "risk_evidence",
         "daily_decision_v3_evidence",
+        "market_context_evidence",
+        "industry_rotation_evidence",
+        "instrument_technical_evidence",
+        "selection_run_evidence",
     }
 )
+READ_EVIDENCE_TOOL_ORDER = tuple(sorted(READ_EVIDENCE_TOOL_NAMES))
 
 AUTHOR_PREVIEW_TOOL_NAMES = frozenset(
     {
@@ -94,6 +102,7 @@ __all__ = [
     "AUTHOR_PREVIEW_TOOL_NAMES",
     "NO_APPROVAL_TOOL_NAMES",
     "READ_EVIDENCE_TOOL_NAMES",
+    "READ_EVIDENCE_TOOL_ORDER",
     "EvidenceToolRegistry",
     "ToolNotAllowedError",
 ]

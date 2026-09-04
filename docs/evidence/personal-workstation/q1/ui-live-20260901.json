@@ -1,0 +1,79 @@
+{
+  "schema_version": "ditto.q1-ui-live.v1",
+  "generated_at": "2026-09-01T12:16:05Z",
+  "status": "passed",
+  "scope": "System/Data Products live-boundary acceptance against the isolated Q1 runtime copy",
+  "branches": {
+    "backend": "codex/roadmap-completion",
+    "frontend": "codex/roadmap-completion"
+  },
+  "runtime": {
+    "data_root": "/tmp/ditto-q1-ui-20260901.v1",
+    "source_certified_root": "/tmp/ditto-q1-certified-20260901.v7",
+    "certified_root_mutated": false,
+    "backend_command": "pixi run -e dev server",
+    "backend_workers": 4,
+    "credential_delivery": "parent-process Keychain preload inherited in worker memory",
+    "credential_values_recorded": false,
+    "frontend_command": "VITE_USE_MOCK=false VITE_API_BASE_URL=/api bun run dev -- --host 127.0.0.1",
+    "frontend_mock_enabled": false
+  },
+  "backend": {
+    "health_endpoint": "/healthz",
+    "health_status": "ok",
+    "service": "ditto-api",
+    "data_products_endpoint": "/api/v1/data-products?profile=research_daily",
+    "http_status": 200,
+    "product_count": 22,
+    "hard_scope_count": 22,
+    "active_certification_count": 0
+  },
+  "browser": {
+    "route": "/system/data-products",
+    "http_status": 200,
+    "title": "Ditto - 量化交易平台",
+    "product_buttons": 22,
+    "shows_hard_scope_22": true,
+    "shows_bundle_blocked": true,
+    "shows_consumer_fail_closed": true,
+    "shows_live_connected": true,
+    "uncertified_detail_fail_closed": true,
+    "api_responses": [
+      {
+        "path": "/api/v1/data-products?profile=research_daily",
+        "status": 200
+      }
+    ],
+    "failed_api_requests": [],
+    "console_errors": [],
+    "page_errors": []
+  },
+  "test_evidence": {
+    "frontend_red": "The new uncertified-product test observed five eager detail requests before the fix.",
+    "frontend_green": "13 passed across the Data Products workbench and hook suites.",
+    "backend_green": "9 passed across provider configuration and the fork-safe server entrypoint suites.",
+    "process_smoke": "Four Granian workers started with data-source validation passed after parent-process Keychain preload."
+  },
+  "artifact_hashes": {
+    "browser_result": "sha256:e368b7e24db73527ed3153aa75c799f8454b626f9e94f2275fe0a3cc94251ffd",
+    "browser_screenshot": "sha256:da8c682266749fe69088ac38ad1a273aff3b7a816b160f802aeb6bc161d694b7",
+    "backend_config": "sha256:df8446b5c57dea25d21776487302f3a0316230e799132fe170b4bf21dfa56e1b",
+    "backend_server_entrypoint": "sha256:0d8497e609d4ba5f91bd6ed950aa5fbd2b702f463b86161d9d4d726567df7d53",
+    "backend_pixi_tasks": "sha256:0c65c73ba3491b1348dd1216e6d3b22db456827fb6d2b1b0bd44cd6cdbedc0ba",
+    "frontend_workbench": "sha256:c87e965fff2f8b6ce83bc154f46f8267ddd4d49c1d843d42f1180014e9783644",
+    "frontend_hooks": "sha256:027a889c237cd7cb16478726751d6fbac8bd52134385cbe9c7ebaea42ea26eb8"
+  },
+  "claim_boundary": {
+    "proves": [
+      "Data Products renders from the live backend with mocks disabled.",
+      "The R2 hard-scope catalog contains exactly 22 products.",
+      "An uncertified catalog is represented honestly as blocked and fail closed.",
+      "The default four-worker server topology can consume locally authorized Keychain credentials without placing secrets in command arguments, environment variables, logs, or evidence."
+    ],
+    "does_not_prove": [
+      "Active per-dataset certification reports exist for all 22 products.",
+      "Q2 through Q6 workflows are complete.",
+      "The 20-real-trading-day Paper soak is complete."
+    ]
+  }
+}

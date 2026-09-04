@@ -33,6 +33,9 @@ from ditto_apps.registry.live.r3_live_snapshot_builder import (
     _membership_with_instrument_lifecycle,
     _stock_membership,
 )
+from ditto_apps.registry.live.r3_live_snapshot_frames import (
+    build_etf_membership_frame,
+)
 from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 
@@ -123,6 +126,36 @@ def test_normalized_benchmark_bars_keep_required_price_limits_non_null() -> None
     assert frame["limit_down"].null_count() == 0
     assert frame["limit_up"].to_list() == pytest.approx([3_848.9])
     assert frame["limit_down"].to_list() == pytest.approx([3_149.1])
+
+
+@pytest.mark.unit
+def test_normalized_bars_collapse_identical_physical_partition_overlap() -> None:
+    raw = _raw_bars(((date(2015, 2, 2), 1, 10.0),))
+
+    frame = _normalized_bars(
+        pl.concat((raw, raw)),
+        _membership(((date(2015, 2, 2), 1),)),
+        authority_snapshot_id="source-1",
+    )
+
+    assert frame.select("trade_date", "instrument_id").rows() == [(date(2015, 2, 2), 1)]
+
+
+@pytest.mark.unit
+def test_normalized_bars_reject_conflicting_physical_partition_overlap() -> None:
+    raw = _raw_bars(
+        (
+            (date(2015, 2, 2), 1, 10.0),
+            (date(2015, 2, 2), 1, 11.0),
+        )
+    )
+
+    with pytest.raises(ValueError, match="conflicting live bar duplicates"):
+        _normalized_bars(
+            raw,
+            _membership(((date(2015, 2, 2), 1),)),
+            authority_snapshot_id="source-1",
+        )
 
 
 @pytest.mark.unit
@@ -228,6 +261,88 @@ def test_stock_membership_uses_only_strictly_prior_index_composition() -> None:
         (date(2015, 2, 3), 1, date(2015, 1, 30)),
         (date(2015, 2, 4), 2, date(2015, 2, 3)),
     ]
+
+
+@pytest.mark.unit
+def test_etf_membership_resolves_portable_tickers_from_current_metadata() -> None:
+    """The real proving lane must not depend on one database's surrogate ids."""
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        "CREATE TABLE instrument (instrument_id INTEGER, ticker TEXT, asset_class TEXT)"
+    )
+    connection.executemany(
+        "INSERT INTO instrument VALUES (?, ?, ?)",
+        (
+            (91, "510050", "etf"),
+            (37, "510300", "etf"),
+            (52, "510500", "etf"),
+            (99, "510050", "stock"),
+        ),
+    )
+
+    frame = build_etf_membership_frame(
+        connection,
+        (date(2015, 2, 2),),
+        authority_snapshot_id="source-1",
+    )
+
+    assert frame.select("instrument_id").to_series().to_list() == [37, 52, 91]
+    assert frame["known_at"].to_list() == [date(2015, 2, 1)] * 3
+    connection.close()
+
+
+@pytest.mark.unit
+def test_etf_membership_can_bind_exact_selection_tickers() -> None:
+    """A SelectionRun target must narrow the research universe exactly."""
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        "CREATE TABLE instrument (instrument_id INTEGER, ticker TEXT, asset_class TEXT)"
+    )
+    connection.executemany(
+        "INSERT INTO instrument VALUES (?, ?, ?)",
+        (
+            (91, "510050", "etf"),
+            (37, "510300", "etf"),
+            (52, "510500", "etf"),
+            (24, "518880", "etf"),
+        ),
+    )
+
+    frame = build_etf_membership_frame(
+        connection,
+        (date(2015, 2, 2), date(2015, 2, 3)),
+        authority_snapshot_id="source-1",
+        tickers=("518880",),
+    )
+
+    assert frame.select("trade_date", "instrument_id").rows() == [
+        (date(2015, 2, 2), 24),
+        (date(2015, 2, 3), 24),
+    ]
+    connection.close()
+
+
+@pytest.mark.unit
+def test_etf_membership_fails_closed_when_portable_ticker_is_missing() -> None:
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        "CREATE TABLE instrument (instrument_id INTEGER, ticker TEXT, asset_class TEXT)"
+    )
+    connection.executemany(
+        "INSERT INTO instrument VALUES (?, ?, ?)",
+        ((91, "510050", "etf"), (37, "510300", "etf")),
+    )
+
+    with pytest.raises(ValueError, match="live ETF metadata is incomplete: 510500"):
+        build_etf_membership_frame(
+            connection,
+            (date(2015, 2, 2),),
+            authority_snapshot_id="source-1",
+        )
+    connection.close()
 
 
 @pytest.mark.unit

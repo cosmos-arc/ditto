@@ -128,8 +128,13 @@ class AgentEpisodeWriter:
                 "agent_episode_event_conflict",
             )
 
-    def put(self, episode: AgentEpisodeManifest) -> AgentEpisodeManifest:
-        """Persist a terminal episode or accept only an exact replay."""
+    @classmethod
+    def put_in_transaction(
+        cls,
+        connection: sqlite3.Connection,
+        episode: AgentEpisodeManifest,
+    ) -> AgentEpisodeManifest:
+        """Persist an episode inside an existing authoritative transaction."""
         if not isinstance(cast(object, episode), AgentEpisodeManifest):
             raise TypeError("episode must be an AgentEpisodeManifest")
         if not episode.verify_manifest_hash() or not episode.verify_replay_identity():
@@ -144,56 +149,60 @@ class AgentEpisodeWriter:
             payload,
             sealed_at_us,
         )
-        with self._transaction() as connection:
-            self.verify_run_identity(connection, episode)
-            self.verify_event_identity(connection, episode)
-            row = connection.execute(
-                """
-                SELECT episode_id, run_id, manifest_hash, replay_identity,
-                       payload_json, sealed_at_us
-                FROM agent_episode_manifests
-                WHERE episode_id=? OR run_id=?
-                """,
-                (episode.episode_id, episode.run_id),
-            ).fetchone()
-            if row is not None:
-                durable = (
-                    row["episode_id"],
-                    row["run_id"],
-                    row["manifest_hash"],
-                    row["replay_identity"],
-                    row["payload_json"],
-                    row["sealed_at_us"],
+        cls.verify_run_identity(connection, episode)
+        cls.verify_event_identity(connection, episode)
+        row = connection.execute(
+            """
+            SELECT episode_id, run_id, manifest_hash, replay_identity,
+                   payload_json, sealed_at_us
+            FROM agent_episode_manifests
+            WHERE episode_id=? OR run_id=?
+            """,
+            (episode.episode_id, episode.run_id),
+        ).fetchone()
+        if row is not None:
+            durable = (
+                row["episode_id"],
+                row["run_id"],
+                row["manifest_hash"],
+                row["replay_identity"],
+                row["payload_json"],
+                row["sealed_at_us"],
+            )
+            if durable != values:
+                raise _conflict(
+                    "Episode replay conflicts with durable identity",
+                    "agent_episode_conflict",
                 )
-                if durable != values:
-                    raise _conflict(
-                        "Episode replay conflicts with durable identity",
-                        "agent_episode_conflict",
-                    )
-                return episode
-            connection.execute(
-                """
-                INSERT INTO agent_episode_manifests (
-                    episode_id, run_id, manifest_hash, replay_identity,
-                    payload_json, sealed_at_us
-                ) VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                values,
-            )
-            append_audit_event(
-                connection,
-                category="episode",
-                subject_id=episode.episode_id,
-                action="sealed",
-                payload_hash=canonical_sha256(
-                    {
-                        "manifest_hash": episode.manifest_hash,
-                        "replay_identity": episode.replay_identity,
-                    }
-                ),
-                occurred_at=episode.sealed_at,
-            )
+            return episode
+        connection.execute(
+            """
+            INSERT INTO agent_episode_manifests (
+                episode_id, run_id, manifest_hash, replay_identity,
+                payload_json, sealed_at_us
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            values,
+        )
+        append_audit_event(
+            connection,
+            category="episode",
+            subject_id=episode.episode_id,
+            action="sealed",
+            payload_hash=canonical_sha256(
+                {
+                    "manifest_hash": episode.manifest_hash,
+                    "replay_identity": episode.replay_identity,
+                }
+            ),
+            occurred_at=episode.sealed_at,
+        )
         return episode
+
+    def put(self, episode: AgentEpisodeManifest) -> AgentEpisodeManifest:
+        """Persist a terminal episode or accept only an exact replay."""
+        with self._transaction() as connection:
+            return self.put_in_transaction(connection, episode)
 
 
 class AgentEpisodeReader:

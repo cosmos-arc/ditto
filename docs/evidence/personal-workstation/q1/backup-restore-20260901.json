@@ -1,0 +1,40 @@
+{
+  "backup_manifest_sha256": "4f61bc3098ada499c26d0d1204fd3a7be8d9e444d3ca9b2c92b71485da4aaa9e",
+  "backup_root": "/private/tmp/ditto-q1-backup-20260901.v2",
+  "generated_at": "2026-09-01T11:26:57.041471+00:00",
+  "passed": true,
+  "payload_tree": {
+    "backup_root_sha256": "sha256:3b8911b116de531ea2a06d33edabe9bc4e727ef78f71bc3088dd099a58dd0939",
+    "file_count": 33,
+    "hashes_equal": true,
+    "restore_root_sha256": "sha256:3b8911b116de531ea2a06d33edabe9bc4e727ef78f71bc3088dd099a58dd0939",
+    "source_root_sha256": "sha256:3b8911b116de531ea2a06d33edabe9bc4e727ef78f71bc3088dd099a58dd0939",
+    "total_bytes": 6562039
+  },
+  "restore_root": "/private/tmp/ditto-q1-restore-20260901.v2",
+  "schema": "ditto.q1-backup-restore.v2",
+  "source_root": "/private/tmp/ditto-q1-certified-20260901.v7",
+  "sqlite": {
+    "backup_integrity_check": "ok",
+    "backup_sha256": "sha256:0c1567fb5364d2100fb923f280c01761de55b744c39bd628d786c9161d0a226c",
+    "foreign_key_violation_count": {
+      "backup": 0,
+      "restore": 0,
+      "source": 0
+    },
+    "logical_row_counts_equal": true,
+    "logical_table_count": 65,
+    "restore_integrity_check": "ok",
+    "restore_sha256": "sha256:0c1567fb5364d2100fb923f280c01761de55b744c39bd628d786c9161d0a226c",
+    "source_integrity_check": "ok",
+    "source_sha256": "sha256:736817465df61e76f8a851186f5c6900890e03c1551d8613fc2d383d595f6838"
+  },
+  "status": "passed",
+  "verification": {
+    "backup_preserved": true,
+    "non_overwriting_backup": true,
+    "non_overwriting_restore": true,
+    "restore_preserved": true,
+    "source_preserved": true
+  }
+}

@@ -7,6 +7,10 @@ from dataclasses import dataclass
 import polars as pl
 from ditto_data.catalog import DataCatalogWriter
 from ditto_data.catalog.metadata import dataset_asset_class
+from ditto_data.catalog.provider_payload import (
+    ProviderPayloadArtifact,
+    ProviderPayloadWriter,
+)
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionQualityEvidence, IngestionResult
@@ -43,6 +47,7 @@ from ditto_application.processes.ingestion.post_ingest import (
     handle_fetch_error,
     record_data_catalog_entry,
     record_ingestion_lineage,
+    retain_provider_payload,
     write_data_safe,
 )
 from ditto_application.processes.ingestion.quality_gate import run_write_quality_gate
@@ -86,6 +91,7 @@ class InstrumentIngestContext:
     catalog_writer: DataCatalogWriter | None = None
     quality_checker: QualityCheckerProtocol | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
+    provider_payload_writer: ProviderPayloadWriter | None = None
     license_record_id: str | None = None
 
 
@@ -100,6 +106,7 @@ class InstrumentPostIngestContext:
     catalog_writer: DataCatalogWriter | None = None
     quality_checker: QualityCheckerProtocol | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
+    provider_payload_writer: ProviderPayloadWriter | None = None
     license_record_id: str | None = None
 
 
@@ -203,6 +210,7 @@ def _fetch_and_ingest_by_instrument(
             catalog_writer=ctx.catalog_writer,
             quality_checker=ctx.quality_checker,
             evidence_committer=ctx.evidence_committer,
+            provider_payload_writer=ctx.provider_payload_writer,
             license_record_id=ctx.license_record_id,
         ),
         chunk_id=chunk_id,
@@ -246,18 +254,13 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
         return ctx.result_handler.handle_empty_data(dataset, params.start_date)
-    if ctx.evidence_committer is not None and ctx.quality_checker is None:
-        return ctx.result_handler.handle_quality_check_required(
-            dataset, params.start_date
-        )
-    if ctx.evidence_committer is not None and not ctx.license_record_id:
-        return IngestionResult(
-            dataset=dataset,
-            trade_date=params.start_date,
-            status="failed",
-            error="R2_LICENSE_RECORD_REQUIRED",
-            message="R2 证据模式缺少已审核 license record",
-        )
+    prerequisite_failure = _instrument_evidence_prerequisite_failure(
+        dataset,
+        params.start_date,
+        ctx=ctx,
+    )
+    if prerequisite_failure is not None:
+        return prerequisite_failure
 
     df, quality_failure = run_write_quality_gate(
         df,
@@ -268,6 +271,16 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
     )
     if quality_failure is not None:
         return quality_failure
+
+    retained = _retain_instrument_provider_payload(
+        df,
+        dataset=dataset,
+        trade_date=params.start_date,
+        ctx=ctx,
+    )
+    if isinstance(retained, IngestionResult):
+        return retained
+    provider_payload = retained
 
     on_duplicate = OnDuplicate.KEEP_LAST
 
@@ -300,6 +313,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
         end_date=params.end_date,
         l1_l2_attested=ctx.quality_checker is not None,
         chunk_id=chunk_id,
+        provider_payload=provider_payload,
     )
     if ctx.evidence_committer is not None:
         outcome = ctx.evidence_committer.commit(
@@ -352,6 +366,47 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
             catalog_writer=ctx.catalog_writer,
         )
     return result
+
+
+def _instrument_evidence_prerequisite_failure(
+    dataset: str,
+    trade_date: str,
+    *,
+    ctx: InstrumentPostIngestContext,
+) -> IngestionResult | None:
+    """Validate R2-only dependencies before any instrument payload write."""
+    if ctx.evidence_committer is None:
+        return None
+    if ctx.quality_checker is None:
+        return ctx.result_handler.handle_quality_check_required(dataset, trade_date)
+    if ctx.license_record_id:
+        return None
+    return IngestionResult(
+        dataset=dataset,
+        trade_date=trade_date,
+        status="failed",
+        error="R2_LICENSE_RECORD_REQUIRED",
+        message="R2 证据模式缺少已审核 license record",
+    )
+
+
+def _retain_instrument_provider_payload(
+    df: pl.DataFrame,
+    *,
+    dataset: str,
+    trade_date: str,
+    ctx: InstrumentPostIngestContext,
+) -> ProviderPayloadArtifact | IngestionResult | None:
+    """Retain R2 payloads while leaving non-evidence ingestion unchanged."""
+    if ctx.evidence_committer is None:
+        return None
+    return retain_provider_payload(
+        df,
+        dataset=dataset,
+        trade_date=trade_date,
+        source_name=ctx.source_name,
+        writer=ctx.provider_payload_writer,
+    )
 
 
 def _fetch_by_dataset(

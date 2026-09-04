@@ -26,6 +26,10 @@ from ditto_data.storage.market.index.constituent.constituent_reader import (
 from ditto_data.storage.market.index.constituent.constituent_writer import (
     IndexConstituentWriter,
 )
+from ditto_data.storage.market.index.global_bars import (
+    GlobalIndexBarsReader,
+    GlobalIndexBarsWriter,
+)
 from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
@@ -57,6 +61,7 @@ class MarketProvider(Provider):
     ) -> MarketReaders:
         """Market 域读取依赖聚合。"""
         store = _market_parquet_store(settings)
+        global_store = _global_index_parquet_store(settings)
         return MarketReaders(
             stock_bars=StockBarsReader(store),
             stock_status=StockStatusReader(store),
@@ -67,6 +72,7 @@ class MarketProvider(Provider):
             etf_adj=EtfAdjFactorReader(store),
             etf_nav=EtfNavReader(store),
             index_bars=IndexBarsReader(store),
+            global_index_bars=GlobalIndexBarsReader(global_store),
             index_constituent=IndexConstituentReader(data_root=settings.data_root),
             fx_bars=FxBarsReader(store),
             commodity_bars=CommodityBarsReader(store),
@@ -79,6 +85,7 @@ class MarketProvider(Provider):
     ) -> MarketWriters:
         """Market 域写入依赖聚合。"""
         store = _market_parquet_store(settings)
+        global_store = _global_index_parquet_store(settings)
         return MarketWriters(
             stock_bars=StockBarsWriter(store),
             stock_status=StockStatusWriter(store),
@@ -88,6 +95,7 @@ class MarketProvider(Provider):
             etf_adj=EtfAdjFactorWriter(store),
             etf_nav=EtfNavWriter(store),
             index_bars=IndexBarsWriter(store),
+            global_index_bars=GlobalIndexBarsWriter(global_store),
             index_constituent=IndexConstituentWriter(data_root=settings.data_root),
             fx_bars=FxBarsWriter(store),
             commodity_bars=CommodityBarsWriter(store),
@@ -115,4 +123,14 @@ def _market_parquet_store(settings: DataStoreSettings) -> ParquetStore:
         key_columns=MARKET_KEY_COLUMNS,
         date_column=MARKET_DATE_COLUMN,
         instrument_column=MARKET_INSTRUMENT_COLUMN,
+    )
+
+
+def _global_index_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """Create the global-index store with revision-preserving natural keys."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=("source_ticker", "trade_date", "knowledge_date"),
+        date_column="trade_date",
+        instrument_column="source_ticker",
     )

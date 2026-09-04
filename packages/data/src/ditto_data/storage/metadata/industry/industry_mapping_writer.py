@@ -52,25 +52,42 @@ class IndustryMappingWriter:
             Exception: 数据库操作失败时传播异常.
 
         """
-        # 失效旧映射：将当前 effective_to 设为 None 的记录设置为失效
-        self._client.execute(
-            """UPDATE industry_mapping
-            SET effective_to = ?
-            WHERE instrument_id = ? AND effective_to IS NULL""",
-            [mapping.effective_from, mapping.instrument_id],
+        existing = self._client.fetchone(
+            """SELECT id FROM industry_mapping
+            WHERE instrument_id = ? AND industry_id = ? AND source = ?
+              AND effective_from IS ? AND effective_to IS ?""",
+            [
+                mapping.instrument_id,
+                mapping.industry_id,
+                mapping.source,
+                mapping.effective_from,
+                mapping.effective_to,
+            ],
         )
+        if existing is not None:
+            return
+
+        # 只有新的 current 映射才失效同来源旧 current；历史区间不得改写当前态。
+        if mapping.effective_to is None:
+            self._client.execute(
+                """UPDATE industry_mapping
+                SET effective_to = ?
+                WHERE instrument_id = ? AND source = ? AND effective_to IS NULL""",
+                [mapping.effective_from, mapping.instrument_id, mapping.source],
+            )
 
         # 插入新映射
         self._client.execute(
             """INSERT INTO industry_mapping
             (instrument_id, industry_id, source, effective_from,
              effective_to, entry_reason)
-            VALUES (?, ?, ?, ?, NULL, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?)""",
             [
                 mapping.instrument_id,
                 mapping.industry_id,
                 mapping.source,
                 mapping.effective_from,
+                mapping.effective_to,
                 mapping.entry_reason,
             ],
         )

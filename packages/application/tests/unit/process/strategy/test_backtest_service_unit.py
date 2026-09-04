@@ -18,7 +18,13 @@ from ditto_application.processes.execution.backtest_process import (
 )
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.engine import EngineConfig, EngineLoop, EngineResult
-from ditto_backtest.manifest import InputRef, RunManifest, RunMode
+from ditto_backtest.manifest import (
+    ContextInputKind,
+    InputRef,
+    ReplayContextInputRef,
+    RunManifest,
+    RunMode,
+)
 from ditto_backtest.result import (
     BacktestAccountStateSnapshot,
     BacktestCheckpoint,
@@ -302,6 +308,25 @@ class TestBacktestServiceConfig:
         engine_config = service._build_engine_config("run-knowledge-lag")
 
         assert engine_config.knowledge_lag_days == 3
+
+    def test_product_context_inputs_propagate_to_engine_manifest_config(self) -> None:
+        """Exact application evidence must survive service-to-engine assembly."""
+        context_ref = ReplayContextInputRef(
+            context_kind=ContextInputKind.MARKET_CONTEXT,
+            context_id="market-regime:sha256:context",
+            content_hash="d" * 64,
+            as_of="2026-08-31T07:00:00Z",
+            knowledge_cutoff="2026-08-31T07:00:00Z",
+            publication_cutoff="2026-08-31T07:00:00Z",
+            source_snapshot_ids=("market-a",),
+        )
+        service = _make_minimal_service(
+            config=_make_service_config(context_input_refs=(context_ref,)),
+        )
+
+        engine_config = service._build_engine_config("run-context-lineage")
+
+        assert engine_config.context_input_refs == (context_ref,)
 
     @pytest.mark.parametrize(
         ("field_name", "invalid_value"),

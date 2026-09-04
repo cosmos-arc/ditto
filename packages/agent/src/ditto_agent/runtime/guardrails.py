@@ -80,6 +80,7 @@ class GuardedEvidenceToolExecutor:
         egress_policy: EvidenceEgressPolicy,
         budget: BudgetLedger,
     ) -> None:
+        manifest_specs = registry.specs
         self._registry = registry.restrict(allowed_tools)
         self._context = context
         self._authority_hash = authority_hash
@@ -95,7 +96,7 @@ class GuardedEvidenceToolExecutor:
                     "input_schema": spec.input_schema,
                     "requires_approval": spec.requires_approval,
                 }
-                for spec in self._specs
+                for spec in manifest_specs
             )
         )
         self._temporal_context_hash = canonical_sha256(context.canonical_payload())

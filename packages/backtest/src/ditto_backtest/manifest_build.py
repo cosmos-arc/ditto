@@ -239,6 +239,7 @@ def build_run_manifest(
         effective_parameters=config.effective_parameters,
         research_snapshot_id=config.research_snapshot_id,
         research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
+        context_input_refs=config.context_input_refs,
         universe_hash=hash_universe(input_instruments),
         dependency_versions=_collect_dependency_versions(),
         random_seed=random_seed,

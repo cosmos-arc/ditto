@@ -152,6 +152,23 @@ class TestRunBacktestFlow:
         assert config.start_date == "2025-01-01"
         assert config.end_date == "2025-06-30"
 
+    def test_passes_exact_catalog_version_to_facade(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """The version locked by the trigger must survive the async boundary."""
+        RUNNER(
+            run_id="run-versioned",
+            strategy_id="my-strategy",
+            strategy_version=7,
+            start_date="2025-01-01",
+            end_date="2025-06-30",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        config = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
+        assert config.strategy_version == "7"
+
     def test_passes_fill_config_to_facade(
         self,
         mock_facade: Mock,

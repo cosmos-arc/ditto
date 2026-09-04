@@ -1,0 +1,144 @@
+{
+  "artifacts": [
+    {
+      "relative_path": "personal-workstation/gates/Q6.json",
+      "sha256": "sha256:e640da56d4fc5f2b39f62c768f8e0bb56f45227de18713d46b8ca3631eb3b4c9",
+      "size_bytes": 3157
+    },
+    {
+      "relative_path": "personal-workstation/manifests/Q4.json",
+      "sha256": "sha256:c3947dd226f2780161cf49fa7b3ce50ff83849802a18e287d39aad2371bbc950",
+      "size_bytes": 3357
+    },
+    {
+      "relative_path": "personal-workstation/manifests/Q5.json",
+      "sha256": "sha256:610fafdc73027bc363df736585a2ae9a1a39587087e394b95241fc79d3965a0b",
+      "size_bytes": 4673
+    },
+    {
+      "relative_path": "personal-workstation/ops/performance.json",
+      "sha256": "sha256:a83c5bab7442d750183ed3afb5675d6fe716456877212cb5302187009b8cc766",
+      "size_bytes": 1062
+    },
+    {
+      "relative_path": "personal-workstation/ops/privacy.json",
+      "sha256": "sha256:c0cf85ea947ee3f97829134e8e597d5714e8e1ae774e52d95ad5a152969f36d3",
+      "size_bytes": 1200
+    },
+    {
+      "relative_path": "personal-workstation/ops/recovery.json",
+      "sha256": "sha256:cfc5f8f51e834667cb0102e306d3819f67a569a8dc1072b976e7e3c5591a834d",
+      "size_bytes": 1493
+    },
+    {
+      "relative_path": "personal-workstation/ops/release-candidate-20260902.json",
+      "sha256": "sha256:f7bed324cce7388eaf4ba68c3539e5067cf59a97536fcde6b973f84bdc189272",
+      "size_bytes": 6620
+    },
+    {
+      "relative_path": "personal-workstation/ops/tabletop.json",
+      "sha256": "sha256:b222d882a52920499953ed80e2351603e56a46e957db33a8fca382f01fae1ae4",
+      "size_bytes": 832
+    },
+    {
+      "relative_path": "personal-workstation/pap09-accelerated-proposal-20260902.json",
+      "sha256": "sha256:55056899e5928914143349a637ba60afb7098c135da0e80dd3ff561580ba25a3",
+      "size_bytes": 9836
+    },
+    {
+      "relative_path": "personal-workstation/pap09-accelerated/accelerated-progress.json",
+      "sha256": "sha256:d78de4ee6040c7d5839753bfb98c8e133adcc6efe7fab4dab76cff5b5acb36db",
+      "size_bytes": 2780
+    },
+    {
+      "relative_path": "personal-workstation/pap09-accelerated/bootstrap.json",
+      "sha256": "sha256:c0c4a443163cb33da1dbcc5adf04b4af107072b1130f6f66725b8944f7594f6b",
+      "size_bytes": 1299
+    },
+    {
+      "relative_path": "personal-workstation/pap09/days/2026-09-02.json",
+      "sha256": "sha256:3cd7e0aa20d962d4367a3c1c3c004301f35f204d552f7623d07258db7b6bb6be",
+      "size_bytes": 3088
+    },
+    {
+      "relative_path": "personal-workstation/pap09/days/2026-09-03.json",
+      "sha256": "sha256:9d8cf85475545f85181e00c321cb634f73fe4a7c29e2800acc2c0b68f2eafbf1",
+      "size_bytes": 2877
+    },
+    {
+      "relative_path": "personal-workstation/pap09/soak-progress.json",
+      "sha256": "sha256:80db91cb2e6b3565d54d9cc690a0f05750b8b29f2d60bd5dad1f523db85a3cc4",
+      "size_bytes": 751
+    },
+    {
+      "relative_path": "personal-workstation/pending-approval-live-preflight-20260902.json",
+      "sha256": "sha256:dea729f318b7a28f19a565e5d0cc075429054886b06bb4756a87abe291de722a",
+      "size_bytes": 2119
+    },
+    {
+      "relative_path": "personal-workstation/q5/live-portfolio-acceptance-20260902.json",
+      "sha256": "sha256:36f1c0fa1556135d102f1fdb6abc51138509133098ea9dc78c598f69a607a88a",
+      "size_bytes": 15167
+    },
+    {
+      "relative_path": "personal-workstation/q5/live-portfolio-diagnostic-20260902.json",
+      "sha256": "sha256:75aa9526742d525f939d057f0bdf0dc4942efc27a7a81449d8ab45595d39cb98",
+      "size_bytes": 12046
+    },
+    {
+      "relative_path": "personal-workstation/q5/live-portfolio-proposal-20260902.json",
+      "sha256": "sha256:5bdbb29f98041b3a5a118914518d4741e3e08761ebc743c9ba41d942e349dbc3",
+      "size_bytes": 5182
+    },
+    {
+      "relative_path": "personal-workstation/q5/ui08-account-acceptance-20260902.json",
+      "sha256": "sha256:95c1ac0aede8f2ca84243d80a7466f0cdfceb5c4a89b0b9f8193a198787ec92c",
+      "size_bytes": 5445
+    },
+    {
+      "relative_path": "personal-workstation/q5/ui08-final-20260902.json",
+      "sha256": "sha256:38938f8ec5b445aa6d7e73ef0443b58856201b991ff4a7fa97e99257cc8b3587",
+      "size_bytes": 6205
+    },
+    {
+      "relative_path": "personal-workstation/q5/ui08-readonly-preflight-20260902.json",
+      "sha256": "sha256:6a7dd6d863b4b89ac09108948bfe4e7cd68bfca006faca641c516133a6fe152c",
+      "size_bytes": 6109
+    },
+    {
+      "relative_path": "personal-workstation/q5/ui08-selection-memo-20260902.json",
+      "sha256": "sha256:74221e2ce7d83f0766b4fd15266d355405caaefa4b48b0a5b7f8d3bf8a8348b6",
+      "size_bytes": 4717
+    },
+    {
+      "relative_path": "personal-workstation/validation/backend.json",
+      "sha256": "sha256:1b741d2f049ffe528f744bf2fbe75075aca216605eb8bea8995714add37eeb18",
+      "size_bytes": 2837
+    },
+    {
+      "relative_path": "personal-workstation/validation/frontend.json",
+      "sha256": "sha256:92451b5de97a88c23088b49e36b3e793cace4168d4f9f4000e3f06b583a22656",
+      "size_bytes": 2299
+    },
+    {
+      "relative_path": "r5/release/eval-report-balanced.json",
+      "sha256": "sha256:4e48415e6b1627de9604a56e9698abeed1a530fe45df7033c3cca8d650c30fb2",
+      "size_bytes": 388103
+    },
+    {
+      "relative_path": "r5/release/eval-report-quality.json",
+      "sha256": "sha256:5e090f2bd2fd1ab18443edd690ecb58c226fbb1bb4f29155802c5b593f4ab89c",
+      "size_bytes": 388096
+    },
+    {
+      "relative_path": "r5/release/release-preflight.json",
+      "sha256": "sha256:3e43f7467138b7094dfc8dc2dc08a4830909c39566bed6f8c19b9a95f4ba9612",
+      "size_bytes": 1361
+    }
+  ],
+  "blockers": [],
+  "gate": "Q6",
+  "manifest_hash": "sha256:a2ed867977f497f8fd77a75fdf0f25903c5817c5e9436f5d7168f085c4d24261",
+  "schema_version": 1,
+  "status": "passed"
+}

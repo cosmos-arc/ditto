@@ -81,6 +81,80 @@ class TestQueryTradesReadsParquet:
         assert all(isinstance(r, TradeRecord) for r in result)
         service.list_artifacts.assert_called_once()
 
+    def test_reads_current_closed_trade_aggregate_schema(self, tmp_path: Path) -> None:
+        """Current engine artifacts expose exit_date/net_pnl without legacy aliases."""
+        artifact_dir = tmp_path / "run-current"
+        artifact_dir.mkdir()
+        pl.DataFrame(
+            {
+                "trade_id": ["trade-1"],
+                "instrument_id": [2001724],
+                "direction": ["buy"],
+                "entry_date": ["2024-01-02"],
+                "exit_date": ["2024-01-05"],
+                "entry_price": [92.0],
+                "exit_price": [93.0],
+                "quantity": [100],
+                "gross_pnl": [100.0],
+                "fees": [5.0],
+                "net_pnl": [95.0],
+            }
+        ).write_parquet(artifact_dir / "trade_log.parquet")
+        record = _make_artifact_record(
+            run_id="run-current", file_path=str(artifact_dir)
+        )
+        service = MagicMock(spec=["list_artifacts"])
+        service.list_artifacts.return_value = [record]
+
+        result = BacktestTradeQueryFacade(service).query_trades(run_id="run-current")
+
+        assert result == [
+            TradeRecord(
+                trade_date="2024-01-05",
+                instrument_id=2001724,
+                direction="buy",
+                entry_date="2024-01-02",
+                exit_date="2024-01-05",
+                entry_price=92.0,
+                exit_price=93.0,
+                quantity=100,
+                pnl=95.0,
+            )
+        ]
+
+    def test_ignores_open_trade_aggregate_rows(self, tmp_path: Path) -> None:
+        """The current engine keeps open positions in trade_log with null exits."""
+        artifact_dir = tmp_path / "run-current-open"
+        artifact_dir.mkdir()
+        pl.DataFrame(
+            {
+                "trade_id": ["trade-closed", "trade-open"],
+                "instrument_id": [2001724, 2001755],
+                "direction": ["buy", "buy"],
+                "entry_date": ["2024-01-02", "2024-01-03"],
+                "exit_date": ["2024-01-05", None],
+                "entry_price": [92.0, 3.50],
+                "exit_price": [93.0, None],
+                "quantity": [100, 1_000],
+                "gross_pnl": [100.0, None],
+                "fees": [5.0, None],
+                "net_pnl": [95.0, None],
+            }
+        ).write_parquet(artifact_dir / "trade_log.parquet")
+        record = _make_artifact_record(
+            run_id="run-current-open", file_path=str(artifact_dir)
+        )
+        service = MagicMock(spec=["list_artifacts"])
+        service.list_artifacts.return_value = [record]
+
+        result = BacktestTradeQueryFacade(service).query_trades(
+            run_id="run-current-open"
+        )
+
+        assert len(result) == 1
+        assert result[0].trade_date == "2024-01-05"
+        assert result[0].instrument_id == 2001724
+
     def test_returns_empty_when_run_id_not_found(self) -> None:
         """run_id 不存在时返回空列表."""
         service = MagicMock(spec=["list_artifacts"])

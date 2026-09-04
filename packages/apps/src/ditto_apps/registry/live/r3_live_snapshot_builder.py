@@ -80,6 +80,7 @@ from ditto_apps.registry.live.r3_live_snapshot_frames import (
 __all__ = [
     "LiveDatasetSnapshotBinding",
     "LiveResearchSnapshotBuild",
+    "LiveResearchSnapshotOptions",
     "build_composed_live_research_snapshot",
     "build_live_research_snapshot",
 ]
@@ -135,6 +136,14 @@ class LiveResearchSnapshotBuild:
     primary_authority_snapshot_id: str
     input_evidence: tuple[dict[str, str], ...]
     row_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class LiveResearchSnapshotOptions:
+    """Optional authorities that specialize one immutable live snapshot."""
+
+    created_at: datetime | None = None
+    etf_tickers: tuple[str, ...] | None = None
 
 
 def _canonical(value: object) -> bytes:
@@ -548,6 +557,34 @@ def _ensure_live_catalog_parents(
     return spine_snapshot_id
 
 
+def _live_membership(
+    connection: sqlite3.Connection,
+    *,
+    lane: LiveLane,
+    sessions: tuple[date, ...],
+    authority_snapshot_id: str,
+    options: LiveResearchSnapshotOptions,
+) -> pl.DataFrame:
+    if lane == "stock":
+        return _stock_membership(
+            connection,
+            sessions,
+            authority_snapshot_id=authority_snapshot_id,
+        )
+    if options.etf_tickers is None:
+        return _etf_membership(
+            connection,
+            sessions,
+            authority_snapshot_id=authority_snapshot_id,
+        )
+    return _etf_membership(
+        connection,
+        sessions,
+        authority_snapshot_id=authority_snapshot_id,
+        tickers=options.etf_tickers,
+    )
+
+
 def build_live_research_snapshot(
     *,
     lane: LiveLane,
@@ -556,7 +593,7 @@ def build_live_research_snapshot(
     catalog_service: ResearchCatalogService,
     certification_reader: CertificationReader,
     snapshot_reader: ProviderSnapshotReader,
-    created_at: datetime | None = None,
+    options: LiveResearchSnapshotOptions = LiveResearchSnapshotOptions(),
 ) -> LiveResearchSnapshotBuild:
     """Freeze one content-addressed live research snapshot and catalog record."""
     root = data_root.expanduser().resolve(strict=True)
@@ -571,17 +608,12 @@ def build_live_research_snapshot(
             connection,
             authority_snapshot_id=authority_source,
         )
-        membership = (
-            _stock_membership(
-                connection,
-                sessions,
-                authority_snapshot_id=authority_source,
-            )
-            if lane == "stock"
-            else _etf_membership(
-                sessions,
-                authority_snapshot_id=authority_source,
-            )
+        membership = _live_membership(
+            connection,
+            lane=lane,
+            sessions=sessions,
+            authority_snapshot_id=authority_source,
+            options=options,
         )
         membership = align_live_membership(root, lane, membership)
         membership = _membership_with_instrument_lifecycle(connection, membership)
@@ -625,8 +657,8 @@ def build_live_research_snapshot(
     finally:
         connection.close()
     now = (
-        created_at.astimezone(UTC)
-        if created_at is not None
+        options.created_at.astimezone(UTC)
+        if options.created_at is not None
         else max(datetime.fromisoformat(item.certified_at) for item in bindings)
     )
     created_at_text = now.isoformat().replace("+00:00", "Z")
@@ -729,6 +761,7 @@ def build_composed_live_research_snapshot(
     *,
     lane: LiveLane,
     data_root: Path,
+    etf_tickers: tuple[str, ...] | None = None,
 ) -> LiveResearchSnapshotBuild:
     """Resolve production ports and build one isolated live snapshot."""
     container = make_app_container()
@@ -740,6 +773,7 @@ def build_composed_live_research_snapshot(
             catalog_service=container.get(ResearchCatalogService),
             certification_reader=container.get(CertificationReader),
             snapshot_reader=container.get(ProviderSnapshotReader),
+            options=LiveResearchSnapshotOptions(etf_tickers=etf_tickers),
         )
     finally:
         container.close()

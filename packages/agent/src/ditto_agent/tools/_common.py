@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Protocol, cast
 
+from ditto_application.queries.account_event_evidence_contracts import (
+    AccountEventEvidenceReadModel,
+)
 from ditto_application.queries.authoring_preview_contracts import (
     AuthoringPreviewReadModel,
 )
@@ -15,7 +18,15 @@ from ditto_application.queries.evidence_contracts import (
     EvidenceArtifactReference,
     EvidencePayloadReadModel,
     EvidenceTemporalContext,
+    IndustryRotationEvidenceReadModel,
+    InstrumentTechnicalEvidenceReadModel,
+    MarketContextEvidenceReadModel,
     ResearchEvidenceReadModel,
+    SelectionRunEvidenceReadModel,
+)
+from ditto_application.queries.portfolio_comparison_evidence_contracts import (
+    PortfolioComparisonEvidenceReadModel,
+    PortfolioScenarioEvidenceReadModel,
 )
 
 from ditto_agent._canonical import canonical_sha256
@@ -344,6 +355,282 @@ def seal_decision_evidence(
     )
 
 
+def seal_market_context_evidence(
+    *,
+    tool_name: str,
+    read_model: MarketContextEvidenceReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Validate and seal one host-bound certified MarketContext projection."""
+    if read_model.temporal_context != application_context(context):
+        raise ValueError("application evidence temporal context mismatch")
+    if read_model.source_snapshot_set_id != context.source_snapshot_id:
+        raise ValueError("market context evidence snapshot set mismatch")
+    payload_snapshot_set_id = read_model.payload.value.get("source_snapshot_set_id")
+    payload_snapshot_ids = read_model.payload.value.get("source_snapshot_ids")
+    if payload_snapshot_set_id != read_model.source_snapshot_set_id:
+        raise ValueError("market context payload snapshot set mismatch")
+    if payload_snapshot_ids != read_model.source_snapshot_ids:
+        raise ValueError("market context payload source snapshots mismatch")
+    if read_model.payload.value.get("status") != read_model.status:
+        raise ValueError("market context payload status mismatch")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="market_context",
+            identity={
+                "status": read_model.status,
+                "source_snapshot_set_id": read_model.source_snapshot_set_id,
+                "source_snapshot_ids": read_model.source_snapshot_ids,
+            },
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast(Mapping[str, object], read_model.payload.value),
+            artifacts=read_model.artifact_refs,
+            lineage=read_model.lineage,
+            payload_artifact_kind="market-context",
+        ),
+        context=context,
+    )
+
+
+def seal_industry_rotation_evidence(
+    *,
+    tool_name: str,
+    read_model: IndustryRotationEvidenceReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Validate and seal one exact persisted industry ranking."""
+    if read_model.temporal_context != application_context(context):
+        raise ValueError("application evidence temporal context mismatch")
+    if read_model.payload.value.get("snapshot_id") != read_model.snapshot_id:
+        raise ValueError("industry rotation payload identity mismatch")
+    if read_model.payload.value.get("status") != read_model.status:
+        raise ValueError("industry rotation payload status mismatch")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="industry_rotation",
+            identity={
+                "snapshot_id": read_model.snapshot_id,
+                "status": read_model.status,
+            },
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast(Mapping[str, object], read_model.payload.value),
+            artifacts=read_model.artifact_refs,
+            lineage=read_model.lineage,
+            payload_artifact_kind="industry-rotation",
+        ),
+        context=context,
+    )
+
+
+def seal_selection_run_evidence(
+    *,
+    tool_name: str,
+    read_model: SelectionRunEvidenceReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Validate and seal exact candidates and exclusions without rewriting."""
+    if read_model.temporal_context != application_context(context):
+        raise ValueError("application evidence temporal context mismatch")
+    if read_model.payload.value.get("run_id") != read_model.run_id:
+        raise ValueError("selection run payload identity mismatch")
+    if read_model.payload.value.get("status") != read_model.status:
+        raise ValueError("selection run payload status mismatch")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="selection_run",
+            identity={"run_id": read_model.run_id, "status": read_model.status},
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast(Mapping[str, object], read_model.payload.value),
+            artifacts=read_model.artifact_refs,
+            lineage=read_model.lineage,
+            payload_artifact_kind="selection-run",
+        ),
+        context=context,
+    )
+
+
+def seal_instrument_technical_evidence(
+    *,
+    tool_name: str,
+    read_model: InstrumentTechnicalEvidenceReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Validate and seal only the levels and readings in one exact snapshot."""
+    if read_model.temporal_context != application_context(context):
+        raise ValueError("technical analysis evidence temporal context mismatch")
+    if read_model.payload.value.get("snapshot_id") != read_model.snapshot_id:
+        raise ValueError("technical analysis payload identity mismatch")
+    if read_model.payload.value.get("instrument_id") != read_model.instrument_id:
+        raise ValueError("technical analysis payload instrument mismatch")
+    if read_model.payload.value.get("status") != read_model.status:
+        raise ValueError("technical analysis payload status mismatch")
+    if (
+        read_model.payload.value.get("source_snapshot_ids")
+        != read_model.source_snapshot_ids
+    ):
+        raise ValueError("technical analysis payload source snapshots mismatch")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="instrument_technical_analysis",
+            identity={
+                "snapshot_id": read_model.snapshot_id,
+                "instrument_id": read_model.instrument_id,
+                "instrument_name": read_model.instrument_name,
+                "status": read_model.status,
+                "source_snapshot_ids": read_model.source_snapshot_ids,
+            },
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast(Mapping[str, object], read_model.payload.value),
+            artifacts=read_model.artifact_refs,
+            lineage=read_model.lineage,
+            payload_artifact_kind="technical-analysis",
+        ),
+        context=context,
+    )
+
+
+def _portfolio_identity(value: object) -> Mapping[str, object]:
+    identity = cast(
+        "PortfolioComparisonEvidenceReadModel | PortfolioScenarioEvidenceReadModel",
+        value,
+    ).identity
+    return {
+        "strategy_id": identity.strategy_id,
+        "model_portfolio_id": identity.model_portfolio_id,
+        "paper_account_id": identity.paper_account_id,
+        "manual_account_id": identity.manual_account_id,
+        "paper_session_id": identity.paper_session_id,
+    }
+
+
+def seal_portfolio_comparison_evidence(
+    *,
+    tool_name: str,
+    read_model: PortfolioComparisonEvidenceReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Validate and seal host-computed three-portfolio values."""
+    if read_model.temporal_context != application_context(context):
+        raise ValueError("portfolio comparison temporal context mismatch")
+    if read_model.source_snapshot_set_id != context.source_snapshot_id:
+        raise ValueError("portfolio comparison snapshot set mismatch")
+    payload = read_model.payload.value
+    if payload.get("as_of") != read_model.as_of:
+        raise ValueError("portfolio comparison payload as_of mismatch")
+    if payload.get("valuation_snapshot_id") != read_model.valuation_snapshot_id:
+        raise ValueError("portfolio comparison payload valuation mismatch")
+    if payload.get("source_snapshot_ids") != read_model.source_snapshot_ids:
+        raise ValueError("portfolio comparison payload snapshots mismatch")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="portfolio_comparison",
+            identity={
+                **_portfolio_identity(read_model),
+                "as_of": read_model.as_of,
+                "valuation_snapshot_id": read_model.valuation_snapshot_id,
+                "source_snapshot_set_id": read_model.source_snapshot_set_id,
+                "source_snapshot_ids": read_model.source_snapshot_ids,
+            },
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast("Mapping[str, object]", payload),
+            artifacts=read_model.artifact_refs,
+            lineage=read_model.lineage,
+            payload_artifact_kind="portfolio-comparison",
+        ),
+        context=context,
+    )
+
+
+def seal_portfolio_scenario_evidence(
+    *,
+    tool_name: str,
+    read_model: PortfolioScenarioEvidenceReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Validate and seal a read-only Portfolio/Risk scenario preview."""
+    if read_model.temporal_context != application_context(context):
+        raise ValueError("portfolio scenario temporal context mismatch")
+    if read_model.source_snapshot_set_id != context.source_snapshot_id:
+        raise ValueError("portfolio scenario snapshot set mismatch")
+    payload = read_model.payload.value
+    if payload.get("baseline_kind") != read_model.baseline_kind:
+        raise ValueError("portfolio scenario payload baseline mismatch")
+    risk = payload.get("risk")
+    if not isinstance(risk, Mapping):
+        raise ValueError("portfolio scenario risk payload is invalid")
+    if risk.get("as_of") != read_model.as_of:
+        raise ValueError("portfolio scenario payload as_of mismatch")
+    if risk.get("valuation_snapshot_id") != read_model.valuation_snapshot_id:
+        raise ValueError("portfolio scenario payload valuation mismatch")
+    if risk.get("source_snapshot_ids") != read_model.source_snapshot_ids:
+        raise ValueError("portfolio scenario payload snapshots mismatch")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="portfolio_scenario_preview",
+            identity={
+                **_portfolio_identity(read_model),
+                "baseline_kind": read_model.baseline_kind,
+                "as_of": read_model.as_of,
+                "valuation_snapshot_id": read_model.valuation_snapshot_id,
+                "source_snapshot_set_id": read_model.source_snapshot_set_id,
+                "source_snapshot_ids": read_model.source_snapshot_ids,
+            },
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast("Mapping[str, object]", payload),
+            artifacts=read_model.artifact_refs,
+            lineage=read_model.lineage,
+            payload_artifact_kind="portfolio-scenario",
+        ),
+        context=context,
+    )
+
+
+def seal_account_event_evidence(
+    *,
+    tool_name: str,
+    read_model: AccountEventEvidenceReadModel,
+    context: TemporalToolContext,
+) -> EvidenceEnvelope:
+    """Verify and seal a host-redacted exact Manual Account ledger."""
+    if read_model.temporal_context != application_context(context):
+        raise ValueError("account event evidence temporal context mismatch")
+    payload = read_model.payload.value
+    expected = {
+        "account_id": read_model.account_id,
+        "as_of": read_model.as_of,
+        "ledger_hash": read_model.ledger_hash,
+        "redaction": read_model.redaction.value,
+    }
+    if any(payload.get(key) != value for key, value in expected.items()):
+        raise ValueError("account event evidence payload identity mismatch")
+    return _seal(
+        _EnvelopeSource(
+            tool_name=tool_name,
+            kind="manual_account_events",
+            identity=expected,
+            payload_schema_version=read_model.payload.schema_version,
+            payload_hash=read_model.payload.payload_hash,
+            payload_value=cast("Mapping[str, object]", payload),
+            artifacts=read_model.artifact_refs,
+            lineage=read_model.lineage,
+            payload_artifact_kind="manual-account-events",
+        ),
+        context=context,
+    )
+
+
 def seal_authoring_preview(
     *,
     tool_name: str,
@@ -406,5 +693,10 @@ __all__ = [
     "read_only_tools",
     "seal_authoring_preview",
     "seal_decision_evidence",
+    "seal_industry_rotation_evidence",
+    "seal_market_context_evidence",
+    "seal_portfolio_comparison_evidence",
+    "seal_portfolio_scenario_evidence",
     "seal_research_evidence",
+    "seal_selection_run_evidence",
 ]

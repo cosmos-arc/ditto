@@ -166,7 +166,13 @@ class ReplayProcess:
         try:
             replay_report = self._facade.run_backtest_from_catalog(
                 config=config,
-                options=BacktestServiceOptions(artifact_dir=str(artifact_dir.parent)),
+                options=BacktestServiceOptions(
+                    artifact_dir=str(artifact_dir.parent),
+                    allow_experimental_data=_bool_config_field(
+                        original_run_config,
+                        "allow_experimental_data",
+                    ),
+                ),
                 version=int(original_manifest.strategy_version)
                 if original_manifest.strategy_version.isdigit()
                 else None,
@@ -385,6 +391,7 @@ class ReplayProcess:
             effective_parameters=manifest.effective_parameters,
             research_snapshot_id=manifest.research_snapshot_id,
             research_snapshot_manifest_hash=(manifest.research_snapshot_manifest_hash),
+            context_input_refs=manifest.context_input_refs,
             parent_run_id=parent_run_id,
             start_date=(
                 _str_config_field(run_config, "start_date") or period.get("start", "")
@@ -599,6 +606,14 @@ def _int_config_field(
     if isinstance(value, bool):
         return default
     return value if isinstance(value, int) else default
+
+
+def _bool_config_field(config: dict[str, object] | None, key: str) -> bool:
+    """Read an explicit run-config boolean without truthy coercion."""
+    if config is None:
+        return False
+    value = config.get(key)
+    return value if isinstance(value, bool) else False
 
 
 def _float_config_field(config: dict[str, object] | None, key: str) -> float:

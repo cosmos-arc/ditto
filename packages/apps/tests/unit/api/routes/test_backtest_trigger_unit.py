@@ -177,11 +177,13 @@ class TestBuildFlowParams:
             run_id="abc12345",
             strategy_id="momentum-etf",
             status="pending",
+            strategy_version=7,
         )
         params = build_flow_params(command, result)
 
         assert params["run_id"] == "abc12345"
         assert params["strategy_id"] == "momentum-etf"
+        assert params["strategy_version"] == 7
         assert params["start_date"] == "2025-01-01"
         assert params["end_date"] == "2025-03-31"
         assert params["initial_cash"] == 1_000_000.0

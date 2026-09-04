@@ -1,0 +1,443 @@
+{
+  "comparison": {
+    "as_of": "2026-09-02",
+    "manual": {
+      "alert_codes": [],
+      "as_of": "2026-09-02",
+      "cash": "100500.00",
+      "cash_weight": "0.99122006",
+      "currency": "CNY",
+      "fees": "0.00",
+      "invested_weight": "0.00877994",
+      "pending_event_count": 0,
+      "portfolio_id": "manual-q4-owner-acceptance",
+      "portfolio_kind": "manual",
+      "positions": [
+        {
+          "average_cost_value": "911.80",
+          "fees": "0.00",
+          "industry": null,
+          "instrument_id": 2001724,
+          "last_price": "8.9020",
+          "market_value": "890.20",
+          "quantity": "1E+2",
+          "realized_pnl": "0.00",
+          "unrealized_pnl": "-21.60",
+          "weight": "0.00877994"
+        }
+      ],
+      "realized_pnl": "0.00",
+      "source_snapshot_ids": [
+        "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+      ],
+      "total_value": "101390.20",
+      "unrealized_pnl": "-21.60",
+      "valuation_snapshot_id": "portfolio-valuation:sha256:bc2151547b3dd66c2a5eea52c4996ac96b084d709d4bdb69a18a419d1d1446e1"
+    },
+    "model": {
+      "alert_codes": [],
+      "as_of": "2026-09-02",
+      "cash": "399997.95",
+      "cash_weight": "0.39999999",
+      "currency": "CNY",
+      "fees": "0.00",
+      "invested_weight": "0.60000001",
+      "pending_event_count": 0,
+      "portfolio_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+      "portfolio_kind": "model",
+      "positions": [
+        {
+          "average_cost_value": "0.00",
+          "fees": "0.00",
+          "industry": null,
+          "instrument_id": 2001724,
+          "last_price": "8.902",
+          "market_value": "299998.47",
+          "quantity": "33700.1202",
+          "realized_pnl": "0.00",
+          "unrealized_pnl": "0.00",
+          "weight": "0.30000000"
+        },
+        {
+          "average_cost_value": "0.00",
+          "fees": "0.00",
+          "industry": null,
+          "instrument_id": 2001755,
+          "last_price": "4.62",
+          "market_value": "299998.47",
+          "quantity": "64934.7338",
+          "realized_pnl": "0.00",
+          "unrealized_pnl": "0.00",
+          "weight": "0.30000000"
+        }
+      ],
+      "realized_pnl": "0.00",
+      "source_snapshot_ids": [
+        "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+      ],
+      "total_value": "999994.89",
+      "unrealized_pnl": "0.00",
+      "valuation_snapshot_id": "portfolio-valuation:sha256:bc2151547b3dd66c2a5eea52c4996ac96b084d709d4bdb69a18a419d1d1446e1"
+    },
+    "model_vs_manual": {
+      "attribution": {
+        "fee_amount": "0.00",
+        "risk_blocked_bps": "0",
+        "slippage_amount": "0.00",
+        "unfilled_bps": "0",
+        "user_choice_bps": "2956.10"
+      },
+      "baseline_portfolio_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+      "cash_drift_bps": "5912.20",
+      "comparison_kind": "model_vs_manual",
+      "items": [
+        {
+          "baseline_weight": "0.30000000",
+          "drift_bps": "-2912.20",
+          "drift_weight": "-0.29122006",
+          "instrument_id": 2001724,
+          "observed_weight": "0.00877994"
+        },
+        {
+          "baseline_weight": "0.30000000",
+          "drift_bps": "-3000.00",
+          "drift_weight": "-0.30000000",
+          "instrument_id": 2001755,
+          "observed_weight": "0"
+        }
+      ],
+      "observed_portfolio_id": "manual-q4-owner-acceptance",
+      "total_abs_drift_bps": "2956.10"
+    },
+    "model_vs_paper": {
+      "attribution": {
+        "fee_amount": "5.01",
+        "risk_blocked_bps": "0",
+        "slippage_amount": "0.10",
+        "unfilled_bps": "3000.0",
+        "user_choice_bps": "0"
+      },
+      "baseline_portfolio_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+      "cash_drift_bps": "5991.10",
+      "comparison_kind": "model_vs_paper",
+      "items": [
+        {
+          "baseline_weight": "0.30000000",
+          "drift_bps": "-2991.10",
+          "drift_weight": "-0.29910980",
+          "instrument_id": 2001724,
+          "observed_weight": "0.00089020"
+        },
+        {
+          "baseline_weight": "0.30000000",
+          "drift_bps": "-3000.00",
+          "drift_weight": "-0.30000000",
+          "instrument_id": 2001755,
+          "observed_weight": "0"
+        }
+      ],
+      "observed_portfolio_id": "paper-pap09-owner-acceptance",
+      "total_abs_drift_bps": "2995.55"
+    },
+    "paper": {
+      "alert_codes": [],
+      "as_of": "2026-09-02",
+      "cash": "999104.69",
+      "cash_weight": "0.99910980",
+      "currency": "CNY",
+      "fees": "5.01",
+      "invested_weight": "0.00089020",
+      "pending_event_count": 0,
+      "portfolio_id": "paper-pap09-owner-acceptance",
+      "portfolio_kind": "paper",
+      "positions": [
+        {
+          "average_cost_value": "895.31",
+          "fees": "5.01",
+          "industry": null,
+          "instrument_id": 2001724,
+          "last_price": "8.9020",
+          "market_value": "890.20",
+          "quantity": "1E+2",
+          "realized_pnl": "0.00",
+          "unrealized_pnl": "-5.11",
+          "weight": "0.00089020"
+        }
+      ],
+      "realized_pnl": "0.00",
+      "source_snapshot_ids": [
+        "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+      ],
+      "total_value": "999994.89",
+      "unrealized_pnl": "-5.11",
+      "valuation_snapshot_id": "portfolio-valuation:sha256:bc2151547b3dd66c2a5eea52c4996ac96b084d709d4bdb69a18a419d1d1446e1"
+    },
+    "paper_vs_manual": {
+      "attribution": {
+        "fee_amount": "0.00",
+        "risk_blocked_bps": "0",
+        "slippage_amount": "0.00",
+        "unfilled_bps": "0",
+        "user_choice_bps": "0"
+      },
+      "baseline_portfolio_id": "paper-pap09-owner-acceptance",
+      "cash_drift_bps": "-78.90",
+      "comparison_kind": "paper_vs_manual",
+      "items": [
+        {
+          "baseline_weight": "0.00089020",
+          "drift_bps": "78.90",
+          "drift_weight": "0.00788974",
+          "instrument_id": 2001724,
+          "observed_weight": "0.00877994"
+        }
+      ],
+      "observed_portfolio_id": "manual-q4-owner-acceptance",
+      "total_abs_drift_bps": "39.45"
+    },
+    "source_snapshot_ids": [
+      "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+    ],
+    "strategy_id": "seed_etf_industry_rotation",
+    "valuation_snapshot_id": "portfolio-valuation:sha256:bc2151547b3dd66c2a5eea52c4996ac96b084d709d4bdb69a18a419d1d1446e1"
+  },
+  "comparison_request": {
+    "as_of": "2026-09-02",
+    "knowledge_cutoff": "2026-09-02T11:57:37.302267Z",
+    "manual_account_id": "manual-q4-owner-acceptance",
+    "model_portfolio_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+    "paper_account_id": "paper-pap09-owner-acceptance",
+    "paper_session_id": "pap09-session-2026-09-02",
+    "publication_cutoff": "2026-09-02T11:57:37.302267Z",
+    "source_snapshot_ids": [
+      "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+    ],
+    "strategy_id": "seed_etf_industry_rotation",
+    "valuation_snapshot_id": null
+  },
+  "daily_decision_v2": {
+    "account_positions": {
+      "account_id": "manual-q4-owner-acceptance",
+      "as_of": "2026-09-02",
+      "baseline_id": "baseline-bc818b9422063d4ed7795ce1",
+      "cash_available": 100500.0,
+      "cash_frozen": 0.0,
+      "cash_settled": 100500.0,
+      "exposure": 890.2,
+      "nav": 1.0,
+      "positions": [
+        {
+          "available_quantity": 100,
+          "average_cost": 9.118,
+          "instrument_id": 2001724,
+          "market_value": 890.2,
+          "quantity": 100,
+          "realized_pnl": 0.0,
+          "snapshot_date": "2026-09-02",
+          "snapshot_id": "baseline-bc818b9422063d4ed7795ce1-2001724",
+          "strategy_id": "seed_etf_industry_rotation",
+          "total_fees": 0.0,
+          "unrealized_pnl": -21.6
+        }
+      ],
+      "sleeve_id": "manual-manual-q4-owner-acceptance-seed_etf_industry_rotation",
+      "total_value": 101390.2
+    },
+    "actions": [
+      {
+        "cash_impact": -29376.6,
+        "current_weight": 0.008779941256650051,
+        "delta_weight": 0.29122005874334994,
+        "direction": "buy",
+        "filled_quantity": 0,
+        "instrument_id": 2001724,
+        "intent_id": "sig-eod-2026-09-02-seed_etf_industry_rotation-1-2026-09-02-fb9112621e38-2001724-buy",
+        "intent_status": "pending",
+        "lot_size": 100,
+        "raw_quantity": 3316,
+        "reason": "rounded_down_to_board_lot",
+        "reference_price": 8.902,
+        "remaining_quantity": 3300,
+        "risk_flags": [],
+        "rounded_quantity": 3300,
+        "sizing_readiness": "ready",
+        "suggested_quantity": 3300,
+        "target_weight": 0.3
+      },
+      {
+        "cash_impact": -30030.0,
+        "current_weight": 0.0,
+        "delta_weight": 0.3,
+        "direction": "buy",
+        "filled_quantity": 0,
+        "instrument_id": 2001755,
+        "intent_id": "sig-eod-2026-09-02-seed_etf_industry_rotation-1-2026-09-02-fb9112621e38-2001755-buy",
+        "intent_status": "pending",
+        "lot_size": 100,
+        "raw_quantity": 6583,
+        "reason": "rounded_down_to_board_lot",
+        "reference_price": 4.62,
+        "remaining_quantity": 6500,
+        "risk_flags": [],
+        "rounded_quantity": 6500,
+        "sizing_readiness": "ready",
+        "suggested_quantity": 6500,
+        "target_weight": 0.3
+      }
+    ],
+    "data": {
+      "dataset_states": [
+        {
+          "dataset": "etf_daily",
+          "reason": "live_provider_observed_after_close",
+          "snapshot_id": "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6",
+          "status": "ready"
+        }
+      ],
+      "dq_state": "passed",
+      "freshness": "ready",
+      "required_datasets": [
+        "etf_daily"
+      ],
+      "snapshot_ids": {
+        "etf_daily": "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+      }
+    },
+    "execution_review": {
+      "deviation": {
+        "filled": 0,
+        "items": [
+          {
+            "actual_weight": null,
+            "deviation_bps": null,
+            "fill_status": "unfilled",
+            "instrument_id": 2001724,
+            "signal_action": "buy",
+            "signal_weight": 0.3
+          },
+          {
+            "actual_weight": null,
+            "deviation_bps": null,
+            "fill_status": "unfilled",
+            "instrument_id": 2001755,
+            "signal_action": "buy",
+            "signal_weight": 0.3
+          }
+        ],
+        "signal_date": "2026-09-02",
+        "strategy_id": "seed_etf_industry_rotation",
+        "total_signals": 2,
+        "unfilled": 2
+      },
+      "effective_fills": [],
+      "exceptions": [],
+      "pnl": {
+        "net_pnl": 0.0,
+        "total_fees": 0.0,
+        "total_realized_pnl": 0.0,
+        "total_unrealized_pnl": 0.0
+      },
+      "unresolved_conflicts": []
+    },
+    "identity": {
+      "account_id": "manual-q4-owner-acceptance",
+      "decision_date": "2026-09-02",
+      "intended_trade_date": "2026-09-03",
+      "signal_date": "2026-09-02",
+      "sleeve_id": "manual-manual-q4-owner-acceptance-seed_etf_industry_rotation",
+      "strategy_id": "seed_etf_industry_rotation",
+      "strategy_version": "1"
+    },
+    "readiness": {
+      "details": [
+        "建议、数据、账户与风险证据已就绪, 请人工复核"
+      ],
+      "reason_codes": [
+        "READY_FOR_REVIEW"
+      ],
+      "status": "ready"
+    },
+    "run_package": {
+      "artifact_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+      "batch_key": "eod-2026-09-02-seed_etf_industry_rotation-1",
+      "checksum": "sha256:fb9112621e38d1fd3d553afb443415cb7c9afe3c0cba517aa4d184348e690292",
+      "checksum_valid": true,
+      "conflict_artifact_id": null,
+      "factor_evidence": {
+        "2001724": {
+          "signal_value": -0.023689405571397315
+        },
+        "2001755": {
+          "signal_value": -0.013663535439795038
+        }
+      },
+      "no_rebalance": false,
+      "outcome": "completed",
+      "risk_evidence": []
+    }
+  },
+  "evidence_hash": "3efe6a0142ed6209581708d31faa5951718e4bf8e70d73f905cc277168bf10ad",
+  "generated_at": "2026-09-02T23:04:10.817558Z",
+  "manual_execution_baseline": {
+    "sleeve_id": "manual-manual-q4-owner-acceptance-seed_etf_industry_rotation",
+    "snapshot_id": "baseline-bc818b9422063d4ed7795ce1",
+    "status": "created"
+  },
+  "operator_id": "workspace-user",
+  "passed": true,
+  "provider": {
+    "actual_observation_time_used_for_pit_visibility": true,
+    "observed_at": "2026-09-02T11:57:37.302267Z",
+    "paper_alias_exact_bar_equivalent": true,
+    "paper_snapshot_alias": "snapshot:tushare:etf_daily:sha256:8b4f3c39a13d3a7427d26322f768ad0e5b78175ccae2307a46d15baf817c9614",
+    "payload_checksum": "a4a60d63f432ef343ef304f794297656",
+    "provider_knowledge_date_retained": true,
+    "raw_row_count": 2110,
+    "snapshot_id": "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6",
+    "source": "tushare",
+    "strategy_universe_row_count": 2
+  },
+  "request_hash": "f6661fefac9294bf1dee388b1fa19b050633d1f233768526c9e374f596c88811",
+  "safety": {
+    "agent_write_tools": 0,
+    "broker_connections": 0,
+    "paper_or_manual_journal_mutations": 0,
+    "real_orders": 0,
+    "strategy_governance_mutations": 0
+  },
+  "schema": "ditto.q5-live-portfolio-acceptance.v1",
+  "signal_package": {
+    "artifact_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+    "checksum": "sha256:fb9112621e38d1fd3d553afb443415cb7c9afe3c0cba517aa4d184348e690292",
+    "source_snapshot_ids": [
+      "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+    ]
+  },
+  "status": "passed",
+  "strategy_run": {
+    "batch_key": "eod-2026-09-02-seed_etf_industry_rotation-1",
+    "spec_hash": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00",
+    "status": "completed",
+    "strategy_id": "seed_etf_industry_rotation",
+    "strategy_version": 1,
+    "target": {
+      "cash_target": 0.0,
+      "factor_values": {
+        "2001724": {
+          "signal_value": -0.023689405571397315
+        },
+        "2001755": {
+          "signal_value": -0.013663535439795038
+        }
+      },
+      "positions": {
+        "2001724": 0.3,
+        "2001755": 0.3
+      }
+    }
+  },
+  "ui08": {
+    "step_10": "reviewable_input_ready_agent_diagnostic_pending",
+    "step_9": "backend_exact_query_passed_ui_pending_browser_confirmation"
+  }
+}

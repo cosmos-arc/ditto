@@ -6,6 +6,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from ditto_agent.storage.sqlite.audit import verify_audit_chain
 from ditto_agent.storage.sqlite.database import AgentDatabase
 from ditto_agent.storage.sqlite.episode_store import (
     AgentEpisodeReader,
@@ -39,6 +40,11 @@ class AgentDatabaseBundle:
         """Permanently close the bundle's owned database connections."""
         self.database.close_all()
         self.presentation_database.close_all()
+
+    def verify_audit(self) -> tuple[int, str | None]:
+        """Verify the private Agent audit chain and return its stable summary."""
+        result = verify_audit_chain(self.database.get_connection())
+        return result.event_count, result.head_hash
 
     def backup_to(self, destination_root: Path) -> tuple[Path, Path]:
         """Back up authoritative and readable Agent stores as one recovery unit."""

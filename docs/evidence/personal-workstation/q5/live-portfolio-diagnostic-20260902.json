@@ -1,0 +1,302 @@
+{
+  "approval": "user-approved-approved-research-minimal-egress",
+  "diagnostic": {
+    "evidence_refs": [
+      "evidence-644eb6f19eb52ce3d5f6301baeadf90b13f6d98d8498a0a0f0b0d329b4f37204"
+    ],
+    "facts": [
+      "For model versus paper, the attribution reports unfilled_bps of 3000.0 and fee_amount of 5.01.",
+      "For model versus manual, the attribution reports user_choice_bps of 2956.10."
+    ],
+    "guardrail_status": "passed",
+    "interpretations": [
+      "These figures are attribution components as reported by the host tool; no ranking, weighting, or causal interpretation is asserted."
+    ],
+    "numeric_claims": [
+      {
+        "evidence_ref": "evidence-644eb6f19eb52ce3d5f6301baeadf90b13f6d98d8498a0a0f0b0d329b4f37204",
+        "path": "model_vs_paper.attribution.unfilled_bps",
+        "value": "3000.0"
+      },
+      {
+        "evidence_ref": "evidence-644eb6f19eb52ce3d5f6301baeadf90b13f6d98d8498a0a0f0b0d329b4f37204",
+        "path": "model_vs_paper.attribution.fee_amount",
+        "value": "5.01"
+      },
+      {
+        "evidence_ref": "evidence-644eb6f19eb52ce3d5f6301baeadf90b13f6d98d8498a0a0f0b0d329b4f37204",
+        "path": "model_vs_manual.attribution.user_choice_bps",
+        "value": "2956.10"
+      }
+    ],
+    "output_kind": "PortfolioDiagnostic",
+    "summary": "Host evidence as of 2026-09-02 records model_vs_paper attribution unfilled_bps of 3000.0 and fee_amount of 5.01, plus model_vs_manual attribution user_choice_bps of 2956.10.",
+    "uncertainties": [
+      "The payload does not document how each attribution component is derived."
+    ]
+  },
+  "egress": {
+    "egress_class": "cloud_allowed",
+    "excluded": [
+      "raw_provider_rows",
+      "provider_payloads",
+      "account_journal_events",
+      "account_free_text"
+    ],
+    "license_class": "approved-research",
+    "payload": {
+      "artifact_refs": [
+        "portfolio-comparison:sha256:1674cf2139fdbf37e4ff4bc9eed60ede9c1ccca6251744c59c8e7fde27e844ad",
+        "artifact:signal_package:signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38:sha256:fb9112621e38d1fd3d553afb443415cb7c9afe3c0cba517aa4d184348e690292",
+        "minimal-egress:sha256:149ba054dcadcf75e3dab809d2661ccfb1bbab100edad06a510725900d832a5a"
+      ],
+      "evidence_id": "evidence-644eb6f19eb52ce3d5f6301baeadf90b13f6d98d8498a0a0f0b0d329b4f37204",
+      "lineage": [
+        "signal-package:signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+        "valuation:portfolio-valuation:sha256:bc2151547b3dd66c2a5eea52c4996ac96b084d709d4bdb69a18a419d1d1446e1",
+        "snapshot:snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6",
+        "q5-acceptance:sha256:3efe6a0142ed6209581708d31faa5951718e4bf8e70d73f905cc277168bf10ad",
+        "redaction:approved-research-portfolio-minimal-v1"
+      ],
+      "result": {
+        "kind": "portfolio_comparison",
+        "payload": {
+          "as_of": "2026-09-02",
+          "manual": {
+            "alert_codes": [],
+            "cash": "100500.00",
+            "cash_weight": "0.99122006",
+            "fees": "0.00",
+            "invested_weight": "0.00877994",
+            "pending_event_count": 0,
+            "portfolio_id": "manual-q4-owner-acceptance",
+            "portfolio_kind": "manual",
+            "positions": [
+              {
+                "average_cost_value": "911.80",
+                "fees": "0.00",
+                "industry": null,
+                "instrument_id": 2001724,
+                "last_price": "8.9020",
+                "market_value": "890.20",
+                "quantity": "1E+2",
+                "realized_pnl": "0.00",
+                "unrealized_pnl": "-21.60",
+                "weight": "0.00877994"
+              }
+            ],
+            "realized_pnl": "0.00",
+            "total_value": "101390.20",
+            "unrealized_pnl": "-21.60"
+          },
+          "model": {
+            "alert_codes": [],
+            "cash": "399997.95",
+            "cash_weight": "0.39999999",
+            "fees": "0.00",
+            "invested_weight": "0.60000001",
+            "pending_event_count": 0,
+            "portfolio_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+            "portfolio_kind": "model",
+            "positions": [
+              {
+                "average_cost_value": "0.00",
+                "fees": "0.00",
+                "industry": null,
+                "instrument_id": 2001724,
+                "last_price": "8.902",
+                "market_value": "299998.47",
+                "quantity": "33700.1202",
+                "realized_pnl": "0.00",
+                "unrealized_pnl": "0.00",
+                "weight": "0.30000000"
+              },
+              {
+                "average_cost_value": "0.00",
+                "fees": "0.00",
+                "industry": null,
+                "instrument_id": 2001755,
+                "last_price": "4.62",
+                "market_value": "299998.47",
+                "quantity": "64934.7338",
+                "realized_pnl": "0.00",
+                "unrealized_pnl": "0.00",
+                "weight": "0.30000000"
+              }
+            ],
+            "realized_pnl": "0.00",
+            "total_value": "999994.89",
+            "unrealized_pnl": "0.00"
+          },
+          "model_vs_manual": {
+            "attribution": {
+              "fee_amount": "0.00",
+              "risk_blocked_bps": "0",
+              "slippage_amount": "0.00",
+              "unfilled_bps": "0",
+              "user_choice_bps": "2956.10"
+            },
+            "baseline_portfolio_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+            "cash_drift_bps": "5912.20",
+            "comparison_kind": "model_vs_manual",
+            "items": [
+              {
+                "baseline_weight": "0.30000000",
+                "drift_bps": "-2912.20",
+                "drift_weight": "-0.29122006",
+                "instrument_id": 2001724,
+                "observed_weight": "0.00877994"
+              },
+              {
+                "baseline_weight": "0.30000000",
+                "drift_bps": "-3000.00",
+                "drift_weight": "-0.30000000",
+                "instrument_id": 2001755,
+                "observed_weight": "0"
+              }
+            ],
+            "observed_portfolio_id": "manual-q4-owner-acceptance",
+            "total_abs_drift_bps": "2956.10"
+          },
+          "model_vs_paper": {
+            "attribution": {
+              "fee_amount": "5.01",
+              "risk_blocked_bps": "0",
+              "slippage_amount": "0.10",
+              "unfilled_bps": "3000.0",
+              "user_choice_bps": "0"
+            },
+            "baseline_portfolio_id": "signal-package-seed_etf_industry_rotation-v1-2026-09-02-eod-2026-09-02-seed_etf_industry_rotation-1-fb9112621e38",
+            "cash_drift_bps": "5991.10",
+            "comparison_kind": "model_vs_paper",
+            "items": [
+              {
+                "baseline_weight": "0.30000000",
+                "drift_bps": "-2991.10",
+                "drift_weight": "-0.29910980",
+                "instrument_id": 2001724,
+                "observed_weight": "0.00089020"
+              },
+              {
+                "baseline_weight": "0.30000000",
+                "drift_bps": "-3000.00",
+                "drift_weight": "-0.30000000",
+                "instrument_id": 2001755,
+                "observed_weight": "0"
+              }
+            ],
+            "observed_portfolio_id": "paper-pap09-owner-acceptance",
+            "total_abs_drift_bps": "2995.55"
+          },
+          "paper": {
+            "alert_codes": [],
+            "cash": "999104.69",
+            "cash_weight": "0.99910980",
+            "fees": "5.01",
+            "invested_weight": "0.00089020",
+            "pending_event_count": 0,
+            "portfolio_id": "paper-pap09-owner-acceptance",
+            "portfolio_kind": "paper",
+            "positions": [
+              {
+                "average_cost_value": "895.31",
+                "fees": "5.01",
+                "industry": null,
+                "instrument_id": 2001724,
+                "last_price": "8.9020",
+                "market_value": "890.20",
+                "quantity": "1E+2",
+                "realized_pnl": "0.00",
+                "unrealized_pnl": "-5.11",
+                "weight": "0.00089020"
+              }
+            ],
+            "realized_pnl": "0.00",
+            "total_value": "999994.89",
+            "unrealized_pnl": "-5.11"
+          },
+          "paper_vs_manual": {
+            "attribution": {
+              "fee_amount": "0.00",
+              "risk_blocked_bps": "0",
+              "slippage_amount": "0.00",
+              "unfilled_bps": "0",
+              "user_choice_bps": "0"
+            },
+            "baseline_portfolio_id": "paper-pap09-owner-acceptance",
+            "cash_drift_bps": "-78.90",
+            "comparison_kind": "paper_vs_manual",
+            "items": [
+              {
+                "baseline_weight": "0.00089020",
+                "drift_bps": "78.90",
+                "drift_weight": "0.00788974",
+                "instrument_id": 2001724,
+                "observed_weight": "0.00877994"
+              }
+            ],
+            "observed_portfolio_id": "manual-q4-owner-acceptance",
+            "total_abs_drift_bps": "39.45"
+          },
+          "source_snapshot_ids": [
+            "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+          ],
+          "valuation_snapshot_id": "portfolio-valuation:sha256:bc2151547b3dd66c2a5eea52c4996ac96b084d709d4bdb69a18a419d1d1446e1"
+        },
+        "redaction_profile": "approved-research-portfolio-minimal-v1",
+        "schema_version": 1
+      },
+      "temporal_context": {
+        "allowed_universe": [
+          "510300.SH",
+          "518880.SH"
+        ],
+        "campaign_authority_hash": null,
+        "campaign_authorization_id": null,
+        "decision_time": "2026-09-02T11:57:37.302267Z",
+        "egress_class": "cloud_allowed",
+        "execution_eligible_at": "not_applicable",
+        "knowledge_cutoff": "2026-09-02T11:57:37.302267Z",
+        "license_class": "approved-research",
+        "publication_cutoff": "2026-09-02T11:57:37.302267Z",
+        "source_snapshot_id": "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6"
+      },
+      "tool_name": "portfolio_comparison_evidence"
+    },
+    "payload_bytes": 5744,
+    "payload_hash": "57fc3b83aae6512bc210deccb307dc09d52271b823ffe42366fbc8d3ae6c920e",
+    "redaction_profile": "approved-research-portfolio-minimal-v1"
+  },
+  "generated_at": "2026-09-02T23:15:45.927287Z",
+  "model_id": "glm-5.3",
+  "model_snapshot": "glm-5.3-coding-plan-2026-09-02",
+  "passed": true,
+  "provider": "glm",
+  "q5_acceptance_hash": "3efe6a0142ed6209581708d31faa5951718e4bf8e70d73f905cc277168bf10ad",
+  "report_hash": "a02d4a903d553cdded78e9a2bb5b61d0033fd6f6ef6f918baf858da4fec4ee16",
+  "run": {
+    "episode_manifest_hash": "66e3cc2687bd86a73dcd3f5126010c5e93ee0c071c61233cf148845809a08cb7",
+    "episode_replay_identity": "f3a2708587dc859d4daa79bc32a83994fd25e44d728b01b859a486039ecfc2bb",
+    "episode_verified": true,
+    "guardrail_status": "passed",
+    "latency_ms": 41708,
+    "run_id": "run-06914af293595b4286f68e36af8e8d12",
+    "session_id": "session-06a933c045395713a596f53439dca76a",
+    "status": "completed",
+    "usage": {
+      "model_attempts": 1,
+      "model_turns": 2,
+      "retries": 0,
+      "tool_calls": 1,
+      "total_tokens": 7900
+    }
+  },
+  "safety": {
+    "account_or_target_mutations": 0,
+    "agent_write_tools": 0,
+    "broker_connections": 0,
+    "real_orders": 0
+  },
+  "schema": "ditto.q5-live-portfolio-diagnostic.v1",
+  "status": "passed"
+}

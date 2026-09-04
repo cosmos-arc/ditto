@@ -26,7 +26,7 @@ RELEASE_SUITE_COUNTS: Mapping[str, int] = MappingProxyType(
     {
         "author": 20,
         "campaign": 30,
-        "grounded": 30,
+        "grounded": 41,
         "permission": 20,
         "sandbox": 10,
         "shadow": 10,
@@ -585,7 +585,7 @@ class EvalCohortPerformance:
 
 @dataclass(frozen=True, slots=True)
 class ReleaseEvalReport:
-    """Frozen 120-case dataset/grader identity and all release hard gates."""
+    """Frozen release dataset/grader identity and all release hard gates."""
 
     run_identity: ReleaseEvalRunIdentity
     seed: int

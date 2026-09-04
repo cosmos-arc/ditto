@@ -16,15 +16,15 @@ from ditto_apps.models.data_products import (
     DataProductCoverageResponse,
     DataProductEvidenceResponse,
     DataProductLicenseResponse,
-    DataProductOverviewResponse,
     DataProductQualityResponse,
     DataProductRunResponse,
+    DataProductViewResponse,
     to_data_product_coverage,
     to_data_product_evidence,
     to_data_product_license,
-    to_data_product_overview,
     to_data_product_quality,
     to_data_product_run,
+    to_data_product_view,
 )
 
 router = APIRouter(prefix="/data-products", tags=["data-products"])
@@ -39,15 +39,15 @@ Profile = Annotated[
 ]
 
 
-@router.get("", response_model=APIResponse[list[DataProductOverviewResponse]])
+@router.get("", response_model=APIResponse[list[DataProductViewResponse]])
 @inject
 async def list_data_products(
     facade: Annotated[DataProductsQueryFacade, FromComponent()],
     profile: Profile = "research_daily",
-) -> APIResponse[list[DataProductOverviewResponse]]:
-    """List the 19 independent R2 product contracts and active reports."""
+) -> APIResponse[list[DataProductViewResponse]]:
+    """List the 22 independent R2 dataset specs and active reports."""
     rows = await asyncio.to_thread(facade.list_products, profile=profile)
-    return APIResponse(data=[to_data_product_overview(row) for row in rows])
+    return APIResponse(data=[to_data_product_view(row) for row in rows])
 
 
 @router.get(

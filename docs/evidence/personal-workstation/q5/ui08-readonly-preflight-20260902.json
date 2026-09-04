@@ -1,0 +1,138 @@
+{
+  "schema": "ditto.personal-workstation.ui08-readonly-preflight.v1",
+  "generated_at": "2026-09-01T20:01:39Z",
+  "status": "partial_pass",
+  "scope": "Read-only browser acceptance for UI-08 steps 1-6, including one completed governed GLM SelectionMemo; no strategy persistence, Paper event, Manual event, publish action, or trade was created",
+  "runtime": {
+    "backend_origin": "http://127.0.0.1:8002",
+    "frontend_origin": "http://127.0.0.1:5175",
+    "mock_enabled": false,
+    "provider": "glm",
+    "provider_state": "available",
+    "governed_runs_during_browser_acceptance": 3,
+    "completed_governed_runs": 1,
+    "failed_recovery_runs": 2,
+    "completed_run_tokens": 4572,
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    }
+  },
+  "repository_state": {
+    "backend_branch": "codex/roadmap-completion",
+    "backend_head": "79fc1cd90a28d9d9a5cb4ecad7ab46c547734572",
+    "frontend_branch": "codex/roadmap-completion",
+    "frontend_head": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+    "working_tree_policy": "existing dirty roadmap-completion trees preserved; no branch created"
+  },
+  "evidence_identity": {
+    "selection_run_id": "selection-run:sha256:8beae94442ac536626d67165f23cee2990ce1e18bc241c9e4bdc1ead8a44bc1f",
+    "industry_rotation_snapshot_id": "industry-rotation:sha256:bf2fd070868f9be58cbe46183f4cbdb54e4affe200e82795851445c1c06a9623",
+    "instrument_id": 2001724,
+    "instrument_name": "华安易富黄金ETF",
+    "ticker": "518880.SH",
+    "technical_snapshot_id": "technical-analysis:sha256:8d56cf82013a3c0acb9fde031cd716de7a47ff3a78e6e226c174c2649d358ce1",
+    "technical_source_snapshot_id": "snapshot:tushare:etf_daily:sha256:bd4c0a82bfcf28627562469dad8f70043cfcfc3059460ca00f0e79879d742708"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "name": "understand macro, global, and A-share context",
+      "state": "prepared",
+      "assertions": [
+        "Today rendered live MarketContext with explicit score, drivers, metrics, cutoffs, and source snapshots",
+        "missing risk report and readiness blocked the execution decision instead of using fallback values"
+      ]
+    },
+    {
+      "step": 2,
+      "name": "inspect industry rotation and run stock/ETF selection",
+      "state": "prepared",
+      "assertions": [
+        "Industry Rotation required an exact snapshot identity and did not fall back to latest",
+        "the bound snapshot rendered 31 ranked industries and explicit missing-input contributions",
+        "ETF SelectionRun rendered 15 included and 113 excluded candidates with reason codes"
+      ]
+    },
+    {
+      "step": 3,
+      "name": "compare candidates and inspect technical/fundamental evidence",
+      "state": "prepared",
+      "assertions": [
+        "the top ETF rendered an exact SelectionRun identity, rank, score, factor contributions, and source snapshot",
+        "technical evidence rendered 36 deterministic readings and explicit missing benchmark/industry inputs",
+        "fundamental evidence remained disabled rather than displaying synthetic PE, PB, industry, or peer values"
+      ]
+    },
+    {
+      "step": 4,
+      "name": "request Agent SelectionMemo with citations",
+      "state": "passed",
+      "assertions": [
+        "the browser created and executed governed run run-2cc8eb0f66bc50bfab866131dcfab242 against the exact SelectionRun context",
+        "selection_run_evidence was called exactly once and cited evidence-9da67d501bcd7c3716d94d85b2a4e0ed36dfbed0aa31e91915012a7f6423dd00",
+        "the completed SelectionMemo preserved rank 1, score 0.8866141732283463, both exact factor contributions, 15 candidate and 113 exclusion counts, and the three exclusion-reason buckets",
+        "approved-research-minimal-v1 excluded the complete candidate and exclusion arrays from model egress while retaining the top three candidates, aggregate exclusion reasons, missing-input state, hashes, and PIT lineage",
+        "guardrail status passed, total usage was 4572 tokens under the 12000-token run cap, and no save, publish, or trade action occurred"
+      ]
+    },
+    {
+      "step": 5,
+      "name": "send candidate to research and obtain a model proposal",
+      "state": "prepared_not_persisted",
+      "assertions": [
+        "without a loaded technical snapshot the handoff was fail-closed",
+        "after loading technical evidence the handoff carried the exact SelectionRun and technical snapshot identities with write scope none",
+        "Research Agent reported provider glm available",
+        "the separately recorded Agent Author proposal remains unsaved pending exact operator approval"
+      ]
+    },
+    {
+      "step": 6,
+      "name": "review risk and position scenario",
+      "state": "prepared_fail_closed",
+      "assertions": [
+        "Model Portfolio rendered an empty versioned target portfolio without inventing holdings, cash, orders, or fills",
+        "Risk Center blocked the decision because account, tail-risk, factor-risk, stress-scenario, reconciliation, and PIT provenance inputs were incomplete"
+      ]
+    },
+    {
+      "step": 7,
+      "name": "Paper orders and fills",
+      "state": "pending_final_acceptance"
+    },
+    {
+      "step": 8,
+      "name": "Manual actual event and correction",
+      "state": "pending_final_acceptance"
+    },
+    {
+      "step": 9,
+      "name": "compare Model, Paper, and Manual",
+      "state": "pending_final_acceptance"
+    },
+    {
+      "step": 10,
+      "name": "EOD Agent Review traceability",
+      "state": "pending_final_acceptance"
+    }
+  ],
+  "browser_assertions": {
+    "console_error_count": 0,
+    "horizontal_overflow": false,
+    "current_page_document_scroll_width": 1280,
+    "exact_identity_handoff": true,
+    "write_operations": 0,
+    "model_calls": 3,
+    "completed_model_calls": 1,
+    "completed_run_id": "run-2cc8eb0f66bc50bfab866131dcfab242"
+  },
+  "does_not_prove": [
+    "UI-08 completion",
+    "strategy draft persistence",
+    "backtest execution or review submission",
+    "Paper or Manual acceptance",
+    "20 real A-share trading-day soak",
+    "Q5 or Q6 gate passage"
+  ]
+}

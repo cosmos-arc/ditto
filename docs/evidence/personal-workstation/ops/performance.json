@@ -1,0 +1,46 @@
+{
+  "cases": [
+    {
+      "iterations": 40,
+      "max_ms": 0.023583,
+      "median_ms": 0.023291,
+      "name": "read_models",
+      "p95_ms": 0.023416,
+      "status": "passed",
+      "threshold_ms": 250.0
+    },
+    {
+      "iterations": 40,
+      "max_ms": 4.939542,
+      "median_ms": 4.693625,
+      "name": "selection",
+      "p95_ms": 4.887,
+      "status": "passed",
+      "threshold_ms": 1000.0
+    },
+    {
+      "iterations": 40,
+      "max_ms": 1.365208,
+      "median_ms": 1.242355,
+      "name": "technical_analysis",
+      "p95_ms": 1.351834,
+      "status": "passed",
+      "threshold_ms": 1000.0
+    },
+    {
+      "iterations": 40,
+      "max_ms": 0.066042,
+      "median_ms": 0.064917,
+      "name": "portfolio_comparison",
+      "p95_ms": 0.065834,
+      "status": "passed",
+      "threshold_ms": 250.0
+    }
+  ],
+  "generated_at": "2026-08-31T17:11:39.552114+00:00",
+  "iterations": 40,
+  "report_hash": "sha256:d4a82749a02b351ed3038408ad86817401d6d6c3e65d751c96c570c437731c00",
+  "schema_version": 1,
+  "status": "passed",
+  "warmup": 5
+}

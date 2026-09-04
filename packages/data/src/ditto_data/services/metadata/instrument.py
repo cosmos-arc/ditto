@@ -16,6 +16,8 @@ from ditto_platform.foundation import ChecksumCompute, logger, traced
 
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.models.metadata import (
+    IndustryBasic,
+    IndustryMapping,
     InstrumentExtension,
     InstrumentRegistration,
     StockExtension,
@@ -279,6 +281,85 @@ class InstrumentService:
 
         """
         return self._industry_mapping_reader.get_stock_industry(instrument_id, asof)
+
+    @traced("metadata.industry.save_classification")
+    def save_industry_classification(
+        self,
+        df: pl.DataFrame,
+        *,
+        source: str,
+    ) -> int:
+        """Persist a provider classification snapshot into the current read model."""
+        required = {"industry_id", "industry_name", "industry_level"}
+        missing = required - set(df.columns)
+        if missing:
+            raise ValueError(
+                f"industry classification missing columns: {sorted(missing)}"
+            )
+        for row in df.to_dicts():
+            raw_level = row["industry_level"]
+            level = (
+                str(raw_level)
+                if str(raw_level).startswith("L")
+                else f"L{int(raw_level)}"
+            )
+            self._industry_writer.register(
+                IndustryBasic(
+                    industry_id=str(row["industry_id"]),
+                    industry_name=str(row["industry_name"]),
+                    industry_level=level,
+                    source=str(row.get("source") or source),
+                )
+            )
+        return len(df)
+
+    @traced("metadata.industry.save_mapping")
+    def save_industry_mapping(
+        self,
+        df: pl.DataFrame,
+        *,
+        source: str,
+    ) -> int:
+        """Resolve provider tickers and persist effective-dated current mappings."""
+        required = {"instrument_id", "industry_id", "industry_date"}
+        missing = required - set(df.columns)
+        if missing:
+            raise ValueError(f"industry mapping missing columns: {sorted(missing)}")
+        identifiers = [str(value) for value in df["instrument_id"].unique().to_list()]
+        resolved = self.resolve_instrument_ids_batch(identifiers, source, None)
+        unresolved = sorted(set(identifiers) - resolved.keys())
+        if unresolved:
+            raise ValueError(
+                f"industry mapping contains unresolved instruments: {len(unresolved)}"
+            )
+        rows = sorted(
+            df.to_dicts(),
+            key=lambda row: (str(row["instrument_id"]), str(row["industry_date"])),
+        )
+        for row in rows:
+            effective_from = row["industry_date"]
+            effective_to = row.get("effective_to")
+            self._industry_mapping_writer.update_mapping(
+                IndustryMapping(
+                    instrument_id=resolved[str(row["instrument_id"])],
+                    industry_id=str(row["industry_id"]),
+                    source=str(row.get("source") or source),
+                    effective_from=(
+                        effective_from.isoformat()
+                        if isinstance(effective_from, date)
+                        else str(effective_from)
+                    ),
+                    effective_to=(
+                        effective_to.isoformat()
+                        if isinstance(effective_to, date)
+                        else str(effective_to)
+                        if effective_to is not None
+                        else None
+                    ),
+                    entry_reason=str(row.get("classification_version") or "provider"),
+                )
+            )
+        return len(rows)
 
     # ============ 状态查询 (PIT) ============
 

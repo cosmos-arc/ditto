@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
+import orjson
 import typer
 from ditto_platform.foundation import (
     ConfigInitCoordinator,
@@ -11,6 +13,11 @@ from ditto_platform.foundation import (
     InitScope,
 )
 
+from ditto_apps.cli.commands.fresh_bootstrap import (
+    FreshBootstrapTargetError,
+    build_fresh_bootstrap_plan,
+    fresh_bootstrap_plan_payload,
+)
 from ditto_apps.registry.infra.config import (
     data_root_init_directories_from_data_store,
     load_data_store_settings,
@@ -44,6 +51,47 @@ def _make_coordinator() -> ConfigInitCoordinator:
 def _init_scope(force: bool) -> InitScope:
     """选择 CLI 初始化作用域。"""
     return InitScope.ALWAYS if force else InitScope.STARTUP
+
+
+@app.command("fresh-bootstrap")
+def fresh_bootstrap(
+    ctx: typer.Context,
+    data_root: Annotated[
+        str | None,
+        typer.Option("--data-root", "-d", help="精确的数据根目录"),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="输出稳定 JSON dry-run manifest"),
+    ] = False,
+) -> None:
+    """只读生成 fresh bootstrap 计划；本命令不执行删除。"""
+    target = _resolve_data_root(ctx, data_root)
+    try:
+        plan = build_fresh_bootstrap_plan(str(target))
+    except FreshBootstrapTargetError as exc:
+        typer.echo(f"FRESH_BOOTSTRAP_TARGET_INVALID: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    payload = fresh_bootstrap_plan_payload(plan)
+    if json_output:
+        typer.echo(
+            orjson.dumps(
+                payload,
+                option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
+            ).decode()
+        )
+        return
+    typer.echo(
+        " ".join(
+            (
+                "mode=dry_run",
+                f"data_root={plan.data_root}",
+                f"plan_hash={plan.plan_hash}",
+                f"candidate_count={len(plan.candidates)}",
+            )
+        )
+    )
 
 
 @app.command()

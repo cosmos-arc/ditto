@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections import Counter
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from types import MappingProxyType
 from typing import cast
@@ -91,19 +92,142 @@ class ModelEvidencePayload:
         evidence: EvidenceEnvelope,
         *,
         temporal_context_hash: str,
+        result: Mapping[str, object] | None = None,
+        artifact_refs: tuple[str, ...] | None = None,
     ) -> ModelEvidencePayload:
         """Project a verified envelope without internal policy or license notes."""
         payload = cls(
             evidence_id=evidence.evidence_id,
             tool_name=evidence.tool_name,
-            result=evidence.result,
-            artifact_refs=evidence.artifact_refs,
+            result=evidence.result if result is None else result,
+            artifact_refs=(
+                evidence.artifact_refs if artifact_refs is None else artifact_refs
+            ),
             lineage=evidence.lineage,
             temporal_context_hash=temporal_context_hash,
             integrity_hash=evidence.integrity_hash,
             payload_hash="0" * 64,
         )
         return replace(payload, payload_hash=canonical_sha256(payload._hash_payload()))
+
+
+_APPROVED_RESEARCH_LICENSE = "approved-research"
+_MINIMAL_PROFILE = "approved-research-minimal-v1"
+_SELECTION_TOOL = "selection_run_evidence"
+_CANDIDATE_FIELDS = (
+    "rank",
+    "instrument_id",
+    "instrument_name",
+    "industry_id",
+    "score",
+    "factor_contributions",
+)
+
+
+def _candidate_rank(item: Mapping[str, object]) -> int:
+    rank = item.get("rank")
+    return rank if isinstance(rank, int) else 2**31
+
+
+def _minimal_candidate(item: Mapping[str, object]) -> dict[str, object]:
+    projected: dict[str, object] = {}
+    for key in _CANDIDATE_FIELDS:
+        if key in item:
+            projected[key] = item[key]
+    return projected
+
+
+def _mapping(value: object, *, field: str) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise EvidenceEgressPolicyError(
+            f"{field} must be a mapping",
+            reason_code="evidence_minimal_projection_invalid",
+        )
+    raw = cast(Mapping[object, object], value)
+    if not all(isinstance(key, str) for key in raw):
+        raise EvidenceEgressPolicyError(
+            f"{field} must use string keys",
+            reason_code="evidence_minimal_projection_invalid",
+        )
+    return cast(Mapping[str, object], raw)
+
+
+def _sequence(value: object, *, field: str) -> Sequence[object]:
+    if not isinstance(value, (tuple, list)):
+        raise EvidenceEgressPolicyError(
+            f"{field} must be a sequence",
+            reason_code="evidence_minimal_projection_invalid",
+        )
+    return cast(Sequence[object], value)
+
+
+def _selection_projection(
+    evidence: EvidenceEnvelope,
+) -> tuple[Mapping[str, object], tuple[str, ...]]:
+    payload = _mapping(evidence.result.get("payload"), field="selection payload")
+    candidates = tuple(
+        _mapping(item, field="selection candidate")
+        for item in _sequence(payload.get("candidates"), field="selection candidates")
+    )
+    exclusions = tuple(
+        _mapping(item, field="selection exclusion")
+        for item in _sequence(payload.get("exclusions"), field="selection exclusions")
+    )
+    ranked: list[Mapping[str, object]] = sorted(candidates, key=_candidate_rank)
+    summary: Counter[tuple[str, str]] = Counter(
+        (
+            str(item.get("stage", "unknown")),
+            str(item.get("reason_code", "unknown")),
+        )
+        for item in exclusions
+    )
+    top_candidates: tuple[dict[str, object], ...] = tuple(
+        _minimal_candidate(item) for item in ranked[:3]
+    )
+    exclusion_summary: tuple[dict[str, object], ...] = tuple(
+        {"stage": stage, "reason_code": reason_code, "count": count}
+        for (stage, reason_code), count in sorted(summary.items())
+    )
+    minimal_payload: dict[str, object] = {
+        "run_id": payload.get("run_id", evidence.result.get("run_id")),
+        "status": payload.get("status", evidence.result.get("status")),
+        "seed": payload.get("seed"),
+        "candidate_count": len(candidates),
+        "exclusion_count": len(exclusions),
+        "top_candidates": top_candidates,
+        "exclusion_summary": exclusion_summary,
+        "missing_inputs": payload.get("missing_inputs", ()),
+        "source_snapshot_ids": payload.get("source_snapshot_ids", ()),
+    }
+    result: dict[str, object] = {
+        "schema_version": 1,
+        "kind": "selection_run",
+        "redaction_profile": _MINIMAL_PROFILE,
+        "source_payload_hash": evidence.result.get("payload_hash"),
+        "payload": minimal_payload,
+    }
+    artifact_refs = tuple(
+        dict.fromkeys(
+            (
+                *evidence.artifact_refs,
+                f"minimal-egress:sha256:{canonical_sha256(minimal_payload)}",
+            )
+        )
+    )
+    return result, artifact_refs
+
+
+def _model_projection(
+    evidence: EvidenceEnvelope,
+    *,
+    context: TemporalToolContext,
+) -> tuple[Mapping[str, object], tuple[str, ...]]:
+    if (
+        context.license_class == _APPROVED_RESEARCH_LICENSE
+        and evidence.tool_name == _SELECTION_TOOL
+    ):
+        return _selection_projection(evidence)
+    return evidence.result, evidence.artifact_refs
 
 
 class EvidenceEgressPolicy:
@@ -175,10 +299,13 @@ class EvidenceEgressPolicy:
                     reason_code="evidence_temporal_context_mismatch",
                     details={"evidence_id": item.evidence_id},
                 )
+            result, artifact_refs = _model_projection(item, context=context)
             payloads.append(
                 ModelEvidencePayload.from_evidence(
                     item,
                     temporal_context_hash=context_hash,
+                    result=result,
+                    artifact_refs=artifact_refs,
                 )
             )
         return tuple(payloads)

@@ -294,6 +294,25 @@ def _failed_payload(*, profile: str, error: Exception) -> bytes:
     )
 
 
+def _has_passing_report(path: Path) -> bool:
+    try:
+        decoded: object = orjson.loads(path.read_bytes())
+    except (OSError, orjson.JSONDecodeError):
+        return False
+    if not isinstance(decoded, dict):
+        return False
+    return cast("dict[str, object]", decoded).get("passed") is True
+
+
+def _write_failed_payload(output: Path, payload: bytes) -> None:
+    target = (
+        output.with_name(f"{output.stem}.last-failure{output.suffix}")
+        if _has_passing_report(output)
+        else output
+    )
+    target.write_bytes(payload)
+
+
 def _bundled_cases() -> dict[str, tuple[EvalCase, ...]]:
     cases: dict[str, tuple[EvalCase, ...]] = {}
     for suite in RELEASE_SUITE_COUNTS:
@@ -370,7 +389,10 @@ def main(
             )
         )
     except Exception as exc:
-        output.write_bytes(_failed_payload(profile=profile_name, error=exc))
+        _write_failed_payload(
+            output,
+            _failed_payload(profile=profile_name, error=exc),
+        )
         return 1
     output.write_bytes(report.to_bytes())
     return 0 if report.passed else 1

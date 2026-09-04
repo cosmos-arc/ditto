@@ -102,6 +102,7 @@ class CoverageCollector:
         self,
         dataset_id: str,
         *,
+        target_from: date | None = None,
         target_to: date,
         expected_dates: tuple[date, ...],
         exceptions: tuple[CoverageException, ...] = (),
@@ -112,20 +113,24 @@ class CoverageCollector:
             metadata = default_dataset_metadata()[dataset_id]
         except KeyError as error:
             raise ValueError(f"unknown dataset: {dataset_id}") from error
-        contract = metadata.product_contract
+        contract = metadata.dataset_spec
         if contract is None:
             raise ValueError(f"dataset has no product contract: {dataset_id}")
         raw_target = contract.raw_target_from
         if raw_target is None:
             raise ValueError(f"dataset has no R2 raw target: {dataset_id}")
         try:
-            target_from = date.fromisoformat(raw_target)
+            contract_target_from = date.fromisoformat(raw_target)
         except ValueError:
             if not expected_dates:
                 raise ValueError(
                     f"symbolic coverage target requires expected dates: {dataset_id}"
                 ) from None
-            target_from = min(expected_dates)
+            contract_target_from = min(expected_dates)
+        if target_from is None:
+            target_from = contract_target_from
+        elif target_from < contract_target_from:
+            raise ValueError("coverage target_from precedes product target_from")
         if target_to < target_from:
             raise ValueError("coverage target_to precedes product target_from")
 
@@ -192,7 +197,7 @@ class CoverageCollector:
         expected_dates: frozenset[date],
         snapshot_ids: frozenset[str] | None,
     ) -> frozenset[date]:
-        contract = default_dataset_metadata()[dataset_id].product_contract
+        contract = default_dataset_metadata()[dataset_id].dataset_spec
         if contract is None:
             raise ValueError(f"dataset has no product contract: {dataset_id}")
         keys = frozenset(contract.partition_keys)

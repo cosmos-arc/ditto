@@ -13,7 +13,9 @@ import orjson
 import pytest
 from ditto_backtest.config import EngineConfig
 from ditto_backtest.manifest import (
+    ContextInputKind,
     InputRef,
+    ReplayContextInputRef,
     RuleRef,
     RuleRefCollector,
     RunManifest,
@@ -143,6 +145,22 @@ def _make_manifest(
         research_snapshot_id=None,
         research_snapshot_manifest_hash=None,
         created_at="2026-03-22T10:00:00Z",
+    )
+
+
+def _context_ref(
+    kind: ContextInputKind,
+    identity: str,
+    digest: str,
+) -> ReplayContextInputRef:
+    return ReplayContextInputRef(
+        context_kind=kind,
+        context_id=identity,
+        content_hash=digest,
+        as_of="2026-08-31T07:00:00Z",
+        knowledge_cutoff="2026-08-31T07:00:00Z",
+        publication_cutoff="2026-08-31T07:00:00Z",
+        source_snapshot_ids=("source-b", "source-a"),
     )
 
 
@@ -1134,6 +1152,62 @@ class TestBuildRunManifestPitPolicy:
         assert manifest.pit_policy == PIT_POLICY_FAIL_CLOSED
         assert manifest.unsafe_time_policy == ""
         assert manifest.knowledge_lag_days == 3
+
+
+class TestReplayContextInputs:
+    """Market and technical evidence must be frozen in replay identity."""
+
+    def test_build_manifest_preserves_canonical_context_input_refs(self) -> None:
+        technical = _context_ref(
+            ContextInputKind.TECHNICAL_ANALYSIS,
+            "technical-analysis:sha256:technical",
+            "d" * 64,
+        )
+        market = _context_ref(
+            ContextInputKind.MARKET_CONTEXT,
+            "market-context:sha256:market",
+            "e" * 64,
+        )
+        config = EngineConfig(
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+            initial_cash=1_000_000.0,
+            spec_hash=_CANONICAL_SPEC_HASH,
+            **_baseline_engine_identity(),
+            context_input_refs=(technical, market),
+        )
+
+        manifest = build_run_manifest(
+            run_id="run-context-inputs",
+            config=config,
+            spec_hash=_CANONICAL_SPEC_HASH,
+            input_evidence=RunManifestInputEvidence(
+                input_instruments=set(),
+                bar_fingerprints={},
+            ),
+            rule_refs=(),
+            random_seed=7,
+        )
+        parsed = orjson.loads(serialize_manifest(manifest))
+
+        assert manifest.context_input_refs == (market, technical)
+        assert parsed["context_input_refs"][0]["context_kind"] == "market_context"
+        assert parsed["context_input_refs"][1]["source_snapshot_ids"] == [
+            "source-a",
+            "source-b",
+        ]
+
+    def test_context_input_ref_rejects_future_knowledge_sentinel(self) -> None:
+        with pytest.raises(ValueError, match="PIT"):
+            ReplayContextInputRef(
+                context_kind=ContextInputKind.MARKET_CONTEXT,
+                context_id="market-context:sha256:future",
+                content_hash="f" * 64,
+                as_of="2026-08-31T07:00:00Z",
+                knowledge_cutoff="2026-09-01T07:00:00Z",
+                publication_cutoff="2026-08-31T07:00:00Z",
+                source_snapshot_ids=("source-a",),
+            )
 
 
 class TestBuildRunManifestSourceSnapshots:

@@ -109,6 +109,18 @@ def schema_body_statements(sql: str, *, version: int = USER_VERSION) -> tuple[st
     return statements[:-2]
 
 
+def fresh_schema_body_statements() -> tuple[str, ...]:
+    """Assemble current create-only DDL without stepping stored schema markers."""
+    return tuple(
+        statement
+        for version in range(1, USER_VERSION + 1)
+        for statement in schema_body_statements(
+            load_schema_sql(version=version),
+            version=version,
+        )
+    )
+
+
 def expected_schema(version: int) -> tuple[int, str]:
     """Return the authenticated catalog size/fingerprint for one version."""
     expected = _SCHEMA_BY_VERSION.get(version)
@@ -153,6 +165,7 @@ __all__ = [
     "SCHEMA_ROW_COUNT",
     "USER_VERSION",
     "expected_schema",
+    "fresh_schema_body_statements",
     "load_schema_sql",
     "schema_body_statements",
     "schema_fingerprint",

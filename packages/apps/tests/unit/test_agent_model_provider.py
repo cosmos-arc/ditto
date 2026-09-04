@@ -20,6 +20,71 @@ def test_agent_model_provider_defaults_to_offline_scripted_fake() -> None:
     assert isinstance(provider, ScriptedAgentModel)
 
 
+def test_glm_validation_settings_load_from_explicit_apps_environment() -> None:
+    settings = AgentModelProviderSettings.from_environment(
+        {
+            "DITTO_AGENT_MODEL_PROVIDER": "glm",
+            "DITTO_AGENT_MODEL_CALLS_ENABLED": "true",
+            "DITTO_AGENT_MODEL_A4_APPROVED": "true",
+            "DITTO_AGENT_MODEL_ID": "glm-5.3",
+            "DITTO_AGENT_MODEL_API_KEY": "test-plan-key",
+            "DITTO_AGENT_MODEL_CREDENTIAL_KIND": "glm_coding_plan_validation",
+            "DITTO_AGENT_MODEL_PRODUCTION_MODE": "false",
+            "DITTO_AGENT_MODEL_REASONING_EFFORT": "medium",
+        }
+    )
+
+    assert settings.provider is AgentModelProviderKind.GLM
+    assert settings.model_calls_enabled is True
+    assert settings.a4_approved is True
+    assert settings.credential_kind is (
+        AgentModelCredentialKind.GLM_CODING_PLAN_VALIDATION
+    )
+    assert settings.production_mode is False
+    assert settings.reasoning_effort == "medium"
+    assert "test-plan-key" not in repr(settings)
+
+
+def test_model_egress_license_grants_load_only_from_explicit_apps_environment() -> None:
+    settings = AgentModelProviderSettings.from_environment(
+        {
+            "DITTO_AGENT_MODEL_APPROVED_LICENSE_CLASSES": (
+                "approved-research,redistribution-reviewed"
+            )
+        }
+    )
+
+    assert settings.approved_license_classes == (
+        "approved-research",
+        "redistribution-reviewed",
+    )
+    assert (
+        AgentModelProviderSettings.from_environment({}).approved_license_classes == ()
+    )
+
+
+def test_model_settings_environment_rejects_implicit_boolean_truthiness() -> None:
+    with pytest.raises(ValueError, match="DITTO_AGENT_MODEL_A4_APPROVED"):
+        AgentModelProviderSettings.from_environment(
+            {"DITTO_AGENT_MODEL_A4_APPROVED": "approved"}
+        )
+
+
+def test_model_egress_license_grants_reject_duplicates_and_whitespace() -> None:
+    with pytest.raises(ValueError, match="duplicates"):
+        AgentModelProviderSettings(
+            approved_license_classes=("approved-research", "approved-research")
+        )
+    with pytest.raises(ValueError, match="surrounding whitespace"):
+        AgentModelProviderSettings.from_environment(
+            {
+                "DITTO_AGENT_MODEL_APPROVED_LICENSE_CLASSES": (
+                    "approved-research, redistribution-reviewed"
+                )
+            }
+        )
+
+
 def test_openai_provider_requires_feature_flag_and_a4_evidence() -> None:
     settings = AgentModelProviderSettings(
         provider=AgentModelProviderKind.OPENAI,

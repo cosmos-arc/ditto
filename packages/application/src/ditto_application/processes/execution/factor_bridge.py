@@ -381,8 +381,6 @@ class FactorBridge:
                     },
                 )
             return expr_or_id
-        if not self._require_registered_factor_ids:
-            return spec.expression
         return self._resolve_registered_expression(expr_or_id, visiting=())
 
     def _resolve_registered_expression(
@@ -415,10 +413,22 @@ class FactorBridge:
                 },
             )
 
+        # The legacy published runtime receives PIT fundamental snapshots as
+        # already materialized columns (for example ``roe`` and ``pe_ratio``).
+        # Its market/technical dependencies, however, must be inlined down to
+        # raw OHLCV because no derived technical columns are materialized.
+        # Registered-only research execution owns the full dependency closure.
         registered_dependencies = {
             dependency
             for dependency in spec.dependencies
             if dependency in self._registry
+            and (
+                self._require_registered_factor_ids
+                or not any(
+                    leaf.startswith("fundamentals.")
+                    for leaf in self._registry[dependency].dependencies
+                )
+            )
         }
         if not registered_dependencies:
             return spec.expression

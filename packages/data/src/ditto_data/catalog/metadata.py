@@ -16,9 +16,9 @@ from dataclasses import dataclass
 from functools import cache
 from typing import Literal
 
-from ditto_data.catalog.product_contract import (
-    DatasetProductContract,
-    resolve_product_contract,
+from ditto_data.catalog.dataset_spec import (
+    DatasetSpec,
+    resolve_dataset_spec,
 )
 
 __all__ = [
@@ -102,6 +102,8 @@ _METADATA_DOMAINS: frozenset[str] = frozenset(
         "etf_basic",
         "index_basic",
         "calendar",
+        "industry_classification",
+        "industry_mapping",
     }
 )
 
@@ -111,6 +113,7 @@ _MARKET_DOMAINS: frozenset[str] = frozenset(
         "stock_daily",
         "etf_daily",
         "index_daily",
+        "global_index_daily",
         "stock_status",
         "adj_factor",
         "fund_adj",
@@ -160,6 +163,9 @@ _INITIAL_FOCUS_DATASETS: frozenset[str] = frozenset(
         "index_daily",
         "adj_factor",
         "fund_adj",
+        "global_index_daily",
+        "industry_classification",
+        "industry_mapping",
     }
 )
 
@@ -242,7 +248,7 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
         return "stock"
     if dataset_id in {"etf_daily", "fund_adj"}:
         return "etf"
-    if dataset_id in {"index_daily", "index_weight"}:
+    if dataset_id in {"index_daily", "global_index_daily", "index_weight"}:
         return "index"
     return None
 
@@ -253,7 +259,13 @@ def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
     if dataset_id in {"fx_daily", "dividend", "corporate_actions"}:
         return "natural_days"
     # Source-defined datasets
-    if dataset_id in {"macro_indicators", "commodity_daily"}:
+    if dataset_id in {
+        "macro_indicators",
+        "commodity_daily",
+        "global_index_daily",
+        "industry_classification",
+        "industry_mapping",
+    }:
         return "source_defined"
     # All others default to trading_days (basic datasets are also
     # effectively trading_days for scheduling purposes even though they
@@ -432,7 +444,7 @@ class DatasetMetadata:
     schema_version: str | None = None
     asset_class: DatasetAssetClass | None = None
     storage_uri_prefixes: tuple[str, ...] = ()
-    product_contract: DatasetProductContract | None = None
+    dataset_spec: DatasetSpec | None = None
 
     def __post_init__(self) -> None:
         """验证域字段合法性。"""
@@ -475,10 +487,16 @@ class DatasetMetadata:
             ingestion_granularities=self.ingestion_granularities,
         )
         if (
-            self.product_contract is not None
-            and self.product_contract.dataset_id != self.dataset_id
+            self.dataset_spec is not None
+            and self.dataset_spec.dataset_id != self.dataset_id
         ):
-            msg = "product_contract.dataset_id must match dataset_id"
+            msg = "dataset_spec.dataset_id must match dataset_id"
+            raise ValueError(msg)
+        if (
+            self.dataset_spec is not None
+            and self.schema_version != self.dataset_spec.schema_version
+        ):
+            msg = "dataset_spec.schema_version must match schema_version"
             raise ValueError(msg)
 
     def supports_source(self, source: str) -> bool:
@@ -512,6 +530,7 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "stock_daily",
     "etf_daily",
     "index_daily",
+    "global_index_daily",
     "stock_status",
     # Reference
     "adj_factor",
@@ -534,6 +553,9 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "corporate_actions",
     # Index reference
     "index_weight",
+    # Industry reference
+    "industry_classification",
+    "industry_mapping",
 )
 
 _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
@@ -555,15 +577,6 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
 )
 
 _UNSUPPORTED_INGESTION_DATASETS: frozenset[str] = frozenset()
-
-_SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
-    "stock_daily": "market.stock_daily.v1",
-    "adj_factor": "market.adj_factor.v1",
-    "stock_status": "market.stock_status.v1",
-    "etf_daily": "etf.daily.v1",
-    "corporate_actions": "fundamental.corporate_actions.v2",
-    "dividend": "fundamental.dividend.v2",
-}
 
 
 def _resolve_ingestion_granularities(
@@ -614,16 +627,6 @@ def _resolve_freshness_sla_hours(dataset_id: str) -> int | None:
     return 36
 
 
-def _resolve_schema_version(dataset_id: str) -> str | None:
-    """Resolve the semantic catalog schema version for runtime assets."""
-    if dataset_id in _UNSUPPORTED_INGESTION_DATASETS:
-        return None
-    schema_version = _SCHEMA_VERSION_OVERRIDES.get(dataset_id)
-    if schema_version is not None:
-        return schema_version
-    return f"{_resolve_domain(dataset_id)}.{dataset_id}.v1"
-
-
 @cache
 def default_dataset_metadata() -> dict[str, DatasetMetadata]:
     """
@@ -631,8 +634,10 @@ def default_dataset_metadata() -> dict[str, DatasetMetadata]:
 
     Cached on first call; subsequent calls return the same dict.
     """
-    return {
-        dataset_id: DatasetMetadata(
+    registry: dict[str, DatasetMetadata] = {}
+    for dataset_id in _ALL_DATASET_IDS:
+        dataset_spec = resolve_dataset_spec(dataset_id)
+        registry[dataset_id] = DatasetMetadata(
             dataset_id=dataset_id,
             domain=_resolve_domain(dataset_id),
             maturity=_resolve_maturity(dataset_id),
@@ -643,12 +648,11 @@ def default_dataset_metadata() -> dict[str, DatasetMetadata]:
             ingestion_granularities=_resolve_ingestion_granularities(dataset_id),
             freshness_sla_hours=_resolve_freshness_sla_hours(dataset_id),
             promotion_criteria=_resolve_promotion_criteria(dataset_id),
-            schema_version=_resolve_schema_version(dataset_id),
+            schema_version=dataset_spec.schema_version,
             asset_class=_resolve_asset_class(dataset_id),
-            product_contract=resolve_product_contract(dataset_id),
+            dataset_spec=dataset_spec,
         )
-        for dataset_id in _ALL_DATASET_IDS
-    }
+    return registry
 
 
 def dataset_asset_class(dataset_id: str) -> DatasetAssetClass | None:

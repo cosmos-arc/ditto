@@ -1,0 +1,72 @@
+{
+  "execution": {
+    "balanced": true,
+    "execution_count": 1,
+    "execution_id": "paper-execution:cac2466d4e9e9b6263bdbad4e9038550",
+    "execution_request_hash": "paper-request:sha256:e9cc563b06e2f9d6b4405f7af7c98fadd1723c26ca14149d34c7c7c14c73191f",
+    "fill_count": 1,
+    "fill_id": "paper-fill:d828ec5d429f3c8b2cfc1e7393cfc33b",
+    "fill_price": 9.106,
+    "ledger_event_id": "account-event:9f2bf47ac27950fc9eddee1cf50d0ac5",
+    "ledger_fill_count": 1,
+    "market_lineage_hash": "market-lineage:sha256:ece32bb1e4a1e7425759a2767207e8d0852c2e59fc9296f008d07bd42137ca48",
+    "market_snapshot_hash": "market-snapshot:sha256:e4e68c9dd5d79becb0b4f554f49a9cb118bc05ace2836cc6f6852be0de3edd74",
+    "operator_id": "workspace-user",
+    "pre_trade_available_quantity": 100,
+    "pre_trade_position_quantity": 100,
+    "reconciliation_checksum": "paper-eod:sha256:fae73fe3745629dcb41eaad30529f08419f37b04fdba6904830e43bbb4959fd1",
+    "reference_price": 9.105,
+    "session_id": "pap09-session-2026-09-03",
+    "session_status": "paused",
+    "settlement_date": "2026-09-04",
+    "total_cost": 5.009106
+  },
+  "pit": {
+    "decision_at": "2026-09-03T00:55:00Z",
+    "decision_precedes_execution": true,
+    "execution_at": "2026-09-03T10:12:39.815220Z",
+    "market_close_at": "2026-09-03T07:00:00Z",
+    "market_close_precedes_recording": true,
+    "publication_cutoff": "2026-09-03T10:12:39.815220Z",
+    "trade_day_precedes_execution_local_date": false
+  },
+  "provider": {
+    "bar": {
+      "amount": 5923257.966,
+      "close": 9.105,
+      "high": 9.135,
+      "low": 9.045,
+      "open": 9.045,
+      "pre_close": 8.902,
+      "source_ticker": "518880.SH",
+      "trade_date": "2026-09-03",
+      "volume": 6510649.68
+    },
+    "calendar_confirmed_open": true,
+    "market_dataset": "etf_daily",
+    "name": "tushare",
+    "observed_at": "2026-09-03T10:12:39.815220Z",
+    "source_snapshot_id": "snapshot:tushare:etf_daily:sha256:0224114874e2014d373ff2680f6359114a5e6344f951b4d38ea153172a08e018"
+  },
+  "qualifies_as_real_soak": true,
+  "real_trading_day_ordinal": 2,
+  "recorded_at": "2026-09-03T10:12:39.815220Z",
+  "request_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+  "safety": {
+    "broker_connections": 0,
+    "daily_execution_count": 1,
+    "paper_only": true,
+    "real_orders": 0
+  },
+  "schema": "ditto.pap09-real-trading-day.v1",
+  "signature": {
+    "algorithm": "hmac-sha256",
+    "approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "payload_hash": "ba7edee1a92efc6dd37fea2d63ef58ac0aa6ba5bfd271fd73b7b8961cb8349c1",
+    "previous_signature": "1f3e15fca2a78163eae9c9473f952d61cea1b9a5940d19f8c39fa26e76b55b56",
+    "value": "e8a362e9a1c4382e72759df0542a9d23399dd15d76a2f6cf0a41a0804092d08a"
+  },
+  "status": "recorded",
+  "trade_date": "2026-09-03",
+  "work_package": "PAP-09"
+}

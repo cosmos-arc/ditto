@@ -59,6 +59,12 @@ class ModelStreamEventKind(StrEnum):
     COMPLETED = "completed"
 
 
+class ModelOutputContract(StrEnum):
+    """Provider-neutral structured outputs enforced before governed grounding."""
+
+    GROUNDED_ANSWER = "grounded_answer"
+
+
 @dataclass(frozen=True, slots=True)
 class ModelToolSpec:
     """One explicitly registered tool definition."""
@@ -97,6 +103,7 @@ class ModelRequest:
     max_output_tokens: int
     tools: tuple[ModelToolSpec, ...]
     required_tool_name: str | None = None
+    output_contract: ModelOutputContract | None = None
 
     def __post_init__(self) -> None:
         """Validate bounded inputs and unique tool identities."""
@@ -129,6 +136,12 @@ class ModelRequest:
             if required_tool_name not in tool_names:
                 raise ValueError("required_tool_name must identify a request tool")
             object.__setattr__(self, "required_tool_name", required_tool_name)
+        if self.output_contract is not None:
+            enum_value(
+                self.output_contract,
+                ModelOutputContract,
+                field="output_contract",
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -363,6 +376,7 @@ __all__ = [
     "ModelContinuation",
     "ModelFailureKind",
     "ModelInterruption",
+    "ModelOutputContract",
     "ModelProviderError",
     "ModelRequest",
     "ModelResult",

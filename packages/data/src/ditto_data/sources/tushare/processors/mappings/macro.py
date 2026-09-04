@@ -14,7 +14,7 @@ class TushareMacroIndicator:
     Attributes:
         api_name: Tushare API name (e.g., "cn_gdp", "cn_cpi").
         code: Unified indicator code (e.g., "CN_GDP_YOY").
-        field: Field name in API response (e.g., "gdp_yoy", "cpi_yoy").
+        field: Field name in API response (e.g., "gdp_yoy", "nt_yoy").
         name: Chinese name.
         category: Indicator category.
         frequency: Data frequency.
@@ -22,6 +22,7 @@ class TushareMacroIndicator:
         description: Description.
         need_pit: Whether PIT tracking is needed.
         release_lag_days: Estimated days after period end before data is released.
+        date_field: Optional provider-specific date column override.
 
     """
 
@@ -43,6 +44,7 @@ class TushareMacroIndicator:
     description: str
     need_pit: bool = False
     release_lag_days: int = 0
+    date_field: str | None = None
 
 
 # Tushare macro indicator registry
@@ -64,7 +66,7 @@ TUSHARE_MACRO_INDICATORS: dict[str, TushareMacroIndicator] = {
     "CN_CPI_YOY": TushareMacroIndicator(
         api_name="cn_cpi",
         code="CN_CPI_YOY",
-        field="cpi_yoy",
+        field="nt_yoy",
         name="CPI同比",
         category="prices",
         frequency="monthly",
@@ -89,7 +91,7 @@ TUSHARE_MACRO_INDICATORS: dict[str, TushareMacroIndicator] = {
     "CN_PMI_MFG": TushareMacroIndicator(
         api_name="cn_pmi",
         code="CN_PMI_MFG",
-        field="pmi_mfg",
+        field="PMI010000",
         name="制造业PMI",
         category="survey",
         frequency="monthly",
@@ -97,6 +99,7 @@ TUSHARE_MACRO_INDICATORS: dict[str, TushareMacroIndicator] = {
         description="制造业采购经理人指数",
         need_pit=True,
         release_lag_days=1,  # 月初发布
+        date_field="MONTH",
     ),
     # === Money Supply ===
     "CN_M2_YOY": TushareMacroIndicator(

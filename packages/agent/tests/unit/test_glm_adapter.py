@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import replace
 
 import pytest
 from ditto_agent.models.glm_adapter import (
@@ -12,6 +13,7 @@ from ditto_agent.models.glm_adapter import (
 from ditto_agent.models.openai_adapter import AgentsSDKEngine, OpenAIInvocation
 from ditto_agent.models.port import (
     ModelContinuation,
+    ModelOutputContract,
     ModelRequest,
     ModelResult,
     ModelStreamEvent,
@@ -100,6 +102,26 @@ async def test_glm_adapter_fixes_responses_endpoint_and_provider_identity() -> N
     assert invocation.trace_include_sensitive_data is False
     assert invocation.use_responses is True
     assert "test-plan-key" not in repr(invocation)
+
+
+@pytest.mark.asyncio
+async def test_glm_coding_plan_keeps_grounded_contract_local() -> None:
+    """Coding Plan rejects SDK response_format but local grounding stays strict."""
+    engine = RecordingEngine()
+    provider = GLMAgentsModel(
+        model_id="glm-5.3",
+        api_key="test-plan-key",
+        endpoint_kind=GLMEndpointKind.CODING_PLAN_RESPONSES,
+        engine=engine,
+    )
+
+    await provider.run(
+        replace(_request(), output_contract=ModelOutputContract.GROUNDED_ANSWER)
+    )
+
+    invocation = engine.invocations[0]
+    agent, _run_config, _sdk_provider = AgentsSDKEngine()._sdk_inputs(invocation)
+    assert agent.output_type is None
 
 
 def test_glm_endpoint_reaches_the_concrete_sdk_provider() -> None:

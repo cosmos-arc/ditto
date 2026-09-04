@@ -37,6 +37,7 @@ class BacktestFlowRequest:
     strategy_id: str
     start_date: str
     end_date: str
+    strategy_version: int = 0
     initial_cash: float = DEFAULT_INITIAL_CASH
     parameter_overrides: tuple[str, ...] = ()
     cost_config: dict[str, object] | None = None
@@ -64,6 +65,7 @@ class BacktestFlowRequest:
         return cls(
             run_id=_required_str(params, "run_id"),
             strategy_id=_required_str(params, "strategy_id"),
+            strategy_version=_int_param(params, "strategy_version"),
             start_date=_required_str(params, "start_date"),
             end_date=_required_str(params, "end_date"),
             initial_cash=_float_param(params, "initial_cash", DEFAULT_INITIAL_CASH),
@@ -160,6 +162,11 @@ def run_backtest_flow(
 
     config = BacktestCatalogRequestConfig(
         strategy_id=flow_request.strategy_id,
+        strategy_version=(
+            str(flow_request.strategy_version)
+            if flow_request.strategy_version > 0
+            else ""
+        ),
         run_id=flow_request.run_id,
         start_date=flow_request.start_date,
         end_date=flow_request.end_date,

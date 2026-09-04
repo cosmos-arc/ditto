@@ -240,6 +240,14 @@ def _compare_manifest_data(
                 replay.research_snapshot_manifest_hash,
             )
         )
+    if original.context_input_refs != replay.context_input_refs:
+        diffs.append(
+            _manifest_diff_line(
+                "context_input_refs",
+                original.context_input_refs,
+                replay.context_input_refs,
+            )
+        )
     return tuple(diffs)
 
 

@@ -1,0 +1,50 @@
+{
+  "approved_at": "2026-09-02T09:35:53.658202Z",
+  "manual": {
+    "account_id": "manual-q4-owner-acceptance",
+    "account_status": "created",
+    "cash": "100500.00",
+    "event_count": 4,
+    "event_hashes": [
+      "account-event:sha256:4b873cf8174b1ed814a18a2a4a8b25955f56678285d8ec11d864efb3fbbbd40d",
+      "account-event:sha256:e6f9d57143961595ac0c330b78dbaca8701d23615bfdbf80ea8cb59291bbd615",
+      "account-event:sha256:3b15a4b09aabf661d9865db351d9a2830a014968321d086bf6f905cc730d8580",
+      "account-event:sha256:027070f1c21dec5c6fd02359940afb5f1dd38ffce6fd015d0e853750827a4754"
+    ],
+    "event_statuses": [
+      "created",
+      "created",
+      "created",
+      "created"
+    ],
+    "ledger_hash": "account-ledger:sha256:1f05753ea4469cf4324a92c69aff4004d5134322039a6a716369f7a6077414eb",
+    "owner_approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "position_average_cost": "9.1180",
+    "position_quantity": "100",
+    "valuation_complete": true
+  },
+  "operator_id": "workspace-user",
+  "paper": {
+    "account_id": "paper-pap09-owner-acceptance",
+    "account_status": "created",
+    "execution_count": 0,
+    "opening_event_id": "account-event:40eedeb39a6447cebc1772e1706499dd",
+    "real_broker_connections": 0,
+    "session_count": 0
+  },
+  "request_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+  "schema": "ditto.q4-live-account-acceptance-bootstrap.v1",
+  "signature": {
+    "algorithm": "hmac-sha256",
+    "approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "payload_hash": "9e89951728c7637fcd8e139b5f243d9a81517e036cec3a63016dbc1a2409b90e",
+    "previous_signature": null,
+    "value": "be7e65bf3a2b08956f382debca2684f540278408e8d3b18921cce45d6496f847"
+  },
+  "signing": {
+    "algorithm": "hmac-sha256",
+    "private_key_exported": false,
+    "private_key_mode": "0600"
+  },
+  "status": "passed"
+}

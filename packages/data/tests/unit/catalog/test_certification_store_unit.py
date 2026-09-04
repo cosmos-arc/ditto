@@ -145,6 +145,24 @@ def test_range_catalog_asset_proves_each_expected_partition_in_chunk() -> None:
     assert coverage.is_complete
 
 
+def test_coverage_can_certify_an_explicit_bounded_window() -> None:
+    catalog = InMemoryDataCatalog()
+    for partition_date in (date(2024, 3, 28), date(2024, 3, 29)):
+        catalog.upsert_asset(_entry("stock_daily", partition_date))
+
+    coverage = CoverageCollector(catalog).collect(
+        "stock_daily",
+        target_from=date(2024, 3, 28),
+        target_to=date(2024, 3, 29),
+        expected_dates=(date(2024, 3, 28), date(2024, 3, 29)),
+    )
+
+    assert coverage.target_from == date(2024, 3, 28)
+    assert coverage.complete_from == date(2024, 3, 28)
+    assert coverage.expected_partitions == 2
+    assert coverage.is_complete
+
+
 def test_provider_request_range_proves_point_partition_asset_coverage() -> None:
     catalog = InMemoryDataCatalog()
     entry = _entry("calendar", date(2015, 12, 31))

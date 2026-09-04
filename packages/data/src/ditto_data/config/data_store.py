@@ -36,6 +36,11 @@ class _MarketPaths:
         return self._root / "market" / "index" / "bars" / "daily"
 
     @property
+    def global_index_bars(self) -> Path:
+        """全球指数日线行情路径."""
+        return self._root / "market" / "index" / "global_bars"
+
+    @property
     def stock_status(self) -> Path:
         """股票状态路径."""
         return self._root / "market" / "stock" / "status"
@@ -66,6 +71,7 @@ class _MarketPaths:
             "market/stock/bars/daily",
             "market/etf/bars/daily",
             "market/index/bars/daily",
+            "market/index/global_bars",
             "market/stock/status",
             "market/etf/status",
             "market/stock/adj",
@@ -203,9 +209,14 @@ class _UtilityPaths:
         """数据库存储路径."""
         return self._root / "db"
 
+    @property
+    def provider_payloads(self) -> Path:
+        """不可变 provider 响应归档路径."""
+        return self._root / "provider_payloads"
+
     def directories(self) -> list[str]:
         """该子域下的所有相对目录."""
-        return ["logs", "backups", "temp", "db"]
+        return ["logs", "backups", "temp", "db", "provider_payloads"]
 
 
 @final

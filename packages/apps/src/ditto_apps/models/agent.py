@@ -101,6 +101,35 @@ class AgentRunContext(_StrictModel):
     context_id: str = Field(min_length=1, max_length=1024)
 
 
+class AgentRunExecutionScope(BaseModel):
+    """Operator-visible PIT identity for one read-only model execution."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision_time: datetime
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    source_snapshot_id: str = Field(min_length=1, max_length=512)
+    allowed_universe: tuple[str, ...] = Field(min_length=1, max_length=512)
+    max_output_tokens: int = Field(default=1024, gt=0)
+
+
+class AgentRunExecutionPlanResponse(_StrictModel):
+    """Complete server-bound execution authority shown to the operator."""
+
+    decision_time: datetime
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    source_snapshot_id: str
+    execution_eligible_at: Literal["not_applicable"]
+    allowed_universe: tuple[str, ...]
+    license_class: str
+    egress_class: Literal["cloud_allowed"]
+    allowed_tools: tuple[str, ...]
+    max_output_tokens: int
+    authority_hash: str
+
+
 class AgentRunToolRecord(_StrictModel):
     """Redacted tool identity and authenticated evidence references."""
 
@@ -136,11 +165,11 @@ class AgentRunCreateRequest(_StrictModel):
 
     session_id: str = Field(min_length=1, max_length=512)
     objective: str = Field(min_length=1, max_length=4096)
-    authority_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     max_model_tokens: int = Field(default=4096, gt=0)
     max_model_spend_usd: Decimal = Field(default=Decimal("1"), ge=0)
     model_profile: Literal["balanced", "quality"] = "balanced"
     context: AgentRunContext | None = None
+    execution_scope: AgentRunExecutionScope
 
     @field_validator("max_model_spend_usd", mode="before")
     @classmethod
@@ -189,10 +218,17 @@ class AgentRunResponse(_StrictModel):
     projection_reason: str | None
     projection_version: int | None
     projection_updated_at: datetime | None
+    execution_plan: AgentRunExecutionPlanResponse | None
 
 
 class AgentRunCancelRequest(_StrictModel):
     """Optimistic cancellation fence."""
+
+    expected_revision: int = Field(ge=0)
+
+
+class AgentRunExecuteRequest(_StrictModel):
+    """Optimistic execution fence for one queued run."""
 
     expected_revision: int = Field(ge=0)
 
@@ -500,6 +536,9 @@ __all__ = [
     "AgentRunCancelRequest",
     "AgentRunContext",
     "AgentRunCreateRequest",
+    "AgentRunExecuteRequest",
+    "AgentRunExecutionPlanResponse",
+    "AgentRunExecutionScope",
     "AgentRunGuardrail",
     "AgentRunResponse",
     "AgentRunToolRecord",

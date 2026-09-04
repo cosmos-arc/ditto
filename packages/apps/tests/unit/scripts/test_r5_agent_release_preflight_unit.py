@@ -117,7 +117,7 @@ def _write_passing_glm_report(repo: Path, *, profile: str) -> None:
     )
 
 
-def test_current_preflight_passes_every_release_check() -> None:
+def test_current_preflight_accepts_both_refreshed_live_profiles() -> None:
     first = build_release_preflight(REPO_ROOT)
     second = build_release_preflight(REPO_ROOT)
 
@@ -133,6 +133,8 @@ def test_current_preflight_passes_every_release_check() -> None:
     assert checks["sandbox_live"].status is ReleaseCheckStatus.PASSED
     assert checks["balanced_live_eval"].status is ReleaseCheckStatus.PASSED
     assert checks["quality_live_eval"].status is ReleaseCheckStatus.PASSED
+    assert checks["balanced_live_eval"].reason_code == "balanced_live_eval_passed"
+    assert checks["quality_live_eval"].reason_code == "quality_live_eval_passed"
     assert (
         first.to_bytes()
         == (
@@ -146,7 +148,7 @@ def test_current_preflight_passes_every_release_check() -> None:
     )
 
 
-def test_authenticated_glm_reports_complete_the_two_live_checks(
+def test_authenticated_glm_reports_accept_current_a4_dataset_scope(
     tmp_path: Path,
 ) -> None:
     repo = _copy_release_surface(tmp_path)
@@ -160,6 +162,8 @@ def test_authenticated_glm_reports_complete_the_two_live_checks(
     checks = {item.name: item for item in report.checks}
     assert checks["balanced_live_eval"].status is ReleaseCheckStatus.PASSED
     assert checks["quality_live_eval"].status is ReleaseCheckStatus.PASSED
+    assert checks["balanced_live_eval"].reason_code == "balanced_live_eval_passed"
+    assert checks["quality_live_eval"].reason_code == "quality_live_eval_passed"
 
 
 def test_rehashed_live_report_cannot_hide_total_token_cap_overrun(
@@ -414,7 +418,7 @@ def test_sandbox_artifact_hash_drift_fails_closed(tmp_path: Path) -> None:
     assert sandbox_check.reason_code == "sandbox_live_artifact_mismatch"
 
 
-def test_cli_writes_the_same_passing_report_without_running_external_systems(
+def test_cli_writes_the_same_passing_report_without_external_systems(
     tmp_path: Path,
 ) -> None:
     output = tmp_path / "preflight.json"

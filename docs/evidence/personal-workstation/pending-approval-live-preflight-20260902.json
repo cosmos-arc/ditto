@@ -1,0 +1,44 @@
+{
+  "schema": "ditto.personal-workstation.pending-approval-live-preflight.v1",
+  "generated_at": "2026-09-02T15:59:57Z",
+  "status": "passed",
+  "purpose": "Read-only real-provider drift and target-state preflight before the two content-addressed acceptance writes",
+  "q4_accelerated_acceptance": {
+    "proposal": "docs/evidence/personal-workstation/pap09-accelerated-proposal-20260902.json",
+    "approval_hash": "4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b",
+    "provider": "tushare",
+    "calendar_and_bars_match_frozen_proposal": true,
+    "trade_date_count": 20,
+    "first_trade_date": "2026-08-06",
+    "last_trade_date": "2026-09-02",
+    "provider_bars_hash": "08dc8d77103856bbee0dff6babfe5712622fe1428a362c69c9f70629321527c7",
+    "data_root_exists": false,
+    "evidence_root_exists": false
+  },
+  "q5_portfolio_closure": {
+    "proposal": "docs/evidence/personal-workstation/q5/live-portfolio-proposal-20260902.json",
+    "approval_hash": "f6661fefac9294bf1dee388b1fa19b050633d1f233768526c9e374f596c88811",
+    "provider": "tushare",
+    "signal_date": "2026-09-02",
+    "live_payload_matches_frozen_proposal": true,
+    "raw_provider_row_count": 2110,
+    "strategy_universe_row_count": 2,
+    "provider_rows_hash": "6e4917bcca8b9e5b83c314644f2f3ca3c2dc0bb530466fce2e78f44e2b642c05",
+    "acceptance_receipt_exists": false
+  },
+  "defect_regression": {
+    "observed_failure": "The immutable approved provider rows used MappingProxyType values that orjson could not serialize during the live drift comparison",
+    "fixed_before_any_approved_write": true,
+    "test": "packages/apps/tests/unit/scripts/test_q5_live_portfolio_acceptance_unit.py::test_runtime_accepts_exact_frozen_rows_before_persistence_preflight",
+    "status": "passed",
+    "module_result": "7 passed"
+  },
+  "safety": {
+    "writes": 0,
+    "broker_connections": 0,
+    "real_orders": 0,
+    "credentials_exported": false,
+    "raw_provider_rows_in_this_evidence": false
+  },
+  "remaining_condition": "The two proposal-specific exact operator approvals are still required before their declared writes execute"
+}

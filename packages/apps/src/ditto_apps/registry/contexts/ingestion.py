@@ -29,6 +29,7 @@ from ditto_data.catalog import (
     DataCatalogWriter,
 )
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
+from ditto_data.catalog.provider_payload import ProviderPayloadWriter
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
@@ -92,6 +93,7 @@ def create_ingestion_bundle(
         catalog_reader = container.get(DataCatalogReader)
         catalog_writer = container.get(DataCatalogWriter)
         source_fallback_policy_reader = container.get(CatalogSourceFallbackPolicyReader)
+        provider_payload_writer = container.get(ProviderPayloadWriter)
         evidence_committer: IngestionEvidenceCommitter | None = None
         if license_record_id is not None:
             evidence_committer = container.get(IngestionEvidenceCommitter)
@@ -119,6 +121,7 @@ def create_ingestion_bundle(
                 catalog_writer=catalog_writer,
                 source_fallback_policy_reader=source_fallback_policy_reader,
                 evidence_committer=evidence_committer,
+                provider_payload_writer=provider_payload_writer,
                 license_record_id=license_record_id,
             ),
         ) as coordinator:

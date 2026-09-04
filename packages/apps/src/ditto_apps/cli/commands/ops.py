@@ -48,7 +48,10 @@ from ditto_apps.jobs.flows.eod import run_eod_pipeline
 from ditto_apps.jobs.flows.repair import run_sparse_pit_reattestation
 from ditto_apps.registry.container import Container, make_app_container
 
+from .workstation_recovery import app as workstation_recovery_app
+
 app = typer.Typer(help="运维命令")
+app.add_typer(workstation_recovery_app, name="workstation")
 
 type MaturityPromotionRevocationReason = Literal[
     "policy_regression",

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-03T10:12:42Z",
+  "gate": "Q4",
+  "gate_status": "passed",
+  "engineering_status": "PROVEN",
+  "decision": "Q1-Q3 are proven. The exact operator approvals bootstrapped dedicated Manual/Paper acceptance accounts and authorized the content-addressed accelerated acceptance. The run processed 20 already-closed real Tushare trading sessions from 2026-08-06 through 2026-09-02 in order, with per-day restart, immutable ledger events, balanced reconciliation, exact snapshot lineage, and a valid HMAC chain. The natural wall-clock path now contains the consecutive 2026-09-02 and 2026-09-03 live days, each recorded only after Shanghai close and provider publication with an intact HMAC chain. Q4 and PAP-09 release acceptance pass through the accelerated evidence; the two live days are not represented as a completed wall-clock soak. Broker connections and real orders remain zero.",
+  "evidence": [
+    "docs/evidence/personal-workstation/20260831-paper-five-day-preacceptance.json",
+    "docs/evidence/personal-workstation/20260831-manual-account-rebuild.json",
+    "docs/evidence/personal-workstation/20260831-portfolio-comparison-live-acceptance.json",
+    "docs/evidence/personal-workstation/pap09/account-acceptance-proposal-20260902.json",
+    "docs/evidence/personal-workstation/pap09/bootstrap.json",
+    "docs/evidence/personal-workstation/pap09/days/2026-09-02.json",
+    "docs/evidence/personal-workstation/pap09/days/2026-09-03.json",
+    "docs/evidence/personal-workstation/pap09/soak-progress.json",
+    "docs/evidence/personal-workstation/pap09-accelerated-proposal-20260902.json",
+    "docs/evidence/personal-workstation/pap09-accelerated/bootstrap.json",
+    "docs/evidence/personal-workstation/pap09-accelerated/accelerated-progress.json",
+    "docs/evidence/personal-workstation/pending-approval-live-preflight-20260902.json",
+    "docs/evidence/personal-workstation/q5/ui08-account-acceptance-20260902.json",
+    "docs/evidence/personal-workstation/validation/backend.json"
+  ],
+  "blockers": [],
+  "owners": [
+    "PAPER_ACCOUNT_OWNER",
+    "MANUAL_ACCOUNT_OWNER"
+  ],
+  "unblock_conditions": []
+}

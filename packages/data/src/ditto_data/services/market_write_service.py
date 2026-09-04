@@ -26,12 +26,14 @@ from ditto_data.storage.market.commodity.bars import CommodityBarsWriter
 from ditto_data.storage.market.etf.bars import EtfBarsWriter
 from ditto_data.storage.market.fx.bars import FxBarsWriter
 from ditto_data.storage.market.index.bars import IndexBarsWriter
+from ditto_data.storage.market.index.global_bars import GlobalIndexBarsWriter
 from ditto_data.storage.market.stock.bars import StockBarsWriter
 
 type _BarsWriter = (
     StockBarsWriter
     | EtfBarsWriter
     | IndexBarsWriter
+    | GlobalIndexBarsWriter
     | FxBarsWriter
     | CommodityBarsWriter
 )
@@ -127,6 +129,31 @@ class MarketWriteService:
             {"dataset": dataset, "operation": "write"},
         )
 
+        return rows_written
+
+    @traced("market.save_global_index_bars")
+    def save_global_index_bars(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> int:
+        """Persist global-index bars with provider ticker and PIT revision keys."""
+        writer = self._write_ports.global_index_bars
+        if writer is None:
+            raise ValueError("global_index_daily writer not configured")
+        lock_name = f"bars_write_global_index_daily_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = writer.write(
+                self._to_storage_columns(df),
+                year,
+                on_duplicate=self._map_on_duplicate(on_duplicate),
+            )
+        rows_written = write_result.added + write_result.updated
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "global_index_daily", "operation": "write"},
+        )
         return rows_written
 
     def _get_bars_writer(

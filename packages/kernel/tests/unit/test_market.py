@@ -60,6 +60,11 @@ class TestMacroCategory:
             "money_supply",
             "prices",
             "employment",
+            "credit",
+            "survey",
+            "commodity",
+            "vix",
+            "dollar_index",
         }
         assert {e.value for e in MacroCategory} == expected
 

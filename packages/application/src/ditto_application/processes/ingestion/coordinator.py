@@ -141,6 +141,7 @@ class IngestionCoordinator:
         self._catalog_reader = cfg.catalog_reader
         self._catalog_writer = cfg.catalog_writer
         self._evidence_committer = cfg.evidence_committer
+        self._provider_payload_writer = cfg.provider_payload_writer
         self._license_record_id = cfg.license_record_id
 
         self._metadata_manager = MetadataManager(
@@ -391,6 +392,7 @@ class IngestionCoordinator:
                 catalog_writer=self._catalog_writer,
                 source_name=self._source_name,
                 evidence_committer=self._evidence_committer,
+                provider_payload_writer=self._provider_payload_writer,
                 license_record_id=self._license_record_id,
             ),
         )
@@ -535,6 +537,7 @@ class IngestionCoordinator:
                 catalog_writer=self._catalog_writer,
                 source_name=self._source_name,
                 evidence_committer=self._evidence_committer,
+                provider_payload_writer=self._provider_payload_writer,
                 license_record_id=self._license_record_id,
             ),
             request_end=request_end,
@@ -635,6 +638,7 @@ class IngestionCoordinator:
                 catalog_writer=self._catalog_writer,
                 quality_checker=self._quality_checker,
                 evidence_committer=self._evidence_committer,
+                provider_payload_writer=self._provider_payload_writer,
                 license_record_id=self._license_record_id,
             ),
         )
@@ -662,6 +666,7 @@ class IngestionCoordinator:
                 catalog_writer=self._catalog_writer,
                 quality_checker=self._quality_checker,
                 evidence_committer=self._evidence_committer,
+                provider_payload_writer=self._provider_payload_writer,
                 license_record_id=self._license_record_id,
             ),
             chunk_id=chunk_id,
@@ -676,6 +681,7 @@ class IngestionCoordinator:
             trade_date,
             fetch_commodity_daily=self._fetch_commodity_daily,
             get_cached_index_codes=self._get_cached_index_codes,
+            source_name=self._source_name,
         )
 
         if dataset_enum not in handlers:

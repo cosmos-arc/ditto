@@ -1,5 +1,7 @@
 """Tests for domain-level Fetcher Protocols and SourceRegistry."""
 
+from datetime import UTC, date, datetime
+
 import polars as pl
 import pytest
 from ditto_data.sources.protocols import (
@@ -34,6 +36,15 @@ class _StubMetadataFetcher:
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
         return pl.DataFrame()
 
+    def fetch_sw_industry_concepts(
+        self,
+        asof_date: str | None = None,
+        level: int = 1,
+        *,
+        knowledge_date: date | None = None,
+    ) -> pl.DataFrame:
+        return pl.DataFrame()
+
 
 class _StubMarketFetcher:
     """Stub implementing MarketFetcher Protocol."""
@@ -63,6 +74,16 @@ class _StubMarketFetcher:
         source_ticker: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+    ) -> pl.DataFrame:
+        return pl.DataFrame()
+
+    def fetch_global_index_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_at: datetime | None = None,
     ) -> pl.DataFrame:
         return pl.DataFrame()
 
@@ -170,6 +191,16 @@ class _StubMacroFetcher:
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         return pl.DataFrame()
 
+    def fetch_macro_indicators_by_codes(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_on: date | None = None,
+    ) -> pl.DataFrame:
+        return pl.DataFrame()
+
     def fetch_fx_daily(
         self,
         ts_codes: list[str],
@@ -225,6 +256,7 @@ class TestMetadataFetcherProtocol:
         stub.fetch_index_basic()
         stub.fetch_calendar("2024-01-01", "2024-12-31")
         stub.fetch_sw_industry(level=2)
+        stub.fetch_sw_industry_concepts(level=1, knowledge_date=date(2026, 9, 1))
 
 
 class TestMarketFetcherProtocol:
@@ -238,6 +270,12 @@ class TestMarketFetcherProtocol:
         stub.fetch_stock_daily("2024-01-02")
         stub.fetch_etf_daily("2024-01-02")
         stub.fetch_index_daily("2024-01-02")
+        stub.fetch_global_index_daily(
+            ["SPX"],
+            "2024-03-25",
+            "2024-04-02",
+            observed_at=datetime(2026, 9, 1, tzinfo=UTC),
+        )
         stub.fetch_adj_factor("2024-01-02")
         stub.fetch_adj_factor_by_ticker("000001.SZ", "20240101", "20240131")
         stub.fetch_fund_adj("2024-01-02")

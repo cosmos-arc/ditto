@@ -377,6 +377,7 @@ def _resolve_backtest_catalog_request(
         candidate_parameters=config.candidate_parameters,
         research_snapshot_id=config.research_snapshot_id,
         research_snapshot_manifest_hash=config.research_snapshot_manifest_hash,
+        context_input_refs=config.context_input_refs,
         rebalance_freq=config.rebalance_freq,
         engine_version=config.engine_version,
         random_seed=config.random_seed,
@@ -496,7 +497,12 @@ class BacktestRuntimeBuilder:
             runtime.spec.universe,
             asof=config.start_date,
         )
-        resolution = resolve_instrument_display(universe_ids, self._metadata_service)
+        resolution = resolve_instrument_display(
+            universe_ids,
+            self._metadata_service,
+            source=source,
+            as_of=config.start_date,
+        )
         tickers = resolution.tickers
         id_map = resolution.id_map
         display_map = resolution.display_map
@@ -524,6 +530,9 @@ class BacktestRuntimeBuilder:
         snapshot_providers = SnapshotProviders(
             fundamental=fundamental_snapshot_fn,
             classification=classification_snapshot_fn,
+            require_source_snapshot_lineage=bool(
+                config.research_snapshot_id or config.context_input_refs
+            ),
         )
         data_feed = ProviderBackedDataFeed(
             self._data_provider,

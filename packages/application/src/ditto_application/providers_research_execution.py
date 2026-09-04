@@ -87,6 +87,9 @@ from ditto_application.processes.experiments.factor_diagnostics_reader import (
     FactorDiagnosticsReader,
     PersistedFactorDiagnosticsSource,
 )
+from ditto_application.processes.experiments.regime_diagnostics_reader import (
+    RegimeDiagnosticsReader,
+)
 from ditto_application.processes.experiments.research_backtest_checkpoint import (
     research_checkpoint_available,
     research_checkpoint_resumable,
@@ -248,6 +251,14 @@ class AppResearchExecutionProvider(Provider):
             source=source,
             expected_registry_hash=R3_CORE_FACTOR_CATALOG.payload_hash,
         )
+
+    @provide
+    def regime_diagnostics_reader(
+        self,
+        artifact_service: ResearchArtifactService,
+    ) -> RegimeDiagnosticsReader:
+        """Bind the PIT regime reader to exact indexed research artifacts."""
+        return RegimeDiagnosticsReader(artifacts=artifact_service)
 
     @provide
     def code_environment_lock(

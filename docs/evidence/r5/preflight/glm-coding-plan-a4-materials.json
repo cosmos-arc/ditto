@@ -1,20 +1,21 @@
 {
   "schema_version": 1,
   "approval_record": {
-    "approval_revision": 4,
+    "approval_revision": 5,
     "approver": "requesting_workspace_user",
     "decision": "accepted_for_r5_online_release_evaluation",
-    "effective_date": "2026-08-17",
-    "user_statement": "如果plan的key已经验证ok的话我们就认为在线验收完成了，只要在线验收的内容使用plan的key都通过了就行",
+    "effective_date": "2026-09-01",
+    "user_statement": "同意 approved-research 最小化证据发送给 GLM；批准 GLM-5.3 两组评测合计最多 100 万 tokens；token 多一些没关系的",
     "execution_context": "codex_supported_developer_task",
     "model_id": "glm-5.3",
-    "model_snapshot": "glm-5.3-coding-plan-2026-08-17",
+    "model_snapshot": "glm-5.3-coding-plan-2026-09-01",
     "profiles": {
       "balanced": "high",
       "quality": "max"
     },
-    "case_count_per_profile": 120,
+    "case_count_per_profile": 131,
     "max_total_tokens_per_profile": 500000,
+    "max_total_tokens_combined": 1000000,
     "production_eligible": false,
     "production_replacement": "glm_standard_api"
   },
@@ -35,7 +36,7 @@
   },
   "license_egress_manifest": {
     "dataset_class": "synthetic_no_user_data",
-    "runnable_dataset_manifest_hash": "6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114",
+    "runnable_dataset_manifest_hash": "55d4dac9d9b36b6c818decca06ff3d0aadfd39a43b0908fcdfab001ca679f941",
     "allowed_case_fields": [
       "case_id",
       "suite",

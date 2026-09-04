@@ -111,3 +111,86 @@ def test_approved_cloud_evidence_produces_stable_minimal_model_payload() -> None
     assert first[0].integrity_hash == evidence.integrity_hash
     assert first[0].verify_payload_hash()
     assert not hasattr(first[0], "license_notes")
+
+
+def test_approved_research_selection_evidence_excludes_full_universe() -> None:
+    context = _context(license_class="approved-research")
+    candidates = tuple(
+        {
+            "instrument_id": index,
+            "instrument_name": f"candidate-{index}",
+            "rank": index,
+            "score": 1.0 / index,
+            "factor_contributions": ({"factor_name": "momentum", "value": index},),
+        }
+        for index in range(1, 6)
+    )
+    exclusions = (
+        {
+            "instrument_id": 10,
+            "reason_code": "insufficient_liquidity",
+            "stage": "hard_filter",
+            "detail": "average_turnover_below_minimum",
+        },
+        {
+            "instrument_id": 11,
+            "reason_code": "insufficient_liquidity",
+            "stage": "hard_filter",
+            "detail": "average_turnover_below_minimum",
+        },
+        {
+            "instrument_id": 12,
+            "reason_code": "below_top_k",
+            "stage": "ranking",
+            "detail": "eligible_score_below_top_k",
+        },
+    )
+    evidence = EvidenceEnvelope.seal(
+        evidence_id="evidence-selection-001",
+        tool_name="selection_run_evidence",
+        result={
+            "schema_version": 1,
+            "kind": "selection_run",
+            "run_id": "selection-run:sha256:" + "a" * 64,
+            "status": "ready",
+            "payload_schema_version": 1,
+            "payload_hash": "b" * 64,
+            "payload": {
+                "run_id": "selection-run:sha256:" + "a" * 64,
+                "status": "ready",
+                "seed": 20260902,
+                "candidates": candidates,
+                "exclusions": exclusions,
+                "missing_inputs": ("industry_mapping",),
+                "source_snapshot_ids": ("snapshot-1", "snapshot-2"),
+            },
+            "artifacts": (),
+        },
+        artifact_refs=("selection-run:sha256:" + "a" * 64,),
+        temporal_context=context,
+        lineage=("selection-run:sha256:" + "a" * 64,),
+    )
+
+    payload = EvidenceEgressPolicy(
+        approved_license_classes=("approved-research",)
+    ).prepare_for_model((evidence,), context=context)[0]
+
+    assert payload.result["redaction_profile"] == "approved-research-minimal-v1"
+    projected = payload.result["payload"]
+    assert projected["candidate_count"] == 5
+    assert projected["exclusion_count"] == 3
+    assert len(projected["top_candidates"]) == 3
+    assert projected["top_candidates"][0]["factor_contributions"] == (
+        {"factor_name": "momentum", "value": 1},
+    )
+    assert projected["exclusion_summary"] == (
+        {"stage": "hard_filter", "reason_code": "insufficient_liquidity", "count": 2},
+        {"stage": "ranking", "reason_code": "below_top_k", "count": 1},
+    )
+    assert "candidates" not in projected
+    assert "exclusions" not in projected
+    assert payload.integrity_hash == evidence.integrity_hash
+    assert any(
+        item.startswith("minimal-egress:sha256:") for item in payload.artifact_refs
+    )
+    assert payload.verify_payload_hash()

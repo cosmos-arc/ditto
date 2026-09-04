@@ -8,7 +8,9 @@ from __future__ import annotations
 import pytest
 from ditto_backtest.errors import ReplayError
 from ditto_backtest.manifest import (
+    ContextInputKind,
     InputRef,
+    ReplayContextInputRef,
     RuleRef,
     RunManifest,
     RunMode,
@@ -499,6 +501,33 @@ class TestCompareManifests:
         assert any(
             "research_snapshot_manifest_hash" in item for item in diff.data_diffs
         )
+
+    def test_context_input_content_or_cutoff_mismatch_is_a_data_diff(self) -> None:
+        baseline = ReplayContextInputRef(
+            context_kind=ContextInputKind.MARKET_CONTEXT,
+            context_id="market-context:sha256:one",
+            content_hash="d" * 64,
+            as_of="2026-08-31T07:00:00Z",
+            knowledge_cutoff="2026-08-31T07:00:00Z",
+            publication_cutoff="2026-08-31T07:00:00Z",
+            source_snapshot_ids=("source-a",),
+        )
+        changed = ReplayContextInputRef(
+            context_kind=ContextInputKind.MARKET_CONTEXT,
+            context_id="market-context:sha256:one",
+            content_hash="e" * 64,
+            as_of="2026-08-31T07:00:00Z",
+            knowledge_cutoff="2026-08-30T07:00:00Z",
+            publication_cutoff="2026-08-30T07:00:00Z",
+            source_snapshot_ids=("source-a",),
+        )
+
+        diff = ReplayValidator.compare_manifests(
+            _make_manifest(context_input_refs=(baseline,)),
+            _make_manifest(context_input_refs=(changed,)),
+        )
+
+        assert any("context_input_refs" in item for item in diff.data_diffs)
 
     def test_effective_parameters_mismatch(self) -> None:
         path = "/pipeline/nodes/legacy_factor_set/config/params/key1"

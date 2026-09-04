@@ -269,7 +269,7 @@ class AppProcessProvider(Provider):
             credential_sources.add("local_tdx")
         certifications: list[ProductCertificationEvidence] = []
         for metadata in default_dataset_metadata().values():
-            contract = metadata.product_contract
+            contract = metadata.dataset_spec
             if contract is None or contract.r2_scope != "hard":
                 continue
             report = certification_reader.get_active_report(

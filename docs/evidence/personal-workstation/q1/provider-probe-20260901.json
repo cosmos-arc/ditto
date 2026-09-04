@@ -1,0 +1,184 @@
+{
+  "benchmarks": [
+    {
+      "dataset_id": "stock_daily",
+      "elapsed_seconds": 0.2889936249994207,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:daily",
+      "observed_at": "2026-09-01T09:04:35.029200+00:00",
+      "sample_partitions": 1,
+      "sample_rows": 5356,
+      "target_partitions": 3000
+    },
+    {
+      "dataset_id": "index_daily",
+      "elapsed_seconds": 0.086860000010347,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:index_daily",
+      "observed_at": "2026-09-01T09:04:35.029200+00:00",
+      "sample_partitions": 1,
+      "sample_rows": 1,
+      "target_partitions": 3000
+    },
+    {
+      "dataset_id": "adj_factor",
+      "elapsed_seconds": 0.18270958302309737,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:adj_factor",
+      "observed_at": "2026-09-01T09:04:35.029200+00:00",
+      "sample_partitions": 1,
+      "sample_rows": 5383,
+      "target_partitions": 3000
+    },
+    {
+      "dataset_id": "fund_adj",
+      "elapsed_seconds": 0.09976099999039434,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:fund_adj",
+      "observed_at": "2026-09-01T09:04:35.029200+00:00",
+      "sample_partitions": 1,
+      "sample_rows": 1375,
+      "target_partitions": 3000
+    }
+  ],
+  "first_run": null,
+  "incremental_elapsed_seconds": null,
+  "provider_access": [
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:stock_basic",
+      "provider_dataset": "tushare:stock_basic"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:fund_basic",
+      "provider_dataset": "tushare:fund_basic"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:index_basic",
+      "provider_dataset": "tushare:index_basic"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:trade_cal",
+      "provider_dataset": "tushare:trade_cal"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:daily",
+      "provider_dataset": "tushare:daily"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:fund_daily",
+      "provider_dataset": "tushare:fund_daily"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:index_daily",
+      "provider_dataset": "tushare:index_daily"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:sw_daily",
+      "provider_dataset": "tushare:sw_daily"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:index_global",
+      "provider_dataset": "tushare:index_global"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:index_classify",
+      "provider_dataset": "tushare:index_classify"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:index_member_all",
+      "provider_dataset": "tushare:index_member_all"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:stock_st",
+      "provider_dataset": "tushare:stock_st"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:adj_factor",
+      "provider_dataset": "tushare:adj_factor"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:fund_adj",
+      "provider_dataset": "tushare:fund_adj"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:balancesheet",
+      "provider_dataset": "tushare:balancesheet"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:income",
+      "provider_dataset": "tushare:income"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:cashflow",
+      "provider_dataset": "tushare:cashflow"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:dividend",
+      "provider_dataset": "tushare:dividend"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:daily_basic",
+      "provider_dataset": "tushare:daily_basic"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:cn_macro",
+      "provider_dataset": "tushare:cn_macro"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:commodity_reference",
+      "provider_dataset": "tushare:commodity_reference"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:corporate_actions",
+      "provider_dataset": "tushare:corporate_actions"
+    },
+    {
+      "checked_at": "2026-09-01T09:04:35.029200+00:00",
+      "entitled": true,
+      "evidence_uri": "file:///Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/provider-probe-20260901.json#tushare:index_weight",
+      "provider_dataset": "tushare:index_weight"
+    }
+  ],
+  "second_run": null,
+  "workbench_query_seconds": null
+}

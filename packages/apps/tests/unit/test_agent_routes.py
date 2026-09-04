@@ -6,7 +6,13 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from ditto_agent.contracts.execution import AgentRunExecutionPlan
 from ditto_agent.contracts.runtime import ModelProfile, RetentionClass, RunStatus
+from ditto_agent.contracts.temporal import (
+    EgressClass,
+    TemporalContextInput,
+    TemporalToolContext,
+)
 from ditto_agent.presentation import AgentContextPresentation
 from ditto_agent.runtime.service import (
     AgentApprovalDecision,
@@ -15,6 +21,7 @@ from ditto_agent.runtime.service import (
     AgentRequestConflict,
     AgentRunCancelCommand,
     AgentRunCreateCommand,
+    AgentRunExecuteCommand,
     AgentRuntimePort,
     AgentRuntimeUnavailable,
     AgentRunView,
@@ -30,6 +37,7 @@ from ditto_apps.api.routes.agent_routes import (
     cancel_agent_run,
     create_agent_run,
     create_agent_session,
+    execute_agent_run,
     get_agent_decision_opinion,
 )
 from ditto_apps.models.agent import (
@@ -38,6 +46,8 @@ from ditto_apps.models.agent import (
     AgentRunCancelRequest,
     AgentRunContext,
     AgentRunCreateRequest,
+    AgentRunExecuteRequest,
+    AgentRunExecutionScope,
     AgentSessionCreateRequest,
 )
 from ditto_apps.openapi_contract import create_openapi_app
@@ -50,6 +60,9 @@ _create_agent_session = getattr(
 )
 _create_agent_run = getattr(create_agent_run, "__dishka_orig_func__", create_agent_run)
 _cancel_agent_run = getattr(cancel_agent_run, "__dishka_orig_func__", cancel_agent_run)
+_execute_agent_run = getattr(
+    execute_agent_run, "__dishka_orig_func__", execute_agent_run
+)
 _get_agent_decision_opinion = getattr(
     get_agent_decision_opinion,
     "__dishka_orig_func__",
@@ -72,6 +85,10 @@ class _RecordingRuntime(AgentRuntimePort):
     def create_run(self, command: AgentRunCreateCommand) -> AgentRunView:
         self.commands.append(command)
         return _run_view()
+
+    async def execute_run(self, command: AgentRunExecuteCommand) -> AgentRunView:
+        self.commands.append(command)
+        return _run_view(status=RunStatus.COMPLETED, revision=2)
 
     def get_run(self, run_id: str) -> AgentRunView:
         self.commands.append(run_id)
@@ -126,6 +143,7 @@ def test_openapi_registers_stable_r51_agent_surface() -> None:
         "/api/v1/agent/runs/{run_id}",
         "/api/v1/agent/runs/{run_id}/events",
         "/api/v1/agent/runs/{run_id}/cancel",
+        "/api/v1/agent/runs/{run_id}/execute",
         "/api/v1/agent/approvals",
         "/api/v1/agent/approvals/{approval_id}",
         "/api/v1/agent/approvals/{approval_id}/decision",
@@ -309,14 +327,22 @@ async def test_create_routes_translate_dtos_to_runtime_commands() -> None:
         runtime,
         "session-key",
     )
+    scope = AgentRunExecutionScope(
+        decision_time=datetime(2026, 8, 30, 8, tzinfo=UTC),
+        knowledge_cutoff=datetime(2026, 8, 30, 7, tzinfo=UTC),
+        publication_cutoff=datetime(2026, 8, 30, 6, tzinfo=UTC),
+        source_snapshot_id="snapshot-certified-2026-08-29",
+        allowed_universe=("510300.SH",),
+        max_output_tokens=256,
+    )
     run = await _create_agent_run(
         AgentRunCreateRequest(
             session_id="session-1",
             objective="Explain the frozen evidence.",
-            authority_hash=_HASH,
             max_model_tokens=512,
             max_model_spend_usd=Decimal("0.25"),
             model_profile="balanced",
+            execution_scope=scope,
             context=AgentRunContext(
                 context_type="daily_decision",
                 context_id="strategy-a:paper-a:2026-08-19:artifact-v3",
@@ -328,6 +354,26 @@ async def test_create_routes_translate_dtos_to_runtime_commands() -> None:
 
     assert session.data.session_id == "session-1"
     assert run.data.run_id == "run-1"
+    plan = AgentRunExecutionPlan(
+        temporal_context=TemporalToolContext.from_host(
+            TemporalContextInput(
+                decision_time=scope.decision_time,
+                knowledge_cutoff=scope.knowledge_cutoff,
+                publication_cutoff=scope.publication_cutoff,
+                source_snapshot_id=scope.source_snapshot_id,
+                execution_eligible_at="not_applicable",
+                allowed_universe=scope.allowed_universe,
+                license_class="approved-research",
+                egress_class=EgressClass.CLOUD_ALLOWED,
+            )
+        ),
+        allowed_tools=(
+            "daily_decision_v3_evidence",
+            "portfolio_evidence",
+            "risk_evidence",
+        ),
+        max_output_tokens=256,
+    )
     assert runtime.commands == [
         AgentSessionCreateCommand(
             retention_class=RetentionClass.AUDIT,
@@ -336,7 +382,7 @@ async def test_create_routes_translate_dtos_to_runtime_commands() -> None:
         AgentRunCreateCommand(
             session_id="session-1",
             objective="Explain the frozen evidence.",
-            authority_hash=_HASH,
+            authority_hash=plan.authority_hash,
             max_model_tokens=512,
             max_model_spend_usd=Decimal("0.25"),
             model_profile=ModelProfile.BALANCED,
@@ -345,8 +391,113 @@ async def test_create_routes_translate_dtos_to_runtime_commands() -> None:
                 context_type="daily_decision",
                 context_id="strategy-a:paper-a:2026-08-19:artifact-v3",
             ),
+            execution_plan=plan,
         ),
     ]
+
+
+@pytest.mark.asyncio
+async def test_market_context_run_is_narrowed_to_market_context_evidence() -> None:
+    runtime = _RecordingRuntime()
+    scope = AgentRunExecutionScope(
+        decision_time=datetime(2026, 8, 31, 9, tzinfo=UTC),
+        knowledge_cutoff=datetime(2026, 8, 31, 8, tzinfo=UTC),
+        publication_cutoff=datetime(2026, 8, 31, 7, 30, tzinfo=UTC),
+        source_snapshot_id="snapshot-set:sha256:market",
+        allowed_universe=("market-context",),
+        max_output_tokens=512,
+    )
+
+    await _create_agent_run(
+        AgentRunCreateRequest(
+            session_id="session-1",
+            objective="Create a cited MarketContext EvidenceBrief.",
+            max_model_tokens=1024,
+            max_model_spend_usd=Decimal("0.25"),
+            model_profile="balanced",
+            execution_scope=scope,
+            context=AgentRunContext(
+                context_type="market_context",
+                context_id="market-regime:sha256:abc",
+            ),
+        ),
+        runtime,
+        "market-brief-1",
+    )
+
+    command = runtime.commands[0]
+    assert isinstance(command, AgentRunCreateCommand)
+    assert command.execution_plan.allowed_tools == ("market_context_evidence",)
+
+
+@pytest.mark.asyncio
+async def test_instrument_run_is_narrowed_to_technical_evidence() -> None:
+    runtime = _RecordingRuntime()
+    scope = AgentRunExecutionScope(
+        decision_time=datetime(2026, 8, 31, 9, tzinfo=UTC),
+        knowledge_cutoff=datetime(2026, 8, 31, 8, tzinfo=UTC),
+        publication_cutoff=datetime(2026, 8, 31, 7, tzinfo=UTC),
+        source_snapshot_id="snapshot-stock",
+        allowed_universe=("600519.SH",),
+        max_output_tokens=512,
+    )
+
+    await _create_agent_run(
+        AgentRunCreateRequest(
+            session_id="session-1",
+            objective="Create a cited TechnicalAnalysisBrief for 600519.SH.",
+            max_model_tokens=1024,
+            max_model_spend_usd=Decimal("0.25"),
+            model_profile="balanced",
+            execution_scope=scope,
+            context=AgentRunContext(
+                context_type="instrument",
+                context_id="600519.SH",
+            ),
+        ),
+        runtime,
+        "technical-brief-1",
+    )
+
+    command = runtime.commands[0]
+    assert isinstance(command, AgentRunCreateCommand)
+    assert command.execution_plan.allowed_tools == ("instrument_technical_evidence",)
+
+
+@pytest.mark.asyncio
+async def test_unknown_context_type_is_rejected_instead_of_receiving_all_tools() -> (
+    None
+):
+    runtime = _RecordingRuntime()
+    scope = AgentRunExecutionScope(
+        decision_time=datetime(2026, 8, 31, 9, tzinfo=UTC),
+        knowledge_cutoff=datetime(2026, 8, 31, 8, tzinfo=UTC),
+        publication_cutoff=datetime(2026, 8, 31, 7, 30, tzinfo=UTC),
+        source_snapshot_id="snapshot-stock",
+        allowed_universe=("600519.SH",),
+        max_output_tokens=512,
+    )
+
+    with pytest.raises(APIError) as exc_info:
+        await _create_agent_run(
+            AgentRunCreateRequest(
+                session_id="session-1",
+                objective="Try an unrecognized capability context.",
+                max_model_tokens=1024,
+                max_model_spend_usd=Decimal("0.25"),
+                model_profile="balanced",
+                execution_scope=scope,
+                context=AgentRunContext(
+                    context_type="model-invented-context",
+                    context_id="unsafe",
+                ),
+            ),
+            runtime,
+            "unknown-context-1",
+        )
+
+    assert exc_info.value.status_code == 422
+    assert runtime.commands == []
 
 
 @pytest.mark.asyncio
@@ -362,6 +513,22 @@ async def test_cancel_route_preserves_revision_fence() -> None:
     assert response.data.status is RunStatus.CANCELLED
     assert runtime.commands == [
         AgentRunCancelCommand(run_id="run-1", expected_revision=1)
+    ]
+
+
+@pytest.mark.asyncio
+async def test_execute_route_preserves_revision_fence() -> None:
+    runtime = _RecordingRuntime()
+
+    response = await _execute_agent_run(
+        "run-1",
+        AgentRunExecuteRequest(expected_revision=0),
+        runtime,
+    )
+
+    assert response.data.status is RunStatus.COMPLETED
+    assert runtime.commands == [
+        AgentRunExecuteCommand(run_id="run-1", expected_revision=0)
     ]
 
 
@@ -391,7 +558,13 @@ async def test_idempotency_conflict_and_disabled_runtime_are_structured() -> Non
             AgentRunCreateRequest(
                 session_id="session-1",
                 objective="Explain evidence.",
-                authority_hash=_HASH,
+                execution_scope=AgentRunExecutionScope(
+                    decision_time=datetime(2026, 8, 30, 8, tzinfo=UTC),
+                    knowledge_cutoff=datetime(2026, 8, 30, 7, tzinfo=UTC),
+                    publication_cutoff=datetime(2026, 8, 30, 6, tzinfo=UTC),
+                    source_snapshot_id="snapshot-certified-2026-08-29",
+                    allowed_universe=("510300.SH",),
+                ),
             ),
             DisabledRuntime(),
             "run-key",

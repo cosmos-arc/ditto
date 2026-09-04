@@ -214,6 +214,58 @@ class TestShouldSkip:
         assert reason is not None
         assert "成功" in reason or "SUCCESS" in reason
 
+    def test_sparse_range_success_skips_only_with_attested_cumulative_snapshot(
+        self,
+        mock_ingestion_log_store,
+    ) -> None:
+        """Range-shaped sparse evidence must replay locally without a provider call."""
+        mock_ingestion_log_store.get_log.return_value = IngestionLog(
+            dataset="corporate_actions",
+            source="tushare",
+            trade_date="2024-03-28",
+            status=IngestionStatus.SUCCESS,
+            checksum="abc123",
+            rows=126,
+        )
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="corporate_actions",
+                    namespace="capital",
+                    partition_keys=(
+                        "start_date=2024-03-28",
+                        "end_date=2024-03-28",
+                    ),
+                ),
+                storage_uri="corporate_actions/2024",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:corporate_actions:v2",
+                    row_count=126,
+                ),
+                source="tushare",
+                freshness_at=datetime(2024, 3, 28, 18, 5, tzinfo=UTC),
+                source_snapshot_id=(
+                    "snapshot:tushare:corporate_actions:all:2024-03-28:"
+                    "2024-03-28:abc123:quality=l1-l2"
+                ),
+            )
+        )
+        manager = MetadataManager(
+            mock_ingestion_log_store,
+            data_catalog_reader=catalog,
+        )
+
+        decision = manager.get_skip_decision(
+            dataset="corporate_actions",
+            trade_date="2024-03-28",
+            source="tushare",
+        )
+
+        assert decision.should_skip is True
+        assert decision.checksum == "abc123"
+        assert decision.row_count == 126
+
     @pytest.mark.parametrize(
         ("checksum", "rows"),
         [(None, 0), ("", 0), ("sha256:known", None), ("sha256:known", -1)],

@@ -9,6 +9,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Protocol
 
+from ditto_agent.contracts.execution import AgentRunExecutionPlan
 from ditto_agent.contracts.runtime import ModelProfile, RetentionClass, RunStatus
 from ditto_agent.presentation import (
     AgentContextPresentation,
@@ -116,6 +117,15 @@ class AgentRunCreateCommand:
     model_profile: ModelProfile
     idempotency_key: str
     context: AgentContextPresentation | None = None
+    execution_plan: AgentRunExecutionPlan | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AgentRunExecuteCommand:
+    """Execute one queued run under its persisted authority and revision fence."""
+
+    run_id: str
+    expected_revision: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,6 +197,7 @@ class AgentRunView:
     projection_reason: str | None = "agent_presentation_unconfigured"
     projection_version: int | None = None
     projection_updated_at: datetime | None = None
+    execution_plan: AgentRunExecutionPlan | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -302,6 +313,10 @@ class AgentRuntimePort(Protocol):
         """Create or exactly replay one queued run request."""
         ...
 
+    async def execute_run(self, command: AgentRunExecuteCommand) -> AgentRunView:
+        """Execute one queued read-only run and persist its governed outcome."""
+        ...
+
     def get_run(self, run_id: str) -> AgentRunView:
         """Return one non-sensitive run projection."""
         ...
@@ -341,6 +356,7 @@ __all__ = [
     "AgentResourceNotFound",
     "AgentRunCancelCommand",
     "AgentRunCreateCommand",
+    "AgentRunExecuteCommand",
     "AgentRunListView",
     "AgentRunView",
     "AgentRuntimeError",

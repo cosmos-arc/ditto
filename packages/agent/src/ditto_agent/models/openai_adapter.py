@@ -22,6 +22,7 @@ from agents.items import ToolApprovalItem, ToolCallItem
 from agents.models.openai_provider import OpenAIProvider
 from agents.stream_events import RawResponsesStreamEvent
 from agents.tool_context import ToolContext
+from pydantic import BaseModel, ConfigDict
 
 from ditto_agent._canonical import canonical_bytes
 from ditto_agent.contracts._validation import normalized_text
@@ -29,6 +30,7 @@ from ditto_agent.models.port import (
     ApprovalDecision,
     ModelContinuation,
     ModelInterruption,
+    ModelOutputContract,
     ModelProviderError,
     ModelRequest,
     ModelResult,
@@ -50,6 +52,21 @@ type ReasoningEffort = (
 _REASONING_EFFORTS = frozenset(
     {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
 )
+_MIN_FENCED_JSON_LINES = 3
+
+
+class _GroundedClaimOutput(BaseModel):
+    claim: str
+    evidence_refs: list[str]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class _GroundedAnswerOutput(BaseModel):
+    claims: list[_GroundedClaimOutput]
+    uncertainty: str | None
+
+    model_config = ConfigDict(strict=True, extra="forbid")
 
 
 class _FunctionToolCall(Protocol):
@@ -75,6 +92,7 @@ class OpenAIInvocation:
     tracing_disabled: bool = True
     trace_include_sensitive_data: bool = False
     use_responses: bool = True
+    native_structured_outputs: bool = True
     reasoning_effort: ReasoningEffort = None
     continuation: ModelContinuation | None = None
     decisions: tuple[ApprovalDecision, ...] = ()
@@ -101,6 +119,8 @@ class OpenAIInvocation:
             raise ValueError("OpenAI hosted sensitive tracing must remain disabled")
         if type(self.use_responses) is not bool:
             raise ValueError("OpenAI-compatible API mode must be boolean")
+        if type(self.native_structured_outputs) is not bool:
+            raise ValueError("native structured-output capability must be boolean")
         if self.reasoning_effort is not None:
             normalized_effort = normalized_text(
                 self.reasoning_effort,
@@ -153,6 +173,32 @@ def _plain_mapping(value: Mapping[str, object]) -> dict[str, object]:
     mapping = cast(dict[object, object], decoded)
     if not all(isinstance(key, str) for key in mapping):
         raise TypeError("canonical mapping keys must be strings")
+    return cast(dict[str, object], mapping)
+
+
+def _decode_model_output(
+    value: str | Mapping[str, object] | None,
+) -> str | Mapping[str, object] | None:
+    """Decode an exact JSON object while preserving ordinary model text."""
+    if not isinstance(value, str):
+        return value
+    candidate = value.strip()
+    lines = candidate.splitlines()
+    if (
+        len(lines) >= _MIN_FENCED_JSON_LINES
+        and lines[0].casefold() in {"```json", "```"}
+        and lines[-1] == "```"
+    ):
+        candidate = "\n".join(lines[1:-1]).strip()
+    try:
+        decoded: object = orjson.loads(candidate)
+    except orjson.JSONDecodeError:
+        return value
+    if not isinstance(decoded, dict):
+        return value
+    mapping = cast(dict[object, object], decoded)
+    if not all(isinstance(key, str) for key in mapping):
+        return value
     return cast(dict[str, object], mapping)
 
 
@@ -219,11 +265,14 @@ class AgentsSDKEngine:
 
     def _function_tool(self, spec: ModelToolSpec) -> FunctionTool:
         async def invoke(context: ToolContext[object], arguments_json: str) -> object:
-            return await self._tool_invoker.invoke(
+            result = await self._tool_invoker.invoke(
                 spec.name,
                 arguments_json,
                 call_id=context.tool_call_id,
             )
+            if isinstance(result, Mapping):
+                return _plain_mapping(cast("Mapping[str, object]", result))
+            return result
 
         return FunctionTool(
             name=spec.name,
@@ -261,6 +310,15 @@ class AgentsSDKEngine:
             tools=[self._function_tool(tool) for tool in invocation.request.tools],
             model=invocation.model_id,
             model_settings=settings,
+            output_type=(
+                _GroundedAnswerOutput
+                if (
+                    invocation.native_structured_outputs
+                    and invocation.request.output_contract
+                    is ModelOutputContract.GROUNDED_ANSWER
+                )
+                else None
+            ),
         )
         run_config = RunConfig(
             model_provider=provider,
@@ -296,11 +354,15 @@ class AgentsSDKEngine:
         )
         usage = result.context_wrapper.usage
         raw_output: object = result.final_output
+        if isinstance(raw_output, BaseModel):
+            raw_output = raw_output.model_dump(mode="json")
         if raw_output is not None and not isinstance(raw_output, (str, Mapping)):
             raise ModelProviderError(
                 "OpenAI final output must be text or a structured mapping"
             )
-        output = cast(str | Mapping[str, object] | None, raw_output)
+        output = _decode_model_output(
+            cast(str | Mapping[str, object] | None, raw_output)
+        )
         return ModelResult(
             final_output=output,
             tool_calls=tuple(tool_calls),
@@ -410,6 +472,7 @@ class OpenAICompatibleAgentsModel:
     """Internal OpenAI-compatible adapter with provider-specific identity."""
 
     _provider_name = "OpenAI"
+    _native_structured_outputs = True
 
     def __init__(
         self,
@@ -467,6 +530,7 @@ class OpenAICompatibleAgentsModel:
             base_url=self._base_url,
             provider_id=self._provider_id,
             use_responses=self._use_responses,
+            native_structured_outputs=self._native_structured_outputs,
             reasoning_effort=self._reasoning_effort,
             continuation=continuation,
             decisions=decisions,

@@ -10,7 +10,9 @@ from typing import cast
 
 import pytest
 from ditto_apps.registry.live import r3_live_acceptance_driver as registry_driver
+from ditto_apps.registry.live.r3_live_planning_builder import LivePlanningOptions
 from ditto_apps.scripts import r3_live_acceptance_driver as driver
+from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
 
 
 def test_live_lane_reuses_one_scheduler_runtime_for_every_tick(
@@ -43,8 +45,24 @@ def test_live_lane_reuses_one_scheduler_runtime_for_every_tick(
         return {"occurred_at": occurred_at.isoformat()}
 
     expected = object()
+    context_refs = (
+        ReplayContextInputRef(
+            context_kind=ContextInputKind.MARKET_CONTEXT,
+            context_id="market-regime:sha256:market",
+            content_hash="a" * 64,
+            as_of="2026-08-01T00:00:00Z",
+            knowledge_cutoff="2026-08-01T00:00:00Z",
+            publication_cutoff="2026-08-01T00:00:00Z",
+            source_snapshot_ids=("snapshot:tushare:index_daily:sha256:market",),
+        ),
+    )
 
     def live_lane(**kwargs: object) -> object:
+        options = cast("object", kwargs["planning_options"])
+        assert options.etf_tickers == ("518880",)  # type: ignore[attr-defined]
+        assert options.strategy_id == "agent_etf_518880_rotation"  # type: ignore[attr-defined]
+        assert options.strategy_version == 1  # type: ignore[attr-defined]
+        assert options.context_input_refs == context_refs  # type: ignore[attr-defined]
         scheduler_tick = cast("object", kwargs["scheduler_tick"])
         select_and_claim = cast("object", kwargs["select_and_claim"])
         assert callable(scheduler_tick)
@@ -69,11 +87,17 @@ def test_live_lane_reuses_one_scheduler_runtime_for_every_tick(
     monkeypatch.setattr(driver, "select_and_claim_with_bundle", select_with_bundle)
     monkeypatch.setattr(driver, "_run_live_golden_lane", live_lane)
 
-    result = driver.run_live_golden_lane(
+    result = driver.run_live_golden_lane_with_options(
         lane="stock",
         data_root=tmp_path,
         evidence_root=tmp_path / "evidence",
         purpose="unit",
+        planning_options=LivePlanningOptions(
+            etf_tickers=("518880",),
+            strategy_id="agent_etf_518880_rotation",
+            strategy_version=1,
+            context_input_refs=context_refs,
+        ),
     )
 
     assert result is expected

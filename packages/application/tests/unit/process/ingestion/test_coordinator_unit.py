@@ -18,7 +18,11 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     InMemoryDataCatalog,
 )
-from ditto_data.errors import SourceFetchError
+from ditto_data.errors import (
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
+)
 from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.models.ingestion import IngestionLog, IngestionResult, IngestionStatus
 from ditto_platform.foundation import (
@@ -914,7 +918,7 @@ class TestIngestDate:
         """成功摄取 macro_indicators 数据。"""
         # Arrange
         mock_ingestion_log_store.get_log.return_value = None
-        mock_source.fetch_macro_indicators.return_value = pl.DataFrame(
+        mock_source.fetch_macro_indicators_by_codes.return_value = pl.DataFrame(
             {
                 "indicator_code": ["SHIBOR_ON"],
                 "indicator_name": ["隔夜Shibor"],
@@ -941,7 +945,18 @@ class TestIngestDate:
 
         # Assert
         assert result.status == "success"
-        mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-27")
+        mock_source.fetch_macro_indicators_by_codes.assert_called_once_with(
+            [
+                "CN_GDP_YOY",
+                "CN_CPI_YOY",
+                "CN_PPI_YOY",
+                "CN_M2_YOY",
+                "CN_PMI_MFG",
+            ],
+            "2015-01-01",
+            "2024-12-27",
+            observed_on=date.today(),
+        )
         mock_macro_service.save_indicators.assert_called_once()
 
     def test_ingest_date_fred_source_uses_fred_macro_fetcher(
@@ -1071,6 +1086,37 @@ class TestIngestDate:
         assert result.status == "failed"
         assert result.error == "FETCH_ERROR"
         assert "Network error" in result.message
+
+    @pytest.mark.parametrize(
+        "provider_error",
+        [
+            SourceAuthenticationError(source="tushare"),
+            SourceRateLimitError(source="tushare"),
+        ],
+    )
+    def test_provider_control_plane_errors_are_typed_fetch_failures(
+        self,
+        coordinator,
+        mock_ingestion_log_store,
+        mock_source,
+        provider_error,
+    ) -> None:
+        """Provider auth/limit outages must not collapse into UNKNOWN_ERROR."""
+        mock_ingestion_log_store.get_log.return_value = None
+        mock_source.fetch_stock_daily.side_effect = provider_error
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.FAIL,
+            error_code="FETCH_ERROR",
+            error_message="provider unavailable",
+        )
+
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        assert result.status == "failed"
+        assert result.error == "FETCH_ERROR"
 
     def test_ingest_date_empty_dataframe(
         self, coordinator, mock_ingestion_log_store, mock_source
@@ -2153,7 +2199,7 @@ class TestTradingDayCheck:
         mock_metadata_service.reset_mock()
         mock_metadata_service.is_trading_day.return_value = False
 
-        mock_source.fetch_macro_indicators.return_value = pl.DataFrame(
+        mock_source.fetch_macro_indicators_by_codes.return_value = pl.DataFrame(
             {
                 "indicator_code": ["SHIBOR_ON"],
                 "indicator_name": ["隔夜Shibor"],
@@ -2181,7 +2227,18 @@ class TestTradingDayCheck:
 
         # Assert
         assert result.status == "success"
-        mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-28")
+        mock_source.fetch_macro_indicators_by_codes.assert_called_once_with(
+            [
+                "CN_GDP_YOY",
+                "CN_CPI_YOY",
+                "CN_PPI_YOY",
+                "CN_M2_YOY",
+                "CN_PMI_MFG",
+            ],
+            "2015-01-01",
+            "2024-12-28",
+            observed_on=date.today(),
+        )
         mock_metadata_service.is_trading_day.assert_not_called()
 
 

@@ -110,6 +110,14 @@ def _store(tmp_path: Path) -> tuple[AgentStoreWriter, AgentStoreReader]:
     return AgentStoreWriter(database), AgentStoreReader(database)
 
 
+def test_put_manifest_accepts_exact_replay_on_runtime_restart(tmp_path: Path) -> None:
+    writer, _ = _store(tmp_path)
+    manifest = _manifest()
+
+    writer.put_manifest(manifest)
+    writer.put_manifest(manifest)
+
+
 def test_store_persists_run_events_approval_and_retention_without_raw_objective(
     tmp_path: Path,
 ) -> None:

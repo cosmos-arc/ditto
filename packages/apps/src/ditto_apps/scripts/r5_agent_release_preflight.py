@@ -306,7 +306,8 @@ def _suite_evidence(
             report.get("schema_version") != 1
             or report.get("provider_id") != provider_id
             or report.get("seed") != _release_contract.FAKE_SEED
-            or report.get("minimum_case_count") != expected_count
+            or report.get("minimum_case_count")
+            != _release_contract.EXPECTED_MINIMUM_COUNTS[suite]
             or report.get("case_count") != expected_count
             or report.get("passed") is not True
             or results is None

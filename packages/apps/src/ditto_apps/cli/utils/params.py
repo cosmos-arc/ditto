@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from click import get_current_context
-
 from ditto_apps.cli.context import create_executor
 from ditto_apps.cli.utils.output import print_ingestion_result
 
@@ -27,9 +25,13 @@ class CLIIngestOptions:
     force: bool
 
 
-def run_instrument_ingest(dataset: str, params: CLIIngestOptions) -> None:
+def run_instrument_ingest(
+    dataset: str,
+    params: CLIIngestOptions,
+    *,
+    verbose: bool,
+) -> None:
     """执行按标的摄取."""
-    ctx = get_current_context()
     with create_executor() as executor:
         result = executor.ingest_by_instrument(
             dataset=dataset,
@@ -40,4 +42,4 @@ def run_instrument_ingest(dataset: str, params: CLIIngestOptions) -> None:
             end_date=params.end or "",
             force=params.force,
         )
-        print_ingestion_result(result, ctx.obj["verbose"])
+        print_ingestion_result(result, verbose)

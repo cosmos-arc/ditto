@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from datetime import date
 from typing import Protocol, cast
 
+from ditto_backtest.context_inputs import ReplayContextInputRef
+
 from ditto_application.processes.experiments._execution_bundle_inputs import (
     BaselineExecutorBinding,
     CodeEnvironmentLock,
@@ -90,6 +92,7 @@ class _SemanticsView(Protocol):
     baseline_plan: BaselineExecutionPlan | None
     policy: ResearchExecutionPolicy
     environment: CodeEnvironmentLock
+    context_input_refs: tuple[ReplayContextInputRef, ...]
 
 
 def validate_research_execution_semantics(
@@ -459,4 +462,16 @@ def build_research_execution_payload(
             "semantics": view.policy.canonical_payload(),
         },
         "environment": view.environment.as_payload(),
+        "context_input_refs": [
+            {
+                "context_kind": item.context_kind.value,
+                "context_id": item.context_id,
+                "content_hash": item.content_hash,
+                "as_of": item.as_of,
+                "knowledge_cutoff": item.knowledge_cutoff,
+                "publication_cutoff": item.publication_cutoff,
+                "source_snapshot_ids": list(item.source_snapshot_ids),
+            }
+            for item in view.context_input_refs
+        ],
     }

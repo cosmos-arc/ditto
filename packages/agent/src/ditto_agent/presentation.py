@@ -15,6 +15,7 @@ from ditto_agent.contracts._validation import (
     sha256_hex,
     utc_datetime,
 )
+from ditto_agent.contracts.execution import AgentRunExecutionPlan
 from ditto_agent.contracts.runtime import RunStatus
 
 AgentGuardrailStatus = Literal["passed", "blocked", "unknown"]
@@ -185,6 +186,7 @@ class AgentRunPresentation:
     projection_version: int
     updated_at: datetime
     event_cursor: int = 0
+    execution_plan: AgentRunExecutionPlan | None = None
 
     def __post_init__(self) -> None:
         """Normalize and validate the complete sanitized projection."""
@@ -199,6 +201,11 @@ class AgentRunPresentation:
             raw_context, AgentContextPresentation
         ):
             raise TypeError("context must be an AgentContextPresentation")
+        raw_execution_plan = cast(object, self.execution_plan)
+        if raw_execution_plan is not None and not isinstance(
+            raw_execution_plan, AgentRunExecutionPlan
+        ):
+            raise TypeError("execution_plan must be an AgentRunExecutionPlan")
         enum_value(self.status, RunStatus, field="status")
         object.__setattr__(
             self,
