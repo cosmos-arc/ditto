@@ -67,6 +67,10 @@ def _fill_transition(
         raise OrderStateError(f"FILL requires positive fill_qty, got {fill_qty}")
     if leaves_qty <= 0:
         raise OrderStateError(f"FILL with no remaining leaves_qty ({leaves_qty})")
+    if fill_qty > leaves_qty:
+        raise OrderStateError(
+            f"FILL quantity ({fill_qty}) exceeds remaining leaves_qty ({leaves_qty})"
+        )
     return (
         OrderStatus.FILLED if fill_qty >= leaves_qty else OrderStatus.PARTIALLY_FILLED
     )

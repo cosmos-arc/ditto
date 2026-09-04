@@ -125,6 +125,30 @@ def test_select_current_snapshot_ids_excludes_superseded_schema() -> None:
 
 
 @pytest.mark.unit
+def test_select_current_snapshot_ids_allows_filtered_canonical_rows() -> None:
+    current = _snapshot(
+        schema_version="fundamental.dividend.v2",
+        row_count=5,
+        created_at=_NOW,
+        checksum="current-filtered",
+    )
+
+    selected = select_current_snapshot_ids(
+        dataset_id="dividend",
+        catalog_entries=(
+            _entry(
+                schema_version="fundamental.dividend.v2",
+                row_count=4,
+                created_at=_NOW,
+            ),
+        ),
+        snapshots=(current,),
+    )
+
+    assert selected == (current.snapshot_id,)
+
+
+@pytest.mark.unit
 def test_select_current_snapshot_ids_rejects_ambiguous_or_missing_binding() -> None:
     current = _snapshot(
         schema_version="fundamental.dividend.v2",
@@ -235,9 +259,15 @@ def test_probe_consumer_payload_reads_sqlite_and_parquet(tmp_path) -> None:
     pl.DataFrame(
         {"instrument_id": [1, 2, 3], "trade_date": [date(2026, 7, 31)] * 3}
     ).write_parquet(parquet_root / "2026.parquet")
+    global_root = tmp_path / "market" / "index" / "global_bars"
+    global_root.mkdir(parents=True)
+    pl.DataFrame(
+        {"source_ticker": ["N225"], "trade_date": [date(2026, 7, 31)]}
+    ).write_parquet(global_root / "2026.parquet")
 
     dividend = probe_consumer_payload(tmp_path, "dividend")
     stock_daily = probe_consumer_payload(tmp_path, "stock_daily")
+    global_index_daily = probe_consumer_payload(tmp_path, "global_index_daily")
 
     assert dividend == {"kind": "sqlite", "object": "dividend", "row_count": 2}
     assert stock_daily == {
@@ -245,6 +275,12 @@ def test_probe_consumer_payload_reads_sqlite_and_parquet(tmp_path) -> None:
         "kind": "parquet",
         "object": "market/stock/bars",
         "row_count": 3,
+    }
+    assert global_index_daily == {
+        "file_count": 1,
+        "kind": "parquet",
+        "object": "market/index/global_bars",
+        "row_count": 1,
     }
 
 

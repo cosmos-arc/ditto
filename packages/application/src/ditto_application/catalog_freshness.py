@@ -268,12 +268,11 @@ class PersistedIngestionEvidenceVerifier:
             and log.rows == row_count
             and entry.schema.row_count == row_count
             and entry.source_snapshot_id
-            == catalog_source_snapshot_id(
+            == _expected_catalog_source_snapshot_id(
+                entry=entry,
                 dataset=dataset,
-                trade_date=trade_date,
                 source=source,
                 checksum=checksum,
-                l1_l2_attested=True,
             )
         )
 
@@ -326,11 +325,14 @@ def catalog_snapshot_has_quality_logs(
     if actual_ids != expected_snapshot_ids or len(entries) != len(actual_ids):
         return False
     row_count = 0
-    for partition_date, entry in dated_entries:
+    for _partition_date, entry in dated_entries:
+        log_trade_date = _catalog_log_trade_date(entry)
+        if log_trade_date is None:
+            return False
         log = ingestion_logs.get_log(
             dataset=dataset,
             source=source,
-            trade_date=partition_date.isoformat(),
+            trade_date=log_trade_date,
         )
         if (
             log is None
@@ -342,17 +344,71 @@ def catalog_snapshot_has_quality_logs(
             or log.rows < 0
             or log.rows != entry.schema.row_count
             or entry.source_snapshot_id
-            != catalog_source_snapshot_id(
+            != _expected_catalog_source_snapshot_id(
+                entry=entry,
                 dataset=dataset,
-                trade_date=partition_date.isoformat(),
                 source=source,
                 checksum=log.checksum,
-                l1_l2_attested=True,
             )
         ):
             return False
         row_count += log.rows
     return row_count == expected_row_count
+
+
+def _catalog_partition_values(entry: DataCatalogEntry) -> dict[str, str] | None:
+    values: dict[str, str] = {}
+    for partition in entry.asset.partition_keys:
+        key, separator, value = partition.partition("=")
+        if not separator or not key or not value or key in values:
+            return None
+        values[key] = value
+    return values
+
+
+def _catalog_log_trade_date(entry: DataCatalogEntry) -> str | None:
+    values = _catalog_partition_values(entry)
+    if values is None:
+        return None
+    if set(values) == {"trade_date"}:
+        return values["trade_date"]
+    if set(values) in (
+        {"start_date", "end_date"},
+        {"source_ticker", "start_date", "end_date"},
+    ):
+        return values["start_date"]
+    return None
+
+
+def _expected_catalog_source_snapshot_id(
+    *,
+    entry: DataCatalogEntry,
+    dataset: str,
+    source: str,
+    checksum: str,
+) -> str | None:
+    values = _catalog_partition_values(entry)
+    if values is None:
+        return None
+    if set(values) == {"trade_date"}:
+        return catalog_source_snapshot_id(
+            dataset=dataset,
+            trade_date=values["trade_date"],
+            source=source,
+            checksum=checksum,
+            l1_l2_attested=True,
+        )
+    if set(values) in (
+        {"start_date", "end_date"},
+        {"source_ticker", "start_date", "end_date"},
+    ):
+        source_ticker = values.get("source_ticker", "all")
+        return (
+            f"snapshot:{source}:{dataset}:{source_ticker}:"
+            f"{values['start_date']}:{values['end_date']}:"
+            f"{checksum}:quality=l1-l2"
+        )
+    return None
 
 
 def catalog_entry_for_date(

@@ -63,6 +63,7 @@ class TestMainRoutesAssembly:
     def test_expected_route_modules_complete(self) -> None:
         """验证 __all__ 包含所有路由模块."""
         expected = {
+            "account_ledger",
             "agent_routes",
             "backtest",
             "capital",
@@ -74,14 +75,18 @@ class TestMainRoutesAssembly:
             "macro",
             "market",
             "metadata",
+            "paper",
+            "portfolio_comparison",
             "research_candidate_routes",
             "research_catalog_routes",
             "research_experiment_routes",
             "research_review_routes",
             "research_selection_routes",
+            "selection",
             "source",
             "strategy",
             "system",
+            "technical_analysis",
             "trade",
             "universe",
         }

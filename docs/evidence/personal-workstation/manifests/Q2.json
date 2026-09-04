@@ -1,0 +1,34 @@
+{
+  "artifacts": [
+    {
+      "relative_path": "personal-workstation/gates/Q2.json",
+      "sha256": "sha256:a5c12e4054608d99c03bd53927b152f3cbf0363eeac210254e815832e33a0731",
+      "size_bytes": 1044
+    },
+    {
+      "relative_path": "personal-workstation/manifests/Q1.json",
+      "sha256": "sha256:63f25ea1bd068458c16cac7dc476a07586cc127df45d892beb7a52ae9217547d",
+      "size_bytes": 2476
+    },
+    {
+      "relative_path": "personal-workstation/q2/market-context-live-20260901.json",
+      "sha256": "sha256:88f2ab3dc4aae6106ae6ef3264b30e9dc384577c1dc3542b313ea848b0359eec",
+      "size_bytes": 13539
+    },
+    {
+      "relative_path": "personal-workstation/q2/ui-live-20260901.json",
+      "sha256": "sha256:7a53ad7bd48295d3e1c8fe9c8a5e5a35bad19cd2ac92c6d878965c456738b048",
+      "size_bytes": 11215
+    },
+    {
+      "relative_path": "personal-workstation/q23-agent-live-20260901.json",
+      "sha256": "sha256:0beb14b6eecb144f3b72aaf955cefc65db299b99acab268b785d443b0f8da627",
+      "size_bytes": 19213
+    }
+  ],
+  "blockers": [],
+  "gate": "Q2",
+  "manifest_hash": "sha256:d37ce625d53900880da634a270cdb771eddaf1364dff89c0fd5858354528903d",
+  "schema_version": 1,
+  "status": "passed"
+}

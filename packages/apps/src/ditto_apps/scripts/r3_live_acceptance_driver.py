@@ -23,6 +23,7 @@ from ditto_apps.registry.live.r3_live_acceptance_driver import (
 from ditto_apps.registry.live.r3_live_acceptance_driver import (
     run_live_golden_lane as _run_live_golden_lane,
 )
+from ditto_apps.registry.live.r3_live_planning_builder import LivePlanningOptions
 
 __all__ = [
     "LiveBackupRestoreResult",
@@ -31,6 +32,7 @@ __all__ = [
     "LiveGovernanceLifecycleResult",
     "run_live_backup_restore",
     "run_live_golden_lane",
+    "run_live_golden_lane_with_options",
     "run_live_governance_lifecycle",
 ]
 
@@ -41,6 +43,31 @@ def run_live_golden_lane(
     data_root: Path,
     evidence_root: Path,
     purpose: str,
+    etf_tickers: tuple[str, ...] | None = None,
+    strategy_id: str | None = None,
+    strategy_version: int | None = None,
+) -> LiveGoldenLaneResult:
+    """Run one live lane using the convenience planning inputs."""
+    return run_live_golden_lane_with_options(
+        lane=lane,
+        data_root=data_root,
+        evidence_root=evidence_root,
+        purpose=purpose,
+        planning_options=LivePlanningOptions(
+            etf_tickers=etf_tickers,
+            strategy_id=strategy_id,
+            strategy_version=strategy_version,
+        ),
+    )
+
+
+def run_live_golden_lane_with_options(
+    *,
+    lane: Literal["stock", "etf"],
+    data_root: Path,
+    evidence_root: Path,
+    purpose: str,
+    planning_options: LivePlanningOptions,
 ) -> LiveGoldenLaneResult:
     """Run one live lane with the production jobs scheduler injected explicitly."""
     with create_live_research_acceptance_bundle() as bundle:
@@ -65,4 +92,5 @@ def run_live_golden_lane(
             purpose=purpose,
             scheduler_tick=scheduler_tick,
             select_and_claim=select_and_claim,
+            planning_options=planning_options,
         )

@@ -129,13 +129,11 @@ class DecisionOpinionShadowDatabase:
                 )
                 rows = schema.schema_rows(connection)
                 if markers == (0, 0) and not rows:
-                    for statement in schema.schema_body_statements(
-                        schema.load_schema_sql(version=1), version=1
-                    ):
+                    for statement in schema.fresh_schema_body_statements():
                         connection.execute(statement)
                     connection.execute(f"PRAGMA application_id={schema.APPLICATION_ID}")
-                    connection.execute("PRAGMA user_version=1")
-                    current_version = 1
+                    connection.execute(f"PRAGMA user_version={schema.USER_VERSION}")
+                    current_version = schema.USER_VERSION
                 elif (
                     markers[0] != schema.APPLICATION_ID
                     or markers[1] < 1

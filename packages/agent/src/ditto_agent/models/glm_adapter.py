@@ -52,6 +52,7 @@ class GLMAgentsModel(OpenAICompatibleAgentsModel):
             use_responses=coding_plan,
             reasoning_effort=reasoning_effort,
         )
+        self._native_structured_outputs = not coding_plan
 
 
 __all__ = [

@@ -32,6 +32,7 @@ from ditto_apps.models.agent import (
     AgentDecisionOpinionIdentity,
     AgentDecisionOpinionResponse,
     AgentRunContext,
+    AgentRunExecutionPlanResponse,
     AgentRunGuardrail,
     AgentRunResponse,
     AgentRunToolRecord,
@@ -125,6 +126,23 @@ def run_response(run: AgentRunView) -> AgentRunResponse:
         if run.usage is not None
         else None
     )
+    execution_plan = (
+        AgentRunExecutionPlanResponse(
+            decision_time=run.execution_plan.temporal_context.decision_time,
+            knowledge_cutoff=run.execution_plan.temporal_context.knowledge_cutoff,
+            publication_cutoff=(run.execution_plan.temporal_context.publication_cutoff),
+            source_snapshot_id=(run.execution_plan.temporal_context.source_snapshot_id),
+            execution_eligible_at="not_applicable",
+            allowed_universe=run.execution_plan.temporal_context.allowed_universe,
+            license_class=run.execution_plan.temporal_context.license_class,
+            egress_class="cloud_allowed",
+            allowed_tools=run.execution_plan.allowed_tools,
+            max_output_tokens=run.execution_plan.max_output_tokens,
+            authority_hash=run.execution_plan.authority_hash,
+        )
+        if run.execution_plan is not None
+        else None
+    )
     return AgentRunResponse(
         run_id=run.run_id,
         session_id=run.session_id,
@@ -163,6 +181,7 @@ def run_response(run: AgentRunView) -> AgentRunResponse:
         projection_reason=run.projection_reason,
         projection_version=run.projection_version,
         projection_updated_at=run.projection_updated_at,
+        execution_plan=execution_plan,
     )
 
 

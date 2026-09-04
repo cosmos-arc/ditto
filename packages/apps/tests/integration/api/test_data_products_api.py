@@ -13,10 +13,10 @@ from ditto_application.queries.data_products import (
     DataProductCoverageView,
     DataProductEvidenceView,
     DataProductLicenseView,
-    DataProductOverview,
     DataProductQualityView,
     DataProductRunView,
     DataProductsQueryFacade,
+    DataProductView,
 )
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.data_products import router
@@ -35,12 +35,16 @@ def facade() -> MagicMock:
         passed=True,
     )
     mock.list_products.return_value = (
-        DataProductOverview(
+        DataProductView(
             dataset_id="stock_daily",
             r2_scope="hard",
             maturity="stable",
             schedule="trade_daily",
             owner="market-data",
+            schema_version="market.stock_daily.v1",
+            frequency="trading_daily",
+            timezone="Asia/Shanghai",
+            currency="CNY",
             raw_target_from="1990-12-19",
             certified_target_from="2005-01-04",
             active_certification_report_id="report-1",
@@ -171,7 +175,7 @@ def test_openapi_contains_complete_data_product_schemas(app: FastAPI) -> None:
     assert "/api/v1/data-products/{dataset_id}/license" in paths
     component_names = schema["components"]["schemas"]
     for model_name in (
-        "DataProductOverviewResponse",
+        "DataProductViewResponse",
         "DataProductCoverageResponse",
         "DataProductQualityResponse",
         "DataProductRunResponse",

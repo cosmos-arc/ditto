@@ -43,9 +43,15 @@ class TestTushareMacroIndicatorMetadata:
         """CPI indicator has correct metadata."""
         cpi = TUSHARE_MACRO_INDICATORS["CN_CPI_YOY"]
         assert cpi.api_name == "cn_cpi"
-        assert cpi.field == "cpi_yoy"
+        assert cpi.field == "nt_yoy"
         assert cpi.category == "prices"
         assert cpi.frequency == "monthly"
+
+    def test_pmi_indicator_uses_provider_native_field_names(self) -> None:
+        """The NBS PMI surface exposes uppercase provider codes and MONTH."""
+        pmi = TUSHARE_MACRO_INDICATORS["CN_PMI_MFG"]
+        assert pmi.field == "PMI010000"
+        assert pmi.date_field == "MONTH"
 
     def test_money_supply_indicators_share_same_api(self) -> None:
         """M0, M1, M2 indicators share the same API."""

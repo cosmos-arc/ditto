@@ -1,6 +1,6 @@
 """Tests for TushareSource."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 import httpx
 import polars as pl
@@ -176,6 +176,33 @@ class TestTushareSourceEtfBasic:
         result = source.fetch_etf_basic()
 
         assert result.is_empty()
+
+    def test_fetch_etf_basic_excludes_non_etf_and_unlisted_rows(
+        self, respx_mock
+    ) -> None:
+        """Only listed ETFs may enter the ETF security master."""
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "name", "list_date"],
+                        "items": [
+                            ["510300.SH", "沪深300ETF", "20120706"],
+                            ["164212.SZ", "新能源汽车(QDII-LOF)-A", "20200101"],
+                            ["508609.SH", "华安锦江REIT", "20240101"],
+                            ["589430.SH", "科创板芯片设计ETF", None],
+                        ],
+                    },
+                },
+            )
+        )
+
+        result = TushareSource(settings=_settings()).fetch_etf_basic()
+
+        assert result["source_ticker"].to_list() == ["510300.SH"]
 
 
 class TestTushareSourceEtfDaily:
@@ -922,6 +949,42 @@ class TestTushareSourceMacroIndicators:
         result = source.fetch_macro_indicators("2024-01-02")
         assert result.equals(expected)
 
+    def test_fetch_macro_indicators_by_codes_is_public_and_bounded(
+        self, mocker
+    ) -> None:
+        """The first China macro batch must not depend on a private adapter."""
+        observed_on = date(2026, 9, 1)
+        source = TushareSource(settings=_settings())
+        expected = pl.DataFrame({"indicator_code": ["CN_GDP_YOY"]})
+        fetch = mocker.patch.object(
+            source._macro,  # pyright: ignore[reportPrivateUsage]
+            "fetch_indicators",
+            return_value=expected,
+        )
+
+        direct = source.fetch_macro_indicators_by_codes(
+            ["CN_GDP_YOY"],
+            "2024-01-01",
+            "2024-12-31",
+            observed_on=observed_on,
+        )
+        facade = source.macro.fetch_macro_indicators_by_codes(
+            ["CN_GDP_YOY"],
+            "2024-01-01",
+            "2024-12-31",
+            observed_on=observed_on,
+        )
+
+        assert direct.equals(expected)
+        assert facade.equals(expected)
+        assert fetch.call_count == 2
+        fetch.assert_called_with(
+            codes=["CN_GDP_YOY"],
+            start_date="2024-01-01",
+            end_date="2024-12-31",
+            observed_on=observed_on,
+        )
+
 
 class TestTushareSourceDividendRange:
     """Dividend bootstrap uses the documented announcement-date filter."""
@@ -1103,7 +1166,58 @@ class TestTushareSourceFacadeProperties:
         assert hasattr(facade, "fetch_fund_adj")
         assert hasattr(facade, "fetch_index_basic")
         assert hasattr(facade, "fetch_index_daily")
+        assert hasattr(facade, "fetch_global_index_daily")
         assert hasattr(facade, "fetch_sw_industry")
+        assert hasattr(facade, "fetch_sw_industry_concepts")
+
+    def test_global_index_and_industry_concepts_delegate_publicly(self, mocker) -> None:
+        """New PIT products are reachable through both public entry points."""
+        source = TushareSource(settings=_settings())
+        observed_at = datetime(2026, 9, 1, 1, 2, tzinfo=UTC)
+        knowledge_date = date(2026, 9, 1)
+        global_expected = pl.DataFrame({"source_ticker": ["SPX"]})
+        industry_expected = pl.DataFrame({"instrument_id": ["000001.SZ"]})
+        global_fetch = mocker.patch.object(
+            source._index,  # pyright: ignore[reportPrivateUsage]
+            "fetch_global_daily",
+            return_value=global_expected,
+        )
+        industry_fetch = mocker.patch.object(
+            source._industry,  # pyright: ignore[reportPrivateUsage]
+            "fetch_sw_industry_concepts",
+            return_value=industry_expected,
+        )
+
+        direct_global = source.fetch_global_index_daily(
+            ["SPX"], "2024-03-25", "2024-04-02", observed_at=observed_at
+        )
+        facade_global = source.etf_index.fetch_global_index_daily(
+            ["SPX"], "2024-03-25", "2024-04-02", observed_at=observed_at
+        )
+        direct_industry = source.fetch_sw_industry_concepts(
+            level=1, knowledge_date=knowledge_date
+        )
+        facade_industry = source.etf_index.fetch_sw_industry_concepts(
+            level=1, knowledge_date=knowledge_date
+        )
+
+        assert direct_global.equals(global_expected)
+        assert facade_global.equals(global_expected)
+        assert direct_industry.equals(industry_expected)
+        assert facade_industry.equals(industry_expected)
+        assert global_fetch.call_count == 2
+        global_fetch.assert_called_with(
+            ["SPX"],
+            "2024-03-25",
+            "2024-04-02",
+            observed_at=observed_at,
+        )
+        assert industry_fetch.call_count == 2
+        industry_fetch.assert_called_with(
+            asof_date=None,
+            level=1,
+            knowledge_date=knowledge_date,
+        )
 
     def test_fundamental_facade_property_returns_facade(self) -> None:
         """source.fundamental 返回 _FundamentalFacade 实例."""
@@ -1125,6 +1239,7 @@ class TestTushareSourceFacadeProperties:
         facade = source.macro
         assert facade is not None
         assert hasattr(facade, "fetch_macro_indicators")
+        assert hasattr(facade, "fetch_macro_indicators_by_codes")
         assert hasattr(facade, "fetch_fx_daily")
         assert hasattr(facade, "fetch_metal_daily")
         assert hasattr(facade, "fetch_commodities")

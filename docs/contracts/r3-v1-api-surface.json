@@ -14,9 +14,9 @@
     "runtime_rolling": "An IMPLEMENT/PLANNED entry has null runtime mapping only while its exact route is absent. As soon as the route lands, set exact runtime_method/runtime_path, keep operationId equal to the entry operation_id, refresh runtime_contracts and the Markdown hash/summary, but keep implementation_state=PLANNED until Task 16 closure."
   },
   "counts": {
-    "IMPLEMENT/IMPLEMENTED": 33,
+    "DEFER/PLANNED": 1,
     "EQUIVALENT/IMPLEMENTED": 6,
-    "DEFER/PLANNED": 1
+    "IMPLEMENT/IMPLEMENTED": 34
   },
   "approval_required": {
     "status": "APPROVED",
@@ -155,8 +155,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Candidate Id",
-            "type": "string"
+            "type": "string",
+            "title": "Candidate Id"
           }
         },
         {
@@ -164,9 +164,9 @@
           "in": "query",
           "required": true,
           "schema": {
+            "type": "string",
             "minLength": 1,
-            "title": "Experiment Id",
-            "type": "string"
+            "title": "Experiment Id"
           }
         },
         {
@@ -190,11 +190,11 @@
           "in": "query",
           "required": false,
           "schema": {
-            "default": 20,
+            "type": "integer",
             "maximum": 100,
             "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
+            "default": 20,
+            "title": "Limit"
           }
         }
       ],
@@ -219,8 +219,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Candidate Id",
-            "type": "string"
+            "type": "string",
+            "title": "Candidate Id"
           }
         },
         {
@@ -228,9 +228,9 @@
           "in": "query",
           "required": true,
           "schema": {
+            "type": "string",
             "minLength": 1,
-            "title": "Experiment Id",
-            "type": "string"
+            "title": "Experiment Id"
           }
         },
         {
@@ -254,11 +254,11 @@
           "in": "query",
           "required": false,
           "schema": {
-            "default": 20,
+            "type": "integer",
             "maximum": 100,
             "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
+            "default": 20,
+            "title": "Limit"
           }
         }
       ],
@@ -283,8 +283,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Candidate Id",
-            "type": "string"
+            "type": "string",
+            "title": "Candidate Id"
           }
         },
         {
@@ -292,9 +292,9 @@
           "in": "query",
           "required": true,
           "schema": {
+            "type": "string",
             "minLength": 1,
-            "title": "Experiment Id",
-            "type": "string"
+            "title": "Experiment Id"
           }
         },
         {
@@ -318,11 +318,11 @@
           "in": "query",
           "required": false,
           "schema": {
-            "default": 20,
+            "type": "integer",
             "maximum": 100,
             "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
+            "default": 20,
+            "title": "Limit"
           }
         }
       ],
@@ -362,8 +362,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -388,8 +388,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -414,8 +414,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -442,8 +442,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         },
         {
@@ -451,8 +451,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -479,8 +479,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         },
         {
@@ -488,8 +488,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -514,8 +514,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -540,8 +540,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -566,8 +566,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -594,8 +594,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         },
         {
@@ -603,8 +603,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -631,8 +631,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         },
         {
@@ -640,8 +640,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -668,8 +668,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -696,8 +696,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         },
         {
@@ -705,8 +705,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -733,8 +733,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         },
         {
@@ -742,8 +742,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -768,8 +768,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -794,8 +794,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Experiment Id",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment Id"
           }
         }
       ],
@@ -833,8 +833,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Factor Id",
-            "type": "string"
+            "type": "string",
+            "title": "Factor Id"
           }
         },
         {
@@ -842,9 +842,9 @@
           "in": "query",
           "required": true,
           "schema": {
+            "type": "string",
             "minLength": 1,
-            "title": "Snapshot Id",
-            "type": "string"
+            "title": "Snapshot Id"
           }
         },
         {
@@ -852,9 +852,9 @@
           "in": "query",
           "required": true,
           "schema": {
+            "type": "string",
             "format": "date",
-            "title": "Start Date",
-            "type": "string"
+            "title": "Start Date"
           }
         },
         {
@@ -862,9 +862,9 @@
           "in": "query",
           "required": true,
           "schema": {
+            "type": "string",
             "format": "date",
-            "title": "End Date",
-            "type": "string"
+            "title": "End Date"
           }
         },
         {
@@ -872,10 +872,10 @@
           "in": "query",
           "required": true,
           "schema": {
-            "maxLength": 64,
+            "type": "string",
             "minLength": 64,
-            "title": "Registry Hash",
-            "type": "string"
+            "maxLength": 64,
+            "title": "Registry Hash"
           }
         }
       ],
@@ -926,12 +926,12 @@
           "in": "query",
           "required": false,
           "schema": {
-            "default": 20,
-            "description": "每页数量",
+            "type": "integer",
             "maximum": 100,
             "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
+            "description": "每页数量",
+            "default": 20,
+            "title": "Limit"
           }
         },
         {
@@ -939,11 +939,11 @@
           "in": "query",
           "required": false,
           "schema": {
-            "default": 0,
-            "description": "偏移量",
+            "type": "integer",
             "minimum": 0,
-            "title": "Offset",
-            "type": "integer"
+            "description": "偏移量",
+            "default": 0,
+            "title": "Offset"
           }
         }
       ],
@@ -970,8 +970,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -996,8 +996,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         }
       ],
@@ -1024,8 +1024,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1033,8 +1033,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -1059,8 +1059,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         }
       ],
@@ -1085,8 +1085,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1110,11 +1110,11 @@
           "in": "query",
           "required": false,
           "schema": {
-            "default": 20,
+            "type": "integer",
             "maximum": 100,
             "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
+            "default": 20,
+            "title": "Limit"
           }
         }
       ],
@@ -1139,8 +1139,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         }
       ],
@@ -1165,8 +1165,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1174,9 +1174,9 @@
           "in": "path",
           "required": true,
           "schema": {
+            "type": "integer",
             "minimum": 1,
-            "title": "Version",
-            "type": "integer"
+            "title": "Version"
           }
         }
       ],
@@ -1203,8 +1203,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1212,8 +1212,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         },
         {
@@ -1221,8 +1221,46 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_preview_strategy_author",
+      "method": "POST",
+      "path": "/api/v1/strategies/{strategy_id}/versions/{version}/author-preview",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/StrategyAuthorPreviewRequest"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_StrategyAuthorPreviewResponse_"
+        },
+        "422": {
+          "$ref": "#/components/schemas/HTTPValidationError"
+        }
+      },
+      "parameters": [
+        {
+          "name": "strategy_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Strategy Id"
+          }
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Version"
           }
         }
       ],
@@ -1249,8 +1287,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1258,8 +1296,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         },
         {
@@ -1267,8 +1305,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -1293,8 +1331,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1302,8 +1340,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         }
       ],
@@ -1330,8 +1368,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1339,8 +1377,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         },
         {
@@ -1348,8 +1386,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -1376,8 +1414,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1385,8 +1423,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         },
         {
@@ -1394,8 +1432,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -1422,8 +1460,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1431,8 +1469,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         },
         {
@@ -1440,8 +1478,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -1468,8 +1506,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1477,8 +1515,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         },
         {
@@ -1486,8 +1524,8 @@
           "in": "header",
           "required": true,
           "schema": {
-            "title": "Idempotency-Key",
-            "type": "string"
+            "type": "string",
+            "title": "Idempotency-Key"
           }
         }
       ],
@@ -1514,8 +1552,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Strategy Id",
-            "type": "string"
+            "type": "string",
+            "title": "Strategy Id"
           }
         },
         {
@@ -1523,8 +1561,8 @@
           "in": "path",
           "required": true,
           "schema": {
-            "title": "Version",
-            "type": "integer"
+            "type": "integer",
+            "title": "Version"
           }
         }
       ],
@@ -3083,6 +3121,39 @@
         "Review selection/exposure evidence"
       ],
       "controversy_topic": "aggregate-selection-evidence"
+    },
+    {
+      "operation_id": "strategies_preview_strategy_author",
+      "design_method": "POST",
+      "design_path": "/api/v1/strategies/{strategy_id}/versions/{version}/author-preview",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/strategies/{strategy_id}/versions/{version}/author-preview",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        14,
+        17
+      ],
+      "reason": "Current-roadmap runtime-only governed Author preview operation is audited explicitly.",
+      "origins": [
+        "PERSONAL_QUANT_WORKSTATION",
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "strategy_id plus immutable version path and validated StrategyAuthorPreviewRequest.",
+        "response_dto": "APIResponse[StrategyAuthorPreviewResponse] with structured draft, compile, validation, and diff evidence.",
+        "error_codes": "200 preview result; 422 path or request validation; the preview is read-only and cannot persist a strategy version.",
+        "idempotency": "Read-only preview orchestration; Idempotency-Key is not applicable.",
+        "revision_etag": "Immutable strategy version and returned evidence hashes bind the preview; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Research Agent Author preview"
+      ],
+      "controversy_topic": null
     }
   ],
   "contract_rules": {

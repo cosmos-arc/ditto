@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ditto_apps.api.routes import (
+    account_ledger,
     agent_routes,
     backtest,
     capital,
@@ -14,19 +15,24 @@ from ditto_apps.api.routes import (
     macro,
     market,
     metadata,
+    paper,
+    portfolio_comparison,
     research_candidate_routes,
     research_catalog_routes,
     research_experiment_routes,
     research_review_routes,
     research_selection_routes,
+    selection,
     source,
     strategy,
     system,
+    technical_analysis,
     trade,
     universe,
 )
 
 __all__ = [
+    "account_ledger",
     "agent_routes",
     "backtest",
     "capital",
@@ -38,14 +44,18 @@ __all__ = [
     "macro",
     "market",
     "metadata",
+    "paper",
+    "portfolio_comparison",
     "research_candidate_routes",
     "research_catalog_routes",
     "research_experiment_routes",
     "research_review_routes",
     "research_selection_routes",
+    "selection",
     "source",
     "strategy",
     "system",
+    "technical_analysis",
     "trade",
     "universe",
 ]

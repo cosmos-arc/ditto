@@ -69,6 +69,10 @@ from ditto_data.storage.market.index.constituent import (
     IndexConstituentReader,
     IndexConstituentWriter,
 )
+from ditto_data.storage.market.index.global_bars import (
+    GlobalIndexBarsReader,
+    GlobalIndexBarsWriter,
+)
 from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
@@ -116,6 +120,7 @@ class MarketReaders:
     etf_adj: EtfAdjFactorReader | None = None
     etf_nav: EtfNavReader | None = None
     index_bars: IndexBarsReader | None = None
+    global_index_bars: GlobalIndexBarsReader | None = None
     index_constituent: IndexConstituentReader | None = None
     fx_bars: FxBarsReader | None = None
     commodity_bars: CommodityBarsReader | None = None
@@ -154,6 +159,7 @@ class MarketWriters:
     etf_adj: EtfAdjFactorWriter | None = None
     etf_nav: EtfNavWriter | None = None
     index_bars: IndexBarsWriter | None = None
+    global_index_bars: GlobalIndexBarsWriter | None = None
     index_constituent: IndexConstituentWriter | None = None
     fx_bars: FxBarsWriter | None = None
     commodity_bars: CommodityBarsWriter | None = None

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 import polars as pl
 
 from ditto_data.sources.tushare.adapters.calendar import CalendarTushareAdapter
@@ -13,9 +15,11 @@ from ditto_data.sources.tushare.etf_index_source import (
     fetch_etf_basic,
     fetch_etf_daily,
     fetch_fund_adj,
+    fetch_global_index_daily,
     fetch_index_basic,
     fetch_index_daily,
     fetch_sw_industry,
+    fetch_sw_industry_concepts,
 )
 from ditto_data.sources.tushare.stock_source import (
     fetch_adj_factor,
@@ -176,3 +180,35 @@ class EtfIndexFacade:
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
         """获取申万行业分类."""
         return fetch_sw_industry(self._industry, level)
+
+    def fetch_global_index_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        *,
+        observed_at: datetime | None = None,
+    ) -> pl.DataFrame:
+        """获取带显式市场时区和可见时间的全球指数日线."""
+        return fetch_global_index_daily(
+            self._index,
+            codes,
+            start_date,
+            end_date,
+            observed_at=observed_at,
+        )
+
+    def fetch_sw_industry_concepts(
+        self,
+        asof_date: str | None = None,
+        level: int = 1,
+        *,
+        knowledge_date: date | None = None,
+    ) -> pl.DataFrame:
+        """获取 effective-dated 申万行业成分."""
+        return fetch_sw_industry_concepts(
+            self._industry,
+            asof_date=asof_date,
+            level=level,
+            knowledge_date=knowledge_date,
+        )

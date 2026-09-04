@@ -1,0 +1,74 @@
+{
+  "checks": {
+    "agent_uses_application_evidence_only": true,
+    "comparison_http_200": true,
+    "exact_as_of_and_snapshot_identity_visible": true,
+    "manual_drift_is_user_choice": true,
+    "model_paper_attribution_is_separated": true,
+    "no_apply_or_write_action_visible": true,
+    "openapi_get_uses_query_array_without_body": true,
+    "scenario_http_200": true,
+    "scenario_is_read_only": true,
+    "three_columns_visible_at_all_audited_widths": true,
+    "visual_console_clean": true,
+    "visual_has_no_horizontal_overflow": true
+  },
+  "comparison": {
+    "artifact_checksum": "sha256:a7ddd52a672dc03e303a537e6a8dec9294fedbbb56b9c2900173e034d1f1d93f",
+    "as_of": "2026-08-31",
+    "manual_total_value": "152090.00",
+    "manual_user_choice_bps": "2277.48",
+    "model_total_value": "149959.49",
+    "paper_fee_amount": "15.51",
+    "paper_total_value": "149959.49",
+    "paper_unfilled_bps": "3000.0",
+    "source_snapshot_id": "snapshot:cmp_fixture:stock_daily:sha256:7eb5bab01ff364ca970c1e8f6915626ee7a8112a8b074376b0e2fafeb464fd2d",
+    "strategy_id": "cmp-live-strategy",
+    "valuation_snapshot_id": "portfolio-valuation:sha256:2ffaddb1f14e13d1614b2857dcd1dba468e193ee230c151f31ed0246a7a2b9a1"
+  },
+  "fixture_mode": "isolated_production_read_paths",
+  "limitations": [
+    "uses a certified isolated local provider payload rather than a network live provider",
+    "does not advance or satisfy the PAP-09 twenty-real-trading-day soak",
+    "frontend route remains under /trading until the planned I13 five-domain hard cut"
+  ],
+  "qualifies_as_real_soak": false,
+  "real_trading_day_count": 0,
+  "result": "PASS",
+  "scenario": {
+    "applied_constraints": [
+      "cash_reserve_weight=0.20",
+      "max_position_weight=0.80"
+    ],
+    "baseline_kind": "model",
+    "before_stressed_return": -0.042500001,
+    "after_stressed_return": -0.04,
+    "turnover": 0.02500001
+  },
+  "schema_version": "portfolio-comparison-live-acceptance-v1",
+  "visual_audit": {
+    "browser": "Codex in-app browser",
+    "console_errors_or_warnings": 0,
+    "viewports": [
+      {
+        "card_widths": [365, 365, 365],
+        "height": 900,
+        "horizontal_overflow": false,
+        "width": 1200
+      },
+      {
+        "card_widths": [421, 421, 421],
+        "height": 900,
+        "horizontal_overflow": false,
+        "width": 1366
+      },
+      {
+        "card_widths": [477, 477, 477],
+        "height": 960,
+        "horizontal_overflow": false,
+        "width": 1536
+      }
+    ]
+  },
+  "work_package": "CMP-07"
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 import polars as pl
@@ -23,7 +24,7 @@ def _make_bars_df(
 
 def _row(
     instrument_id: int,
-    trade_date: str,
+    trade_date: str | date,
     close: float = 10.0,
 ) -> dict[str, Any]:
     """Single bar row with sensible defaults."""
@@ -250,3 +251,25 @@ class TestGetHistoryAsOfBoundary:
 
         assert len(result) == 1
         assert result["trade_date"][0] == "2026-03-04"
+
+    def test_native_date_column_excludes_as_of_and_future_rows(self) -> None:
+        """Provider-native Date values preserve the strict PIT boundary."""
+        rows = [
+            _row(instrument_id=1, trade_date=value, close=10.0 + offset)
+            for offset, value in enumerate(
+                (
+                    date(2026, 3, 4),
+                    date(2026, 3, 5),
+                    date(2099, 1, 1),
+                )
+            )
+        ]
+        feed = _make_feed(_make_bars_df(rows))
+
+        result = feed.get_history(
+            instrument_ids=[InstrumentId(1)],
+            as_of_date="2026-03-05",
+            lookback_days=5,
+        )
+
+        assert result["trade_date"].to_list() == [date(2026, 3, 4)]

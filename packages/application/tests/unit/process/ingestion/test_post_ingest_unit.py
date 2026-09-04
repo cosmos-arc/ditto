@@ -1,6 +1,7 @@
 """Post-ingest helper unit tests."""
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import cast
 
 import polars as pl
@@ -19,6 +20,7 @@ from ditto_application.processes.ingestion.post_ingest import (
     PostIngestContext,
     process_fetched_data,
     record_data_catalog_entry,
+    run_list_date_inference,
     write_data_safe,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
@@ -28,6 +30,11 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     InMemoryDataCatalog,
 )
+from ditto_data.catalog.provider_payload import (
+    FilesystemProviderPayloadStore,
+    ProviderPayloadArtifact,
+)
+from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import OnDuplicate, WriteResult
 
@@ -106,6 +113,30 @@ class _EvidenceCommitRecorder:
     def commit(self, request: object) -> EvidenceCommitOutcome:
         self.requests.append(request)
         return self.outcome
+
+
+class _FreezeRecorder:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, list[str]]] = []
+
+    def create_freeze(
+        self,
+        freeze_id: str,
+        description: str,
+        datasets: list[str],
+    ) -> None:
+        self.calls.append((freeze_id, description, datasets))
+
+
+def test_index_basic_skips_unbounded_per_instrument_list_date_inference() -> None:
+    recorder = _ListDateInferenceRecorder()
+
+    run_list_date_inference(
+        cast(ListDateInferenceService, recorder),
+        "index_basic",
+    )
+
+    assert recorder.asset_classes == []
 
 
 def test_record_data_catalog_entry_accepts_catalog_write_context() -> None:
@@ -245,7 +276,7 @@ def test_r2_evidence_profile_requires_quality_checker_before_payload_write() -> 
     assert committer.requests == []
 
 
-def test_r2_evidence_failure_never_returns_success() -> None:
+def test_r2_evidence_failure_never_returns_success(tmp_path: Path) -> None:
     writer = _WriteDataRecorder(
         WriteResult(
             file_path="stock_daily/2024",
@@ -270,6 +301,7 @@ def test_r2_evidence_failure_never_returns_success() -> None:
         source_name="tushare",
         quality_checker=_PassingQualityChecker(),
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
+        provider_payload_writer=FilesystemProviderPayloadStore(tmp_path),
         license_record_id="license:tushare:stock_daily:reviewed",
     )
 
@@ -287,7 +319,7 @@ def test_r2_evidence_failure_never_returns_success() -> None:
     assert logs.logs == []
 
 
-def test_r2_evidence_success_does_not_duplicate_success_log() -> None:
+def test_r2_evidence_success_does_not_duplicate_success_log(tmp_path: Path) -> None:
     writer = _WriteDataRecorder(
         WriteResult(
             file_path="stock_daily/2024",
@@ -304,6 +336,7 @@ def test_r2_evidence_success_does_not_duplicate_success_log() -> None:
         )
     )
     logs = _IngestionLogRecorder()
+    freeze = _FreezeRecorder()
     ctx = PostIngestContext(
         result_handler=IngestionResultHandler(cast(object, logs), "tushare"),
         data_writer=cast(IngestionDataWriter, writer),
@@ -311,7 +344,9 @@ def test_r2_evidence_success_does_not_duplicate_success_log() -> None:
         source_name="tushare",
         quality_checker=_PassingQualityChecker(),
         evidence_committer=cast(IngestionEvidenceCommitter, committer),
+        provider_payload_writer=FilesystemProviderPayloadStore(tmp_path),
         license_record_id="license:tushare:stock_daily:reviewed",
+        freeze_store=cast(FreezeStore, freeze),
     )
 
     result = process_fetched_data(
@@ -325,6 +360,77 @@ def test_r2_evidence_success_does_not_duplicate_success_log() -> None:
     assert result.status == "success"
     assert len(committer.requests) == 1
     assert logs.logs == []
+    assert freeze.calls == []
+
+
+def test_r2_provider_payload_uri_remains_bound_to_pre_future_response(
+    tmp_path: Path,
+) -> None:
+    """A later same-year response must not change an earlier provider snapshot."""
+    writer = _WriteDataRecorder(
+        WriteResult(
+            file_path="stock_daily/2026",
+            checksum="canonical-year-partition",
+            rows_written=1,
+            rows_total=1,
+            blocked=False,
+        )
+    )
+    committer = _EvidenceCommitRecorder(
+        EvidenceCommitOutcome("partition:tushare:stock_daily", completed=True)
+    )
+    payload_store = FilesystemProviderPayloadStore(tmp_path)
+    ctx = PostIngestContext(
+        result_handler=IngestionResultHandler(None, "tushare"),
+        data_writer=cast(IngestionDataWriter, writer),
+        list_date_inference=cast(ListDateInferenceService, None),
+        source_name="tushare",
+        quality_checker=_PassingQualityChecker(),
+        evidence_committer=cast(IngestionEvidenceCommitter, committer),
+        provider_payload_writer=payload_store,
+        license_record_id="license:tushare:stock_daily:reviewed",
+    )
+    original = pl.DataFrame({"trade_date": ["2026-08-28"], "close": [10.2]})
+    revised = pl.DataFrame(
+        {
+            "trade_date": ["2026-08-28", "2026-08-31"],
+            "close": [10.2, 11.0],
+        }
+    )
+
+    first = process_fetched_data(
+        original,
+        "stock_daily",
+        "2026-08-28",
+        False,
+        ctx=ctx,
+    )
+    second = process_fetched_data(
+        revised,
+        "stock_daily",
+        "2026-08-28",
+        True,
+        ctx=ctx,
+    )
+
+    assert first.status == "success"
+    assert second.status == "success"
+    first_snapshot = committer.requests[0].provider_snapshot
+    second_snapshot = committer.requests[1].provider_snapshot
+    first_success_log = committer.requests[0].success_log
+    assert first_snapshot.payload_uri != "stock_daily/2026"
+    assert second_snapshot.payload_uri != first_snapshot.payload_uri
+    assert first_success_log.checksum == "canonical-year-partition"
+    assert first_success_log.rows == 1
+    assert first_success_log.checksum != first_snapshot.checksum
+    first_artifact = ProviderPayloadArtifact(
+        dataset_id=first_snapshot.dataset_id,
+        source=first_snapshot.source,
+        checksum=first_snapshot.checksum,
+        row_count=first_snapshot.row_count,
+        uri=first_snapshot.payload_uri,
+    )
+    assert payload_store.read_payload(first_artifact).to_dicts() == original.to_dicts()
 
 
 def test_process_fetched_data_rejects_sparse_empty_without_pit_snapshot() -> None:
@@ -870,7 +976,7 @@ def test_r2_empty_range_commits_no_payload_provider_observation() -> None:
 
 def test_basic_catalog_is_recorded_before_list_date_inference() -> None:
     write_result = WriteResult(
-        file_path="instrument_reader:index_basic",
+        file_path="instrument_reader:stock_basic",
         checksum="checksum123",
         rows_written=1,
         rows_total=1,
@@ -888,7 +994,7 @@ def test_basic_catalog_is_recorded_before_list_date_inference() -> None:
     )
     catalog = InMemoryDataCatalog()
     asset = DataAssetRef(
-        dataset_id="index_basic",
+        dataset_id="stock_basic",
         namespace="metadata",
         partition_keys=("trade_date=",),
     )
@@ -906,12 +1012,12 @@ def test_basic_catalog_is_recorded_before_list_date_inference() -> None:
             {
                 "source_ticker": ["000001.SH"],
                 "ticker": ["000001"],
-                "name": ["上证指数"],
+                "name": ["浦发银行"],
                 "exchange": ["SSE"],
                 "list_date": [None],
             }
         ),
-        "index_basic",
+        "stock_basic",
         "",
         True,
         ctx=ctx,

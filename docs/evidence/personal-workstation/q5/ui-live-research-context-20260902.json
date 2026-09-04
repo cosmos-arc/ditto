@@ -1,0 +1,80 @@
+{
+  "schema": "ditto.personal-workstation.q5-ui-research-context.v1",
+  "generated_at": "2026-09-01T17:50:21Z",
+  "status": "passed",
+  "scope": "SelectionRun -> Instrument technical evidence -> Research Agent context handoff",
+  "runtime": {
+    "backend_origin": "http://127.0.0.1:8002",
+    "data_root": "/private/tmp/ditto-q5-live-20260901.v1",
+    "frontend_origin": "http://127.0.0.1:5175",
+    "mock_enabled": false,
+    "model_calls_during_browser_acceptance": 0,
+    "provider": "glm",
+    "provider_profile": "balanced",
+    "provider_state": "available"
+  },
+  "repository_state": {
+    "backend_branch": "codex/roadmap-completion",
+    "backend_head": "79fc1cd90a28d9d9a5cb4ecad7ab46c547734572",
+    "frontend_branch": "codex/roadmap-completion",
+    "frontend_head": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+    "working_tree_policy": "existing dirty roadmap-completion trees preserved; no branch created"
+  },
+  "evidence_context": {
+    "instrument_id": 2001724,
+    "instrument_name": "华安易富黄金ETF",
+    "ticker": "518880.SH",
+    "selection_run_id": "selection-run:sha256:8beae94442ac536626d67165f23cee2990ce1e18bc241c9e4bdc1ead8a44bc1f",
+    "technical_snapshot_id": "technical-analysis:sha256:8d56cf82013a3c0acb9fde031cd716de7a47ff3a78e6e226c174c2649d358ce1",
+    "technical_source_snapshot_id": "snapshot:tushare:etf_daily:sha256:bd4c0a82bfcf28627562469dad8f70043cfcfc3059460ca00f0e79879d742708"
+  },
+  "browser_assertions": {
+    "context_identity_roundtrip": true,
+    "context_type": "technical-analysis",
+    "current_page_console_error_count": 0,
+    "horizontal_overflow": false,
+    "instrument_overlay_exact_selection_identity": true,
+    "instrument_overlay_exact_technical_identity": true,
+    "instrument_overlay_write_scope": "none",
+    "research_agent_context_identity": "technical-analysis:sha256:8d56cf82013a3c0acb9fde031cd716de7a47ff3a78e6e226c174c2649d358ce1",
+    "research_agent_new_run_enabled": true,
+    "viewport": {
+      "height": 720,
+      "width": 1280,
+      "document_scroll_width": 1280
+    }
+  },
+  "focused_verification": [
+    {
+      "command": "bunx vitest run src/features/instruments/components/instrument-components.test.tsx src/features/instruments/components/instrument-technical-view.test.tsx",
+      "result": "15 passed"
+    },
+    {
+      "command": "pixi run -e dev pytest <11 RES-02 planning/replay test modules>",
+      "result": "479 passed"
+    },
+    {
+      "command": "bun run check",
+      "result": "192 test files, 1507 tests, route/product/architecture/harness gates passed"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "docs/evidence/personal-workstation/q5/screenshots/instrument-send-research.png",
+      "sha256": "4fd0fd92d6626daaf2c0d95365e1eb2c59bb51333b9294abc103ef4d30e27730",
+      "size_bytes": 63418
+    },
+    {
+      "path": "docs/evidence/personal-workstation/q5/screenshots/research-agent-context.png",
+      "sha256": "ea39e3e987622c7ff99a12b6ea1aa0a8f6ace085e356dfbdd233421482585ea4",
+      "size_bytes": 42411
+    }
+  ],
+  "does_not_prove": [
+    "Strategy draft persistence before exact operator approval",
+    "Backtest execution or review submission",
+    "Full UI-08 ten-step journey",
+    "Q5 gate passage",
+    "Q6 gate passage"
+  ]
+}

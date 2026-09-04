@@ -78,7 +78,7 @@ def test_deterministic_fixture_acceptance_covers_all_release_gates() -> None:
     report = run_fixture_acceptance()
 
     assert report.status == "ready"
-    assert report.preflight.contract_count == 19
+    assert report.preflight.contract_count == 22
     assert report.recoverability.passed is True
     assert report.idempotency is not None
     assert report.idempotency.passed is True

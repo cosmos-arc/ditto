@@ -1,0 +1,1 @@
+{"dataset_id":"stock_daily","probe":{"file_count":1,"kind":"parquet","object":"market/stock/bars","row_count":5355},"schema":"ditto.q2-consumer-evidence.v1","snapshot_ids":["snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13"],"target_from":"2024-03-29","target_to":"2024-03-29"}

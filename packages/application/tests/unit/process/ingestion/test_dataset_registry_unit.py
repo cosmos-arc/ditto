@@ -115,6 +115,20 @@ class TestDefaultDatasetRegistry:
         assert registration.write_kind is WriteKind.FUND_ADJ
         assert registration.write_kind is not WriteKind.ADJ_FACTOR
 
+    def test_workstation_context_products_have_real_source_defined_routes(self) -> None:
+        registry = default_dataset_registry()
+
+        expected = {
+            Dataset.GLOBAL_INDEX_DAILY: WriteKind.GLOBAL_INDEX_BARS,
+            Dataset.INDUSTRY_CLASSIFICATION: WriteKind.INDUSTRY_CLASSIFICATION,
+            Dataset.INDUSTRY_MAPPING: WriteKind.INDUSTRY_MAPPING,
+        }
+        for dataset, write_kind in expected.items():
+            registration = registry.require(dataset)
+            assert registration.date_schedule is DateScheduleType.SOURCE_DEFINED
+            assert registration.daily_fetch_factory is not None
+            assert registration.write_kind is write_kind
+
 
 @pytest.mark.unit
 class TestDatasetRegistryConformance:
@@ -137,6 +151,7 @@ class TestDatasetRegistryConformance:
             Dataset.STOCK_DAILY,
             Dataset.ETF_DAILY,
             Dataset.INDEX_DAILY,
+            Dataset.GLOBAL_INDEX_DAILY,
             Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
@@ -152,6 +167,8 @@ class TestDatasetRegistryConformance:
             Dataset.FX_DAILY,
             Dataset.COMMODITY_DAILY,
             Dataset.INDEX_WEIGHT,
+            Dataset.INDUSTRY_CLASSIFICATION,
+            Dataset.INDUSTRY_MAPPING,
         }
 
         for dataset in date_fetchable:

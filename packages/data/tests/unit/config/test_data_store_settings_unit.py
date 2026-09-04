@@ -95,11 +95,13 @@ class TestDataStoreSettingsAllDirectories:
         for directory in moved_directories:
             assert directory not in dirs
 
-    def test_count_matches_previous_hardcoded_list(self) -> None:
-        """验证目录数量与之前 Infra 硬编码的列表一致（24 个）."""
+    def test_count_includes_provider_payload_archive(self) -> None:
+        """目录清单应包含全球指数和不可变 provider payload 归档（26 个）."""
         settings = DataStoreSettings()
         dirs = settings.all_directories()
-        assert len(dirs) == 24, f"Expected 24 directories, got {len(dirs)}"
+        assert len(dirs) == 26, f"Expected 26 directories, got {len(dirs)}"
+        assert "market/index/global_bars" in dirs
+        assert "provider_payloads" in dirs
 
 
 class TestPathGroupsStructure:
@@ -177,7 +179,7 @@ class TestPathGroupsStructure:
         """PathGroups.all_directories() 应返回完整的目录清单."""
         pg = PathGroups(Path("/data"))
         dirs = pg.all_directories()
-        assert len(dirs) == 24
+        assert len(dirs) == 26
         assert "market/stock/bars/daily" in dirs
         assert "capital/flow" in dirs
         assert "fundamental/financial" in dirs
@@ -246,10 +248,11 @@ class TestPathGroupsSubdomainDirectories:
     """子域 directories() 方法测试 — 确保每个路径组能独立列出其目录."""
 
     def test_market_directories(self) -> None:
-        """market.directories() 应返回 8 个市场目录."""
+        """market.directories() 应返回 9 个市场目录."""
         pg = PathGroups(Path("/data"))
         dirs = pg.market.directories()
-        assert len(dirs) == 8
+        assert len(dirs) == 9
+        assert "market/index/global_bars" in dirs
         assert all(d.startswith("market/") for d in dirs)
 
     def test_capital_directories(self) -> None:
@@ -274,8 +277,9 @@ class TestPathGroupsSubdomainDirectories:
         assert all(d.startswith("macro/") for d in dirs)
 
     def test_utility_directories(self) -> None:
-        """utility.directories() 应返回 4 个通用目录."""
+        """utility.directories() 应包含 provider payload 归档目录."""
         pg = PathGroups(Path("/data"))
         dirs = pg.utility.directories()
-        assert len(dirs) == 4
+        assert len(dirs) == 5
+        assert "provider_payloads" in dirs
         assert all("/" not in d for d in dirs)  # 通用目录无子目录

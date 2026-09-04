@@ -1,9 +1,9 @@
 """
-交易命令路由 — 更新意图状态 / 录入成交.
+Manual 命令路由 — 更新本地意图状态 / 录入人工成交.
 
 端点:
-- PUT   /trade/intents/{id}/status    更新意图状态
-- POST  /trade/fills                   录入成交
+- PUT   /manual/intents/{id}/status    更新本地意图状态
+- POST  /manual/fills                   录入人工成交
 """
 
 from __future__ import annotations

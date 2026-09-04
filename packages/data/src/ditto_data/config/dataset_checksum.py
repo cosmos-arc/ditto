@@ -28,9 +28,24 @@ def dataset_sort_keys(dataset: str) -> Sequence[str]:
 _SORT_KEYS: dict[str, Sequence[str]] = {
     "stock_daily": ("trade_date", "instrument_id"),
     "etf_daily": ("trade_date", "instrument_id"),
+    "global_index_daily": ("source_ticker", "trade_date", "knowledge_date"),
     "adj_factor": ("trade_date", "instrument_id"),
     "fund_adj": ("trade_date", "instrument_id"),
     "calendar": ("trade_date",),
     "stock_basic": ("ts_code",),
     "etf_basic": ("ts_code",),
+    "industry_classification": (
+        "source",
+        "classification_version",
+        "industry_id",
+        "knowledge_date",
+    ),
+    "industry_mapping": (
+        "source",
+        "classification_version",
+        "instrument_id",
+        "industry_id",
+        "industry_date",
+        "knowledge_date",
+    ),
 }

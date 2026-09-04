@@ -117,10 +117,10 @@ async def test_live_release_freezes_model_prompt_a4_and_pricing_identity() -> No
     assert report.run_identity.verify_identity_hash()
     assert report.provider_id == identity.provider_id
     assert report.profile == "balanced"
-    assert report.case_count == 120
-    assert report.total_model_spend_usd == Decimal("0.03840")
+    assert report.case_count == 131
+    assert report.total_model_spend_usd == Decimal("0.04192")
     assert report.passed is True
-    assert len(provider.calls) == 120
+    assert len(provider.calls) == 131
 
     changed = await run_live_release(
         provider=_AsyncFixtureProvider(),

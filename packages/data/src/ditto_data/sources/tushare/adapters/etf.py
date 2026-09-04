@@ -56,8 +56,14 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 fields="ts_code,name,list_date",
             )
 
-            return TushareDataTransformer.transform(
+            transformed = TushareDataTransformer.transform(
                 response, "etf_basic", ETF_BASIC_MAPPING
+            )
+            if transformed.is_empty():
+                return transformed
+            return transformed.filter(
+                pl.col("list_date").is_not_null()
+                & pl.col("name").str.contains(r"(?i)ETF")
             )
 
     @traced("source.tushare.fetch_etf_daily")

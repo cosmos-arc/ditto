@@ -14,6 +14,7 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     default_dataset_metadata,
 )
+from ditto_data.catalog.provider_payload import ProviderPayloadArtifact
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.lineage import (
     DataLineageRecorder,
@@ -50,6 +51,7 @@ class CatalogWriteContext:
     l1_l2_attested: bool = False
     chunk_id: str | None = None
     payload_retained: bool = True
+    provider_payload: ProviderPayloadArtifact | None = None
 
 
 def _dataset_namespace(dataset: str) -> str:
@@ -308,6 +310,8 @@ def build_evidence_commit_request(
     """Build immutable provider/catalog/lineage/log evidence for one payload."""
     if license_record_id is None:
         raise AppProcessError("R2 evidence commit requires license_record_id")
+    if ctx.payload_retained and ctx.provider_payload is None:
+        raise AppProcessError("R2 evidence commit requires immutable provider payload")
     now = datetime.now(UTC)
     request_end = ctx.end_date or ctx.trade_date
     catalog_entry = build_data_catalog_entry(ctx, now=now)
@@ -322,6 +326,16 @@ def build_evidence_commit_request(
             ]
         )
     ).hexdigest()
+    payload_checksum = (
+        ctx.provider_payload.checksum
+        if ctx.provider_payload is not None
+        else ctx.write_result.checksum
+    )
+    payload_row_count = (
+        ctx.provider_payload.row_count
+        if ctx.provider_payload is not None
+        else ctx.write_result.rows_written
+    )
     snapshot = ProviderSnapshot.create(
         ProviderSnapshotDraft(
             dataset_id=ctx.dataset,
@@ -329,7 +343,7 @@ def build_evidence_commit_request(
             request_start=ctx.trade_date,
             request_end=request_end,
             schema_version=_dataset_schema_version(ctx.dataset),
-            checksum=ctx.write_result.checksum,
+            checksum=payload_checksum,
             canonical_asset=catalog_entry.asset,
             request_parameters_hash=f"sha256:{request_hash}",
             response_metadata=(
@@ -343,8 +357,12 @@ def build_evidence_commit_request(
                 ),
             ),
             license_record_id=license_record_id,
-            row_count=ctx.write_result.rows_written,
-            payload_uri=(ctx.write_result.file_path if ctx.payload_retained else None),
+            row_count=payload_row_count,
+            payload_uri=(
+                ctx.provider_payload.uri
+                if ctx.provider_payload is not None and ctx.payload_retained
+                else None
+            ),
             payload_retained=ctx.payload_retained,
             created_at=now,
         )

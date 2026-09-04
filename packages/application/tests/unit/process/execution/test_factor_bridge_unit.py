@@ -670,6 +670,23 @@ class TestFactorIdResolution:
         # momentum_1m → ts_pct_change(market.close, 20) → dependencies 含 market.close
         assert "market.close" in result.expressions[2].analysis.dependencies
 
+    def test_default_mode_inlines_etf_seed_dependency_closures(self) -> None:
+        """Published seed factors execute from raw OHLCV instead of derived columns."""
+        bridge = FactorBridge()
+
+        result = bridge.compile_and_validate(
+            expressions=("macd_hist", "rsi_14", "atr_14"),
+            weights=(0.4, 0.3, 0.3),
+        )
+
+        dependencies = {
+            dependency
+            for expression in result.expressions
+            for dependency in expression.analysis.dependencies
+        }
+        assert dependencies == {"market.close", "market.high", "market.low"}
+        assert dependencies.isdisjoint({"macd", "macd_signal", "returns_1", "tr"})
+
     def test_custom_registry_injection(self) -> None:
         """注入自定义 registry 时，ID 按自定义映射解析；未命中项原样返回."""
         custom = {

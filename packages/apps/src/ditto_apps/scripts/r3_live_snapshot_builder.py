@@ -32,6 +32,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--lane", required=True, choices=("stock", "etf"))
     parser.add_argument("--data-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument(
+        "--etf-ticker",
+        action="append",
+        dest="etf_tickers",
+        help="Narrow the ETF lane to exact SelectionRun ticker(s).",
+    )
     return parser
 
 
@@ -48,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     result = build_composed_live_research_snapshot(
         lane=cast("LiveLane", args.lane),
         data_root=root,
+        etf_tickers=None if args.etf_tickers is None else tuple(args.etf_tickers),
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(

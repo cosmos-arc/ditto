@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-01T00:47:00+08:00",
+  "status": "passed",
+  "work_packages": [
+    {"id": "OPS-01", "status": "passed", "evidence": "schedule contract and 3 schedule tests"},
+    {"id": "OPS-02", "status": "passed", "evidence": "one trace and correlation ID across ingest, Agent, and ledger"},
+    {"id": "OPS-03", "status": "passed", "evidence": "four logical domains, six SQLite stores, authenticated isolated restore"},
+    {"id": "OPS-04", "status": "passed", "evidence": "docs/evidence/personal-workstation/ops/tabletop.json"},
+    {"id": "OPS-05", "status": "passed", "evidence": "freshness, DQ, run, Paper, Agent, E2E dashboard contract"},
+    {"id": "OPS-06", "status": "passed", "evidence": "per-Gate authenticated manifests with tamper test"},
+    {"id": "OPS-07", "status": "passed", "evidence": "docs/evidence/personal-workstation/ops/recovery.json"},
+    {"id": "OPS-08", "status": "passed", "evidence": "docs/evidence/personal-workstation/ops/privacy.json"},
+    {"id": "OPS-09", "status": "passed", "evidence": "docs/evidence/personal-workstation/ops/performance.json"}
+  ],
+  "boundary": "This report closes OPS-01 through OPS-09 only; it does not claim real-data, real-model, 20-day soak, or Q6 acceptance."
+}

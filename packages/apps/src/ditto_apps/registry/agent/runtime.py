@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import Never, cast
+from typing import Never
 
-import orjson
 from ditto_agent._canonical import canonical_sha256
 from ditto_agent.approval_runtime import (
     AgentApprovalRuntime,
@@ -23,8 +23,8 @@ from ditto_agent.contracts.runtime import (
     AgentSession,
     RunStatus,
 )
+from ditto_agent.models.port import AgentModelPort, ModelToolInvoker
 from ditto_agent.presentation import (
-    AgentContextPresentation,
     AgentGuardrailPresentation,
     AgentPresentationError,
     AgentRunPresentation,
@@ -42,6 +42,7 @@ from ditto_agent.runtime.service import (
     AgentResourceNotFound,
     AgentRunCancelCommand,
     AgentRunCreateCommand,
+    AgentRunExecuteCommand,
     AgentRunListView,
     AgentRuntimePort,
     AgentRuntimeState,
@@ -51,28 +52,43 @@ from ditto_agent.runtime.service import (
     AgentSessionListView,
     AgentSessionView,
     ApprovalDecisionKind,
-    ApprovalDecisionStatus,
 )
 from ditto_agent.runtime.state_machine import InvalidRunTransition
+from ditto_agent.storage.sqlite.episode_store import AgentEpisodeWriter
 from ditto_agent.storage.sqlite.errors import (
     AgentConflictError,
     AgentPersistenceError,
 )
 from ditto_agent.storage.sqlite.presentation_store import (
+    AgentPresentationProjector,
     AgentPresentationReader,
     AgentPresentationWriter,
 )
 from ditto_agent.storage.sqlite.reader import AgentStoreReader
 from ditto_agent.storage.sqlite.records import (
-    ApprovalStatus,
     IdempotencyDisposition,
     StoredAgentRun,
-    StoredApproval,
     StoredRunEvent,
 )
 from ditto_agent.storage.sqlite.writer import AgentStoreWriter
+from ditto_agent.tools.registry import EvidenceToolRegistry
 
-from ditto_apps.registry.agent.runtime_presenters import run_view as _run_view
+from ditto_apps.registry.agent._run_execution import (
+    RunExecutionContext,
+    execute_persisted_run,
+)
+from ditto_apps.registry.agent.runtime_presenters import (
+    approval_decision as _approval_view,
+)
+from ditto_apps.registry.agent.runtime_presenters import (
+    approval_projection as _approval_projection,
+)
+from ditto_apps.registry.agent.runtime_presenters import (
+    context_filter as _context_filter,
+)
+from ditto_apps.registry.agent.runtime_presenters import (
+    run_view as _run_view,
+)
 
 _SESSION_SCOPE = "agent.session.create"
 _RUN_SCOPE = "agent.run.create"
@@ -98,24 +114,25 @@ def _event_view(event: StoredRunEvent) -> AgentEventView:
     )
 
 
-def _approval_view(approval: StoredApproval) -> AgentApprovalDecision:
-    if approval.decided_at is None or approval.operator_id is None:
-        raise AgentRuntimeUnavailable("agent_approval_receipt_invalid")
-    status = {
-        ApprovalStatus.APPROVED: ApprovalDecisionStatus.APPROVED,
-        ApprovalStatus.REJECTED: ApprovalDecisionStatus.REJECTED,
-    }.get(approval.status)
-    if status is None:
-        raise AgentRuntimeUnavailable("agent_approval_receipt_invalid")
-    return AgentApprovalDecision(
-        approval_id=approval.request_id,
-        run_id=approval.run_id,
-        action_hash=approval.action_hash,
-        status=status,
-        operator_id=approval.operator_id,
-        reason=approval.reason,
-        decided_at=approval.decided_at,
-    )
+def _run_request_payload(command: AgentRunCreateCommand) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "session_id": command.session_id,
+        "objective": command.objective,
+        "authority_hash": command.authority_hash,
+        "max_model_tokens": command.max_model_tokens,
+        "max_model_spend_usd": command.max_model_spend_usd,
+        "model_profile": command.model_profile,
+    }
+    if command.context is not None:
+        payload["context"] = command.context
+    if command.execution_plan is not None:
+        if command.authority_hash != command.execution_plan.authority_hash:
+            raise AgentInvalidRequest(
+                "Agent execution authority does not match its plan",
+                reason_code="agent_authority_mismatch",
+            )
+        payload["execution_plan"] = command.execution_plan
+    return payload
 
 
 def _page_bounds(limit: int, offset: int) -> None:
@@ -127,69 +144,6 @@ def _page_bounds(limit: int, offset: int) -> None:
         raise AgentInvalidRequest(
             "Agent page offset is invalid", reason_code="agent_pagination_invalid"
         )
-
-
-def _context_filter(
-    context_type: str | None,
-    context_id: str | None,
-) -> AgentContextPresentation | None:
-    if (context_type is None) != (context_id is None):
-        raise AgentInvalidRequest(
-            "Agent context filters must be supplied together",
-            reason_code="agent_context_filter_incomplete",
-        )
-    if context_type is None or context_id is None:
-        return None
-    try:
-        return AgentContextPresentation(
-            context_type=context_type,
-            context_id=context_id,
-        )
-    except ValueError as exc:
-        raise AgentInvalidRequest(
-            "Agent context filter is invalid",
-            reason_code="agent_context_filter_invalid",
-        ) from exc
-
-
-def _approval_status(approval: StoredApproval, *, now: datetime) -> AgentApprovalStatus:
-    if approval.status is ApprovalStatus.APPROVED:
-        return AgentApprovalStatus.APPROVED
-    if approval.status is ApprovalStatus.REJECTED:
-        return AgentApprovalStatus.REJECTED
-    if approval.expires_at <= now:
-        return AgentApprovalStatus.EXPIRED
-    return AgentApprovalStatus.PENDING
-
-
-def _approval_projection(
-    approval: StoredApproval, *, now: datetime
-) -> AgentApprovalView:
-    try:
-        decoded = orjson.loads(approval.action_payload)
-    except orjson.JSONDecodeError as exc:
-        raise AgentRuntimeUnavailable("agent_approval_projection_invalid") from exc
-    if not isinstance(decoded, dict):
-        raise AgentRuntimeUnavailable("agent_approval_projection_invalid")
-    payload = cast("dict[str, object]", decoded)
-    action_type = payload.get("action_kind")
-    target_identity = payload.get("subject_identity")
-    if type(action_type) is not str or type(target_identity) is not str:
-        raise AgentRuntimeUnavailable("agent_approval_projection_invalid")
-    return AgentApprovalView(
-        approval_id=approval.request_id,
-        run_id=approval.run_id,
-        action_type=action_type,
-        target_identity=target_identity,
-        action_payload=payload,
-        action_hash=approval.action_hash,
-        status=_approval_status(approval, now=now),
-        requested_at=approval.requested_at,
-        expires_at=approval.expires_at,
-        operator_id=approval.operator_id,
-        reason=approval.reason,
-        decided_at=approval.decided_at,
-    )
 
 
 def _raise_persistence(exc: AgentPersistenceError) -> Never:
@@ -277,6 +231,10 @@ class DisabledAgentRuntime(AgentRuntimePort):
         """Reject run creation while the feature is disabled."""
         self._unavailable()
 
+    async def execute_run(self, command: AgentRunExecuteCommand) -> AgentRunView:
+        """Reject run execution while the feature or model lane is disabled."""
+        self._unavailable()
+
     def get_run(self, run_id: str) -> AgentRunView:
         """Reject run reads while the feature is disabled."""
         self._unavailable()
@@ -303,9 +261,14 @@ class PersistedAgentRuntimeOptions:
     """Optional runtime collaborators kept behind one composition-root value."""
 
     approval_runtime: AgentApprovalRuntime | None = None
-    provider_name: str = "configured"
+    provider_name: str | None = None
     presentation_reader: AgentPresentationReader | None = None
     presentation_writer: AgentPresentationWriter | None = None
+    presentation_projector: AgentPresentationProjector | None = None
+    episode_writer: AgentEpisodeWriter | None = None
+    tool_registry: EvidenceToolRegistry | None = None
+    model_factory: Callable[[ModelToolInvoker], AgentModelPort] | None = None
+    approved_license_classes: tuple[str, ...] = ()
 
 
 class PersistedAgentRuntime(AgentRuntimePort):
@@ -329,6 +292,12 @@ class PersistedAgentRuntime(AgentRuntimePort):
         self._provider_name = resolved_options.provider_name
         self._presentation_reader = resolved_options.presentation_reader
         self._presentation_writer = resolved_options.presentation_writer
+        self._presentation_projector = resolved_options.presentation_projector
+        self._episode_writer = resolved_options.episode_writer
+        self._tool_registry = resolved_options.tool_registry
+        self._model_factory = resolved_options.model_factory
+        self._approved_license_classes = resolved_options.approved_license_classes
+        self._execution_locks: dict[str, asyncio.Lock] = {}
 
     def _project_run(self, run: StoredAgentRun) -> AgentRunView:
         if self._presentation_reader is None:
@@ -342,7 +311,36 @@ class PersistedAgentRuntime(AgentRuntimePort):
                 run,
                 projection_reason="agent_presentation_missing",
             )
-        return _run_view(run, presentation=presentation)
+        latest_event_cursor = self._latest_event_cursor(run.run_id)
+        objective_matches = (
+            hashlib.sha256(presentation.objective.encode()).hexdigest()
+            == run.objective_hash
+        )
+        authority_matches = (
+            presentation.execution_plan is None
+            or presentation.execution_plan.authority_hash == run.authority_hash
+        )
+        if not objective_matches or not authority_matches:
+            return _run_view(
+                run,
+                presentation=presentation,
+                projection_reason="agent_presentation_identity_mismatch",
+                projection_complete=False,
+                event_cursor=latest_event_cursor,
+            )
+        if presentation.status is not run.status:
+            return _run_view(
+                run,
+                presentation=presentation,
+                projection_reason="agent_presentation_stale",
+                projection_complete=False,
+                event_cursor=latest_event_cursor,
+            )
+        return _run_view(
+            run,
+            presentation=presentation,
+            event_cursor=latest_event_cursor,
+        )
 
     def _latest_event_cursor(self, run_id: str) -> int:
         events = self._reader.list_run_events(run_id)
@@ -382,6 +380,7 @@ class PersistedAgentRuntime(AgentRuntimePort):
                     projection_version=1,
                     updated_at=run.created_at,
                     event_cursor=self._latest_event_cursor(run.run_id),
+                    execution_plan=command.execution_plan,
                 )
             )
         except AgentPresentationError as exc:
@@ -413,13 +412,20 @@ class PersistedAgentRuntime(AgentRuntimePort):
 
     def get_capabilities(self) -> AgentCapabilityView:
         """Return the configured public profile without model credentials."""
+        execution_available = self._model_factory is not None
         return AgentCapabilityView(
             enabled=True,
-            runtime_state=AgentRuntimeState.AVAILABLE,
-            provider=self._provider_name,
+            runtime_state=(
+                AgentRuntimeState.AVAILABLE
+                if execution_available
+                else AgentRuntimeState.DEGRADED
+            ),
+            provider=self._provider_name if execution_available else None,
             available_profiles=(self._manifest.model_profile,),
             default_profile=self._manifest.model_profile,
-            degradation_reason=None,
+            degradation_reason=(
+                None if execution_available else "agent_model_execution_unconfigured"
+            ),
             checked_at=self._clock(),
         )
 
@@ -590,17 +596,7 @@ class PersistedAgentRuntime(AgentRuntimePort):
                     "Agent model profile is not configured for this runtime",
                     reason_code="agent_model_profile_unavailable",
                 )
-            request_payload: dict[str, object] = {
-                "session_id": command.session_id,
-                "objective": command.objective,
-                "authority_hash": command.authority_hash,
-                "max_model_tokens": command.max_model_tokens,
-                "max_model_spend_usd": command.max_model_spend_usd,
-                "model_profile": command.model_profile,
-            }
-            if command.context is not None:
-                request_payload["context"] = command.context
-            request_hash = canonical_sha256(request_payload)
+            request_hash = canonical_sha256(_run_request_payload(command))
             reservation = self._writer.reserve_idempotency(
                 scope=_RUN_SCOPE,
                 idempotency_key=command.idempotency_key,
@@ -658,6 +654,28 @@ class PersistedAgentRuntime(AgentRuntimePort):
             _raise_persistence(exc)
         self._ensure_initial_projection(run, command)
         return self._project_run(run)
+
+    async def execute_run(self, command: AgentRunExecuteCommand) -> AgentRunView:
+        """Execute one queued read-only plan and durably seal its outcome."""
+        lock = self._execution_locks.setdefault(command.run_id, asyncio.Lock())
+        async with lock:
+            durable = await execute_persisted_run(
+                command,
+                context=RunExecutionContext(
+                    reader=self._reader,
+                    writer=self._writer,
+                    manifest=self._manifest,
+                    clock=self._clock,
+                    presentation_reader=self._presentation_reader,
+                    presentation_projector=self._presentation_projector,
+                    episode_writer=self._episode_writer,
+                    tool_registry=self._tool_registry,
+                    model_factory=self._model_factory,
+                    approved_license_classes=self._approved_license_classes,
+                    advance_projection_status=self._advance_projection_status,
+                ),
+            )
+        return self._project_run(durable)
 
     def get_run(self, run_id: str) -> AgentRunView:
         """Read one run or fail closed with a typed missing identity."""

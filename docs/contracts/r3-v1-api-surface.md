@@ -5,7 +5,7 @@
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `a0defbe4eb29be1cbe603824be53afed0ed1f41c97211334659df064142834f6`
+> JSON canonical SHA-256: `d9796c4f34d9d93e714f047c1e142a573139234f8ed4964cb609469871f8885e`
 
 Task 4 classification 已由用户批准；批准 reference 为
 `user-message:2026-07-31:final-task4-classification-approved`。Task 9 candidate
@@ -32,9 +32,9 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
   "classification_counts": {
     "DEFER/PLANNED": 1,
     "EQUIVALENT/IMPLEMENTED": 6,
-    "IMPLEMENT/IMPLEMENTED": 33
+    "IMPLEMENT/IMPLEMENTED": 34
   },
-  "runtime_contract_count": 39,
+  "runtime_contract_count": 40,
   "defer_operation_ids": [
     "design_research_experiment_launch_alias"
   ],
@@ -253,6 +253,7 @@ cursor 还必须绑定 resource kind，不能跨三类 evidence page 复用。
 |---|---|---|---|---|---|
 | `GET /strategies` | IMPLEMENTED | limit/offset | `list[StrategyResponse]` | 422 pagination；current version | Strategy catalog；17 |
 | `GET /strategies/{id}` | IMPLEMENTED | strategy_id | `StrategyResponse` | 404；current version/spec | Strategy detail/Studio；4,17 |
+| `POST /strategies/{id}/versions/{v}/author-preview` | IMPLEMENTED | strategy_id+immutable version+validated preview request | `StrategyAuthorPreviewResponse` | 422 validation；read-only preview evidence | Research Agent Author preview；4,14,17 |
 | `GET /research/experiments/{id}/selection-evidence` | IMPLEMENTED（Task 9） | experiment_id resolves selected/published ledger | `ExperimentSelectionEvidenceResponse`（typed payload） | 404；artifact_id/content_hash/pinned | Experiment/Review evidence；10,17,23 |
 
 这些 runtime-only operation 不是遗漏的“设计完成”：它们以 `origins` 明确标记
@@ -261,13 +262,13 @@ cursor 还必须绑定 resource kind，不能跨三类 evidence page 复用。
 ## 4. Runtime reconciliation 与 closure 规则
 
 - Contract test 直接读取 `app.openapi()`，不启动 server、不访问 DB。
-- JSON `runtime_contracts` 保存当前 39 个 operation 的 exact observed projection：
+- JSON `runtime_contracts` 保存当前 40 个 operation 的 exact observed projection：
   `operationId`、method/path、request body schema（无 body 为 `null`）、全部
   response status/schema、全部 path/query/header parameter 的
   name/in/required/schema，以及 `x-ditto-maturity`。Task 9 的 candidate-selection
   与 holdout-evaluations 已观测到 required `Idempotency-Key` string header；其余
   operation 同样只记录当前 OpenAPI 真实值，不伪造未来状态。
-- runtime 的 39 个 R3 operation 必须全部被 exact entry 或
+- runtime 的 40 个 R3 operation 必须全部被 exact entry 或
   `equivalence.runtime_operations` 覆盖；多一个或少一个都会失败。
 - Closure mode 要求全部非 `DEFER` entry 为 `IMPLEMENTED`，且 primary runtime
   method/path、operationId、request/response/status/parameters/maturity 均精确匹配；

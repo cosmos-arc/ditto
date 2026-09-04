@@ -253,6 +253,9 @@ class IngestionDataWriter:
         WriteKind.MACRO: "_handler_macro",
         WriteKind.CALENDAR: "_handler_calendar",
         WriteKind.BASIC: "_handler_basic",
+        WriteKind.GLOBAL_INDEX_BARS: "_handler_global_index_bars",
+        WriteKind.INDUSTRY_CLASSIFICATION: "_handler_industry_classification",
+        WriteKind.INDUSTRY_MAPPING: "_handler_industry_mapping",
     }
 
     def _handler_traded_bars(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
@@ -332,24 +335,32 @@ class IngestionDataWriter:
             )
         return lambda: self._write_basic(ctx.df, ctx.trade_date, asset_class)
 
-    def _resolve_and_enrich_instrument_id(
-        self,
-        df: pl.DataFrame,
-        source_ticker_col: str,
-    ) -> pl.DataFrame:
-        """解析 instrument_id 并 enrich（统一入口）."""
-        if "instrument_id" in df.columns:
-            return df
-        source_tickers = df[source_ticker_col].unique().to_list()
-        instrument_id_mapping = (
-            self._metadata_service.instrument.resolve_instrument_ids_batch(
-                identifiers=source_tickers,
-                source=self._source_name,
-                asof=None,
-            )
+    def _handler_global_index_bars(
+        self, ctx: _WriteContext
+    ) -> Callable[[], WriteResult]:
+        return lambda: self._write_global_index_bars(
+            ctx.dataset,
+            ctx.df,
+            ctx.year,
+            ctx.on_duplicate,
         )
-        return _enrich_with_instrument_id(
-            df, instrument_id_mapping, source_ticker_col, self._source_name
+
+    def _handler_industry_classification(
+        self, ctx: _WriteContext
+    ) -> Callable[[], WriteResult]:
+        return lambda: self._write_industry_read_model(
+            ctx.dataset,
+            ctx.df,
+            "save_industry_classification",
+        )
+
+    def _handler_industry_mapping(
+        self, ctx: _WriteContext
+    ) -> Callable[[], WriteResult]:
+        return lambda: self._write_industry_read_model(
+            ctx.dataset,
+            ctx.df,
+            "save_industry_mapping",
         )
 
     def _write_traded_bars(
@@ -364,7 +375,14 @@ class IngestionDataWriter:
         ],
     ) -> WriteResult:
         """写入行情 K 线数据（stock/etf/index 共用）."""
-        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
         rows_written = self._market_write_service.save_bars(
             dataset=bars_dataset,
             df=enriched_df,
@@ -372,6 +390,35 @@ class IngestionDataWriter:
             on_duplicate=on_duplicate,
         )
         return _to_write_result(dataset, year, enriched_df, rows_written)
+
+    def _write_global_index_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Persist global bars without inventing A-share instrument identities."""
+        rows_written = self._market_write_service.save_global_index_bars(
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(dataset, year, df, rows_written)
+
+    def _write_industry_read_model(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        method_name: Literal[
+            "save_industry_classification",
+            "save_industry_mapping",
+        ],
+    ) -> WriteResult:
+        """Persist the current SQLite read model; immutable PIT evidence is separate."""
+        method = getattr(self._metadata_service.instrument, method_name)
+        rows_written = method(df, source=self._source_name)
+        return _to_write_result(dataset, 0, df, rows_written)
 
     def _write_instrument_code_bars(
         self,
@@ -397,7 +444,14 @@ class IngestionDataWriter:
         year: int,
         source_ticker_col: str,
     ) -> WriteResult:
-        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
         rows_written = self._market_write_service.save_stock_status(
             df=enriched_df,
             year=year,
@@ -417,7 +471,14 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
-        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
 
         rows_written = self._market_write_service.save_adj_factor(
             df=enriched_df,
@@ -440,7 +501,14 @@ class IngestionDataWriter:
         source_ticker_col: str,
     ) -> WriteResult:
         """Write ETF adjustment factors through the dedicated ETF storage port."""
-        enriched_df = self._resolve_and_enrich_instrument_id(df, source_ticker_col)
+        enriched_df = self._enrich_and_filter_fk_dataframe(
+            df,
+            dataset,
+            year,
+            source_ticker_col,
+        )
+        if enriched_df is None:
+            return _to_write_result(dataset, year, df, 0)
         rows_written = self._market_write_service.save_fund_adj(
             df=enriched_df,
             year=year,
@@ -623,6 +691,12 @@ class IngestionDataWriter:
     def _write_calendar(self, df: pl.DataFrame, trade_date: str) -> WriteResult:
         records = df.to_dicts()
         self._metadata_service.calendar.save_calendar(records=records)
+        calendar_dates = tuple(str(record["trade_date"]) for record in records)
+        if calendar_dates:
+            self._metadata_service.calendar.enrich_calendar(
+                min(calendar_dates),
+                max(calendar_dates),
+            )
         file_path = f"calendar_store:{trade_date}"
         checksum = ChecksumCompute.from_dataframe(df, dataset_sort_keys("calendar"))
         return WriteResult(

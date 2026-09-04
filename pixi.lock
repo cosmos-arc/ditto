@@ -12246,6 +12246,7 @@ packages:
   name: ditto-agent
   requires_dist:
   - ditto-application
+  - ditto-kernel
   - ditto-platform
   - openai-agents>=0.20.0,<0.21
   - orjson

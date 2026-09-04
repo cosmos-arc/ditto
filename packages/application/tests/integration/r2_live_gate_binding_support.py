@@ -19,6 +19,7 @@ _R2_CONTRACTS = {
     "stock_daily": ("tushare:daily", "local_tdx:day"),
     "etf_daily": ("tushare:fund_daily", "local_tdx:day"),
     "index_daily": ("tushare:index_daily", "local_tdx:day"),
+    "global_index_daily": ("tushare:index_global",),
     "stock_status": ("tushare:stock_st", "tushare:suspend_d", "tushare:bak_basic"),
     "adj_factor": ("tushare:adj_factor",),
     "fund_adj": ("tushare:fund_adj",),
@@ -35,6 +36,8 @@ _R2_CONTRACTS = {
     "commodity_daily": ("fred:commodity_series", "tushare:commodity_reference"),
     "corporate_actions": ("tushare:corporate_actions",),
     "index_weight": ("tushare:index_weight",),
+    "industry_classification": ("tushare:index_classify",),
+    "industry_mapping": ("tushare:index_member_all",),
 }
 
 
@@ -81,7 +84,7 @@ def ready_source(root: Path) -> R2LiveGateEvidenceSource:
         "preflight": {
             "status": "ready",
             "checked_at": checked_at,
-            "contract_count": 19,
+            "contract_count": 22,
             "products": products,
             "reason_codes": [],
             "performance": {

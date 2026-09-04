@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 import httpx
 from ditto_data.sources.fred.adapters.macro import MacroFredAdapter
 from ditto_data.sources.schemas.macro_schemas import MACRO_INDICATOR_SOURCE_SCHEMA
@@ -44,14 +46,10 @@ class TestMacroFredAdapter:
         expected_columns = set(MACRO_INDICATOR_SOURCE_SCHEMA.schema.keys())
         assert set(result.columns) == expected_columns
 
-    def test_fetch_indicators_sets_knowledge_date_from_observation_date(
+    def test_fetch_indicators_uses_provider_vintage_start_as_knowledge_date(
         self, respx_mock
     ) -> None:
-        """knowledge_date 从观测日期 (date 列) 获取.
-
-        Note: 完整的 PIT 语义需要向 FRED API 传递 realtime_start/realtime_end
-        参数，当前未实现，因此使用观测日期作为 knowledge_date。
-        """
+        """Current-vintage fetches cannot predate the provider vintage start."""
         # Arrange
         respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
             return_value=httpx.Response(
@@ -80,10 +78,10 @@ class TestMacroFredAdapter:
             end_date="2024-12-31",
         )
 
-        # Assert - knowledge_date comes from observation date
+        # The January observation was not public until February 2.
         import datetime
 
-        assert result["knowledge_date"][0] == datetime.date(2024, 1, 1)
+        assert result["knowledge_date"][0] == datetime.date(2024, 2, 2)
 
     def test_fetch_indicators_unknown_code_skipped(self, respx_mock) -> None:
         """未知指标代码被跳过."""
@@ -173,10 +171,10 @@ class TestMacroFredAdapter:
 class TestMacroFredAdapterRealtimePit:
     """F2-#2: ALFRED realtime PIT 语义（仅 need_pit 指标启用真正 PIT）。"""
 
-    def test_need_pit_indicator_passes_realtime_and_sets_knowledge_date(
+    def test_need_pit_indicator_passes_realtime_and_uses_vintage_start(
         self, respx_mock
     ) -> None:
-        """need_pit 传 realtime_end: 透传 + knowledge_date=realtime_end."""
+        """ALFRED provides the exact date on which the selected vintage appeared."""
         import datetime
 
         captured: dict[str, str] = {}
@@ -214,11 +212,12 @@ class TestMacroFredAdapterRealtimePit:
 
         # realtime_end 透传给 FRED API
         assert captured.get("realtime_end") == "2024-04-01"
-        # knowledge_date 用 realtime_end（真正 PIT）
-        assert result["knowledge_date"][0] == datetime.date(2024, 4, 1)
+        assert result["knowledge_date"][0] == datetime.date(2024, 2, 15)
 
-    def test_non_pit_indicator_ignores_realtime(self, respx_mock) -> None:
-        """need_pit=False 指标即使传 realtime_end 也不透传，knowledge_date=date."""
+    def test_non_revising_indicator_still_respects_publication_time(
+        self, respx_mock
+    ) -> None:
+        """Revision policy never permits visibility before first publication."""
         import datetime
 
         captured: dict[str, str] = {}
@@ -254,9 +253,8 @@ class TestMacroFredAdapterRealtimePit:
             realtime_end="2024-04-01",
         )
 
-        # 非 PIT 指标不透传 realtime
-        assert "realtime_end" not in captured
-        assert result["knowledge_date"][0] == datetime.date(2024, 1, 1)
+        assert captured.get("realtime_end") == "2024-04-01"
+        assert result["knowledge_date"][0] == datetime.date(2024, 2, 2)
 
     def test_need_pit_dedupes_revisions_takes_latest_as_of(self, respx_mock) -> None:
         """realtime 模式下同一 date 多版本（修订）取 realtime_start<=T 最新版本."""
@@ -293,14 +291,15 @@ class TestMacroFredAdapterRealtimePit:
             realtime_end="2024-04-01",
         )
 
-        # 去重为一行，取修订后最新值
+        # 去重为一行，取修订后最新值及其实际公开日
         assert result.height == 1
         assert result["value"][0] == 3.2
+        assert result["knowledge_date"][0] == datetime.date(2024, 3, 15)
 
-    def test_need_pit_without_realtime_falls_back_to_observation_date(
+    def test_need_pit_without_realtime_uses_current_vintage_start(
         self, respx_mock
     ) -> None:
-        """need_pit 无 realtime_end: 回退, knowledge_date=date."""
+        """Current-vintage fallback remains fail-closed for historical queries."""
         import datetime
 
         captured: dict[str, str] = {}
@@ -336,4 +335,4 @@ class TestMacroFredAdapterRealtimePit:
         )
 
         assert "realtime_end" not in captured
-        assert result["knowledge_date"][0] == datetime.date(2024, 1, 1)
+        assert result["knowledge_date"][0] == datetime.date(2024, 2, 15)

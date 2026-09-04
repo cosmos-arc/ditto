@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-01T15:33:29Z",
+  "gate": "Q2",
+  "gate_status": "passed",
+  "engineering_status": "PROVEN",
+  "decision": "Q2 passes against the bounded Q1 live snapshot set. MarketContext, Today/Markets live projections, regime-to-industry/risk explanations, deterministic historical as_of replay, and one real GLM-5.3 EvidenceBrief were exercised with exact evidence citations. Missing macro_surprise_score is reported as degraded input rather than fabricated, and approved-research egress contains only the minimized evidence payload.",
+  "evidence": [
+    "docs/evidence/personal-workstation/manifests/Q1.json",
+    "docs/evidence/personal-workstation/q2/market-context-live-20260901.json",
+    "docs/evidence/personal-workstation/q2/ui-live-20260901.json",
+    "docs/evidence/personal-workstation/q23-agent-live-20260901.json"
+  ],
+  "blockers": [],
+  "owners": [
+    "DATA_PROVIDER_OWNER",
+    "MARKET_CONTEXT_OWNER",
+    "AGENT_OWNER",
+    "PRODUCT_ACCEPTANCE_OWNER"
+  ],
+  "unblock_conditions": []
+}

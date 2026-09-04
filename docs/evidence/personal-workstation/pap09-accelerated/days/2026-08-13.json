@@ -1,0 +1,81 @@
+{
+  "accelerated_trading_day_ordinal": 6,
+  "acceptance_mode": "accelerated_real_provider_replay",
+  "execution": {
+    "balanced": true,
+    "execution_count": 1,
+    "execution_id": "paper-execution:97acfc196b0a83b2ea9c51e0d3396e7d",
+    "execution_request_hash": "paper-request:sha256:0516a0177981668053f2a4673c73cbd3c808568e7ab64ab356601d1f7fc98469",
+    "fill_count": 1,
+    "fill_id": "paper-fill:089ec974a928b35f6f25cb2b56de1181",
+    "fill_price": 9.043,
+    "ledger_event_id": "account-event:e32a8b33993e9916b3dfa835b79784d5",
+    "ledger_fill_count": 1,
+    "market_lineage_hash": "market-lineage:sha256:00f95b23382c6d17bceef1ca1fd1d0a0629d34b4d31978d2792c5670162253dd",
+    "market_snapshot_hash": "market-snapshot:sha256:3d5f339da4d443cdd363375d8bfc25e687aa2e575fc0ae9c8bf6588b62c7ac30",
+    "operator_id": "workspace-user",
+    "pre_trade_available_quantity": 500,
+    "pre_trade_position_quantity": 500,
+    "reconciliation_checksum": "paper-eod:sha256:e0f2acd530957deff0315d871e8edaf8a35120ebd553d7861520438477d0467a",
+    "reference_price": 9.042,
+    "session_id": "pap09-accelerated-session-2026-08-13",
+    "session_status": "paused",
+    "settlement_date": "2026-08-14",
+    "total_cost": 5.009043
+  },
+  "live_day_anchor": {
+    "approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "day_evidence_hash": "52bf2838ebf8fc7a66a72302c19593561f9d67859f5dc841001aff97b1e1358d"
+  },
+  "pit": {
+    "bar_observed_at": "2026-09-02T23:02:58.427289Z",
+    "decision_at": "2026-08-13T00:55:00Z",
+    "decision_precedes_execution": true,
+    "decision_uses_same_day_close": false,
+    "execution_at": "2026-09-02T23:02:58.427289Z",
+    "fill_uses_bar_after_observation": true,
+    "future_bar_used": false,
+    "historical_replay_explicit": true,
+    "publication_cutoff": "2026-09-02T23:02:58.427289Z"
+  },
+  "provider": {
+    "approved_bar_hash": "b43c272ecbf63b622e2a60d5050ab2c71060d17b7762169dcda7bacec4316da6",
+    "bar": {
+      "amount": 4877606.464,
+      "close": 9.042,
+      "high": 9.144,
+      "low": 9.016,
+      "open": 9.126,
+      "pre_close": 9.103,
+      "source_ticker": "518880.SH",
+      "trade_date": "2026-08-13",
+      "volume": 5373857.11
+    },
+    "calendar_confirmed_open": true,
+    "frozen_at": "2026-09-02T11:16:24.213840Z",
+    "market_dataset": "etf_daily",
+    "name": "tushare",
+    "source_snapshot_id": "snapshot:tushare:etf_daily:sha256:b43c272ecbf63b622e2a60d5050ab2c71060d17b7762169dcda7bacec4316da6"
+  },
+  "qualifies_as_release_acceptance": true,
+  "qualifies_as_wall_clock_soak": false,
+  "recorded_at": "2026-09-02T23:02:58.427289Z",
+  "request_hash": "4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b",
+  "safety": {
+    "broker_connections": 0,
+    "daily_execution_count": 1,
+    "paper_only": true,
+    "real_orders": 0
+  },
+  "schema": "ditto.pap09-accelerated-provider-replay-day.v1",
+  "signature": {
+    "algorithm": "hmac-sha256",
+    "approval_hash": "4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b",
+    "payload_hash": "ad058152bbaf993075a0ca8eadd0a22a2c266fd1c58edbac30dbc763ca91b990",
+    "previous_signature": "60e1fcb848af76b914bc1d82818c5e8f6c8c059bd865d51f38c0a7161170993e",
+    "value": "3174e1d0d59b983aa5f51a385b26e14a4afd46796cf6ac71ded538bd09099c50"
+  },
+  "status": "recorded",
+  "trade_date": "2026-08-13",
+  "work_package": "PAP-09"
+}

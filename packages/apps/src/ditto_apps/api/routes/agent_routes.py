@@ -8,8 +8,15 @@ from typing import Annotated, Never
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_agent.contracts.execution import AgentRunExecutionPlan
 from ditto_agent.contracts.runtime import ModelProfile, RetentionClass, RunStatus
+from ditto_agent.contracts.temporal import (
+    EgressClass,
+    TemporalContextInput,
+    TemporalToolContext,
+)
 from ditto_agent.presentation import AgentContextPresentation
+from ditto_agent.runtime.context_profiles import context_tool_allowlist
 from ditto_agent.runtime.service import (
     AgentApprovalDecisionCommand,
     AgentApprovalStatus,
@@ -18,6 +25,7 @@ from ditto_agent.runtime.service import (
     AgentResourceNotFound,
     AgentRunCancelCommand,
     AgentRunCreateCommand,
+    AgentRunExecuteCommand,
     AgentRuntimeError,
     AgentRuntimePort,
     AgentRuntimeUnavailable,
@@ -90,6 +98,7 @@ from ditto_apps.models.agent import (
     AgentDecisionOpinionResponse,
     AgentRunCancelRequest,
     AgentRunCreateRequest,
+    AgentRunExecuteRequest,
     AgentRunResponse,
     AgentSessionCreateRequest,
     AgentSessionResponse,
@@ -97,6 +106,7 @@ from ditto_apps.models.agent import (
 from ditto_apps.models.common import APIResponse, PaginationResponse
 
 router = APIRouter(prefix="/agent", tags=["agent"])
+
 LastEventIdHeader = Annotated[int | None, Header(alias="Last-Event-ID", ge=0)]
 
 
@@ -270,12 +280,30 @@ async def create_agent_run(
 ) -> APIResponse[AgentRunResponse]:
     """Create or exactly replay one governed read-only run."""
     try:
+        execution_plan = AgentRunExecutionPlan(
+            temporal_context=TemporalToolContext.from_host(
+                TemporalContextInput(
+                    decision_time=request.execution_scope.decision_time,
+                    knowledge_cutoff=request.execution_scope.knowledge_cutoff,
+                    publication_cutoff=request.execution_scope.publication_cutoff,
+                    source_snapshot_id=request.execution_scope.source_snapshot_id,
+                    execution_eligible_at="not_applicable",
+                    allowed_universe=request.execution_scope.allowed_universe,
+                    license_class="approved-research",
+                    egress_class=EgressClass.CLOUD_ALLOWED,
+                )
+            ),
+            allowed_tools=context_tool_allowlist(
+                request.context.context_type if request.context is not None else None
+            ),
+            max_output_tokens=request.execution_scope.max_output_tokens,
+        )
         run = await _run_blocking(
             runtime.create_run,
             AgentRunCreateCommand(
                 session_id=request.session_id,
                 objective=request.objective,
-                authority_hash=request.authority_hash,
+                authority_hash=execution_plan.authority_hash,
                 max_model_tokens=request.max_model_tokens,
                 max_model_spend_usd=request.max_model_spend_usd,
                 model_profile=ModelProfile(request.model_profile),
@@ -288,8 +316,15 @@ async def create_agent_run(
                     if request.context is not None
                     else None
                 ),
+                execution_plan=execution_plan,
             ),
         )
+    except ValueError as exc:
+        raise APIError(
+            "Agent execution scope is invalid",
+            status_code=422,
+            error_code="AGENT_EXECUTION_SCOPE_INVALID",
+        ) from exc
     except AgentRuntimeError as exc:
         _raise_runtime_error(exc)
     return APIResponse(data=_run_response(run))
@@ -395,6 +430,29 @@ async def cancel_agent_run(
                 run_id=run_id,
                 expected_revision=request.expected_revision,
             ),
+        )
+    except AgentRuntimeError as exc:
+        _raise_runtime_error(exc)
+    return APIResponse(data=_run_response(run))
+
+
+@router.post(
+    "/runs/{run_id}/execute",
+    response_model=APIResponse[AgentRunResponse],
+)
+@inject
+async def execute_agent_run(
+    run_id: str,
+    request: AgentRunExecuteRequest,
+    runtime: Annotated[AgentRuntimePort, FromComponent()],
+) -> APIResponse[AgentRunResponse]:
+    """Execute one queued read-only run under its persisted PIT authority."""
+    try:
+        run = await runtime.execute_run(
+            AgentRunExecuteCommand(
+                run_id=run_id,
+                expected_revision=request.expected_revision,
+            )
         )
     except AgentRuntimeError as exc:
         _raise_runtime_error(exc)

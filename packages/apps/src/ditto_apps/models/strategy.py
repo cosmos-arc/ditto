@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from ditto_platform.foundation.json_types import JsonValue
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -182,6 +182,71 @@ class StrategySpecValidationResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class StrategyAuthorExpressionRequest(BaseModel):
+    """One detached DSL expression included in an Author workbench preview."""
+
+    derived_id: NonBlankStr
+    version: int = Field(ge=1)
+    expression: NonBlankStr
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class StrategyAuthorPreviewRequest(BaseModel):
+    """Detached candidate sent through every safe Author preview stage."""
+
+    spec_json: dict[str, JsonValue]
+    expressions: list[StrategyAuthorExpressionRequest] = Field(
+        default_factory=list,
+        max_length=64,
+    )
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class StrategyAuthorOperationResponse(BaseModel):
+    """One content-addressed, non-publishable Author preview result."""
+
+    kind: Literal["draft", "compile", "validate", "diff"]
+    subject_id: str
+    subject_version: str
+    valid: bool
+    changed: bool
+    publishable: Literal[False] = False
+    payload_hash: str
+    payload: dict[str, JsonValue]
+    lineage: list[str]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class StrategyAuthorTestResponse(BaseModel):
+    """One deterministic host assertion over the four preview stages."""
+
+    name: str
+    passed: bool
+    detail: str
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class StrategyAuthorPreviewResponse(BaseModel):
+    """Aggregate Strategy Studio workbench response with no mutation authority."""
+
+    strategy_id: str
+    base_version: int
+    valid: bool
+    publishable: Literal[False] = False
+    canonical_hash: str | None
+    draft: StrategyAuthorOperationResponse
+    compile: list[StrategyAuthorOperationResponse]
+    validation: StrategyAuthorOperationResponse
+    diff: StrategyAuthorOperationResponse
+    tests: list[StrategyAuthorTestResponse]
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
 class SpecChangeResponse(BaseModel):
     """One field-level change between two canonical spec payloads."""
 
@@ -214,6 +279,11 @@ __all__ = [
     "SpecChangeResponse",
     "StrategyActivePointerResponse",
     "StrategyActiveResponse",
+    "StrategyAuthorExpressionRequest",
+    "StrategyAuthorOperationResponse",
+    "StrategyAuthorPreviewRequest",
+    "StrategyAuthorPreviewResponse",
+    "StrategyAuthorTestResponse",
     "StrategyGovernanceEventResponse",
     "StrategyResponse",
     "StrategySpecValidateRequest",

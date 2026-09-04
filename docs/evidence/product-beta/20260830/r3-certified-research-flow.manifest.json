@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "command": "pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance --fixture --output artifacts/acceptance/r3-report.json",
+      "generated_at": "2026-08-30T08:05:58Z",
+      "mode": "deterministic_fixture",
+      "relative_path": "docs/evidence/product-beta/20260830/r3-certified-research-flow.json",
+      "sha256": "28a1bd55c7900f89a9afd43ba6063f06ad51d6e838d7b069a0f76f0497e93267",
+      "source_commit": "79fc1cd90a28d9d9a5cb4ecad7ab46c547734572"
+    }
+  ],
+  "schema": "ditto.r3-evidence-manifest",
+  "version": 1
+}

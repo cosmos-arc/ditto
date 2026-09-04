@@ -9,7 +9,7 @@ from ditto_agent.presentation import (
     AgentGuardrailPresentation,
     AgentRunPresentation,
 )
-from ditto_agent.runtime.service import AgentRuntimePort
+from ditto_agent.runtime.service import AgentRuntimePort, AgentRuntimeState
 from ditto_agent.storage.sqlite.episode_store import (
     AgentEpisodeReader,
     AgentEpisodeWriter,
@@ -80,9 +80,32 @@ def test_production_container_enables_persisted_r5_surfaces(
         campaign_runtime = container.get(CampaignRuntimePort)
         decision_query = container.get(DecisionOpinionQueryPort)
 
-        assert runtime.get_capabilities().enabled is True
+        capability = runtime.get_capabilities()
+        assert capability.enabled is True
+        assert capability.runtime_state is AgentRuntimeState.AVAILABLE
+        assert capability.provider == "fake"
         assert isinstance(campaign_runtime, PersistedCampaignRuntime)
         assert isinstance(decision_query, DecisionOpinionQueryService)
+    finally:
+        container.close()
+
+
+def test_persisted_runtime_reports_model_execution_degraded_when_unconfigured(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DITTO_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DITTO_AGENT_ENABLED", "true")
+    monkeypatch.setenv("DITTO_AGENT_MODEL_CALLS_ENABLED", "false")
+
+    container = make_app_container()
+    try:
+        capability = container.get(AgentRuntimePort).get_capabilities()
+
+        assert capability.enabled is True
+        assert capability.runtime_state is AgentRuntimeState.DEGRADED
+        assert capability.provider is None
+        assert capability.degradation_reason == "agent_model_execution_unconfigured"
     finally:
         container.close()
 

@@ -12,6 +12,7 @@ from types import MappingProxyType
 from typing import Literal, Protocol, cast
 
 import orjson
+from ditto_kernel.identity import InstrumentId
 
 from ditto_application.exceptions import AppQueryError
 
@@ -23,9 +24,18 @@ __all__ = [
     "EvidenceTemporalContext",
     "EvidenceValue",
     "FactorEvidenceQuery",
+    "IndustryRotationEvidenceQueryPort",
+    "IndustryRotationEvidenceReadModel",
+    "InstrumentTechnicalEvidenceQuery",
+    "InstrumentTechnicalEvidenceQueryPort",
+    "InstrumentTechnicalEvidenceReadModel",
+    "MarketContextEvidenceQueryPort",
+    "MarketContextEvidenceReadModel",
     "ResearchEvidenceKind",
     "ResearchEvidenceQueryPort",
     "ResearchEvidenceReadModel",
+    "SelectionRunEvidenceQueryPort",
+    "SelectionRunEvidenceReadModel",
 ]
 
 type EvidenceScalar = str | bool | int | float | None
@@ -243,6 +253,70 @@ class DecisionEvidenceReadModel:
     lineage: tuple[str, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class MarketContextEvidenceReadModel:
+    """One certified MarketContext payload bound to an exact snapshot set."""
+
+    status: Literal["ready", "degraded", "blocked"]
+    source_snapshot_set_id: str
+    source_snapshot_ids: tuple[str, ...]
+    temporal_context: EvidenceTemporalContext
+    payload: EvidencePayloadReadModel
+    artifact_refs: tuple[EvidenceArtifactReference, ...]
+    lineage: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class IndustryRotationEvidenceReadModel:
+    """One exact persisted industry ranking bound to host PIT authority."""
+
+    snapshot_id: str
+    status: Literal["ready", "degraded", "blocked"]
+    temporal_context: EvidenceTemporalContext
+    payload: EvidencePayloadReadModel
+    artifact_refs: tuple[EvidenceArtifactReference, ...]
+    lineage: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SelectionRunEvidenceReadModel:
+    """One exact persisted selection result including all why-out evidence."""
+
+    run_id: str
+    status: Literal["ready", "degraded", "blocked"]
+    temporal_context: EvidenceTemporalContext
+    payload: EvidencePayloadReadModel
+    artifact_refs: tuple[EvidenceArtifactReference, ...]
+    lineage: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class InstrumentTechnicalEvidenceQuery:
+    """One instrument and optional workflow links selected by the host UI."""
+
+    instrument_id: InstrumentId
+    instrument_name: str
+    instrument_code: str
+    selection_run_id: str | None = None
+    research_case_id: str | None = None
+    portfolio_snapshot_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class InstrumentTechnicalEvidenceReadModel:
+    """One deterministic technical snapshot exposed as immutable evidence."""
+
+    snapshot_id: str
+    instrument_id: InstrumentId
+    instrument_name: str
+    status: Literal["ready", "degraded", "blocked"]
+    source_snapshot_ids: tuple[str, ...]
+    temporal_context: EvidenceTemporalContext
+    payload: EvidencePayloadReadModel
+    artifact_refs: tuple[EvidenceArtifactReference, ...]
+    lineage: tuple[str, ...]
+
+
 class ResearchEvidenceQueryPort(Protocol):
     """Pure read contract implemented by the application research facade."""
 
@@ -304,6 +378,57 @@ class DecisionEvidenceQueryPort(Protocol):
         context: EvidenceTemporalContext,
     ) -> DecisionEvidenceReadModel:
         """Read one exact DailyDecision V3 projection."""
+        ...
+
+
+class MarketContextEvidenceQueryPort(Protocol):
+    """Pure read contract for one host-bound certified market context."""
+
+    def get_evidence(
+        self,
+        *,
+        context: EvidenceTemporalContext,
+    ) -> MarketContextEvidenceReadModel:
+        """Read the exact MarketContext snapshot set visible to the host."""
+        ...
+
+
+class IndustryRotationEvidenceQueryPort(Protocol):
+    """Pure read contract for one exact persisted rotation snapshot."""
+
+    def get_evidence(
+        self,
+        *,
+        snapshot_id: str,
+        context: EvidenceTemporalContext,
+    ) -> IndustryRotationEvidenceReadModel:
+        """Read exact ranked industry evidence without latest fallback."""
+        ...
+
+
+class SelectionRunEvidenceQueryPort(Protocol):
+    """Pure read contract for one exact persisted SelectionRun."""
+
+    def get_evidence(
+        self,
+        *,
+        run_id: str,
+        context: EvidenceTemporalContext,
+    ) -> SelectionRunEvidenceReadModel:
+        """Read exact candidate and exclusion evidence without reconstruction."""
+        ...
+
+
+class InstrumentTechnicalEvidenceQueryPort(Protocol):
+    """Pure read contract for one exact deterministic technical snapshot."""
+
+    def get_evidence(
+        self,
+        *,
+        query: InstrumentTechnicalEvidenceQuery,
+        context: EvidenceTemporalContext,
+    ) -> InstrumentTechnicalEvidenceReadModel:
+        """Compute evidence only from the host-bound certified snapshot set."""
         ...
 
 

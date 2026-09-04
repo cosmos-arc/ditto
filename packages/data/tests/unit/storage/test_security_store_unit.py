@@ -504,6 +504,29 @@ class TestInstrumentReader:
 
         assert result.is_empty()
 
+    def test_find_securities_infers_nullable_columns_from_all_rows(self) -> None:
+        """Late non-null metadata values must not exceed Polars' inference sample."""
+        for offset in range(101):
+            instrument_id = 100001000 + offset
+            self.client.execute(
+                """INSERT INTO instrument (
+                    instrument_id, ticker, name, exchange, asset_class, list_date
+                )
+                VALUES (?, ?, ?, 'SSE', 'stock', ?)""",
+                [
+                    instrument_id,
+                    f"{offset:06d}",
+                    f"Security {offset}",
+                    "2002-06-14" if offset == 100 else None,
+                ],
+            )
+        self.client.commit()
+
+        result = self.reader.find_securities(SecurityQuery(asset_class="stock"))
+
+        assert result.height == 101
+        assert result.filter(pl.col("list_date").is_not_null()).height == 1
+
     def test_find_securities_with_pit_and_min_list_days(self) -> None:
         """Security query applies source PIT and minimum listing age together."""
         for instrument_id, ticker, source_ticker, list_date in [

@@ -273,3 +273,35 @@ def test_bootstrap_forwards_repeatable_instrument_ids(
     assert result.exit_code == 0
     options = execute.call_args.args[2]
     assert options.instrument_ids == (3, 9)
+
+
+@pytest.mark.unit
+def test_build_certification_forwards_explicit_bounded_window(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    execute = MagicMock(return_value={"status": "completed"})
+    monkeypatch.setattr(
+        "ditto_apps.cli.commands.data_products.execute_data_product_operation",
+        execute,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "data-products",
+            "build-certification",
+            "index_daily",
+            "--target-from",
+            "2024-02-01",
+            "--target-to",
+            "2024-03-29",
+            "--confirm",
+            "data-product:build-certification:index_daily:confirm",
+        ],
+    )
+
+    assert result.exit_code == 0
+    options = execute.call_args.args[2]
+    assert options.target_from == "2024-02-01"
+    assert options.target_to == "2024-03-29"

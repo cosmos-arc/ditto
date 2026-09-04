@@ -28,10 +28,10 @@ GROUNDED_CASES = (
 )
 
 
-def test_grounded_dataset_has_exactly_30_versioned_cases_and_all_families() -> None:
+def test_grounded_dataset_has_41_versioned_cases_and_all_families() -> None:
     cases = load_eval_cases(GROUNDED_CASES)
 
-    assert len(cases) == 30
+    assert len(cases) == 41
     assert all(case.schema_version == 2 for case in cases)
     assert all(case.verify_hashes() for case in cases)
     assert {case.grounded_family for case in cases} == set(GroundedCaseFamily)
@@ -96,7 +96,7 @@ def test_grounded_runner_cli_uses_bundled_seed_and_cases_without_overrides(
     assert exit_code == 0
     assert payload["passed"] is True
     assert payload["suite"] == "grounded"
-    assert len(payload["results"]) == 30
+    assert len(payload["results"]) == 41
     assert payload["minimum_case_count"] == 30
 
 
@@ -113,7 +113,9 @@ def test_grounded_gate_fails_closed_when_a_required_metric_is_missing() -> None:
     )
 
     assert not report.passed
-    assert report.case_count < report.minimum_case_count
+    summaries = {summary.metric: summary for summary in report.metric_summaries}
+    assert summaries[GroundedMetric.PIT_SAFETY].total_cases == 0
+    assert not summaries[GroundedMetric.PIT_SAFETY].passed
 
 
 @pytest.mark.parametrize(
@@ -173,14 +175,14 @@ class _GroundedMutationProvider:
         )
 
 
-def test_grounded_tool_choice_threshold_allows_one_of_25_but_not_two_failures() -> None:
+def test_grounded_tool_choice_threshold_allows_one_of_37_but_not_two_failures() -> None:
     cases = load_eval_cases(GROUNDED_CASES)
     applicable = tuple(
         case.case_id
         for case in cases
         if GroundedMetric.TOOL_CHOICE in case.required_metrics
     )
-    assert len(applicable) == 26
+    assert len(applicable) == 37
 
     passing = LocalEvalRunner(
         provider=_GroundedMutationProvider(wrong_tool_cases=frozenset(applicable[:1]))
@@ -195,22 +197,22 @@ def test_grounded_tool_choice_threshold_allows_one_of_25_but_not_two_failures() 
     failing_summary = {summary.metric: summary for summary in failing.metric_summaries}[
         GroundedMetric.TOOL_CHOICE
     ]
-    assert passing_summary.observed_basis_points == 9_615
+    assert passing_summary.observed_basis_points == 9_729
     assert passing_summary.passed
     assert passing.passed
-    assert failing_summary.observed_basis_points == 9_230
+    assert failing_summary.observed_basis_points == 9_459
     assert not failing_summary.passed
     assert not failing.passed
 
 
-def test_grounded_factual_threshold_allows_one_of_11_but_not_two_failures() -> None:
+def test_grounded_factual_threshold_allows_one_of_19_but_not_two_failures() -> None:
     cases = load_eval_cases(GROUNDED_CASES)
     applicable = tuple(
         case.case_id
         for case in cases
         if GroundedMetric.FACTUAL_CORRECTNESS in case.required_metrics
     )
-    assert len(applicable) == 11
+    assert len(applicable) == 19
 
     passing = LocalEvalRunner(
         provider=_GroundedMutationProvider(
@@ -229,9 +231,9 @@ def test_grounded_factual_threshold_allows_one_of_11_but_not_two_failures() -> N
     failing_summary = {summary.metric: summary for summary in failing.metric_summaries}[
         GroundedMetric.FACTUAL_CORRECTNESS
     ]
-    assert passing_summary.observed_basis_points == 9_090
+    assert passing_summary.observed_basis_points == 9_473
     assert passing_summary.passed
     assert passing.passed
-    assert failing_summary.observed_basis_points == 8_181
+    assert failing_summary.observed_basis_points == 8_947
     assert not failing_summary.passed
     assert not failing.passed

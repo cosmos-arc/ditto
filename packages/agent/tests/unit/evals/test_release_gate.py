@@ -1,4 +1,4 @@
-"""R5.5 aggregate 120-case release-eval contracts."""
+"""Aggregate release-eval contracts for the current frozen dataset."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from ditto_agent.evals.runner import EvalRunnerError, LocalEvalRunner, main
 EXPECTED_COUNTS = {
     "author": 20,
     "campaign": 30,
-    "grounded": 30,
+    "grounded": 41,
     "permission": 20,
     "sandbox": 10,
     "shadow": 10,
@@ -33,7 +33,7 @@ EVIDENCE = Path(__file__).parents[5] / "docs" / "evidence" / "r5" / "release"
 def _assert_release_manifests(payload: dict[str, Any]) -> None:
     manifest = {item["suite"]: item["cases"] for item in payload["dataset_manifest"]}
     assert {suite: len(cases) for suite, cases in manifest.items()} == EXPECTED_COUNTS
-    assert sum(len(cases) for cases in manifest.values()) == 120
+    assert sum(len(cases) for cases in manifest.values()) == 131
     assert all(
         set(case) == {"case_id", "schema_version", "input_hash", "case_hash"}
         for cases in manifest.values()
@@ -51,7 +51,7 @@ def _assert_release_manifests(payload: dict[str, Any]) -> None:
         assert {case["schema_version"] for case in manifest[suite]} == {version}
 
     observation_manifest = payload["observation_manifest"]
-    assert len(observation_manifest) == 120
+    assert len(observation_manifest) == 131
     assert len(payload["observation_manifest_hash"]) == 64
     assert (
         canonical_sha256(observation_manifest) == payload["observation_manifest_hash"]
@@ -72,7 +72,7 @@ def _assert_release_performance(payload: dict[str, Any]) -> None:
 
     cohorts = {item["cohort"]: item for item in payload["performance"]}
     assert cohorts["read"]["suites"] == ["grounded"]
-    assert cohorts["read"]["case_count"] == 30
+    assert cohorts["read"]["case_count"] == 41
     assert cohorts["read"]["latency_limit_ms"] == 30_000
     assert cohorts["read"]["spend_limit_usd"] == "0.25"
     assert cohorts["read"]["passed"] is True
@@ -92,7 +92,7 @@ def _assert_release_performance(payload: dict[str, Any]) -> None:
         assert float(cohort["spend_p95_usd"]) <= float(cohort["max_spend_usd"])
 
 
-def test_all_suite_fake_report_freezes_120_cases_graders_and_slos(
+def test_all_suite_fake_report_freezes_131_cases_graders_and_slos(
     tmp_path: Path,
 ) -> None:
     first = tmp_path / "release-first.json"
@@ -134,13 +134,13 @@ def test_all_suite_fake_report_freezes_120_cases_graders_and_slos(
     assert payload["run_identity"]["cost_basis"] == "fixture"
     assert payload["run_identity"]["model_snapshot"] == "fixture-observation-v1"
     assert len(payload["run_identity"]["identity_hash"]) == 64
-    assert payload["case_count"] == 120
+    assert payload["case_count"] == 131
     assert payload["suite_case_counts"] == EXPECTED_COUNTS
     assert len(payload["dataset_manifest_hash"]) == 64
     assert len(payload["grader_manifest_hash"]) == 64
     assert len(payload["report_hash"]) == 64
     assert payload["passed"] is True
-    assert payload["total_model_spend_usd"] == "0.02895"
+    assert payload["total_model_spend_usd"] == "0.0398"
 
     _assert_release_manifests(payload)
     _assert_release_performance(payload)

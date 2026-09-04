@@ -6,6 +6,7 @@ from dataclasses import FrozenInstanceError
 from typing import ClassVar
 
 import pytest
+from ditto_data.catalog.dataset_spec import DatasetSpec
 from ditto_data.catalog.metadata import (
     DatasetMetadata,
     default_dataset_metadata,
@@ -233,6 +234,9 @@ class TestDefaultMetadataMaturityAssignments:
             "index_daily",
             "adj_factor",
             "fund_adj",
+            "global_index_daily",
+            "industry_classification",
+            "industry_mapping",
         }
     )
 
@@ -298,6 +302,8 @@ class TestDefaultMetadataDomainAssignments:
             "etf_basic",
             "index_basic",
             "calendar",
+            "industry_classification",
+            "industry_mapping",
         ):
             assert registry[dataset_id].domain == "metadata", (
                 f"{dataset_id} should be in metadata domain"
@@ -313,6 +319,7 @@ class TestDefaultMetadataDomainAssignments:
             "adj_factor",
             "fund_adj",
             "index_weight",
+            "global_index_daily",
         }
         for dataset_id in market_ids:
             assert registry[dataset_id].domain == "market", (
@@ -349,6 +356,37 @@ class TestDefaultMetadataDomainAssignments:
             assert registry[dataset_id].domain == "macro", (
                 f"{dataset_id} should be in macro domain"
             )
+
+    def test_workstation_context_products_freeze_pit_contracts(self) -> None:
+        registry = default_dataset_metadata()
+
+        global_index = registry["global_index_daily"]
+        assert global_index.domain == "market"
+        assert global_index.schedule == "source_defined"
+        assert global_index.asset_class == "index"
+        assert global_index.dataset_spec.primary_key == (
+            "source_ticker",
+            "trade_date",
+            "knowledge_date",
+        )
+        assert global_index.dataset_spec.provider_datasets == ("tushare:index_global",)
+        assert global_index.dataset_spec.timezone == "source_defined"
+        assert global_index.dataset_spec.currency == "mixed"
+        assert global_index.dataset_spec.knowledge_date_field == "knowledge_date"
+        assert global_index.dataset_spec.revision_policy == "append_only"
+
+        classification = registry["industry_classification"]
+        mapping = registry["industry_mapping"]
+        assert classification.domain == mapping.domain == "metadata"
+        assert classification.schedule == mapping.schedule == "source_defined"
+        assert classification.dataset_spec.provider_datasets == (
+            "tushare:index_classify",
+        )
+        assert mapping.dataset_spec.provider_datasets == ("tushare:index_member_all",)
+        assert classification.dataset_spec.knowledge_date_field == "knowledge_date"
+        assert mapping.dataset_spec.knowledge_date_field == "knowledge_date"
+        assert classification.dataset_spec.revision_policy == "effective_dated"
+        assert mapping.dataset_spec.revision_policy == "effective_dated"
 
 
 class TestDefaultMetadataSourceCapabilities:
@@ -462,6 +500,7 @@ class TestR2DataProductContracts:
             "stock_daily",
             "etf_daily",
             "index_daily",
+            "global_index_daily",
             "adj_factor",
             "fund_adj",
             "stock_status",
@@ -474,6 +513,8 @@ class TestR2DataProductContracts:
             "valuation_metrics",
             "macro_indicators",
             "commodity_daily",
+            "industry_classification",
+            "industry_mapping",
         }
     )
     DEFERRED_SCOPE: ClassVar[frozenset[str]] = frozenset(
@@ -486,12 +527,12 @@ class TestR2DataProductContracts:
         hard_scope = {
             dataset_id
             for dataset_id, metadata in registry.items()
-            if metadata.product_contract.r2_scope == "hard"
+            if metadata.dataset_spec.r2_scope == "hard"
         }
         deferred_scope = {
             dataset_id
             for dataset_id, metadata in registry.items()
-            if metadata.product_contract.r2_scope == "deferred"
+            if metadata.dataset_spec.r2_scope == "deferred"
         }
 
         assert hard_scope == self.HARD_SCOPE
@@ -501,59 +542,69 @@ class TestR2DataProductContracts:
         registry = default_dataset_metadata()
 
         for dataset_id, metadata in registry.items():
-            contract = metadata.product_contract
-            assert contract.dataset_id == dataset_id
-            assert contract.owner == "data-platform"
-            assert contract.primary_key
-            assert contract.partition_keys
-            assert contract.provider_datasets
-            assert contract.bootstrap_chunk in {
+            spec = metadata.dataset_spec
+            assert isinstance(spec, DatasetSpec)
+            assert spec.dataset_id == dataset_id
+            assert spec.owner == "data-platform"
+            assert spec.primary_key
+            assert spec.partition_keys
+            assert spec.provider_datasets
+            assert spec.schema_version.endswith((".v1", ".v2"))
+            assert spec.frequency in {
+                "static",
+                "trading_daily",
+                "monthly",
+                "quarterly",
+                "event",
+                "source_defined",
+            }
+            assert spec.timezone
+            assert spec.currency in {"CNY", "mixed", None}
+            assert spec.bootstrap_chunk in {
                 "month",
                 "quarter",
                 "year",
                 "source_defined",
             }
-            assert contract.coverage_start_rule
-            assert contract.fallback_mode in {"automatic", "manual", "none"}
-            assert contract.revision_policy in {
+            assert spec.coverage_start_rule
+            assert spec.fallback_mode in {"automatic", "manual", "none"}
+            assert spec.revision_policy in {
                 "append_only",
                 "effective_dated",
                 "not_applicable",
             }
-            assert contract.runbook.startswith("docs/operations/")
-            assert contract.license_policy == "provider_ledger_required"
+            assert spec.runbook.startswith("docs/operations/")
+            assert spec.license_policy == "provider_ledger_required"
 
     def test_hard_scope_freezes_coverage_targets(self) -> None:
         registry = default_dataset_metadata()
 
         for dataset_id in self.HARD_SCOPE:
-            contract = registry[dataset_id].product_contract
+            contract = registry[dataset_id].dataset_spec
             assert contract.raw_target_from is not None
             assert contract.certified_target_from is not None
 
-        assert registry["stock_daily"].product_contract.raw_target_from == "2015-01-01"
+        assert registry["stock_daily"].dataset_spec.raw_target_from == "2015-01-01"
         assert (
-            registry["stock_status"].product_contract.certified_target_from
-            == "2016-01-01"
+            registry["stock_status"].dataset_spec.certified_target_from == "2016-01-01"
         )
         assert (
-            registry["macro_indicators"].product_contract.knowledge_date_field
+            registry["macro_indicators"].dataset_spec.knowledge_date_field
             == "knowledge_date"
         )
         assert (
-            registry["index_weight"].product_contract.revision_policy
-            == "effective_dated"
+            registry["index_weight"].dataset_spec.revision_policy == "effective_dated"
         )
 
-    def test_product_contract_dataset_id_must_match_metadata(self) -> None:
-        stock_contract = default_dataset_metadata()["stock_daily"].product_contract
+    def test_dataset_spec_identity_must_match_metadata(self) -> None:
+        stock_spec = default_dataset_metadata()["stock_daily"].dataset_spec
 
-        with pytest.raises(ValueError, match=r"product_contract\.dataset_id"):
+        with pytest.raises(ValueError, match=r"dataset_spec\.dataset_id"):
             DatasetMetadata(
                 dataset_id="other",
                 domain="market",
                 maturity="experimental",
                 schedule="trading_days",
                 schema_version="market.other.v1",
-                product_contract=stock_contract,
+                dataset_spec=stock_spec,
             )

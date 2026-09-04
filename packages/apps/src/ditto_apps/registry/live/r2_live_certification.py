@@ -1,4 +1,4 @@
-"""Certify and promote all 19 R2 products from one isolated live data root."""
+"""Certify and promote all 22 R2 products from one isolated live data root."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class _SQLiteConsumerContract:
 
 
 _DEFAULT_TARGET_FROM = date(2015, 1, 1)
-_EXPECTED_PRODUCT_COUNT = 19
+_EXPECTED_PRODUCT_COUNT = 22
 _SHA256_HEX_LENGTH = 64
 _SQLITE_CONSUMERS = {
     "calendar": _SQLiteConsumerContract("trading_calendar", "trading_calendar"),
@@ -110,6 +110,7 @@ _PARQUET_CONSUMERS = {
     "stock_daily": "market/stock/bars",
     "etf_daily": "market/etf/bars",
     "index_daily": "market/index/bars",
+    "global_index_daily": "market/index/global_bars",
     "stock_status": "market/stock/status",
     "adj_factor": "market/stock/adj",
     "fund_adj": "market/etf/adj",
@@ -200,7 +201,12 @@ def select_current_snapshot_ids(
     selected: list[str] = []
     for entry in entries:
         created_at = entry.schema.created_at
-        if created_at is None or entry.schema.schema_version is None:
+        row_count = entry.schema.row_count
+        if (
+            created_at is None
+            or row_count is None
+            or entry.schema.schema_version is None
+        ):
             raise ValueError(
                 f"current catalog schema evidence is incomplete: {dataset_id}"
             )
@@ -211,7 +217,7 @@ def select_current_snapshot_ids(
             and snapshot.canonical_asset == entry.asset
             and snapshot.source == entry.source
             and snapshot.schema_version == entry.schema.schema_version
-            and snapshot.row_count == entry.schema.row_count
+            and snapshot.row_count >= row_count
             and snapshot.created_at == created_at
             and _snapshot_payload_is_verifiable(snapshot)
         )
@@ -328,7 +334,7 @@ def _write_addressed(root: Path, stem: str, payload: object) -> tuple[Path, str]
 
 
 def _literal_target_from(dataset_id: str) -> date:
-    contract = default_dataset_metadata()[dataset_id].product_contract
+    contract = default_dataset_metadata()[dataset_id].dataset_spec
     if contract is None or contract.r2_scope != "hard":
         raise ValueError(f"dataset is outside hard R2 scope: {dataset_id}")
     raw = contract.raw_target_from
@@ -345,7 +351,7 @@ def resolve_coverage_target_from(
     expected_dates: tuple[date, ...],
 ) -> date:
     """Resolve the frozen coverage start for literal and symbolic contracts."""
-    contract = default_dataset_metadata()[dataset_id].product_contract
+    contract = default_dataset_metadata()[dataset_id].dataset_spec
     if contract is None or contract.raw_target_from is None:
         raise ValueError(f"dataset has no R2 raw target: {dataset_id}")
     try:
@@ -573,13 +579,13 @@ def certify_live_products(
         sorted(
             metadata.dataset_id
             for metadata in registry.values()
-            if metadata.product_contract is not None
-            and metadata.product_contract.r2_scope == "hard"
+            if metadata.dataset_spec is not None
+            and metadata.dataset_spec.r2_scope == "hard"
         )
     )
     if len(dataset_ids) != _EXPECTED_PRODUCT_COUNT:
         raise ValueError(
-            f"R2 hard-scope registry must contain 19 products: {len(dataset_ids)}"
+            f"R2 hard-scope registry must contain 22 products: {len(dataset_ids)}"
         )
 
     with create_query_context() as query_context:

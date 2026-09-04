@@ -96,7 +96,7 @@ def _all_satisfied_evidence() -> HardGateEvidence:
 
 
 def test_gate_policy_version_is_pinned() -> None:
-    assert GATE_POLICY_VERSION == "r3.v1"
+    assert GATE_POLICY_VERSION == "r3.v2"
 
 
 def test_gate_outcome_has_four_explicit_values() -> None:
@@ -120,7 +120,6 @@ def test_hard_gate_rule_ids_are_stable_and_complete() -> None:
         "trial_declaration",
         "holdout_claim",
         "artifact_completeness",
-        "r2_live_gate",
     )
     assert len(set(HARD_GATE_RULE_IDS)) == len(HARD_GATE_RULE_IDS)
 
@@ -128,9 +127,35 @@ def test_hard_gate_rule_ids_are_stable_and_complete() -> None:
 def test_evaluate_hard_gates_returns_one_per_rule_in_order() -> None:
     evaluations = evaluate_hard_gates(_all_satisfied_evidence())
 
-    assert tuple(item.rule_id for item in evaluations) == HARD_GATE_RULE_IDS
-    assert all(item.layer == GateLayer.HARD for item in evaluations)
+    hard_evaluations = tuple(
+        item for item in evaluations if item.layer is GateLayer.HARD
+    )
+    assert tuple(item.rule_id for item in hard_evaluations) == HARD_GATE_RULE_IDS
+    assert evaluations[-1].rule_id == "r2_live_gate"
+    assert evaluations[-1].layer is GateLayer.EVIDENCE
     assert all(item.outcome == GateOutcome.PASS for item in evaluations)
+
+
+def test_global_r2_release_evidence_does_not_block_exact_snapshot_review() -> None:
+    """The global 22-product release gate is not a per-strategy hard gate."""
+    evaluations = evaluate_hard_gates(
+        replace(
+            _all_satisfied_evidence(),
+            r2_live_gate=GateFact(
+                None,
+                {
+                    "status": "configuration_blocked",
+                    "reason_code": "separate_global_release_scope",
+                },
+            ),
+        )
+    )
+
+    r2_gate = next(item for item in evaluations if item.rule_id == "r2_live_gate")
+
+    assert r2_gate.layer is GateLayer.EVIDENCE
+    assert r2_gate.outcome is GateOutcome.NOT_EVALUATED
+    assert not review_blocked_by_hard_gates(evaluations)
 
 
 @pytest.mark.parametrize("rule_id", HARD_GATE_RULE_IDS)
@@ -292,5 +317,4 @@ _RULE_TO_FIELD = {
     "trial_declaration": "trial_declaration",
     "holdout_claim": "holdout_claim",
     "artifact_completeness": "artifact_completeness",
-    "r2_live_gate": "r2_live_gate",
 }

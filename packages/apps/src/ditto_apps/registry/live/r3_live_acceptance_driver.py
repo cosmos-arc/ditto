@@ -80,6 +80,7 @@ from ditto_apps.registry.live.r3_live_evidence_store import (
 )
 from ditto_apps.registry.live.r3_live_planning_builder import (
     LivePlanningArtifact,
+    LivePlanningOptions,
     LivePlanningServices,
     build_live_planning_artifact,
     write_live_planning_artifact,
@@ -115,10 +116,7 @@ class SelectAndClaim(Protocol):
     def __call__(self, experiment_id: str) -> tuple[str, str, str, bool]: ...
 
 
-# Live golden lanes run real fold backtests (~1891s proven on the frozen Aug-3
-# snapshot). A data-blind tick cap cut slow lanes off mid-backtest, so termination
-# is wall-clock-bounded with a generous tick safety ceiling. The clock is a
-# module-level alias so unit tests can advance it without touching wall time.
+# Live golden lanes use wall-clock termination; tests replace this clock alias.
 _LIVE_LANE_WALL_CLOCK_SECONDS = 3600.0
 _LIVE_LANE_MAX_TICKS = 6000
 _monotonic: Callable[[], float] = time.monotonic
@@ -247,6 +245,7 @@ def _build_planning(
     purpose: str,
     data_root: Path,
     evidence_root: Path,
+    planning_options: LivePlanningOptions | None = None,
 ) -> tuple[LivePlanningArtifact, Path]:
     _ensure_seed_v1(lane)
     container = make_app_container()
@@ -255,6 +254,7 @@ def _build_planning(
             lane=lane,
             purpose=purpose,
             data_root=data_root,
+            options=planning_options,
             services=LivePlanningServices(
                 artifact_service=container.get(ResearchArtifactService),
                 research_catalog=container.get(ResearchCatalogService),
@@ -333,8 +333,7 @@ def _tick_until(
             break
         detail = _detail(experiment_id)
         if target == "candidate_selection" and detail.stage == target:
-            # Re-enter the stage once so an interrupted transition can
-            # idempotently finish publishing candidate/selection evidence.
+            # Re-enter once to idempotently finish interrupted evidence publication.
             scheduler_tick(occurred_at=datetime.now(UTC))
             replayed = _detail(experiment_id)
             if replayed.stage != target:
@@ -519,6 +518,7 @@ def run_live_golden_lane(
     purpose: str,
     scheduler_tick: SchedulerTick,
     select_and_claim: SelectAndClaim,
+    planning_options: LivePlanningOptions | None = None,
 ) -> LiveGoldenLaneResult:
     """Run one real-data planning, worker, selection, holdout, and packet closure."""
     root = evidence_root.expanduser().resolve(strict=False)
@@ -528,6 +528,7 @@ def run_live_golden_lane(
         purpose=purpose,
         data_root=data_root.expanduser().resolve(strict=True),
         evidence_root=root,
+        planning_options=planning_options,
     )
     _launch(artifact)
     detail = _detail(artifact.experiment_id)

@@ -1,0 +1,119 @@
+{
+  "exact_acceptance_request": {
+    "approval_hash": "f6661fefac9294bf1dee388b1fa19b050633d1f233768526c9e374f596c88811",
+    "approval_phrase": "批准组合闭环 f6661fefac9294bf1dee388b1fa19b050633d1f233768526c9e374f596c88811",
+    "arguments": {
+      "data_root": "/private/tmp/ditto-q5-research-closure-20260902.v2",
+      "decision": {
+        "account_id": "manual-q4-owner-acceptance",
+        "intended_trade_date": "2026-09-03",
+        "paper_account_id": "paper-pap09-owner-acceptance",
+        "paper_session_id": "pap09-session-2026-09-02",
+        "signal_date": "2026-09-02"
+      },
+      "evidence_root": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5",
+      "expected_strategy_output": {
+        "cash_target": 0.0,
+        "factor_values": {
+          "2001724": {
+            "signal_value": -0.023689405571397315
+          },
+          "2001755": {
+            "signal_value": -0.013663535439795038
+          }
+        },
+        "positions": {
+          "2001724": 0.3,
+          "2001755": 0.3
+        }
+      },
+      "lineage": {
+        "account_evidence_hash": "3fb52c80f011ace8d939b267df9ab8dd8de483e57c0a540088547716ac0b14d6",
+        "account_evidence_path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/ui08-account-acceptance-20260902.json",
+        "manual_ledger_hash": "account-ledger:sha256:1f05753ea4469cf4324a92c69aff4004d5134322039a6a716369f7a6077414eb",
+        "paper_ledger_hash": "account-ledger:sha256:bb0033022cb91cd5cfae8e37f353038d30dd52ad2ae8e9903efccc31406a06c3",
+        "paper_snapshot_alias": "snapshot:tushare:etf_daily:sha256:8b4f3c39a13d3a7427d26322f768ad0e5b78175ccae2307a46d15baf817c9614",
+        "q3_evidence_hash": "724089103018e6f16ce780524e04c7b61783a3b067d47310ae210380f1a3d42e",
+        "q3_evidence_path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/q3-discovery-live-20260902.json",
+        "selection_as_of": "2026-09-01T15:57:47.155511Z",
+        "selection_run_id": "selection-run:sha256:8beae94442ac536626d67165f23cee2990ce1e18bc241c9e4bdc1ead8a44bc1f"
+      },
+      "observed_at": "2026-09-02T11:57:37.302267Z",
+      "operation": "close-live-model-paper-manual-portfolio-v1",
+      "prohibitions": {
+        "agent_write_tool": true,
+        "broker_connection": true,
+        "latest_snapshot_fallback": true,
+        "paper_or_manual_journal_write": true,
+        "real_order": true,
+        "strategy_governance_write": true
+      },
+      "provider": {
+        "dataset_id": "etf_daily",
+        "license_record_id": "license:tushare:etf_daily:sha256:c0f1403a9924d2cc71ad440c08ab743369721661a61d54ecb36637661bbcf6fc",
+        "paper_snapshot_alias": "snapshot:tushare:etf_daily:sha256:8b4f3c39a13d3a7427d26322f768ad0e5b78175ccae2307a46d15baf817c9614",
+        "payload_checksum": "a4a60d63f432ef343ef304f794297656",
+        "payload_uri": "provider_payloads/tushare/etf_daily/a4a60d63f432ef343ef304f794297656.parquet",
+        "provider_rows": [
+          {
+            "amount": 7544980.786,
+            "close": 8.902,
+            "high": 8.922,
+            "instrument_id": 2001724,
+            "knowledge_date": "2026-09-03",
+            "low": 8.833,
+            "open": 8.9,
+            "pct_change": -2.37,
+            "pre_close": 9.118,
+            "source_ticker": "518880.SH",
+            "trade_date": "2026-09-02",
+            "volume": 8497014.87
+          },
+          {
+            "amount": 2941487.681,
+            "close": 4.62,
+            "high": 4.654,
+            "instrument_id": 2001755,
+            "knowledge_date": "2026-09-03",
+            "low": 4.601,
+            "open": 4.65,
+            "pct_change": -1.37,
+            "pre_close": 4.684,
+            "source_ticker": "510300.SH",
+            "trade_date": "2026-09-02",
+            "volume": 6364597.77
+          }
+        ],
+        "provider_rows_hash": "6e4917bcca8b9e5b83c314644f2f3ca3c2dc0bb530466fce2e78f44e2b642c05",
+        "raw_provider_row_count": 2110,
+        "schema_version": "etf.daily.v1",
+        "snapshot_id": "snapshot:tushare:etf_daily:sha256:906509d79b31cc23176ca18e8da0548f1da2c8264f146ac420b90c1f48e487b6",
+        "source": "tushare"
+      },
+      "strategy": {
+        "spec_hash": "68cc64dc74f6a251a08ffdbee2de9b671641a5c908e47b2202481cff4e1c8b00",
+        "strategy_id": "seed_etf_industry_rotation",
+        "strategy_version": 1,
+        "universe": "csi_etf_broad"
+      },
+      "trading_database": "/Users/chevy/Desktop/code/ditto/data/personal-workstation-acceptance/state/q4-account-acceptance.sqlite3",
+      "writes": {
+        "acceptance_evidence": true,
+        "derived_manual_execution_baseline": true,
+        "provider_payload_and_snapshot": true,
+        "recommendation_run_and_signal_package": true
+      }
+    },
+    "requires_exact_approval": true
+  },
+  "generated_at": "2026-09-02T11:57:37.302267Z",
+  "safety": {
+    "agent_write_tools": 0,
+    "broker_connections": 0,
+    "paper_or_manual_journal_mutations": 0,
+    "real_orders": 0,
+    "strategy_governance_mutations": 0
+  },
+  "schema": "ditto.q5-live-portfolio-acceptance-proposal.v1",
+  "status": "pending_operator_approval"
+}

@@ -13,6 +13,19 @@ class StatusMerger:
 
     """
 
+    @staticmethod
+    def _collapse_text_rows(df: pl.DataFrame, column: str) -> pl.DataFrame:
+        """Collapse one provider's repeated ticker rows deterministically."""
+        return df.group_by("ts_code", maintain_order=True).agg(
+            pl.col(column)
+            .cast(pl.String)
+            .drop_nulls()
+            .unique()
+            .sort()
+            .str.join(";")
+            .alias(column)
+        )
+
     def merge_status_data(
         self,
         list_status_df: pl.DataFrame,
@@ -41,13 +54,18 @@ class StatusMerger:
 
         """
         # Start with all stock codes from list_status (as reference)
-        result = list_status_df.rename({"ts_code": "source_ticker"})
+        result = list_status_df.unique(
+            subset=["ts_code"],
+            keep="last",
+            maintain_order=True,
+        ).rename({"ts_code": "source_ticker"})
 
         # Add suspension info
         if not suspend_df.is_empty():
-            suspend_expanded = suspend_df.with_columns(
-                pl.lit(True).alias("is_suspended")
-            )
+            suspend_expanded = self._collapse_text_rows(
+                suspend_df,
+                "suspend_timing",
+            ).with_columns(pl.lit(True).alias("is_suspended"))
             result = result.join(
                 suspend_expanded.rename({"ts_code": "source_ticker"}),
                 on="source_ticker",
@@ -59,7 +77,7 @@ class StatusMerger:
 
         # Add ST status
         if not st_df.is_empty():
-            st_expanded = st_df.with_columns(
+            st_expanded = self._collapse_text_rows(st_df, "name").with_columns(
                 pl.lit(True).alias("is_st"),
                 pl.col("name").alias("st_type"),
             )

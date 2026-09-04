@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
 
+from ditto_data.catalog.dataset_spec import DatasetSpec
 from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
 from ditto_data.catalog.metadata import default_dataset_metadata
-from ditto_data.catalog.product_contract import DatasetProductContract
 
 from ditto_application.exceptions import AppProcessError
 
@@ -32,7 +32,7 @@ type R2PreflightStatus = Literal[
     "performance_blocked",
 ]
 
-_EXPECTED_CONTRACT_COUNT = 19
+_EXPECTED_CONTRACT_COUNT = 22
 _REPRESENTATIVE_DATASETS = frozenset(
     {"stock_daily", "index_daily", "adj_factor", "fund_adj"}
 )
@@ -198,7 +198,7 @@ class R2IngestionPreflight:
     """Evaluate frozen scope, provider access, license, and performance evidence."""
 
     def run_fixture(self, *, checked_at: datetime) -> R2PreflightReport:
-        """Run the deterministic 19-product acceptance fixture."""
+        """Run the deterministic 22-product acceptance fixture."""
         contracts = _hard_contracts()
         access = tuple(
             ProviderAccessEvidence(
@@ -307,12 +307,12 @@ class R2IngestionPreflight:
         )
 
 
-def _hard_contracts() -> tuple[DatasetProductContract, ...]:
+def _hard_contracts() -> tuple[DatasetSpec, ...]:
     return tuple(
-        metadata.product_contract
+        metadata.dataset_spec
         for metadata in default_dataset_metadata().values()
-        if metadata.product_contract is not None
-        and metadata.product_contract.r2_scope == "hard"
+        if metadata.dataset_spec is not None
+        and metadata.dataset_spec.r2_scope == "hard"
     )
 
 
@@ -340,7 +340,7 @@ def _fixture_license(
 
 
 def _fixture_certification(
-    contract: DatasetProductContract,
+    contract: DatasetSpec,
     checked_at: datetime,
 ) -> ProductCertificationEvidence:
     required_from = _required_certified_from(contract) or checked_at.date()
@@ -380,7 +380,7 @@ def _certification_by_dataset(
     return result
 
 
-def _required_certified_from(contract: DatasetProductContract) -> date | None:
+def _required_certified_from(contract: DatasetSpec) -> date | None:
     for value in (contract.certified_target_from, contract.raw_target_from):
         if value is None:
             continue
@@ -392,7 +392,7 @@ def _required_certified_from(contract: DatasetProductContract) -> date | None:
 
 
 def _evaluate_product(
-    contract: DatasetProductContract,
+    contract: DatasetSpec,
     *,
     access_by_dataset: dict[str, ProviderAccessEvidence],
     license_records: tuple[DatasetLicenseRecord, ...],

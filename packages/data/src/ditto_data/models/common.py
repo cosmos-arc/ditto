@@ -66,6 +66,7 @@ class Dataset(StrEnum):
     STOCK_DAILY = "stock_daily"
     ETF_DAILY = "etf_daily"
     INDEX_DAILY = "index_daily"
+    GLOBAL_INDEX_DAILY = "global_index_daily"
     STOCK_STATUS = "stock_status"
 
     # 参考类数据集（需要 trade_date）
@@ -96,6 +97,10 @@ class Dataset(StrEnum):
     # Index 域（参考类数据）
     INDEX_WEIGHT = "index_weight"
 
+    # Workstation context reference products
+    INDUSTRY_CLASSIFICATION = "industry_classification"
+    INDUSTRY_MAPPING = "industry_mapping"
+
     def _legacy_asset_class(self) -> AssetClass | None:
         """Return legacy Dataset-owned asset-class mapping without warnings."""
         # Stock 数据集
@@ -116,7 +121,11 @@ class Dataset(StrEnum):
         if self in (Dataset.ETF_DAILY, Dataset.FUND_ADJ):
             return AssetClass.ETF
         # Index 数据集
-        if self in (Dataset.INDEX_DAILY, Dataset.INDEX_WEIGHT):
+        if self in (
+            Dataset.INDEX_DAILY,
+            Dataset.GLOBAL_INDEX_DAILY,
+            Dataset.INDEX_WEIGHT,
+        ):
             return AssetClass.INDEX
         return None
 

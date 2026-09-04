@@ -1,0 +1,59 @@
+{
+  "schema": "ditto.q1-provider-license-review.v1",
+  "reviewed_at": "2026-09-01T10:00:00+08:00",
+  "reviewed_by": "workspace-owner-authorized-implementation",
+  "workstation_scope": "single-owner local non-commercial research workstation",
+  "providers": [
+    {
+      "provider": "tushare",
+      "terms_version": "official-user-and-data-service-agreements-reviewed-2026-09-01",
+      "official_sources": [
+        "https://tushare.pro/document/1?doc_id=409",
+        "https://tushare.pro/document/1?doc_id=405"
+      ],
+      "permissions": {
+        "local_cache": "allowed",
+        "derivative_compute": "allowed",
+        "display": "restricted",
+        "redistribution": "prohibited"
+      },
+      "restrictions": [
+        "Use is limited to the account owner, on this local workstation, for non-commercial personal research.",
+        "The account, credential, raw payload, and provider data must not be shared with another person or service.",
+        "Display is limited to the owner-facing local application.",
+        "No raw or row-level Tushare content may be sent to GLM; only independently derived, minimal scalar or hash evidence may leave the workstation after approved-research redaction."
+      ],
+      "review_basis": "The official service agreement grants a personal, non-transferable, non-commercial, revocable and time-limited right for personal viewing and forbids account sharing. The local cache and computation permissions above are scoped only to operating that personal local viewer; they do not grant redistribution or third-party access."
+    },
+    {
+      "provider": "fred",
+      "terms_version": "official-api-and-services-terms-reviewed-2026-09-01",
+      "official_sources": [
+        "https://fred.stlouisfed.org/docs/api/terms_of_use.html",
+        "https://fred.stlouisfed.org/legal/"
+      ],
+      "permissions": {
+        "local_cache": "allowed",
+        "derivative_compute": "allowed",
+        "display": "restricted",
+        "redistribution": "prohibited"
+      },
+      "restrictions": [
+        "Use is limited to the account owner's local personal research unless each underlying series owner grants broader rights.",
+        "Third-party series restrictions remain controlling; copyrighted series require owner permission beyond personal use.",
+        "Owner-facing display must retain source attribution and the required non-endorsement notice where FRED data is shown.",
+        "No raw or row-level FRED content may be sent to GLM; only independently derived, minimal scalar or hash evidence may leave the workstation after approved-research redaction."
+      ],
+      "required_notice": "This product uses the FRED API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.",
+      "review_basis": "The official API terms permit API-backed applications but preserve all underlying series-owner restrictions and require permission for third-party series beyond personal use. The conservative workstation policy therefore prohibits redistribution by default."
+    }
+  ],
+  "model_egress_policy": {
+    "license_class": "approved-research",
+    "raw_provider_payloads": "prohibited",
+    "row_level_provider_data": "prohibited",
+    "minimal_independently_derived_scalars_and_hashes": "allowed-after-redaction-and-owner-approval"
+  },
+  "decision": "PASS_FOR_SCOPED_LOCAL_PERSONAL_USE",
+  "legal_advice": false
+}

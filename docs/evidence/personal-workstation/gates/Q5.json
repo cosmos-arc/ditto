@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-02T23:24:53Z",
+  "gate": "Q5",
+  "gate_status": "passed",
+  "engineering_status": "PROVEN",
+  "decision": "Q1-Q4 are proven. The same real SelectionRun and PIT lineage produced an exactly approved Strategy Draft, a completed 136-eligible-month Backtest with all 10 hard review gates passing, and an independently approved governed submit-review call. The exactly approved Q5 closure materialized a real-provider Model portfolio and compared it with the approved Paper and Manual accounts at one as-of date and one Tushare snapshot. A governed GLM-5.3 PortfolioDiagnostic called the read-only comparison tool exactly once, passed its guardrail, and cited exact numeric paths. UI-08 completed all ten steps with zero browser console errors. No strategy was published or activated, no account or target was mutated by the diagnostic, and no real order or broker connection occurred.",
+  "evidence": [
+    "docs/evidence/personal-workstation/validation/backend.json",
+    "docs/evidence/personal-workstation/validation/frontend.json",
+    "docs/evidence/personal-workstation/ops/ops-acceptance.json",
+    "docs/evidence/personal-workstation/ops/recovery.json",
+    "docs/evidence/personal-workstation/q5/agent-author-proposal-20260902.json",
+    "docs/evidence/personal-workstation/q5/agent-author-save-canonicalization-incident-20260902.json",
+    "docs/evidence/personal-workstation/q5/agent-author-save-research-closure-20260902.json",
+    "docs/evidence/personal-workstation/q5/agent-author-submit-review-proposal-20260902.json",
+    "docs/evidence/personal-workstation/q5/agent-author-submit-review-receipt-20260902.json",
+    "docs/evidence/personal-workstation/q5/live-portfolio-proposal-20260902.json",
+    "docs/evidence/personal-workstation/q5/live-portfolio-acceptance-20260902.json",
+    "docs/evidence/personal-workstation/q5/live-portfolio-diagnostic-20260902.json",
+    "docs/evidence/personal-workstation/pending-approval-live-preflight-20260902.json",
+    "docs/evidence/personal-workstation/q5/r3-live-agent-author-corrected-v2/lanes/etf/results/0afd78900a94a88d7eb4951763aac4e10a991195f89d55fd9b444de671bff166.json",
+    "docs/evidence/personal-workstation/q5/r3-live-agent-author-corrected-v2/planning/etf/agent-author-etf-context/7a5446e2dd558aa60c451a96f041bd645cfa1ef2ca6c806919aaf4597e2935c5.json",
+    "docs/evidence/personal-workstation/q5/ui08-readonly-preflight-20260902.json",
+    "docs/evidence/personal-workstation/q5/ui08-selection-memo-20260902.json",
+    "docs/evidence/personal-workstation/q5/ui08-account-acceptance-20260902.json",
+    "docs/evidence/personal-workstation/q5/ui08-final-20260902.json"
+  ],
+  "blockers": [],
+  "owners": [
+    "RESEARCH_OWNER",
+    "PRODUCT_ACCEPTANCE_OWNER"
+  ],
+  "unblock_conditions": []
+}

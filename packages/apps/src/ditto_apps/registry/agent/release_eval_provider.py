@@ -75,7 +75,28 @@ _TOOL_DESCRIPTIONS: Mapping[str, str] = {
     "daily_decision_v3_evidence": (
         "Read exact DailyDecision V3 or decision-lineage evidence."
     ),
+    "market_context_evidence": (
+        "Read the host-bound exact-PIT market regime, drivers, impacts, and evidence."
+    ),
+    "industry_rotation_evidence": (
+        "Read one exact persisted industry ranking and its factor contributions."
+    ),
+    "instrument_technical_evidence": (
+        "Read exact deterministic indicators and recorded technical levels."
+    ),
+    "selection_run_evidence": (
+        "Read one exact SelectionRun including immutable ranks and exclusions."
+    ),
     "portfolio_evidence": "Read exact portfolio evidence.",
+    "portfolio_comparison_evidence": (
+        "Read the exact host-computed Model, Paper, and Manual portfolio comparison."
+    ),
+    "portfolio_scenario_preview": (
+        "Preview a detached portfolio scenario without changing any account state."
+    ),
+    "account_event_evidence": (
+        "Read an exact host-redacted Manual Account event stream without private text."
+    ),
     "research_backtest_evidence": "Read exact backtest evidence.",
     "research_experiment_evidence": "Read exact experiment evidence.",
     "research_factor_evidence": "Read exact factor evidence.",
@@ -99,7 +120,14 @@ _GOVERNED_OPERATION_BY_TOOL: Mapping[str, str] = {
     "author_validate_strategy": "validate_strategy_spec",
     "campaign_propose_candidate": "evaluate_campaign_candidate",
     "daily_decision_v3_evidence": "read_daily_decision_v3",
+    "market_context_evidence": "read_market_context",
+    "industry_rotation_evidence": "read_industry_rotation",
+    "instrument_technical_evidence": "read_instrument_technical_analysis",
+    "selection_run_evidence": "read_selection_run",
     "portfolio_evidence": "read_portfolio_snapshot",
+    "portfolio_comparison_evidence": "read_portfolio_comparison",
+    "portfolio_scenario_preview": "preview_detached_portfolio_scenario",
+    "account_event_evidence": "read_redacted_manual_account_events",
     "research_backtest_evidence": "read_backtest_result",
     "research_experiment_evidence": "read_experiment_result",
     "research_factor_evidence": "read_factor_evaluation",

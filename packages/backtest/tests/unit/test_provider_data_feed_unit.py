@@ -7,6 +7,7 @@ from datetime import date
 from typing import Any
 
 import polars as pl
+import pytest
 from ditto_backtest.data_feed import ProviderBackedDataFeed, SnapshotProviders
 from ditto_data.provider import BarQuery
 from ditto_kernel.identity import InstrumentId
@@ -318,6 +319,48 @@ class TestProviderBackedDataFeedSourceSnapshots:
 
         assert feed.source_snapshot_ids() == {}
         assert feed.get_slice("2026-03-01").source_snapshot_ids == {}
+
+    def test_required_source_snapshot_lineage_fails_closed(self) -> None:
+        """Research/context-bound runs cannot silently erase bar provenance."""
+        bars = _make_bars_df(instrument_id=1, dates=["2026-03-01"])
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(bars_df=bars),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+            id_map={"000001.SZ": InstrumentId(1)},
+            snapshot_providers=SnapshotProviders(require_source_snapshot_lineage=True),
+        )
+
+        with pytest.raises(ValueError, match="source snapshot lineage is incomplete"):
+            feed.source_snapshot_ids()
+
+    def test_required_source_snapshot_lineage_accepts_every_instrument(self) -> None:
+        """One exact upstream snapshot per requested instrument closes the boundary."""
+        bars = pl.concat(
+            (
+                _make_bars_df(instrument_id=1, dates=["2026-03-01"]),
+                _make_bars_df(instrument_id=2, dates=["2026-03-01"]),
+            )
+        ).with_columns(
+            pl.lit("snapshot:tushare:bars:exact").alias("source_snapshot_id")
+        )
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(bars_df=bars),
+            tickers=("000001.SZ", "600000.SH"),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+            id_map={
+                "000001.SZ": InstrumentId(1),
+                "600000.SH": InstrumentId(2),
+            },
+            snapshot_providers=SnapshotProviders(require_source_snapshot_lineage=True),
+        )
+
+        assert feed.source_snapshot_ids() == {
+            InstrumentId(1): "snapshot:tushare:bars:exact",
+            InstrumentId(2): "snapshot:tushare:bars:exact",
+        }
 
     def test_multiple_snapshot_ids_are_aggregated_stably(self) -> None:
         """同一标的跨多源快照时使用稳定 snapshot-set 聚合 ID."""

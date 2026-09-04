@@ -21,7 +21,7 @@ class TestMacroTushareAdapterFetchIndicators:
         mock_client.query.return_value = pl.DataFrame(
             {
                 "month": ["202401"],
-                "cpi_yoy": [0.7],
+                "nt_yoy": [0.7],
             }
         )
 
@@ -82,6 +82,50 @@ class TestMacroTushareAdapterFetchIndicators:
         # fields should include the required field
         assert "gdp_yoy" in call_kwargs["fields"]
 
+    def test_pmi_uses_uppercase_provider_date_and_value_fields(self) -> None:
+        """Normalize the actual cn_pmi provider schema."""
+        from datetime import date
+
+        from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame(
+            {"MONTH": ["202401"], "PMI010000": [49.2]}
+        )
+
+        result = MacroTushareAdapter(_client=mock_client).fetch_indicators(
+            codes=["CN_PMI_MFG"],
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            observed_on=date(2026, 9, 1),
+        )
+
+        assert result.height == 1
+        assert result["date"][0] == date(2024, 1, 1)
+        assert result["value"][0] == 49.2
+        assert "MONTH" in mock_client.query.call_args.kwargs["fields"]
+        assert "PMI010000" in mock_client.query.call_args.kwargs["fields"]
+
+    def test_provider_full_history_response_is_bounded_locally(self) -> None:
+        """China macro APIs ignore generic start/end parameters."""
+        from datetime import date
+
+        from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
+
+        mock_client = MagicMock()
+        mock_client.query.return_value = pl.DataFrame(
+            {"month": ["202312", "202401", "202402"], "nt_yoy": [0.1, 0.2, 0.3]}
+        )
+
+        result = MacroTushareAdapter(_client=mock_client).fetch_indicators(
+            codes=["CN_CPI_YOY"],
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            observed_on=date(2026, 9, 1),
+        )
+
+        assert result.get_column("date").to_list() == [date(2024, 1, 1)]
+
     def test_fetch_indicators_unknown_code_skipped(self) -> None:
         """Unknown indicator codes are skipped."""
         from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
@@ -109,7 +153,7 @@ class TestMacroTushareAdapterFetchIndicators:
         mock_client.query.return_value = pl.DataFrame(
             {
                 "month": [],
-                "cpi_yoy": [],
+                "nt_yoy": [],
             }
         )
 
@@ -123,8 +167,10 @@ class TestMacroTushareAdapterFetchIndicators:
         assert result.height == 0
         assert set(result.columns) == set(MACRO_INDICATOR_SOURCE_SCHEMA.schema.keys())
 
-    def test_fetch_indicators_sets_knowledge_date_with_release_lag(self) -> None:
-        """knowledge_date is date plus release_lag_days."""
+    def test_historical_macro_bootstrap_is_visible_only_from_retrieval_date(
+        self,
+    ) -> None:
+        """A provider lag estimate must never masquerade as publication truth."""
         from datetime import date
 
         from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
@@ -133,7 +179,7 @@ class TestMacroTushareAdapterFetchIndicators:
         mock_client.query.return_value = pl.DataFrame(
             {
                 "month": ["202401"],
-                "cpi_yoy": [0.7],
+                "nt_yoy": [0.7],
             }
         )
 
@@ -142,16 +188,15 @@ class TestMacroTushareAdapterFetchIndicators:
             codes=["CN_CPI_YOY"],
             start_date="2024-01-01",
             end_date="2024-01-31",
+            observed_on=date(2026, 9, 1),
         )
 
-        # CN_CPI_YOY has release_lag_days=10
-        # 2024-01-01 + 10 days = 2024-01-11
         assert result.height == 1
         assert result["date"][0] == date(2024, 1, 1)
-        assert result["knowledge_date"][0] == date(2024, 1, 11)
+        assert result["knowledge_date"][0] == date(2026, 9, 1)
 
-    def test_fetch_indicators_daily_data_no_release_lag(self) -> None:
-        """Daily data (e.g., Shibor) has no release lag."""
+    def test_historical_daily_macro_also_uses_retrieval_date(self) -> None:
+        """Historical SHIBOR fetches cannot claim same-day provider visibility."""
         from datetime import date
 
         from ditto_data.sources.tushare.adapters.macro import MacroTushareAdapter
@@ -169,13 +214,12 @@ class TestMacroTushareAdapterFetchIndicators:
             codes=["CN_CREDIT_TS"],
             start_date="2024-01-15",
             end_date="2024-01-15",
+            observed_on=date(2026, 9, 1),
         )
 
-        # CN_CREDIT_TS (Shibor) has release_lag_days=0
-        # knowledge_date = date + 0 = date
         assert result.height == 1
         assert result["date"][0] == date(2024, 1, 15)
-        assert result["knowledge_date"][0] == date(2024, 1, 15)
+        assert result["knowledge_date"][0] == date(2026, 9, 1)
 
     def test_fetch_multiple_indicators_from_same_api(self) -> None:
         """M0, M1, M2 from same cn_m API use single call."""
@@ -214,7 +258,7 @@ class TestMacroTushareAdapterFetchIndicators:
             call_count += 1
             api_name = kwargs.get("api_name")
             if api_name == "cn_cpi":
-                return pl.DataFrame({"month": ["202401"], "cpi_yoy": [0.7]})
+                return pl.DataFrame({"month": ["202401"], "nt_yoy": [0.7]})
             elif api_name == "cn_ppi":
                 return pl.DataFrame({"month": ["202401"], "ppi_yoy": [-2.5]})
             return pl.DataFrame()
@@ -241,7 +285,7 @@ class TestMacroTushareAdapterFetchIndicators:
         mock_client.query.return_value = pl.DataFrame(
             {
                 "month": ["202401"],
-                "cpi_yoy": [0.7],
+                "nt_yoy": [0.7],
             }
         )
 
@@ -269,7 +313,7 @@ class TestMacroTushareAdapterFetchIndicators:
         mock_client.query.return_value = pl.DataFrame(
             {
                 "month": ["202401"],
-                "cpi_yoy": [0.7],
+                "nt_yoy": [0.7],
             }
         )
 

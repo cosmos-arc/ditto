@@ -7,6 +7,7 @@ from typing import Protocol, cast
 
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
+from ditto_data.catalog.provider_payload import ProviderPayloadWriter
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
@@ -87,6 +88,7 @@ class CoordinatorRuntimeContext:
     catalog_writer: DataCatalogWriter | None = None
     source_fallback_policy_reader: CatalogSourceFallbackPolicyReader | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
+    provider_payload_writer: ProviderPayloadWriter | None = None
     license_record_id: str | None = None
 
 
@@ -250,6 +252,7 @@ def _build_coordinator(
             catalog_reader=runtime.catalog_reader,
             catalog_writer=runtime.catalog_writer,
             evidence_committer=runtime.evidence_committer,
+            provider_payload_writer=runtime.provider_payload_writer,
             license_record_id=runtime.license_record_id,
         ),
     )

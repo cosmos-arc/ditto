@@ -1,0 +1,699 @@
+{
+  "after_state_sha256": "7207345bd7a12c0ae97f88732c59b0bb641de771ec5c269cb4204ae5c866116d",
+  "before_state_sha256": "7207345bd7a12c0ae97f88732c59b0bb641de771ec5c269cb4204ae5c866116d",
+  "data_root": "/private/tmp/ditto-q1-certified-20260901.v7",
+  "generated_at": "2026-09-01T11:55:17.171590+00:00",
+  "partitions": [
+    {
+      "dataset": "calendar",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "stock_basic",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "etf_basic",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "index_basic",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "stock_daily",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "etf_daily",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "index_daily",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "global_index_daily",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "industry_classification",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "industry_mapping",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "stock_status",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "adj_factor",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "fund_adj",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "macro_indicators",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "corporate_actions",
+      "trade_date": "2024-03-28"
+    }
+  ],
+  "passed": true,
+  "replay_results": [
+    {
+      "dataset": "calendar",
+      "row_count": 366,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "stock_basic",
+      "row_count": 5892,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "etf_basic",
+      "row_count": 1799,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "index_basic",
+      "row_count": 8000,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "stock_daily",
+      "row_count": 5355,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "etf_daily",
+      "row_count": 933,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "index_daily",
+      "row_count": 173,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "global_index_daily",
+      "row_count": 1,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "industry_classification",
+      "row_count": 31,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "industry_mapping",
+      "row_count": 5370,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "stock_status",
+      "row_count": 5361,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "adj_factor",
+      "row_count": 5382,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "fund_adj",
+      "row_count": 943,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "macro_indicators",
+      "row_count": 481,
+      "status": "skipped",
+      "trade_date": "2024-03-29"
+    },
+    {
+      "dataset": "corporate_actions",
+      "row_count": 126,
+      "status": "skipped",
+      "trade_date": "2024-03-28"
+    }
+  ],
+  "runtime_state": {
+    "ingestion_records": [
+      {
+        "attempts": 1,
+        "checksum": "3b29ac22fc1994b15209b30a8d7527da",
+        "dataset": "adj_factor",
+        "error_code": null,
+        "rows": 5382,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "3fad3180beea209711516b59ef380717",
+        "dataset": "calendar",
+        "error_code": null,
+        "rows": 366,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "00089e838561426b0a5bc8c6cc39da52",
+        "dataset": "corporate_actions",
+        "error_code": null,
+        "rows": 126,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-28"
+      },
+      {
+        "attempts": 1,
+        "checksum": "a4e8daf870872d2d3f0940c9221e583c",
+        "dataset": "etf_basic",
+        "error_code": null,
+        "rows": 1799,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "27aea43afa0ed5702946f1a42bc3a4a3",
+        "dataset": "etf_daily",
+        "error_code": null,
+        "rows": 933,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "7a9aca997341eae62685902f2d2ac9b2",
+        "dataset": "fund_adj",
+        "error_code": null,
+        "rows": 943,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "f0ca57e1eb988ca8e404a5b71f1704b1",
+        "dataset": "global_index_daily",
+        "error_code": null,
+        "rows": 1,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "47acbc26313f2087fd97e8aed56326c6",
+        "dataset": "index_basic",
+        "error_code": null,
+        "rows": 8000,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "25bbc7ffc468913474447e04f401470a",
+        "dataset": "index_daily",
+        "error_code": null,
+        "rows": 173,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "304951434808c452401ee3ba567c83b4",
+        "dataset": "industry_classification",
+        "error_code": null,
+        "rows": 31,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "b2a535f72c434b1ea147041bd83c1f42",
+        "dataset": "industry_mapping",
+        "error_code": null,
+        "rows": 5370,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "edc9ec139a605f63e850b74c26c42414",
+        "dataset": "macro_indicators",
+        "error_code": null,
+        "rows": 481,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "a0dde40a02005c1b2f8aa64fc90f0a40",
+        "dataset": "stock_basic",
+        "error_code": null,
+        "rows": 5892,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "4a658acd757178b621e062800ee2870c",
+        "dataset": "stock_daily",
+        "error_code": null,
+        "rows": 5355,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      },
+      {
+        "attempts": 1,
+        "checksum": "ba374fe46d964dacb1cadfb3dae31f7f",
+        "dataset": "stock_status",
+        "error_code": null,
+        "rows": 5361,
+        "source": "tushare",
+        "status": "SUCCESS",
+        "trade_date": "2024-03-29"
+      }
+    ],
+    "payloads": [
+      {
+        "path": "market/etf/adj/2024.parquet",
+        "sha256": "4b4d2806d49e1713711b7e48905f1603022d3e5c52cbdac90bc2faa919bd47a3",
+        "size_bytes": 8197
+      },
+      {
+        "path": "market/etf/bars/2024.parquet",
+        "sha256": "eb6f30a8f13a64f3fd5019066f313351c8702e143a7d21c098a4e7758fad017e",
+        "size_bytes": 38435
+      },
+      {
+        "path": "market/index/bars/2024.parquet",
+        "sha256": "67d50e7ae8d2f606f10b81ba7d2ff7d5cc3f28220b7c9e5ba87213486ca2d025",
+        "size_bytes": 11810
+      },
+      {
+        "path": "market/index/constituent.db",
+        "sha256": "a8583f1283fb03e87b21db764a7ac7fe5bf26892f733ecbc1d52af51da5f1faa",
+        "size_bytes": 12288
+      },
+      {
+        "path": "market/index/global_bars/2024.parquet",
+        "sha256": "0ca2473563026cfec6c620d2f968594ea7f8be71f35994ab50886ca5c78230dc",
+        "size_bytes": 5690
+      },
+      {
+        "path": "market/stock/adj/2024.parquet",
+        "sha256": "95d8539ccf2f7ddcf44882346d4f8d04b6e853ac693b8df5c094e551d15b11e5",
+        "size_bytes": 33980
+      },
+      {
+        "path": "market/stock/bars/2024.parquet",
+        "sha256": "1b0575ee46d5e08fe0232f4db32acbd31460798bb781e70555a1bb730dd70917",
+        "size_bytes": 169378
+      },
+      {
+        "path": "market/stock/status/2024.parquet",
+        "sha256": "5b83c58fd9be9abf1f60648030bf4d134948fada06e1a8e2bc6ff448d8796628",
+        "size_bytes": 18503
+      },
+      {
+        "path": "provider_payloads/tushare/adj_factor/8e946312298983bcab1e38e7b1048653.parquet",
+        "sha256": "5ef3ec2fbc3cf56aa60a70ff7ceb1fdf85610d6ebf0318f88adb7f5825a52719",
+        "size_bytes": 27385
+      },
+      {
+        "path": "provider_payloads/tushare/calendar/3fad3180beea209711516b59ef380717.parquet",
+        "sha256": "9358b273fe6abdab37fd5ca4500934a4a815d1063b803a647c629462f8eca3b3",
+        "size_bytes": 2124
+      },
+      {
+        "path": "provider_payloads/tushare/corporate_actions/4496cbd12e3e0c64eb979472a1eb3289.parquet",
+        "sha256": "9dfc4befe088922c0f4334c6aec6cb56a78b681047886b9ddb4d2248b9616653",
+        "size_bytes": 6781
+      },
+      {
+        "path": "provider_payloads/tushare/etf_basic/6ed44dc45cfd645a540e1cd724750970.parquet",
+        "sha256": "c65d04e6b186d3721fa0a247b3f5ce4674d109044109b59f20bfdb42cf46c4c2",
+        "size_bytes": 32121
+      },
+      {
+        "path": "provider_payloads/tushare/etf_daily/65701bb8039aa188b8ea5dbc5e89236d.parquet",
+        "sha256": "3d3df7fea1831f6e581cebc4e665fd25a2b52363673ac86bc1a7948a2603e683",
+        "size_bytes": 44581
+      },
+      {
+        "path": "provider_payloads/tushare/fund_adj/10ec35ae74fdfb73a2c83c0de651d34d.parquet",
+        "sha256": "4f31c05db96ecfca4d6ac55680aff418fa6bd4aac5269d53d8b7d14646965b0d",
+        "size_bytes": 7853
+      },
+      {
+        "path": "provider_payloads/tushare/global_index_daily/f0ca57e1eb988ca8e404a5b71f1704b1.parquet",
+        "sha256": "0ca2473563026cfec6c620d2f968594ea7f8be71f35994ab50886ca5c78230dc",
+        "size_bytes": 5690
+      },
+      {
+        "path": "provider_payloads/tushare/index_basic/3d4cf4764bff9f60995ff5ede55acd8f.parquet",
+        "sha256": "610567ef8da5b03ffec954b4ff2a10eca05e60e4ec167fa2ef2d2609deb21bed",
+        "size_bytes": 79821
+      },
+      {
+        "path": "provider_payloads/tushare/index_daily/42c92d551bec3b10cf4af3b51642d799.parquet",
+        "sha256": "045af290da68325bc58e15c141298b5e78fd43aa7766235ed87b0dde359fbd3a",
+        "size_bytes": 10638
+      },
+      {
+        "path": "provider_payloads/tushare/industry_classification/304951434808c452401ee3ba567c83b4.parquet",
+        "sha256": "4f382647dd31cbc1dbf067d03d41cd07baa7db3eada01f3af7b6cf08d0737035",
+        "size_bytes": 3162
+      },
+      {
+        "path": "provider_payloads/tushare/industry_mapping/b2a535f72c434b1ea147041bd83c1f42.parquet",
+        "sha256": "80c2f59075d24dff41de79d7413a65bd770091b14628154038bec3519009ac13",
+        "size_bytes": 32908
+      },
+      {
+        "path": "provider_payloads/tushare/macro_indicators/edc9ec139a605f63e850b74c26c42414.parquet",
+        "sha256": "76ba28c715f28bcf769a87eb314552b732f2a56867725727fa883a8376a4f742",
+        "size_bytes": 6278
+      },
+      {
+        "path": "provider_payloads/tushare/stock_basic/bbc403855a4c7ca275ad135c464f2db2.parquet",
+        "sha256": "579650f177691d779d48c50cabfd0c0407f90673d92d6daefaedd710587b7576",
+        "size_bytes": 77374
+      },
+      {
+        "path": "provider_payloads/tushare/stock_daily/d407aef6aac718dded565884cb68a831.parquet",
+        "sha256": "6fb28124153d8666b954e14f44faabc3c9b134ae48bc02291814c771c190a138",
+        "size_bytes": 174033
+      },
+      {
+        "path": "provider_payloads/tushare/stock_status/fc5a204f53f0c1428d9e0a6221a8ef00.parquet",
+        "sha256": "b45c0a0f8f54c4f0a67ea0fd507c8668f73a15ee0b3a51a4fe2168c38757ff46",
+        "size_bytes": 22705
+      }
+    ],
+    "sqlite_tables": {
+      "actual_positions": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "balance_sheet": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "cash_flow": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "catalog_source_fallback_policies": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "catalog_source_fallback_policy_events": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "compiled_expression_cache": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "compiled_expression_operator": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "corporate_actions": {
+        "content_sha256": "68548c2ea225385e02b27af712dbc6ebb736a059e23e2c7c85ac1df0b897ef7e",
+        "row_count": 50
+      },
+      "data_catalog_entries": {
+        "content_sha256": "a3e8295c3bfcaa095b278613544a25e18043a0a7ca69a4bf2b4ee69652a08259",
+        "row_count": 15
+      },
+      "data_lineage_events": {
+        "content_sha256": "d3772449cdeb5968d994b5b44d8c25eaa2d5527b93494c53df9e23d9924684bb",
+        "row_count": 15
+      },
+      "data_lineage_inputs": {
+        "content_sha256": "d415dcf578f1651604460d199321adc8f444f3f4b8ce70639a7e83867536d7e8",
+        "row_count": 15
+      },
+      "data_lineage_outputs": {
+        "content_sha256": "6e1fb7e644f7bff3f70e23ba2c6dc82f0a12bb19a88e8f5cce3dc41aad3e332f",
+        "row_count": 15
+      },
+      "dataset_certification_events": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "dataset_certification_reports": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "dataset_license_records": {
+        "content_sha256": "007ba8bef1914bdaa1f4179718b13e6c34321fc57b0e0ec7a384d112ec247902",
+        "row_count": 16
+      },
+      "derived_checkpoint": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_dependency": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_invalidation": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_partition": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_run": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_shadow_slot": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_spec": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_spec_operator": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_state": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "derived_version": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "dividend": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "execution_fills": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "freeze_point": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "income_statement": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "index_weight": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "industry_basic": {
+        "content_sha256": "f9a582443775e66e0b48fc440f97b9fd241c6982d96182beda129d44c7c27290",
+        "row_count": 31
+      },
+      "industry_mapping": {
+        "content_sha256": "f648b3f7d4da7c0c7edef12afe3f1006b96790d70b6d54e040bc73b0c01504eb",
+        "row_count": 5370
+      },
+      "ingestion_cursor": {
+        "content_sha256": "386b70bbb004682e5c548cabc44132284f8958369e70f6a1137478cae6bf9847",
+        "row_count": 15
+      },
+      "ingestion_log": {
+        "content_sha256": "4e7379eca3b46934399533b74caa0ed5d5377466eb79a1d95b00f3d8bfaa112f",
+        "row_count": 15
+      },
+      "ingestion_partition_checkpoints": {
+        "content_sha256": "722fe39b900a34f0631d0999a326c73a0ea85990e140ce8d336869c4e09124d6",
+        "row_count": 15
+      },
+      "ingestion_partition_events": {
+        "content_sha256": "51f7f694f1b8805987fa76a3496102eb9a5e8849f4de84fc2b60a98d746518ae",
+        "row_count": 150
+      },
+      "instrument": {
+        "content_sha256": "7abb7498d25ef1bd25bc51b50469c9074780b5b032271f1e0ae1bb5948621d1d",
+        "row_count": 15691
+      },
+      "instrument_etf": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "instrument_id_sequence": {
+        "content_sha256": "b4f8a199bb8ebb9789e5261f3f7600e5f1d1ae2af458674674e6e7838ec7d14f",
+        "row_count": 5
+      },
+      "instrument_index": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "instrument_mapping": {
+        "content_sha256": "dd3cb0a81417c351a1fc6bad9dabb7552082d0297cce36dce91b1487cee6da80",
+        "row_count": 15691
+      },
+      "instrument_name_history": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "instrument_stock": {
+        "content_sha256": "f0b00e060bbe0687c541204691b657d7da3cc93d13613a5b3ab8cde5f25e36d7",
+        "row_count": 5892
+      },
+      "macro_indicator_data": {
+        "content_sha256": "41ff97cf1985b4389cf11521734599e0bc6adf0ddf13543c9d45645837f83bcf",
+        "row_count": 481
+      },
+      "macro_indicators": {
+        "content_sha256": "606caead2fc14ba42b591756440306afa3df02dcd63cd6aa45df7b79dfd6e2c4",
+        "row_count": 5
+      },
+      "margin_trading": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "pledge_ratio": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "price_limit_config": {
+        "content_sha256": "4ee22ebd2e9894e178215f61f89ee8190dccd1a8f3ac05da168cc084e25531db",
+        "row_count": 5
+      },
+      "provider_snapshots": {
+        "content_sha256": "5c81732ba8ab660f1281340490961bb50ba2782e9c89979cc690b3ff33f53dc7",
+        "row_count": 15
+      },
+      "quarantine_failed_data": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "research_dataset_snapshot": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "research_dataset_spec": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "research_spine_snapshot": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "research_spine_spec": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "sqlite_sequence": {
+        "content_sha256": "f9f6411aa2fa9afdd25f8b3548dbcc8536acdf2427440f5aacc531ac85adf3d4",
+        "row_count": 5
+      },
+      "st_change_history": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "strategy_artifact": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "strategy_run": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "strategy_run_checkpoint": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "strategy_spec": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "trade_intents": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "trading_calendar": {
+        "content_sha256": "b1521fb05528535f2d6610568f27f047edae2765a96a10697f5f7a0dce008579",
+        "row_count": 366
+      },
+      "universe": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "universe_constituent": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "universe_rebalance": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      },
+      "valuation_metrics": {
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "row_count": 0
+      }
+    }
+  },
+  "schema": "ditto.q1-live-replay.v3"
+}

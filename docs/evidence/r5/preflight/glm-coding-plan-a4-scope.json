@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
   "provider": "glm",
-  "approval_record_hash": "fce5d8b553829259ec548cb2eca4fe631da21c1764ef72f76705bc0cf7e322a8",
+  "approval_record_hash": "8df7df49da53806beef4b13510420277030d2855cb6fea333d77cea94736e11b",
   "provider_data_controls_hash": "1b1c694b72da0d947e31078e294dfc2440c215c8b537cb9ef83c5f02aa022eb8",
-  "runnable_dataset_manifest_hash": "6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114",
-  "license_egress_manifest_hash": "dc2608abdf9b09d81b95db9c431e5f145c0fca39a37cc06a6f2604f4aebb1708",
+  "runnable_dataset_manifest_hash": "55d4dac9d9b36b6c818decca06ff3d0aadfd39a43b0908fcdfab001ca679f941",
+  "license_egress_manifest_hash": "f82c52c359c5ffda77e8f6b29059a7bcc510d13a3f3e1f329cd2d0c90528a937",
   "model_id": "glm-5.3",
-  "model_snapshot": "glm-5.3-coding-plan-2026-08-17",
+  "model_snapshot": "glm-5.3-coding-plan-2026-09-01",
   "max_total_tokens": 500000
 }

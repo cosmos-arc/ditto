@@ -1,0 +1,39 @@
+{
+  "artifacts": [
+    {
+      "relative_path": "personal-workstation/gates/Q3.json",
+      "sha256": "sha256:5ff6e24469b95361b7d20f3decd2ebb57a50f31599ed969ff1cd71dd8fbf6038",
+      "size_bytes": 1153
+    },
+    {
+      "relative_path": "personal-workstation/manifests/Q1.json",
+      "sha256": "sha256:63f25ea1bd068458c16cac7dc476a07586cc127df45d892beb7a52ae9217547d",
+      "size_bytes": 2476
+    },
+    {
+      "relative_path": "personal-workstation/manifests/Q2.json",
+      "sha256": "sha256:bf7a222ac4cae5d4e41ebce9e759b66fe01553502b13481a8d2c5347ba66f1c7",
+      "size_bytes": 1202
+    },
+    {
+      "relative_path": "personal-workstation/q23-agent-live-20260901.json",
+      "sha256": "sha256:0beb14b6eecb144f3b72aaf955cefc65db299b99acab268b785d443b0f8da627",
+      "size_bytes": 19213
+    },
+    {
+      "relative_path": "personal-workstation/q3/discovery-live-20260901.json",
+      "sha256": "sha256:e85d71882ad0d40cd554f4fc3c8eecf5f5edd8aa638e10a52e9536393fd2c99f",
+      "size_bytes": 202307
+    },
+    {
+      "relative_path": "personal-workstation/q3/ui-live-20260901.json",
+      "sha256": "sha256:6cadb6678b5d6b55b822ee98a305b399c130335a0fab06df76cb3a8c5f6937ba",
+      "size_bytes": 341937
+    }
+  ],
+  "blockers": [],
+  "gate": "Q3",
+  "manifest_hash": "sha256:d6a1c6371c8399ad3f8fa5cc5e76304559cde1ec0f65fafd4274d1bc9408e20e",
+  "schema_version": 1,
+  "status": "passed"
+}

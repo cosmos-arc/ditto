@@ -30,6 +30,26 @@ Analysis is research-only, not imported by production packages.
 Reports, diagnostics, experiments, and screeners are reserved/future analysis
 namespaces, not current runtime APIs.
 
+## Portfolio Comparison Boundary
+
+| Responsibility | Owner / Provider | Direct Consumers | Contract |
+|---|---|---|---|
+| Same-valuation normalization, pairwise drift, target constraints | `portfolio` / deterministic services | `application` | `PortfolioValuationInput`, `PortfolioDriftView` |
+| Exposure, stress, and constraint findings | `risk` / deterministic scenario service | `application` | `PortfolioScenarioInput`, `ScenarioPreview` |
+| Signal Package + Paper/Manual ledger + Paper execution + retained PIT price join | `application.queries` / `LivePortfolioComparisonSource` | application queries | `PortfolioComparisonSourcePort` |
+| Three-column aggregation and no-write preview | `application.queries` | `apps`, `agent` | `PortfolioComparisonView`, `PortfolioScenarioPreviewView` |
+| HTTP projection and physical dependency injection | `apps` / FastAPI and `apps.registry` | `ditto-app` | OpenAPI `/api/v1/portfolio/*` |
+| Grounded explanation only | `agent` tools over application leaf contracts | Agent runtime | sealed comparison/scenario evidence, `PortfolioDiagnostic` |
+
+The comparison fails closed unless all three portfolios share `as_of`, valuation
+snapshot, provider snapshot set, and CNY currency. The Signal Package checksum
+selects Model targets; Paper and Manual are rebuilt from separate append-only
+ledgers. Agent schemas expose portfolio/session identities and user scenario
+constraints, but never temporal cutoffs, provider snapshot IDs, target weights,
+apply commands, or ledger writes. `.importlinter`, `arch-check`, PIT future
+sentinels, no-side-effect tests, and the static OpenAPI snapshot enforce this
+boundary.
+
 ## Test Placement
 
 Unit tests live beside the owning package under `tests/unit`.

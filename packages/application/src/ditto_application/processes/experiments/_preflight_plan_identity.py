@@ -7,6 +7,9 @@ import json
 from collections.abc import Mapping
 from typing import cast
 
+from ditto_application.processes.execution.replay_context_inputs import (
+    decode_replay_context_inputs,
+)
 from ditto_application.processes.experiments._baseline_runtime_evidence import (
     decode_baseline_runtime_evidence,
 )
@@ -19,7 +22,7 @@ from ditto_application.processes.experiments.planning_probes import (
 
 __all__ = ["validate_plan_preimage"]
 
-_PLAN_PREIMAGE_KEYS = {
+_PLAN_PREIMAGE_KEYS_V1 = {
     "schema_version",
     "launch_spec_hash",
     "gate_payload_hashes",
@@ -44,6 +47,7 @@ _PLAN_PREIMAGE_KEYS = {
     "certification",
     "preflight_hash",
 }
+_PLAN_PREIMAGE_KEYS_V2 = _PLAN_PREIMAGE_KEYS_V1 | {"context_input_refs"}
 
 
 def _mapping(value: object, field_name: str) -> dict[str, object]:
@@ -198,11 +202,16 @@ def validate_plan_preimage(
 ) -> None:
     """Validate the preimage content address and every persisted cross-link."""
     payload = _mapping(value, "detail.plan_preimage")
-    if set(payload) != _PLAN_PREIMAGE_KEYS:
+    schema_version = _integer(
+        payload.get("schema_version"), "plan_preimage.schema_version"
+    )
+    expected_keys = (
+        _PLAN_PREIMAGE_KEYS_V1 if schema_version == 1 else _PLAN_PREIMAGE_KEYS_V2
+    )
+    if schema_version not in {1, 2} or set(payload) != expected_keys:
         raise experiment_process_error("detail.plan_preimage has an invalid shape")
     if (
         hashlib.sha256(_canonical_json(payload)).hexdigest() != plan_hash
-        or _integer(payload.get("schema_version"), "plan_preimage.schema_version") != 1
         or _string(payload.get("preflight_hash"), "plan_preimage.preflight_hash")
         != preflight_hash
         or not is_canonical_content_hash(payload.get("launch_spec_hash"))
@@ -238,6 +247,7 @@ def validate_plan_preimage(
         )
     _hash_list(payload.get("gate_payload_hashes"), "plan_preimage.gate_payload_hashes")
     _hash_list(payload.get("fold_payload_hashes"), "plan_preimage.fold_payload_hashes")
+    decode_replay_context_inputs(payload.get("context_input_refs", []))
     factor_binding_hashes = _list(
         payload.get("factor_binding_hashes"),
         "plan_preimage.factor_binding_hashes",

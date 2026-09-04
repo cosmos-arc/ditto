@@ -46,6 +46,7 @@ from ditto_application.agent_campaign_contracts import (
     CampaignCandidateReceipt,
 )
 from ditto_application.processes.experiments._autonomous_campaign_contracts import (
+    TERMINAL_CAMPAIGN_STATUSES,
     CampaignAuthorizationProof,
     CampaignCoordinatorStatus,
     CampaignManifestView,
@@ -428,13 +429,27 @@ class AutonomousCampaignSupport:
         if existing is not None:
             return existing
         events = self._reader.list_campaign_events(campaign_id)
+        latest_status = (
+            None if not events else CampaignCoordinatorStatus(events[-1].status)
+        )
+        effective_status = (
+            latest_status
+            if status is CampaignCoordinatorStatus.RUNNING
+            and latest_status is not None
+            and (
+                latest_status is CampaignCoordinatorStatus.PAUSED_BUDGET
+                or latest_status is CampaignCoordinatorStatus.CANCEL_REQUESTED
+                or latest_status.value in TERMINAL_CAMPAIGN_STATUSES
+            )
+            else status
+        )
         record = CampaignEventRecord(
             event_id=event_id,
             campaign_id=campaign_id,
             ordinal=len(events),
             event_type=event_type,
             previous_status=None if not events else events[-1].status,
-            status=status.value,
+            status=effective_status.value,
             detail_payload=encode_campaign_detail(detail),
             occurred_at_epoch_us=campaign_epoch_us(occurred_at),
         )

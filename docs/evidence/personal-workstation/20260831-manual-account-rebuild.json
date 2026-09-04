@@ -1,0 +1,92 @@
+{
+  "account_id": "manual-rebuild-rehearsal-20260831",
+  "as_of": "2026-08-31",
+  "checks": {
+    "all_events_round_trip_exactly": true,
+    "fresh_sqlite_reopened": true,
+    "manual_reconciliation_matches": true,
+    "repeat_ledger_hash_is_identical": true,
+    "repeat_replay_is_identical": true,
+    "valuation_uses_explicit_price": true
+  },
+  "event_hashes": [
+    "account-event:sha256:23692719479583e99c2ba5bdfb0b1ab5102e19c0e24bea315e301dc729f619f4",
+    "account-event:sha256:449ba74563d035c85c92eb8e704181096572705079867809e57a2163f14fdddc",
+    "account-event:sha256:0a3c113aa2c7197d81ba5b1813198dba333ed9b60261f9d3a078a986d4e98b7c",
+    "account-event:sha256:1a0d5a6a35196dcef920821f0dd6b9ad489a8f64213e93f856b92a981d1c519d",
+    "account-event:sha256:a5c6ddfa2ab958d69ea7d1eb59202b5d5ee8fff5d3a9fb5b503786c959348d5e",
+    "account-event:sha256:38c6809f1250688a2e8044dae4f01d832778a38a9d6695ea336bdcbee28237dc",
+    "account-event:sha256:ca3ce7057ff2603117ce68c42ea78c3f916062381e82d4af192ed671e4018266"
+  ],
+  "event_ids": [
+    "opening-cash",
+    "opening-position",
+    "buy-original",
+    "buy-correction",
+    "deposit-original",
+    "deposit-reversal",
+    "partial-sell"
+  ],
+  "evidence_hash": "sha256:5c777bdaac99b2b9fbe611c820a2dfd8170d342964ed98e515c10d40f6faf4a5",
+  "expected": {
+    "cash_available": "99559.25",
+    "cash_settled": "99559.25",
+    "event_count": 7,
+    "position_available_quantity": "150",
+    "position_average_cost": "10.9250",
+    "position_market_value": "2100.00",
+    "position_quantity": "150",
+    "realized_pnl": "198.00",
+    "total_fees": "10.75",
+    "total_value": "101659.25",
+    "unrealized_pnl": "461.25"
+  },
+  "generated_at": "2026-08-31T08:26:20.417523+00:00",
+  "ledger_hash": "account-ledger:sha256:e6426e90ff2fe63037d47786692e2e97f6413fc26e171bd04bb84bd73ea854c4",
+  "observed": {
+    "cash_available": "99559.25",
+    "cash_settled": "99559.25",
+    "event_count": 7,
+    "position_available_quantity": "150",
+    "position_average_cost": "10.9250",
+    "position_market_value": "2100.00",
+    "position_quantity": "150",
+    "realized_pnl": "198.00",
+    "total_fees": "10.75",
+    "total_value": "101659.25",
+    "unrealized_pnl": "461.25"
+  },
+  "result": "PASS",
+  "schema_version": "manual-account-rebuild-evidence-v1",
+  "snapshot": {
+    "account_id": "manual-rebuild-rehearsal-20260831",
+    "account_kind": "manual",
+    "as_of": "2026-08-31",
+    "cash": {
+      "available": "99559.25",
+      "frozen": "0",
+      "settled": "99559.25"
+    },
+    "event_count": 7,
+    "ledger_hash": "account-ledger:sha256:e6426e90ff2fe63037d47786692e2e97f6413fc26e171bd04bb84bd73ea854c4",
+    "positions": [
+      {
+        "available_quantity": "150",
+        "average_cost": "10.9250",
+        "instrument_id": 42,
+        "last_price": "14.0000",
+        "market_value": "2100.00",
+        "quantity": "150",
+        "realized_pnl": "198.00",
+        "total_fees": "10.75",
+        "unrealized_pnl": "461.25"
+      }
+    ],
+    "realized_pnl": "198.00",
+    "total_fees": "10.75",
+    "total_value": "101659.25",
+    "unrealized_pnl": "461.25",
+    "valuation_complete": true
+  },
+  "work_package": "MAN-08"
+}

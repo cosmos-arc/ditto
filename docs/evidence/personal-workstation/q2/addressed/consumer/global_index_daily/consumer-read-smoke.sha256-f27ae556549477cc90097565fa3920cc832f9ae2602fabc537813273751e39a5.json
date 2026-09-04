@@ -1,0 +1,1 @@
+{"dataset_id":"global_index_daily","probe":{"file_count":1,"kind":"parquet","object":"market/index/global_bars","row_count":1},"schema":"ditto.q2-consumer-evidence.v1","snapshot_ids":["snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"],"target_from":"2024-03-29","target_to":"2024-03-29"}

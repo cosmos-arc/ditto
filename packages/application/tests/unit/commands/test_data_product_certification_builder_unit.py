@@ -29,7 +29,12 @@ from ditto_data.ingestion.partition_state import (
 )
 
 
-def _fixture(tmp_path):
+def _fixture(
+    tmp_path,
+    *,
+    canonical_row_count: int = 1,
+    provider_row_count: int = 1,
+):
     now = datetime(2026, 8, 1, tzinfo=UTC)
     asset = DataAssetRef(
         dataset_id="stock_daily",
@@ -46,7 +51,7 @@ def _fixture(tmp_path):
             storage_uri="stock_daily/2015",
             schema=DataSchemaFingerprint(
                 schema_hash="schema:sha256:value",
-                row_count=1,
+                row_count=canonical_row_count,
                 created_at=now,
                 schema_version="market.stock_daily.v1",
                 columns=("trade_date", "close"),
@@ -84,7 +89,7 @@ def _fixture(tmp_path):
             request_parameters_hash="sha256:request",
             response_metadata=(("snapshot_layer", "normalized_provider_payload"),),
             license_record_id=license_record.record_id,
-            row_count=1,
+            row_count=provider_row_count,
             payload_uri="stock_daily/2015",
             payload_retained=True,
             created_at=now,
@@ -186,6 +191,38 @@ def test_builder_derives_report_from_complete_content_addressed_chain(tmp_path) 
     assert report.evidence.source_ids == ("tushare",)
     assert "universe" in report.evidence.pit_replay_results[0].name
     assert report.evidence.recovery_results[0].evidence_uri.endswith("recovery.json")
+
+
+@pytest.mark.unit
+def test_builder_preserves_explicit_bounded_certification_window(tmp_path) -> None:
+    builder, request = _fixture(tmp_path)
+    bounded_from = date(2015, 1, 5)
+
+    report = builder.build(replace(request, target_from=bounded_from))
+
+    assert report.coverage.target_from == bounded_from
+    assert report.coverage.complete_from == bounded_from
+
+
+@pytest.mark.unit
+def test_builder_allows_provider_rows_filtered_from_canonical_asset(tmp_path) -> None:
+    builder, request = _fixture(tmp_path, provider_row_count=2)
+
+    report = builder.build(request)
+
+    assert report.coverage.is_complete
+
+
+@pytest.mark.unit
+def test_builder_rejects_canonical_rows_exceeding_provider_payload(tmp_path) -> None:
+    builder, request = _fixture(
+        tmp_path,
+        canonical_row_count=2,
+        provider_row_count=1,
+    )
+
+    with pytest.raises(AppProcessError, match="exceeds provider payload"):
+        builder.build(request)
 
 
 @pytest.mark.unit

@@ -1,0 +1,292 @@
+{
+  "backend": "http://127.0.0.1:8000",
+  "base_url": "http://127.0.0.1:5174",
+  "generated_at": "2026-09-01T13:03:54.334Z",
+  "mode": "live-backend-no-msw",
+  "passed": true,
+  "routes": [
+    {
+      "acceptance_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "market_context": {
+        "as_of": "2026-09-01T13:03:52.951000Z",
+        "knowledge_cutoff": "2026-09-01T13:03:52.951000Z",
+        "publication_cutoff": "2026-09-01T13:03:52.951000Z",
+        "source_snapshot_ids": [
+          "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+          "snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+          "snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812",
+          "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344",
+          "snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b"
+        ],
+        "source_snapshot_set_id": "snapshot-set:sha256:bbea30dd87f5272a28aed8c608a369de05cb60f1b57c01eab240092175c23196",
+        "status": "degraded",
+        "feature_set_id": "market-regime:sha256:7e77ed8fd924ab5b1759481e52f319d0d7e3a437268f02054ed00737abeeb67a",
+        "feature_version": "market-regime.v1",
+        "regime_label": "risk_on",
+        "regime_score": 0.28052652688959984,
+        "drivers": [
+          {
+            "name": "breadth",
+            "category": "a_share",
+            "contribution": 0.1383824627685279,
+            "direction": "supportive"
+          },
+          {
+            "name": "volatility",
+            "category": "risk",
+            "contribution": 0.11191285938349084,
+            "direction": "supportive"
+          },
+          {
+            "name": "cross_market",
+            "category": "global",
+            "contribution": 0.019659552338705904,
+            "direction": "supportive"
+          },
+          {
+            "name": "style",
+            "category": "style",
+            "contribution": 0.010837270826430052,
+            "direction": "supportive"
+          },
+          {
+            "name": "trend",
+            "category": "a_share",
+            "contribution": -0.0002656184275548642,
+            "direction": "pressuring"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "a_share_breadth",
+            "category": "a_share",
+            "value": 0.4705003734129948,
+            "unit": "ratio",
+            "trend": "rising",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13"
+          },
+          {
+            "name": "benchmark_return_20d",
+            "category": "a_share",
+            "value": -0.00009031026536865383,
+            "unit": "decimal_return",
+            "trend": "falling",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d"
+          },
+          {
+            "name": "realized_volatility_20d",
+            "category": "a_share",
+            "value": 0.1048740695240328,
+            "unit": "annualized_decimal",
+            "trend": "unknown",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d"
+          },
+          {
+            "name": "global_index_return_1d",
+            "category": "global",
+            "value": 0.005013185846370005,
+            "unit": "decimal_return",
+            "trend": "rising",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"
+          }
+        ],
+        "impacts": [
+          {
+            "target_domain": "industry",
+            "target": "cyclical",
+            "direction": "supportive",
+            "rationale_driver": "breadth"
+          },
+          {
+            "target_domain": "selection",
+            "target": "momentum",
+            "direction": "supportive",
+            "rationale_driver": "trend"
+          },
+          {
+            "target_domain": "portfolio",
+            "target": "equity_beta",
+            "direction": "supportive",
+            "rationale_driver": "trend"
+          },
+          {
+            "target_domain": "risk",
+            "target": "volatility_budget",
+            "direction": "supportive",
+            "rationale_driver": "volatility"
+          }
+        ],
+        "missing_inputs": [
+          "macro_surprise_score"
+        ],
+        "data_conflicts": [],
+        "uncertainties": [
+          "macro_surprise_score_not_derivable_from_requested_snapshots"
+        ],
+        "evidence_refs": [
+          "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+          "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d",
+          "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"
+        ]
+      },
+      "page_errors": [],
+      "path": "/markets",
+      "screenshot": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q2/screenshots/markets.png",
+      "visible_assertions": {
+        "Risk On": true,
+        "Degraded": true,
+        "global_index_return_1d": true,
+        "Downstream impact chain": true,
+        "no_market_context_blocked": true
+      }
+    },
+    {
+      "acceptance_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "market_context": {
+        "as_of": "2026-09-01T13:03:53.900000Z",
+        "knowledge_cutoff": "2026-09-01T13:03:53.900000Z",
+        "publication_cutoff": "2026-09-01T13:03:53.900000Z",
+        "source_snapshot_ids": [
+          "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+          "snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+          "snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812",
+          "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344",
+          "snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b"
+        ],
+        "source_snapshot_set_id": "snapshot-set:sha256:bbea30dd87f5272a28aed8c608a369de05cb60f1b57c01eab240092175c23196",
+        "status": "degraded",
+        "feature_set_id": "market-regime:sha256:5078505b66731bec12f420ea13288bcdd9b75f291d89947b44946b2f44a3950a",
+        "feature_version": "market-regime.v1",
+        "regime_label": "risk_on",
+        "regime_score": 0.28052652688959984,
+        "drivers": [
+          {
+            "name": "breadth",
+            "category": "a_share",
+            "contribution": 0.1383824627685279,
+            "direction": "supportive"
+          },
+          {
+            "name": "volatility",
+            "category": "risk",
+            "contribution": 0.11191285938349084,
+            "direction": "supportive"
+          },
+          {
+            "name": "cross_market",
+            "category": "global",
+            "contribution": 0.019659552338705904,
+            "direction": "supportive"
+          },
+          {
+            "name": "style",
+            "category": "style",
+            "contribution": 0.010837270826430052,
+            "direction": "supportive"
+          },
+          {
+            "name": "trend",
+            "category": "a_share",
+            "contribution": -0.0002656184275548642,
+            "direction": "pressuring"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "a_share_breadth",
+            "category": "a_share",
+            "value": 0.4705003734129948,
+            "unit": "ratio",
+            "trend": "rising",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13"
+          },
+          {
+            "name": "benchmark_return_20d",
+            "category": "a_share",
+            "value": -0.00009031026536865383,
+            "unit": "decimal_return",
+            "trend": "falling",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d"
+          },
+          {
+            "name": "realized_volatility_20d",
+            "category": "a_share",
+            "value": 0.1048740695240328,
+            "unit": "annualized_decimal",
+            "trend": "unknown",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d"
+          },
+          {
+            "name": "global_index_return_1d",
+            "category": "global",
+            "value": 0.005013185846370005,
+            "unit": "decimal_return",
+            "trend": "rising",
+            "freshness": "fresh",
+            "evidence_ref": "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"
+          }
+        ],
+        "impacts": [
+          {
+            "target_domain": "industry",
+            "target": "cyclical",
+            "direction": "supportive",
+            "rationale_driver": "breadth"
+          },
+          {
+            "target_domain": "selection",
+            "target": "momentum",
+            "direction": "supportive",
+            "rationale_driver": "trend"
+          },
+          {
+            "target_domain": "portfolio",
+            "target": "equity_beta",
+            "direction": "supportive",
+            "rationale_driver": "trend"
+          },
+          {
+            "target_domain": "risk",
+            "target": "volatility_budget",
+            "direction": "supportive",
+            "rationale_driver": "volatility"
+          }
+        ],
+        "missing_inputs": [
+          "macro_surprise_score"
+        ],
+        "data_conflicts": [],
+        "uncertainties": [
+          "macro_surprise_score_not_derivable_from_requested_snapshots"
+        ],
+        "evidence_refs": [
+          "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+          "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d",
+          "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"
+        ]
+      },
+      "page_errors": [],
+      "path": "/",
+      "screenshot": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q2/screenshots/today.png",
+      "visible_assertions": {
+        "市场脉搏": true,
+        "DAILY BRIEF": true,
+        "风险偏好": true,
+        "MarketContext EvidenceBrief": true,
+        "no_market_context_blocked": true
+      }
+    }
+  ],
+  "schema": "ditto.q2-live-ui.v1"
+}

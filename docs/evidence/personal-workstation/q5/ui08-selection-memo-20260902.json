@@ -1,0 +1,148 @@
+{
+  "schema": "ditto.personal-workstation.ui08-selection-memo.v1",
+  "generated_at": "2026-09-01T20:01:39Z",
+  "status": "passed",
+  "approval": "user-approved-approved-research-minimal-egress",
+  "provider": {
+    "name": "glm",
+    "model_id": "glm-5.3",
+    "credential_kind": "glm_coding_plan_validation",
+    "production_eligible": false
+  },
+  "browser": {
+    "frontend_origin": "http://127.0.0.1:5175",
+    "backend_origin": "http://127.0.0.1:8002",
+    "mock_enabled": false,
+    "entry": "Research Agent Lab",
+    "context_type": "selection",
+    "context_id": "selection-run:sha256:8beae94442ac536626d67165f23cee2990ce1e18bc241c9e4bdc1ead8a44bc1f"
+  },
+  "run": {
+    "run_id": "run-2cc8eb0f66bc50bfab866131dcfab242",
+    "session_id": "session-c78ddb8838e05635ba484dc545a4a03e",
+    "status": "completed",
+    "revision": 2,
+    "event_cursor": 14,
+    "projection_state": "complete",
+    "objective_hash": "ca016c94c5d452486745c3762b98091b1d65cee0f7656c8443af220602e0d7bc",
+    "authority_hash": "fae2044c6c871a2993885bf78679404c0173912c444c8121df841e08cf1b2d57",
+    "manifest_hash": "c87c8d01e1b75bed3d83459f003464f9ad1f44d660fbc203fa2c562646bfb682",
+    "guardrail": "passed",
+    "failure_code": null,
+    "usage": {
+      "model_attempts": 1,
+      "model_turns": 2,
+      "tool_calls": 1,
+      "retries": 0,
+      "total_tokens": 4572,
+      "max_model_tokens": 12000,
+      "model_spend_usd": "0"
+    }
+  },
+  "pit_authority": {
+    "decision_time": "2026-09-01T15:57:47.155511Z",
+    "knowledge_cutoff": "2026-09-01T15:57:47.155511Z",
+    "publication_cutoff": "2026-09-01T15:57:47.155511Z",
+    "source_snapshot_id": "snapshot-set:sha256:7af2c65f14a0e2580f42396cf5e8a1f8584e27c759010c1b5c404fd9554754b8",
+    "allowed_universe": [
+      "518880.SH"
+    ],
+    "license_class": "approved-research",
+    "egress_class": "cloud_allowed"
+  },
+  "tool": {
+    "name": "selection_run_evidence",
+    "call_id": "call_-7293598219504709063",
+    "arguments_hash": "42fa05c76eaa7f3531bb33dad28fc933de4da9ed6217f57418e6021403654b41",
+    "result_hash": "b04ad5f757653f59081eb9de85b63c35abbb9162b5b6a3a39ac71b03483d2751",
+    "evidence_id": "evidence-9da67d501bcd7c3716d94d85b2a4e0ed36dfbed0aa31e91915012a7f6423dd00"
+  },
+  "minimal_egress": {
+    "profile": "approved-research-minimal-v1",
+    "source_payload_hash": "a06fbeef08c2f65f983d6db63b6c7efe4cb7d04fd14ac04c563a6a247ea09743",
+    "model_payload_hash": "744b48222aa862f797e53a804e67b6a96d01ff951e483f4717e79fea03b8d658",
+    "minimal_artifact_ref": "minimal-egress:sha256:a10dfbedff95521858c8c3d4103f20ecfea17da5e1e192822adba70c152bbf85",
+    "source_candidate_count": 15,
+    "source_exclusion_count": 113,
+    "egressed_top_candidate_count": 3,
+    "egressed_exclusion_buckets": [
+      {
+        "stage": "hard_filter",
+        "reason_code": "insufficient_liquidity",
+        "count": 43
+      },
+      {
+        "stage": "hard_filter",
+        "reason_code": "insufficient_listing_days",
+        "count": 9
+      },
+      {
+        "stage": "ranking",
+        "reason_code": "below_top_k",
+        "count": 61
+      }
+    ],
+    "excluded": [
+      "raw_provider_rows",
+      "ohlcv_rows",
+      "full_selection_candidate_array",
+      "full_selection_exclusion_array"
+    ]
+  },
+  "selection_memo_assertions": {
+    "instrument_id": 2001724,
+    "instrument_name": "华安易富黄金ETF",
+    "ticker": "518880.SH",
+    "rank": 1,
+    "score": 0.8866141732283463,
+    "factor_contributions": [
+      {
+        "factor_name": "liquidity_rank",
+        "value": 0.811023622047244,
+        "weight": 0.4,
+        "contribution": 0.3244094488188976
+      },
+      {
+        "factor_name": "momentum_1d_rank",
+        "value": 0.9370078740157479,
+        "weight": 0.6,
+        "contribution": 0.5622047244094487
+      }
+    ],
+    "missing_inputs": [],
+    "citation_exact": true,
+    "saved": false,
+    "published": false,
+    "traded": false
+  },
+  "event_chain": [
+    "run_queued",
+    "run_started",
+    "provider_attempt",
+    "tool_call",
+    "tool_result",
+    "run_completed"
+  ],
+  "recovery_evidence": [
+    {
+      "run_id": "run-990dcb7b57a55eecbb57e0514a4fc9ea",
+      "status": "failed",
+      "failure_code": "model_provider_failed",
+      "tokens": 0,
+      "preserved": true
+    },
+    {
+      "run_id": "run-c59c0a566e575dbcbd8e690f93bea425",
+      "status": "failed",
+      "failure_code": "model_provider_failed",
+      "tokens": 0,
+      "preserved": true
+    }
+  ],
+  "fix_evidence": {
+    "context_identity_is_model_visible_data": true,
+    "selection_full_universe_is_redacted": true,
+    "manifest_hash_survives_context_allowlist_restriction": true,
+    "persisted_manifest_exact_replay_survives_restart": true
+  }
+}

@@ -7,6 +7,15 @@ from ditto_platform.foundation import SQLitePool
 
 from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.governance.service import GovernanceService
+from ditto_strategy.industry_rotation.store import (
+    IndustryRotationReader,
+    IndustryRotationWriter,
+)
+from ditto_strategy.selection.store import SelectionRunReader, SelectionRunWriter
+from ditto_strategy.storage.sqlite.industry_rotation_store import (
+    SQLiteIndustryRotationStore,
+)
+from ditto_strategy.storage.sqlite.selection_run_store import SQLiteSelectionRunStore
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -132,6 +141,58 @@ class StrategyStorageProvider(Provider):
         writer = SQLiteStrategyRunCheckpointWriter(sqlite_pool)
         writer.init_schema()
         return writer
+
+    @provide
+    def selection_run_store(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> SQLiteSelectionRunStore:
+        """提供 immutable SelectionRun 持久化存储."""
+        store = SQLiteSelectionRunStore(sqlite_pool)
+        store.init_schema()
+        return store
+
+    @provide
+    def industry_rotation_store(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> SQLiteIndustryRotationStore:
+        """Provide append-only industry-rotation evidence persistence."""
+        store = SQLiteIndustryRotationStore(sqlite_pool)
+        store.init_schema()
+        return store
+
+    @provide
+    def industry_rotation_reader(
+        self,
+        industry_rotation_store: SQLiteIndustryRotationStore,
+    ) -> IndustryRotationReader:
+        """Bind the SQLite store to the exact rotation read port."""
+        return industry_rotation_store
+
+    @provide
+    def industry_rotation_writer(
+        self,
+        industry_rotation_store: SQLiteIndustryRotationStore,
+    ) -> IndustryRotationWriter:
+        """Bind the SQLite store to the append-only rotation write port."""
+        return industry_rotation_store
+
+    @provide
+    def selection_run_reader(
+        self,
+        selection_run_store: SQLiteSelectionRunStore,
+    ) -> SelectionRunReader:
+        """将 SQLite store 注册为 SelectionRunReader port."""
+        return selection_run_store
+
+    @provide
+    def selection_run_writer(
+        self,
+        selection_run_store: SQLiteSelectionRunStore,
+    ) -> SelectionRunWriter:
+        """将 SQLite store 注册为 SelectionRunWriter port."""
+        return selection_run_store
 
     @provide
     def strategy_catalog_service(

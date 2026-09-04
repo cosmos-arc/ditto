@@ -1,0 +1,23 @@
+{
+  "schema": "ditto.q1-fred-pit-live.v1",
+  "generated_at": "2026-09-01T11:55:33Z",
+  "provider": "fred-alfred",
+  "credential_source": "os-keychain",
+  "credential_material_recorded": false,
+  "network_mode": "real-provider",
+  "command": "pixi run -e dev pytest packages/apps/tests/e2e/test_real_data_pipeline.py -q --no-cov",
+  "test_source_sha256": "b8f345dca43d4fdbbc1b5c399336ea229fd8e5b40bba28b8ae30362636203ebf",
+  "assertions": [
+    "publication date is taken from the selected real vintage",
+    "non-revising observations remain hidden before publication cutoff",
+    "revising GDP preserves three distinct real ALFRED vintages",
+    "GDP is empty before its first real publication"
+  ],
+  "result": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "elapsed_seconds": 9.35
+  },
+  "passed": true
+}

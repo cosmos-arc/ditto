@@ -1,0 +1,81 @@
+{
+  "actor": "workspace-owner-approved-q5-live",
+  "data_root": "/private/tmp/ditto-q5-live-20260901.v1",
+  "generated_at": "2026-09-01T15:56:54.575814+00:00",
+  "products": [
+    {
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "consumer_evidence_path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/r3-certifications/products/calendar/consumer-read-smoke.sha256-c7ee6ae776bf3c35a7da942f6a1cd64ae21b942df324110a3e644e3d0b6ea269.json",
+      "consumer_evidence_sha256": "c7ee6ae776bf3c35a7da942f6a1cd64ae21b942df324110a3e644e3d0b6ea269",
+      "content_hash": "f046780fb23bcf9548915f1a706672d22aec69c2b458a483ff94ac0c78617f74",
+      "dataset_id": "calendar",
+      "report_id": "certification:9348c06c86b1c252e4df2229f645103202dbc0c50e9fa8dddd267ea059088456",
+      "snapshot_ids": [
+        "snapshot:tushare:calendar:sha256:0712b1000c7ce16198e291ac11bc384a0ff8da6e01b6a92ea565199932c4f404",
+        "snapshot:tushare:calendar:sha256:0c2b94ec60e05f82e5576c4ed3a33d19cf991fb9ad9818ef71b0407a9b1fb383",
+        "snapshot:tushare:calendar:sha256:2444775119ca4e46ed8dfa6dc43eb02adc120b61940fd3038c26201e46fb0177",
+        "snapshot:tushare:calendar:sha256:38aff623f98a574f510ab5daf5aaeb4bc4a3adca39e284332934c05e29ebd606",
+        "snapshot:tushare:calendar:sha256:3eb452928a8960eab78d29cd64d6a36f8e0ce8d2df47318b6aa425653aae912c",
+        "snapshot:tushare:calendar:sha256:56d86a43db1193ad5a711b3175e76a23b40c90ff5b5ba2addf08b4a96ed7f35d",
+        "snapshot:tushare:calendar:sha256:5b639e2332ba40108874e1cdaa3c325f02656c9d3ee39ccb0285db25f1fc36fa",
+        "snapshot:tushare:calendar:sha256:6b0c0edea40710eb8387719e1777afdf654bf2441b078de14829c19c61a9404f",
+        "snapshot:tushare:calendar:sha256:bb54d0bd41fa9833166828cf3d894aa2dda2b919743af1eb68e611c852829e53",
+        "snapshot:tushare:calendar:sha256:bcabae35a9f6aaa34a80ee4deb8c5d4ff6b24ea6e3c286b00f5e587b766f6ab0",
+        "snapshot:tushare:calendar:sha256:cd5363ae1b0b28d7b5e0e0a01abeea3c171d5255588017da0e2b474a48d18a8c",
+        "snapshot:tushare:calendar:sha256:d3e5a759deee0dfb85935f543576a9c64173fc587da501637210f0113660fcad",
+        "snapshot:tushare:calendar:sha256:e666914885f31a9057063fab287a2e633d574a2f78ff6521a05056a5d112ed7f"
+      ]
+    },
+    {
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "consumer_evidence_path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/r3-certifications/products/etf_basic/consumer-read-smoke.sha256-f887a12172325919d23d9bbecbecc54b4daa36651ee5429c7c4e29f6a681c62f.json",
+      "consumer_evidence_sha256": "f887a12172325919d23d9bbecbecc54b4daa36651ee5429c7c4e29f6a681c62f",
+      "content_hash": "40f00c09bab6dbbdd6369000e79678ca5b1a219ec98d1973c5d12a6b92ae0e2f",
+      "dataset_id": "etf_basic",
+      "report_id": "certification:3373bfe41a4725db7b5d8b92eb5618b3cfdd64b43c5d61aef860c121c10c6c1b",
+      "snapshot_ids": [
+        "snapshot:tushare:etf_basic:sha256:454021740f139e3bfb80aa7154aeb7b06d94aa6fd27dc1fd9c475e7ba795a430",
+        "snapshot:tushare:etf_basic:sha256:5ddb0afdba4c2cd5c69b76858a2169de252fe6575a5285274649314f850a1b18"
+      ]
+    },
+    {
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "consumer_evidence_path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/r3-certifications/products/etf_daily/consumer-read-smoke.sha256-9fb4f482491349b46f3629253ce73875b97621172e0a6c9d97f85353730bd4d9.json",
+      "consumer_evidence_sha256": "9fb4f482491349b46f3629253ce73875b97621172e0a6c9d97f85353730bd4d9",
+      "content_hash": "bf8ff93296cbdf6cc0f9d60b8872f70df68afef1934ebcc23aa9d4f45401d274",
+      "dataset_id": "etf_daily",
+      "report_id": "certification:f96742a29522b3e9205f052eab5369b4f555fa18926dc446c8885074160ee3a1",
+      "snapshot_ids": [
+        "snapshot:tushare:etf_daily:sha256:25db9d3205537f98d54e1f9564688c8914d7942975f25f8374a655cf16c63583",
+        "snapshot:tushare:etf_daily:sha256:5432de924c0353e556bd4e6c66452e98bd7601a3bb0e88d874dbbc482cb3ab22",
+        "snapshot:tushare:etf_daily:sha256:79e2d281b1f0084ce99918f76c0bab197a7456ca8f608985f7a5f53d1e2ace36",
+        "snapshot:tushare:etf_daily:sha256:a36642f11360eba9d23f4cf2f2e4dd32bd6cd14ac6a867bfde9755072f555a37",
+        "snapshot:tushare:etf_daily:sha256:bc435cf84a642fc2df463903447a939754e12516d0b3a472dae79990e6f2b7ca",
+        "snapshot:tushare:etf_daily:sha256:bd4c0a82bfcf28627562469dad8f70043cfcfc3059460ca00f0e79879d742708",
+        "snapshot:tushare:etf_daily:sha256:d5bd7faee336b89d04306981de75c57171e07e5feb6afeb940fa7caa12427d22"
+      ]
+    },
+    {
+      "certified_from": "2015-01-01",
+      "certified_through": "2026-07-31",
+      "consumer_evidence_path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/r3-certifications/products/index_daily/consumer-read-smoke.sha256-ee2dfdcc2d5e79816260cbd884069d0c71496539f5349a24b47e03c65f2f7465.json",
+      "consumer_evidence_sha256": "ee2dfdcc2d5e79816260cbd884069d0c71496539f5349a24b47e03c65f2f7465",
+      "content_hash": "1cdfe5e6f0afb2d8fceb941b962d726b66d1cfddef9d5bf525163682cd2d8eda",
+      "dataset_id": "index_daily",
+      "report_id": "certification:743b288ca68a374ff1a516c3e4616ed73b7c709b5cccac50bebe7250f2003405",
+      "snapshot_ids": [
+        "snapshot:tushare:index_daily:sha256:473de2e6a6cb159fb3ff6230bd088c1c7325fd15df3110caa16244de35cee6a8",
+        "snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+        "snapshot:tushare:index_daily:sha256:843c22bddb440636ccc8f3554ceb25e893c133687cc3dc9dfc46e1cb082f1d2c",
+        "snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812"
+      ]
+    }
+  ],
+  "profile": "r2-modern-a-share-v1",
+  "recovery_evidence_path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q5/r2-live-evidence/recoverability.json",
+  "recovery_evidence_sha256": "2230b5d4bebfedddb2913e3e1ea0d3a5a20aee1f7a8fb49197b7f2b7d6c6dcba",
+  "schema": "ditto.personal-workstation.q5-r3-data-certifications.v1"
+}

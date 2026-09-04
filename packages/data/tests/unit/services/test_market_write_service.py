@@ -27,6 +27,7 @@ def mock_writers() -> dict[str, MagicMock]:
         "etf_bars": MagicMock(),
         "etf_status": MagicMock(),
         "etf_adj": MagicMock(),
+        "global_index_bars": MagicMock(),
     }
 
 
@@ -46,6 +47,7 @@ def market_write_service(
         etf_bars=mock_writers["etf_bars"],
         etf_status=mock_writers["etf_status"],
         etf_adj=mock_writers["etf_adj"],
+        global_index_bars=mock_writers["global_index_bars"],
     )
 
     return MarketWriteService(
@@ -119,6 +121,29 @@ class TestMarketWriteServiceSaveBars:
         # Assert
         assert rows_written == 1
         mock_writers["etf_bars"].write.assert_called_once()
+
+    def test_save_global_index_daily_preserves_provider_identity(
+        self,
+        market_write_service: MarketWriteService,
+        mock_writers: dict[str, MagicMock],
+    ) -> None:
+        df = pl.DataFrame(
+            {
+                "source_ticker": ["SPX"],
+                "trade_date": [date(2024, 3, 28)],
+                "knowledge_date": [date(2026, 9, 1)],
+                "close": [5254.35],
+            }
+        )
+        mock_writers["global_index_bars"].write.return_value = MagicMock(
+            added=1,
+            updated=0,
+        )
+
+        rows_written = market_write_service.save_global_index_bars(df, 2024)
+
+        assert rows_written == 1
+        mock_writers["global_index_bars"].write.assert_called_once()
 
 
 class TestMarketWriteServiceSaveAdjFactor:

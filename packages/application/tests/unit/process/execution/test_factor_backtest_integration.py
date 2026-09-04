@@ -332,6 +332,46 @@ class TestFactorAwareBundleBuilder:
             "2026-04-10",
         ]
 
+    def test_factor_history_normalizes_provider_native_dates(self) -> None:
+        """Provider Date rows and the current ISO date share one stable schema."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close",),
+            weights=(1.0,),
+        )
+        data_feed = MagicMock()
+        data_feed.get_history.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "open": [9.0],
+                "high": [9.5],
+                "low": [8.5],
+                "close": [9.25],
+                "volume": [900.0],
+                "trade_date": [date(2024, 1, 1)],
+            }
+        )
+        data_feed.get_fundamental_snapshot.return_value = pl.DataFrame()
+        data_feed.get_classification_snapshot.return_value = pl.DataFrame()
+
+        bundle = build_factor_bundle(
+            ctx=_make_step_context("2024-01-02", _make_slice_with_bars()),
+            strategy_id="native-date-strat",
+            run_id="native-date-run",
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=20,
+        )
+
+        assert bundle.market_data.schema["trade_date"] == pl.String
+        assert bundle.market_data["trade_date"].to_list() == [
+            "2024-01-01",
+            "2024-01-02",
+            "2024-01-02",
+            "2024-01-02",
+        ]
+
     def test_backtest_service_options_accept_compiled_expressions(self) -> None:
         """BacktestServiceOptions 接受 compiled_expressions 参数."""
         bridge = FactorBridge()

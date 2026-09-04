@@ -142,6 +142,7 @@ from ditto_application.research_validation_protocol import (
     ValidationProtocolRequest,
     compile_validation_protocol,
 )
+from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
 from ditto_features.expression.contracts import CompileIdentity
 from ditto_strategy.models import StrategySpecRecord
 
@@ -333,6 +334,17 @@ def _planning_request() -> ExperimentPlanningRequest:
         worker_count=2,
         failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
         created_at=_NOW,
+        context_input_refs=(
+            ReplayContextInputRef(
+                context_kind=ContextInputKind.MARKET_CONTEXT,
+                context_id="market-regime:sha256:task8",
+                content_hash="6" * 64,
+                as_of="2026-01-02T00:00:00Z",
+                knowledge_cutoff="2026-01-02T00:00:00Z",
+                publication_cutoff="2026-01-02T00:00:00Z",
+                source_snapshot_ids=("provider-snapshot-task8",),
+            ),
+        ),
     )
 
 
@@ -1219,6 +1231,19 @@ def _assert_exact_baseline_runtime_is_frozen(
     }
 
 
+def _assert_exact_context_inputs_resolved(
+    *,
+    input_resolver: _ExactInputsResolver,
+    request: ExperimentPlanningRequest,
+) -> None:
+    assert all(item.snapshot == _exact_snapshot() for item in input_resolver.calls)
+    assert all(
+        item.universe == ExactUniverseIdentity("csi_etf_broad", "9" * 64)
+        for item in input_resolver.calls
+    )
+    assert request.context_input_refs
+
+
 def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identity(
     tmp_path: Path,
 ) -> None:
@@ -1294,6 +1319,7 @@ def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identi
         ) == ("0.1.0", "monthly", 50_000, None, 64)
         assert binder.snapshot.exact_snapshot == _exact_snapshot()
         assert binder.membership_hash == "9" * 64
+        assert binder.context_input_refs == request.context_input_refs
         _assert_exact_baseline_runtime_is_frozen(
             reader=reader,
             baseline_fold=baseline_fold,
@@ -1317,10 +1343,9 @@ def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identi
             candidate_replay_runtime_builder=candidate_replay_runtime_builder,
             input_resolver=input_resolver,
         )
-        assert all(item.snapshot == _exact_snapshot() for item in input_resolver.calls)
-        assert all(
-            item.universe == ExactUniverseIdentity("csi_etf_broad", "9" * 64)
-            for item in input_resolver.calls
+        _assert_exact_context_inputs_resolved(
+            input_resolver=input_resolver,
+            request=request,
         )
 
         with pytest.raises(AppProcessError) as missing_inputs:

@@ -2,11 +2,14 @@
 ETF/Index/Industry 数据获取 — 从 TushareSource 提取的 ETF/指数/行业 fetch 逻辑.
 
 提供 fetch_etf_basic / fetch_etf_daily / fetch_fund_adj /
-fetch_index_basic / fetch_index_daily / fetch_sw_industry 模块级函数，
+fetch_index_basic / fetch_index_daily / fetch_global_index_daily /
+fetch_sw_industry / fetch_sw_industry_concepts 模块级函数，
 供 TushareSource 的同名方法委托调用。
 """
 
 from __future__ import annotations
+
+from datetime import date, datetime
 
 import polars as pl
 
@@ -199,6 +202,23 @@ def fetch_index_daily(
     )
 
 
+def fetch_global_index_daily(
+    index: IndexTushareAdapter,
+    codes: list[str],
+    start_date: str,
+    end_date: str,
+    *,
+    observed_at: datetime | None = None,
+) -> pl.DataFrame:
+    """Fetch the supported global-index basket with PIT-safe timestamps."""
+    return index.fetch_global_daily(
+        codes,
+        start_date,
+        end_date,
+        observed_at=observed_at,
+    )
+
+
 def fetch_sw_industry(
     industry: IndustryTushareAdapter,
     level: int = 1,
@@ -221,3 +241,18 @@ def fetch_sw_industry(
 
     """
     return industry.fetch_sw_industry(level)
+
+
+def fetch_sw_industry_concepts(
+    industry: IndustryTushareAdapter,
+    asof_date: str | None = None,
+    level: int = 1,
+    *,
+    knowledge_date: date | None = None,
+) -> pl.DataFrame:
+    """Fetch effective-dated SW industry memberships, fail closed by retrieval date."""
+    return industry.fetch_sw_industry_concepts(
+        asof_date=asof_date,
+        level=level,
+        knowledge_date=knowledge_date,
+    )

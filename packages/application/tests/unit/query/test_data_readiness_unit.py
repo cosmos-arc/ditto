@@ -12,6 +12,7 @@ from ditto_application.queries.data_readiness import (
     DatasetReadinessRequirement,
     PartitionHealth,
 )
+from ditto_data.catalog.metadata import default_dataset_metadata
 
 
 def _active_report(
@@ -132,7 +133,13 @@ def test_missing_profile_certification_fails_closed() -> None:
     assert report.datasets[0].reason_codes == ("CERTIFICATION_MISSING",)
 
 
-def test_p0_and_p1_bundles_cover_the_19_products_without_overlap() -> None:
-    assert len(R2_P0_DATASETS) == 12
+def test_p0_and_p1_bundles_cover_the_22_products_without_overlap() -> None:
+    assert len(R2_P0_DATASETS) == 15
     assert len(R2_P1_DATASETS) == 7
     assert set(R2_P0_DATASETS).isdisjoint(R2_P1_DATASETS)
+    assert set(R2_P0_DATASETS) | set(R2_P1_DATASETS) == {
+        metadata.dataset_id
+        for metadata in default_dataset_metadata().values()
+        if metadata.dataset_spec is not None
+        and metadata.dataset_spec.r2_scope == "hard"
+    }

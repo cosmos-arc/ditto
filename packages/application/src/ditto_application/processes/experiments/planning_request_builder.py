@@ -15,6 +15,9 @@ from ditto_kernel.exceptions import DittoError
 from ditto_strategy.models import StrategySpecRecord
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.execution.replay_context_inputs import (
+    decode_replay_context_inputs,
+)
 from ditto_application.processes.experiments._planning_request_identity import (
     validate_planning_request_graph,
 )
@@ -57,7 +60,7 @@ from ditto_application.strategy_spec_deserialization import (
 
 __all__ = ["build_experiment_planning_request"]
 
-_TOP_LEVEL_KEYS = {
+_REQUIRED_TOP_LEVEL_KEYS = {
     "experiment_id",
     "research_cycle_id",
     "research_cycle_hash",
@@ -74,6 +77,7 @@ _TOP_LEVEL_KEYS = {
     "failure_policy",
     "created_at",
 }
+_TOP_LEVEL_KEYS = _REQUIRED_TOP_LEVEL_KEYS | {"context_input_refs"}
 _STRATEGY_KEYS = {"strategy_id", "version", "spec_hash", "spec_json"}
 _SNAPSHOT_KEYS = {"snapshot_id", "manifest_hash"}
 _COST_MODEL_KEYS = {"bytes_per_run", "bytes_per_trading_session"}
@@ -177,7 +181,13 @@ def _document_copy(document: Mapping[str, object]) -> dict[str, object]:
     stable_preimage: _JsonValue | None = None
     if type(document) not in {dict, MappingProxyType}:
         try:
-            pre_read = {key: document[key] for key in sorted(_TOP_LEVEL_KEYS)}
+            try:
+                document["context_input_refs"]
+            except KeyError:
+                expected_keys = _REQUIRED_TOP_LEVEL_KEYS
+            else:
+                expected_keys = _TOP_LEVEL_KEYS
+            pre_read = {key: document[key] for key in sorted(expected_keys)}
         except (KeyError, RuntimeError, TypeError, ValueError):
             _invalid("planning_document_changed_during_snapshot")
         stable_preimage = _detach_json(pre_read)
@@ -420,7 +430,8 @@ def _budget(value: object) -> ExperimentBudgetSpec:
 
 def _build(document: Mapping[str, object]) -> ExperimentPlanningRequest:
     payload = _document_copy(document)
-    if set(payload) != _TOP_LEVEL_KEYS:
+    payload_keys = set(payload)
+    if payload_keys not in (_REQUIRED_TOP_LEVEL_KEYS, _TOP_LEVEL_KEYS):
         _invalid("invalid_planning_document_shape")
     created_at_text = decode_string(payload.get("created_at"), "created_at")
     created_at = _created_at(created_at_text)
@@ -470,6 +481,10 @@ def _build(document: Mapping[str, object]) -> ExperimentPlanningRequest:
         "failure_policy",
         lambda: decode_experiment_failure_policy(payload.get("failure_policy")),
     )
+    context_input_refs = _decode_field(
+        "context_input_refs",
+        lambda: decode_replay_context_inputs(payload.get("context_input_refs", [])),
+    )
     request = ExperimentPlanningRequest(
         experiment_id=_canonical_string(
             payload.get("experiment_id"),
@@ -495,6 +510,7 @@ def _build(document: Mapping[str, object]) -> ExperimentPlanningRequest:
         worker_count=decode_integer(payload.get("worker_count"), "worker_count"),
         failure_policy=failure_policy,
         created_at=created_at,
+        context_input_refs=context_input_refs,
     )
     validate_planning_request_graph(request)
     validate_planning_identity(

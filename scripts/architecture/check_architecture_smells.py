@@ -241,6 +241,61 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
             "ordinary API, CLI, and job modules remain behind Application facades."
         ),
     ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/scripts/q2_live_market_context.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.metadata",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        owner="apps isolated Q2 live acceptance entrypoint",
+        reason=(
+            "The operator-run Q2 acceptance composes exact retained provider "
+            "payloads and certification authorities under an isolated data root."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/scripts/q3_live_discovery_support.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        owner="apps isolated Q3 live discovery composition",
+        reason=(
+            "The operator-run Q3 acceptance resolves exact provider snapshots, "
+            "payloads, and certifications before invoking application facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/scripts/q3_live_discovery.py"),
+        allowed_modules=frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        owner="apps isolated Q3 live discovery entrypoint",
+        reason=(
+            "The operator-run Q3 acceptance resolves exact provider snapshots, "
+            "payloads, and certifications before invoking application facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=("packages/apps/src/ditto_apps/scripts/q5_live_agent_author_support.py"),
+        allowed_modules=frozenset({"ditto_strategy.models"}),
+        owner="apps isolated Q5 Author acceptance composition",
+        reason=(
+            "The operator-run Q5 acceptance validates the model proposal against "
+            "the strategy-owned canonical record before exposing an approval hash."
+        ),
+    ),
 )
 
 APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
@@ -249,6 +304,67 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
 }
 
 APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/research_case.py",
+        allowed_modules=frozenset({"ditto_analysis.research.cases"}),
+        owner="apps ResearchCase composition adapter",
+        reason=(
+            "The composition root converts an Application-owned SelectionRun "
+            "handoff contract into the isolated Analysis ResearchCase domain; "
+            "ordinary application processes never import Analysis."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/fresh_runtime.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.storage.sqlite.experiments",
+                "ditto_data.config.data_store",
+                "ditto_execution.di",
+            }
+        ),
+        owner="apps greenfield runtime composition root",
+        reason=(
+            "The pre-launch fresh-runtime builder composes authenticated "
+            "current-schema "
+            "storage owners into one empty isolated data root; ordinary API, CLI, and "
+            "job modules remain behind application facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/infra/trading_storage.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.config.data_store",
+                "ditto_execution.di",
+            }
+        ),
+        owner="apps trading recovery-unit composition",
+        reason=(
+            "The composition adapter owns the dedicated trading SQLite pool and "
+            "binds execution storage to it; ordinary Apps consumers remain behind "
+            "Application contracts."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/performance_probes.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_features.technical_analysis.contracts",
+                "ditto_features.technical_analysis.service",
+                "ditto_portfolio.portfolio_comparison",
+                "ditto_strategy.selection.contracts",
+                "ditto_strategy.selection.pipeline",
+            }
+        ),
+        owner="apps OPS-09 performance probe composition",
+        reason=(
+            "The evidence-only composition probe invokes exact deterministic "
+            "capability paths under explicit p95 budgets; the generic benchmark "
+            "harness contains no capability imports."
+        ),
+    ),
     CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/registry/agent/provider.py",
         allowed_modules=frozenset({"ditto_analysis.experiments.campaign_persistence"}),
@@ -352,6 +468,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
             {
                 "ditto_data.catalog",
                 "ditto_data.catalog.fallback_policy",
+                "ditto_data.catalog.provider_payload",
                 "ditto_data.ingestion.freeze_store",
                 "ditto_data.ingestion.ingestion_cursor_store",
                 "ditto_data.ingestion.ingestion_log_store",
@@ -534,6 +651,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_analysis.experiments.trial_ledger",
                 "ditto_analysis.research.artifact_service",
                 "ditto_analysis.research.catalog_service",
+                "ditto_backtest.context_inputs",
                 "ditto_data.catalog.certification",
                 "ditto_data.catalog.source_snapshot",
                 "ditto_strategy.alpha.seeds",
@@ -564,6 +682,95 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         reason=(
             "Task 18 owns the explicit production-port composition for golden "
             "lane, governance, and recovery evidence over an isolated root."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=(
+            "packages/apps/src/ditto_apps/registry/live/"
+            "q4_live_account_acceptance_runtime.py"
+        ),
+        allowed_modules=frozenset(
+            {
+                "ditto_execution.paper.session",
+                "ditto_execution.paper.sqlite_store",
+                "ditto_execution.storage.sqlite.account_journal",
+                "ditto_portfolio.account_ledger",
+                "ditto_portfolio.account_projection",
+            }
+        ),
+        owner="apps Q4/PAP-09 account acceptance composition",
+        reason=(
+            "The exact-approval acceptance runtime composes canonical Manual and "
+            "Paper storage with Application handlers for an isolated, Paper-only "
+            "evidence root; the CLI and ordinary Apps paths stay on Application "
+            "contracts and the registry-owned runtime."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=(
+            "packages/apps/src/ditto_apps/registry/live/"
+            "q4_accelerated_paper_acceptance_runtime.py"
+        ),
+        allowed_modules=frozenset({"ditto_execution.storage.sqlite.account_journal"}),
+        owner="apps PAP-09 accelerated acceptance composition",
+        reason=(
+            "The exact-approval replay runtime creates its isolated Paper account "
+            "against the canonical execution journal before delegating every day "
+            "to the shared Q4 production Paper path."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=(
+            "packages/apps/src/ditto_apps/registry/live/"
+            "q5_live_portfolio_acceptance_runtime.py"
+        ),
+        allowed_modules=frozenset(
+            {
+                "ditto_backtest.data_feed",
+                "ditto_data.catalog",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+                "ditto_execution.paper.session",
+                "ditto_portfolio.account_projection",
+                "ditto_strategy.storage.sqlite.services.strategy_run_service",
+            }
+        ),
+        owner="apps Q5 live portfolio acceptance composition",
+        reason=(
+            "The exact-approval acceptance runtime binds one frozen provider "
+            "payload and snapshot to the published strategy, canonical Paper and "
+            "Manual projections, EOD lifecycle, and read-only comparison evidence; "
+            "ordinary API and CLI paths remain behind Application contracts."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=(
+            "packages/apps/src/ditto_apps/registry/live/q5_live_portfolio_proposal.py"
+        ),
+        allowed_modules=frozenset(
+            {
+                "ditto_backtest.data_feed",
+                "ditto_data.services.metadata_service",
+            }
+        ),
+        owner="apps Q5 live portfolio proposal composition",
+        reason=(
+            "The read-only proposal boundary resolves the published universe "
+            "through canonical metadata and evaluates its exact provider slice "
+            "before freezing the operator approval request."
+        ),
+    ),
+    CompositionImportAllowance(
+        path=(
+            "packages/apps/src/ditto_apps/registry/live/"
+            "q4_live_account_acceptance_store.py"
+        ),
+        allowed_modules=frozenset({"ditto_execution.storage.sqlite.account_journal"}),
+        owner="apps Q4/PAP-09 acceptance recovery storage composition",
+        reason=(
+            "The restart-safe acceptance helper inspects the same isolated "
+            "Manual journal composed by the Q4 runtime so interrupted receipt "
+            "writes recover immutable account identity without replay drift."
         ),
     ),
 )

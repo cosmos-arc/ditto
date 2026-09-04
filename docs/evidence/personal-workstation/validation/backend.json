@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-02T23:47:00Z",
+  "repository": {
+    "path": "/Users/chevy/Desktop/code/ditto",
+    "branch": "codex/roadmap-completion",
+    "head": "79fc1cd90a28d9d9a5cb4ecad7ab46c547734572",
+    "worktree_policy": "existing roadmap worktree preserved; dirty state accepted by user; no branch created"
+  },
+  "configuration": {
+    "pixi_toml_sha256": "0c65c73ba3491b1348dd1216e6d3b22db456827fb6d2b1b0bd44cd6cdbedc0ba",
+    "pyproject_toml_sha256": "ecd9b5d820f10cda05651a65744dcdc9d6ed600b4ce924f9603c896f857edd78",
+    "openapi_v1_sha256": "acaf611b4ae849f9adea6c13ea17139103f839ef94caa3a3f167f331a65f8a2e"
+  },
+  "full_ci": {
+    "command": "pixi run -e dev ci",
+    "status": "passed",
+    "completed_at": "2026-09-02T23:44:00Z",
+    "pytest": {
+      "passed": 14395,
+      "skipped": 69,
+      "xfailed": 11,
+      "xpassed": 11,
+      "coverage_percent": 92.08
+    },
+    "lint": "passed",
+    "format": "passed",
+    "type_errors": 0,
+    "import_linter": {
+      "kept_contracts": 43,
+      "broken_contracts": 0
+    },
+    "architecture_smell_check": "passed",
+    "harness_validation": "passed",
+    "harness_tests": {
+      "passed": 16,
+      "failed": 0
+    }
+  },
+  "pit_gate": {
+    "command": "pixi run -e dev pytest -m pit",
+    "status": "passed",
+    "passed": 73,
+    "skipped": 1,
+    "skip_reason": "TDX sample data is unavailable; this is not accepted as real-provider proof"
+  },
+  "post_pap09_changed_scope": {
+    "command": "pixi run -e dev check",
+    "status": "passed",
+    "pytest": {
+      "passed": 13394,
+      "xfailed": 1
+    },
+    "lint": "passed",
+    "format": "passed",
+    "type_errors": 0,
+    "import_linter": {
+      "kept_contracts": 43,
+      "broken_contracts": 0
+    },
+    "architecture_smell_check": "passed",
+    "harness_validation": "passed",
+    "harness_tests": {
+      "passed": 18,
+      "failed": 0
+    },
+    "focused_regression": {
+      "command": "pixi run -e dev pytest packages/apps/tests/unit/scripts/test_q4_accelerated_paper_acceptance_unit.py packages/apps/tests/unit/scripts/test_q5_live_portfolio_acceptance_unit.py packages/apps/tests/unit/scripts/test_q5_live_portfolio_diagnostic_unit.py",
+      "passed": 16,
+      "failed": 0
+    },
+    "release_hardening_regression": {
+      "command": "pixi run -e dev pytest packages/apps/tests/unit/operations/test_personal_workstation_release_candidate_unit.py packages/apps/tests/unit/scripts/test_personal_workstation_release_candidate_unit.py packages/apps/tests/unit/scripts/test_q4_accelerated_paper_acceptance_unit.py -q",
+      "passed": 16,
+      "failed": 0
+    }
+  },
+  "diff_check": {
+    "command": "git diff --check",
+    "status": "passed"
+  },
+  "release_claim": "engineering validation only; skipped, fixture, fake-model, or synthetic evidence does not prove Q1-Q6"
+}

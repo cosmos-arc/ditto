@@ -1,0 +1,117 @@
+{
+  "schema": "ditto.personal-workstation.ui08-account-acceptance.v1",
+  "generated_at": "2026-09-02T10:15:32Z",
+  "status": "partial_pass",
+  "scope": "Post-close live-backend browser acceptance for UI-08 steps 7-10 against the dedicated approved PAP-09 Paper and Manual accounts",
+  "runtime": {
+    "backend_origin": "http://127.0.0.1:8003",
+    "frontend_origin": "http://127.0.0.1:5176",
+    "mock_enabled": false,
+    "trading_store_binding": "explicit DITTO_TRADING_SQLITE_PATH acceptance override",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    }
+  },
+  "repository_state": {
+    "backend_branch": "codex/roadmap-completion",
+    "backend_head": "79fc1cd90a28d9d9a5cb4ecad7ab46c547734572",
+    "frontend_branch": "codex/roadmap-completion",
+    "frontend_head": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+    "working_tree_policy": "existing dirty roadmap-completion trees preserved; no branch created"
+  },
+  "approval": {
+    "request_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "same_day_closed_market_authorization": "做合理的验收就行了，现在收盘了，不等待次日"
+  },
+  "evidence_identity": {
+    "trade_date": "2026-09-02",
+    "paper_account_id": "paper-pap09-owner-acceptance",
+    "paper_session_id": "pap09-session-2026-09-02",
+    "manual_account_id": "manual-q4-owner-acceptance",
+    "strategy_id": "seed_etf_industry_rotation",
+    "instrument_id": 2001724,
+    "ticker": "518880.SH",
+    "provider_snapshot_id": "snapshot:tushare:etf_daily:sha256:8b4f3c39a13d3a7427d26322f768ad0e5b78175ccae2307a46d15baf817c9614",
+    "paper_market_snapshot_hash": "market-snapshot:sha256:e146a260a8182933c48166584841ac153b4b92f274e5462e9f6625075fdc0399",
+    "paper_market_lineage_hash": "market-lineage:sha256:c7ab2af20213e483284869462d37ab351f17ebe5a425004191bcef745d70cc04",
+    "paper_reconciliation_checksum": "paper-eod:sha256:b074fdc708b8c188a92770f279fd744817c13a8c81bd089a7f56f2dac3119a0d",
+    "paper_ledger_hash": "account-ledger:sha256:bb0033022cb91cd5cfae8e37f353038d30dd52ad2ae8e9903efccc31406a06c3",
+    "manual_ledger_hash": "account-ledger:sha256:1f05753ea4469cf4324a92c69aff4004d5134322039a6a716369f7a6077414eb"
+  },
+  "steps": [
+    {
+      "step": 7,
+      "name": "Paper orders and fills",
+      "state": "passed",
+      "assertions": [
+        "the live page rendered the exact approved Paper account and paused session at revision 2",
+        "one 100-unit BUY fill rendered at 8.903 against the Tushare 8.902 close, with 1.00 slippage and 5.01 total cost",
+        "the request, fill assumption, market snapshot, market lineage, ledger event, and balanced EOD checksum remained visible and traceable",
+        "the paused session disabled new matching; broker connections and real orders remained zero"
+      ]
+    },
+    {
+      "step": 8,
+      "name": "Manual actual event and correction",
+      "state": "passed",
+      "assertions": [
+        "the live page rendered the exact owner-approved dedicated Manual acceptance account",
+        "the projection rebuilt cash 100500.00 and 100 units of instrument 2001724 from four immutable events",
+        "opening cash, opening position, deposit, and appended correction remained individually visible; original events were not edited",
+        "valuation remained explicitly incomplete on the API read because no valuation snapshot was supplied, so the UI showed the needs-review state instead of inventing completeness"
+      ]
+    },
+    {
+      "step": 9,
+      "name": "compare Model, Paper, and Manual",
+      "state": "fail_closed_pending_exact_model",
+      "assertions": [
+        "the request bound exact strategy, model portfolio, Paper account/session, Manual account, PIT cutoffs, and provider snapshot identity",
+        "the live page rejected the comparison because the exact active signal package was not found",
+        "no latest fallback or synthetic Model portfolio was displayed"
+      ]
+    },
+    {
+      "step": 10,
+      "name": "EOD Agent Review traceability",
+      "state": "pending_real_review_input",
+      "assertions": [
+        "the review route rendered zero signals and the explicit no-reviewable-signal state",
+        "the acceptance runtime exposed Agent as disabled/provider-not-configured and retained an empty run history",
+        "no GLM call or fabricated EOD diagnosis was created without a complete comparison and review input"
+      ]
+    }
+  ],
+  "browser_assertions": {
+    "paper_horizontal_overflow": false,
+    "manual_horizontal_overflow": false,
+    "comparison_horizontal_overflow": false,
+    "review_horizontal_overflow": false,
+    "document_scroll_width": 1280,
+    "exact_identity_handoff": true,
+    "browser_write_operations": 0,
+    "console_observation": "not collected in this post-close run; UI-07 retains the separate console audit"
+  },
+  "pap09_progress": {
+    "real_trading_day_count": 1,
+    "remaining_real_trading_days": 19,
+    "q4_five_day_ready": false,
+    "pap09_twenty_day_complete": false,
+    "signature_chain_valid": true
+  },
+  "safety": {
+    "paper_only": true,
+    "broker_connections": 0,
+    "real_orders": 0,
+    "strategy_published": false,
+    "strategy_activated": false
+  },
+  "does_not_prove": [
+    "UI-08 steps 9 or 10 completion",
+    "five-day Q4 acceptance",
+    "20 real A-share trading-day PAP-09 completion",
+    "Q4, Q5, or Q6 gate passage",
+    "fresh-bootstrap OPS-10 acceptance"
+  ]
+}

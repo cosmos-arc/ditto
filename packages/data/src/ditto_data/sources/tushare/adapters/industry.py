@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
@@ -16,33 +18,31 @@ from ditto_data.sources.tushare.processors.transformer import (
 
 # 申万行业分类列映射配置
 SW_INDUSTRY_CLASSIFY_MAPPING = ColumnMapping(
-    rename={"index_code": "source_ticker", "index_name": "industry_name"},
+    rename={"index_code": "source_ticker"},
     date_columns={},
     float_columns=[],
     int_columns=("level",),
     output_columns=("source_ticker", "industry_name", "level"),
 )
 
-# 申万行业成分股列映射配置
-# 注意：不关联 source_schema，因为最终输出需要添加 industry_date 和 knowledge_date 列
-# 我们会在 fetch_sw_industry_concepts 方法中手动验证
-SW_INDUSTRY_CONCEPTS_MAPPING = ColumnMapping(
-    rename={"ts_code": "instrument_id", "name": "stock_name"},
-    # 只转换 in_date，不转换 out_date（可能有 null）
-    date_columns={"in_date": "%Y%m%d"},
-    float_columns=[],
-    int_columns=("is_new",),
-    computed_columns={},
-    output_columns=(
-        "instrument_id",
-        "stock_name",
-        "index_code",
-        "industry_name",
-        "industry_level",
-        # 保留 in_date 列，后面会重命名为 industry_date
-        "in_date",
-    ),
-)
+_SW_INDUSTRY_CONCEPTS_SCHEMA: dict[str, pl.DataType | type[pl.DataType]] = {
+    "instrument_id": pl.String,
+    "industry_id": pl.String,
+    "industry_name": pl.String,
+    "industry_level": pl.Int32,
+    "industry_date": pl.Date,
+    "effective_to": pl.Date,
+    "knowledge_date": pl.Date,
+    "classification_version": pl.String,
+    "source": pl.String,
+}
+
+
+def _provider_level(level: int) -> str:
+    """Translate the public numeric level to Tushare's L1/L2/L3 contract."""
+    if level not in {1, 2, 3}:
+        raise ValueError("level must be one of 1, 2, or 3")
+    return f"L{level}"
 
 
 def _record_metrics(row_count: int, dataset: str) -> None:
@@ -108,10 +108,15 @@ class IndustryTushareAdapter(BaseTushareAdapter):
         with tushare_fetch_error_handler("sw_industry", "index_classify"):
             response = self._client.query(
                 api_name="index_classify",
-                level=str(level),
+                level=_provider_level(level),
                 src="SW2021",
-                fields="index_code,index_name,level",
+                fields="index_code,industry_name,level",
             )
+
+            if response.height > 0:
+                response = response.with_columns(
+                    pl.col("level").cast(pl.String).str.strip_prefix("L").cast(pl.Int64)
+                )
 
             result = TushareDataTransformer.transform(
                 response, "sw_industry", SW_INDUSTRY_CLASSIFY_MAPPING
@@ -138,6 +143,8 @@ class IndustryTushareAdapter(BaseTushareAdapter):
         self,
         asof_date: str | None = None,
         level: int = 1,
+        *,
+        knowledge_date: date | None = None,
     ) -> pl.DataFrame:
         """
         获取申万行业成分股.
@@ -145,6 +152,8 @@ class IndustryTushareAdapter(BaseTushareAdapter):
         Args:
             asof_date: 历史查询日期 (YYYY-MM-DD), None 表示最新
             level: 行业级别 (1=一级行业, 2=二级行业, 3=三级行业)
+            knowledge_date: Provider payload 的实际获取日期。默认今天；不得用
+                ``in_date`` 冒充发布时间。
 
         Returns:
             DataFrame with columns:
@@ -165,86 +174,82 @@ class IndustryTushareAdapter(BaseTushareAdapter):
             level=level,
         )
 
-        with tushare_fetch_error_handler("sw_industry_concepts", "index_member"):
-            # Tushare API: index_member 获取指数成分股
-            # 申万行业指数的成分股即为该行业的股票
-            # 需要先获取所有申万行业代码，然后分别查询成分股
-
-            # 1. 获取申万行业代码
-            industries = self._client.query(
+        with tushare_fetch_error_handler("sw_industry_concepts", "index_member_all"):
+            provider_level = _provider_level(level).lower()
+            classifications = self._client.query(
                 api_name="index_classify",
-                level=str(level),
+                level=_provider_level(level),
                 src="SW2021",
-                fields="index_code,index_name",
+                fields="index_code,industry_name",
+            )
+            if classifications.height == 0:
+                logger.warning(
+                    "No SW industry classifications found",
+                    event="tushare_sw_industry_concepts_no_classifications",
+                )
+                return pl.DataFrame(schema=_SW_INDUSTRY_CONCEPTS_SCHEMA)
+            member_frames: list[pl.DataFrame] = []
+            for industry_code in classifications.get_column("index_code").to_list():
+                params = {
+                    "api_name": "index_member_all",
+                    f"{provider_level}_code": industry_code,
+                    "fields": (
+                        "l1_code,l1_name,l2_code,l2_name,l3_code,l3_name,"
+                        "ts_code,name,in_date,out_date,is_new"
+                    ),
+                }
+                if asof_date is None:
+                    params["is_new"] = "Y"
+                frame = self._client.query(**params)
+                if frame.height > 0:
+                    member_frames.append(frame)
+            members = (
+                pl.concat(member_frames)
+                if member_frames
+                else pl.DataFrame(schema=_SW_INDUSTRY_CONCEPTS_SCHEMA)
             )
 
-            if len(industries) == 0:
-                logger.warning(
-                    "No SW industries found",
-                    event="tushare_sw_industry_concepts_no_industries",
-                )
-                return pl.DataFrame(schema=SW_INDUSTRY_CONCEPTS_MAPPING.output_columns)
-
-            # 2. 查询每个行业的成分股
-            all_concepts: list[pl.DataFrame] = []
-            for industry_row in industries.iter_rows(named=True):
-                index_code = industry_row["index_code"]
-                industry_name = industry_row["index_name"]
-
-                # 查询该行业的成分股
-                params = {
-                    "api_name": "index_member",
-                    "index_code": index_code,
-                    "fields": "ts_code,name,in_date,out_date,is_new",
-                }
-
-                if asof_date:
-                    # 历史查询：指定查询日期
-                    params["date"] = asof_date.replace("-", "")
-
-                members = self._client.query(**params)
-
-                if len(members) > 0:
-                    # 添加行业信息
-                    members = members.with_columns(
-                        pl.lit(index_code).alias("index_code"),
-                        pl.lit(industry_name).alias("industry_name"),
-                        pl.lit(level).alias("industry_level"),
-                    )
-                    all_concepts.append(members)
-
-            # 3. 合并所有成分股数据
-            if not all_concepts:
+            if not member_frames:
                 logger.warning(
                     "No SW industry concepts found",
                     event="tushare_sw_industry_concepts_empty",
                 )
-                return pl.DataFrame(schema=SW_INDUSTRY_CONCEPTS_MAPPING.output_columns)
+                return pl.DataFrame(schema=_SW_INDUSTRY_CONCEPTS_SCHEMA)
 
-            result = pl.concat(all_concepts)
-
-            # 4. 数据转换和验证
-            result = TushareDataTransformer.transform(
-                result, "sw_industry_concepts", SW_INDUSTRY_CONCEPTS_MAPPING
+            observed_on = knowledge_date or date.today()
+            result = members.with_columns(
+                pl.col("ts_code").cast(pl.String).alias("instrument_id"),
+                pl.col(f"{provider_level}_code").cast(pl.String).alias("industry_id"),
+                pl.col(f"{provider_level}_name").cast(pl.String).alias("industry_name"),
+                pl.lit(level, dtype=pl.Int32).alias("industry_level"),
+                pl.col("in_date")
+                .cast(pl.String)
+                .str.to_date("%Y%m%d", strict=False)
+                .alias("industry_date"),
+                pl.col("out_date")
+                .cast(pl.String)
+                .str.to_date("%Y%m%d", strict=False)
+                .alias("effective_to"),
+                pl.lit(observed_on).alias("knowledge_date"),
+                pl.lit("SW2021").alias("classification_version"),
+                pl.lit("sw").alias("source"),
             )
-
-            # 5. 添加 industry_date 和 knowledge_date 列
-            # in_date 已经在 date_columns 中转换为 Date 类型
-            # industry_date = in_date（行业生效日期）
-            # knowledge_date = in_date（数据可知日期）
-            result = result.rename({"in_date": "industry_date"})
-            result = result.with_columns(
-                pl.col("industry_date").alias("knowledge_date")
+            result = result.filter(
+                pl.col("instrument_id").is_not_null()
+                & pl.col("instrument_id").str.contains(r"^\d{6}\.(?:SH|SZ|BJ)$")
+                & pl.col("industry_id").is_not_null()
+                & pl.col("industry_date").is_not_null()
             )
-
-            # 6. 选择符合 INDUSTRY_SOURCE_SCHEMA 的最终列
-            result = result.select(
-                "instrument_id",
-                "industry_name",
-                "industry_level",
-                "industry_date",
-                "knowledge_date",
-            )
+            if asof_date is not None:
+                asof = date.fromisoformat(asof_date)
+                result = result.filter(
+                    (pl.col("industry_date") <= asof)
+                    & (
+                        pl.col("effective_to").is_null()
+                        | (pl.col("effective_to") > asof)
+                    )
+                )
+            result = result.select(*_SW_INDUSTRY_CONCEPTS_SCHEMA)
 
             row_count = len(result)
             logger.info(

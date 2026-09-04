@@ -19,6 +19,8 @@ from ditto_strategy.di import get_strategy_providers
 from .agent.provider import AgentRuntimeProvider
 from .infra import R2LiveGateEvidenceProvider, get_infra_providers
 from .infra.risk_persistence import RiskPersistenceProvider
+from .infra.trading_storage import TradingStorageProvider
+from .research_case import ResearchCaseCompositionProvider
 
 __all__ = ["make_app_container", "make_async_app_container"]
 
@@ -32,6 +34,8 @@ def _get_base_providers() -> tuple[Provider, ...]:
         *get_features_providers(),  # Features 存储层
         *get_analysis_providers(),  # Analysis 存储层
         *get_execution_providers(),  # Execution 存储层
+        TradingStorageProvider(),  # 将 execution 绑定到独立 trading 恢复单元
+        ResearchCaseCompositionProvider(),  # Analysis→Application handoff adapter
         *get_app_providers(),  # App 层
         AgentRuntimeProvider(),  # R5 Agent 默认关闭并结构化 fail closed
         RiskPersistenceProvider(),  # 显式覆盖 V3 fail-closed reader

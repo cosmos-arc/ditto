@@ -102,6 +102,10 @@ def data_root_init_directories_from_data_store(
     )
 
 
+_RUNTIME_SECRET_REFS = (("tushare", "token"), ("fred", "api_key"))
+_PRELOADED_KEYRING_SECRETS: dict[tuple[str, str], str] = {}
+
+
 def _load_keyring_secret(service: str, key: str) -> str | None:
     """
     从 keyring 加载密钥（运行时降级）。
@@ -114,6 +118,14 @@ def _load_keyring_secret(service: str, key: str) -> str | None:
         密钥值，如果 keyring 不可用或读取失败则返回 None
 
     """
+    secret_ref = (service, key)
+    if secret_ref in _PRELOADED_KEYRING_SECRETS:
+        return _PRELOADED_KEYRING_SECRETS[secret_ref]
+    return _read_keyring_secret(service, key)
+
+
+def _read_keyring_secret(service: str, key: str) -> str | None:
+    """Read one secret from the platform backend without caching it."""
     try:
         import keyring  # noqa: PLC0415  # 可选依赖延迟加载
     except ImportError:
@@ -125,6 +137,13 @@ def _load_keyring_secret(service: str, key: str) -> str | None:
     except Exception as e:
         logger.warning("keyring read failed", service=service, error=str(e))
         return None
+
+
+def preload_runtime_secrets() -> None:
+    """Resolve server secrets before Granian forks its worker processes."""
+    for service, key in _RUNTIME_SECRET_REFS:
+        if secret := _read_keyring_secret(service, key):
+            _PRELOADED_KEYRING_SECRETS[(service, key)] = secret
 
 
 @dataclass(frozen=True)

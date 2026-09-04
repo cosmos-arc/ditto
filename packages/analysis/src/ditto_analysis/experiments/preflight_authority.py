@@ -1,5 +1,3 @@
-"""Analysis-owned canonical authority decoded from a persisted R3 preflight."""
-
 from __future__ import annotations
 
 import re
@@ -67,7 +65,7 @@ _PREFLIGHT_KEYS = {
     "authority",
     "identities",
 }
-_PLAN_PREIMAGE_KEYS = {
+_PLAN_PREIMAGE_KEYS_V1 = {
     "schema_version",
     "launch_spec_hash",
     "gate_payload_hashes",
@@ -92,6 +90,7 @@ _PLAN_PREIMAGE_KEYS = {
     "certification",
     "preflight_hash",
 }
+_PLAN_PREIMAGE_KEYS_V2 = _PLAN_PREIMAGE_KEYS_V1 | {"context_input_refs"}
 _IDENTITY_KEYS = {
     "request_hash",
     "research_cycle_id",
@@ -225,7 +224,6 @@ def _hashes(
 def _detail_root(
     detail: Mapping[str, object],
 ) -> tuple[dict[str, object], ContentHash]:
-    """Validate an optional signed mutation receipt without owning app semantics."""
     full = _mapping(cast("object", detail), "detail")
     keys = set(full)
     if keys == _DETAIL_KEYS:
@@ -721,7 +719,17 @@ def decode_preflight_authority(
     try:
         root, detail_hash = _detail_root(detail)
         preflight = _mapping(root.get("preflight"), "preflight", _PREFLIGHT_KEYS)
-        plan = _mapping(root.get("plan_preimage"), "plan_preimage", _PLAN_PREIMAGE_KEYS)
+        plan = _mapping(root.get("plan_preimage"), "plan_preimage")
+        plan_schema_version = _integer(
+            plan.get("schema_version"), "plan_preimage.schema_version"
+        )
+        expected_plan_keys = (
+            _PLAN_PREIMAGE_KEYS_V1
+            if plan_schema_version == 1
+            else _PLAN_PREIMAGE_KEYS_V2
+        )
+        if plan_schema_version not in {1, 2} or set(plan) != expected_plan_keys:
+            raise _invalid("plan_preimage has an invalid shape")
         plan_hash = _hash(root.get("plan_hash"), "detail.plan_hash")
         preflight_hash = _hash(root.get("preflight_hash"), "detail.preflight_hash")
         if canonical_payload(preflight).content_hash != preflight_hash:
@@ -730,7 +738,7 @@ def decode_preflight_authority(
             raise _invalid("plan hash does not match its payload")
         if (
             _integer(preflight.get("schema_version"), "preflight.schema_version") != 1
-            or _integer(plan.get("schema_version"), "plan_preimage.schema_version") != 1
+            or plan_schema_version not in {1, 2}
             or _hash(plan.get("preflight_hash"), "plan_preimage.preflight_hash")
             != preflight_hash
         ):

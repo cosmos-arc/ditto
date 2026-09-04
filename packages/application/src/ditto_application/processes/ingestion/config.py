@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
+from ditto_data.catalog.provider_payload import ProviderPayloadWriter
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
@@ -48,4 +49,5 @@ class IngestionCoordinatorConfig:
     catalog_reader: DataCatalogReader | None = None
     catalog_writer: DataCatalogWriter | None = None
     evidence_committer: IngestionEvidenceCommitter | None = None
+    provider_payload_writer: ProviderPayloadWriter | None = None
     license_record_id: str | None = None

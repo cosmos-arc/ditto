@@ -51,7 +51,7 @@ class DataProductLicenseCommands:
     def review(self, command: ReviewDataProductLicense) -> DatasetLicenseRecord:
         """Append a deterministic record only for a declared product source."""
         metadata = default_dataset_metadata().get(command.dataset_id)
-        contract = metadata.product_contract if metadata is not None else None
+        contract = metadata.dataset_spec if metadata is not None else None
         if contract is None:
             raise AppCommandError(
                 f"Unknown data product: {command.dataset_id}",

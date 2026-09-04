@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import cast
@@ -42,6 +44,21 @@ def _normalized_text(value: str, *, field_name: str) -> str:
     return normalized
 
 
+def _normalized_license_classes(value: object) -> tuple[str, ...]:
+    if not isinstance(value, tuple):
+        raise TypeError("approved_license_classes must be a tuple of strings")
+    raw = cast(tuple[object, ...], value)
+    if not all(isinstance(item, str) for item in raw):
+        raise TypeError("approved_license_classes must be a tuple of strings")
+    typed = cast(tuple[str, ...], raw)
+    normalized = tuple(
+        _normalized_text(item, field_name="approved_license_class") for item in typed
+    )
+    if len(normalized) != len(set(normalized)):
+        raise ValueError("approved_license_classes must not contain duplicates")
+    return normalized
+
+
 @dataclass(frozen=True, slots=True)
 class AgentModelProviderSettings:
     """Apps-owned provider config with all live capabilities disabled by default."""
@@ -55,6 +72,7 @@ class AgentModelProviderSettings:
     credential_kind: AgentModelCredentialKind = AgentModelCredentialKind.FORMAL_API
     production_mode: bool = True
     reasoning_effort: ReasoningEffort = None
+    approved_license_classes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate closed config identities and normalize optional secrets."""
@@ -97,6 +115,74 @@ class AgentModelProviderSettings:
                 "reasoning_effort",
                 cast(ReasoningEffort, normalized_effort),
             )
+        object.__setattr__(
+            self,
+            "approved_license_classes",
+            _normalized_license_classes(self.approved_license_classes),
+        )
+
+    @staticmethod
+    def _environment_bool(
+        environment: Mapping[str, str],
+        name: str,
+        *,
+        default: bool,
+    ) -> bool:
+        value = environment.get(name)
+        if value is None:
+            return default
+        normalized = value.casefold()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+        raise ValueError(f"{name} must be an explicit boolean")
+
+    @classmethod
+    def from_environment(
+        cls,
+        environment: Mapping[str, str] | None = None,
+    ) -> AgentModelProviderSettings:
+        """Load only the explicit Apps-owned model configuration names."""
+        source = os.environ if environment is None else environment
+        provider_raw = source.get("DITTO_AGENT_MODEL_PROVIDER", "fake")
+        credential_raw = source.get(
+            "DITTO_AGENT_MODEL_CREDENTIAL_KIND",
+            AgentModelCredentialKind.FORMAL_API.value,
+        )
+        reasoning_raw = source.get("DITTO_AGENT_MODEL_REASONING_EFFORT")
+        approved_license_classes_raw = source.get(
+            "DITTO_AGENT_MODEL_APPROVED_LICENSE_CLASSES",
+            "",
+        )
+        return cls(
+            provider=AgentModelProviderKind(provider_raw),
+            model_calls_enabled=cls._environment_bool(
+                source,
+                "DITTO_AGENT_MODEL_CALLS_ENABLED",
+                default=False,
+            ),
+            a4_approved=cls._environment_bool(
+                source,
+                "DITTO_AGENT_MODEL_A4_APPROVED",
+                default=False,
+            ),
+            model_id=source.get("DITTO_AGENT_MODEL_ID"),
+            api_key=source.get("DITTO_AGENT_MODEL_API_KEY"),
+            project_id=source.get("DITTO_AGENT_MODEL_PROJECT_ID"),
+            credential_kind=AgentModelCredentialKind(credential_raw),
+            production_mode=cls._environment_bool(
+                source,
+                "DITTO_AGENT_MODEL_PRODUCTION_MODE",
+                default=True,
+            ),
+            reasoning_effort=cast(ReasoningEffort, reasoning_raw),
+            approved_license_classes=(
+                ()
+                if approved_license_classes_raw == ""
+                else tuple(approved_license_classes_raw.split(","))
+            ),
+        )
 
 
 def _required(

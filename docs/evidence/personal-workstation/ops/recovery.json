@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-01T00:47:00+08:00",
+  "status": "passed",
+  "result": {
+    "passed": 4,
+    "failed": 0
+  },
+  "drills": [
+    {
+      "name": "process_interruption",
+      "expectation": "pre-commit interruption leaves the run queued and retryable",
+      "test": "packages/apps/tests/integration/test_agent_run_execution.py::test_process_interruption_before_commit_leaves_run_queued_and_retryable",
+      "status": "passed"
+    },
+    {
+      "name": "database_failure",
+      "expectation": "tampered SQLite backup is rejected without a partial restore root",
+      "test": "packages/apps/tests/integration/operations/test_workstation_backup_restore.py::test_restore_rejects_a_tampered_database_and_leaves_no_partial_root",
+      "status": "passed"
+    },
+    {
+      "name": "sse_resume",
+      "expectation": "Last-Event-ID resumes monotonically without model re-execution",
+      "test": "packages/apps/tests/integration/test_agent_sse.py::test_persisted_sse_is_monotonic_and_last_event_id_resumes_without_execution",
+      "status": "passed"
+    },
+    {
+      "name": "duplicate_request",
+      "expectation": "same request replays exactly and body drift conflicts",
+      "test": "packages/apps/tests/integration/test_agent_sse.py::test_same_idempotency_key_replays_exact_result_and_conflicts_on_body_drift",
+      "status": "passed"
+    }
+  ],
+  "verification": "pixi run -e dev pytest <the four selectors above> -q",
+  "observed_exit_code": 0
+}

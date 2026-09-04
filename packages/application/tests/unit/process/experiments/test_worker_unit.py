@@ -596,7 +596,7 @@ def test_first_attempt_factory_freezes_semantics_before_atomic_claim() -> None:
     assert first.projection.status is ExperimentStatus.QUEUED
     assert first.projection.backtest_run_id is None
     assert first.spec.attempt_id == AttemptId(
-        "attempt-9faccd3ec1168c57c9821def208e4a6ec4c852dadb4212fea6e92e51c9bcb0da"
+        "attempt-ac074bda1170853ed51cbcb303e5b4450eb4730e28bf76d644945bd149d26f94"
     )
 
 

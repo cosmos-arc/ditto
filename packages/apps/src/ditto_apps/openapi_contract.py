@@ -15,6 +15,7 @@ from ditto_apps.api.app_metadata import (
 )
 from ditto_apps.api.maturity import OPENAPI_TAGS, build_maturity_openapi_schema
 from ditto_apps.api.routes import (
+    account_ledger,
     agent_routes,
     backtest,
     capital,
@@ -26,20 +27,26 @@ from ditto_apps.api.routes import (
     macro,
     market,
     metadata,
+    paper,
+    portfolio_comparison,
     research_candidate_routes,
     research_catalog_routes,
     research_experiment_routes,
     research_review_routes,
     research_selection_routes,
+    selection,
     source,
     strategy,
+    strategy_author_preview,
     system,
+    technical_analysis,
     trade,
     universe,
 )
 from ditto_apps.api.routes.debug import debug_router
 
 _V1_ROUTERS = (
+    account_ledger.router,
     agent_routes.router,
     backtest.router,
     capital.router,
@@ -51,13 +58,18 @@ _V1_ROUTERS = (
     macro.router,
     market.router,
     metadata.router,
+    paper.router,
+    portfolio_comparison.router,
     research_experiment_routes.router,
     research_catalog_routes.router,
     research_candidate_routes.router,
     research_review_routes.router,
     research_selection_routes.router,
+    selection.router,
     source.router,
     strategy.router,
+    strategy_author_preview.router,
+    technical_analysis.router,
     trade.router,
     universe.router,
 )

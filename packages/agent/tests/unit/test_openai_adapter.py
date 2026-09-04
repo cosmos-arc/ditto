@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import replace
+from types import MappingProxyType
 
 import pytest
 from agents.tool_context import ToolContext
@@ -9,9 +10,11 @@ from ditto_agent.models.openai_adapter import (
     AgentsSDKEngine,
     OpenAIAgentsModel,
     OpenAIInvocation,
+    _decode_model_output,
 )
 from ditto_agent.models.port import (
     ModelContinuation,
+    ModelOutputContract,
     ModelRequest,
     ModelResult,
     ModelStreamEvent,
@@ -57,6 +60,35 @@ def _request(*, kind: ModelToolKind = ModelToolKind.FUNCTION) -> ModelRequest:
             ),
         ),
     )
+
+
+def test_model_output_decodes_an_exact_json_object_for_governed_grounding() -> None:
+    raw = (
+        '{"claims":[{"claim":"Ready.","evidence_refs":["evidence-1"]}],'
+        '"uncertainty":null}'
+    )
+
+    assert _decode_model_output(raw) == {
+        "claims": [{"claim": "Ready.", "evidence_refs": ["evidence-1"]}],
+        "uncertainty": None,
+    }
+    assert _decode_model_output("ordinary text") == "ordinary text"
+    assert _decode_model_output("[1,2,3]") == "[1,2,3]"
+
+
+def test_model_output_decodes_one_json_markdown_fence() -> None:
+    """OpenAI-compatible providers may fence an otherwise exact JSON object."""
+    raw = (
+        "```json\n"
+        '{"claims":[{"claim":"Ready.","evidence_refs":["evidence-1"]}],'
+        '"uncertainty":null}\n'
+        "```"
+    )
+
+    assert _decode_model_output(raw) == {
+        "claims": [{"claim": "Ready.", "evidence_refs": ["evidence-1"]}],
+        "uncertainty": None,
+    }
 
 
 class RecordingEngine:
@@ -120,6 +152,41 @@ async def test_sdk_function_tool_preserves_provider_call_id_for_host_audit() -> 
 
 
 @pytest.mark.asyncio
+async def test_sdk_function_tool_materializes_read_only_host_mappings() -> None:
+    class ReadOnlyMappingInvoker(RecordingToolInvoker):
+        async def invoke(
+            self,
+            tool_name: str,
+            arguments_json: str,
+            *,
+            call_id: str,
+        ) -> object:
+            await super().invoke(
+                tool_name,
+                arguments_json,
+                call_id=call_id,
+            )
+            return MappingProxyType({"status": "ok"})
+
+    invoker = ReadOnlyMappingInvoker()
+    sdk_tool = AgentsSDKEngine(tool_invoker=invoker)._function_tool(_request().tools[0])
+    context = ToolContext(
+        context={},
+        tool_name=sdk_tool.name,
+        tool_call_id="call-provider-002",
+        tool_arguments='{"experiment_id":"experiment-001"}',
+    )
+
+    result = await sdk_tool.on_invoke_tool(
+        context,
+        '{"experiment_id":"experiment-001"}',
+    )
+
+    assert type(result) is dict
+    assert result == {"status": "ok"}
+
+
+@pytest.mark.asyncio
 async def test_openai_adapter_forces_private_responses_and_local_tracing() -> None:
     engine = RecordingEngine()
     provider = OpenAIAgentsModel(
@@ -160,6 +227,23 @@ async def test_openai_adapter_requires_a_tool_when_the_host_contract_says_so() -
     )
     assert run_config.model_settings is not None
     assert run_config.model_settings.tool_choice == tool_name
+
+
+def test_sdk_enforces_grounded_answer_output_contract() -> None:
+    request = replace(
+        _request(),
+        output_contract=ModelOutputContract.GROUNDED_ANSWER,
+    )
+    invocation = OpenAIInvocation(
+        request=request,
+        model_id="gpt-5.6-terra-2026-08-01",
+        api_key="test-key",
+        project_id="project-r5",
+    )
+
+    agent, _run_config, _provider = AgentsSDKEngine()._sdk_inputs(invocation)
+
+    assert agent.output_type is not None
 
 
 def test_openai_adapter_requires_project_identity() -> None:

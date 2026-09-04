@@ -155,6 +155,28 @@ def test_fresh_and_repeat_initialize_create_exact_approved_schema(
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
+def test_fresh_initialize_uses_current_schema_ddl_not_the_v1_migration_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api = _api()
+    from ditto_analysis.storage.sqlite.experiments import database as database_module
+
+    def historical_migration_is_forbidden(_connection: sqlite3.Connection) -> None:
+        raise AssertionError("fresh create must not execute the historical migration")
+
+    monkeypatch.setattr(
+        database_module.ResearchExperimentDatabase,
+        "_apply_v2_migration",
+        staticmethod(historical_migration_is_forbidden),
+    )
+
+    database = api.ResearchExperimentDatabase(tmp_path)
+    database.initialize()
+
+    assert _logical_snapshot(database.path)[0:2] == (APP_ID, USER_VERSION)
+
+
 def test_two_wrappers_initialize_the_same_empty_database_safely(tmp_path: Path) -> None:
     api = _api()
     first = api.ResearchExperimentDatabase(tmp_path)

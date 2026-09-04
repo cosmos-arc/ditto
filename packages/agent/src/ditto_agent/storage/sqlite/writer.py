@@ -17,8 +17,7 @@ from ditto_agent.contracts.runtime import (
     AgentSession,
     RunStatus,
 )
-from ditto_agent.runtime.episode import episode_event_hash
-from ditto_agent.runtime.state_machine import transition_run
+from ditto_agent.runtime.episode import AgentEpisodeManifest, EpisodeEventRecord
 from ditto_agent.storage.sqlite._codec import decimal_text, epoch_us
 from ditto_agent.storage.sqlite._coordination_writer import AgentCoordinationWriter
 from ditto_agent.storage.sqlite.approval_batch_writer import (
@@ -45,6 +44,7 @@ from ditto_agent.storage.sqlite.records import (
     StoredApproval,
     StoredRunEvent,
 )
+from ditto_agent.storage.sqlite.run_execution_writer import AgentRunExecutionWriter
 
 
 def _conflict(message: str, reason_code: str) -> AgentConflictError:
@@ -63,6 +63,7 @@ class AgentStoreWriter:
         self._reader = AgentStoreReader(database)
         self._coordination = AgentCoordinationWriter(database)
         self._approval_batches = ApprovalBatchWriter(database)
+        self._run_execution = AgentRunExecutionWriter(database)
 
     @contextmanager
     def _transaction(self) -> Generator[sqlite3.Connection]:
@@ -115,7 +116,7 @@ class AgentStoreWriter:
                 (manifest.manifest_hash,),
             ).fetchone()
             if row is not None:
-                durable = tuple(row[name] for name in row)
+                durable = tuple(row)
                 if durable != values:
                     raise _conflict(
                         "Manifest hash conflicts with durable content",
@@ -251,94 +252,32 @@ class AgentStoreWriter:
         event_payload_hash: str | None = None,
     ) -> StoredAgentRun:
         """Apply one legal lifecycle transition and optional event atomically."""
-        if (event_type is None) != (event_payload_hash is None):
-            raise ValueError(
-                "event_type and event_payload_hash must be supplied together"
-            )
-        if event_type is not None:
-            event_type = normalized_text(event_type, field="event_type")
-        if event_payload_hash is not None:
-            event_payload_hash = sha256_hex(
-                event_payload_hash, field="event_payload_hash"
-            )
-        occurred_at_us = epoch_us(occurred_at, field="transition occurred_at")
-        with self._transaction() as connection:
-            row = connection.execute(
-                "SELECT status, revision, started_at_us FROM agent_runs WHERE run_id=?",
-                (run_id,),
-            ).fetchone()
-            if row is None:
-                raise _conflict("Agent run does not exist", "agent_run_missing")
-            revision = int(row["revision"])
-            if revision != expected_revision:
-                raise _conflict(
-                    "Agent run revision has changed", "agent_run_revision_conflict"
-                )
-            source = RunStatus(str(row["status"]))
-            transition_run(source, target)
-            started_at_us = row["started_at_us"]
-            if source is RunStatus.QUEUED and target in {
-                RunStatus.RUNNING,
-                RunStatus.CANCELLED,
-            }:
-                started_at_us = occurred_at_us
-            finished_at_us = (
-                occurred_at_us
-                if target
-                in {
-                    RunStatus.COMPLETED,
-                    RunStatus.FAILED,
-                    RunStatus.CANCELLED,
-                }
-                else None
-            )
-            cursor = connection.execute(
-                """
-                UPDATE agent_runs
-                SET status=?, started_at_us=?, finished_at_us=?, revision=revision + 1
-                WHERE run_id=? AND revision=?
-                """,
-                (
-                    target.value,
-                    started_at_us,
-                    finished_at_us,
-                    run_id,
-                    expected_revision,
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise _conflict(
-                    "Agent run transition lost its revision fence",
-                    "agent_run_revision_conflict",
-                )
-            self._audit(
-                connection,
-                category="run",
-                subject_id=run_id,
-                action="transitioned",
-                payload={
-                    "source": source,
-                    "target": target,
-                    "revision": expected_revision + 1,
-                },
-                occurred_at=occurred_at,
-            )
-            if event_type is not None and event_payload_hash is not None:
-                self._append_run_event(
-                    connection,
-                    run_id=run_id,
-                    event_type=event_type,
-                    payload_hash=event_payload_hash,
-                    occurred_at=occurred_at,
-                    occurred_at_us=occurred_at_us,
-                )
-        stored = self._reader.get_run(run_id)
-        if stored is None:
-            raise AgentPersistenceError(
-                "Transitioned Agent run is not readable",
-                reason_code="agent_write_visibility_failed",
-            )
-        return stored
+        return self._run_execution.transition_run(
+            run_id=run_id,
+            expected_revision=expected_revision,
+            target=target,
+            occurred_at=occurred_at,
+            event_type=event_type,
+            event_payload_hash=event_payload_hash,
+        )
+
+    def commit_run_execution(
+        self,
+        *,
+        run_id: str,
+        expected_revision: int,
+        target: RunStatus,
+        events: tuple[EpisodeEventRecord, ...],
+        episode: AgentEpisodeManifest | None,
+    ) -> StoredAgentRun:
+        """Atomically persist one execution lifecycle, events, and Episode."""
+        return self._run_execution.commit_run_execution(
+            run_id=run_id,
+            expected_revision=expected_revision,
+            target=target,
+            events=events,
+            episode=episode,
+        )
 
     def append_run_event(
         self,
@@ -349,88 +288,11 @@ class AgentStoreWriter:
         occurred_at: datetime,
     ) -> StoredRunEvent:
         """Append one event with database-assigned global and per-run sequence."""
-        event_type = normalized_text(event_type, field="event_type")
-        payload_hash = sha256_hex(payload_hash, field="payload_hash")
-        occurred_at_us = epoch_us(occurred_at, field="event occurred_at")
-        with self._transaction() as connection:
-            return self._append_run_event(
-                connection,
-                run_id=run_id,
-                event_type=event_type,
-                payload_hash=payload_hash,
-                occurred_at=occurred_at,
-                occurred_at_us=occurred_at_us,
-            )
-
-    @staticmethod
-    def _append_run_event(
-        connection: sqlite3.Connection,
-        *,
-        run_id: str,
-        event_type: str,
-        payload_hash: str,
-        occurred_at: datetime,
-        occurred_at_us: int,
-    ) -> StoredRunEvent:
-        if (
-            connection.execute(
-                "SELECT 1 FROM agent_runs WHERE run_id=?", (run_id,)
-            ).fetchone()
-            is None
-        ):
-            raise _conflict("Agent run does not exist", "agent_run_missing")
-        last = connection.execute(
-            """
-            SELECT run_sequence, event_hash
-            FROM agent_run_events
-            WHERE run_id=?
-            ORDER BY run_sequence DESC
-            LIMIT 1
-            """,
-            (run_id,),
-        ).fetchone()
-        run_sequence = 1 if last is None else int(last["run_sequence"]) + 1
-        prev_hash = None if last is None else str(last["event_hash"])
-        global_row = connection.execute(
-            "SELECT COALESCE(MAX(event_id), 0) + 1 FROM agent_run_events"
-        ).fetchone()
-        event_id = int(global_row[0])
-        event_hash = episode_event_hash(
-            event_id=event_id,
+        return self._run_execution.append_run_event(
             run_id=run_id,
-            run_sequence=run_sequence,
             event_type=event_type,
             payload_hash=payload_hash,
             occurred_at=occurred_at,
-            prev_hash=prev_hash,
-        )
-        connection.execute(
-            """
-            INSERT INTO agent_run_events (
-                event_id, run_id, run_sequence, event_type, payload_hash,
-                occurred_at_us, prev_hash, event_hash
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                event_id,
-                run_id,
-                run_sequence,
-                event_type,
-                payload_hash,
-                occurred_at_us,
-                prev_hash,
-                event_hash,
-            ),
-        )
-        return StoredRunEvent(
-            event_id=event_id,
-            run_id=run_id,
-            run_sequence=run_sequence,
-            event_type=event_type,
-            payload_hash=payload_hash,
-            occurred_at=occurred_at,
-            prev_hash=prev_hash,
-            event_hash=event_hash,
         )
 
     def create_approval(

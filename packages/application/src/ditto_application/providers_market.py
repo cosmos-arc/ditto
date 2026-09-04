@@ -15,6 +15,8 @@ from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionReader,
     DatasetPromotionEvidenceReader,
 )
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
@@ -24,11 +26,13 @@ from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
+from ditto_features.market_context.service import MarketRegimeService
 from ditto_features.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
     DerivedQueryService,
 )
+from ditto_features.technical_analysis.service import TechnicalAnalysisService
 
 from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
@@ -42,10 +46,34 @@ from ditto_application.queries.fx import FXQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.macro import MacroQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.market_context import (
+    MarketContextFacade,
+    MarketContextQueryPort,
+    MarketContextQueryService,
+    MarketContextSourcePort,
+)
+from ditto_application.queries.market_context_evidence import (
+    MarketContextEvidenceQueryFacade,
+)
+from ditto_application.queries.market_context_source import (
+    ProviderPayloadMarketContextSource,
+)
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.promotion_evidence import PromotionEvidenceCollector
 from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_application.queries.source import SourceDataPort, SourceQueryFacade
+from ditto_application.queries.technical_analysis import (
+    TechnicalAnalysisFacade,
+    TechnicalAnalysisQueryPort,
+    TechnicalAnalysisQueryService,
+    TechnicalAnalysisSourcePort,
+)
+from ditto_application.queries.technical_analysis_evidence import (
+    InstrumentTechnicalEvidenceQueryFacade,
+)
+from ditto_application.queries.technical_analysis_source import (
+    ProviderPayloadTechnicalAnalysisSource,
+)
 from ditto_application.queries.universe import UniverseQueryFacade
 
 __all__ = ["AppMarketQueryProvider"]
@@ -55,6 +83,90 @@ class AppMarketQueryProvider(Provider):
     """App Query 层 DI Provider — 市场数据查询服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def technical_analysis_source(
+        self,
+        snapshot_reader: ProviderSnapshotReader,
+        payload_reader: ProviderPayloadReader,
+    ) -> TechnicalAnalysisSourcePort:
+        """Load exact technical bars from retained provider payloads."""
+        return ProviderPayloadTechnicalAnalysisSource(
+            snapshot_reader=snapshot_reader,
+            payload_reader=payload_reader,
+        )
+
+    @provide
+    def technical_analysis_query(
+        self,
+        source: TechnicalAnalysisSourcePort,
+    ) -> TechnicalAnalysisQueryPort:
+        """Build the deterministic technical-analysis query service."""
+        return TechnicalAnalysisQueryService(source, TechnicalAnalysisService())
+
+    @provide
+    def technical_analysis_facade(
+        self,
+        snapshot_reader: ProviderSnapshotReader,
+        query: TechnicalAnalysisQueryPort,
+    ) -> TechnicalAnalysisFacade:
+        """Resolve exact source identities before technical evaluation."""
+        return TechnicalAnalysisFacade(snapshot_reader=snapshot_reader, query=query)
+
+    @provide
+    def instrument_technical_evidence_query_facade(
+        self,
+        certification_reader: CertificationReader,
+        technical_analysis: TechnicalAnalysisFacade,
+    ) -> InstrumentTechnicalEvidenceQueryFacade:
+        """Bind technical briefs to approved historical stock snapshots."""
+        return InstrumentTechnicalEvidenceQueryFacade(
+            certification_reader=certification_reader,
+            technical_analysis=technical_analysis,
+            certification_profile="technical_daily",
+        )
+
+    @provide
+    def market_context_source(
+        self,
+        snapshot_reader: ProviderSnapshotReader,
+        payload_reader: ProviderPayloadReader,
+    ) -> MarketContextSourcePort:
+        """Load exact PIT facts from immutable provider payload artifacts."""
+        return ProviderPayloadMarketContextSource(
+            snapshot_reader=snapshot_reader,
+            payload_reader=payload_reader,
+        )
+
+    @provide
+    def market_context_query(
+        self,
+        source: MarketContextSourcePort,
+    ) -> MarketContextQueryPort:
+        """Build the shared deterministic market-context aggregate query."""
+        return MarketContextQueryService(source, MarketRegimeService())
+
+    @provide
+    def market_context_facade(
+        self,
+        snapshot_reader: ProviderSnapshotReader,
+        query: MarketContextQueryPort,
+    ) -> MarketContextFacade:
+        """Resolve exact provider snapshots before market-context evaluation."""
+        return MarketContextFacade(snapshot_reader=snapshot_reader, query=query)
+
+    @provide
+    def market_context_evidence_query_facade(
+        self,
+        certification_reader: CertificationReader,
+        market_context: MarketContextFacade,
+    ) -> MarketContextEvidenceQueryFacade:
+        """Bind Agent briefs to approved historical research-daily snapshots."""
+        return MarketContextEvidenceQueryFacade(
+            certification_reader=certification_reader,
+            market_context=market_context,
+            certification_profile="research_daily",
+        )
 
     @provide
     def data_products_query_facade(

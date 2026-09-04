@@ -8,6 +8,8 @@ fetch_commodities 模块级函数，
 
 from __future__ import annotations
 
+from datetime import date
+
 import polars as pl
 
 from ditto_data.sources.tushare.adapters.fx import FxTushareAdapter
@@ -18,18 +20,43 @@ from ditto_data.sources.tushare.adapters.metal import MetalTushareAdapter
 def fetch_macro_indicators(
     macro: MacroTushareAdapter,
     trade_date: str,
+    *,
+    observed_on: date | None = None,
 ) -> pl.DataFrame:
     """Fetch macro indicators data."""
-    return macro.fetch_macro_indicators(trade_date)
+    return macro.fetch_macro_indicators(trade_date, observed_on=observed_on)
 
 
 def fetch_macro_indicators_range(
     macro: MacroTushareAdapter,
     start_date: str,
     end_date: str,
+    *,
+    observed_on: date | None = None,
 ) -> pl.DataFrame:
     """Fetch normalized macro observations over one bounded interval."""
-    return macro.fetch_macro_indicators_range(start_date, end_date)
+    return macro.fetch_macro_indicators_range(
+        start_date,
+        end_date,
+        observed_on=observed_on,
+    )
+
+
+def fetch_macro_indicators_by_codes(
+    macro: MacroTushareAdapter,
+    codes: list[str],
+    start_date: str,
+    end_date: str,
+    *,
+    observed_on: date | None = None,
+) -> pl.DataFrame:
+    """Fetch a bounded, provider-observed China macro snapshot."""
+    return macro.fetch_indicators(
+        codes=codes,
+        start_date=start_date,
+        end_date=end_date,
+        observed_on=observed_on,
+    )
 
 
 def fetch_fx_daily(

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLiteClient, SQLitePool
+from ditto_portfolio.account_ledger import AccountEventJournalPort
 
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.contracts import (
@@ -13,7 +16,10 @@ from ditto_execution.contracts import (
     IntentDataPort,
     PositionDataPort,
 )
+from ditto_execution.paper.session import PaperSessionStorePort
+from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
+from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_execution.storage.sqlite.reconciliation import (
     REPAIR_WORKFLOW_DDL,
     SQLiteRepairWorkflowStore,
@@ -41,7 +47,43 @@ from ditto_execution.storage.sqlite.trade import (
 )
 from ditto_execution.storage.sqlite.trade.service import TradeService
 
-__all__ = ["ExecutionStorageProvider"]
+__all__ = [
+    "ExecutionDatabase",
+    "ExecutionSQLiteClient",
+    "ExecutionStorageProvider",
+    "initialize_execution_storage",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionDatabase:
+    """Nominal execution database binding selected by the composition root."""
+
+    pool: SQLitePool
+
+
+class ExecutionSQLiteClient(SQLiteClient):
+    """Nominal client that prevents execution storage from replacing data DI."""
+
+
+def initialize_execution_storage(pool: SQLitePool) -> None:
+    """Create every fresh execution-owned schema in one SQLite database."""
+    audit_service = ExecutionAuditService(pool)
+    audit_service.init_schema()
+    client = SQLiteClient(pool)
+    client.executescript(
+        INTENTS_DDL
+        + FILLS_DDL
+        + FILL_ADJUSTMENTS_DDL
+        + POSITIONS_DDL
+        + ACCOUNT_SNAPSHOTS_DDL
+        + BROKER_EVENTS_DDL
+        + REPAIR_WORKFLOW_DDL
+    )
+    ensure_position_schema(client)
+    SqliteAccountEventJournal(client)
+    SqlitePaperSessionStore(client)
+    client.commit()
 
 
 class ExecutionStorageProvider(Provider):
@@ -52,21 +94,35 @@ class ExecutionStorageProvider(Provider):
     # ── 审计服务 ──
 
     @provide
-    def execution_audit_service(self, sqlite_pool: SQLitePool) -> ExecutionAuditService:
+    def execution_database(self, sqlite_pool: SQLitePool) -> ExecutionDatabase:
+        """Default shared binding retained for capability-level composition tests."""
+        return ExecutionDatabase(sqlite_pool)
+
+    @provide
+    def execution_audit_service(
+        self,
+        database: ExecutionDatabase,
+    ) -> ExecutionAuditService:
         """创建 ExecutionAuditService 并初始化 schema."""
-        service = ExecutionAuditService(sqlite_pool)
+        service = ExecutionAuditService(database.pool)
         service.init_schema()
         return service
 
     # ── 交易闭环 ──
 
     @provide
-    def execution_sqlite_client(self, sqlite_pool: SQLitePool) -> SQLiteClient:
+    def execution_sqlite_client(
+        self,
+        database: ExecutionDatabase,
+    ) -> ExecutionSQLiteClient:
         """Execution 域 SQLiteClient（独立于 data 域实例）。"""
-        return SQLiteClient(sqlite_pool)
+        return ExecutionSQLiteClient(database.pool)
 
     @provide
-    def execution_readers(self, sqlite_client: SQLiteClient) -> ExecutionReaders:
+    def execution_readers(
+        self,
+        sqlite_client: ExecutionSQLiteClient,
+    ) -> ExecutionReaders:
         """Execution 域读取依赖聚合."""
         return ExecutionReaders(
             intent=IntentReader(sqlite_client),
@@ -78,7 +134,10 @@ class ExecutionStorageProvider(Provider):
         )
 
     @provide
-    def execution_writers(self, sqlite_client: SQLiteClient) -> ExecutionWriters:
+    def execution_writers(
+        self,
+        sqlite_client: ExecutionSQLiteClient,
+    ) -> ExecutionWriters:
         """Execution 域写入依赖聚合."""
         return ExecutionWriters(
             intent=IntentWriter(sqlite_client),
@@ -90,7 +149,7 @@ class ExecutionStorageProvider(Provider):
         )
 
     @provide
-    def init_schema(self, sqlite_client: SQLiteClient) -> None:
+    def init_schema(self, sqlite_client: ExecutionSQLiteClient) -> None:
         """执行 execution 域 DDL（应用级单次初始化）。"""
         sqlite_client.executescript(
             INTENTS_DDL
@@ -107,18 +166,36 @@ class ExecutionStorageProvider(Provider):
     @provide
     def repair_workflow_store(
         self,
-        sqlite_client: SQLiteClient,
+        sqlite_client: ExecutionSQLiteClient,
         _schema_initialized: None,
     ) -> SQLiteRepairWorkflowStore:
         """对账修复审批/执行状态存储."""
         return SQLiteRepairWorkflowStore(sqlite_client)
 
     @provide
+    def account_event_journal(
+        self,
+        sqlite_client: ExecutionSQLiteClient,
+        _schema_initialized: None,
+    ) -> AccountEventJournalPort:
+        """Bind the portfolio journal port to the thread-local SQLite client."""
+        return SqliteAccountEventJournal(sqlite_client)
+
+    @provide
+    def paper_session_store(
+        self,
+        sqlite_client: ExecutionSQLiteClient,
+        _schema_initialized: None,
+    ) -> PaperSessionStorePort:
+        """Bind formal paper sessions to the execution-owned SQLite store."""
+        return SqlitePaperSessionStore(sqlite_client)
+
+    @provide
     def trade_service(
         self,
         readers: ExecutionReaders,
         writers: ExecutionWriters,
-        sqlite_client: SQLiteClient,
+        sqlite_client: ExecutionSQLiteClient,
         audit_service: ExecutionAuditService,
         _schema_initialized: None,
     ) -> TradeService:

@@ -398,6 +398,9 @@ DITTO_DATA_ROOT=/tmp/test_data pixi run -e dev test
 # 覆盖 SQLite 路径
 SQLITE_PATH=/tmp/test.db pixi run -e dev python -c "..."
 
+# 仅覆盖 execution-owned Paper/Manual 交易 SQLite（验收/恢复场景）
+DITTO_TRADING_SQLITE_PATH=/tmp/trading-acceptance.sqlite pixi run -e dev python -m ditto_apps.server
+
 # Docker 部署时覆盖日志目录
 LOG_DIR=/app/logs pixi run server
 ```
@@ -582,6 +585,7 @@ c.close()
 | `ENVIRONMENT` | 运行时环境 | `development`, `testing`, `production` |
 | `DITTO_DATA_ROOT` | 覆盖数据目录 | `/data/ditto` |
 | `SQLITE_PATH` | 覆盖 SQLite 路径 | `/tmp/test.db` |
+| `DITTO_TRADING_SQLITE_PATH` | 仅覆盖 execution-owned Paper/Manual 交易 SQLite；未设置时使用 `{DITTO_DATA_ROOT}/trading/trading.sqlite` | `/tmp/trading-acceptance.sqlite` |
 | `DUCKDB_PATH` | 覆盖 DuckDB 路径 | `/tmp/test.duckdb` |
 | `LOG_DIR` | 覆盖日志目录（Docker 部署用） | `/app/logs` |
 | `TUSHARE_TOKEN` | Tushare Token（优先级最高） | `your_token` |

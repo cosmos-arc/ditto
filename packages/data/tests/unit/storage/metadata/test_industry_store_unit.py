@@ -248,6 +248,26 @@ class TestIndustryMappingWriterSource:
         assert len(rows) == 1
         assert rows[0]["source"] == "sw"
 
+    def test_update_mapping_is_idempotent_and_preserves_effective_to(self) -> None:
+        mapping = IndustryMapping(
+            instrument_id=1000001,
+            industry_id="801010.SI",
+            source="sw",
+            effective_from="2024-01-01",
+            effective_to="2025-01-01",
+            entry_reason="SW2021",
+        )
+
+        self.writer.update_mapping(mapping)
+        self.writer.update_mapping(mapping)
+
+        rows = self.client.fetchall(
+            "SELECT * FROM industry_mapping WHERE instrument_id = ?",
+            [1000001],
+        )
+        assert len(rows) == 1
+        assert rows[0]["effective_to"] == "2025-01-01"
+
 
 class TestIndustryMappingReaderAllLevels:
     """Tests for IndustryMappingReader.get_stock_industries_all_levels (T14)."""

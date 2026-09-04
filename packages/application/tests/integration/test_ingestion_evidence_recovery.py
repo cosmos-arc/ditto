@@ -90,10 +90,12 @@ def _request(license_record: DatasetLicenseRecord) -> EvidenceCommitRequest:
             ),
             source="tushare",
             freshness_at=now,
-            source_snapshot_id=snapshot.snapshot_id,
+            source_snapshot_id=(
+                "snapshot:tushare:stock_daily:2026-07-17:sha256:canonical:quality=l1-l2"
+            ),
         ),
         lineage_event=LineageEvent(
-            run_id="ingest:tushare:stock_daily:2026-07-17:sha256:payload",
+            run_id="ingest:tushare:stock_daily:2026-07-17:sha256:canonical",
             operation="ingest",
             inputs=(
                 LineageInputRef(
@@ -116,7 +118,7 @@ def _request(license_record: DatasetLicenseRecord) -> EvidenceCommitRequest:
             source="tushare",
             trade_date="2026-07-17",
             status=IngestionStatus.SUCCESS,
-            checksum="sha256:payload",
+            checksum="sha256:canonical",
             rows=1,
         ),
     )

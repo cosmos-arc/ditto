@@ -41,6 +41,9 @@ from ditto_application.commands.strategy import (
     UpdateStrategyCommand,
     UpdateStrategyHandler,
 )
+from ditto_application.processes.execution.replay_context_inputs import (
+    replay_context_inputs_payload,
+)
 from ditto_application.processes.experiments._planning_request_identity import (
     plain_planning_value,
 )
@@ -80,6 +83,7 @@ from ditto_application.research_validation_protocol import (
 from ditto_application.strategy_spec_deserialization import (
     canonical_spec_hash_for_record,
 )
+from ditto_backtest.context_inputs import ReplayContextInputRef
 from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
@@ -92,11 +96,13 @@ from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.strategy import create_strategy_bundle
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
     LiveResearchSnapshotBuild,
+    LiveResearchSnapshotOptions,
     build_live_research_snapshot,
 )
 
 __all__ = [
     "LivePlanningArtifact",
+    "LivePlanningOptions",
     "LivePlanningServices",
     "build_live_planning_artifact",
     "ensure_research_candidate",
@@ -131,6 +137,16 @@ class LivePlanningServices:
     executor_probe: BuilderBackedResearchExecutorProbe
     planning_process: ExperimentPlanningProcess
     environment: CodeEnvironmentLock
+
+
+@dataclass(frozen=True, slots=True)
+class LivePlanningOptions:
+    """Optional exact candidate, selection universe, and replay context bindings."""
+
+    etf_tickers: tuple[str, ...] | None = None
+    context_input_refs: tuple[ReplayContextInputRef, ...] = ()
+    strategy_id: str | None = None
+    strategy_version: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,8 +204,34 @@ def ensure_research_candidate(
     lane: LiveLane,
     catalog: StrategyCatalogService,
     update_handler: UpdateStrategyHandler,
+    strategy_id: str | None = None,
+    strategy_version: int | None = None,
 ) -> StrategySpecRecord:
     """Create one append-only draft from seed v1, or reuse an exact open version."""
+    if (strategy_id is None) != (strategy_version is None):
+        raise ValueError("exact strategy identity requires both id and version")
+    if strategy_id is not None and strategy_version is not None:
+        if (
+            not strategy_id
+            or strategy_id != strategy_id.strip()
+            or type(strategy_version) is not int
+            or strategy_version < 1
+        ):
+            raise ValueError("exact strategy identity is invalid")
+        exact = catalog.get_spec(strategy_id, strategy_version)
+        state = catalog.get_version_state(strategy_id, strategy_version)
+        if (
+            exact is None
+            or exact.strategy_id != strategy_id
+            or exact.version != strategy_version
+            or state not in {"draft", "review"}
+            or exact.spec_hash != canonical_spec_hash_for_record(exact)
+        ):
+            raise ValueError(
+                "exact research candidate is unavailable: "
+                + f"{strategy_id}@{strategy_version}"
+            )
+        return exact
     strategy_id = _STRATEGY_BY_LANE[lane]
     _require_seed_record(catalog, strategy_id)
     latest = catalog.get_spec(strategy_id)
@@ -352,6 +394,7 @@ def planning_request_document(
         "dataset_requirements": [
             dict(item.as_payload()) for item in request.dataset_requirements
         ],
+        "context_input_refs": replay_context_inputs_payload(request.context_input_refs),
         "cost_model": asdict(request.cost_model),
         "budget": asdict(request.budget),
         "seed": request.seed,
@@ -403,10 +446,12 @@ def build_live_planning_artifact(
     purpose: str,
     data_root: Path,
     services: LivePlanningServices,
+    options: LivePlanningOptions | None = None,
 ) -> LivePlanningArtifact:
     """Build, canonical-roundtrip, and production-preflight one live plan."""
     if _PURPOSE_PATTERN.fullmatch(purpose) is None:
         raise ValueError("live planning purpose must be canonical lowercase kebab-case")
+    selected = options or LivePlanningOptions()
     snapshot = build_live_research_snapshot(
         lane=lane,
         data_root=data_root,
@@ -414,13 +459,19 @@ def build_live_planning_artifact(
         catalog_service=services.research_catalog,
         certification_reader=services.certification_reader,
         snapshot_reader=services.snapshot_reader,
+        options=LiveResearchSnapshotOptions(etf_tickers=selected.etf_tickers),
     )
     candidate = ensure_research_candidate(
         lane=lane,
         catalog=services.strategy_catalog,
         update_handler=services.update_handler,
+        strategy_id=selected.strategy_id,
+        strategy_version=selected.strategy_version,
     )
-    seed_v1 = _require_seed_record(services.strategy_catalog, candidate.strategy_id)
+    seed_v1 = _require_seed_record(
+        services.strategy_catalog,
+        _STRATEGY_BY_LANE[lane],
+    )
     matrix = CandidateMatrixSpec(
         baseline=_baseline(lane, seed_v1),
         candidate_limit=4,
@@ -494,6 +545,7 @@ def build_live_planning_artifact(
         worker_count=2,
         failure_policy=ExperimentFailurePolicy.CONTINUE_CANDIDATE_FAILURES,
         created_at=created_at,
+        context_input_refs=selected.context_input_refs,
     )
     document = planning_request_document(request)
     canonical_request = build_experiment_planning_request(document)
@@ -572,6 +624,14 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--purpose", required=True)
     parser.add_argument("--data-root", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
+    parser.add_argument(
+        "--etf-ticker",
+        action="append",
+        dest="etf_tickers",
+        help="Narrow the ETF experiment to exact SelectionRun ticker(s).",
+    )
+    parser.add_argument("--strategy-id")
+    parser.add_argument("--strategy-version", type=int)
     return parser
 
 
@@ -586,6 +646,10 @@ def main(argv: list[str] | None = None) -> int:
     ):
         raise SystemExit("DITTO_DATA_ROOT must exactly match --data-root")
     lane = cast("LiveLane", args.lane)
+    if (args.strategy_id is None) != (args.strategy_version is None):
+        raise SystemExit(
+            "--strategy-id and --strategy-version must be provided together"
+        )
     strategy_id = _STRATEGY_BY_LANE[lane]
     with create_strategy_bundle() as strategy_bundle:
         if strategy_bundle.catalog_service is None:
@@ -600,6 +664,13 @@ def main(argv: list[str] | None = None) -> int:
             lane=lane,
             purpose=args.purpose,
             data_root=data_root,
+            options=LivePlanningOptions(
+                etf_tickers=None
+                if args.etf_tickers is None
+                else tuple(args.etf_tickers),
+                strategy_id=args.strategy_id,
+                strategy_version=args.strategy_version,
+            ),
             services=LivePlanningServices(
                 artifact_service=container.get(ResearchArtifactService),
                 research_catalog=container.get(ResearchCatalogService),
@@ -626,6 +697,7 @@ def main(argv: list[str] | None = None) -> int:
                 "plan_hash": artifact.plan_hash,
                 "planning_document_hash": artifact.planning_document_hash,
                 "preflight_status": artifact.preflight_status,
+                "strategy_id": artifact.strategy_id,
                 "strategy_version": artifact.strategy_version,
             },
             option=orjson.OPT_SORT_KEYS,

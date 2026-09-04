@@ -1,0 +1,62 @@
+{
+  "schema": "ditto.q5-agent-author-save-canonicalization-incident.v1",
+  "generated_at": "2026-09-02T05:51:46Z",
+  "status": "resolved",
+  "incident": {
+    "failure": "noncanonical_strategy_spec_payload",
+    "cause": "The v1 proposal writer and exact-save continuation reused an agent canonical serializer that normalized integral floats to integers. The persisted StrategySpec therefore failed the application planning document's type-aware canonical roundtrip.",
+    "affected_fields": [
+      "constraints[0].params.max_weight",
+      "execution.cost_model.slippage_bps"
+    ],
+    "failed_acceptance_root": "/private/tmp/ditto-q5-live-20260901.v1",
+    "superseded_receipt": {
+      "relative_path": "docs/evidence/personal-workstation/q5/agent-author-save-20260902.json",
+      "sha256": "d2068011d62f594124eac937030322cbed6eabb4161ba151f14cd07debc5f24e",
+      "eligible_for_res_06": false
+    },
+    "effects": {
+      "experiment_launched": false,
+      "review_submitted": false,
+      "published": false,
+      "trade_created": false
+    }
+  },
+  "remediation": {
+    "method": "Preserve exact JSON number types across proposal storage, approval resume, and tool invocation; retain a narrow verifier for the already-approved v1 proposal hash.",
+    "tdd": {
+      "red_observed": true,
+      "green_result": "15 passed",
+      "test_files": [
+        "packages/apps/tests/unit/scripts/test_q5_live_agent_author_unit.py",
+        "packages/apps/tests/unit/scripts/test_q5_live_agent_author_save_unit.py"
+      ]
+    },
+    "isolated_acceptance_root": "/private/tmp/ditto-q5-research-closure-20260902.v2",
+    "accepted_receipt": {
+      "relative_path": "docs/evidence/personal-workstation/q5/agent-author-save-research-closure-20260902.json",
+      "sha256": "31ad4bf2a213719cd9e52a5fe294e934a086b3a49853f771b896201483b3aa70",
+      "approved_request_hash": "1b7608964ee37e211c729e969da0ae44d2822cdfc81049409107186fa9b7f12d",
+      "stored_strategy_spec_hash": "49e7e79197e5a645b79b44cf09b22205ffa73e430558aa70386572a87994c33c",
+      "stored_numeric_types": {
+        "constraints[0].params.max_weight": "real",
+        "execution.cost_model.slippage_bps": "real"
+      }
+    },
+    "real_research_closure": {
+      "experiment_id": "r3-live-etf-agent-author-etf-context-933d21313ceb59d117d3ac06",
+      "status": "completed",
+      "eligible_month_count": 136,
+      "hard_gate_pass_count": 10,
+      "holdout_duplicate_blocked": true,
+      "review_bundle_hash": "30c9ad10847ae91195321628b26bac133093c12afe97c06695e10ba31cbcc62c",
+      "result_relative_path": "docs/evidence/personal-workstation/q5/r3-live-agent-author-corrected-v2/lanes/etf/results/0afd78900a94a88d7eb4951763aac4e10a991195f89d55fd9b444de671bff166.json",
+      "result_sha256": "0afd78900a94a88d7eb4951763aac4e10a991195f89d55fd9b444de671bff166"
+    }
+  },
+  "safety": {
+    "original_data_preserved": true,
+    "publish_authority_used": false,
+    "trade_authority_used": false
+  }
+}

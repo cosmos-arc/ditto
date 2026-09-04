@@ -1,6 +1,6 @@
 # R5 governed Agent operations runbook
 
-Status: R5.5 implementation and online acceptance are COMPLETE. Deterministic/Fake acceptance, OrbStack A3 physical OCI acceptance, GLM 5.3 Coding Plan balanced/quality 120-case runs, and release preflight all pass. Coding Plan is acceptance-only; a deployed product must use a standard API credential.
+Status: R5.5 implementation, persisted read-only product execution, and online acceptance are COMPLETE. Deterministic/Fake acceptance, OrbStack A3 physical OCI acceptance, GLM 5.3 Coding Plan balanced/quality 120-case runs, one persisted certified-data Product Beta run, and release preflight all pass. Coding Plan is acceptance-only; a deployed product must use a standard API credential.
 
 This runbook is for the local internal operator. The recorded A3 authorizes only its exact OrbStack/image/security scope; this document does not authorize a different daemon/profile. It does not authorize production data writes, real retention deletion, formal model egress, publishing, trading, orders, or broker access.
 
@@ -45,6 +45,38 @@ pixi run -e dev python -m ditto_apps.scripts.r5_glm_validation \
 
 The command must report `status=passed`, exactly 2 provider requests, at most 4096 total tokens, and all five checks true. It deliberately reports `cost_evaluated=false`, `production_eligible=false`, and `release_gate_passed=false`. Omitting `--approval-a4` returns exit 5 before reading the credential. Coding Plan credentials are rejected whenever Apps composition is in production mode. Do not use this command as a standalone Ditto validation service; repeatable tests outside Codex and every deployed environment require a standard `formal_api` credential. The two credential kinds are code-bound to different protocols: validation uses `/api/v1` Responses; GLM production uses `https://open.bigmodel.cn/api/paas/v4` Chat Completions. Never override a base URL to make one credential impersonate the other.
 
+## Persisted Product Beta execution
+
+The local Beta adds one bounded synchronous execution operation:
+`POST /api/v1/agent/runs/{run_id}/execute`. It executes only an already queued run,
+uses the immutable PIT authority stored with that run, and permits only the run's
+closed read-only evidence-tool allowlist. It persists started/provider/tool/outcome
+events, the operator projection, and a sealed Episode before returning. There is no
+publish, strategy-weight, order, trade, broker, worker-queue, event-bus, or generic
+network tool in this path.
+
+The approved Codex-only GLM rehearsal uses an isolated new data root and a certified
+ETF research snapshot. The fixture is deterministic certified evidence, not a fresh
+Tushare or FRED download and not proof that those provider credentials are present.
+The output intentionally remains `production_eligible=false`.
+
+```bash
+DITTO_AGENT_GLM_VALIDATION_API_KEY="$(security find-generic-password \
+  -s codex-zai-api-key -a chevy -w)" \
+pixi run -e dev python -m ditto_apps.scripts.r5_product_beta_glm \
+  --model glm-5.3 \
+  --approval-a4 \
+  --data-root /absolute/new/path/ditto-product-beta-agent \
+  --output docs/evidence/product-beta/20260830/glm-persisted-run.json
+```
+
+The exact data root must not already contain operator data. A passing report has
+`status=passed`, `run_status=completed`, `guardrail_status=passed`,
+`episode_verified=true`, one tool call, grounded evidence references, and a
+six-event durable lifecycle. Missing A4 approval, credential, model configuration,
+PIT authority, cited evidence, or tool grounding fails closed. Do not rerun solely
+to refresh its timestamp.
+
 ## GLM online release evaluation
 
 The Apps composition is intentionally sized for one local operator. One schema-v2 scope JSON carries the provider, content hashes for the approval record, provider data controls, runnable 120-case manifest and license/egress manifest, model ID/revision label, and one positive `max_total_tokens`. The operator separately supplies the prompt/tool manifest hash. These values and the selected profile/reasoning are part of the report identity.
@@ -65,7 +97,7 @@ DITTO_R5_PROMPT_TOOL_MANIFEST_HASH="$(pixi run -e dev python -c \
 export DITTO_R5_PROMPT_TOOL_MANIFEST_HASH
 ```
 
-The accepted value is `6f0829b47d9ed24e54c4f0427f1829613327b220f8e95fb4e35e6c48e64d6c93`; a mismatch fails before key access. The reviewed scope is [glm-coding-plan-a4-scope.json](../evidence/r5/preflight/glm-coding-plan-a4-scope.json), backed by [glm-coding-plan-a4-materials.json](../evidence/r5/preflight/glm-coding-plan-a4-materials.json). It fixes `glm-5.3`, the 120-case dataset, provider controls, license/egress manifest, revision label and a 500,000-token cap per profile. Do not fabricate placeholder hashes to obtain a green report.
+The accepted value is `f6095c0c9a6832ff332742c9cfb0612e47080df456038d403c044c19082b2cc9`; a mismatch fails before key access. The reviewed scope is [glm-coding-plan-a4-scope.json](../evidence/r5/preflight/glm-coding-plan-a4-scope.json), backed by [glm-coding-plan-a4-materials.json](../evidence/r5/preflight/glm-coding-plan-a4-materials.json). It fixes `glm-5.3`, the 129-case dataset, provider controls, license/egress manifest, revision label and a 500,000-token cap per profile. Do not fabricate placeholder hashes to obtain a green report.
 
 For a deliberate rerun of the accepted scope, inject `DITTO_AGENT_GLM_VALIDATION_API_KEY` through the local secret mechanism and run both profiles through the Apps-owned entry point. Do not rerun merely to refresh a timestamp; model/profile/prompt/tool/dataset changes require a new approval identity.
 
@@ -94,6 +126,13 @@ All five flags default to false:
 - `DITTO_AGENT_CAMPAIGN_ENABLED`
 - `DITTO_AGENT_DECISION_SHADOW_ENABLED`
 - `DITTO_AGENT_MODEL_CALLS_ENABLED`
+
+Live evidence egress also requires an independent, Apps-owned license grant:
+
+- `DITTO_AGENT_MODEL_APPROVED_LICENSE_CLASSES` is a comma-separated exact allowlist, for example `approved-research,redistribution-reviewed`.
+- Its default is empty (deny all). Entries with surrounding whitespace, empty segments, or duplicates are rejected instead of normalized implicitly.
+- A run's persisted `license_class` is only a classification request; it never authorizes itself. `cloud_allowed` evidence crosses the provider boundary only when the exact class is present in this allowlist.
+- Manual Account evidence is composed through `account_event_evidence`; cloud-bound reads always request `cloud_redacted`, while prohibited egress fails before the Application query runs.
 
 Rollback is to set all five false and restart the local Apps process. With the master flag false, child flags are ineffective and optional Agent dependencies are not probed. Do not delete Agent/Research databases during rollback. Core Ditto remains available when model provider, Agent database, sandbox, or exporter probes fail.
 
@@ -158,7 +197,10 @@ Run/show/events are not authority to mutate. Approve/reject bind to the server-i
 
 ## HTTP surface
 
-The checked-in OpenAPI contract exposes only the governed session, run, persisted-event, approval-decision, and Campaign lifecycle routes under `/api/v1/agent`. There is no publish, weight, order, trade, or broker route. SSE resumes from persisted event IDs and never replays a side effect.
+The checked-in OpenAPI contract exposes only the governed session, run, bounded
+read-only run execution, persisted-event, approval-decision, and Campaign lifecycle
+routes under `/api/v1/agent`. There is no publish, weight, order, trade, or broker
+route. SSE resumes from persisted event IDs and never replays a side effect.
 
 ## Incident sequence
 

@@ -4,6 +4,7 @@ requires-python = ">= 3.13"
 version = "0.1.0"
 dependencies = [
     "ditto-application",
+    "ditto-kernel",
     "ditto-platform",
     "openai-agents>=0.20.0,<0.21",
     "orjson",

@@ -37,10 +37,12 @@ def _df_to_trade_records(df: pl.DataFrame) -> list[TradeRecord]:
     """将 DataFrame 转换为 TradeRecord 列表."""
     if df.is_empty():
         return []
+    trade_date_column = "trade_date" if "trade_date" in df.columns else "exit_date"
+    pnl_column = "pnl" if "pnl" in df.columns else "net_pnl"
     rows = df.to_dicts()
     return [
         TradeRecord(
-            trade_date=str(row["trade_date"]),
+            trade_date=str(row[trade_date_column]),
             instrument_id=int(row["instrument_id"]),
             direction=str(row["direction"]),
             entry_date=str(row["entry_date"]),
@@ -48,7 +50,7 @@ def _df_to_trade_records(df: pl.DataFrame) -> list[TradeRecord]:
             entry_price=float(row["entry_price"]),
             exit_price=float(row["exit_price"]),
             quantity=int(row["quantity"]),
-            pnl=float(row["pnl"]),
+            pnl=float(row[pnl_column]),
         )
         for row in rows
     ]
@@ -97,9 +99,16 @@ class BacktestTradeQueryFacade:
             return []
 
         df = pl.read_parquet(parquet_path)
+        df = self._filter_closed_trades(df)
         df = self._apply_date_filters(df, start_date, end_date)
         df = self._apply_pagination(df, limit, offset)
         return _df_to_trade_records(df)
+
+    @staticmethod
+    def _filter_closed_trades(df: pl.DataFrame) -> pl.DataFrame:
+        """Exclude current-engine aggregate rows that still represent open positions."""
+        pnl_column = "pnl" if "pnl" in df.columns else "net_pnl"
+        return df.drop_nulls(["exit_date", "exit_price", pnl_column])
 
     @staticmethod
     def _apply_date_filters(

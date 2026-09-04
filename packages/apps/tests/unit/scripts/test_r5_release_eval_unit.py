@@ -13,7 +13,7 @@ from ditto_apps.registry.agent.release_eval_provider import (
 from ditto_apps.scripts.r5_release_eval import main
 
 _DATASET_MANIFEST_HASH = (
-    "6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114"
+    "55d4dac9d9b36b6c818decca06ff3d0aadfd39a43b0908fcdfab001ca679f941"
 )
 _PROMPT_TOOL_MANIFEST_HASH = formal_prompt_tool_manifest_hash()
 
@@ -232,7 +232,7 @@ def test_formal_cli_rejects_prompt_tool_manifest_drift_before_secret_read(
     assert payload["reason_code"] == "formal_eval_prompt_tool_manifest_mismatch"
 
 
-def test_formal_cli_runs_120_cases_with_frozen_identity_and_token_budget(
+def test_formal_cli_runs_131_cases_with_frozen_identity_and_token_budget(
     tmp_path: Path,
 ) -> None:
     scope = tmp_path / "scope.json"
@@ -270,9 +270,9 @@ def test_formal_cli_runs_120_cases_with_frozen_identity_and_token_budget(
     raw = output.read_text()
     payload = orjson.loads(raw)
     assert exit_code == 0
-    assert providers[0].calls == 120
+    assert providers[0].calls == 131
     assert payload["passed"] is True
-    assert payload["case_count"] == 120
+    assert payload["case_count"] == 131
     assert payload["provider_id"] == "glm-coding-plan-responses-v1"
     assert payload["run_identity"]["model_id"] == "glm-5.3"
     assert payload["run_identity"]["model_snapshot"] == "glm-5.3-coding-plan-2026-08-17"
@@ -321,6 +321,38 @@ def test_formal_cli_stops_when_total_token_budget_is_exceeded(
     assert exit_code == 1
     assert payload["reason_code"] == "eval_live_total_tokens_exceeded"
     assert providers[0].calls == 1
+
+
+def test_failed_rerun_preserves_last_passing_report_and_writes_diagnostic(
+    tmp_path: Path,
+) -> None:
+    scope = tmp_path / "scope.json"
+    output = tmp_path / "quality.json"
+    _scope(scope, max_total_tokens=100)
+    passing_report = orjson.dumps({"passed": True, "report_id": "last-valid"})
+    output.write_bytes(passing_report)
+
+    exit_code = main(
+        (
+            "--profile",
+            "quality",
+            "--approval-a4",
+            "--scope",
+            str(scope),
+            "--prompt-tool-manifest-hash",
+            _PROMPT_TOOL_MANIFEST_HASH,
+            "--output",
+            str(output),
+        ),
+        environment={"DITTO_AGENT_GLM_VALIDATION_API_KEY": "plan-secret"},
+        provider_builder=lambda identity, api_key: _InjectedLiveProvider(identity),
+    )
+
+    failure_path = output.with_name("quality.last-failure.json")
+    failure = orjson.loads(failure_path.read_bytes())
+    assert exit_code == 1
+    assert output.read_bytes() == passing_report
+    assert failure["reason_code"] == "eval_live_total_tokens_exceeded"
 
 
 def test_formal_cli_rejects_provider_model_snapshot_drift_before_first_case(

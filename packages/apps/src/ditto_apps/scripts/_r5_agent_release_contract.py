@@ -3,33 +3,37 @@
 EXPECTED_COUNTS = {
     "author": 20,
     "campaign": 30,
-    "grounded": 30,
+    "grounded": 41,
     "permission": 20,
     "sandbox": 10,
     "shadow": 10,
 }
 EXPECTED_CASE_COUNT = sum(EXPECTED_COUNTS.values())
+EXPECTED_MINIMUM_COUNTS = {
+    **EXPECTED_COUNTS,
+    "grounded": 30,
+}
 FAKE_REPORT_SCHEMA_VERSION = 2
 FAKE_PROVIDER_ID = "fake-eval-provider-v1"
 GLM_RELEASE_PROVIDER_ID = "glm-coding-plan-responses-v1"
 FROZEN_GLM_A4_SCOPE_HASH = (
-    "0a3244486e365a275f3e99d6a5bbcef84d567b947c2b01db810b1709377cb219"
+    "50386ed59b9710e043bdcc75d2a646a4c7d6b84659d8af0a13e0a1f3c9a781c8"
 )
 FROZEN_GLM_PROMPT_TOOL_MANIFEST_HASH = (
-    "6f0829b47d9ed24e54c4f0427f1829613327b220f8e95fb4e35e6c48e64d6c93"
+    "37f34f6270be28c6d045458d33cbdea6051ff797c10edd026994f4b222a6e167"
 )
 FAKE_SEED = 20260816
 FROZEN_FAKE_IDENTITIES = {
     "dataset_manifest_hash": (
-        "6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114"
+        "55d4dac9d9b36b6c818decca06ff3d0aadfd39a43b0908fcdfab001ca679f941"
     ),
     "grader_manifest_hash": (
         "ce6856a7d764bfbe7b6bf344efe653382bddf2901d19473eba955c9ff544d37d"
     ),
     "observation_manifest_hash": (
-        "c0987a52980260a7b490a462bcc7fc7aae324ac3e766f295e013cab477c89172"
+        "555213c1e8c886e042bbbf00c61ba3a746df041459ae7609a6c4d6f567431255"
     ),
-    "report_hash": "5321bcbe665ad7d7e2ad29fa76ae0f345cc2a1c24759f72c3d11d1bd6ae1e300",
+    "report_hash": "e7134abb3159e27bf9bed49ad27b9c042cef268f7aa8ab6ece3945830b70b05f",
 }
 FROZEN_FAKE_RUN_IDENTITY_HASH = (
     "84a6348e9d3b08f69c3841c2c7d5a5e6cd56ab45e3f23f322b56f357b24394c5"

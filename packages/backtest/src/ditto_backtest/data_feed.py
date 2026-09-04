@@ -51,6 +51,7 @@ class SnapshotProviders:
 
     fundamental: FundamentalSnapshotFn | None = None
     classification: ClassificationSnapshotFn | None = None
+    require_source_snapshot_lineage: bool = False
 
 
 # get_fundamental_snapshot 无注入 fn 或无数据时返回的空 schema。
@@ -274,6 +275,9 @@ class ProviderBackedDataFeed:
         self._id_map = id_map
         self._benchmark_id = benchmark_id
         self._snapshots = snapshot_providers or SnapshotProviders()
+        self._require_source_snapshot_lineage = (
+            self._snapshots.require_source_snapshot_lineage
+        )
         # Lazy-loaded caches
         self._bars_df: pl.DataFrame | None = None
         self._trading_days_cache: list[str] | None = None
@@ -291,7 +295,48 @@ class ProviderBackedDataFeed:
         )
         result = self._provider.get_bars(query)
         self._bars_df = self._ensure_prev_close(result)
+        self._validate_required_source_snapshot_lineage(self._bars_df)
         return self._bars_df
+
+    def _validate_required_source_snapshot_lineage(self, df: pl.DataFrame) -> None:
+        """Fail closed when a research/context-bound run has incomplete bar lineage."""
+        if not self._require_source_snapshot_lineage:
+            return
+        expected = {
+            iid
+            for ticker, iid in self._id_map.items()
+            if ticker in self._tickers and iid != self._benchmark_id
+        }
+        if _SOURCE_SNAPSHOT_ID_COLUMN not in df.columns:
+            missing = sorted(int(item) for item in expected)
+        else:
+            relevant = df.filter(
+                pl.col("instrument_id").is_in([int(item) for item in expected])
+            )
+            observed = {
+                InstrumentId(int(item))
+                for item in relevant["instrument_id"].unique().to_list()
+            }
+            unresolved = {
+                InstrumentId(int(item))
+                for item in relevant.filter(
+                    pl.col(_SOURCE_SNAPSHOT_ID_COLUMN).is_null()
+                    | (
+                        pl.col(_SOURCE_SNAPSHOT_ID_COLUMN)
+                        .cast(pl.String)
+                        .str.strip_chars()
+                        == ""
+                    )
+                )["instrument_id"]
+                .unique()
+                .to_list()
+            }
+            missing = sorted(int(item) for item in (expected - observed) | unresolved)
+        if missing:
+            rendered = ", ".join(str(item) for item in missing)
+            raise ValueError(
+                "source snapshot lineage is incomplete for instruments: " + rendered
+            )
 
     @staticmethod
     def _ensure_prev_close(df: pl.DataFrame) -> pl.DataFrame:
@@ -402,10 +447,11 @@ class ProviderBackedDataFeed:
             return df.clear()
 
         iid_values = [int(iid) for iid in instrument_ids]
+        cutoff = date.fromisoformat(as_of_date)
         filtered = df.filter(
             (pl.col("instrument_id").is_in(iid_values))
             # PIT: strict < 排除当日数据，防止未来数据泄露到因子回看窗口
-            & (pl.col("trade_date") < as_of_date),
+            & (pl.col("trade_date").cast(pl.Date) < cutoff),
         )
 
         # 按 instrument_id 分组，每组取最近 lookback_days 个交易日

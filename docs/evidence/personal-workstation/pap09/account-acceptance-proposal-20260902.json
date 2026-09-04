@@ -1,0 +1,136 @@
+{
+  "exact_acceptance_request": {
+    "approval_hash": "8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "approval_phrase": "批准账户验收 8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2",
+    "arguments": {
+      "data_root": "/Users/chevy/Desktop/code/ditto/data/personal-workstation-acceptance",
+      "evidence_root": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/pap09",
+      "evidence_signing": {
+        "algorithm": "hmac-sha256",
+        "key_bytes": 32,
+        "private_key_exported": false,
+        "private_key_mode": "0600",
+        "private_key_storage": "data_root/state/evidence-signing.key"
+      },
+      "generated_at": "2026-09-02T08:04:04.776241Z",
+      "manual": {
+        "account_id": "manual-q4-owner-acceptance",
+        "account_kind": "manual",
+        "deposit_correction": {
+          "corrected_amount": "500",
+          "original_amount": "5000"
+        },
+        "opening_cash": "100000",
+        "opening_position": {
+          "instrument_code": "518880.SH",
+          "instrument_id": 2001724,
+          "price": "9.118",
+          "provider_snapshot_hash": "4434c50e784dbdeb21be94be11b6d39fa26612e5e491a560fab9f7163d9032d2",
+          "quantity": 100,
+          "trade_date": "2026-09-01"
+        },
+        "scope": "dedicated_synthetic_acceptance_account"
+      },
+      "operation": "bootstrap-manual-and-authorize-paper-soak-v1",
+      "operator_authority": "exact_user_approval",
+      "paper": {
+        "account_id": "paper-pap09-owner-acceptance",
+        "account_kind": "paper",
+        "daily_limit": 1,
+        "decision_local_time": "08:55:00 Asia/Shanghai",
+        "execution_policy": "only_after_trade_day_and_provider_bar_publication",
+        "fill_assumption": {
+          "assumption_id": "pap09-real-close-v1",
+          "reference_price_field": "close",
+          "slippage_bps": 1.0,
+          "version": 1
+        },
+        "first_day_policy": "first_tushare_open_day_after_approval_local_date",
+        "instrument_code": "518880.SH",
+        "instrument_id": 2001724,
+        "opening_cash": "1000000",
+        "order_quantity": 100,
+        "order_side": "buy",
+        "order_type": "market",
+        "q4_minimum_days": 5,
+        "rules": {
+          "asset_class": "etf",
+          "commission_rate": 0.0003,
+          "exchange": "XSHG",
+          "lot_size": 100,
+          "min_commission": 5.0,
+          "settlement_cycle": 1,
+          "stamp_duty_rate": 0.0,
+          "tick_size": 0.001,
+          "transfer_fee_rate": 0.00001
+        },
+        "strategy_id": "seed_etf_industry_rotation",
+        "target_real_trading_days": 20
+      },
+      "prohibitions": {
+        "agent_manual_write": true,
+        "agent_paper_start": true,
+        "broker_connection": true,
+        "current_or_future_day_backfill": true,
+        "more_than_one_day_per_run": true,
+        "real_order": true,
+        "strategy_publish_or_activation": true
+      },
+      "provider": {
+        "calendar_dataset": "trade_calendar",
+        "latest_published_bar": {
+          "amount": 4118875.882,
+          "close": 9.118,
+          "high": 9.156,
+          "low": 9.108,
+          "open": 9.128,
+          "pre_close": 9.135,
+          "source_ticker": "518880.SH",
+          "trade_date": "2026-09-01",
+          "volume": 4510448.54
+        },
+        "latest_published_bar_hash": "4434c50e784dbdeb21be94be11b6d39fa26612e5e491a560fab9f7163d9032d2",
+        "market_dataset": "etf_daily",
+        "name": "tushare"
+      }
+    },
+    "requires_exact_approval": true
+  },
+  "forecast": {
+    "first_twenty_open_dates": [
+      "2026-09-03",
+      "2026-09-04",
+      "2026-09-07",
+      "2026-09-08",
+      "2026-09-09",
+      "2026-09-10",
+      "2026-09-11",
+      "2026-09-14",
+      "2026-09-15",
+      "2026-09-16",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-09-21",
+      "2026-09-22",
+      "2026-09-23",
+      "2026-09-24",
+      "2026-09-28",
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-08"
+    ],
+    "informational_only": true,
+    "runtime_calendar_remains_authoritative": true,
+    "source": "tushare"
+  },
+  "generated_at": "2026-09-02T08:04:04.776241Z",
+  "safety": {
+    "broker_connections": 0,
+    "manual_scope": "dedicated_synthetic_acceptance_account",
+    "paper_only": true,
+    "publishes_strategy": false,
+    "real_orders": 0
+  },
+  "schema": "ditto.q4-live-account-acceptance-proposal.v1",
+  "status": "pending_operator_approval"
+}

@@ -131,6 +131,14 @@ def migration_body_statements(sql: str) -> tuple[str, ...]:
     return statements[:-1]
 
 
+def fresh_schema_body_statements() -> tuple[str, ...]:
+    """Assemble the current create-only DDL without applying a version migration."""
+    return (
+        *schema_body_statements(load_v1_schema_sql()),
+        *migration_body_statements(load_migration_sql()),
+    )
+
+
 def schema_rows(connection: sqlite3.Connection) -> tuple[tuple[object, ...], ...]:
     """Return the approved fingerprint input in its exact stable order."""
     return tuple(

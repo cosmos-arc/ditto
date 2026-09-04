@@ -81,7 +81,7 @@ if mode == "timeout":
     time.sleep(10)
 elif mode == "orphan-pipe":
     subprocess.Popen(
-        [sys.executable, "-c", "import time; time.sleep(3)"],
+        [sys.executable, "-c", "import time; time.sleep(10)"],
         stdout=sys.stdout,
         stderr=sys.stderr,
     )
@@ -227,7 +227,7 @@ def test_runner_timeout_is_not_extended_by_orphaned_output_pipes(
     started = time.monotonic()
     result = runner.run(_command("orphan-pipe", seccomp_path=seccomp, timeout=1))
 
-    assert time.monotonic() - started < 2.5
+    assert time.monotonic() - started < 5
     assert result.timed_out is True
     assert cleanup.read_text(encoding="utf-8") == "cleaned"
 

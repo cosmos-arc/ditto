@@ -1015,6 +1015,7 @@ class TestBuildConfig:
         manifest.effective_parameters = ()
         manifest.research_snapshot_id = None
         manifest.research_snapshot_manifest_hash = None
+        manifest.context_input_refs = ()
         manifest.parameter_overrides = ()
         manifest.engine_version = "0.1.0"
 
@@ -1050,6 +1051,7 @@ class TestBuildConfig:
         manifest.effective_parameters = ()
         manifest.research_snapshot_id = None
         manifest.research_snapshot_manifest_hash = None
+        manifest.context_input_refs = ()
         manifest.parameter_overrides = ("--lookback=20",)
         manifest.engine_version = "0.2.0"
 
@@ -1092,6 +1094,7 @@ class TestBuildConfig:
         manifest.effective_parameters = effective_parameters
         manifest.research_snapshot_id = None
         manifest.research_snapshot_manifest_hash = None
+        manifest.context_input_refs = ()
         manifest.engine_version = "0.2.0"
 
         config = ReplayProcess._build_config(
@@ -1694,6 +1697,7 @@ class TestReplaySuccess:
             "resume_settlement_state_hash": "sha256:settlement",
             "resume_runtime_state_json": '{"pending_orders":[],"delayed_signals":[]}',
             "resume_runtime_state_hash": "sha256:runtime",
+            "allow_experimental_data": True,
         }
         mock_run_model = MagicMock()
         mock_run_model.get_run.return_value = StrategyRunRecord(
@@ -1754,6 +1758,8 @@ class TestReplaySuccess:
             == '{"pending_orders":[],"delayed_signals":[]}'
         )
         assert config.resume_runtime_state_hash == "sha256:runtime"
+        options = mock_facade.run_backtest_from_catalog.call_args.kwargs["options"]
+        assert options.allow_experimental_data is True
 
     def test_replay_proof_uses_persisted_fill_log_state(
         self,

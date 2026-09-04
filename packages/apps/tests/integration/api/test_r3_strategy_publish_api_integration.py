@@ -152,7 +152,7 @@ def _deterministic_packet(
     r2_live_gate: bool | None = None,
     soft_failure: bool = False,
 ) -> ReviewPacket:
-    hard_gates = evaluate_hard_gates(
+    evaluations = evaluate_hard_gates(
         HardGateEvidence(
             certified_snapshot=GateFact(True, {"fixture": "tmp_path"}),
             ninety_six_month=GateFact(True, {"months": 96}),
@@ -167,14 +167,16 @@ def _deterministic_packet(
             r2_live_gate=GateFact(r2_live_gate, {"source": "deterministic_fixture"}),
         )
     )
+    hard_gates = tuple(gate for gate in evaluations if gate.layer is GateLayer.HARD)
     assert tuple(gate.rule_id for gate in hard_gates) == HARD_GATE_RULE_IDS
     expected_r2_outcome = {
         True: GateOutcome.PASS,
         False: GateOutcome.FAIL,
         None: GateOutcome.NOT_EVALUATED,
     }[r2_live_gate]
-    assert hard_gates[-1].outcome is expected_r2_outcome
-    evaluations = hard_gates
+    r2_evidence = next(gate for gate in evaluations if gate.rule_id == "r2_live_gate")
+    assert r2_evidence.layer is GateLayer.EVIDENCE
+    assert r2_evidence.outcome is expected_r2_outcome
     if soft_failure:
         evaluations += (
             GateEvaluation(
@@ -426,7 +428,7 @@ async def _submit_review(
 
 
 @pytest.mark.parametrize("r2_live_gate", [False, None], ids=["fail", "not_evaluated"])
-async def test_http_submit_review_blocks_nonpassing_hard_gate_without_writes(
+async def test_http_submit_review_allows_nonpassing_global_r2_release_evidence(
     tmp_path: Path,
     r2_live_gate: bool | None,
 ) -> None:
@@ -436,31 +438,19 @@ async def test_http_submit_review_blocks_nonpassing_hard_gate_without_writes(
         prepare_candidate_review=False,
     )
     try:
-        state_before = harness.governance_store.get_state(
-            harness.strategy_id, harness.candidate_version
-        )
-        history_before = _governance_history(
-            harness.governance_pool, harness.strategy_id
-        )
-
         response = await _submit_review(
             harness,
             bundle_hash=str(harness.packet.bundle_hash),
             idempotency_key=f"submit-hard-{r2_live_gate}",
         )
 
-        assert response.status_code == 422
-        assert response.json()["error_code"] == "HARD_GATE_FAILED"
-        assert (
-            harness.governance_store.get_state(
-                harness.strategy_id, harness.candidate_version
-            )
-            == state_before
+        assert response.status_code == 200
+        state = harness.governance_store.get_state(
+            harness.strategy_id, harness.candidate_version
         )
-        assert (
-            _governance_history(harness.governance_pool, harness.strategy_id)
-            == history_before
-        )
+        assert state is not None
+        assert state.state.value == "review"
+        assert state.review_outcome.value == "pending"
     finally:
         await harness.close()
 
@@ -801,17 +791,34 @@ async def _assert_typed_zero_write_rejection(
     )
 
 
-async def test_http_publish_blocks_persisted_packet_when_r2_live_gate_is_unevaluated(
+async def test_http_publish_allows_persisted_packet_with_global_r2_evidence_unevaluated(
     tmp_path: Path,
 ) -> None:
-    """A deterministic persisted packet reaches promotion and fails closed."""
+    """Exact snapshot gates govern strategy promotion, not the global release."""
     harness = _build_harness(tmp_path)
     try:
-        await _assert_typed_zero_write_rejection(
-            harness,
-            expected_status=422,
-            expected_error_code="hard_gate_blocked",
+        response = await harness.client.post(
+            (
+                f"/api/v1/strategies/{harness.strategy_id}/versions/"
+                f"{harness.candidate_version}/publish"
+            ),
+            headers={"Idempotency-Key": "publish-product-scoped-certification"},
+            json={
+                "bundle_hash": str(harness.packet.bundle_hash),
+                "actor": "http-acceptance-publisher",
+                "reason": "publish exact certified experiment evidence",
+            },
         )
+
+        assert response.status_code == 200
+        state = harness.governance_store.get_state(
+            harness.strategy_id, harness.candidate_version
+        )
+        pointer = harness.governance_store.get_active_pointer(harness.strategy_id)
+        assert state is not None
+        assert state.state.value == "published"
+        assert pointer is not None
+        assert pointer.active_version == harness.candidate_version
     finally:
         await harness.close()
 

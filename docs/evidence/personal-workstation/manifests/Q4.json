@@ -1,0 +1,84 @@
+{
+  "artifacts": [
+    {
+      "relative_path": "personal-workstation/20260831-manual-account-rebuild.json",
+      "sha256": "sha256:a356ae54b3f0018c6fda5e4f1e2809503e7b73edf4c9c720d9ed97b538c146d6",
+      "size_bytes": 3180
+    },
+    {
+      "relative_path": "personal-workstation/20260831-paper-five-day-preacceptance.json",
+      "sha256": "sha256:1c3a85f1324e7f461e608395f16fd3d3299fa2509042ba07f77840b42a89c1a2",
+      "size_bytes": 8991
+    },
+    {
+      "relative_path": "personal-workstation/20260831-portfolio-comparison-live-acceptance.json",
+      "sha256": "sha256:d1b5edb0154f6708410aab6514794ee0727ea4f417e74930714b933bedd55f05",
+      "size_bytes": 2540
+    },
+    {
+      "relative_path": "personal-workstation/gates/Q4.json",
+      "sha256": "sha256:7ab5c646f37c11892408ec4c779e044141da116f9f8f90cc61fc66a71819d614",
+      "size_bytes": 2168
+    },
+    {
+      "relative_path": "personal-workstation/pap09-accelerated-proposal-20260902.json",
+      "sha256": "sha256:55056899e5928914143349a637ba60afb7098c135da0e80dd3ff561580ba25a3",
+      "size_bytes": 9836
+    },
+    {
+      "relative_path": "personal-workstation/pap09-accelerated/accelerated-progress.json",
+      "sha256": "sha256:d78de4ee6040c7d5839753bfb98c8e133adcc6efe7fab4dab76cff5b5acb36db",
+      "size_bytes": 2780
+    },
+    {
+      "relative_path": "personal-workstation/pap09-accelerated/bootstrap.json",
+      "sha256": "sha256:c0c4a443163cb33da1dbcc5adf04b4af107072b1130f6f66725b8944f7594f6b",
+      "size_bytes": 1299
+    },
+    {
+      "relative_path": "personal-workstation/pap09/account-acceptance-proposal-20260902.json",
+      "sha256": "sha256:727384aa084941282eaeb532aed304b68715e465be6447392f0f71942586dccd",
+      "size_bytes": 4506
+    },
+    {
+      "relative_path": "personal-workstation/pap09/bootstrap.json",
+      "sha256": "sha256:d7af160de357c5edb2ed2525b740d09c120e18a315158c78caf1a0d4c109174d",
+      "size_bytes": 1933
+    },
+    {
+      "relative_path": "personal-workstation/pap09/days/2026-09-02.json",
+      "sha256": "sha256:3cd7e0aa20d962d4367a3c1c3c004301f35f204d552f7623d07258db7b6bb6be",
+      "size_bytes": 3088
+    },
+    {
+      "relative_path": "personal-workstation/pap09/days/2026-09-03.json",
+      "sha256": "sha256:9d8cf85475545f85181e00c321cb634f73fe4a7c29e2800acc2c0b68f2eafbf1",
+      "size_bytes": 2877
+    },
+    {
+      "relative_path": "personal-workstation/pap09/soak-progress.json",
+      "sha256": "sha256:80db91cb2e6b3565d54d9cc690a0f05750b8b29f2d60bd5dad1f523db85a3cc4",
+      "size_bytes": 751
+    },
+    {
+      "relative_path": "personal-workstation/pending-approval-live-preflight-20260902.json",
+      "sha256": "sha256:dea729f318b7a28f19a565e5d0cc075429054886b06bb4756a87abe291de722a",
+      "size_bytes": 2119
+    },
+    {
+      "relative_path": "personal-workstation/q5/ui08-account-acceptance-20260902.json",
+      "sha256": "sha256:95c1ac0aede8f2ca84243d80a7466f0cdfceb5c4a89b0b9f8193a198787ec92c",
+      "size_bytes": 5445
+    },
+    {
+      "relative_path": "personal-workstation/validation/backend.json",
+      "sha256": "sha256:1b741d2f049ffe528f744bf2fbe75075aca216605eb8bea8995714add37eeb18",
+      "size_bytes": 2837
+    }
+  ],
+  "blockers": [],
+  "gate": "Q4",
+  "manifest_hash": "sha256:70397ae5b568aa70355d3974a6275aa582153674cc7c219c9ca018af9d9cf324",
+  "schema_version": 1,
+  "status": "passed"
+}

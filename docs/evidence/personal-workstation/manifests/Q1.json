@@ -1,0 +1,64 @@
+{
+  "artifacts": [
+    {
+      "relative_path": "personal-workstation/gates/Q1.json",
+      "sha256": "sha256:966ecf8273ff271fa5ddd29a3bdaa72df2a0516dfe6f370aedff8d1aa95852b3",
+      "size_bytes": 1434
+    },
+    {
+      "relative_path": "personal-workstation/q1/backup-restore-20260901.json",
+      "sha256": "sha256:87a9f1f1eba6578f95242e267367b57a6c0e41473171d328b94796337840e575",
+      "size_bytes": 1601
+    },
+    {
+      "relative_path": "personal-workstation/q1/fred-pit-live-20260901.json",
+      "sha256": "sha256:6f270ad5673a0984e3a2c6c78e3986b59714c14751be4d7d44bb25b748aa931e",
+      "size_bytes": 819
+    },
+    {
+      "relative_path": "personal-workstation/q1/live-replay-20260901.json",
+      "sha256": "sha256:7e9068e04730fbed32c90c5272a97965169b21c29e4aeede636a0e1fbe9e708d",
+      "size_bytes": 23023
+    },
+    {
+      "relative_path": "personal-workstation/q1/macro-manual-verification-20260901.json",
+      "sha256": "sha256:62be41014a60d9ee170497f67dd3b545c0830f2c11ef2002cd69cfbb66321d35",
+      "size_bytes": 4279
+    },
+    {
+      "relative_path": "personal-workstation/q1/market-semantics-20260901.json",
+      "sha256": "sha256:2bd86c79911dddd0b35611c06af68d0626937909e2b0175e1f13889863e75cd2",
+      "size_bytes": 8533
+    },
+    {
+      "relative_path": "personal-workstation/q1/provider-license-review-20260901.json",
+      "sha256": "sha256:7be5f5ce7277a9cd9c1aa75e5c6861dabad93c7d6e087098c2a4cc53453d4689",
+      "size_bytes": 3395
+    },
+    {
+      "relative_path": "personal-workstation/q1/provider-outage-20260901.json",
+      "sha256": "sha256:cb35ad264c6963fc3d783ba32e37b8264eef4a3ab2ba35365c64dbe6c8ddd96b",
+      "size_bytes": 1426
+    },
+    {
+      "relative_path": "personal-workstation/q1/provider-probe-20260901.json",
+      "sha256": "sha256:012681ecde924ef29e3a70a99274d13d47f4ceb5dd541a34bb821af90675595a",
+      "size_bytes": 8411
+    },
+    {
+      "relative_path": "personal-workstation/q1/ui-live-20260901.json",
+      "sha256": "sha256:90208a6c43bc4d174ae3d0d1f765985bb0c583104fb9dee1bd461cb8ebb6f9ba",
+      "size_bytes": 3533
+    },
+    {
+      "relative_path": "personal-workstation/q1/verification-20260901.json",
+      "sha256": "sha256:153722439bdf476d8e090fc256683b2142c3813ad9c2f0701def88879c4b5ed0",
+      "size_bytes": 1557
+    }
+  ],
+  "blockers": [],
+  "gate": "Q1",
+  "manifest_hash": "sha256:83edb96d0a1862895bcc2437c9ac6bf03843ac6e929cbd9a5f8dcde31e4cf714",
+  "schema_version": 1,
+  "status": "passed"
+}

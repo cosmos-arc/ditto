@@ -154,6 +154,41 @@ def _create_v1_database(data_root: Path) -> DecisionOpinionShadowDatabase:
     return database
 
 
+def test_fresh_shadow_database_uses_current_schema_ddl(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    called = False
+
+    def current_schema() -> tuple[str, ...]:
+        nonlocal called
+        called = True
+        return tuple(
+            statement
+            for version in range(1, schema.USER_VERSION + 1)
+            for statement in schema.schema_body_statements(
+                schema.load_schema_sql(version=version),
+                version=version,
+            )
+        )
+
+    monkeypatch.setattr(
+        schema,
+        "fresh_schema_body_statements",
+        current_schema,
+        raising=False,
+    )
+
+    database = DecisionOpinionShadowDatabase(tmp_path)
+    database.initialize()
+
+    assert called
+    assert (
+        database.get_connection().execute("PRAGMA user_version").fetchone()[0]
+        == schema.USER_VERSION
+    )
+
+
 def test_shadow_v1_migrates_forward_without_changing_historical_opinion(
     tmp_path: Path,
 ) -> None:

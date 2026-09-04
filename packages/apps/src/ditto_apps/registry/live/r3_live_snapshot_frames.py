@@ -16,7 +16,7 @@ type LiveLane = Literal["stock", "etf"]
 LIVE_START = date(2015, 2, 1)
 LIVE_END = date(2026, 7, 31)
 _STOCK_INDEX = "000300.SH"
-_ETF_IDS = (2_002_506, 2_002_571, 2_002_631)
+_ETF_TICKERS = ("510050", "510300", "510500")
 
 
 def open_live_database(data_root: Path) -> sqlite3.Connection:
@@ -128,21 +128,45 @@ def build_stock_membership_frame(
 
 
 def build_etf_membership_frame(
+    connection: sqlite3.Connection,
     sessions: tuple[date, ...],
     *,
     authority_snapshot_id: str,
+    tickers: tuple[str, ...] = _ETF_TICKERS,
 ) -> pl.DataFrame:
-    """Build the fixed ETF proving-lane membership with prior-day knowledge."""
+    """Resolve an exact portable ETF universe and apply prior-day knowledge."""
+    if not tickers:
+        raise ValueError("live ETF ticker selection is empty")
+    if len(set(tickers)) != len(tickers):
+        raise ValueError("live ETF ticker selection contains duplicates")
+    placeholders = ",".join("?" for _ in tickers)
+    query = f"""SELECT instrument_id, ticker FROM instrument
+        WHERE asset_class = 'etf' AND ticker IN ({placeholders})
+        ORDER BY instrument_id"""  # noqa: S608 -- only placeholders are interpolated
+    rows = connection.execute(
+        query,
+        tickers,
+    ).fetchall()
+    by_ticker: dict[str, list[int]] = {}
+    for row in rows:
+        by_ticker.setdefault(str(row["ticker"]), []).append(int(row["instrument_id"]))
+    missing_or_ambiguous = tuple(
+        ticker for ticker in tickers if len(by_ticker.get(ticker, ())) != 1
+    )
+    if missing_or_ambiguous:
+        rendered = ", ".join(missing_or_ambiguous)
+        raise ValueError(f"live ETF metadata is incomplete: {rendered}")
+    instrument_ids = tuple(sorted(by_ticker[ticker][0] for ticker in tickers))
     return pl.DataFrame(
         {
-            "trade_date": tuple(day for day in sessions for _ in _ETF_IDS),
-            "instrument_id": _ETF_IDS * len(sessions),
-            "is_member": (True,) * (len(sessions) * len(_ETF_IDS)),
+            "trade_date": tuple(day for day in sessions for _ in instrument_ids),
+            "instrument_id": instrument_ids * len(sessions),
+            "is_member": (True,) * (len(sessions) * len(instrument_ids)),
             "known_at": tuple(
-                day - timedelta(days=1) for day in sessions for _ in _ETF_IDS
+                day - timedelta(days=1) for day in sessions for _ in instrument_ids
             ),
             "source_snapshot_id": (authority_snapshot_id,)
-            * (len(sessions) * len(_ETF_IDS)),
+            * (len(sessions) * len(instrument_ids)),
         },
         schema={
             "trade_date": pl.Date,

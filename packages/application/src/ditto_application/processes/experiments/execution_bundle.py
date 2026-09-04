@@ -9,6 +9,10 @@ from typing import cast
 
 import orjson
 from ditto_analysis.experiments import ContentHash, canonical_payload
+from ditto_backtest.context_inputs import (
+    ReplayContextInputRef,
+    normalize_context_input_refs,
+)
 from ditto_features.expression.contracts import CompileIdentity
 from ditto_strategy.alpha.parameters import CandidateParameter
 
@@ -628,6 +632,7 @@ class ResearchExecutionSemantics:
     baseline_plan: BaselineExecutionPlan | None
     policy: ResearchExecutionPolicy
     environment: CodeEnvironmentLock
+    context_input_refs: tuple[ReplayContextInputRef, ...] = ()
     canonical_payload: bytes = field(init=False, repr=False)
     reproduction_fingerprint: ContentHash = field(init=False)
 
@@ -652,6 +657,29 @@ class ResearchExecutionSemantics:
             self,
             strategy_binding_type=StrategyExecutionBinding,
             backtest_binding_type=BacktestExecutionConfigBinding,
+        )
+        try:
+            normalized_context_inputs = normalize_context_input_refs(
+                self.context_input_refs
+            )
+        except ValueError as exc:
+            raise _error(
+                "research context input lineage is invalid",
+                "invalid_replay_context_inputs",
+            ) from exc
+        boundaries = {
+            (item.as_of, item.knowledge_cutoff, item.publication_cutoff)
+            for item in normalized_context_inputs
+        }
+        if len(boundaries) > 1:
+            raise _error(
+                "research context inputs have mixed temporal boundaries",
+                "invalid_replay_context_inputs",
+            )
+        object.__setattr__(
+            self,
+            "context_input_refs",
+            normalized_context_inputs,
         )
         payload = canonical_payload(self._payload())
         object.__setattr__(self, "canonical_payload", payload.json_bytes)

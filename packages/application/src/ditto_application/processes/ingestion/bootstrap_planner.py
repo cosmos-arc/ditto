@@ -115,8 +115,8 @@ class BootstrapPlanner:
         execution_mode: BootstrapExecutionMode = (
             "instrument_range" if normalized_instruments else "date_range"
         )
-        product_contract = metadata.product_contract
-        if product_contract is None:
+        dataset_spec = metadata.dataset_spec
+        if dataset_spec is None:
             raise AppProcessError(f"dataset has no bootstrap contract: {dataset_id}")
         all_chunks = self._base_chunks(
             dataset_id=dataset_id,
@@ -124,7 +124,7 @@ class BootstrapPlanner:
             interval=(start.isoformat(), end.isoformat()),
             schedule=metadata.schedule,
             chunk_policy=(
-                "year" if normalized_instruments else product_contract.bootstrap_chunk
+                "year" if normalized_instruments else dataset_spec.bootstrap_chunk
             ),
             execution_mode=execution_mode,
             instrument_ids=normalized_instruments,

@@ -1,0 +1,34 @@
+{
+  "artifacts": [
+    {
+      "relative_path": "personal-workstation/gates/Q0.json",
+      "sha256": "sha256:43b45caa42d2d64e2091e57c50d7236a09e680f9ff7428aee2cf1a2ec1b2e845",
+      "size_bytes": 660
+    },
+    {
+      "relative_path": "personal-workstation/ops/recovery.json",
+      "sha256": "sha256:cfc5f8f51e834667cb0102e306d3819f67a569a8dc1072b976e7e3c5591a834d",
+      "size_bytes": 1493
+    },
+    {
+      "relative_path": "personal-workstation/validation/backend.json",
+      "sha256": "sha256:1b741d2f049ffe528f744bf2fbe75075aca216605eb8bea8995714add37eeb18",
+      "size_bytes": 2837
+    },
+    {
+      "relative_path": "personal-workstation/validation/frontend.json",
+      "sha256": "sha256:92451b5de97a88c23088b49e36b3e793cace4168d4f9f4000e3f06b583a22656",
+      "size_bytes": 2299
+    },
+    {
+      "relative_path": "workstation-baseline-20260831.json",
+      "sha256": "sha256:4864eb1cdbfbcd87bd7edcdd346a3bda562ba3c120c7c71a024344c59866cc64",
+      "size_bytes": 2777
+    }
+  ],
+  "blockers": [],
+  "gate": "Q0",
+  "manifest_hash": "sha256:cdeb952d766c028d44535ef98d38a085513155d8c7e39ee8ce7afc30f7a6ca19",
+  "schema_version": 1,
+  "status": "passed"
+}

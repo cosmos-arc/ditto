@@ -171,3 +171,13 @@ class TestFillQtyValidation:
                 fill_qty=fill_qty,
                 leaves_qty=50,
             )
+
+    def test_rejects_fill_larger_than_remaining_quantity(self) -> None:
+        """A direct FSM caller cannot turn an impossible overfill into FILLED."""
+        with pytest.raises(OrderStateError, match="exceeds"):
+            transition(
+                OrderStatus.SUBMITTED,
+                OrderTrigger.FILL,
+                fill_qty=101,
+                leaves_qty=100,
+            )

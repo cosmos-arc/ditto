@@ -1,0 +1,58 @@
+{
+  "schema_version": "ditto.q1-verification.v1",
+  "generated_at": "2026-09-01T12:22:00Z",
+  "status": "passed",
+  "backend": {
+    "command": "pixi run -e dev check",
+    "exit_code": 0,
+    "lint": "passed",
+    "format": "2839 files already formatted",
+    "type": "0 errors, 0 warnings, 0 notes",
+    "tests": {
+      "passed": 13283,
+      "xfailed": 1,
+      "duration_seconds": 208.18
+    },
+    "architecture": {
+      "contracts_kept": 43,
+      "contracts_broken": 0,
+      "smell_check": "passed"
+    },
+    "harness": {
+      "validation": "passed",
+      "tests_passed": 16
+    }
+  },
+  "pit": {
+    "command": "pixi run -e dev pytest -m pit -q --no-cov",
+    "passed": 53,
+    "skipped": 1,
+    "skip_reason": "Optional local TDX sample is absent; live Tushare and FRED evidence was exercised separately.",
+    "status": "passed"
+  },
+  "fred_live": {
+    "command": "pixi run -e dev pytest packages/apps/tests/e2e/test_real_data_pipeline.py -q --no-cov",
+    "passed": 4,
+    "status": "passed"
+  },
+  "frontend": {
+    "command": "bun run check",
+    "exit_code": 0,
+    "lint": "755 files checked",
+    "type": "passed",
+    "unit_tests": {
+      "files_passed": 192,
+      "tests_passed": 1501
+    },
+    "route_audit": "36 product routes covered",
+    "prototype_freeze": "28 sources matched baseline",
+    "architecture": "passed",
+    "harness_tests_passed": 10
+  },
+  "focused_tdd": {
+    "frontend_data_products": "13 passed",
+    "backend_keychain_and_server": "9 passed",
+    "red_observed": true,
+    "green_observed": true
+  }
+}

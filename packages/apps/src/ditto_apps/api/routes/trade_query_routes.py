@@ -1,15 +1,15 @@
 """
-交易查询路由 — 意图/成交/持仓/盈亏/信号/偏差/对比.
+Manual 查询路由 — 本地意图/人工成交/实际持仓/盈亏/偏差/对比.
 
 端点:
-- GET  /trade/intents                        列出交易意图
-- GET  /trade/fills                          列出成交记录
-- GET  /trade/positions                      查询持仓快照
-- GET  /trade/pnl                            盈亏汇总
-- GET  /trade/signals/latest                 最新信号
-- GET  /trade/signals/{strategy_id}/intents  信号意图明细
-- GET  /trade/deviation                      信号-成交偏差报告
-- GET  /trade/comparison                     回测 vs 实际对比
+- GET  /manual/intents                        列出本地意图
+- GET  /manual/fills                          列出人工成交
+- GET  /manual/positions                      查询实际持仓快照
+- GET  /manual/pnl                            盈亏汇总
+- GET  /manual/signals/latest                 最新信号
+- GET  /manual/signals/{strategy_id}/intents  信号意图明细
+- GET  /manual/deviation                      信号-人工成交偏差报告
+- GET  /manual/comparison                     回测 vs Manual 对比
 """
 
 from __future__ import annotations

@@ -1,0 +1,314 @@
+{
+  "agent_evidence": {
+    "all_numeric_metrics_cited": true,
+    "approved_egress_class": "cloud_allowed",
+    "artifact_refs": [
+      "market-context:sha256:010e994ae67f1ae7d2c2ac685d667c10bddec2291a538d5b13876fc573950375",
+      "artifact:dataset_certification:certification:2fa914794db658f2c7c8348274fd81754515080c21305fc3c24394cf29b5baf4:sha256:b42f7b537fecc99de7e8727e0c13bb179dfc64d9b741be9e19d9084498ceaf14",
+      "artifact:dataset_certification:certification:bb8f632423dbe5138853d8a751a866c1dcb93b78e6834458affb2be17842451a:sha256:1f2073c36847606c8ae43531e9293a1984f67b915df94e58e7f4d6a54622048c",
+      "artifact:dataset_certification:certification:c3e8544b1d10d91ef68d75975924827b722ca70ddeda637f424feba4f707b2e9:sha256:32da9fe7139e8e00672424388c5fae88ebb711a75f06048484cc61f3518ec19e",
+      "artifact:dataset_certification:certification:f2bd3e12881401f677c8247c4a76fc443609f6619e0a738801d6f9ef07eccc0d:sha256:7d3b989ce0b02d93ce6aaf1f2fdac3464ecded0be34a5c69fec9328657be14a2"
+    ],
+    "evidence_id": "evidence-63fbbe0739e131ca996458aac52bdbeed5a051b66feaa2022f335c1cc985cfd2",
+    "integrity_hash": "d825567749a5f7e645ff8841bd7b5fae0a83ad3a72d1f56f9341aad9c19e4e0d",
+    "license_class": "approved-research",
+    "lineage": [
+      "market-context:market-regime:sha256:12dca5da59847b6968be8c32f15dac66dfbd65843c1a0ee4ba04f292c1f7c55d",
+      "certification:certification:2fa914794db658f2c7c8348274fd81754515080c21305fc3c24394cf29b5baf4",
+      "certification:certification:bb8f632423dbe5138853d8a751a866c1dcb93b78e6834458affb2be17842451a",
+      "certification:certification:c3e8544b1d10d91ef68d75975924827b722ca70ddeda637f424feba4f707b2e9",
+      "certification:certification:f2bd3e12881401f677c8247c4a76fc443609f6619e0a738801d6f9ef07eccc0d",
+      "snapshot:snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344",
+      "snapshot:snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+      "snapshot:snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812",
+      "snapshot:snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b",
+      "snapshot:snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+      "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+      "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d",
+      "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"
+    ],
+    "tool_name": "market_context_evidence"
+  },
+  "certifications": [
+    {
+      "consumer_evidence_sha256": "f27ae556549477cc90097565fa3920cc832f9ae2602fabc537813273751e39a5",
+      "consumer_probe": {
+        "file_count": 1,
+        "kind": "parquet",
+        "object": "market/index/global_bars",
+        "row_count": 1
+      },
+      "content_hash": "1f2073c36847606c8ae43531e9293a1984f67b915df94e58e7f4d6a54622048c",
+      "dataset_id": "global_index_daily",
+      "expected_partition_count": 1,
+      "report_id": "certification:bb8f632423dbe5138853d8a751a866c1dcb93b78e6834458affb2be17842451a",
+      "snapshot_ids": [
+        "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"
+      ],
+      "target_from": "2024-03-29",
+      "target_to": "2024-03-29"
+    },
+    {
+      "consumer_evidence_sha256": "2bcddcce54baf0803af4cc34f1dcf0a49cee81f56152ed27db0f14ae1c82a68f",
+      "consumer_probe": {
+        "file_count": 1,
+        "kind": "parquet",
+        "object": "market/index/bars",
+        "row_count": 243
+      },
+      "content_hash": "32da9fe7139e8e00672424388c5fae88ebb711a75f06048484cc61f3518ec19e",
+      "dataset_id": "index_daily",
+      "expected_partition_count": 36,
+      "report_id": "certification:c3e8544b1d10d91ef68d75975924827b722ca70ddeda637f424feba4f707b2e9",
+      "snapshot_ids": [
+        "snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+        "snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812"
+      ],
+      "target_from": "2024-02-01",
+      "target_to": "2024-03-29"
+    },
+    {
+      "consumer_evidence_sha256": "271cb30c57dbeb35a8e13e6bb3aa39d4d53b73730a6bd49562ed3821fea0ec23",
+      "consumer_probe": {
+        "kind": "sqlite",
+        "object": "macro_indicator_data",
+        "row_count": 481
+      },
+      "content_hash": "b42f7b537fecc99de7e8727e0c13bb179dfc64d9b741be9e19d9084498ceaf14",
+      "dataset_id": "macro_indicators",
+      "expected_partition_count": 1,
+      "report_id": "certification:2fa914794db658f2c7c8348274fd81754515080c21305fc3c24394cf29b5baf4",
+      "snapshot_ids": [
+        "snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b"
+      ],
+      "target_from": "2024-03-29",
+      "target_to": "2024-03-29"
+    },
+    {
+      "consumer_evidence_sha256": "e0887c0d4fcf405737106f50353e7f6739f3efd0f16aec1fa4a94f3fdced82bb",
+      "consumer_probe": {
+        "file_count": 1,
+        "kind": "parquet",
+        "object": "market/stock/bars",
+        "row_count": 5355
+      },
+      "content_hash": "7d3b989ce0b02d93ce6aaf1f2fdac3464ecded0be34a5c69fec9328657be14a2",
+      "dataset_id": "stock_daily",
+      "expected_partition_count": 1,
+      "report_id": "certification:f2bd3e12881401f677c8247c4a76fc443609f6619e0a738801d6f9ef07eccc0d",
+      "snapshot_ids": [
+        "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13"
+      ],
+      "target_from": "2024-03-29",
+      "target_to": "2024-03-29"
+    }
+  ],
+  "criteria": {
+    "agent_evidence_brief_envelope": true,
+    "global_overnight_timing": true,
+    "historical_as_of_replay": true,
+    "market_context_view": true,
+    "missing_data_fail_closed_or_degraded": true,
+    "regime_industry_risk_explanation": true
+  },
+  "data_root": "/private/tmp/ditto-q2-live-20260901.v1",
+  "generated_at": "2026-09-01T12:37:10.251043Z",
+  "global_session_visibility": [
+    {
+      "event_time": "2024-03-29T06:00:00+00:00",
+      "source_ticker": "N225",
+      "timezone": "Asia/Tokyo",
+      "visible_at_a_share_close": true,
+      "visible_at_a_share_open": false
+    }
+  ],
+  "historical_replay": {
+    "deterministic": true,
+    "first_integrity_hash": "d825567749a5f7e645ff8841bd7b5fae0a83ad3a72d1f56f9341aad9c19e4e0d",
+    "pre_acquisition_rejection": {
+      "as_of": "2026-09-01T10:34:22.774439+00:00",
+      "error_type": "AppQueryError",
+      "message": "market context source snapshot 'snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344' is not visible at knowledge_cutoff=2026-09-01T10:34:22.774439+00:00",
+      "passed": true
+    },
+    "replay_as_of": "2026-09-01T12:38:10.251043Z",
+    "second_integrity_hash": "d825567749a5f7e645ff8841bd7b5fae0a83ad3a72d1f56f9341aad9c19e4e0d"
+  },
+  "market_context": {
+    "as_of": "2026-09-01T12:38:10.251043Z",
+    "data_conflicts": [],
+    "drivers": [
+      {
+        "category": "a_share",
+        "contribution": 0.1383824627685279,
+        "direction": "supportive",
+        "name": "breadth"
+      },
+      {
+        "category": "risk",
+        "contribution": 0.11191285938349084,
+        "direction": "supportive",
+        "name": "volatility"
+      },
+      {
+        "category": "global",
+        "contribution": 0.019659552338705904,
+        "direction": "supportive",
+        "name": "cross_market"
+      },
+      {
+        "category": "style",
+        "contribution": 0.010837270826430052,
+        "direction": "supportive",
+        "name": "style"
+      },
+      {
+        "category": "a_share",
+        "contribution": -0.0002656184275548642,
+        "direction": "pressuring",
+        "name": "trend"
+      }
+    ],
+    "evidence_refs": [
+      "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+      "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d",
+      "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344"
+    ],
+    "feature_set_id": "market-regime:sha256:12dca5da59847b6968be8c32f15dac66dfbd65843c1a0ee4ba04f292c1f7c55d",
+    "feature_version": "market-regime.v1",
+    "impacts": [
+      {
+        "direction": "supportive",
+        "rationale_driver": "breadth",
+        "target": "cyclical",
+        "target_domain": "industry"
+      },
+      {
+        "direction": "supportive",
+        "rationale_driver": "trend",
+        "target": "momentum",
+        "target_domain": "selection"
+      },
+      {
+        "direction": "supportive",
+        "rationale_driver": "trend",
+        "target": "equity_beta",
+        "target_domain": "portfolio"
+      },
+      {
+        "direction": "supportive",
+        "rationale_driver": "volatility",
+        "target": "volatility_budget",
+        "target_domain": "risk"
+      }
+    ],
+    "knowledge_cutoff": "2026-09-01T12:38:10.251043Z",
+    "metrics": [
+      {
+        "category": "a_share",
+        "evidence_ref": "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13",
+        "freshness": "fresh",
+        "name": "a_share_breadth",
+        "trend": "rising",
+        "unit": "ratio",
+        "value": 0.4705003734129948
+      },
+      {
+        "category": "a_share",
+        "evidence_ref": "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d",
+        "freshness": "fresh",
+        "name": "benchmark_return_20d",
+        "trend": "falling",
+        "unit": "decimal_return",
+        "value": -0.00009031026536865383
+      },
+      {
+        "category": "a_share",
+        "evidence_ref": "snapshot-set:sha256:ed36433f2e59a5580ea7ea1c7d6d2c7897cfb0dbf0733580e1e68825f6af2c3d",
+        "freshness": "fresh",
+        "name": "realized_volatility_20d",
+        "trend": "unknown",
+        "unit": "annualized_decimal",
+        "value": 0.1048740695240328
+      },
+      {
+        "category": "global",
+        "evidence_ref": "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344",
+        "freshness": "fresh",
+        "name": "global_index_return_1d",
+        "trend": "rising",
+        "unit": "decimal_return",
+        "value": 0.005013185846370005
+      }
+    ],
+    "missing_inputs": [
+      "macro_surprise_score"
+    ],
+    "publication_cutoff": "2026-09-01T12:38:10.251043Z",
+    "regime_label": "risk_on",
+    "regime_score": 0.28052652688959984,
+    "source_snapshot_ids": [
+      "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344",
+      "snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+      "snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812",
+      "snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b",
+      "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13"
+    ],
+    "source_snapshot_set_id": "snapshot-set:sha256:bbea30dd87f5272a28aed8c608a369de05cb60f1b57c01eab240092175c23196",
+    "status": "degraded",
+    "uncertainties": [
+      "macro_surprise_score_not_derivable_from_requested_snapshots"
+    ]
+  },
+  "missing_data_behavior": {
+    "missing_inputs": [
+      "macro_surprise_score"
+    ],
+    "passed": true,
+    "status": "degraded",
+    "uncertainties": [
+      "macro_surprise_score_not_derivable_from_requested_snapshots"
+    ]
+  },
+  "passed": true,
+  "profile": "research_daily",
+  "recovery_evidence": {
+    "path": "/Users/chevy/Desktop/code/ditto/docs/evidence/personal-workstation/q1/backup-restore-20260901.json",
+    "sha256": "87a9f1f1eba6578f95242e267367b57a6c0e41473171d328b94796337840e575"
+  },
+  "regime_to_industry_and_risk": [
+    {
+      "direction": "supportive",
+      "rationale_driver": "breadth",
+      "target": "cyclical",
+      "target_domain": "industry"
+    },
+    {
+      "direction": "supportive",
+      "rationale_driver": "trend",
+      "target": "momentum",
+      "target_domain": "selection"
+    },
+    {
+      "direction": "supportive",
+      "rationale_driver": "trend",
+      "target": "equity_beta",
+      "target_domain": "portfolio"
+    },
+    {
+      "direction": "supportive",
+      "rationale_driver": "volatility",
+      "target": "volatility_budget",
+      "target_domain": "risk"
+    }
+  ],
+  "schema": "ditto.q2-live-market-context.v1",
+  "source_snapshot_ids": [
+    "snapshot:tushare:global_index_daily:sha256:cbedef277c09e0e91cf78272138ead0b81a97fbf26b71d695ff3321be2b1e344",
+    "snapshot:tushare:index_daily:sha256:5e4164fe4932fc660b1ee70619eefa999f92f4d0bf50d04c7a11ee51ae56694a",
+    "snapshot:tushare:index_daily:sha256:dca544e0c7e8a0d00d768227b5b7aab0023b29dc6e95ff8aa49f72bf48bf3812",
+    "snapshot:tushare:macro_indicators:sha256:ae50f278ce36513963618c82b9afd9c9b1ab7af288a3fdca597683774b3ab92b",
+    "snapshot:tushare:stock_daily:sha256:cf3d2f87ba770ea311972c1554feace10762650918b8620934748090ceeeab13"
+  ],
+  "source_snapshot_set_id": "snapshot-set:sha256:bbea30dd87f5272a28aed8c608a369de05cb60f1b57c01eab240092175c23196"
+}

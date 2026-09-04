@@ -75,7 +75,7 @@ def preview_data_product_operation(
 ) -> DataProductOperationPreview:
     """Validate the target and return the canonical safety preview."""
     metadata = default_dataset_metadata().get(dataset_id)
-    if metadata is None or metadata.product_contract is None:
+    if metadata is None or metadata.dataset_spec is None:
         raise AppCommandError(
             f"Unknown data product: {dataset_id}",
             command=f"preview_data_product_{operation}",

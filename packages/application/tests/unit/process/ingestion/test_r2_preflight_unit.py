@@ -31,10 +31,10 @@ REPRESENTATIVE_DATASETS = (
 
 def _hard_contracts():
     return tuple(
-        metadata.product_contract
+        metadata.dataset_spec
         for metadata in default_dataset_metadata().values()
-        if metadata.product_contract is not None
-        and metadata.product_contract.r2_scope == "hard"
+        if metadata.dataset_spec is not None
+        and metadata.dataset_spec.r2_scope == "hard"
     )
 
 
@@ -109,7 +109,7 @@ def _benchmarks(
 
 
 @pytest.mark.unit
-def test_ready_requires_19_contracts_access_licenses_and_performance_evidence() -> None:
+def test_ready_requires_22_contracts_access_licenses_and_performance_evidence() -> None:
     report = R2IngestionPreflight().run(
         R2PreflightEvidence(
             provider_access=_access(),
@@ -124,8 +124,8 @@ def test_ready_requires_19_contracts_access_licenses_and_performance_evidence() 
     )
 
     assert report.status == "ready"
-    assert report.contract_count == 19
-    assert len(report.products) == 19
+    assert report.contract_count == 22
+    assert len(report.products) == 22
     assert all(product.ready for product in report.products)
     assert all(product.certification_report_id for product in report.products)
     assert all(

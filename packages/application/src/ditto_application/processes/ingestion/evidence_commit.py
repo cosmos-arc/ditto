@@ -232,11 +232,16 @@ class IngestionEvidenceCommitter:
             or request.success_log.source != request.source
             or request.success_log.trade_date != request.request_start
             or request.success_log.status is not IngestionStatus.SUCCESS
-            or request.success_log.checksum != request.provider_snapshot.checksum
-            or request.success_log.rows != request.provider_snapshot.row_count
+            or not isinstance(request.success_log.checksum, str)
+            or not request.success_log.checksum
+            or request.success_log.rows != request.catalog_entry.schema.row_count
+            or not isinstance(request.catalog_entry.source_snapshot_id, str)
+            or f":{request.success_log.checksum}"
+            not in request.catalog_entry.source_snapshot_id
+            or f":{request.success_log.checksum}" not in request.lineage_event.run_id
         ):
             raise AppProcessError(
-                "success log does not match committed payload evidence"
+                "success log does not match committed canonical evidence"
             )
 
     def _prepare_checkpoint(

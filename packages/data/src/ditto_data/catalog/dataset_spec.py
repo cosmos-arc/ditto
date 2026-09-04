@@ -1,22 +1,31 @@
-"""Frozen R2 data-product contracts, independent of catalog runtime metadata."""
+"""Immutable dataset specs, independent of catalog runtime metadata."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
 
-__all__ = ["DatasetProductContract", "resolve_product_contract"]
+__all__ = ["DatasetSpec", "resolve_dataset_spec"]
 
 type R2Scope = Literal["hard", "deferred"]
 type BootstrapChunk = Literal["month", "quarter", "year", "source_defined"]
 type FallbackMode = Literal["automatic", "manual", "none"]
 type RevisionPolicy = Literal["append_only", "effective_dated", "not_applicable"]
+type DatasetFrequency = Literal[
+    "static",
+    "trading_daily",
+    "monthly",
+    "quarterly",
+    "event",
+    "source_defined",
+]
+type DatasetCurrency = Literal["CNY", "mixed"] | None
 type CoverageTargets = tuple[str | None, str | None, str]
 
 
 @dataclass(frozen=True)
-class DatasetProductContract:
-    """Frozen operational contract for one R2 data product."""
+class DatasetSpec:
+    """Catalog-owned identity and operating contract for one dataset."""
 
     dataset_id: str
     r2_scope: R2Scope
@@ -24,6 +33,10 @@ class DatasetProductContract:
     primary_key: tuple[str, ...]
     partition_keys: tuple[str, ...]
     provider_datasets: tuple[str, ...]
+    schema_version: str
+    frequency: DatasetFrequency
+    timezone: str
+    currency: DatasetCurrency
     bootstrap_chunk: BootstrapChunk
     coverage_start_rule: str
     raw_target_from: str | None
@@ -39,6 +52,8 @@ class DatasetProductContract:
         required_text = {
             "dataset_id": self.dataset_id,
             "owner": self.owner,
+            "schema_version": self.schema_version,
+            "timezone": self.timezone,
             "coverage_start_rule": self.coverage_start_rule,
             "runbook": self.runbook,
         }
@@ -56,6 +71,10 @@ class DatasetProductContract:
                 raise ValueError(f"Invalid product contract {field}: {values!r}")
         if not self.runbook.startswith("docs/operations/"):
             raise ValueError(f"Invalid product contract runbook: {self.runbook!r}")
+        if not self.schema_version.endswith((".v1", ".v2")):
+            raise ValueError(
+                f"Invalid product contract schema_version: {self.schema_version!r}"
+            )
         if self.r2_scope == "hard" and (
             self.raw_target_from is None or self.certified_target_from is None
         ):
@@ -73,6 +92,7 @@ _R2_HARD_SCOPE = frozenset(
         "stock_daily",
         "etf_daily",
         "index_daily",
+        "global_index_daily",
         "adj_factor",
         "fund_adj",
         "stock_status",
@@ -85,6 +105,8 @@ _R2_HARD_SCOPE = frozenset(
         "valuation_metrics",
         "macro_indicators",
         "commodity_daily",
+        "industry_classification",
+        "industry_mapping",
     }
 )
 
@@ -96,6 +118,11 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "stock_daily": ("instrument_id", "trade_date"),
     "etf_daily": ("instrument_id", "trade_date"),
     "index_daily": ("instrument_id", "trade_date"),
+    "global_index_daily": (
+        "source_ticker",
+        "trade_date",
+        "knowledge_date",
+    ),
     "stock_status": ("instrument_id", "trade_date"),
     "adj_factor": ("instrument_id", "trade_date", "knowledge_date"),
     "fund_adj": ("instrument_id", "trade_date", "knowledge_date"),
@@ -140,6 +167,20 @@ _PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
         "effective_date",
     ),
     "index_weight": ("index_id", "constituent_id", "effective_from"),
+    "industry_classification": (
+        "source",
+        "classification_version",
+        "industry_id",
+        "knowledge_date",
+    ),
+    "industry_mapping": (
+        "source",
+        "classification_version",
+        "instrument_id",
+        "industry_id",
+        "industry_date",
+        "knowledge_date",
+    ),
 }
 
 _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
@@ -150,6 +191,7 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     "stock_daily": ("tushare:daily", "local_tdx:day"),
     "etf_daily": ("tushare:fund_daily", "local_tdx:day"),
     "index_daily": ("tushare:index_daily", "local_tdx:day"),
+    "global_index_daily": ("tushare:index_global",),
     "stock_status": (
         "tushare:stock_st",
         "tushare:suspend_d",
@@ -176,6 +218,8 @@ _PROVIDER_DATASETS: dict[str, tuple[str, ...]] = {
     ),
     "corporate_actions": ("tushare:corporate_actions",),
     "index_weight": ("tushare:index_weight",),
+    "industry_classification": ("tushare:index_classify",),
+    "industry_mapping": ("tushare:index_member_all",),
 }
 
 _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
@@ -186,6 +230,7 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "stock_daily": "month",
     "etf_daily": "month",
     "index_daily": "month",
+    "global_index_daily": "month",
     "stock_status": "month",
     "adj_factor": "month",
     "fund_adj": "month",
@@ -201,7 +246,80 @@ _BOOTSTRAP_CHUNKS: dict[str, BootstrapChunk] = {
     "commodity_daily": "source_defined",
     "corporate_actions": "quarter",
     "index_weight": "month",
+    "industry_classification": "year",
+    "industry_mapping": "month",
 }
+
+_SCHEMA_VERSION_OVERRIDES: dict[str, str] = {
+    "stock_daily": "market.stock_daily.v1",
+    "adj_factor": "market.adj_factor.v1",
+    "stock_status": "market.stock_status.v1",
+    "etf_daily": "etf.daily.v1",
+    "corporate_actions": "fundamental.corporate_actions.v2",
+    "dividend": "fundamental.dividend.v2",
+}
+
+_DATASET_DOMAINS: dict[str, str] = {
+    "stock_basic": "metadata",
+    "etf_basic": "metadata",
+    "index_basic": "metadata",
+    "calendar": "metadata",
+    "stock_daily": "market",
+    "etf_daily": "market",
+    "index_daily": "market",
+    "global_index_daily": "market",
+    "stock_status": "market",
+    "adj_factor": "market",
+    "fund_adj": "market",
+    "balance_sheet": "fundamental",
+    "income_statement": "fundamental",
+    "cash_flow": "fundamental",
+    "dividend": "fundamental",
+    "valuation_metrics": "capital",
+    "margin_trading": "capital",
+    "pledge_ratio": "capital",
+    "macro_indicators": "macro",
+    "fx_daily": "macro",
+    "commodity_daily": "macro",
+    "corporate_actions": "fundamental",
+    "index_weight": "market",
+    "industry_classification": "metadata",
+    "industry_mapping": "metadata",
+}
+
+_STATIC_DATASETS = frozenset({"stock_basic", "etf_basic", "index_basic"})
+_QUARTERLY_DATASETS = frozenset(
+    {"balance_sheet", "income_statement", "cash_flow", "pledge_ratio"}
+)
+_EVENT_DATASETS = frozenset({"dividend", "corporate_actions"})
+_MONTHLY_DATASETS = frozenset({"index_weight"})
+_SOURCE_DEFINED_DATASETS = frozenset(
+    {
+        "macro_indicators",
+        "commodity_daily",
+        "global_index_daily",
+        "industry_classification",
+        "industry_mapping",
+    }
+)
+_CNY_DATASETS = frozenset(
+    {
+        "stock_daily",
+        "etf_daily",
+        "index_daily",
+        "balance_sheet",
+        "income_statement",
+        "cash_flow",
+        "dividend",
+        "valuation_metrics",
+        "margin_trading",
+        "pledge_ratio",
+        "corporate_actions",
+    }
+)
+_MIXED_CURRENCY_DATASETS = frozenset(
+    {"macro_indicators", "fx_daily", "commodity_daily", "global_index_daily"}
+)
 
 _APPEND_ONLY_DATASETS = frozenset(
     {
@@ -217,6 +335,7 @@ _APPEND_ONLY_DATASETS = frozenset(
         "macro_indicators",
         "fx_daily",
         "commodity_daily",
+        "global_index_daily",
     }
 )
 _EFFECTIVE_DATED_DATASETS = frozenset(
@@ -227,10 +346,19 @@ _EFFECTIVE_DATED_DATASETS = frozenset(
         "stock_status",
         "corporate_actions",
         "index_weight",
+        "industry_classification",
+        "industry_mapping",
     }
 )
 _KNOWLEDGE_DATE_DATASETS = _APPEND_ONLY_DATASETS | frozenset(
-    {"stock_basic", "etf_basic", "index_basic", "corporate_actions"}
+    {
+        "stock_basic",
+        "etf_basic",
+        "index_basic",
+        "corporate_actions",
+        "industry_classification",
+        "industry_mapping",
+    }
 )
 
 _DEFAULT_R2_COVERAGE_TARGET: CoverageTargets = (
@@ -294,6 +422,21 @@ _R2_COVERAGE_TARGETS: dict[str, CoverageTargets] = {
         "evidence-determined",
         "knowledge_date on or after R2 operational window",
     ),
+    "global_index_daily": (
+        "provider-native",
+        "evidence-determined",
+        "per-market trading calendar and actual retrieval visibility",
+    ),
+    "industry_classification": (
+        "SW2021-native",
+        "evidence-determined",
+        "classification version and actual retrieval visibility",
+    ),
+    "industry_mapping": (
+        "SW2021-native",
+        "evidence-determined",
+        "effective interval and actual retrieval visibility",
+    ),
 }
 
 
@@ -308,11 +451,14 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
         return ("observation_date",)
     if dataset_id == "index_weight":
         return ("effective_from",)
+    if dataset_id in {"industry_classification", "industry_mapping"}:
+        return ("knowledge_date",)
     if dataset_id in {
         "calendar",
         "stock_daily",
         "etf_daily",
         "index_daily",
+        "global_index_daily",
         "stock_status",
         "adj_factor",
         "fund_adj",
@@ -325,8 +471,37 @@ def _partition_keys(dataset_id: str) -> tuple[str, ...]:
     return ("knowledge_date",)
 
 
-def resolve_product_contract(dataset_id: str) -> DatasetProductContract:
-    """Build the immutable operational contract for one catalog dataset."""
+def _schema_version(dataset_id: str) -> str:
+    return _SCHEMA_VERSION_OVERRIDES.get(
+        dataset_id,
+        f"{_DATASET_DOMAINS[dataset_id]}.{dataset_id}.v1",
+    )
+
+
+def _frequency(dataset_id: str) -> DatasetFrequency:
+    if dataset_id in _STATIC_DATASETS:
+        return "static"
+    if dataset_id in _QUARTERLY_DATASETS:
+        return "quarterly"
+    if dataset_id in _EVENT_DATASETS:
+        return "event"
+    if dataset_id in _MONTHLY_DATASETS:
+        return "monthly"
+    if dataset_id in _SOURCE_DEFINED_DATASETS:
+        return "source_defined"
+    return "trading_daily"
+
+
+def _currency(dataset_id: str) -> DatasetCurrency:
+    if dataset_id in _CNY_DATASETS:
+        return "CNY"
+    if dataset_id in _MIXED_CURRENCY_DATASETS:
+        return "mixed"
+    return None
+
+
+def resolve_dataset_spec(dataset_id: str) -> DatasetSpec:
+    """Build the immutable specification for one known catalog dataset."""
     raw_from, certified_from, coverage_rule = _coverage_targets(dataset_id)
     revision_policy: RevisionPolicy = "not_applicable"
     if dataset_id in _APPEND_ONLY_DATASETS:
@@ -336,13 +511,21 @@ def resolve_product_contract(dataset_id: str) -> DatasetProductContract:
     fallback_mode: FallbackMode = (
         "manual" if dataset_id in {"macro_indicators", "commodity_daily"} else "none"
     )
-    return DatasetProductContract(
+    return DatasetSpec(
         dataset_id=dataset_id,
         r2_scope="hard" if dataset_id in _R2_HARD_SCOPE else "deferred",
         owner="data-platform",
         primary_key=_PRIMARY_KEYS[dataset_id],
         partition_keys=_partition_keys(dataset_id),
         provider_datasets=_PROVIDER_DATASETS[dataset_id],
+        schema_version=_schema_version(dataset_id),
+        frequency=_frequency(dataset_id),
+        timezone=(
+            "source_defined"
+            if dataset_id in _SOURCE_DEFINED_DATASETS | {"fx_daily"}
+            else "Asia/Shanghai"
+        ),
+        currency=_currency(dataset_id),
         bootstrap_chunk=_BOOTSTRAP_CHUNKS[dataset_id],
         coverage_start_rule=coverage_rule,
         raw_target_from=raw_from,
