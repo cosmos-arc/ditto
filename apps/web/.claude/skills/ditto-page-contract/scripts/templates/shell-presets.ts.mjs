@@ -88,7 +88,7 @@ export const SHELL_PROTOTYPE_PRESETS = {
   },
   "object-hub": {
     rail: ".shell-rail",
-    header: ".object-header",
+    header: ".shell-header",
   },
   studio: {
     rail: ".shell-rail",

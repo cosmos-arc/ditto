@@ -6,6 +6,7 @@ import { useRecentSignals } from "../hooks";
 
 function formatTime(isoString: string): string {
 	const date = new Date(isoString);
+	if (Number.isNaN(date.getTime())) return isoString;
 	return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
@@ -40,7 +41,7 @@ export function SignalsSection() {
 								</div>
 								<div className="flex items-center gap-3 text-(--color-foreground-tertiary)">
 									<span>{signal.strategy}</span>
-									<span>{signal.confidence}%</span>
+									<span>{signal.confidence == null ? "置信度未提供" : `${signal.confidence}%`}</span>
 									<span>{formatTime(signal.time)}</span>
 								</div>
 							</div>

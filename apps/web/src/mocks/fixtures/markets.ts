@@ -14,10 +14,23 @@ import type {
 } from "@/types";
 
 export const mockMarketContext: MarketContextResponse = {
-	regime: "risk_on",
-	volatility: 18.5,
-	usdStrength: 0.72,
-	alertCount: 2,
+	as_of: "2026-08-31T09:00:00Z",
+	data_conflicts: [],
+	drivers: [],
+	evidence_refs: [],
+	feature_set_id: "market-regime:sha256:fixture",
+	feature_version: "market-regime.v1",
+	impacts: [],
+	knowledge_cutoff: "2026-08-31T09:00:00Z",
+	metrics: [],
+	missing_inputs: ["benchmark_return_20d"],
+	publication_cutoff: "2026-08-31T09:00:00Z",
+	regime_label: null,
+	regime_score: null,
+	source_snapshot_ids: ["snapshot-market-fixture"],
+	source_snapshot_set_id: "snapshot-market-fixture",
+	status: "blocked",
+	uncertainties: ["fixture_has_no_market_facts"],
 };
 
 export const mockScopeStrip: ScopeStripResponse = {

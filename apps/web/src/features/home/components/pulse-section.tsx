@@ -15,7 +15,7 @@ export function PulseSection() {
 
 	if (isLoading) {
 		return (
-			<div className="flex h-[calc(var(--density-strip-height)-4px)] items-center gap-4 bg-(--color-surface-strip) px-4">
+			<div className="flex h-[var(--height-status-bar)] items-center gap-4 bg-(--color-surface-strip) px-4">
 				{LOADING_METRIC_IDS.map((metricId) => (
 					<LoadingSkeleton key={metricId} variant="metric" className="h-4 w-24" />
 				))}
@@ -23,7 +23,7 @@ export function PulseSection() {
 		);
 	}
 
-	const isPositive = (data?.pnlPercent ?? 0) >= 0;
+	const isPositive = data?.pnlPercent != null && data.pnlPercent >= 0;
 
 	return (
 		<DittoErrorBoundary
@@ -35,7 +35,7 @@ export function PulseSection() {
 			<ScrollReveal>
 				<div
 					data-slot="pulse-strip"
-					className="flex h-[calc(var(--density-strip-height)-4px)] items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-xs text-(--color-foreground-tertiary)"
+					className="flex h-[var(--height-status-bar)] items-center gap-4 overflow-hidden bg-(--color-surface-strip) px-4 text-xs text-(--color-foreground-tertiary)"
 				>
 					{/* 1. Time + Status */}
 					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
@@ -43,7 +43,13 @@ export function PulseSection() {
 						<span className="font-data">{data?.date ?? "—"}</span>
 						<span>·</span>
 						<span>
-							{data?.session === "continuous" ? "盘中交易" : data?.session === "pre_market" ? "盘前" : "已收盘"}
+							{data?.session == null
+								? "交易阶段不可用"
+								: data.session === "continuous"
+									? "盘中交易"
+									: data.session === "pre_market"
+										? "盘前"
+										: "已收盘"}
 						</span>
 					</div>
 
@@ -55,8 +61,7 @@ export function PulseSection() {
 						<span
 							className={`font-data ${isPositive ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
 						>
-							{isPositive ? "+" : ""}
-							{data?.pnlPercent ?? 0}%
+							{data?.pnlPercent == null ? "不可用" : `${isPositive ? "+" : ""}${data.pnlPercent}%`}
 						</span>
 					</div>
 
@@ -84,7 +89,7 @@ export function PulseSection() {
 						<span>待处理</span>
 						<span className="font-data text-(--color-foreground-secondary)">{data?.pendingActions ?? 0}</span>
 						<span className="ml-2">运行中</span>
-						<span className="font-data text-(--color-foreground-secondary)">{data?.runningJobs ?? 0}</span>
+						<span className="font-data text-(--color-foreground-secondary)">{data?.runningJobs ?? "不可用"}</span>
 					</div>
 				</div>
 			</ScrollReveal>

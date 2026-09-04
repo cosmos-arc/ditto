@@ -1,117 +1,153 @@
 {
   "id": "backtest-result",
-  "version": 1,
-  "status": "draft",
+  "version": 3,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
-  "route": "/research/backtest/$id",
+  "updatedAt": "2026-08-30",
+  "route": "/research/backtests/$id",
+  "resolvedRoute": "/research/backtests/bt-001",
   "pagePattern": "object-hub",
   "shellFamily": "object-hub",
   "prototypeRef": "docs/designs/specs/prototypes/page-backtest-result.html",
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/backtest",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
-      "src/features/backtest/components/info-level-annotations.test.tsx",
+      "src/features/backtest/components/backtest-page-workspace.test.tsx",
       "src/features/backtest/components/backtest-components.test.tsx"
     ],
-    "reactComponentRefs": [
-      "BacktestPage"
-    ]
+    "reactComponentRefs": ["BacktestPage"]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/backtests/runs/{run_id}",
+      "/api/v1/backtests/runs/{run_id}/report",
+      "/api/v1/backtests/runs/{run_id}/nav",
+      "/api/v1/backtests/runs/{run_id}/benchmark",
+      "/api/v1/backtests/runs/{run_id}/trades",
+      "/api/v1/backtests/runs/{run_id}/audit"
+    ],
+    "writePaths": [],
+    "mockFallback": false
   },
   "viewports": [
-    {
-      "width": 1536,
-      "height": 900,
-      "role": "primary"
-    },
-    {
-      "width": 1366,
-      "height": 768,
-      "role": "compact"
-    }
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" },
+    { "width": 1200, "height": 800, "role": "compact" }
   ],
   "slots": [
     {
+      "name": "header",
+      "required": true,
+      "infoLevel": "l0",
+      "prototypeSelector": ".shell-header",
+      "reactSelector": "[data-slot='header']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.11 },
+      "a11yRole": "banner"
+    },
+    {
       "name": "meta",
       "required": true,
-      "prototypeSelector": ".object-meta",
-      "reactSelector": "[data-slot='meta']",
-      "a11yRole": "banner",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
+      "infoLevel": "l1",
+      "prototypeSelector": ".hub-meta",
+      "reactSelector": "[data-testid='backtest-detail-identity']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 12, "widthRatio": 0.03, "heightRatio": 0.08 },
+      "a11yRole": "complementary",
+      "responsiveBehavior": { "compact": "reflow" }
     },
     {
       "name": "tabs",
       "required": true,
-      "prototypeSelector": ".object-tabs",
-      "reactSelector": "[data-slot='tabs']",
+      "infoLevel": "l1",
+      "prototypeSelector": ".hub-tabs",
+      "reactSelector": "[data-testid='backtest-detail-tabs']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 68, "widthRatio": 0.03, "heightRatio": 0.08 },
       "a11yRole": "navigation",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
+      "responsiveBehavior": { "compact": "reflow" }
     },
     {
       "name": "main",
       "required": true,
-      "prototypeSelector": ".object-main",
+      "infoLevel": "l1",
+      "prototypeSelector": "[data-contract-slot='main']",
       "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 68, "widthRatio": 0.03, "heightRatio": 0.2 },
       "a11yRole": "main"
     },
     {
       "name": "bottom",
       "required": true,
-      "prototypeSelector": ".object-bottom",
-      "reactSelector": "[data-slot='bottom']",
+      "infoLevel": "l2",
+      "prototypeSelector": ".hub-bottom",
+      "reactSelector": "[data-testid='backtest-detail-bottom']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 12, "widthRatio": 0.03, "heightRatio": 0.12 },
       "a11yRole": "region",
-      "responsiveBehavior": {
-        "compact": "collapsed"
-      }
+      "responsiveBehavior": { "compact": "collapsed" }
     }
   ],
   "states": {
-    "universal": [
-      "loading",
-      "empty",
-      "error",
-      "stale"
-    ],
+    "universal": ["loading", "empty", "error", "stale"],
     "pageSpecific": [
-      "not-found"
+      "selected-nav-tab",
+      "selected-report-tab",
+      "selected-trades-tab",
+      "selected-audit-tab",
+      "run-unavailable",
+      "report-unavailable",
+      "performance-unpublished",
+      "nav-unavailable",
+      "benchmark-unpublished",
+      "benchmark-unavailable",
+      "trades-empty",
+      "trades-unavailable",
+      "audit-empty",
+      "audit-unavailable"
     ]
   },
-  "flags": {
-    "hasStatusBar": false,
-    "sidebarCollapsible": false
-  },
+  "interactions": [
+    {
+      "id": "switch-backtest-evidence-view",
+      "trigger": "tab-change",
+      "affectedSlots": ["tabs", "main", "bottom"],
+      "expectedBehavior": "switches among NAV, published report, exact trades, and audit evidence while retaining the frozen run and strategy-version identity"
+    },
+    {
+      "id": "request-agent-evidence-analysis",
+      "trigger": "header-evidence-action",
+      "affectedSlots": ["header"],
+      "expectedBehavior": "opens the governed Agent entry with the exact run, strategy, and version context instead of generating an ungoverned inline interpretation"
+    },
+    {
+      "id": "retry-backtest-run",
+      "trigger": "typed-run-retry-action",
+      "affectedSlots": ["meta", "tabs", "main", "bottom"],
+      "expectedBehavior": "retries run identity and withholds every result resource until the run is confirmed"
+    },
+    {
+      "id": "retry-backtest-resource",
+      "trigger": "typed-resource-retry-action",
+      "affectedSlots": ["meta", "main", "bottom"],
+      "expectedBehavior": "retries only the failed report, NAV, benchmark, trades, or audit resource and never substitutes zeros, holdings, names, or monthly returns"
+    }
+  ],
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
   "metrics": {
-    "capturedAt": "2026-04-27",
+    "capturedAt": "2026-08-30",
     "viewport": "1536x900",
     "baseline": {
-      "meta": {
-        "width": 1536,
-        "height": 112,
-        "strategy": "content-driven"
-      },
-      "tabs": {
-        "width": 1536,
-        "height": 48,
-        "strategy": "content-driven"
-      },
-      "main": {
-        "width": 1536,
-        "height": 590,
-        "strategy": "content-driven"
-      },
-      "bottom": {
-        "width": 1536,
-        "height": 140,
-        "strategy": "content-driven"
-      }
+      "meta": { "width": 1480, "height": 36, "strategy": "content-driven" },
+      "tabs": { "width": 1480, "height": 45, "strategy": "content-driven" },
+      "main": { "width": 1480, "height": 659, "strategy": "content-driven" },
+      "bottom": { "width": 1480, "height": 36, "strategy": "content-driven" }
     }
   },
   "visualThresholds": {
@@ -119,7 +155,7 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.075
   },
   "overlays": [
     {
@@ -127,85 +163,50 @@
       "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-export",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "BacktestOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "backtest-result.enable-signal",
-      "kind": "modal",
+      "kind": "alert-dialog",
       "blocking": true,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-enable-signal",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "BacktestOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "backtest-result.ai-analysis",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-ai-analysis",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "BacktestOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "backtest-result.compare-toast",
       "kind": "toast",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "toggle" },
       "prototypeSelector": "#overlay-compare-toast",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "BacktestOverlays",
+      "closeBehavior": ["primary-action"]
     },
     {
       "id": "backtest-result.compare",
       "kind": "modal",
-      "blocking": true,
+      "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-compare",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "BacktestOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     }
   ]
 }

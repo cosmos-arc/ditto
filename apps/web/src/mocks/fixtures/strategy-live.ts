@@ -94,6 +94,16 @@ export const mockStrategyDetailDto: StrategyResponse = mockStrategyList[0];
 export const mockStrategyVersionList: StrategyVersionResponse[] = [
 	{
 		strategy_id: "seed_etf_industry_rotation",
+		version: 4,
+		parent_version: 3,
+		spec_hash: "a".repeat(64),
+		state: "review",
+		review_outcome: "approved",
+		created_at: "2026-07-26T09:00:00Z",
+		experiment_id: "exp-rotation-v4",
+	},
+	{
+		strategy_id: "seed_etf_industry_rotation",
 		version: 1,
 		parent_version: null,
 		spec_hash: "h-v1",

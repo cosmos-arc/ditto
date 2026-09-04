@@ -18,6 +18,8 @@ import type {
 	SpecChange,
 	SpecDiff,
 	SpecValidation,
+	StrategyAuthorOperation,
+	StrategyAuthorPreview,
 	StrategyDetail,
 	StrategyLifecycleState,
 	StrategyListItem,
@@ -31,6 +33,8 @@ type StrategyResponse = components["schemas"]["StrategyResponse"];
 type StrategyVersionResponse = components["schemas"]["StrategyVersionResponse"];
 type StrategyVersionDetailResponse = components["schemas"]["StrategyVersionDetailResponse"];
 type StrategySpecValidationResponse = components["schemas"]["StrategySpecValidationResponse"];
+type StrategyAuthorOperationResponse = components["schemas"]["StrategyAuthorOperationResponse"];
+type StrategyAuthorPreviewResponse = components["schemas"]["StrategyAuthorPreviewResponse"];
 type StrategyVersionDiffResponse = components["schemas"]["StrategyVersionDiffResponse"];
 type SpecChangeResponse = components["schemas"]["SpecChangeResponse"];
 type NodeDescriptorResponse = components["schemas"]["NodeDescriptorResponse"];
@@ -232,6 +236,35 @@ export function mapSpecValidation(dto: StrategySpecValidationResponse): SpecVali
 		changed: dto.changed,
 		valid: dto.valid,
 		errors: dto.errors ?? [],
+	};
+}
+
+function mapStrategyAuthorOperation(dto: StrategyAuthorOperationResponse): StrategyAuthorOperation {
+	return {
+		kind: dto.kind,
+		subjectId: dto.subject_id,
+		subjectVersion: dto.subject_version,
+		valid: dto.valid,
+		changed: dto.changed,
+		publishable: dto.publishable,
+		payloadHash: dto.payload_hash,
+		payload: { ...dto.payload },
+		lineage: dto.lineage,
+	};
+}
+
+export function mapStrategyAuthorPreview(dto: StrategyAuthorPreviewResponse): StrategyAuthorPreview {
+	return {
+		strategyId: dto.strategy_id,
+		baseVersion: dto.base_version,
+		valid: dto.valid,
+		publishable: dto.publishable,
+		canonicalHash: dto.canonical_hash,
+		draft: mapStrategyAuthorOperation(dto.draft),
+		compile: dto.compile.map(mapStrategyAuthorOperation),
+		validation: mapStrategyAuthorOperation(dto.validation),
+		diff: mapStrategyAuthorOperation(dto.diff),
+		tests: dto.tests.map((test) => ({ name: test.name, passed: test.passed, detail: test.detail })),
 	};
 }
 

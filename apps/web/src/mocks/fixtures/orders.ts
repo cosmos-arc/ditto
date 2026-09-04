@@ -115,12 +115,12 @@ export const mockOrderDetail: GetOrderDetailResponse = {
 		{
 			time: "2026-04-09T10:05:03Z",
 			event: "路由选择",
-			detail: "MiniQMT 主通道，预计延迟 12ms",
+			detail: "Paper 模拟撮合，按下一可见价格成交",
 		},
 		{
 			time: "2026-04-09T10:05:04Z",
-			event: "券商回报",
-			detail: "订单已报送至中信证券柜台",
+			event: "模拟成交回报",
+			detail: "Paper 成交已写入本地账本",
 		},
 	] as const,
 } as const;

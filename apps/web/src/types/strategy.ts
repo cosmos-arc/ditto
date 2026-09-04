@@ -164,6 +164,43 @@ export type SpecValidation = {
 	readonly errors: readonly string[];
 };
 
+// === Author detached preview ===
+
+export type StrategyAuthorOperationKind = "draft" | "compile" | "validate" | "diff";
+
+/** One content-addressed Author stage with explicitly zero mutation authority. */
+export type StrategyAuthorOperation = {
+	readonly kind: StrategyAuthorOperationKind;
+	readonly subjectId: string;
+	readonly subjectVersion: string;
+	readonly valid: boolean;
+	readonly changed: boolean;
+	readonly publishable: false;
+	readonly payloadHash: string;
+	readonly payload: Readonly<Record<string, unknown>>;
+	readonly lineage: readonly string[];
+};
+
+export type StrategyAuthorTest = {
+	readonly name: string;
+	readonly passed: boolean;
+	readonly detail: string;
+};
+
+/** Aggregate draft/compile/validate/diff preview authenticated as one candidate. */
+export type StrategyAuthorPreview = {
+	readonly strategyId: string;
+	readonly baseVersion: number;
+	readonly valid: boolean;
+	readonly publishable: false;
+	readonly canonicalHash: string | null;
+	readonly draft: StrategyAuthorOperation;
+	readonly compile: readonly StrategyAuthorOperation[];
+	readonly validation: StrategyAuthorOperation;
+	readonly diff: StrategyAuthorOperation;
+	readonly tests: readonly StrategyAuthorTest[];
+};
+
 // === diff 结果（StrategyVersionDiffResponse）===
 
 /** 一处字段级 canonical spec 变更。 */

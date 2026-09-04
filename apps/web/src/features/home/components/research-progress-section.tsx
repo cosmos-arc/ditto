@@ -40,6 +40,11 @@ export function ResearchProgressSection() {
 				>
 					{findingsData && (
 						<div className="flex flex-col">
+							{findingsData.findings.length === 0 && (
+								<p className="p-3 text-xs text-(--color-foreground-tertiary)">
+									研究投影不可用；请进入 Research 查看独立研究证据。
+								</p>
+							)}
 							{findingsData.findings.map((finding) => (
 								<div
 									key={`${finding.source}-${finding.text}`}

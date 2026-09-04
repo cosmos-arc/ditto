@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
@@ -67,33 +68,46 @@ function registerReviewHandlers(hardReviewBlocked = false, reviewOutcome = "pend
 }
 
 describe("ReviewDetailPage", () => {
-	it("renders the frozen evidence sections in order without turning soft statistics into PASS", async () => {
-		registerReviewHandlers();
-		const { container } = render(<ReviewDetailPage experimentId="exp-review" strategyId="s" version={2} />, {
+	it("keeps the default governed mock packet aligned with its queue version", async () => {
+		render(<ReviewDetailPage experimentId="exp-rotation-v4" strategyId="seed_etf_industry_rotation" version={4} />, {
 			wrapper,
 		});
 
-		await screen.findByText("Decision Banner");
-		const sectionTitles = Array.from(container.querySelectorAll('[data-slot="context-section-header"]')).map((node) =>
-			node.querySelector("span")?.textContent?.trim(),
-		);
-		expect(sectionTitles.slice(0, 9)).toEqual([
-			"Decision Banner",
-			"Hard Gates",
-			"Statistical Evidence",
-			"Spec Diff",
-			"Candidate Rationale",
-			"Selection/Exposure Evidence",
-			"Lineage/Artifacts",
-			"R1 Impact",
-			"Decision Form",
-		]);
+		expect(await screen.findByRole("button", { name: "发布" })).toBeEnabled();
+		expect(screen.getByTestId("review-detail-meta")).toHaveTextContent(/approved/);
+		expect(screen.getByTestId("review-detail-meta")).not.toHaveTextContent(/unknown/);
+	});
+
+	it("organizes the governed packet as a decision workbench without turning soft statistics into PASS", async () => {
+		registerReviewHandlers();
+		const user = userEvent.setup();
+		render(<ReviewDetailPage experimentId="exp-review" strategyId="s" version={2} />, {
+			wrapper,
+		});
+
+		expect(screen.getByRole("region", { name: "审查决策工作台" })).toBeInTheDocument();
+		expect(await screen.findByRole("navigation", { name: "审查工作台导航" })).toBeInTheDocument();
+		expect(screen.getByText("Decision Banner")).toBeInTheDocument();
+		expect(screen.getByText("Hard Gates")).toBeInTheDocument();
+		expect(screen.getByText("Decision Form")).toBeInTheDocument();
+		expect(screen.queryByText("Statistical Evidence")).not.toBeInTheDocument();
+
+		await user.click(screen.getByRole("tab", { name: "证据与差异" }));
 		const statistical = screen.getByText("Statistical Evidence").closest('[data-slot="context-section"]');
 		expect(statistical).not.toBeNull();
 		expect((statistical as HTMLElement).querySelector('[data-slot="status-badge"]')).not.toBeInTheDocument();
 		expect(within(statistical as HTMLElement).getByText(/no automatic pass/i)).toBeInTheDocument();
 		expect(screen.getByText(/Technology/)).toBeInTheDocument();
 		expect(screen.getByText(/large/)).toBeInTheDocument();
+
+		await user.click(screen.getByRole("tab", { name: "血统与影响" }));
+		expect(screen.getByText("Lineage/Artifacts")).toBeInTheDocument();
+		expect(screen.getByText("R1 Impact")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("tab", { name: "治理审计" }));
+		expect(screen.getByRole("region", { name: "Governance Audit" })).toBeInTheDocument();
+		expect(screen.getByTestId("review-detail-bottom")).toHaveTextContent(/bundle/i);
+		expect(screen.getByTestId("review-detail-bottom")).toHaveTextContent(mockReviewPacket.bundle_hash);
 	});
 
 	it("fails closed on a hard gate and disables approve", async () => {

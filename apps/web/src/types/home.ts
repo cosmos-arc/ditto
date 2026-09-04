@@ -25,28 +25,28 @@ export type GetMarketIndicesRequest = undefined;
 /** Home 脉动 */
 export type HomePulseResponse = {
 	readonly date: string;
-	readonly session: MarketSession;
+	readonly session: MarketSession | null;
 	readonly pendingActions: number;
 	readonly criticalAlerts: number;
-	readonly runningJobs: number;
-	readonly pnlToday: number;
-	readonly pnlPercent: number;
+	readonly runningJobs: number | null;
+	readonly pnlToday: number | null;
+	readonly pnlPercent: number | null;
 	readonly riskLevel: string;
 	readonly regimeType: string;
 };
 
 /** 决策横幅 */
 export type DecisionBannerResponse = {
-	readonly totalEquity: number;
-	readonly dailyPnl: number;
-	readonly dailyPnlPercent: number;
-	readonly riskUtilization: number;
-	readonly leverage: number;
-	readonly maxDrawdown: number;
-	readonly ivix: number;
-	readonly northboundFlow: number;
+	readonly totalEquity: number | null;
+	readonly dailyPnl: number | null;
+	readonly dailyPnlPercent: number | null;
+	readonly riskUtilization: number | null;
+	readonly leverage: number | null;
+	readonly maxDrawdown: number | null;
+	readonly ivix: number | null;
+	readonly northboundFlow: number | null;
 	readonly equitySparkline: readonly number[];
-	readonly marketRegime: MarketRegime;
+	readonly marketRegime: MarketRegime | null;
 	readonly regimeType: string;
 	readonly suggestion: string;
 };
@@ -90,7 +90,7 @@ export type RecentSignal = {
 	readonly ticker: string;
 	readonly action: SignalDirection;
 	readonly strategy: string;
-	readonly confidence: number;
+	readonly confidence: number | null;
 	readonly time: string;
 };
 
@@ -145,6 +145,30 @@ export type MarketPulseMetric = {
 	readonly sparkline?: readonly number[];
 };
 
+export type TodayMarketBriefDriver = {
+	readonly category: string;
+	readonly contribution: number;
+	readonly direction: "supportive" | "pressuring" | "neutral";
+	readonly name: string;
+};
+
+export type TodayMarketBrief = {
+	readonly asOf: string;
+	readonly evidenceRefs: readonly string[];
+	readonly featureSetId: string;
+	readonly knowledgeCutoff: string;
+	readonly publicationCutoff: string;
+	readonly drivers: readonly TodayMarketBriefDriver[];
+	readonly regimeLabel: string;
+	readonly regimeScore: number | null;
+	readonly riskItems: readonly string[];
+	readonly sourceSnapshotIds: readonly string[];
+	readonly sourceSnapshotSetId: string;
+	readonly status: "ready" | "degraded" | "blocked";
+	readonly statusLabel: string;
+};
+
 export type GetMarketPulseMetricsResponse = {
+	readonly brief?: TodayMarketBrief;
 	readonly metrics: readonly MarketPulseMetric[];
 };

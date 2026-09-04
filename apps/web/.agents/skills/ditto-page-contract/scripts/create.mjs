@@ -29,6 +29,31 @@ const PROTOTYPE_NORMALIZE_CSS = `
     min-height: 0 !important;
     flex: 0 0 auto !important;
   }
+  #default-view > .shell-hub {
+    padding-bottom: 0 !important;
+  }
+  #default-view > .shell-hub .tab-panel[aria-hidden="false"] {
+    grid-area: main !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  #default-view > .shell-studio > .studio-logs {
+    height: 132px !important;
+    min-height: 132px !important;
+  }
+  #default-view:has(> .shell-studio) > .status-bar {
+    width: calc(100% - 56px) !important;
+    margin-left: 56px !important;
+  }
+  @media (max-width: 1280px) {
+    #default-view > .shell-studio {
+      --prototype-studio-source-width: 200px !important;
+      --prototype-studio-inspector-width: 280px !important;
+    }
+  }
+  #default-view > [class*="shell"] > .danger-confirmation-summary {
+    display: none !important;
+  }
   #default-view > .status-bar {
     height: 24px !important;
     flex: 0 0 auto !important;

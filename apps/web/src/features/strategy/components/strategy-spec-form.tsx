@@ -19,9 +19,9 @@ interface StrategySpecFormProps {
  */
 export function StrategySpecForm({ spec, onChange }: StrategySpecFormProps): ReactElement {
 	return (
-		<div className="flex flex-col gap-(--section-gap)">
+		<div className="grid grid-cols-1 gap-3 xl:grid-cols-2 [&>*:last-child]:xl:col-span-2">
 			<ContextSection title="基本信息">
-				<div className="flex flex-col gap-2 p-(--density-panel-padding)">
+				<div className="grid grid-cols-2 gap-2 p-(--density-panel-padding)">
 					<TextField label="名称" value={spec.name} onChange={(v) => onChange((d) => ({ ...d, name: v }))} />
 					<TextField label="模板" value={spec.template} onChange={(v) => onChange((d) => ({ ...d, template: v }))} />
 					<TextField label="股票池" value={spec.universe} onChange={(v) => onChange((d) => ({ ...d, universe: v }))} />
@@ -35,7 +35,7 @@ export function StrategySpecForm({ spec, onChange }: StrategySpecFormProps): Rea
 			</ContextSection>
 
 			<ContextSection title="评分 / 选取">
-				<div className="flex flex-col gap-2 p-(--density-panel-padding)">
+				<div className="grid grid-cols-2 gap-2 p-(--density-panel-padding)">
 					<TextField
 						label="评分方法"
 						value={spec.scorer.method}
@@ -58,7 +58,7 @@ export function StrategySpecForm({ spec, onChange }: StrategySpecFormProps): Rea
 			</ContextSection>
 
 			<ContextSection title="执行假设">
-				<div className="flex flex-col gap-2 p-(--density-panel-padding)">
+				<div className="grid grid-cols-2 gap-2 p-(--density-panel-padding) xl:grid-cols-3">
 					<TextField
 						label="频率"
 						value={spec.execution.frequency}

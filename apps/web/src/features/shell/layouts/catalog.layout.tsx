@@ -9,7 +9,7 @@ interface CatalogLayoutProps {
 }
 
 /**
- * CatalogLayout — /markets/screener, /trading/signals.
+ * CatalogLayout — /markets/screener, /portfolio/review.
  * Grid: filter toolbar + table/detail.
  */
 export function CatalogLayout({ toolbar, main, detail, className }: CatalogLayoutProps) {

@@ -27,12 +27,12 @@ function createWrapper() {
 beforeEach(() => server.use(...backtestHandlers));
 
 describe("Backtest route page contract handoffs", () => {
-	it("covers BacktestListPage route composition", () => {
+	it("covers BacktestListPage route composition", async () => {
 		render(<BacktestListPage />, { wrapper: createWrapper() });
 
-		expect(screen.getByText("回测列表")).toBeInTheDocument();
-		expect(screen.getByText("Backtests")).toBeInTheDocument();
-		expect(screen.getByText("Result Preview")).toBeInTheDocument();
+		expect(await screen.findByRole("region", { name: "受控回测目录" })).toBeInTheDocument();
+		expect(screen.getByText("Backtest Runs")).toBeInTheDocument();
+		expect(screen.getByRole("complementary", { name: "回测运行详情" })).toBeInTheDocument();
 	});
 });
 
@@ -51,50 +51,54 @@ describe("BacktestKpiStrip", () => {
 });
 
 describe("BacktestTrades", () => {
-	it("渲染交易记录标题", async () => {
+	it("渲染受控成交列", async () => {
 		render(<BacktestTrades jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("交易记录")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("Instrument")).resolves.toBeInTheDocument();
+		expect(screen.getByText("PnL")).toBeInTheDocument();
 	});
 
-	it("显示交易列表", async () => {
+	it("仅显示契约提供的 instrument identity", async () => {
 		render(<BacktestTrades jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
-		expect(screen.getAllByText("五粮液")).toHaveLength(2);
+		await expect(screen.findByText("Instrument #600519")).resolves.toBeInTheDocument();
+		expect(screen.getByText("Instrument #300750")).toBeInTheDocument();
+		expect(screen.queryByText("贵州茅台")).not.toBeInTheDocument();
 	});
 });
 
 describe("BacktestOverview", () => {
 	it("渲染 NAV 曲线区域", async () => {
 		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("净值曲线")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("净值与基准")).resolves.toBeInTheDocument();
 	});
 
-	it("渲染持仓列表", async () => {
+	it("显示策略与基准的独立末值", async () => {
 		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("当前持仓")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("1.1820")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("1.0740")).resolves.toBeInTheDocument();
 	});
 
-	it("显示持仓权重", async () => {
+	it("不展示没有公共资源支撑的持仓", async () => {
 		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText(/25%/)).resolves.toBeInTheDocument();
+		await screen.findByText("净值与基准");
+		expect(screen.queryByText("当前持仓")).not.toBeInTheDocument();
 	});
 });
 
 describe("BacktestReturnsView", () => {
-	it("渲染月度收益区域", async () => {
+	it("渲染已发布的 performance report", async () => {
 		render(<BacktestReturnsView jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("月度收益")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("Performance report")).resolves.toBeInTheDocument();
 	});
 
-	it("显示月度收益率数据", async () => {
+	it("显示报告资金与成交统计", async () => {
 		render(<BacktestReturnsView jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText(/2.8%/)).resolves.toBeInTheDocument();
-		await expect(screen.findByText(/3.5%/)).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/1,000,000/)).resolves.toBeInTheDocument();
+		expect(screen.getByText("24")).toBeInTheDocument();
 	});
 
-	it("显示基准收益", async () => {
+	it("不伪造月度收益", async () => {
 		render(<BacktestReturnsView jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("基准")).resolves.toBeInTheDocument();
+		await screen.findByText("Performance report");
+		expect(screen.queryByText("月度收益")).not.toBeInTheDocument();
 	});
 });

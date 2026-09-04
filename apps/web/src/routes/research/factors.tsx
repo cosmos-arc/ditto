@@ -1,7 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { FactorListPage } from "@/features/research";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/research/factors")({
-	component: FactorListPage,
-	staticData: { title: "因子库" },
+	component: Outlet,
+	staticData: { title: "因子研究" },
 });

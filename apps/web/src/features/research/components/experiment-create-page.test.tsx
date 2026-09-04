@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -41,6 +41,20 @@ function readyPreflight() {
 }
 
 describe("ExperimentCreatePage", () => {
+	it("renders a governed studio with the exact planning identity and an honest preflight state", async () => {
+		render(<ExperimentCreatePage />, { wrapper });
+
+		const studio = screen.getByRole("region", { name: "实验规划工作区" });
+		expect(within(studio).getByText("r3-experiment")).toBeInTheDocument();
+		expect(within(studio).getByText("seed_stock_selection_rotation@1")).toBeInTheDocument();
+		expect(within(studio).getByText("certified-snapshot-r3")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='source']")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='main']")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='inspector']")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='logs']")).toBeInTheDocument();
+		expect(within(studio).getByText("尚未运行。Preflight 为只读，不创建 experiment。")).toBeInTheDocument();
+	});
+
 	it("binds launch to one confirmed preflight and invalidates confirmation after any edit", async () => {
 		const user = userEvent.setup();
 		const onLaunched = vi.fn();

@@ -368,6 +368,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/runs/{run_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Agent Run
+         * @description Execute one queued read-only run under its persisted PIT authority.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["agent_execute_agent_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agent/sessions": {
         parameters: {
             query?: never;
@@ -894,7 +916,7 @@ export interface paths {
         };
         /**
          * List Data Products
-         * @description List the 19 independent R2 product contracts and active reports.
+         * @description List the 22 independent R2 dataset specs and active reports.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
@@ -1815,6 +1837,502 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/manual/account-baseline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Account Baseline
+         * @description 返回不晚于信号日的最新账户基线及同日持仓。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_account_baseline"];
+        put?: never;
+        /**
+         * Import Account Baseline
+         * @description 幂等导入账户与持仓期初基线。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_import_account_baseline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Manual Account
+         * @description Create or exactly replay one permanently MANUAL account identity.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_create_account"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/accounts/{account_id}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct Manual Event
+         * @description Append a correction while retaining the original event.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_correct_event"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/accounts/{account_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Manual Event
+         * @description Append one immutable MANUAL account business event.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_record_event"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/accounts/{account_id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Manual Account Ledger
+         * @description Rebuild one exact MANUAL account view at an explicit as-of date.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_ledger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/accounts/{account_id}/reversals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverse Manual Event
+         * @description Append a reversal while retaining the referenced event.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_reverse_event"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Comparison
+         * @description 回测 vs 实际对比.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_comparison"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/daily-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Decision
+         * @description 获取每日决策驾驶舱报告.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_daily_decision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/daily-decision/v2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Decision V2
+         * @description 获取以持久化 Signal Package 为事实源的 Daily Decision V2。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_daily_decision_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/daily-decision/v3": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Decision V3
+         * @description Return V2 plus fail-closed portfolio, risk, and reconciliation evidence.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_daily_decision_v3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/deviation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Deviation
+         * @description 信号-成交偏差报告.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_deviation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/fill-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Fill Adjustments
+         * @description 列出 append-only 成交修正证据。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_list_fill_adjustments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/fills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Fills
+         * @description 列出成交记录.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_list_fills"];
+        put?: never;
+        /**
+         * Record Fill
+         * @description 录入人工成交.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_record_fill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/fills/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Effective Fills
+         * @description 列出排除已作废/被替换原记录后的有效成交。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_list_effective_fills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/fills/{fill_id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace Fill
+         * @description 追加替换成交及链接事件；原始成交保持不可变。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_replace_fill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/fills/{fill_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void Fill
+         * @description 追加作废事件；原始成交保持不可变。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["manual_void_fill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Intents
+         * @description 列出交易意图.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_list_intents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/intents/{intent_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Intent Status
+         * @description 更新交易意图状态.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        put: operations["manual_update_intent_status"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/pnl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compute Pnl
+         * @description 计算 P&L 汇总.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_compute_pnl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Positions
+         * @description 列出实际持仓.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_list_positions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/signals/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Latest Signals
+         * @description 获取最新信号日期的交易意图.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_latest_signals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/signals/{signal_date}/intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Signal Intents
+         * @description 获取指定信号日期的交易意图.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_signal_intents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/market/bars": {
         parameters: {
             query?: never;
@@ -1845,6 +2363,50 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["market_post_bars"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/market/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Market Context
+         * @description Read one market context from explicit immutable provider snapshots.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["market_get_context"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/market/regime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Regime Diagnostics
+         * @description Read regime observations only from one immutable PIT research snapshot.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["market_get_regime"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1909,6 +2471,226 @@ export interface paths {
         get: operations["metadata_get_instrument"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Paper Account
+         * @description Create or replay a PAPER account with immutable opening cash.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["paper_create_account"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/accounts/{account_id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Paper Account Ledger
+         * @description Rebuild one exact PAPER account ledger at the requested date.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["paper_get_account_ledger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Paper Session
+         * @description Create and optionally start one formal paper session.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["paper_create_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Paper Session
+         * @description Read exact session, execution, fill, lineage, and EOD evidence.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["paper_get_session"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/sessions/{session_id}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Operate Paper Order
+         * @description Execute or replay one complete deterministic paper-order input.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["paper_operate_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/sessions/{session_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Paper Session
+         * @description Pause or replay one formal paper session transition.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["paper_pause_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/sessions/{session_id}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconcile Paper Session
+         * @description Create or replay a fill-to-ledger EOD checksum.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["paper_reconcile_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/sessions/{session_id}/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recover Paper Session
+         * @description Repair ledger markers after an interrupted paper operation.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["paper_recover_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Portfolio Comparison
+         * @description Return a complete same-PIT three-column comparison or fail closed.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["portfolio_get_comparison"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio/scenario-previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Portfolio Scenario
+         * @description Preview deterministic target/risk changes without writing any portfolio.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["portfolio_preview_scenario"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2419,6 +3201,122 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/selections/industry-rotations/{snapshot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Industry Rotation
+         * @description Read one exact persisted IndustryRotation snapshot by content identity.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["selections_get_industry_rotation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/selections/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Selection Runs
+         * @description List saved runs for one spec family, newest first.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["selections_list_runs"];
+        put?: never;
+        /**
+         * Create Selection Run
+         * @description Create or exactly replay a content-addressed industry and selection run.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["selections_create_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/selections/runs/{before_run_id}/compare/{after_run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Selection Runs
+         * @description Compare two exact saved runs, including previous-run why-in/out changes.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["selections_compare_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/selections/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Selection Run
+         * @description Read one exact saved SelectionRun by content identity.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["selections_get_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/selections/runs/{run_id}/research-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Research Case
+         * @description Derive a stable Research Case from one exact saved SelectionRun.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["selections_create_research_case"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/source/{source}/{dataset}": {
         parameters: {
             query?: never;
@@ -2652,6 +3550,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/strategies/{strategy_id}/versions/{version}/author-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Strategy Author
+         * @description Run detached draft/compile/validate/diff stages without any mutation.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["strategies_preview_strategy_author"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate": {
         parameters: {
             query?: never;
@@ -2806,217 +3726,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/trade/account-baseline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Account Baseline
-         * @description 返回不晚于信号日的最新账户基线及同日持仓。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_account_baseline"];
-        put?: never;
-        /**
-         * Import Account Baseline
-         * @description 幂等导入账户与持仓期初基线。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["trade_import_account_baseline"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/comparison": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Comparison
-         * @description 回测 vs 实际对比.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_comparison"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/daily-decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Daily Decision
-         * @description 获取每日决策驾驶舱报告.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_daily_decision"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/daily-decision/v2": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Daily Decision V2
-         * @description 获取以持久化 Signal Package 为事实源的 Daily Decision V2。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_daily_decision_v2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/daily-decision/v3": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Daily Decision V3
-         * @description Return V2 plus fail-closed portfolio, risk, and reconciliation evidence.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_daily_decision_v3"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/deviation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Deviation
-         * @description 信号-成交偏差报告.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_deviation"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fill-adjustments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Fill Adjustments
-         * @description 列出 append-only 成交修正证据。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_list_fill_adjustments"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Fills
-         * @description 列出成交记录.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_list_fills"];
-        put?: never;
-        /**
-         * Record Fill
-         * @description 录入人工成交.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["trade_record_fill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills/effective": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Effective Fills
-         * @description 列出排除已作废/被替换原记录后的有效成交。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_list_effective_fills"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills/{fill_id}/replace": {
+    "/api/v1/technical-analysis/snapshots/query": {
         parameters: {
             query?: never;
             header?: never;
@@ -3026,166 +3736,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Replace Fill
-         * @description 追加替换成交及链接事件；原始成交保持不可变。
+         * Query Technical Analysis
+         * @description Compute one exact snapshot from retained, explicitly identified data.
          *
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
-        post: operations["trade_replace_fill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/fills/{fill_id}/void": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Void Fill
-         * @description 追加作废事件；原始成交保持不可变。
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        post: operations["trade_void_fill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/intents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Intents
-         * @description 列出交易意图.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_list_intents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/intents/{intent_id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Update Intent Status
-         * @description 更新交易意图状态.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        put: operations["trade_update_intent_status"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/pnl": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Compute Pnl
-         * @description 计算 P&L 汇总.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_compute_pnl"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/positions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Positions
-         * @description 列出实际持仓.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_list_positions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/signals/latest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Latest Signals
-         * @description 获取最新信号日期的交易意图.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_latest_signals"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trade/signals/{signal_date}/intents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Signal Intents
-         * @description 获取指定信号日期的交易意图.
-         *
-         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
-         */
-        get: operations["trade_get_signal_intents"];
-        put?: never;
-        post?: never;
+        post: operations["technical_analysis_query"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3306,6 +3862,20 @@ export interface components {
         APIResponse_AccountBaselineImportResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["AccountBaselineImportResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AccountCommandReceiptResponse] */
+        APIResponse_AccountCommandReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AccountCommandReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[AccountLedgerResponse] */
+        APIResponse_AccountLedgerResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["AccountLedgerResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3659,6 +4229,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[IndustryRotationResponse] */
+        APIResponse_IndustryRotationResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["IndustryRotationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[IngestionStatusResponse] */
         APIResponse_IngestionStatusResponse_: {
             /** @description 响应数据 */
@@ -3680,6 +4257,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[MarketContextResponse] */
+        APIResponse_MarketContextResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["MarketContextResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[MaturityGovernanceReportResponse] */
         APIResponse_MaturityGovernanceReportResponse_: {
             /** @description 响应数据 */
@@ -3694,10 +4278,73 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[PaperAccountLedgerResponse] */
+        APIResponse_PaperAccountLedgerResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperAccountLedgerResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperAccountReceiptResponse] */
+        APIResponse_PaperAccountReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperAccountReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperExecutionReceiptResponse] */
+        APIResponse_PaperExecutionReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperExecutionReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperReconciliationResponse] */
+        APIResponse_PaperReconciliationResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperReconciliationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperRecoverResponse] */
+        APIResponse_PaperRecoverResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperRecoverResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperSessionCommandResponse] */
+        APIResponse_PaperSessionCommandResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperSessionCommandResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperSessionReadResponse] */
+        APIResponse_PaperSessionReadResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperSessionReadResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[PnlSummaryResponse] */
         APIResponse_PnlSummaryResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["PnlSummaryResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PortfolioComparisonResponse] */
+        APIResponse_PortfolioComparisonResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PortfolioComparisonResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PortfolioScenarioPreviewResponse] */
+        APIResponse_PortfolioScenarioPreviewResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PortfolioScenarioPreviewResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3712,6 +4359,13 @@ export interface components {
         APIResponse_PromotionReadinessReportResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["PromotionReadinessReportResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[RegimeDiagnosticsResponse] */
+        APIResponse_RegimeDiagnosticsResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["RegimeDiagnosticsResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3736,6 +4390,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[ResearchCaseResponse] */
+        APIResponse_ResearchCaseResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ResearchCaseResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[ResumeRunResponse] */
         APIResponse_ResumeRunResponse_: {
             /** @description 响应数据 */
@@ -3757,6 +4418,27 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[SelectionRunDiffResponse] */
+        APIResponse_SelectionRunDiffResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["SelectionRunDiffResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[SelectionRunResponse] */
+        APIResponse_SelectionRunResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["SelectionRunResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[SelectionWorkspaceReceiptResponse] */
+        APIResponse_SelectionWorkspaceReceiptResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["SelectionWorkspaceReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[StrategyActivePointerResponse] */
         APIResponse_StrategyActivePointerResponse_: {
             /** @description 响应数据 */
@@ -3768,6 +4450,13 @@ export interface components {
         APIResponse_StrategyActiveResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["StrategyActiveResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[StrategyAuthorPreviewResponse] */
+        APIResponse_StrategyAuthorPreviewResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyAuthorPreviewResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3803,6 +4492,13 @@ export interface components {
         APIResponse_StrategyVersionStateResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["StrategyVersionStateResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[TechnicalAnalysisSnapshotResponse] */
+        APIResponse_TechnicalAnalysisSnapshotResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["TechnicalAnalysisSnapshotResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -3970,16 +4666,6 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
-        /** APIResponse[list[DataProductOverviewResponse]] */
-        APIResponse_list_DataProductOverviewResponse__: {
-            /**
-             * Data
-             * @description 响应数据
-             */
-            data: components["schemas"]["DataProductOverviewResponse"][];
-            /** @description 分页信息(可选) */
-            pagination?: components["schemas"]["PaginationResponse"] | null;
-        };
         /** APIResponse[list[DataProductRunResponse]] */
         APIResponse_list_DataProductRunResponse__: {
             /**
@@ -3987,6 +4673,16 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["DataProductRunResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[DataProductViewResponse]] */
+        APIResponse_list_DataProductViewResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["DataProductViewResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -4260,6 +4956,16 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[tuple[SelectionRunResponse, ...]] */
+        APIResponse_tuple_SelectionRunResponse__________: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["SelectionRunResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /**
          * AccountBaselineImportResponse
          * @description 账户基线导入结果。
@@ -4304,6 +5010,122 @@ export interface components {
             strategy_id: string;
             /** Total Value */
             total_value: number;
+        };
+        /**
+         * AccountCommandReceiptResponse
+         * @description Immutable account command receipt with replay status.
+         */
+        AccountCommandReceiptResponse: {
+            account: components["schemas"]["AccountResponse"];
+            event: components["schemas"]["AccountEventResponse"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "replayed";
+        };
+        /**
+         * AccountEventResponse
+         * @description Canonical immutable event and its tamper-evident hash.
+         */
+        AccountEventResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "manual";
+            /** Actor */
+            actor: string;
+            /** Attachment Refs */
+            attachment_refs: string[];
+            /** Corrects Event Id */
+            corrects_event_id: string | null;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Event Hash */
+            event_hash: string;
+            /** Event Id */
+            event_id: string;
+            event_type: components["schemas"]["AccountEventTypeResponse"];
+            /** External Reference */
+            external_reference: string | null;
+            /** Fees */
+            fees: string;
+            /** Gross Amount */
+            gross_amount: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Instrument Id */
+            instrument_id: number | null;
+            /** Net Cash */
+            net_cash: string;
+            /** Note */
+            note: string;
+            /** Price */
+            price: string;
+            /** Quantity */
+            quantity: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            replacement_event_type: components["schemas"]["ManualBusinessEventType"] | null;
+            /** Reverses Event Id */
+            reverses_event_id: string | null;
+            /** Settlement Date */
+            settlement_date: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "manual_entry" | "file_import";
+            /** Tax */
+            tax: string;
+            /** Trade Date */
+            trade_date: string;
+        };
+        /** @enum {string} */
+        AccountEventTypeResponse: "opening_cash" | "opening_position" | "buy" | "sell" | "deposit" | "withdrawal" | "fee" | "tax" | "interest" | "dividend" | "transfer_in" | "transfer_out" | "split" | "merge" | "other_corporate_action" | "reversal" | "correction";
+        /**
+         * AccountLedgerResponse
+         * @description Account identity, visible immutable events, and rebuilt projection.
+         */
+        AccountLedgerResponse: {
+            account: components["schemas"]["AccountResponse"];
+            /** Events */
+            events: components["schemas"]["AccountEventResponse"][];
+            snapshot: components["schemas"]["PortfolioSnapshotResponse"];
+        };
+        /**
+         * AccountResponse
+         * @description Read-only account identity displayed on every account surface.
+         */
+        AccountResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "manual";
+            /** Name */
+            name: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
         };
         /**
          * AccountStateComparisonResponse
@@ -4912,9 +5734,8 @@ export interface components {
          * @description Create a governed read-only run without exposing provider state.
          */
         AgentRunCreateRequest: {
-            /** Authority Hash */
-            authority_hash: string;
             context?: components["schemas"]["AgentRunContext"] | null;
+            execution_scope: components["schemas"]["AgentRunExecutionScope"];
             /**
              * Max Model Spend Usd
              * @default 1
@@ -4935,6 +5756,87 @@ export interface components {
             objective: string;
             /** Session Id */
             session_id: string;
+        };
+        /**
+         * AgentRunExecuteRequest
+         * @description Optimistic execution fence for one queued run.
+         */
+        AgentRunExecuteRequest: {
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /**
+         * AgentRunExecutionPlanResponse
+         * @description Complete server-bound execution authority shown to the operator.
+         */
+        AgentRunExecutionPlanResponse: {
+            /** Allowed Tools */
+            allowed_tools: string[];
+            /** Allowed Universe */
+            allowed_universe: string[];
+            /** Authority Hash */
+            authority_hash: string;
+            /**
+             * Decision Time
+             * Format: date-time
+             */
+            decision_time: string;
+            /**
+             * Egress Class
+             * @constant
+             */
+            egress_class: "cloud_allowed";
+            /**
+             * Execution Eligible At
+             * @constant
+             */
+            execution_eligible_at: "not_applicable";
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** License Class */
+            license_class: string;
+            /** Max Output Tokens */
+            max_output_tokens: number;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Source Snapshot Id */
+            source_snapshot_id: string;
+        };
+        /**
+         * AgentRunExecutionScope
+         * @description Operator-visible PIT identity for one read-only model execution.
+         */
+        AgentRunExecutionScope: {
+            /** Allowed Universe */
+            allowed_universe: string[];
+            /**
+             * Decision Time
+             * Format: date-time
+             */
+            decision_time: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /**
+             * Max Output Tokens
+             * @default 1024
+             */
+            max_output_tokens: number;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Source Snapshot Id */
+            source_snapshot_id: string;
         };
         /**
          * AgentRunGuardrail
@@ -4968,6 +5870,7 @@ export interface components {
             event_cursor: number;
             /** Evidence Refs */
             evidence_refs: string[];
+            execution_plan: components["schemas"]["AgentRunExecutionPlanResponse"] | null;
             /** Failure Code */
             failure_code: string | null;
             /** Finished At */
@@ -5677,6 +6580,20 @@ export interface components {
             expected_revision: number;
             /** Rationale */
             rationale: string;
+        };
+        /**
+         * CashSnapshotResponse
+         * @description Available, settled, and frozen CNY balances.
+         */
+        CashSnapshotResponse: {
+            /** Available */
+            available: string;
+            /** Frozen */
+            frozen: string;
+            /** Settled */
+            settled: string;
+            /** Total */
+            total: string;
         };
         /**
          * CatalogAssetRefResponse
@@ -7421,6 +8338,15 @@ export interface components {
             instrument_id: number;
         };
         /**
+         * CorrectManualEventBody
+         * @description Append a correction that replaces one prior business event.
+         */
+        CorrectManualEventBody: {
+            /** Corrects Event Id */
+            corrects_event_id: string;
+            replacement: components["schemas"]["ManualEventBody"];
+        };
+        /**
          * CostConfigRequest
          * @description 成本模型配置请求 — A 股标准费率默认值.
          */
@@ -7494,6 +8420,142 @@ export interface components {
              * @description 策略 ID
              */
             strategy_id: string;
+        };
+        /**
+         * CreateManualAccountBody
+         * @description Create one permanently MANUAL account identity.
+         */
+        CreateManualAccountBody: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Currency
+             * @default CNY
+             * @constant
+             */
+            currency: "CNY";
+            /** Name */
+            name: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+        };
+        /**
+         * CreatePaperAccountBody
+         * @description Create one permanently PAPER account with opening cash.
+         */
+        CreatePaperAccountBody: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Currency
+             * @default CNY
+             * @constant
+             */
+            currency: "CNY";
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Initial Cash */
+            initial_cash: number | string;
+            /** Name */
+            name: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /**
+             * Trade Date
+             * Format: date
+             */
+            trade_date: string;
+        };
+        /**
+         * CreatePaperSessionBody
+         * @description Create and optionally start one paper session.
+         */
+        CreatePaperSessionBody: {
+            /** Account Id */
+            account_id: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Session Id */
+            session_id: string;
+            /**
+             * Start Immediately
+             * @default true
+             */
+            start_immediately: boolean;
+            /** Strategy Id */
+            strategy_id: string;
+            /**
+             * Trade Date
+             * Format: date
+             */
+            trade_date: string;
+        };
+        /**
+         * CreateResearchCaseBody
+         * @description User hypothesis bound to an optional subset of selected candidates.
+         */
+        CreateResearchCaseBody: {
+            /**
+             * Candidate Instrument Ids
+             * @default []
+             */
+            candidate_instrument_ids: number[];
+            /** Objective */
+            objective: string;
+        };
+        /**
+         * CreateSelectionRunBody
+         * @description One exact industry-rotation and stock/ETF selection mutation.
+         */
+        CreateSelectionRunBody: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Industries */
+            industries: components["schemas"]["IndustryRotationObservationRequest"][];
+            /** Instruments */
+            instruments: components["schemas"]["SelectionInstrumentRequest"][];
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Market Context Feature Set Id */
+            market_context_feature_set_id?: string | null;
+            /** Membership Version */
+            membership_version: string;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /**
+             * Rotation Algorithm Version
+             * @default industry-rotation-v1
+             */
+            rotation_algorithm_version: string;
+            /**
+             * Rotation Missing Inputs
+             * @default []
+             */
+            rotation_missing_inputs: string[];
+            /** Rotation Source Snapshot Ids */
+            rotation_source_snapshot_ids: string[];
+            /** Seed */
+            seed: number;
+            /** Selection Source Snapshot Ids */
+            selection_source_snapshot_ids: string[];
+            selection_spec: components["schemas"]["SelectionSpecRequest"];
+            /** Universe Snapshot Id */
+            universe_snapshot_id: string;
         };
         /**
          * CreateStrategyRequest
@@ -8431,52 +9493,6 @@ export interface components {
             report_id: string;
         };
         /**
-         * DataProductOverviewResponse
-         * @description Static product contract plus active certification identity.
-         */
-        DataProductOverviewResponse: {
-            /**
-             * Active Certification Report Id
-             * @description Currently approved immutable report
-             */
-            active_certification_report_id: string | null;
-            /**
-             * Certified Target From
-             * @description Certification target
-             */
-            certified_target_from: string | null;
-            /**
-             * Dataset Id
-             * @description Canonical dataset identifier
-             */
-            dataset_id: string;
-            /**
-             * Maturity
-             * @description Effective catalog maturity
-             */
-            maturity: string;
-            /**
-             * Owner
-             * @description Accountable data-product owner
-             */
-            owner: string;
-            /**
-             * R2 Scope
-             * @description R2 scope classification
-             */
-            r2_scope: string;
-            /**
-             * Raw Target From
-             * @description Raw history target
-             */
-            raw_target_from: string | null;
-            /**
-             * Schedule
-             * @description Expected partition schedule
-             */
-            schedule: string;
-        };
-        /**
          * DataProductQualityResponse
          * @description Quality, PIT, freshness, recovery, and consumer evidence.
          */
@@ -8526,6 +9542,72 @@ export interface components {
             revocation_reason: string | null;
             /** Status */
             status: string;
+        };
+        /**
+         * DataProductViewResponse
+         * @description Static dataset spec plus active certification identity.
+         */
+        DataProductViewResponse: {
+            /**
+             * Active Certification Report Id
+             * @description Currently approved immutable report
+             */
+            active_certification_report_id: string | null;
+            /**
+             * Certified Target From
+             * @description Certification target
+             */
+            certified_target_from: string | null;
+            /**
+             * Currency
+             * @description Canonical or mixed dataset currency
+             */
+            currency: string | null;
+            /**
+             * Dataset Id
+             * @description Canonical dataset identifier
+             */
+            dataset_id: string;
+            /**
+             * Frequency
+             * @description Expected observation frequency
+             */
+            frequency: string;
+            /**
+             * Maturity
+             * @description Effective catalog maturity
+             */
+            maturity: string;
+            /**
+             * Owner
+             * @description Accountable data-product owner
+             */
+            owner: string;
+            /**
+             * R2 Scope
+             * @description R2 scope classification
+             */
+            r2_scope: string;
+            /**
+             * Raw Target From
+             * @description Raw history target
+             */
+            raw_target_from: string | null;
+            /**
+             * Schedule
+             * @description Expected partition schedule
+             */
+            schedule: string;
+            /**
+             * Schema Version
+             * @description Canonical dataset schema version
+             */
+            schema_version: string;
+            /**
+             * Timezone
+             * @description Canonical dataset timezone
+             */
+            timezone: string;
         };
         /**
          * DatasetMaturitySummaryResponse
@@ -8737,6 +9819,8 @@ export interface components {
              */
             unfilled: number;
         };
+        /** @enum {string} */
+        Direction: "bullish" | "bearish" | "neutral" | "unknown";
         /**
          * Dividend
          * @description 分红响应模型.
@@ -8768,6 +9852,39 @@ export interface components {
              * @description 标的 ID
              */
             instrument_id: number;
+        };
+        /**
+         * EtfSelectionSpecRequest
+         * @description ETF-specific saved selection policy.
+         */
+        EtfSelectionSpecRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            asset_kind: "etf";
+            /**
+             * Excluded Limit States
+             * @default [
+             *       "limit_up",
+             *       "limit_down"
+             *     ]
+             */
+            excluded_limit_states: components["schemas"]["LimitStateRequest"][];
+            /** Factor Weights */
+            factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
+            /** Max Tracking Error */
+            max_tracking_error?: number | null;
+            /** Min Average Turnover */
+            min_average_turnover: number;
+            /** Min Listing Days */
+            min_listing_days: number;
+            /** Spec Id */
+            spec_id: string;
+            /** Spec Version */
+            spec_version: string;
+            /** Top K */
+            top_k: number;
         };
         /**
          * ExperimentArtifactResponse
@@ -9942,6 +11059,108 @@ export interface components {
             start_date?: string | null;
         };
         /**
+         * IndustryRotationContributionResponse
+         * @description One additive industry score contribution.
+         */
+        IndustryRotationContributionResponse: {
+            /** Contribution */
+            contribution: number;
+            /** Metric */
+            metric: string;
+            /** Value */
+            value: number | null;
+            /** Weight */
+            weight: number;
+        };
+        /**
+         * IndustryRotationObservationRequest
+         * @description Normalized industry facts at one exact PIT cutoff.
+         */
+        IndustryRotationObservationRequest: {
+            /** Advancing Count */
+            advancing_count?: number | null;
+            /** Declining Count */
+            declining_count?: number | null;
+            /** Fundamental Score */
+            fundamental_score: number | null;
+            /** Industry Id */
+            industry_id: string;
+            /** Industry Name */
+            industry_name: string;
+            /** Member Count */
+            member_count?: number | null;
+            /** Regime Alignment Score */
+            regime_alignment_score: number | null;
+            /** Relative Strength 20D */
+            relative_strength_20d: number | null;
+            /** Relative Strength 5D */
+            relative_strength_5d: number | null;
+            /** Relative Strength 60D */
+            relative_strength_60d: number | null;
+            /** Trend Score */
+            trend_score: number | null;
+        };
+        /**
+         * IndustryRotationRankResponse
+         * @description One ranked industry with exact score evidence.
+         */
+        IndustryRotationRankResponse: {
+            /** Contributions */
+            contributions: components["schemas"]["IndustryRotationContributionResponse"][];
+            /** Industry Id */
+            industry_id: string;
+            /** Industry Name */
+            industry_name: string;
+            /** Missing Inputs */
+            missing_inputs: string[];
+            /** Rank */
+            rank: number;
+            /** Score */
+            score: number;
+        };
+        /**
+         * IndustryRotationResponse
+         * @description Content-addressed industry rotation snapshot.
+         */
+        IndustryRotationResponse: {
+            /** Algorithm Version */
+            algorithm_version: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Input Hash */
+            input_hash: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Market Context Feature Set Id */
+            market_context_feature_set_id: string | null;
+            /** Membership Version */
+            membership_version: string;
+            /** Missing Inputs */
+            missing_inputs: string[];
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Rankings */
+            rankings: components["schemas"]["IndustryRotationRankResponse"][];
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "degraded" | "blocked";
+        };
+        /**
          * IngestionHistoryItem
          * @description 单条摄取历史记录.
          */
@@ -10054,6 +11273,8 @@ export interface components {
         "JsonValue-Output": components["schemas"]["JsonPrimitive"] | components["schemas"]["JsonValue-Output"][] | {
             [key: string]: components["schemas"]["JsonValue-Output"];
         };
+        /** @enum {string} */
+        LimitStateRequest: "normal" | "limit_up" | "limit_down";
         /**
          * LineageResponse
          * @description 运行血统链响应.
@@ -10075,7 +11296,7 @@ export interface components {
          * @description 宏观指标类别枚举。
          * @enum {string}
          */
-        MacroCategory: "economic" | "interest_rate" | "exchange_rate" | "money_supply" | "prices" | "employment";
+        MacroCategory: "economic" | "interest_rate" | "exchange_rate" | "money_supply" | "prices" | "employment" | "credit" | "survey" | "commodity" | "vix" | "dollar_index";
         /**
          * MacroFrequency
          * @description 宏观指标频率枚举。
@@ -10113,6 +11334,70 @@ export interface components {
              * @description 版本差异列表
              */
             version_diffs?: string[];
+        };
+        /** @enum {string} */
+        ManualBusinessEventType: "opening_cash" | "opening_position" | "buy" | "sell" | "deposit" | "withdrawal" | "fee" | "tax" | "interest" | "dividend" | "transfer_in" | "transfer_out" | "split" | "merge" | "other_corporate_action";
+        /**
+         * ManualEventBody
+         * @description One business event; control events use dedicated endpoints.
+         */
+        ManualEventBody: {
+            /** Actor */
+            actor: string;
+            /**
+             * Attachment Refs
+             * @default []
+             */
+            attachment_refs: string[];
+            event_type: components["schemas"]["ManualBusinessEventType"];
+            /** External Reference */
+            external_reference?: string | null;
+            /**
+             * Fees
+             * @default 0
+             */
+            fees: number | string;
+            /**
+             * Gross Amount
+             * @default 0
+             */
+            gross_amount: number | string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Instrument Id */
+            instrument_id?: number | null;
+            /** Net Cash */
+            net_cash?: number | string | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /**
+             * Price
+             * @default 0
+             */
+            price: number | string;
+            /**
+             * Quantity
+             * @default 0
+             */
+            quantity: number | string;
+            /**
+             * Settlement Date
+             * Format: date
+             */
+            settlement_date: string;
+            /**
+             * Tax
+             * @default 0
+             */
+            tax: number | string;
+            /**
+             * Trade Date
+             * Format: date
+             */
+            trade_date: string;
         };
         /**
          * Margin
@@ -10157,6 +11442,124 @@ export interface components {
              * @description 交易日期
              */
             trade_date: string;
+        };
+        /**
+         * MarketContextDriverResponse
+         * @description One ordered contribution to the current market regime.
+         */
+        MarketContextDriverResponse: {
+            /** Category */
+            category: string;
+            /** Contribution */
+            contribution: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "supportive" | "pressuring" | "neutral";
+            /** Name */
+            name: string;
+        };
+        /**
+         * MarketContextImpactResponse
+         * @description One deterministic implication for a downstream decision domain.
+         */
+        MarketContextImpactResponse: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "supportive" | "pressuring" | "neutral";
+            /** Rationale Driver */
+            rationale_driver: string;
+            /** Target */
+            target: string;
+            /**
+             * Target Domain
+             * @enum {string}
+             */
+            target_domain: "industry" | "selection" | "portfolio" | "risk";
+        };
+        /**
+         * MarketContextMetricResponse
+         * @description One observed market fact with direct immutable evidence lineage.
+         */
+        MarketContextMetricResponse: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "a_share" | "style" | "global" | "rates" | "fx" | "commodity" | "macro";
+            /** Evidence Ref */
+            evidence_ref: string;
+            /**
+             * Freshness
+             * @enum {string}
+             */
+            freshness: "fresh" | "stale" | "missing";
+            /** Name */
+            name: string;
+            /**
+             * Trend
+             * @enum {string}
+             */
+            trend: "rising" | "falling" | "flat" | "mixed" | "unknown";
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: number;
+        };
+        /**
+         * MarketContextResponse
+         * @description Exact PIT market context shared by Markets, Today, and Agent.
+         */
+        MarketContextResponse: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Data Conflicts */
+            data_conflicts: string[];
+            /** Drivers */
+            drivers: components["schemas"]["MarketContextDriverResponse"][];
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Feature Set Id */
+            feature_set_id: string;
+            /** Feature Version */
+            feature_version: string;
+            /** Impacts */
+            impacts: components["schemas"]["MarketContextImpactResponse"][];
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Metrics */
+            metrics: components["schemas"]["MarketContextMetricResponse"][];
+            /** Missing Inputs */
+            missing_inputs: string[];
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Regime Label */
+            regime_label: ("risk_on" | "balanced" | "risk_off") | null;
+            /** Regime Score */
+            regime_score: number | null;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Source Snapshot Set Id */
+            source_snapshot_set_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "degraded" | "blocked";
+            /** Uncertainties */
+            uncertainties: string[];
         };
         /**
          * MaturityGovernanceAttentionItemResponse
@@ -10566,6 +11969,129 @@ export interface components {
         };
         NonBlankStr: string;
         /**
+         * NormalizedPortfolioPositionResponse
+         * @description One normalized valued holding.
+         */
+        NormalizedPortfolioPositionResponse: {
+            /** Average Cost Value */
+            average_cost_value: string;
+            /** Fees */
+            fees: string;
+            /** Industry */
+            industry: string | null;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Last Price */
+            last_price: string;
+            /** Market Value */
+            market_value: string;
+            /** Quantity */
+            quantity: string;
+            /** Realized Pnl */
+            realized_pnl: string;
+            /** Unrealized Pnl */
+            unrealized_pnl: string;
+            /** Weight */
+            weight: string;
+        };
+        /**
+         * NormalizedPortfolioResponse
+         * @description One column of the unified portfolio comparison.
+         */
+        NormalizedPortfolioResponse: {
+            /** Alert Codes */
+            alert_codes: string[];
+            /** As Of */
+            as_of: string;
+            /** Cash */
+            cash: string;
+            /** Cash Weight */
+            cash_weight: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Fees */
+            fees: string;
+            /** Invested Weight */
+            invested_weight: string;
+            /** Pending Event Count */
+            pending_event_count: number;
+            /** Portfolio Id */
+            portfolio_id: string;
+            /**
+             * Portfolio Kind
+             * @enum {string}
+             */
+            portfolio_kind: "model" | "paper" | "manual";
+            /** Positions */
+            positions: components["schemas"]["NormalizedPortfolioPositionResponse"][];
+            /** Realized Pnl */
+            realized_pnl: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Total Value */
+            total_value: string;
+            /** Unrealized Pnl */
+            unrealized_pnl: string;
+            /** Valuation Snapshot Id */
+            valuation_snapshot_id: string;
+        };
+        /**
+         * OperatePaperOrderBody
+         * @description Complete deterministic order, market, rule, and assumption input.
+         */
+        OperatePaperOrderBody: {
+            assumption: components["schemas"]["PaperFillAssumptionBody"];
+            /** Available Quantity */
+            available_quantity: number;
+            /**
+             * Decision At
+             * Format: date-time
+             */
+            decision_at: string;
+            /**
+             * Execution At
+             * Format: date-time
+             */
+            execution_at: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Instrument Id */
+            instrument_id: number;
+            market: components["schemas"]["PaperMarketSnapshotBody"];
+            /** Order Id */
+            order_id: string;
+            /**
+             * Order Type
+             * @enum {string}
+             */
+            order_type: "market" | "limit";
+            /** Position Quantity */
+            position_quantity: number;
+            /** Price */
+            price?: number | null;
+            /** Quantity */
+            quantity: number;
+            rules: components["schemas"]["PaperInstrumentRulesBody"];
+            /**
+             * Settlement Date
+             * Format: date
+             */
+            settlement_date: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "buy" | "sell";
+            /**
+             * Trade Date
+             * Format: date
+             */
+            trade_date: string;
+        };
+        /**
          * PaginationResponse
          * @description 分页响应模型.
          *
@@ -10598,6 +12124,451 @@ export interface components {
             total: number;
         };
         /**
+         * PaperAccountIdentityResponse
+         * @description Read-only PAPER account identity.
+         */
+        PaperAccountIdentityResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "paper";
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Name */
+            name: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+        };
+        /**
+         * PaperAccountLedgerResponse
+         * @description PAPER identity, events, and rebuilt projection.
+         */
+        PaperAccountLedgerResponse: {
+            account: components["schemas"]["PaperAccountIdentityResponse"];
+            /** Events */
+            events: components["schemas"]["PaperLedgerEventResponse"][];
+            snapshot: components["schemas"]["PaperPortfolioSnapshotResponse"];
+        };
+        /**
+         * PaperAccountReceiptResponse
+         * @description PAPER account identity and opening event receipt.
+         */
+        PaperAccountReceiptResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "paper";
+            /** Name */
+            name: string;
+            /** Opening Event Id */
+            opening_event_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "replayed";
+        };
+        /**
+         * PaperExecutionReceiptResponse
+         * @description Created or replayed execution with compact inspector evidence.
+         */
+        PaperExecutionReceiptResponse: {
+            /** Execution Id */
+            execution_id: string;
+            fill: components["schemas"]["PaperFillResponse"] | null;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Ledger Event Id */
+            ledger_event_id: string | null;
+            /** Order Id */
+            order_id: string;
+            /** Order Status */
+            order_status: string;
+            /** Reality Status */
+            reality_status: string;
+            /** Reason */
+            reason: string | null;
+            /** Request Hash */
+            request_hash: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "replayed";
+        };
+        /**
+         * PaperFillAssumptionBody
+         * @description Versioned price and slippage policy.
+         */
+        PaperFillAssumptionBody: {
+            /** Assumption Id */
+            assumption_id: string;
+            /**
+             * Reference Price Field
+             * @enum {string}
+             */
+            reference_price_field: "open" | "close";
+            /** Slippage Bps */
+            slippage_bps: number;
+            /** Version */
+            version: number;
+        };
+        /**
+         * PaperFillResponse
+         * @description Simulated fill economics and evidence hashes.
+         */
+        PaperFillResponse: {
+            /** Assumption Hash */
+            assumption_hash: string;
+            /** Commission */
+            commission: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "buy" | "sell";
+            /**
+             * Event Time
+             * Format: date-time
+             */
+            event_time: string;
+            /** Fill Id */
+            fill_id: string;
+            /** Fill Price */
+            fill_price: number;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Market Lineage Hash */
+            market_lineage_hash: string;
+            /** Market Snapshot Hash */
+            market_snapshot_hash: string;
+            /** Order Id */
+            order_id: string;
+            /** Quantity */
+            quantity: number;
+            /** Reference Price */
+            reference_price: number;
+            /** Settlement Date */
+            settlement_date: string;
+            /** Slippage */
+            slippage: number;
+            /** Tax */
+            tax: number;
+            /** Total Cost */
+            total_cost: number;
+            /** Trade Date */
+            trade_date: string;
+            /** Transfer Fee */
+            transfer_fee: number;
+        };
+        /**
+         * PaperInstrumentRulesBody
+         * @description Exact static, trading, and fee rules used for one operation.
+         */
+        PaperInstrumentRulesBody: {
+            /** Asset Class */
+            asset_class: string;
+            /** Board Segment */
+            board_segment: string;
+            /** Commission Rate */
+            commission_rate: number;
+            /**
+             * Currency
+             * @default CNY
+             * @constant
+             */
+            currency: "CNY";
+            /** Exchange */
+            exchange: string;
+            /**
+             * Lifecycle State
+             * @default listed
+             */
+            lifecycle_state: string;
+            /** Lot Size */
+            lot_size: number;
+            /** Min Commission */
+            min_commission: number;
+            /**
+             * Multiplier
+             * @default 1
+             */
+            multiplier: number;
+            /**
+             * Price Limit Pct
+             * @default 0.1
+             */
+            price_limit_pct: number | null;
+            /** Settlement Cycle */
+            settlement_cycle: number;
+            /** Stamp Duty Rate */
+            stamp_duty_rate: number;
+            /** Tick Size */
+            tick_size: number;
+            /** Transfer Fee Rate */
+            transfer_fee_rate: number;
+        };
+        /**
+         * PaperLedgerEventResponse
+         * @description Immutable PAPER engine event and tamper-evident hash.
+         */
+        PaperLedgerEventResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "paper";
+            /** Actor */
+            actor: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Event Hash */
+            event_hash: string;
+            /** Event Id */
+            event_id: string;
+            /** Event Type */
+            event_type: string;
+            /** External Reference */
+            external_reference: string | null;
+            /** Fees */
+            fees: string;
+            /** Gross Amount */
+            gross_amount: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Instrument Id */
+            instrument_id: number | null;
+            /** Net Cash */
+            net_cash: string;
+            /** Note */
+            note: string;
+            /** Price */
+            price: string;
+            /** Quantity */
+            quantity: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Settlement Date */
+            settlement_date: string;
+            /**
+             * Source
+             * @constant
+             */
+            source: "paper_engine";
+            /** Tax */
+            tax: string;
+            /** Trade Date */
+            trade_date: string;
+        };
+        /**
+         * PaperMarketSnapshotBody
+         * @description One market payload with explicit PIT provenance.
+         */
+        PaperMarketSnapshotBody: {
+            /** Amount */
+            amount: number;
+            /** Avg Volume 20D */
+            avg_volume_20d?: number | null;
+            /** Close */
+            close: number;
+            /** Dataset Id */
+            dataset_id: string;
+            /** High */
+            high: number;
+            /**
+             * Is Suspended
+             * @default false
+             */
+            is_suspended: boolean;
+            /** Limit Down */
+            limit_down?: number | null;
+            /** Limit Up */
+            limit_up?: number | null;
+            /** Low */
+            low: number;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Open */
+            open: number;
+            /** Prev Close */
+            prev_close: number;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Source */
+            source: string;
+            /** Source Snapshot Id */
+            source_snapshot_id: string;
+            /** Volume */
+            volume: number;
+        };
+        /**
+         * PaperPortfolioSnapshotResponse
+         * @description Full replay of one PAPER account at an explicit date.
+         */
+        PaperPortfolioSnapshotResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "paper";
+            /** As Of */
+            as_of: string;
+            cash: components["schemas"]["CashSnapshotResponse"];
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Event Count */
+            event_count: number;
+            /** Ledger Hash */
+            ledger_hash: string;
+            /** Positions */
+            positions: components["schemas"]["PortfolioPositionSnapshotResponse"][];
+            /** Realized Pnl */
+            realized_pnl: string;
+            /** Total Fees */
+            total_fees: string;
+            /** Total Value */
+            total_value: string;
+            /** Unrealized Pnl */
+            unrealized_pnl: string;
+            /** Valuation Complete */
+            valuation_complete: boolean;
+        };
+        /**
+         * PaperReconciliationResponse
+         * @description End-of-day fill-to-ledger checksum.
+         */
+        PaperReconciliationResponse: {
+            /** Balanced */
+            balanced: boolean;
+            /** Checksum */
+            checksum: string;
+            /** Fill Count */
+            fill_count: number;
+            /** Ledger Fill Count */
+            ledger_fill_count: number;
+            /** Order Count */
+            order_count: number;
+            /**
+             * Reconciled At
+             * Format: date-time
+             */
+            reconciled_at: string;
+            /** Reconciliation Id */
+            reconciliation_id: string;
+            /** Session Id */
+            session_id: string;
+            /** Trade Date */
+            trade_date: string;
+        };
+        /**
+         * PaperRecoverResponse
+         * @description Recovery entrypoint result.
+         */
+        PaperRecoverResponse: {
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Recovered Execution Count */
+            recovered_execution_count: number;
+        };
+        /**
+         * PaperSessionCommandResponse
+         * @description Lifecycle command receipt.
+         */
+        PaperSessionCommandResponse: {
+            /** Action */
+            action: string;
+            session: components["schemas"]["PaperSessionResponse"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "replayed";
+        };
+        /**
+         * PaperSessionReadResponse
+         * @description Session, execution inspector rows, and latest reconciliation.
+         */
+        PaperSessionReadResponse: {
+            /** Executions */
+            executions: components["schemas"]["PaperExecutionReceiptResponse"][];
+            latest_reconciliation: components["schemas"]["PaperReconciliationResponse"] | null;
+            session: components["schemas"]["PaperSessionResponse"];
+        };
+        /**
+         * PaperSessionResponse
+         * @description Durable paper session state.
+         */
+        PaperSessionResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Pause Reason */
+            pause_reason: string | null;
+            /** Revision */
+            revision: number;
+            /** Session Id */
+            session_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "running" | "paused";
+            /** Strategy Id */
+            strategy_id: string;
+            /** Trade Date */
+            trade_date: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * PausePaperSessionBody
+         * @description Pause a running paper session.
+         */
+        PausePaperSessionBody: {
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
          * PnlSummaryResponse
          * @description P&L 汇总响应.
          */
@@ -10622,6 +12593,217 @@ export interface components {
              * @description 浮动盈亏合计
              */
             total_unrealized_pnl: number;
+        };
+        /**
+         * PortfolioAttributionResponse
+         * @description Mutually meaningful Paper execution or Manual user-choice attribution.
+         */
+        PortfolioAttributionResponse: {
+            /** Fee Amount */
+            fee_amount: string;
+            /** Risk Blocked Bps */
+            risk_blocked_bps: string;
+            /** Slippage Amount */
+            slippage_amount: string;
+            /** Unfilled Bps */
+            unfilled_bps: string;
+            /** User Choice Bps */
+            user_choice_bps: string;
+        };
+        /**
+         * PortfolioComparisonResponse
+         * @description Unified same-snapshot MODEL/PAPER/MANUAL read model.
+         */
+        PortfolioComparisonResponse: {
+            /** As Of */
+            as_of: string;
+            manual: components["schemas"]["NormalizedPortfolioResponse"];
+            model: components["schemas"]["NormalizedPortfolioResponse"];
+            model_vs_manual: components["schemas"]["PortfolioDriftResponse"];
+            model_vs_paper: components["schemas"]["PortfolioDriftResponse"];
+            paper: components["schemas"]["NormalizedPortfolioResponse"];
+            paper_vs_manual: components["schemas"]["PortfolioDriftResponse"];
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Strategy Id */
+            strategy_id: string;
+            /** Valuation Snapshot Id */
+            valuation_snapshot_id: string;
+        };
+        /**
+         * PortfolioDriftItemResponse
+         * @description Instrument-level pairwise weight drift.
+         */
+        PortfolioDriftItemResponse: {
+            /** Baseline Weight */
+            baseline_weight: string;
+            /** Drift Bps */
+            drift_bps: string;
+            /** Drift Weight */
+            drift_weight: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Observed Weight */
+            observed_weight: string;
+        };
+        /**
+         * PortfolioDriftResponse
+         * @description One pairwise portfolio drift surface.
+         */
+        PortfolioDriftResponse: {
+            attribution: components["schemas"]["PortfolioAttributionResponse"];
+            /** Baseline Portfolio Id */
+            baseline_portfolio_id: string;
+            /** Cash Drift Bps */
+            cash_drift_bps: string;
+            /**
+             * Comparison Kind
+             * @enum {string}
+             */
+            comparison_kind: "model_vs_paper" | "model_vs_manual" | "paper_vs_manual";
+            /** Items */
+            items: components["schemas"]["PortfolioDriftItemResponse"][];
+            /** Observed Portfolio Id */
+            observed_portfolio_id: string;
+            /** Total Abs Drift Bps */
+            total_abs_drift_bps: string;
+        };
+        /**
+         * PortfolioPositionSnapshotResponse
+         * @description One rebuilt holding with settlement-aware availability.
+         */
+        PortfolioPositionSnapshotResponse: {
+            /** Available Quantity */
+            available_quantity: string;
+            /** Average Cost */
+            average_cost: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Last Price */
+            last_price: string;
+            /** Market Value */
+            market_value: string;
+            /** Quantity */
+            quantity: string;
+            /** Realized Pnl */
+            realized_pnl: string;
+            /** Total Fees */
+            total_fees: string;
+            /** Unrealized Pnl */
+            unrealized_pnl: string;
+        };
+        /**
+         * PortfolioScenarioBody
+         * @description Exact comparison identity plus user-owned constraints and shocks.
+         */
+        PortfolioScenarioBody: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Baseline Kind
+             * @enum {string}
+             */
+            baseline_kind: "model" | "paper" | "manual";
+            /** Cash Reserve Weight */
+            cash_reserve_weight: number | string;
+            /**
+             * Excluded Instrument Ids
+             * @default []
+             */
+            excluded_instrument_ids: number[];
+            /** Industry Shocks */
+            industry_shocks?: {
+                [key: string]: number;
+            };
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Manual Account Id */
+            manual_account_id: string;
+            /**
+             * Market Shock
+             * @default 0
+             */
+            market_shock: number;
+            /** Max Position Weight */
+            max_position_weight: number | string;
+            /** Model Portfolio Id */
+            model_portfolio_id: string;
+            /** Paper Account Id */
+            paper_account_id: string;
+            /** Paper Session Id */
+            paper_session_id: string;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Strategy Id */
+            strategy_id: string;
+            /** Valuation Snapshot Id */
+            valuation_snapshot_id?: string | null;
+        };
+        /**
+         * PortfolioScenarioPreviewResponse
+         * @description Unapplied proposed weights and their deterministic risk preview.
+         */
+        PortfolioScenarioPreviewResponse: {
+            /** Applied Constraints */
+            applied_constraints: string[];
+            /**
+             * Baseline Kind
+             * @enum {string}
+             */
+            baseline_kind: "model" | "paper" | "manual";
+            /** Proposed Weights */
+            proposed_weights: {
+                [key: string]: string;
+            };
+            risk: components["schemas"]["ScenarioRiskPreviewResponse"];
+        };
+        /**
+         * PortfolioSnapshotResponse
+         * @description Full-replay portfolio projection at one explicit date.
+         */
+        PortfolioSnapshotResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "manual";
+            /** As Of */
+            as_of: string;
+            cash: components["schemas"]["CashSnapshotResponse"];
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Event Count */
+            event_count: number;
+            /** Ledger Hash */
+            ledger_hash: string;
+            /** Positions */
+            positions: components["schemas"]["PortfolioPositionSnapshotResponse"][];
+            /** Realized Pnl */
+            realized_pnl: string;
+            /** Total Fees */
+            total_fees: string;
+            /** Total Value */
+            total_value: string;
+            /** Unrealized Pnl */
+            unrealized_pnl: string;
+            /** Valuation Complete */
+            valuation_complete: boolean;
         };
         /**
          * PositionBaselineRequest
@@ -11051,6 +13233,14 @@ export interface components {
             reason: components["schemas"]["NonBlankStr"];
         };
         /**
+         * ReconcilePaperSessionBody
+         * @description Request one exact EOD reconciliation.
+         */
+        ReconcilePaperSessionBody: {
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /**
          * RecordFillRequest
          * @description 录入成交请求.
          */
@@ -11102,6 +13292,121 @@ export interface components {
             strategy_id: components["schemas"]["NonBlankStr"];
             /** @description 成交日期 (YYYY-MM-DD) */
             trade_date: components["schemas"]["IsoCalendarDateStr"];
+        };
+        /**
+         * RecoverPaperSessionBody
+         * @description Request repair of persisted fills missing ledger markers.
+         */
+        RecoverPaperSessionBody: {
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /**
+         * RegimeDiagnosticsResponse
+         * @description PIT-safe regime diagnostics and their complete immutable evidence identity.
+         */
+        RegimeDiagnosticsResponse: {
+            /** Bars Content Hash */
+            bars_content_hash: string;
+            /** Bars Input Id */
+            bars_input_id: string;
+            /** Bars Schema Hash */
+            bars_schema_hash: string;
+            /** Bear Threshold */
+            bear_threshold: number;
+            /** Benchmark Instrument Id */
+            benchmark_instrument_id: number;
+            /** Builder Version */
+            builder_version: string;
+            /** Bull Threshold */
+            bull_threshold: number;
+            current: components["schemas"]["RegimeObservationResponse"];
+            /** Dataset Id */
+            dataset_id: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date
+             */
+            knowledge_cutoff: string;
+            /** Known At Policy */
+            known_at_policy: string;
+            /** Lookback Observations */
+            lookback_observations: number;
+            /** Model Id */
+            model_id: string;
+            /** Observations */
+            observations: components["schemas"]["RegimeObservationResponse"][];
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Snapshot Manifest Hash */
+            snapshot_manifest_hash: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Transitions */
+            transitions: components["schemas"]["RegimeTransitionResponse"][];
+        };
+        /**
+         * RegimeIndicatorResponse
+         * @description One normalized input used by the frozen regime model.
+         */
+        RegimeIndicatorResponse: {
+            /** Name */
+            name: string;
+            /** Normalized Score */
+            normalized_score: number;
+        };
+        /**
+         * RegimeObservationResponse
+         * @description One EOD regime observation whose close is visible before cutoff.
+         */
+        RegimeObservationResponse: {
+            /** Indicators */
+            indicators: components["schemas"]["RegimeIndicatorResponse"][];
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "bull" | "bear" | "neutral";
+            /**
+             * Observed At
+             * Format: date
+             */
+            observed_at: string;
+            /** Position Ratio */
+            position_ratio: number;
+            /** Score */
+            score: number;
+        };
+        /**
+         * RegimeTransitionResponse
+         * @description One label transition between consecutive eligible observations.
+         */
+        RegimeTransitionResponse: {
+            /**
+             * From Label
+             * @enum {string}
+             */
+            from_label: "bull" | "bear" | "neutral";
+            /**
+             * Observed At
+             * Format: date
+             */
+            observed_at: string;
+            /**
+             * To Label
+             * @enum {string}
+             */
+            to_label: "bull" | "bear" | "neutral";
         };
         /**
          * ReplaceFillRequest
@@ -11314,6 +13619,63 @@ export interface components {
             new_run_id: string;
         };
         /**
+         * ResearchCaseResponse
+         * @description Content-addressed SelectionRun-to-research lineage response.
+         */
+        ResearchCaseResponse: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Asset Kind
+             * @enum {string}
+             */
+            asset_kind: "stock" | "etf";
+            /** Candidate Instrument Ids */
+            candidate_instrument_ids: number[];
+            /** Case Id */
+            case_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Industry Rotation Snapshot Id */
+            industry_rotation_snapshot_id: string | null;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Missing Inputs */
+            missing_inputs: string[];
+            /** Objective */
+            objective: string;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Schema Version */
+            schema_version: number;
+            /** Selection Input Hash */
+            selection_input_hash: string;
+            /** Selection Run Hash */
+            selection_run_hash: string;
+            /** Selection Run Id */
+            selection_run_id: string;
+            /** Selection Spec Hash */
+            selection_spec_hash: string;
+            /**
+             * Selection Status
+             * @enum {string}
+             */
+            selection_status: "ready" | "degraded";
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Universe Snapshot Id */
+            universe_snapshot_id: string;
+        };
+        /**
          * ResumeRunResponse
          * @description checkpoint 恢复运行响应.
          */
@@ -11348,6 +13710,33 @@ export interface components {
              * @default pending
              */
             status: string;
+        };
+        /**
+         * ReverseManualEventBody
+         * @description Append a zero-effect control event reversing one prior event.
+         */
+        ReverseManualEventBody: {
+            /** Actor */
+            actor: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Reverses Event Id */
+            reverses_event_id: string;
+            /**
+             * Settlement Date
+             * Format: date
+             */
+            settlement_date: string;
+            /**
+             * Trade Date
+             * Format: date
+             */
+            trade_date: string;
         };
         /**
          * ReviewExposureWeightResponse
@@ -11492,6 +13881,252 @@ export interface components {
          */
         RunStatus: "queued" | "running" | "waiting_approval" | "paused" | "completed" | "failed" | "cancelled";
         /**
+         * ScenarioExposureResponse
+         * @description Before or after deterministic risk exposure.
+         */
+        ScenarioExposureResponse: {
+            /** Cash Weight */
+            cash_weight: number;
+            /** Gross Exposure */
+            gross_exposure: number;
+            /** Industry Exposure */
+            industry_exposure: {
+                [key: string]: number;
+            };
+            /** Stressed Return */
+            stressed_return: number;
+        };
+        /**
+         * ScenarioRiskPreviewResponse
+         * @description Risk-owned scenario result.
+         */
+        ScenarioRiskPreviewResponse: {
+            after: components["schemas"]["ScenarioExposureResponse"];
+            /** As Of */
+            as_of: string;
+            before: components["schemas"]["ScenarioExposureResponse"];
+            /** Constraint Findings */
+            constraint_findings: string[];
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Turnover */
+            turnover: number;
+            /** Valuation Snapshot Id */
+            valuation_snapshot_id: string;
+        };
+        /**
+         * SelectionCandidateResponse
+         * @description One selected candidate and exact ranking evidence.
+         */
+        SelectionCandidateResponse: {
+            /** Factor Contributions */
+            factor_contributions: components["schemas"]["SelectionFactorContributionResponse"][];
+            /** Industry Id */
+            industry_id: string | null;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Instrument Name */
+            instrument_name: string;
+            /** Rank */
+            rank: number;
+            /** Score */
+            score: number;
+        };
+        /**
+         * SelectionExclusionChangeResponse
+         * @description Why-in/why-out change between two exact runs.
+         */
+        SelectionExclusionChangeResponse: {
+            /** After Reason */
+            after_reason: string | null;
+            /** Before Reason */
+            before_reason: string | null;
+            /** Instrument Id */
+            instrument_id: number;
+        };
+        /**
+         * SelectionExclusionResponse
+         * @description One stable why-out record.
+         */
+        SelectionExclusionResponse: {
+            /** Detail */
+            detail: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Instrument Name */
+            instrument_name: string;
+            /** Reason Code */
+            reason_code: string;
+            /** Stage */
+            stage: string;
+        };
+        /**
+         * SelectionFactorContributionResponse
+         * @description One additive selected-instrument score contribution.
+         */
+        SelectionFactorContributionResponse: {
+            /** Contribution */
+            contribution: number;
+            /** Factor Name */
+            factor_name: string;
+            /** Value */
+            value: number;
+            /** Weight */
+            weight: number;
+        };
+        /**
+         * SelectionFactorValueRequest
+         * @description One normalized factor observation.
+         */
+        SelectionFactorValueRequest: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: number;
+        };
+        /**
+         * SelectionFactorWeightRequest
+         * @description One additive factor weight.
+         */
+        SelectionFactorWeightRequest: {
+            /** Name */
+            name: string;
+            /** Weight */
+            weight: number;
+        };
+        /**
+         * SelectionInstrumentRequest
+         * @description Normalized factor and hard-filter facts for one instrument.
+         */
+        SelectionInstrumentRequest: {
+            /** Average Turnover */
+            average_turnover?: number | null;
+            /**
+             * Declared Missing Inputs
+             * @default []
+             */
+            declared_missing_inputs: string[];
+            /** Factor Values */
+            factor_values: components["schemas"]["SelectionFactorValueRequest"][];
+            /** Industry Id */
+            industry_id?: string | null;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Instrument Name */
+            instrument_name: string;
+            /** Is St */
+            is_st?: boolean | null;
+            /** Is Suspended */
+            is_suspended?: boolean | null;
+            limit_state?: components["schemas"]["LimitStateRequest"] | null;
+            /** Listing Days */
+            listing_days?: number | null;
+            /** Tracking Error */
+            tracking_error?: number | null;
+        };
+        /**
+         * SelectionRankChangeResponse
+         * @description Rank change for a candidate selected in both runs.
+         */
+        SelectionRankChangeResponse: {
+            /** After Rank */
+            after_rank: number;
+            /** Before Rank */
+            before_rank: number;
+            /** Instrument Id */
+            instrument_id: number;
+        };
+        /**
+         * SelectionRunDiffResponse
+         * @description Exact previous-run comparison response.
+         */
+        SelectionRunDiffResponse: {
+            /** Added Candidate Ids */
+            added_candidate_ids: number[];
+            /** After Run Id */
+            after_run_id: string;
+            /** Before Run Id */
+            before_run_id: string;
+            /** Data Changed */
+            data_changed: boolean;
+            /** Exclusion Changes */
+            exclusion_changes: components["schemas"]["SelectionExclusionChangeResponse"][];
+            /** Industry Rotation Changed */
+            industry_rotation_changed: boolean;
+            /** Rank Changes */
+            rank_changes: components["schemas"]["SelectionRankChangeResponse"][];
+            /** Removed Candidate Ids */
+            removed_candidate_ids: number[];
+            /** Seed Changed */
+            seed_changed: boolean;
+            /** Spec Changed */
+            spec_changed: boolean;
+        };
+        /**
+         * SelectionRunResponse
+         * @description Exact saved SelectionRun response.
+         */
+        SelectionRunResponse: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Asset Kind
+             * @enum {string}
+             */
+            asset_kind: "stock" | "etf";
+            /** Candidates */
+            candidates: components["schemas"]["SelectionCandidateResponse"][];
+            /** Exclusions */
+            exclusions: components["schemas"]["SelectionExclusionResponse"][];
+            /** Industry Rotation Snapshot Id */
+            industry_rotation_snapshot_id: string | null;
+            /** Input Hash */
+            input_hash: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Missing Inputs */
+            missing_inputs: string[];
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Run Id */
+            run_id: string;
+            /** Seed */
+            seed: number;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Spec Hash */
+            spec_hash: string;
+            /** Spec Id */
+            spec_id: string;
+            /** Spec Version */
+            spec_version: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "degraded" | "blocked";
+            /** Universe Snapshot Id */
+            universe_snapshot_id: string;
+        };
+        SelectionSpecRequest: components["schemas"]["StockSelectionSpecRequest"] | components["schemas"]["EtfSelectionSpecRequest"];
+        /**
+         * SelectionWorkspaceReceiptResponse
+         * @description Mutation response containing both exact artifacts.
+         */
+        SelectionWorkspaceReceiptResponse: {
+            industry_rotation: components["schemas"]["IndustryRotationResponse"];
+            selection_run: components["schemas"]["SelectionRunResponse"];
+        };
+        /**
          * SignalDeviationItem
          * @description 信号-成交偏差项.
          */
@@ -11576,6 +14211,37 @@ export interface components {
             path: string;
         };
         /**
+         * StockSelectionSpecRequest
+         * @description Stock-specific saved selection policy.
+         */
+        StockSelectionSpecRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            asset_kind: "stock";
+            /**
+             * Excluded Limit States
+             * @default [
+             *       "limit_up",
+             *       "limit_down"
+             *     ]
+             */
+            excluded_limit_states: components["schemas"]["LimitStateRequest"][];
+            /** Factor Weights */
+            factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
+            /** Min Average Turnover */
+            min_average_turnover: number;
+            /** Min Listing Days */
+            min_listing_days: number;
+            /** Spec Id */
+            spec_id: string;
+            /** Spec Version */
+            spec_version: string;
+            /** Top K */
+            top_k: number;
+        };
+        /**
          * StrategyActivePointerResponse
          * @description Active pointer returned after a reactivate decision.
          */
@@ -11599,6 +14265,100 @@ export interface components {
             spec: components["schemas"]["StrategyResponse"];
             /** Strategy Id */
             strategy_id: string;
+        };
+        /**
+         * StrategyAuthorExpressionRequest
+         * @description One detached DSL expression included in an Author workbench preview.
+         */
+        StrategyAuthorExpressionRequest: {
+            derived_id: components["schemas"]["NonBlankStr"];
+            expression: components["schemas"]["NonBlankStr"];
+            /** Version */
+            version: number;
+        };
+        /**
+         * StrategyAuthorOperationResponse
+         * @description One content-addressed, non-publishable Author preview result.
+         */
+        StrategyAuthorOperationResponse: {
+            /** Changed */
+            changed: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "draft" | "compile" | "validate" | "diff";
+            /** Lineage */
+            lineage: string[];
+            /** Payload */
+            payload: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Payload Hash */
+            payload_hash: string;
+            /**
+             * Publishable
+             * @default false
+             * @constant
+             */
+            publishable: false;
+            /** Subject Id */
+            subject_id: string;
+            /** Subject Version */
+            subject_version: string;
+            /** Valid */
+            valid: boolean;
+        };
+        /**
+         * StrategyAuthorPreviewRequest
+         * @description Detached candidate sent through every safe Author preview stage.
+         */
+        StrategyAuthorPreviewRequest: {
+            /** Expressions */
+            expressions?: components["schemas"]["StrategyAuthorExpressionRequest"][];
+            /** Spec Json */
+            spec_json: {
+                [key: string]: components["schemas"]["JsonValue-Input"];
+            };
+        };
+        /**
+         * StrategyAuthorPreviewResponse
+         * @description Aggregate Strategy Studio workbench response with no mutation authority.
+         */
+        StrategyAuthorPreviewResponse: {
+            /** Base Version */
+            base_version: number;
+            /** Canonical Hash */
+            canonical_hash: string | null;
+            /** Compile */
+            compile: components["schemas"]["StrategyAuthorOperationResponse"][];
+            diff: components["schemas"]["StrategyAuthorOperationResponse"];
+            draft: components["schemas"]["StrategyAuthorOperationResponse"];
+            /**
+             * Publishable
+             * @default false
+             * @constant
+             */
+            publishable: false;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Tests */
+            tests: components["schemas"]["StrategyAuthorTestResponse"][];
+            /** Valid */
+            valid: boolean;
+            validation: components["schemas"]["StrategyAuthorOperationResponse"];
+        };
+        /**
+         * StrategyAuthorTestResponse
+         * @description One deterministic host assertion over the four preview stages.
+         */
+        StrategyAuthorTestResponse: {
+            /** Detail */
+            detail: string;
+            /** Name */
+            name: string;
+            /** Passed */
+            passed: boolean;
         };
         /**
          * StrategyGovernanceEventResponse
@@ -11790,6 +14550,265 @@ export interface components {
              */
             reason: string;
         };
+        /**
+         * TechnicalAnalysisConflictResponse
+         * @description One deterministic daily/weekly disagreement.
+         */
+        TechnicalAnalysisConflictResponse: {
+            daily: components["schemas"]["Direction"];
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "trend" | "momentum" | "breakout";
+            /** Reason Code */
+            reason_code: string;
+            weekly: components["schemas"]["Direction"];
+        };
+        /**
+         * TechnicalAnalysisIndicatorParameterResponse
+         * @description One canonical numeric indicator parameter.
+         */
+        TechnicalAnalysisIndicatorParameterResponse: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: number;
+        };
+        /**
+         * TechnicalAnalysisIndicatorResponse
+         * @description One indicator result with explicit warm-up or unavailable state.
+         */
+        TechnicalAnalysisIndicatorResponse: {
+            /** Indicator Version */
+            indicator_version: string;
+            /** Name */
+            name: string;
+            /** Parameters */
+            parameters: components["schemas"]["TechnicalAnalysisIndicatorParameterResponse"][];
+            /** Reason */
+            reason: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "warming_up" | "unavailable";
+            timeframe: components["schemas"]["Timeframe"];
+            /** Value */
+            value: number | null;
+            /** Window */
+            window: number | null;
+        };
+        /**
+         * TechnicalAnalysisLevelResponse
+         * @description One versioned support or resistance level.
+         */
+        TechnicalAnalysisLevelResponse: {
+            /** Algorithm Version */
+            algorithm_version: string;
+            /** Confidence */
+            confidence: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "support" | "resistance";
+            /** Price */
+            price: number;
+            timeframe: components["schemas"]["Timeframe"];
+            /** Touches */
+            touches: number;
+            /** Window */
+            window: number;
+        };
+        /**
+         * TechnicalAnalysisQueryBody
+         * @description One exact read request; source facts remain server-owned.
+         */
+        TechnicalAnalysisQueryBody: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Instrument Code */
+            instrument_code: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Instrument Name */
+            instrument_name: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Portfolio Snapshot Id */
+            portfolio_snapshot_id?: string | null;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Research Case Id */
+            research_case_id?: string | null;
+            /** Selection Run Id */
+            selection_run_id?: string | null;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            spec: components["schemas"]["TechnicalAnalysisSpecRequest"];
+        };
+        /**
+         * TechnicalAnalysisSnapshotResponse
+         * @description Content-addressed exact technical-analysis result.
+         */
+        TechnicalAnalysisSnapshotResponse: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Conflicts */
+            conflicts: components["schemas"]["TechnicalAnalysisConflictResponse"][];
+            /** Input Hash */
+            input_hash: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Instrument Name */
+            instrument_name: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Last Computed Bar At */
+            last_computed_bar_at: string | null;
+            /** Last Visible Bar At */
+            last_visible_bar_at: string | null;
+            /** Levels */
+            levels: components["schemas"]["TechnicalAnalysisLevelResponse"][];
+            /** Missing Inputs */
+            missing_inputs: string[];
+            /** Portfolio Snapshot Id */
+            portfolio_snapshot_id: string | null;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Readings */
+            readings: components["schemas"]["TechnicalAnalysisIndicatorResponse"][];
+            /** Registry Version */
+            registry_version: string;
+            /** Research Case Id */
+            research_case_id: string | null;
+            /** Selection Run Id */
+            selection_run_id: string | null;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Spec Hash */
+            spec_hash: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "degraded" | "blocked";
+            /** Timeframe Summaries */
+            timeframe_summaries: components["schemas"]["TechnicalAnalysisTimeframeResponse"][];
+            /** Warnings */
+            warnings: string[];
+        };
+        /**
+         * TechnicalAnalysisSpecRequest
+         * @description Complete versioned v1 technical-indicator parameter set.
+         */
+        TechnicalAnalysisSpecRequest: {
+            /**
+             * Algorithm Version
+             * @default technical-analysis.v1
+             * @constant
+             */
+            algorithm_version: "technical-analysis.v1";
+            /**
+             * Atr Window
+             * @default 14
+             */
+            atr_window: number;
+            /**
+             * Donchian Window
+             * @default 20
+             */
+            donchian_window: number;
+            /**
+             * Macd Fast
+             * @default 12
+             */
+            macd_fast: number;
+            /**
+             * Macd Signal
+             * @default 9
+             */
+            macd_signal: number;
+            /**
+             * Macd Slow
+             * @default 26
+             */
+            macd_slow: number;
+            /**
+             * Return Window
+             * @default 20
+             */
+            return_window: number;
+            /**
+             * Rsi Window
+             * @default 14
+             */
+            rsi_window: number;
+            /**
+             * Slope Window
+             * @default 5
+             */
+            slope_window: number;
+            /** Spec Id */
+            spec_id: string;
+            /** Spec Version */
+            spec_version: string;
+            /**
+             * Support Resistance Window
+             * @default 60
+             */
+            support_resistance_window: number;
+            /** Timeframes */
+            timeframes: components["schemas"]["Timeframe"][];
+            /**
+             * Trend Window
+             * @default 20
+             */
+            trend_window: number;
+            /**
+             * Volatility Window
+             * @default 20
+             */
+            volatility_window: number;
+            /**
+             * Volume Window
+             * @default 20
+             */
+            volume_window: number;
+        };
+        /**
+         * TechnicalAnalysisTimeframeResponse
+         * @description Compact technical state for one timeframe.
+         */
+        TechnicalAnalysisTimeframeResponse: {
+            breakout: components["schemas"]["Direction"];
+            momentum: components["schemas"]["Direction"];
+            timeframe: components["schemas"]["Timeframe"];
+            trend: components["schemas"]["Direction"];
+        };
+        /** @enum {string} */
+        Timeframe: "daily" | "weekly";
         /**
          * TradeIntentResponse
          * @description 交易意图响应.
@@ -12665,6 +15684,41 @@ export interface operations {
             };
         };
     };
+    agent_execute_agent_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentRunExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AgentRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     agent_list_agent_sessions: {
         parameters: {
             query?: {
@@ -13504,7 +16558,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_list_DataProductOverviewResponse__"];
+                    "application/json": components["schemas"]["APIResponse_list_DataProductViewResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -14874,6 +17928,866 @@ export interface operations {
             };
         };
     };
+    manual_get_account_baseline: {
+        parameters: {
+            query: {
+                /** @description 账户 ID */
+                account_id: string;
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 信号日期 */
+                signal_date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_Union_AccountBaselineResponse__NoneType__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_import_account_baseline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportAccountBaselineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AccountBaselineImportResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_create_account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateManualAccountBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AccountCommandReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_correct_event: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectManualEventBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AccountCommandReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_record_event: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualEventBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AccountCommandReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_ledger: {
+        parameters: {
+            query: {
+                as_of: string;
+            };
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AccountLedgerResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_reverse_event: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReverseManualEventBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_AccountCommandReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_comparison: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 回测运行 ID */
+                run_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ComparisonMetricsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_daily_decision: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 交易/信号日期 */
+                trade_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DailyDecisionReportResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_daily_decision_v2: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 交易/信号日期 */
+                trade_date?: string | null;
+                /** @description 人工账户 ID; 缺失时 V2 fail closed 为 ACCOUNT_BASELINE_MISSING */
+                account_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DailyDecisionV2Response_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_daily_decision_v3: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 交易/信号日期 */
+                trade_date?: string | null;
+                /** @description 账户 ID */
+                account_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DailyDecisionV3Response_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_deviation: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 信号日期 */
+                signal_date: string;
+                /** @description 实际成交/持仓日期 */
+                execution_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_DeviationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_list_fill_adjustments: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 目标成交 ID */
+                fill_id?: string | null;
+                /** @description 关联意图 ID */
+                intent_id?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_FillAdjustmentResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_list_fills: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 起始日期 */
+                start_date?: string | null;
+                /** @description 结束日期 */
+                end_date?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_FillResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_record_fill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordFillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FillResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_list_effective_fills: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 起始日期 */
+                start_date?: string | null;
+                /** @description 结束日期 */
+                end_date?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_FillResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_replace_fill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceFillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FillAdjustmentResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_void_fill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidFillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FillAdjustmentResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_list_intents: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 信号日期 */
+                signal_date?: string | null;
+                /** @description 状态过滤 */
+                status?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_TradeIntentResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_update_intent_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIntentStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_bool_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_compute_pnl: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 快照日期 */
+                snapshot_date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PnlSummaryResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_list_positions: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 快照日期 */
+                snapshot_date?: string | null;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_PositionSnapshotResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_latest_signals: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_TradeIntentResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_get_signal_intents: {
+        parameters: {
+            query: {
+                /** @description 策略 ID */
+                strategy_id: string;
+                /** @description 每页数量 */
+                limit?: number;
+                /** @description 偏移量 */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                signal_date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_TradeIntentResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     market_post_bars: {
         parameters: {
             query?: never;
@@ -14894,6 +18808,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_Bar__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    market_get_context: {
+        parameters: {
+            query: {
+                as_of: string;
+                knowledge_cutoff: string;
+                publication_cutoff: string;
+                source_snapshot_id: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_MarketContextResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    market_get_regime: {
+        parameters: {
+            query: {
+                snapshot_id: string;
+                snapshot_manifest_hash: string;
+                benchmark_instrument_id: number;
+                start_date: string;
+                end_date: string;
+                knowledge_cutoff: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_RegimeDiagnosticsResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -14962,6 +18946,349 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_Instrument_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_create_account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePaperAccountBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperAccountReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_get_account_ledger: {
+        parameters: {
+            query: {
+                as_of: string;
+            };
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperAccountLedgerResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_create_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePaperSessionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperSessionCommandResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_get_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperSessionReadResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_operate_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatePaperOrderBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperExecutionReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_pause_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PausePaperSessionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperSessionCommandResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_reconcile_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcilePaperSessionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperReconciliationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paper_recover_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoverPaperSessionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperRecoverResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portfolio_get_comparison: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                model_portfolio_id: string;
+                paper_account_id: string;
+                manual_account_id: string;
+                paper_session_id: string;
+                as_of: string;
+                knowledge_cutoff: string;
+                publication_cutoff: string;
+                source_snapshot_ids: string[];
+                valuation_snapshot_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PortfolioComparisonResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portfolio_preview_scenario: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortfolioScenarioBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PortfolioScenarioPreviewResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -15705,6 +20032,200 @@ export interface operations {
             };
         };
     };
+    selections_get_industry_rotation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_IndustryRotationResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    selections_list_runs: {
+        parameters: {
+            query: {
+                spec_id: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_tuple_SelectionRunResponse__________"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    selections_create_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSelectionRunBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_SelectionWorkspaceReceiptResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    selections_compare_runs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                before_run_id: string;
+                after_run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_SelectionRunDiffResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    selections_get_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_SelectionRunResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    selections_create_research_case: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateResearchCaseBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ResearchCaseResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     source_get_source_data: {
         parameters: {
             query: {
@@ -16071,6 +20592,42 @@ export interface operations {
             };
         };
     };
+    strategies_preview_strategy_author: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategyAuthorPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyAuthorPreviewResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     strategies_deprecate_strategy_version: {
         parameters: {
             query?: never;
@@ -16329,43 +20886,7 @@ export interface operations {
             };
         };
     };
-    trade_get_account_baseline: {
-        parameters: {
-            query: {
-                /** @description 账户 ID */
-                account_id: string;
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 信号日期 */
-                signal_date: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_Union_AccountBaselineResponse__NoneType__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_import_account_baseline: {
+    technical_analysis_query: {
         parameters: {
             query?: never;
             header?: never;
@@ -16374,7 +20895,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ImportAccountBaselineRequest"];
+                "application/json": components["schemas"]["TechnicalAnalysisQueryBody"];
             };
         };
         responses: {
@@ -16384,627 +20905,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["APIResponse_AccountBaselineImportResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_comparison: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 回测运行 ID */
-                run_id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_ComparisonMetricsResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_daily_decision: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 交易/信号日期 */
-                trade_date?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DailyDecisionReportResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_daily_decision_v2: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 交易/信号日期 */
-                trade_date?: string | null;
-                /** @description 人工账户 ID; 缺失时 V2 fail closed 为 ACCOUNT_BASELINE_MISSING */
-                account_id?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DailyDecisionV2Response_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_daily_decision_v3: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 交易/信号日期 */
-                trade_date?: string | null;
-                /** @description 账户 ID */
-                account_id?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DailyDecisionV3Response_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_deviation: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 信号日期 */
-                signal_date: string;
-                /** @description 实际成交/持仓日期 */
-                execution_date?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_DeviationResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_list_fill_adjustments: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 目标成交 ID */
-                fill_id?: string | null;
-                /** @description 关联意图 ID */
-                intent_id?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_FillAdjustmentResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_list_fills: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 起始日期 */
-                start_date?: string | null;
-                /** @description 结束日期 */
-                end_date?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_FillResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_record_fill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RecordFillRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_FillResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_list_effective_fills: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 起始日期 */
-                start_date?: string | null;
-                /** @description 结束日期 */
-                end_date?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_FillResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_replace_fill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                fill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReplaceFillRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_FillAdjustmentResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_void_fill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                fill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["VoidFillRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_FillAdjustmentResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_list_intents: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 信号日期 */
-                signal_date?: string | null;
-                /** @description 状态过滤 */
-                status?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_TradeIntentResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_update_intent_status: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                intent_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateIntentStatusRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_bool_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_compute_pnl: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 快照日期 */
-                snapshot_date: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_PnlSummaryResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_list_positions: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 快照日期 */
-                snapshot_date?: string | null;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_PositionSnapshotResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_latest_signals: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_TradeIntentResponse__"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trade_get_signal_intents: {
-        parameters: {
-            query: {
-                /** @description 策略 ID */
-                strategy_id: string;
-                /** @description 每页数量 */
-                limit?: number;
-                /** @description 偏移量 */
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                signal_date: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIResponse_list_TradeIntentResponse__"];
+                    "application/json": components["schemas"]["APIResponse_TechnicalAnalysisSnapshotResponse_"];
                 };
             };
             /** @description Validation Error */

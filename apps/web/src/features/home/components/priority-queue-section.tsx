@@ -2,6 +2,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
+import type { PendingAction } from "@/types";
 import { usePendingActions } from "../hooks";
 
 const PRIORITY_BAR_COLOR: Record<string, string> = {
@@ -30,7 +31,11 @@ const BADGE_COLOR: Record<string, string> = {
  * Matches prototype .panel with .queue-item rows.
  * Each item has: colored priority bar | title+badges | meta | footer (domain + time)
  */
-export function PriorityQueueSection() {
+interface PriorityQueueSectionProps {
+	readonly onSelectAction?: (action: PendingAction) => void;
+}
+
+export function PriorityQueueSection({ onSelectAction }: PriorityQueueSectionProps) {
 	const { data, isLoading, refetch } = usePendingActions();
 
 	return (
@@ -38,7 +43,7 @@ export function PriorityQueueSection() {
 			data-testid="priority-queue"
 			data-info-level="l1"
 			data-info-unit="priority-queue"
-			className="h-[192px] flex-none"
+			className="h-[329.5px] flex-none"
 		>
 			<PanelHeader
 				title="今日优先事项"
@@ -64,6 +69,9 @@ export function PriorityQueueSection() {
 					{data && (
 						<ScrollReveal>
 							<div className="flex flex-col">
+								{data.actions.length === 0 && (
+									<p className="px-3 py-4 text-sm text-(--color-foreground-tertiary)">当前没有待复核事项</p>
+								)}
 								{data.actions.map((action) => (
 									<div
 										key={action.id}
@@ -97,6 +105,7 @@ export function PriorityQueueSection() {
 												</span>
 												<button
 													type="button"
+													onClick={() => onSelectAction?.(action)}
 													className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-[var(--radius-sm)] px-1.5 py-0.5"
 												>
 													查看详情

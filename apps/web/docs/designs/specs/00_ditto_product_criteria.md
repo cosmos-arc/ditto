@@ -2,7 +2,7 @@
 
 > Ditto Product Criteria
 >
-> v1.0
+> v2.0 — 2026-08-30 产品边界确认版
 >
 > 定义 Ditto 产品定位、密度分层准则、元素角色规范和间距体系。
 > 这是设计 spec 的上游文档——所有页面蓝图和视觉设计必须符合本规格。
@@ -11,9 +11,13 @@
 
 ## 产品定位
 
-**Ditto** = 金融终端工具，品牌 DNA 是 **Linear/Vercel 的克制感 + Bloomberg/quant desk 的专业终端感**。
+**Ditto** = 本地优先的 A 股个股与 ETF 量化决策、Paper Trading 和手工账户管理工作站，品牌 DNA 是 **Linear/Vercel 的克制感 + Bloomberg/quant desk 的专业终端感**。
 
-**用户画像**: 专业交易员/投资者，每天 8+ 小时与数据打交道。信息密度就是生产力。
+**用户画像**: 个人全栈量化投资者，每天长时间与数据、研究和组合事实打交道。信息密度就是生产力。
+
+**产品边界**：宏观、A 股核心/行业指数与全球核心市场数据用于解释 A 股环境；核心可决策资产是 A 股个股和 ETF；系统只提供 Paper 模拟与 Manual 实际账户记录，不连接券商下单。
+
+**产品签名**：每个关键判断都应沿“宏观/全球 → A 股市场 → 行业 → 个股 → 策略/信号 → Model/Paper/Manual → 风险/归因”的证据链下钻。Graphite Studio 是视觉基线，证据链是业务识别度来源。
 
 **审美-功能张力**: 克制感（留白/字号/装饰）vs 信息密度（数据量/可扫视性/操作效率）。
 这不是二选一，而是**按模块分层融合**。
@@ -119,7 +123,7 @@ Ditto 的 AI 不是独立的"AI 域"，而是**嵌入各业务域的智能层**�
 核心叙事（v2.0 嵌入方案）：
 
 - **AI Copilot 是全局 Sidecar 组件**——不属于任何域路由，可从任意页面唤出，提供市场分析、选股辅助、策略草案、因子发现等能力
-- **AI Agent Console 归入 Platform 域**（`/platform/agents`）——自主执行研究任务的 Agent 工作台，产出 Finding 经审批后进入 Signals Inbox
+- **AI Agent Console 归入 System 域**（迁移期路径仍可为 `/platform/agents`）——自主执行研究任务的 Agent 工作台，产出 Finding 经审批后进入 Signals Inbox
 - **AI 能力嵌入业务域页面**——因子发现、策略生成、信号解读等 AI 能力不再有独立入口，而是作为各业务域页面的内嵌功能
 - **AI 融入工作流，不独立于工作流**——Copilot 的产出可发送到 Strategy Studio / Watchlist / Research；Agent 的 Finding 经审批后直接对接 Signals Inbox
 
@@ -127,16 +131,20 @@ Ditto 的 AI 不是独立的"AI 域"，而是**嵌入各业务域的智能层**�
 
 ---
 
-## Platform 域收敛说明
+## System 域收敛说明
 
-v1 阶段 Platform 域从 6 个路由收敛为 2 个核心路由：
+System 域承接原 Platform 的技术路径，但用户可见产品心智统一为 System：
 
-| v1 核心路由 | 承载内容 |
+| 迁移期路径 | 承载内容 |
 |-----------|---------|
 | `/platform` | 平台运维总览：Data Quality + Pipelines/Jobs + System Alerts + Health Strip |
-| `/platform/settings` | 集中配置：Data Providers + Brokers + 通用 Settings |
+| `/platform/settings` | 集中配置：只读 Data Providers + 通用 Settings；不得出现券商下单配置 |
 
-Data Providers 和 Brokers 在用户仅有 1 个数据源和 1 个券商的早期阶段，不需要独立管理页面。通过 `/platform/settings` 的 Tab 视图承接即可。
+实时行情数据源是只读 Provider。Broker 不是被折叠的设置项，而是明确排除的产品能力。
+
+## 完成度判定
+
+页面、route、contract、overlay 和原型数量只能证明界面结构存在。产品完成必须由真实数据、freshness/PIT、错误与空态、以及“市场判断 → 选股 → Paper → 实际账户记录 → 复盘”的端到端任务证据共同验收。
 
 > 详见 [01 产品信息架构 §7.6](01_product_information_architecture.md)。
 

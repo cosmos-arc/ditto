@@ -7,6 +7,7 @@ export { OverlayProvider, useOverlayController } from "./components/overlay-prov
 export { PageTitleBlock } from "./components/page-title-block";
 export { Panel, PanelBody, PanelHeader } from "./components/panel";
 export { Rail } from "./components/rail";
+export { ShellHeaderExtension } from "./components/shell-header-extension";
 export { StatusBar } from "./components/status-bar";
 export { ThemeSwitcher } from "./components/theme-switcher";
 export { ViewPreferencesMenu } from "./components/view-preferences-menu";

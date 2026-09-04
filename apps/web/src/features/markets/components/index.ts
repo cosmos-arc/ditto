@@ -1,4 +1,5 @@
-export { CapitalRotationTable } from "./capital-rotation-table";
-export { MacroDriversBar } from "./macro-drivers-bar";
-export { MarketCardGrid } from "./market-card-grid";
+export { ASharesPage } from "./a-shares-page";
+export { CalendarPage } from "./calendar-page";
+export { IntelligencePage } from "./intelligence-page";
 export { MarketsPage } from "./markets-page";
+export { WatchlistPage } from "./watchlist-page";

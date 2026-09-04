@@ -1,62 +1,105 @@
 import { AreaChart } from "@/components/chart/area-chart";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { ContextSection } from "@/components/domain/context-section";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useBacktestResult } from "../hooks";
+import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api-client";
+import { useBacktestBenchmark, useBacktestNav } from "../hooks";
 
 interface BacktestOverviewProps {
 	readonly jobId: string;
 }
 
 export function BacktestOverview({ jobId }: BacktestOverviewProps) {
-	const { data, isLoading, refetch } = useBacktestResult(jobId);
+	const navQuery = useBacktestNav(jobId);
+	const benchmarkQuery = useBacktestBenchmark(jobId);
 
-	if (isLoading) {
+	if (navQuery.isLoading) {
 		return <LoadingSkeleton variant="table" rows={6} />;
 	}
+	if (navQuery.error) {
+		const message =
+			navQuery.error instanceof ApiError
+				? `${navQuery.error.status} ${navQuery.error.errorCode ?? "BACKTEST_NAV_ERROR"}: ${navQuery.error.message}`
+				: navQuery.error.message;
+		return (
+			<div className="rounded-(--radius-md) border border-(--color-led-danger) bg-(--color-surface-1) p-4 text-xs">
+				<p role="alert" className="text-(--color-led-danger)">
+					{message}
+				</p>
+				<Button size="sm" variant="outline" className="mt-3" onClick={() => void navQuery.refetch()}>
+					重试净值序列
+				</Button>
+			</div>
+		);
+	}
+
+	const nav = navQuery.data ?? [];
+	const benchmark = benchmarkQuery.data;
+	const lastNav = nav.at(-1)?.nav;
+	const lastBenchmark = benchmark?.navs.at(-1);
+	const benchmarkError = benchmarkQuery.error;
+	const benchmarkErrorText = benchmarkError
+		? benchmarkError instanceof ApiError
+			? `${benchmarkError.status} ${benchmarkError.errorCode ?? "BACKTEST_BENCHMARK_ERROR"}: ${benchmarkError.message}`
+			: benchmarkError.message
+		: null;
 
 	return (
-		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			{data && (
-				<div className="flex flex-col gap-(--section-gap)">
-					<div data-info-level="l2" data-info-unit="nav-curve">
-						<ContextSection title="净值曲线">
-							<AreaChart
-								data={data.navSeries.map((p) => ({
-									time: p.date,
-									value: p.nav,
-								}))}
-								height={200}
-								showAxes
-							/>
-						</ContextSection>
+		<div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_20rem]">
+			<section
+				data-info-level="l2"
+				data-info-unit="nav-curve"
+				className="min-w-0 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4"
+			>
+				<div className="flex items-baseline justify-between gap-3">
+					<div>
+						<h3 className="text-sm font-semibold text-(--color-foreground)">净值与基准</h3>
+						<p className="mt-0.5 text-xs text-(--color-foreground-tertiary)">策略净值使用运行产出的逐日 NAV。</p>
 					</div>
-
-					<div data-info-level="l2" data-info-unit="current-holdings">
-						<ContextSection title="当前持仓" count={data.holdings.length}>
-							<div className="space-y-1">
-								{data.holdings.map((h) => (
-									<div
-										key={h.code}
-										data-info-level="l3"
-										data-info-unit="holding-item"
-										className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-									>
-										<div className="flex items-center gap-3">
-											<span className="font-medium">{h.name}</span>
-											<span className="text-xs text-(--color-foreground-tertiary)">{h.code}</span>
-										</div>
-										<div className="flex items-center gap-4 text-(--color-foreground-tertiary)">
-											<span>{(h.weight * 100).toFixed(0)}%</span>
-											<span>{h.shares} 股</span>
-										</div>
-									</div>
-								))}
-							</div>
-						</ContextSection>
-					</div>
+					<span className="font-data text-xs text-(--color-foreground-tertiary)">{nav.length} NAV POINTS</span>
 				</div>
-			)}
-		</DittoErrorBoundary>
+				{nav.length > 0 ? (
+					<AreaChart
+						data={nav.map((point) => ({ time: point.tradeDate, value: point.nav }))}
+						height={280}
+						showAxes
+						className="mt-4"
+					/>
+				) : (
+					<p className="mt-8 text-xs text-(--color-foreground-tertiary)">运行尚未产出净值点。</p>
+				)}
+			</section>
+			<aside
+				data-info-level="l2"
+				data-info-unit="nav-summary"
+				className="rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4"
+			>
+				<h3 className="text-sm font-semibold text-(--color-foreground)">Series evidence</h3>
+				<dl className="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-3 text-xs">
+					<dt className="text-(--color-foreground-tertiary)">策略末值</dt>
+					<dd className="font-data text-(--color-foreground)">{lastNav?.toFixed(4) ?? "未发布"}</dd>
+					<dt className="text-(--color-foreground-tertiary)">基准末值</dt>
+					<dd className="font-data text-(--color-foreground)">{lastBenchmark?.toFixed(4) ?? "未发布"}</dd>
+					<dt className="text-(--color-foreground-tertiary)">基准收益</dt>
+					<dd className="font-data text-(--color-foreground)">
+						{benchmark?.benchmarkReturn === null || benchmark?.benchmarkReturn === undefined
+							? "未发布"
+							: `${benchmark.benchmarkReturn.toFixed(2)}%`}
+					</dd>
+					<dt className="text-(--color-foreground-tertiary)">基准点数</dt>
+					<dd className="font-data text-(--color-foreground)">{benchmark?.navs.length ?? "未发布"}</dd>
+				</dl>
+				{benchmarkQuery.isLoading && <p className="mt-4 text-xs text-(--color-foreground-tertiary)">正在加载基准…</p>}
+				{benchmarkErrorText && (
+					<div className="mt-4 border-t border-(--color-border-subtle) pt-3">
+						<p role="alert" className="text-xs text-(--color-led-danger)">
+							{benchmarkErrorText}
+						</p>
+						<Button size="sm" variant="outline" className="mt-2" onClick={() => void benchmarkQuery.refetch()}>
+							重试基准序列
+						</Button>
+					</div>
+				)}
+			</aside>
+		</div>
 	);
 }

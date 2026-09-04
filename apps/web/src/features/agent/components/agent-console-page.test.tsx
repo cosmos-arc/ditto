@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 	useAgentRun: vi.fn(),
 	useAgentRuns: vi.fn(),
 	useAgentSessions: vi.fn(),
+	executeRun: vi.fn(),
 }));
 
 vi.mock("../hooks", () => ({
@@ -25,6 +26,7 @@ vi.mock("../hooks", () => ({
 	useCancelAgentRun: () => ({ isPending: false, error: null, mutate: vi.fn() }),
 	useCreateAgentCampaign: () => ({ isPending: false, error: null, mutate: vi.fn() }),
 	useCreateAgentRun: () => ({ isPending: false, error: null, mutate: vi.fn() }),
+	useExecuteAgentRun: () => ({ isPending: false, error: null, mutate: mocks.executeRun }),
 	useDecideAgentApproval: () => ({ isPending: false, error: null, mutate: vi.fn() }),
 	useValidateAgentCampaign: () => ({ isPending: false, error: null, mutateAsync: vi.fn(), reset: vi.fn() }),
 }));
@@ -69,6 +71,19 @@ const run: AgentRunView = {
 		exhaustedReason: null,
 	},
 	failureCode: null,
+	executionPlan: {
+		allowedTools: ["research_factor_evidence"],
+		allowedUniverse: ["510300.SH"],
+		authorityHash: "a".repeat(64),
+		decisionTime: "2026-08-18T01:00:00Z",
+		egressClass: "cloud_allowed",
+		executionEligibleAt: "not_applicable",
+		knowledgeCutoff: "2026-08-18T00:55:00Z",
+		licenseClass: "approved-research",
+		maxOutputTokens: 1024,
+		publicationCutoff: "2026-08-18T00:50:00Z",
+		sourceSnapshotId: "snapshot-certified-2026-08-18",
+	},
 	eventCursor: 17,
 	projectionState: "partial",
 	projectionReason: "output_summary_pending",
@@ -198,12 +213,30 @@ beforeEach(() => {
 });
 
 describe("AgentConsolePage", () => {
+	it("separates Research Agent Lab, System Agent Ops, and the Approval Inbox", () => {
+		const lab = render(<AgentConsolePage surface="research-lab" initialSearch={{ tab: "runs" }} />, { wrapper });
+		expect(screen.getByRole("region", { name: "Research Agent Lab" })).toBeInTheDocument();
+		expect(screen.getByText("Research Agent Lab · Strategy Author")).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Approvals" })).not.toBeInTheDocument();
+		lab.unmount();
+
+		const ops = render(<AgentConsolePage surface="system-ops" initialSearch={{ tab: "runs" }} />, { wrapper });
+		expect(screen.getByRole("region", { name: "System Agent Ops" })).toBeInTheDocument();
+		expect(screen.getByText("System Agent Ops · Runtime supervision")).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Approvals" })).not.toBeInTheDocument();
+		ops.unmount();
+
+		render(<AgentConsolePage surface="approval-inbox" initialSearch={{ tab: "approvals" }} />, { wrapper });
+		expect(screen.getByRole("region", { name: "Agent Approval Inbox" })).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Approvals" })).toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Runs" })).not.toBeInTheDocument();
+	});
+
 	it("exposes every required visual-audit contract slot", () => {
 		const { container } = render(<AgentConsolePage initialSearch={{ tab: "runs" }} />, { wrapper });
 
 		for (const [name, slot] of Object.entries({
 			shell: "shell",
-			header: "agent-header",
 			tabs: "tabs",
 			source: "source",
 			main: "main",
@@ -213,11 +246,12 @@ describe("AgentConsolePage", () => {
 			expect(container.querySelector(`[data-slot='${slot}']`), name).not.toBeNull();
 		}
 		const toolbar = container.querySelector("[data-slot='task-toolbar']");
-		expect(toolbar).toHaveClass("flex-col", "sm:flex-row");
+		expect(toolbar).toHaveClass("h-[42px]", "flex-row");
+		expect(container.querySelector("[data-slot='agent-header']")).not.toBeInTheDocument();
 		const shell = container.querySelector("[data-slot='shell']");
-		expect(shell).toHaveClass("h-full", "min-h-0", "overflow-y-auto", "xl:overflow-hidden");
+		expect(shell).toHaveClass("h-full", "min-h-0", "overflow-hidden");
 		const workspace = container.querySelector("[data-slot='workspace']");
-		expect(workspace).toHaveClass("flex-none", "xl:flex-1");
+		expect(workspace).toHaveClass("flex-1", "xl:grid-cols-[18rem_minmax(0,1fr)_23.25rem]");
 	});
 
 	it("keeps historical projections readable when runtime is disabled and blocks creation", async () => {
@@ -225,9 +259,9 @@ describe("AgentConsolePage", () => {
 			wrapper,
 		});
 
-		expect(screen.getByRole("banner")).toHaveTextContent("provider_not_configured");
+		expect(screen.getByRole("status", { name: "Agent runtime" })).toHaveTextContent("provider_not_configured");
 		expect(
-			container.querySelector("[data-slot='agent-header']")?.textContent?.match(/provider not configured/g),
+			container.querySelector("[data-slot='shell-header-extension']")?.textContent?.match(/provider not configured/g),
 		).toHaveLength(1);
 		expect(screen.getByRole("button", { name: "新建 Run" })).toBeDisabled();
 		expect(screen.getByRole("heading", { name: "核对候选因子的证据链" })).toBeInTheDocument();
@@ -278,6 +312,57 @@ describe("AgentConsolePage", () => {
 		expect(screen.getByRole("main")).toHaveTextContent("10,600 tokens remaining");
 		expect(screen.getByRole("main")).toHaveTextContent("$2.82 remaining");
 		expect(screen.getByRole("main")).toHaveTextContent("stop reasonnone");
+	});
+
+	it("shows the exact PIT authority and lets a queued run execute by revision", () => {
+		const queued = { ...run, status: "queued" as const, revision: 0 };
+		mocks.useAgentCapability.mockReturnValue(
+			query({
+				enabled: true,
+				runtimeState: "available",
+				provider: "glm",
+				availableProfiles: ["balanced"],
+				defaultProfile: "balanced",
+				degradationReason: null,
+				checkedAt: "2026-08-18T01:00:00Z",
+			}),
+		);
+		mocks.useAgentRuns.mockReturnValue(
+			query({ items: [queued], pagination: { total: 1, limit: 20, offset: 0, hasMore: false } }),
+		);
+		mocks.useAgentRun.mockImplementation((id: string) => query(id ? queued : undefined));
+
+		render(<AgentConsolePage initialSearch={{ tab: "runs", selected: queued.runId }} />, { wrapper });
+
+		expect(screen.getByRole("main")).toHaveTextContent("snapshot-certified-2026-08-18");
+		expect(screen.getByRole("main")).toHaveTextContent("2026-08-18T00:50:00Z");
+		fireEvent.click(screen.getAllByRole("button", { name: "执行 Run" })[0] as HTMLButtonElement);
+		expect(mocks.executeRun).toHaveBeenCalledWith({ runId: queued.runId, revision: 0 });
+	});
+
+	it("keeps a queued run readable but blocks execution while the model lane is degraded", () => {
+		const queued = { ...run, status: "queued" as const, revision: 0 };
+		mocks.useAgentCapability.mockReturnValue(
+			query({
+				enabled: true,
+				runtimeState: "degraded",
+				provider: null,
+				availableProfiles: ["balanced"],
+				defaultProfile: "balanced",
+				degradationReason: "agent_model_execution_unconfigured",
+				checkedAt: "2026-08-18T01:00:00Z",
+			}),
+		);
+		mocks.useAgentRuns.mockReturnValue(
+			query({ items: [queued], pagination: { total: 1, limit: 20, offset: 0, hasMore: false } }),
+		);
+		mocks.useAgentRun.mockImplementation((id: string) => query(id ? queued : undefined));
+
+		render(<AgentConsolePage initialSearch={{ tab: "runs", selected: queued.runId }} />, { wrapper });
+
+		expect(screen.getByRole("status", { name: "Agent runtime" })).toHaveTextContent("模型执行已禁用");
+		expect(screen.queryByRole("button", { name: "执行 Run" })).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "新建 Run" })).toBeEnabled();
 	});
 
 	it("forwards an exact URL context pair to the durable run list", () => {

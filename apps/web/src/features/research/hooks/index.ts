@@ -54,8 +54,7 @@ export function useReviewQueue() {
 	});
 }
 
+export { useFactorCatalog } from "./use-factor-catalog";
 export { useFactorAnalysis, useFactorDetail, useFactorDiagnostics } from "./use-factor-detail";
-export { useRegimeCurrent } from "./use-regime-current";
-export { useRegimeDrivers } from "./use-regime-drivers";
-export { useRegimeHistory } from "./use-regime-history";
-export { useRegimeStrategyImpact } from "./use-regime-strategy-impact";
+export { isCompleteRegimeScope, regimeDiagnosticsKeys, useRegimeDiagnostics } from "./use-regime-diagnostics";
+export { universeKeys, useUniverseCommands, useUniverseMembers, useUniverses } from "./use-universes";

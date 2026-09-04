@@ -11,7 +11,7 @@ vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
 	return {
 		...actual,
-		useParams: () => ({ id: "600519.SH" }),
+		useParams: () => ({ id: "1000001" }),
 	};
 });
 
@@ -30,7 +30,7 @@ function createWrapper() {
 	};
 }
 
-// ── InstrumentHubPage: 3 L1, 2 L2, 12 L3 ──
+// ── InstrumentHubPage information hierarchy ──
 
 describe("InstrumentHubPage info-level annotations", () => {
 	beforeEach(() => server.use(...instrumentsHandlers));
@@ -49,32 +49,28 @@ describe("InstrumentHubPage info-level annotations", () => {
 		expect(l1Units).toHaveLength(3);
 	});
 
-	it("annotates 2 L2 information units", async () => {
+	it("annotates the evidence sections", async () => {
 		render(<InstrumentHubPage />, { wrapper: createWrapper() });
 
-		// Wait for fundamentals data to load
-		await screen.findByText("2025Q3");
+		await screen.findAllByText("1000001");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
-		expect(l2UnitNames).toContain("financial-statements");
-		expect(l2UnitNames).toContain("fundamentals");
+		expect(l2UnitNames).toContain("instrument-profile");
+		expect(l2UnitNames).toContain("fundamental-boundary");
 		expect(l2Units).toHaveLength(2);
 	});
 
-	it("annotates 12 L3 detail items", async () => {
+	it("annotates the six server-reported identity fields", async () => {
 		render(<InstrumentHubPage />, { wrapper: createWrapper() });
 
-		// Wait for fundamentals data to load
-		await screen.findByText("2025Q3");
+		await screen.findAllByText("1000001");
 
 		const l3Units = document.querySelectorAll("[data-info-level='l3']");
 		const l3UnitNames = Array.from(l3Units).map((el) => el.getAttribute("data-info-unit"));
 
-		expect(l3UnitNames.filter((n) => n === "income-statement-item")).toHaveLength(4);
-		expect(l3UnitNames.filter((n) => n === "fundamental-ratio-item")).toHaveLength(5);
-		expect(l3UnitNames.filter((n) => n === "peer-comparison-item")).toHaveLength(3);
-		expect(l3Units).toHaveLength(12);
+		expect(l3UnitNames.filter((n) => n === "instrument-profile-item")).toHaveLength(6);
+		expect(l3Units).toHaveLength(6);
 	});
 });

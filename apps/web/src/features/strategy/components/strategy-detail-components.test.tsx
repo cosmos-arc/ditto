@@ -87,14 +87,18 @@ describe("StrategyOverview", () => {
 });
 
 describe("StrategyFactorsView", () => {
-	it("渲染策略参数区域", async () => {
+	it("渲染因子配置区域", async () => {
 		render(<StrategyFactorsView id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("策略参数")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("因子配置")).resolves.toBeInTheDocument();
 	});
 
-	it("显示参数键值", async () => {
+	it("显示 factor expression、权重和分析入口", async () => {
 		render(<StrategyFactorsView id="strat-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("lookback")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("vol_window")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("momentum_1m")).resolves.toBeInTheDocument();
+		expect(screen.getByText("0.5")).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "分析 momentum_1m" })).toHaveAttribute(
+			"href",
+			"/research/factors/momentum_1m",
+		);
 	});
 });

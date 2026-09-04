@@ -8,11 +8,11 @@ import { homeHandlers } from "@/mocks/handlers/home";
 import { instrumentsHandlers } from "@/mocks/handlers/instruments";
 import { intelligenceHandlers } from "@/mocks/handlers/intelligence";
 import { marketsHandlers } from "@/mocks/handlers/markets";
-import { platformHandlers } from "@/mocks/handlers/platform";
+import { portfolioHandlers } from "@/mocks/handlers/portfolio";
 import { regimeHandlers } from "@/mocks/handlers/regime";
 import { researchHandlers } from "@/mocks/handlers/research";
 import { strategyHandlers } from "@/mocks/handlers/strategy";
-import { tradingHandlers } from "@/mocks/handlers/trading";
+import { systemHandlers } from "@/mocks/handlers/system";
 import { server } from "@/mocks/server";
 
 const complianceTestTimeoutMs = 15_000;
@@ -45,9 +45,9 @@ describe("v3 Interaction Framework Compliance", () => {
 	beforeAll(() => {
 		server.use(
 			...homeHandlers,
-			...tradingHandlers,
+			...portfolioHandlers,
 			...aiHandlers,
-			...platformHandlers,
+			...systemHandlers,
 			...instrumentsHandlers,
 			...strategyHandlers,
 			...marketsHandlers,
@@ -132,9 +132,9 @@ describe("v3 Interaction Framework Compliance", () => {
 		});
 
 		it("Platform page has at least one L1 unit", async () => {
-			const { PlatformPage } = await import("@/features/platform/components/platform-page");
+			const { SystemPage } = await import("@/features/system/components/system-page");
 			const wrapper = createWrapper();
-			render(<PlatformPage />, { wrapper });
+			render(<SystemPage />, { wrapper });
 			await waitFor(() => {
 				const l1Units = document.querySelectorAll("[data-info-level='l1']");
 				expect(l1Units.length).toBeGreaterThanOrEqual(1);
@@ -142,9 +142,9 @@ describe("v3 Interaction Framework Compliance", () => {
 		});
 
 		it("Trading page has at least one L1 unit", async () => {
-			const { TradingPage } = await import("@/features/trading/components/trading-page");
+			const { PortfolioOverviewPage } = await import("@/features/portfolio/components/portfolio-overview-page");
 			const wrapper = createWrapper();
-			render(<TradingPage />, { wrapper });
+			render(<PortfolioOverviewPage />, { wrapper });
 			await waitFor(() => {
 				const l1Units = document.querySelectorAll("[data-info-level='l1']");
 				expect(l1Units.length).toBeGreaterThanOrEqual(1);
@@ -152,7 +152,7 @@ describe("v3 Interaction Framework Compliance", () => {
 		});
 
 		it("Signals page has at least one L1 unit", async () => {
-			const { SignalsPage } = await import("@/features/trading/components/signals-page");
+			const { SignalsPage } = await import("@/features/portfolio/components/signals-page");
 			const wrapper = createWrapper();
 			render(<SignalsPage />, { wrapper });
 			await waitFor(() => {

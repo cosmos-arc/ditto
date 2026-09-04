@@ -43,6 +43,81 @@
     },
     "note": "Gate score and release UX score are separate. Do not compare manifest near-10 scores with release UX heuristic score. Numeric page scores were not manually inflated after remediation."
   },
+  "reactOnlyRoutes": [
+    {
+      "route": "/system/data-products",
+      "featureModule": "src/features/data-products",
+      "status": "implemented",
+      "reason": "Operational data-product page introduced after the frozen prototype edition; validated through its React contract tests.",
+      "landing": {
+        "reactRouteStatus": "implemented",
+        "featureModule": "src/features/data-products",
+        "contractStatus": "react-only-verified",
+        "overlayStatus": "triggerable",
+        "prototypeVerified": false,
+        "reactParityVerified": true,
+        "reactTestRefs": [
+          "src/features/data-products/components/data-product-workbench.test.tsx",
+          "src/features/data-products/components/data-product-operations.test.tsx",
+          "src/features/data-products/components/data-product-governance-actions.test.tsx",
+          "src/features/data-products/hooks/use-data-products.test.tsx",
+          "src/features/data-products/hooks/use-data-product-operations.test.tsx"
+        ]
+      },
+      "liveData": {
+        "readPaths": [
+          "/api/v1/data-products",
+          "/api/v1/data-products/{dataset_id}/coverage",
+          "/api/v1/data-products/{dataset_id}/quality",
+          "/api/v1/data-products/{dataset_id}/runs",
+          "/api/v1/data-products/{dataset_id}/evidence",
+          "/api/v1/data-products/{dataset_id}/license",
+          "/api/v1/ingestion/catalog/remediation/backlog",
+          "/api/v1/ingestion/catalog/remediation/items/{item_id}",
+          "/api/v1/ingestion/catalog/remediation/approvals",
+          "/api/v1/ingestion/catalog/source-health",
+          "/api/v1/ingestion/catalog/source-health/summary",
+          "/api/v1/ingestion/catalog/source-fallback/preview",
+          "/api/v1/ingestion/catalog/source-fallback/policies",
+          "/api/v1/ingestion/catalog/source-fallback/summary",
+          "/api/v1/ingestion/catalog/promotion/readiness",
+          "/api/v1/ingestion/catalog/promotion/history"
+        ],
+        "writePaths": [
+          "/api/v1/ingestion/catalog/remediation/approvals",
+          "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/decision",
+          "/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/execute",
+          "/api/v1/ingestion/catalog/source-fallback/policies",
+          "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/approval",
+          "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/activation",
+          "/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/retirement",
+          "/api/v1/ingestion/catalog/promotion/revoke"
+        ],
+        "mockFallback": false
+      },
+      "states": {
+        "universal": ["loading", "empty", "error", "stale"],
+        "pageSpecific": [
+          "selected-row",
+          "coverage-gap",
+          "dq-failed",
+          "pit-evidence",
+          "remediation-empty",
+          "source-degraded",
+          "fallback-active",
+          "promotion-blocked",
+          "approval-expired",
+          "confirmation-required"
+        ]
+      },
+      "overlays": [
+        {
+          "id": "data-products.governed-actions",
+          "reactComponent": "DataProductGovernanceActions"
+        }
+      ]
+    }
+  ],
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
   "iterationV2CompletedAt": "2026-04-05",
@@ -82,9 +157,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/markets",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
   {
@@ -113,10 +189,11 @@
       "shellFamily": "ops-console",
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/platform",
-        "contractStatus": "draft",
+        "featureModule": "src/features/system",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -165,9 +242,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/home",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -196,10 +274,11 @@
       "shellFamily": "catalog",
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/screener",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "featureModule": "src/features/selection",
+        "contractStatus": "verified",
+        "overlayStatus": "implemented",
+        "prototypeVerified": false,
+        "reactParityVerified": false
       }
     },
     {
@@ -230,9 +309,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -253,12 +333,14 @@
       "blueprintId": "6a",
       "shellFamily": "studio",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "superseded",
         "featureModule": "src/features/research",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
-      }
+        "contractStatus": "retired",
+        "overlayStatus": "archived",
+        "prototypeVerified": true,
+        "reactParityVerified": false
+      },
+      "migrationNote": "2026-08-31 five-domain hard cut removes the legacy route contract; the frozen HTML remains a design specimen."
     },
   {
     "id": "trading-overview",
@@ -293,12 +375,14 @@
       "blueprintId": 9,
       "shellFamily": "analytical",
       "landing": {
-        "reactRouteStatus": "implemented",
-        "featureModule": "src/features/trading",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
-      }
+        "reactRouteStatus": "superseded",
+        "featureModule": "src/features/portfolio",
+        "contractStatus": "retired",
+        "overlayStatus": "archived",
+        "prototypeVerified": true,
+        "reactParityVerified": false
+      },
+      "migrationNote": "2026-08-31 five-domain hard cut removes the legacy route contract; the frozen HTML remains a design specimen."
     },
     {
       "id": "instrument-hub",
@@ -335,9 +419,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/instruments",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -374,9 +459,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/strategy",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -413,10 +499,11 @@
       "shellFamily": "ops-console",
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/trading",
-        "contractStatus": "draft",
+        "featureModule": "src/features/portfolio",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -452,10 +539,11 @@
       "shellFamily": "ops-console",
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/trading",
-        "contractStatus": "draft",
+        "featureModule": "src/features/portfolio",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
   {
@@ -492,10 +580,11 @@
       "shellFamily": "analytical",
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/trading",
-        "contractStatus": "draft",
+        "featureModule": "src/features/portfolio",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -532,10 +621,11 @@
       "shellFamily": "command-center",
       "landing": {
         "reactRouteStatus": "deprecated",
-        "featureModule": "src/features/home + src/features/platform",
+        "featureModule": "src/features/home + src/features/system",
         "contractStatus": "archived",
         "overlayStatus": "archived",
-        "visualAuditStatus": "not-applicable"
+        "prototypeVerified": false,
+        "reactParityVerified": false
       },
       "migrationNote": "v2.0 removes /ai as a product domain; overview content lands in Home Agent Findings and Platform Agents.",
       "archiveNote": "Physically archived on 2026-04-30; retained as an AI interaction specimen, not an active landing route candidate."
@@ -567,12 +657,14 @@
       "blueprintId": 17,
       "shellFamily": "analytical",
       "landing": {
-        "reactRouteStatus": "implemented",
+        "reactRouteStatus": "superseded",
         "featureModule": "src/features/research",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
-      }
+        "contractStatus": "retired",
+        "overlayStatus": "archived",
+        "prototypeVerified": true,
+        "reactParityVerified": false
+      },
+      "migrationNote": "2026-08-31 five-domain hard cut removes the legacy route contract; the frozen HTML remains a design specimen."
     },
     {
       "id": "markets-intelligence",
@@ -609,12 +701,14 @@
       "blueprintId": "2.2",
       "shellFamily": "analytical",
       "landing": {
-        "reactRouteStatus": "implemented",
+        "reactRouteStatus": "superseded",
         "featureModule": "src/features/markets",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
-      }
+        "contractStatus": "retired",
+        "overlayStatus": "archived",
+        "prototypeVerified": true,
+        "reactParityVerified": false
+      },
+      "migrationNote": "2026-08-31 five-domain hard cut removes the legacy route contract; the frozen HTML remains a design specimen."
     },
     {
       "id": "ai-copilot",
@@ -653,7 +747,8 @@
         "featureModule": "global-copilot-sidecar",
         "contractStatus": "archived",
         "overlayStatus": "archived",
-        "visualAuditStatus": "not-applicable"
+        "prototypeVerified": false,
+        "reactParityVerified": false
       },
       "migrationNote": "v2.0 removes /ai/copilot as a product route; Copilot now lands as a global sidecar capability.",
       "archiveNote": "Physically archived on 2026-04-30; retained as an AI interaction specimen, not an active landing route candidate."
@@ -691,12 +786,13 @@
       "shellFamily": "studio",
       "landing": {
         "reactRouteStatus": "superseded",
-        "featureModule": "src/features/platform",
+        "featureModule": "src/features/system",
         "contractStatus": "superseded",
         "overlayStatus": "archived",
-        "visualAuditStatus": "superseded"
+        "prototypeVerified": false,
+        "reactParityVerified": false
       },
-      "archiveNote": "2026-05-12: removed from the prototype release surface; page-agent-console-v2.html is the canonical /platform/agents prototype."
+      "archiveNote": "2026-05-12: removed from the prototype release surface; page-agent-console-v2.html is the canonical /research/agent and /system/agent shared prototype."
     },
   {
     "id": "agent-console-v2",
@@ -718,9 +814,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/agent",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -747,9 +844,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/strategy",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -776,9 +874,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -805,9 +904,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/backtest",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -849,12 +949,14 @@
       "blueprintId": "4.2",
       "shellFamily": "catalog",
       "landing": {
-        "reactRouteStatus": "implemented",
+        "reactRouteStatus": "superseded",
         "featureModule": "src/features/markets",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
-      }
+        "contractStatus": "retired",
+        "overlayStatus": "archived",
+        "prototypeVerified": true,
+        "reactParityVerified": false
+      },
+      "migrationNote": "2026-08-31 five-domain hard cut removes the legacy route contract; the frozen HTML remains a design specimen."
     },
     {
       "id": "a-shares",
@@ -898,9 +1000,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/markets",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -952,10 +1055,11 @@
     "note": "2026-08-18 R4: 增加 current/target/delta、solver/policy、total exposure/cash baseline、reconciliation 与失败关闭状态。",
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/trading",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "featureModule": "src/features/portfolio",
+        "contractStatus": "verified",
+        "overlayStatus": "none",
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -981,9 +1085,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/markets",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -1009,9 +1114,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -1037,9 +1143,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/strategy",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -1065,9 +1172,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/backtest",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -1093,9 +1201,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -1121,9 +1230,10 @@
       "landing": {
         "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
-        "contractStatus": "draft",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": true
       }
     },
     {
@@ -1141,17 +1251,18 @@
         "after": 0
       },
       "stateCoverage": {
-        "tabs": 3,
-        "overlays": 4,
-        "stateVariants": 12,
+        "tabs": 0,
+        "overlays": 0,
+        "stateVariants": 9,
         "coveragePercent": 100
       },
       "landing": {
         "reactRouteStatus": "implemented",
-        "featureModule": "src/features/platform",
-        "contractStatus": "draft",
+        "featureModule": "src/features/system",
+        "contractStatus": "verified",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "verified"
+        "prototypeVerified": true,
+        "reactParityVerified": false
       }
     }
   ],

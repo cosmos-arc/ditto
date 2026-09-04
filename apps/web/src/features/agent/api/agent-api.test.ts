@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "@/types/generated/api";
-import { createAgentRun, listAgentRuns, validateAgentCampaignStep } from "./agent-api";
+import { createAgentRun, executeAgentRun, listAgentRuns, validateAgentCampaignStep } from "./agent-api";
 
 type AgentRunResponse = components["schemas"]["AgentRunResponse"];
 
@@ -20,6 +20,7 @@ function runResponse(): AgentRunResponse {
 		finished_at: null,
 		revision: 3,
 		objective: "Explain the factor evidence.",
+		execution_plan: null,
 		context: { context_type: "factor", context_id: "factor:mom-20" },
 		output_summary: "Evidence is still being assembled.",
 		tool_records: [],
@@ -118,12 +119,20 @@ describe("Agent API adapter", () => {
 		);
 	});
 
-	it("creates a run with an exact derived authority hash and idempotency key", async () => {
+	it("creates a run with an explicit PIT scope and server-derived authority", async () => {
 		const fetchMock = vi.fn<typeof fetch>(async (_input, init) => {
 			const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-			expect(body.authority_hash).toMatch(/^[0-9a-f]{64}$/u);
+			expect(body).not.toHaveProperty("authority_hash");
+			expect(body.execution_scope).toEqual({
+				allowed_universe: ["510300.SH"],
+				decision_time: "2026-08-18T08:00:00Z",
+				knowledge_cutoff: "2026-08-18T07:55:00Z",
+				max_output_tokens: 1024,
+				publication_cutoff: "2026-08-18T07:50:00Z",
+				source_snapshot_id: "snapshot-certified-2026-08-18",
+			});
 			expect(body).not.toHaveProperty("api_key");
-			return new Response(JSON.stringify({ data: { ...runResponse(), authority_hash: body.authority_hash } }), {
+			return new Response(JSON.stringify({ data: runResponse() }), {
 				status: 201,
 				headers: { "Content-Type": "application/json" },
 			});
@@ -137,6 +146,14 @@ describe("Agent API adapter", () => {
 			maxModelSpendUsd: "1.25",
 			modelProfile: "balanced",
 			context: { contextType: "factor", contextId: "factor:mom-20" },
+			executionScope: {
+				allowedUniverse: ["510300.SH"],
+				decisionTime: "2026-08-18T08:00:00Z",
+				knowledgeCutoff: "2026-08-18T07:55:00Z",
+				maxOutputTokens: 1024,
+				publicationCutoff: "2026-08-18T07:50:00Z",
+				sourceSnapshotId: "snapshot-certified-2026-08-18",
+			},
 			idempotencyKey: "run-create-21",
 		});
 
@@ -147,6 +164,27 @@ describe("Agent API adapter", () => {
 				method: "POST",
 				headers: expect.objectContaining({ "Idempotency-Key": "run-create-21" }),
 			}),
+		);
+	});
+
+	it("executes only the exact queued revision", async () => {
+		const fetchMock = vi.fn<typeof fetch>(async (_input, init) => {
+			expect(JSON.parse(String(init?.body))).toEqual({ expected_revision: 3 });
+			return new Response(JSON.stringify({ data: { ...runResponse(), status: "completed", revision: 5 } }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			});
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(executeAgentRun({ runId: "run-21", revision: 3 })).resolves.toMatchObject({
+			runId: "run-21",
+			status: "completed",
+			revision: 5,
+		});
+		expect(fetchMock).toHaveBeenCalledWith(
+			"/api/v1/agent/runs/run-21/execute",
+			expect.objectContaining({ method: "POST" }),
 		);
 	});
 });

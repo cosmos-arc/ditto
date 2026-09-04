@@ -1,83 +1,61 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useInstrumentFundamentals } from "../hooks";
+import { ErrorState } from "@/lib/error-boundary";
+import { useInstrumentDetail } from "../hooks";
 
 interface InstrumentOverviewProps {
 	readonly id: string;
 }
 
 export function InstrumentOverview({ id }: InstrumentOverviewProps) {
-	const { data, isLoading, refetch } = useInstrumentFundamentals(id);
+	const query = useInstrumentDetail(id);
+
+	if (query.isError) return <ErrorState onRetry={() => void query.refetch()} />;
+
+	const fields = query.data
+		? ([
+				["内部 ID", String(query.data.instrument_id)],
+				["裸代码", query.data.ticker],
+				["交易所", query.data.exchange],
+				["资产类别", query.data.asset_class],
+				["上市日期", query.data.list_date ?? "未报告"],
+				["当前状态", query.data.is_active ? "交易中" : "非活跃"],
+			] as const)
+		: [];
 
 	return (
-		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">
-			<div data-info-level="l2" data-info-unit="financial-statements">
-				<ContextSection title="财务报表">
-					{isLoading && <LoadingSkeleton variant="table" rows={4} />}
-					<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-						{data && (
-							<div className="space-y-1">
-								{data.income.map((stmt) => (
-									<div
-										key={stmt.period}
-										data-info-level="l3"
-										data-info-unit="income-statement-item"
-										className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-									>
-										<span className="font-medium">{stmt.period}</span>
-										<div className="flex gap-4 text-(--color-foreground-tertiary)">
-											<span>营收 {stmt.revenue.toLocaleString()}万</span>
-											<span>净利润 {stmt.netProfit.toLocaleString()}万</span>
-											<span>毛利率 {stmt.grossMargin.toFixed(1)}%</span>
-											<span>净利率 {stmt.netMargin.toFixed(1)}%</span>
-										</div>
-									</div>
-								))}
-							</div>
-						)}
-					</DittoErrorBoundary>
+		<div className="grid gap-[var(--section-gap)] p-[var(--density-panel-padding)] lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)]">
+			<div data-info-level="l2" data-info-unit="instrument-profile">
+				<ContextSection title="标的档案">
+					{query.isLoading ? (
+						<LoadingSkeleton variant="table" rows={6} />
+					) : (
+						<dl className="grid gap-px overflow-hidden rounded-lg border border-(--color-border-subtle) bg-(--color-border-subtle) sm:grid-cols-2">
+							{fields.map(([label, value]) => (
+								<div
+									key={label}
+									data-info-level="l3"
+									data-info-unit="instrument-profile-item"
+									className="bg-(--color-surface-1) px-4 py-3"
+								>
+									<dt className="text-xs text-(--color-foreground-tertiary)">{label}</dt>
+									<dd className="mt-1 font-medium text-sm text-(--color-foreground)">{value}</dd>
+								</div>
+							))}
+						</dl>
+					)}
 				</ContextSection>
 			</div>
 
-			<div data-info-level="l2" data-info-unit="fundamentals">
-				<ContextSection title="基本面">
-					{isLoading && <LoadingSkeleton variant="table" rows={5} />}
-					<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-						{data && (
-							<div className="grid grid-cols-2 gap-4">
-								<div className="space-y-1">
-									{data.ratios.map((r) => (
-										<div
-											key={r.name}
-											data-info-level="l3"
-											data-info-unit="fundamental-ratio-item"
-											className="flex items-center justify-between rounded-md px-3 py-2 text-sm"
-										>
-											<span className="text-(--color-foreground-tertiary)">{r.name}</span>
-											<span className="font-medium">{r.value.toFixed(2)}</span>
-										</div>
-									))}
-								</div>
-								<div className="space-y-1">
-									{data.peers.map((p) => (
-										<div
-											key={p.code}
-											data-info-level="l3"
-											data-info-unit="peer-comparison-item"
-											className="flex items-center justify-between rounded-md px-3 py-2 text-sm"
-										>
-											<span className="font-medium">{p.name}</span>
-											<div className="flex gap-3 text-(--color-foreground-tertiary)">
-												<span>PE {p.pe.toFixed(1)}</span>
-												<span>PB {p.pb.toFixed(1)}</span>
-											</div>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-					</DittoErrorBoundary>
+			<div data-info-level="l2" data-info-unit="fundamental-boundary">
+				<ContextSection title="基本面边界">
+					<div className="rounded-lg border border-(--color-border-subtle) bg-(--color-surface-1) p-4 text-sm leading-6">
+						<p className="font-medium text-(--color-foreground)">实验数据默认关闭</p>
+						<p className="mt-1 text-(--color-foreground-tertiary)">
+							财务、估值与分红接口需要精确 as-of 日期并显式允许 experimental 数据。本页不会用演示值填充
+							PE、PB、行业或同业比较。
+						</p>
+					</div>
 				</ContextSection>
 			</div>
 		</div>

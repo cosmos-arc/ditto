@@ -316,13 +316,14 @@
 	--height-status-bar: var(--shell-status-bar-height);
 	--width-activity: var(--shell-analytical-activity-width);
 	--height-analysis-band: var(--shell-analytical-band-height);
-	--height-trading-analysis-band: var(--shell-trading-analysis-band-height);
+	--height-portfolio-analysis-band: var(--shell-portfolio-analysis-band-height);
 	--width-radar-right-rail: var(--shell-radar-right-rail-width);
 	--width-catalog-detail: var(--shell-catalog-detail-width);
 	--width-ops-detail: var(--shell-ops-detail-width);
 	--width-signals-detail: var(--shell-signals-detail-width);
 	--width-studio-source: 240px;
 	--width-studio-inspector: 300px;
+	--height-studio-bottom: var(--shell-studio-bottom-height);
 	--width-copilot-session: 220px;
 	--width-copilot-context: 280px;
 
@@ -798,6 +799,10 @@ body {
 		animation-duration: 0.01ms;
 		animation-iteration-count: 1;
 		transition-duration: 0.01ms;
+	}
+	.reveal-up {
+		opacity: 1;
+		transform: none;
 	}
 }
 

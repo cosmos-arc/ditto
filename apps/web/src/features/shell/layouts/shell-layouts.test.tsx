@@ -130,13 +130,15 @@ describe("AnalyticalLayout", () => {
 		const { container } = render(<AnalyticalLayout main={<span>Main</span>} />);
 		const root = expectGridRoot(container);
 		expect(root.className).toContain("grid-cols-[1fr]");
-		expect(root.className).toContain("grid-rows-[auto_1fr]");
+		expect(root.className).toContain("grid-rows-[minmax(var(--height-strip-min,0px),auto)_1fr]");
 	});
 
 	it("applies grid layout with analysis, no banner", () => {
 		const { container } = render(<AnalyticalLayout main={<span>Main</span>} analysis={<span>Analysis</span>} />);
 		const root = expectGridRoot(container);
-		expect(root.className).toContain("grid-rows-[auto_1fr_var(--height-analysis-band)]");
+		expect(root.className).toContain(
+			"grid-rows-[minmax(var(--height-strip-min,0px),auto)_minmax(var(--height-main-min,0px),1fr)_var(--height-analysis-band)]",
+		);
 	});
 
 	it("applies grid layout with banner, no analysis", () => {
@@ -149,7 +151,7 @@ describe("AnalyticalLayout", () => {
 			/>,
 		);
 		const root = expectGridRoot(container);
-		expect(root.className).toContain("grid-rows-[auto_auto_1fr]");
+		expect(root.className).toContain("grid-rows-[minmax(var(--height-strip-min,0px),auto)_auto_1fr]");
 		expect(root.className).toContain('[grid-template-areas:"strip_strip""banner_banner""main_activity"]');
 	});
 
@@ -164,7 +166,9 @@ describe("AnalyticalLayout", () => {
 			/>,
 		);
 		const root = expectGridRoot(container);
-		expect(root.className).toContain("grid-rows-[auto_auto_1fr_var(--height-analysis-band)]");
+		expect(root.className).toContain(
+			"grid-rows-[minmax(var(--height-strip-min,0px),auto)_auto_minmax(var(--height-main-min,0px),1fr)_var(--height-analysis-band)]",
+		);
 		expect(root.className).toContain(
 			'[grid-template-areas:"strip_strip""banner_banner""main_activity""analysis_activity"]',
 		);
@@ -454,11 +458,13 @@ describe("OpsConsoleLayout", () => {
 		expect(root.className).toContain("grid-rows-[auto_1fr]");
 	});
 
-	it("applies two-column grid when detail is provided", () => {
+	it("applies a desktop detail column and collapses it below 900px", () => {
 		const { container } = render(<OpsConsoleLayout main={<span>Main</span>} detail={<span>Detail</span>} />);
 		const root = expectGridRoot(container);
-		expect(root.className).toContain("grid-cols-[1fr_var(--width-ops-detail)]");
+		expect(root.className).toContain("grid-cols-[1fr]");
+		expect(root.className).toContain("min-[900px]:grid-cols-[1fr_var(--width-ops-detail)]");
 		expect(root.className).toContain("grid-rows-[auto_1fr]");
+		expect(container.querySelector("[data-slot='detail']")).toHaveClass("hidden", "min-[900px]:block");
 	});
 
 	it("assigns correct grid-area to each slot", () => {

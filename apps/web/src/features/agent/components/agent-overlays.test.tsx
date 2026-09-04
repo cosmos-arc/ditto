@@ -126,6 +126,7 @@ const run: AgentRunView = {
 	guardrail: null,
 	usage: null,
 	failureCode: null,
+	executionPlan: null,
 	eventCursor: 17,
 	projectionState: "complete",
 	projectionReason: null,
@@ -200,7 +201,7 @@ describe("Agent governed overlays", () => {
 		expect(screen.getByRole("textbox", { name: "Context identity" })).toHaveValue("experiment-22@revision-4");
 	});
 
-	it("submits the exact governed run authority and returns the created projection", async () => {
+	it("submits the exact PIT scope and executes the new governed run", async () => {
 		const user = userEvent.setup();
 		const onCreated = vi.fn();
 		const onOpenChange = vi.fn();
@@ -221,8 +222,20 @@ describe("Agent governed overlays", () => {
 		await user.click(screen.getByText("覆盖硬预算"));
 		fireEvent.change(screen.getByRole("spinbutton", { name: "Max model tokens" }), { target: { value: "16000" } });
 		fireEvent.change(screen.getByRole("textbox", { name: "Max model spend USD" }), { target: { value: "4.25" } });
+		fireEvent.change(screen.getByRole("textbox", { name: "Decision time" }), {
+			target: { value: "2026-08-25T08:00:00Z" },
+		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Knowledge cutoff" }), {
+			target: { value: "2026-08-25T07:55:00Z" },
+		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Publication cutoff" }), {
+			target: { value: "2026-08-25T07:50:00Z" },
+		});
+		await user.type(screen.getByRole("textbox", { name: "Source snapshot" }), "snapshot-certified-2026-08-25");
+		await user.type(screen.getByRole("textbox", { name: "Allowed universe" }), "510300.SH, 510500.SH");
+		fireEvent.change(screen.getByRole("spinbutton", { name: "Max output tokens" }), { target: { value: "2048" } });
 		await user.click(screen.getByRole("button", { name: "取消" }));
-		await user.click(screen.getByRole("button", { name: "创建 Run" }));
+		await user.click(screen.getByRole("button", { name: "创建并执行" }));
 
 		expect(mocks.createRun).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -231,6 +244,15 @@ describe("Agent governed overlays", () => {
 				maxModelTokens: 16_000,
 				modelProfile: "quality",
 				objective: "Inspect exact evidence.",
+				executeImmediately: true,
+				executionScope: {
+					allowedUniverse: ["510300.SH", "510500.SH"],
+					decisionTime: "2026-08-25T08:00:00Z",
+					knowledgeCutoff: "2026-08-25T07:55:00Z",
+					maxOutputTokens: 2048,
+					publicationCutoff: "2026-08-25T07:50:00Z",
+					sourceSnapshotId: "snapshot-certified-2026-08-25",
+				},
 				retentionClass: "audit",
 				sessionId: "",
 				idempotencyKey: expect.stringMatching(/^agent-run:/),
@@ -241,6 +263,48 @@ describe("Agent governed overlays", () => {
 		options.onSuccess(run);
 		expect(onCreated).toHaveBeenCalledWith(run);
 		expect(onOpenChange).toHaveBeenLastCalledWith(false);
+	});
+
+	it("allows queueing but blocks immediate execution while the model lane is degraded", () => {
+		render(
+			<AgentRunCreateSheet
+				open
+				onOpenChange={vi.fn()}
+				onCreated={vi.fn()}
+				capability={{
+					...capability,
+					runtimeState: "degraded",
+					provider: null,
+					degradationReason: "agent_model_execution_unconfigured",
+				}}
+				initialObjective="Queue an exact evidence review."
+			/>,
+		);
+
+		fireEvent.change(screen.getByRole("textbox", { name: "Decision time" }), {
+			target: { value: "2026-08-25T08:00:00Z" },
+		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Knowledge cutoff" }), {
+			target: { value: "2026-08-25T07:55:00Z" },
+		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Publication cutoff" }), {
+			target: { value: "2026-08-25T07:50:00Z" },
+		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Source snapshot" }), {
+			target: { value: "snapshot-certified-2026-08-25" },
+		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Allowed universe" }), {
+			target: { value: "510300.SH" },
+		});
+
+		expect(screen.getByRole("alert")).toHaveTextContent("模型执行不可用");
+		expect(screen.getByRole("button", { name: "仅创建" })).toBeEnabled();
+		expect(screen.getByRole("button", { name: "创建并执行" })).toBeDisabled();
+		fireEvent.click(screen.getByRole("button", { name: "仅创建" }));
+		expect(mocks.createRun).toHaveBeenCalledWith(
+			expect.objectContaining({ executeImmediately: false }),
+			expect.any(Object),
+		);
 	});
 
 	it("requires the exact run revision phrase before cancelling", async () => {

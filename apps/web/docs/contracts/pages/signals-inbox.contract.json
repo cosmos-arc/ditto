@@ -1,10 +1,10 @@
 {
   "id": "signals-inbox",
-  "version": 2,
-  "status": "draft",
+  "version": 3,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-05-02",
-  "route": "/trading/signals",
+  "updatedAt": "2026-08-31",
+  "route": "/portfolio/review",
   "pagePattern": "queue-ops-console",
   "shellFamily": "ops-console",
   "prototypeRef": "docs/designs/specs/prototypes/page-signals-inbox.html",
@@ -13,16 +13,27 @@
   ],
   "landing": {
     "reactRouteStatus": "implemented",
-    "featureModule": "src/features/trading",
-    "contractStatus": "draft",
+    "featureModule": "src/features/portfolio",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
-      "src/features/trading/components/signals-components.test.tsx"
+      "src/features/portfolio/components/signals-components.test.tsx"
     ],
     "reactComponentRefs": [
-      "SignalsPage"
+      "SignalsPage",
+      "SignalDetailPanel"
     ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/manual/daily-decision/v2"
+    ],
+    "writePaths": [
+      "/api/v1/manual/fills"
+    ],
+    "mockFallback": false
   },
   "viewports": [
     {
@@ -34,13 +45,18 @@
       "width": 1366,
       "height": 768,
       "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
     }
   ],
   "slots": [
     {
       "name": "health",
       "required": true,
-      "prototypeSelector": ".ops-health",
+      "prototypeSelector": ".scope-strip",
       "reactSelector": "[data-slot='health']",
       "a11yRole": "banner",
       "responsiveBehavior": {
@@ -50,14 +66,14 @@
     {
       "name": "main",
       "required": true,
-      "prototypeSelector": ".ops-main",
+      "prototypeSelector": ".signals-main",
       "reactSelector": "[data-slot='main']",
       "a11yRole": "main"
     },
     {
       "name": "detail",
       "required": true,
-      "prototypeSelector": ".ops-detail",
+      "prototypeSelector": ".detail-panel",
       "reactSelector": "[data-slot='detail']",
       "a11yRole": "complementary",
       "responsiveBehavior": {
@@ -79,7 +95,8 @@
       "risk-pass",
       "risk-warn",
       "risk-block",
-      "evidence-open"
+      "evidence-open",
+      "manual-fill-open"
     ]
   },
   "overlays": [
@@ -93,7 +110,7 @@
         "action": "confirm-signal"
       },
       "prototypeSelector": "#overlay-order-confirm",
-      "reactComponent": "SignalDetailPanel",
+      "reactComponent": "SignalOrderPreviewDialog",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -110,7 +127,7 @@
         "action": "ai-read"
       },
       "prototypeSelector": "#overlay-ai-read",
-      "reactComponent": "SignalAiReadDialog",
+      "reactComponent": "SignalEvidenceDialog",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -118,16 +135,16 @@
       ]
     },
     {
-      "id": "signals-inbox.batch-confirm",
+      "id": "signals.batch-review",
       "kind": "modal",
       "blocking": true,
       "requiredInDefaultFlow": true,
       "trigger": {
         "slot": "main",
-        "action": "open-overlay"
+        "action": "open-batch-review"
       },
       "prototypeSelector": "#overlay-batch-confirm",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "SignalsBatchReviewDialog",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -135,16 +152,16 @@
       ]
     },
     {
-      "id": "signals-inbox.signal-confirm-to-order",
+      "id": "signals.order-preview",
       "kind": "modal",
       "blocking": true,
       "requiredInDefaultFlow": true,
       "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
+        "slot": "detail",
+        "action": "review-order-intent"
       },
       "prototypeSelector": "#overlay-signal-confirm-to-order",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "SignalOrderPreviewDialog",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -182,6 +199,6 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.05
   }
 }

@@ -57,7 +57,7 @@ describe("prototype primary answer actions", () => {
 
 	afterAll(async () => {
 		await browser.close();
-	});
+	}, 30_000);
 
 	it(
 		"opens the Research run queue drilldown from the primary answer action",

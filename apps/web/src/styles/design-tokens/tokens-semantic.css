@@ -109,9 +109,9 @@
 }
 
 /* --- Domain Signature Colors --- */
-/* Each domain gets a unique signature palette; brass is default for home/trading */
+/* Each domain gets a unique signature palette; brass is default for Today/Portfolio. */
 
-[data-domain="trading"] {
+[data-domain="portfolio"] {
 	--brand-signature-fg: oklch(0.76 0.055 74); /* Brass — current default */
 	--brand-signature-muted: oklch(0.66 0.04 74);
 	--brand-signature-line: oklch(0.62 0.04 74);
@@ -129,7 +129,7 @@
 	--brand-signature-line: oklch(0.582 0.065 300);
 	--brand-signature-subtle: oklch(0.732 0.095 300 / 0.08);
 }
-[data-domain="platform"] {
+[data-domain="system"] {
 	--brand-signature-fg: oklch(0.64 0.1 235); /* Lapis — order & control */
 	--brand-signature-muted: oklch(0.54 0.08 235);
 	--brand-signature-line: oklch(0.47 0.07 235);
@@ -231,7 +231,7 @@
 	--brand-signature-line: oklch(0.392 0.065 300);
 	--brand-signature-subtle: oklch(0.492 0.095 300 / 0.1);
 }
-[data-theme="light"][data-domain="platform"] {
+[data-theme="light"][data-domain="system"] {
 	--brand-signature-fg: oklch(0.4 0.1 235);
 	--brand-signature-muted: oklch(0.35 0.08 235);
 	--brand-signature-line: oklch(0.3 0.07 235);

@@ -105,8 +105,8 @@ export const mockHomeAlerts: readonly HomeAlert[] = [
 	{
 		id: "home-alert-002",
 		severity: "critical",
-		title: "券商连接中断 — 中信证券",
-		desc: "券商连接中断 — 中信证券",
+		title: "Paper 成交回放中断",
+		desc: "Paper 成交回放中断",
 		time: "15分钟前",
 	},
 	{

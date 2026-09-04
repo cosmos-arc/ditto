@@ -1,40 +1,47 @@
+import { useState } from "react";
+import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { AnalyticalLayout } from "@/features/shell";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
 import { ASharesOverview } from "./a-shares-overview";
+import { ASharesOverlay, type ASharesOverlayId, aSharesActions } from "./market-page-overlays";
 
 export function ASharesPage() {
+	const [activeOverlay, setActiveOverlay] = useState<ASharesOverlayId | null>(null);
 	return (
-		<AnalyticalLayout
-			main={
-				<div
-					data-info-level="l1"
-					data-info-unit="a-shares-main"
-					className="h-full overflow-y-auto p-(--density-panel-padding)"
-				>
-					<ASharesOverview />
-				</div>
-			}
-			activity={
-				<Panel data-info-level="l1" data-info-unit="market-snapshot">
-					<PanelHeader title="市场快照" />
-					<PanelBody data-info-level="l2" data-info-unit="snapshot-body" className="p-3">
-						<div
-							data-info-level="l2"
-							data-info-unit="snapshot-detail"
-							className="space-y-2 text-sm text-(--color-foreground-secondary)"
-						>
-							<p>沪深两市成交额 1.12 万亿，较昨日放量 8.3%。涨跌比 2847:1936。</p>
-							<p
-								data-info-level="l3"
-								data-info-unit="snapshot-timestamp"
-								className="text-xs text-(--color-foreground-tertiary)"
-							>
-								数据截至 15:00 收盘
-							</p>
+		<>
+			<AnalyticalLayout
+				strip={
+					<div className="flex flex-wrap items-center gap-3 border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-4 py-2">
+						<div className="min-w-0 flex-1">
+							<p className="text-sm font-medium">A 股市场</p>
+							<p className="text-xs text-(--color-foreground-tertiary)">范围：active stock metadata · 价格快照未加载</p>
 						</div>
-					</PanelBody>
-				</Panel>
-			}
-		/>
+						<PageActionBar ariaLabel="A 股页面操作" actions={aSharesActions} onOpen={setActiveOverlay} />
+					</div>
+				}
+				main={
+					<div
+						data-info-level="l1"
+						data-info-unit="a-shares-main"
+						className="h-full overflow-y-auto p-(--density-panel-padding)"
+					>
+						<ASharesOverview />
+					</div>
+				}
+				activity={
+					<Panel data-info-level="l1" data-info-unit="market-evidence-boundary">
+						<PanelHeader title="证据边界" />
+						<PanelBody className="p-4 text-sm leading-6 text-(--color-foreground-secondary)">
+							<p className="font-medium text-(--color-foreground)">价格与涨跌未查询</p>
+							<p className="mt-1">
+								metadata 合同只回答标的身份、上市日期与活跃状态。没有 immutable snapshot identity
+								时，本页不展示收盘点位、成交额或涨跌比。
+							</p>
+						</PanelBody>
+					</Panel>
+				}
+			/>
+			<ASharesOverlay active={activeOverlay} onClose={() => setActiveOverlay(null)} />
+		</>
 	);
 }

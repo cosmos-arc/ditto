@@ -7,6 +7,7 @@ import {
 	mockExperimentGates,
 	mockExperimentSelectionEvidence,
 } from "../fixtures/experiment-workbench";
+import { mockFactorCatalog } from "../fixtures/factor-catalog-live";
 import {
 	mockExperiments,
 	mockFactorAnalysis,
@@ -251,6 +252,7 @@ export const researchHandlers: RequestHandler[] = [
 			},
 		});
 	}),
+	http.get("/api/v1/research/factors", () => HttpResponse.json({ data: mockFactorCatalog })),
 
 	// === R3 review queue + review-packet live-shape（generated DTO + {data} 信封）===
 	http.get("/api/v1/research/reviews", () => HttpResponse.json({ data: mockReviewQueue })),

@@ -36,40 +36,42 @@ describe("Rail", () => {
 	it("renders navigation links for all 5 product domains", () => {
 		render(<Rail />);
 		// Each domain has a Link with aria-label
-		expect(screen.getByLabelText("首页")).toBeInTheDocument();
-		expect(screen.getByLabelText("市场")).toBeInTheDocument();
-		expect(screen.getByLabelText("研究")).toBeInTheDocument();
-		expect(screen.getByLabelText("交易")).toBeInTheDocument();
-		expect(screen.getByLabelText("平台")).toBeInTheDocument();
+		expect(screen.getByLabelText("Today")).toBeInTheDocument();
+		expect(screen.getByLabelText("Markets")).toBeInTheDocument();
+		expect(screen.getByLabelText("Research")).toBeInTheDocument();
+		expect(screen.getByLabelText("Portfolio")).toBeInTheDocument();
+		expect(screen.getByLabelText("System")).toBeInTheDocument();
+		expect(screen.queryByLabelText("交易")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("平台")).not.toBeInTheDocument();
 		expect(screen.queryByLabelText("AI")).not.toBeInTheDocument();
 	});
 
 	it("marks home as active when pathname is /", () => {
 		mockUseLocation.mockReturnValue({ pathname: "/" });
 		render(<Rail />);
-		const homeLink = screen.getByLabelText("首页").closest("a");
+		const homeLink = screen.getByLabelText("Today").closest("a");
 		expect(homeLink?.className).toContain("bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]");
 	});
 
 	it("marks markets as active when pathname starts with /markets", () => {
 		mockUseLocation.mockReturnValue({ pathname: "/markets" });
 		render(<Rail />);
-		const marketsLink = screen.getByLabelText("市场").closest("a");
+		const marketsLink = screen.getByLabelText("Markets").closest("a");
 		expect(marketsLink?.className).toContain("bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]");
 	});
 
-	it("marks trading as active when pathname starts with /trading/something", () => {
-		mockUseLocation.mockReturnValue({ pathname: "/trading/orders" });
+	it("marks portfolio as active when pathname starts with /portfolio", () => {
+		mockUseLocation.mockReturnValue({ pathname: "/portfolio/transactions" });
 		render(<Rail />);
-		const tradingLink = screen.getByLabelText("交易").closest("a");
-		expect(tradingLink?.className).toContain("bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]");
+		const portfolioLink = screen.getByLabelText("Portfolio").closest("a");
+		expect(portfolioLink?.className).toContain("bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]");
 	});
 
 	it("does not mark other domains active when on /research", () => {
 		mockUseLocation.mockReturnValue({ pathname: "/research" });
 		render(<Rail />);
-		const homeLink = screen.getByLabelText("首页").closest("a");
-		const marketsLink = screen.getByLabelText("市场").closest("a");
+		const homeLink = screen.getByLabelText("Today").closest("a");
+		const marketsLink = screen.getByLabelText("Markets").closest("a");
 		expect(homeLink?.className).not.toContain("bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]");
 		expect(marketsLink?.className).not.toContain("bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]");
 	});
@@ -88,8 +90,10 @@ describe("Rail", () => {
 		expect(screen.getByTestId("link-/")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/markets")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/research")).toBeInTheDocument();
-		expect(screen.getByTestId("link-/trading")).toBeInTheDocument();
-		expect(screen.getByTestId("link-/platform")).toBeInTheDocument();
+		expect(screen.getByTestId("link-/portfolio")).toBeInTheDocument();
+		expect(screen.getByTestId("link-/system")).toBeInTheDocument();
+		expect(screen.queryByTestId("link-/trading")).not.toBeInTheDocument();
+		expect(screen.queryByTestId("link-/platform")).not.toBeInTheDocument();
 		expect(screen.queryByTestId("link-/ai")).not.toBeInTheDocument();
 	});
 

@@ -42,8 +42,10 @@ export function StrategyEditor({
 	}
 
 	return (
-		<div className="flex flex-col gap-(--section-gap)">
-			<StrategySpecForm spec={spec} onChange={onChange} />
+		<div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+			<div className="2xl:col-span-2">
+				<StrategySpecForm spec={spec} onChange={onChange} />
+			</div>
 			<SignalExpressionsEditor spec={spec} onChange={onChange} />
 			<ParamConstraintsEditor spec={spec} onChange={onChange} />
 		</div>

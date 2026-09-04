@@ -56,24 +56,25 @@ describe("Research route page contract handoffs", () => {
 		render(<ResearchPage />, { wrapper: createWrapper() });
 
 		expect(screen.queryByText(/prototype only/i)).not.toBeInTheDocument();
-		await expect(screen.findByText("研究实验")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("治理审查")).resolves.toBeInTheDocument();
+		await expect(screen.findByRole("region", { name: "因子监控" })).resolves.toBeInTheDocument();
+		expect(screen.getByText("近期运行")).toBeInTheDocument();
+		expect(screen.getAllByText("审查队列").length).toBeGreaterThanOrEqual(1);
 	});
 
 	it("covers ResearchPage route composition", async () => {
 		render(<ResearchPage />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("研究实验")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("治理审查")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("创建实验")).resolves.toBeInTheDocument();
+		await expect(screen.findByRole("region", { name: "因子监控" })).resolves.toBeInTheDocument();
+		expect(screen.getByText("近期运行")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "新建实验" })).toBeInTheDocument();
 	});
 
-	it("covers FactorListPage route composition", () => {
+	it("covers FactorListPage route composition", async () => {
 		render(<FactorListPage />, { wrapper: createWrapper() });
 
-		expect(screen.getByText("因子库")).toBeInTheDocument();
-		expect(screen.getByText("Factors")).toBeInTheDocument();
-		expect(screen.getByText("Factor Detail")).toBeInTheDocument();
+		await expect(screen.findByRole("region", { name: "受控因子目录" })).resolves.toBeInTheDocument();
+		expect(screen.getByRole("searchbox", { name: "搜索因子" })).toBeInTheDocument();
+		expect(screen.getByRole("complementary", { name: "因子详情" })).toBeInTheDocument();
 	});
 
 	it("covers ExperimentListPage route composition", () => {
@@ -84,12 +85,13 @@ describe("Research route page contract handoffs", () => {
 		expect(screen.getByText("Run Detail")).toBeInTheDocument();
 	});
 
-	it("covers UniverseListPage route composition", () => {
+	it("covers UniverseListPage route composition", async () => {
 		render(<UniverseListPage />, { wrapper: createWrapper() });
 
-		expect(screen.getByText("股票池")).toBeInTheDocument();
+		expect(await screen.findByRole("region", { name: "受控股票池目录" })).toBeInTheDocument();
+		expect(screen.getByText("股票池目录")).toBeInTheDocument();
 		expect(screen.getByText("Universes")).toBeInTheDocument();
-		expect(screen.getByText("Rules")).toBeInTheDocument();
+		expect(screen.getByRole("complementary", { name: "股票池详情" })).toBeInTheDocument();
 	});
 });
 

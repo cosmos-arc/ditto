@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 import { mockDecisionBanner } from "@/mocks/fixtures/home";
 import { homeHandlers } from "@/mocks/handlers/home";
+import { portfolioHandlers } from "@/mocks/handlers/portfolio";
 import { server } from "@/mocks/server";
 import { BannerSection } from "./banner-section";
 import { DataHealthSection } from "./data-health-section";
@@ -32,7 +33,7 @@ function createWrapper() {
 }
 
 beforeEach(() => {
-	server.use(...homeHandlers);
+	server.use(...homeHandlers, ...portfolioHandlers);
 });
 
 describe("PulseSection", () => {
@@ -56,12 +57,12 @@ describe("PulseSection", () => {
 		await expect(screen.findByText("+0.34%")).resolves.toBeInTheDocument();
 	});
 
-	it("使用原型 32px 脉动条高度", async () => {
+	it("使用原型 24px 首页状态条高度", async () => {
 		render(<PulseSection />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("盈亏")).resolves.toBeInTheDocument();
 		const strip = document.querySelector("[data-slot='pulse-strip']");
-		expect(strip).toHaveClass("h-[calc(var(--density-strip-height)-4px)]");
+		expect(strip).toHaveClass("h-[var(--height-status-bar)]");
 	});
 });
 
@@ -69,32 +70,30 @@ describe("BannerSection", () => {
 	it("渲染决策横幅", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("今日盈亏")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("今日主决策")).resolves.toBeInTheDocument();
 	});
 
-	it("显示 CTA 操作按钮", async () => {
+	it("主动作进入真实信号与风控路由", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
-		await expect(screen.findByText("查看信号总览")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("进入研究")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("查看风控")).resolves.toBeInTheDocument();
+		await expect(screen.findByRole("link", { name: "复核信号" })).resolves.toHaveAttribute("href", "/portfolio/review");
+		expect(screen.getByRole("link", { name: "查看风控" })).toHaveAttribute("href", "/risk");
 	});
 
-	it("显示 4 个 KPI 指标", async () => {
+	it("只显示聚合合同能提供的三个影响指标", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("杠杆率")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("回撤")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("IVIX")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("北向资金")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("风险利用率")).resolves.toBeInTheDocument();
 	});
 
-	it("显示权益 sparkline", async () => {
+	it("不把 mock sparkline 伪装成 live 证据", async () => {
 		render(<BannerSection />, { wrapper: createWrapper() });
 
 		const banner = await screen.findByTestId("decision-banner");
 		const svg = banner.querySelector("svg");
-		expect(svg).toBeInTheDocument();
+		expect(svg).not.toBeInTheDocument();
 	});
 
 	it("渲染响应中的判断文案", async () => {
@@ -105,12 +104,21 @@ describe("BannerSection", () => {
 });
 
 describe("HomePage", () => {
-	it("live 模式显示 prototype only 空态", () => {
+	it("live 模式保留同一 Command Center 工作面而不是整页占位", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		render(<HomePage />, { wrapper: createWrapper() });
 
-		expect(screen.getByText("prototype only")).toBeInTheDocument();
-		expect(screen.getByText("prototype only，请切 VITE_USE_MOCK=true 查看原型数据。")).toBeInTheDocument();
+		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("#510300 BUY 建议待人工复核")).resolves.toBeInTheDocument();
+		expect(screen.getByText("Daily Decision V3 要求人工复核后再形成执行意图。")).toBeInTheDocument();
+		await expect(screen.findAllByText("风险偏好")).resolves.toHaveLength(2);
+		expect(screen.getByText("今日变化与驱动")).toBeInTheDocument();
+		expect(screen.getByText("证据 2 · 快照 7")).toBeInTheDocument();
+		expect(screen.getByText("Agent 投影不可用；Daily Decision V3 未提供 Agent findings。")).toBeInTheDocument();
+		expect(screen.queryByText("贵州茅台（600519）出现卖出信号")).not.toBeInTheDocument();
+		expect(document.querySelector("[data-slot='main']")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='sidebar']")).toBeInTheDocument();
+		expect(screen.queryByText("prototype only")).not.toBeInTheDocument();
 	});
 
 	it("暴露 Home 主区和次级区审计目标并移除猜测高度", async () => {
@@ -123,16 +131,56 @@ describe("HomePage", () => {
 
 		expect(main).toBeInTheDocument();
 		expect(primary).toBeInTheDocument();
-		expect(primary).toHaveClass("max-h-[66%]");
+		expect(primary).not.toHaveClass("max-h-[66%]");
 		expect(secondary).toBeInTheDocument();
 	});
 
-	it("渲染 WorkspacePlaceholder", async () => {
+	it("不再用即将推出占位符挤占今日工作面", async () => {
 		render(<HomePage />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
-		expect(screen.getByText("自定义工作区 — 即将推出")).toBeInTheDocument();
-		expect(screen.getByText(/拖拽配置个性化工作区布局/)).toBeInTheDocument();
+		expect(screen.queryByText("自定义工作区 — 即将推出")).not.toBeInTheDocument();
+		expect(document.querySelector("[data-slot='home-secondary']")).toBeInTheDocument();
+	});
+
+	it("从优先事项打开信号证据并经二次确认交接到 Manual/Paper 复核", async () => {
+		const user = userEvent.setup();
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await screen.findByText("贵州茅台（600519）出现卖出信号");
+		await user.click(screen.getAllByRole("button", { name: "查看详情" })[0]);
+
+		const evidence = await screen.findByRole("dialog", { name: "信号证据" });
+		expect(evidence).toHaveTextContent("RSI 背离叠加放量");
+		await user.click(within(evidence).getByRole("button", { name: "形成订单前检查" }));
+
+		const handoff = await screen.findByRole("dialog", { name: "订单交接确认" });
+		expect(handoff).toHaveTextContent("不会在 Home 自动创建 Paper 订单或成交");
+		expect(within(handoff).getByRole("link", { name: "进入信号收件箱复核" })).toHaveAttribute(
+			"href",
+			"/portfolio/review",
+		);
+	});
+
+	it("工作台设置只修改真实侧栏偏好", async () => {
+		const user = userEvent.setup();
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await user.click(await screen.findByRole("button", { name: "工作台设置" }));
+		const settings = await screen.findByRole("dialog", { name: "工作台设置" });
+		await user.click(within(settings).getByRole("button", { name: "折叠右侧栏" }));
+
+		expect(useUIPreferences.getState().sidebarCollapsed).toBe(true);
+	});
+
+	it("AI 建议 overlay 明确是只读后端证据摘要", async () => {
+		const user = userEvent.setup();
+		render(<HomePage />, { wrapper: createWrapper() });
+
+		await user.click(await screen.findByRole("button", { name: "决策证据" }));
+		const evidence = await screen.findByRole("dialog", { name: "AI 决策证据" });
+		expect(evidence).toHaveTextContent("只读证据摘要");
+		expect(evidence).toHaveTextContent("未调用模型");
 	});
 });
 

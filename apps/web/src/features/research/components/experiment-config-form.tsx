@@ -67,7 +67,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 	return (
 		<div className="flex flex-col gap-(--section-gap)">
 			<ContextSection title="Experiment identity">
-				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 xl:grid-cols-3">
+				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 2xl:grid-cols-3">
 					<Field label="Experiment ID" value={draft.experimentId} onChange={(v) => update("experimentId", v)} />
 					<Field
 						label="Research cycle ID"
@@ -83,7 +83,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 			</ContextSection>
 
 			<ContextSection title="Frozen strategy and snapshot">
-				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 xl:grid-cols-3">
+				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 2xl:grid-cols-3">
 					<Field label="Strategy ID" value={draft.strategyId} onChange={(v) => update("strategyId", v)} />
 					<Field
 						label="Strategy version"
@@ -102,7 +102,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 						value={draft.snapshotManifestHash}
 						onChange={(v) => update("snapshotManifestHash", v)}
 					/>
-					<div className="sm:col-span-2 xl:col-span-3">
+					<div className="sm:col-span-2 2xl:col-span-3">
 						<JsonField
 							label="Frozen StrategySpec JSON"
 							value={draft.strategySpecJson}
@@ -113,7 +113,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 			</ContextSection>
 
 			<ContextSection title="Validation and promotion">
-				<div className="grid gap-3 p-(--density-panel-padding) xl:grid-cols-2">
+				<div className="grid gap-3 p-(--density-panel-padding) 2xl:grid-cols-2">
 					<JsonField
 						label="Canonical validation JSON"
 						value={draft.validationJson}
@@ -128,7 +128,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 			</ContextSection>
 
 			<ContextSection title="Candidate matrix">
-				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 xl:grid-cols-3">
+				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 2xl:grid-cols-3">
 					<Field
 						label="Baseline descriptor"
 						value={draft.baselineDescriptorType}
@@ -146,7 +146,7 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 						value={draft.candidateLimit}
 						onChange={(v) => update("candidateLimit", Number(v))}
 					/>
-					<div className="sm:col-span-2 xl:col-span-3 grid gap-3 xl:grid-cols-2">
+					<div className="grid gap-3 sm:col-span-2 2xl:col-span-3 2xl:grid-cols-2">
 						<JsonField
 							label="Baseline payload JSON"
 							value={draft.baselinePayloadJson}
@@ -164,8 +164,8 @@ export function ExperimentConfigForm({ draft, onChange }: ExperimentConfigFormPr
 			</ContextSection>
 
 			<ContextSection title="Data, cost and execution policy">
-				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 xl:grid-cols-4">
-					<div className="sm:col-span-2 xl:col-span-4">
+				<div className="grid gap-3 p-(--density-panel-padding) sm:grid-cols-2 2xl:grid-cols-4">
+					<div className="sm:col-span-2 2xl:col-span-4">
 						<JsonField
 							label="Dataset requirements JSON"
 							value={draft.datasetRequirementsJson}

@@ -1,3 +1,1 @@
-export { useInstrumentChart } from "./use-instrument-chart";
-export { useInstrumentDetail } from "./use-instrument-detail";
-export { useInstrumentFundamentals } from "./use-instrument-fundamentals";
+export { instrumentKeys, useInstrumentChart, useInstrumentDetail } from "./use-instrument-workspace";

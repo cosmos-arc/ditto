@@ -35,6 +35,13 @@ it("uses only frozen live R3 resources and exposes typed retry errors when mocks
 				{ status: 503 },
 			);
 		}),
+		http.get("/api/v1/research/factors", ({ request }) => {
+			requests.push(new URL(request.url).pathname);
+			return HttpResponse.json(
+				{ detail: "factor catalog unavailable", error_code: "FACTOR_CATALOG_UNAVAILABLE" },
+				{ status: 503 },
+			);
+		}),
 	);
 
 	render(<ResearchPage />, { wrapper });
@@ -42,7 +49,15 @@ it("uses only frozen live R3 resources and exposes typed retry errors when mocks
 	expect(screen.queryByText(/prototype only/i)).not.toBeInTheDocument();
 	await expect(screen.findByText(/503 EXPERIMENT_CATALOG_UNAVAILABLE/)).resolves.toBeInTheDocument();
 	await expect(screen.findByText(/503 REVIEW_QUEUE_UNAVAILABLE/)).resolves.toBeInTheDocument();
+	await expect(screen.findByText(/503 FACTOR_CATALOG_UNAVAILABLE/)).resolves.toBeInTheDocument();
+	expect(screen.getByRole("button", { name: "重试因子目录" })).toBeInTheDocument();
 	expect(screen.getByRole("button", { name: "重试实验目录" })).toBeInTheDocument();
 	expect(screen.getByRole("button", { name: "重试审查队列" })).toBeInTheDocument();
-	await waitFor(() => expect(requests.sort()).toEqual(["/api/v1/research/experiments", "/api/v1/research/reviews"]));
+	await waitFor(() =>
+		expect(requests.sort()).toEqual([
+			"/api/v1/research/experiments",
+			"/api/v1/research/factors",
+			"/api/v1/research/reviews",
+		]),
+	);
 });

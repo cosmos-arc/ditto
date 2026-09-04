@@ -1,53 +1,35 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
-import { marketsHandlers } from "@/mocks/handlers/markets";
-import { server } from "@/mocks/server";
-
-import { ASharesOverview } from "./a-shares-overview";
+import { describe, expect, it } from "vitest";
 import { ASharesPage } from "./a-shares-page";
 
-function createQueryClient(): QueryClient {
-	return new QueryClient({
-		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
-	});
+function wrapper() {
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	return ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	);
 }
-
-function createWrapper() {
-	const qc = createQueryClient();
-	return function Wrapper({ children }: { children: ReactNode }) {
-		return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
-	};
-}
-
-beforeEach(() => server.use(...marketsHandlers));
-
-describe("ASharesOverview", () => {
-	it("渲染指数概览", async () => {
-		render(<ASharesOverview />, { wrapper: createWrapper() });
-
-		await expect(screen.findByText("上证指数")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("深证成指")).resolves.toBeInTheDocument();
-	});
-
-	it("显示板块涨幅", async () => {
-		render(<ASharesOverview />, { wrapper: createWrapper() });
-
-		await expect(screen.findByText("新能源")).resolves.toBeInTheDocument();
-	});
-});
 
 describe("ASharesPage", () => {
-	it("渲染 activity 面板", async () => {
-		render(<ASharesPage />, { wrapper: createWrapper() });
+	it("按交易所展示活跃 A 股身份覆盖", async () => {
+		render(<ASharesPage />, { wrapper: wrapper() });
 
-		await expect(screen.findByText("市场快照")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("A 股身份覆盖")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("宁德时代")).resolves.toBeInTheDocument();
 	});
 
-	it("渲染指数概览内容", async () => {
-		render(<ASharesPage />, { wrapper: createWrapper() });
+	it("不会把 metadata 列表冒充收盘快照", async () => {
+		render(<ASharesPage />, { wrapper: wrapper() });
+		await expect(screen.findByText(/价格与涨跌未查询/)).resolves.toBeInTheDocument();
+	});
 
-		await expect(screen.findByText("上证指数")).resolves.toBeInTheDocument();
+	it("AI overlay 在缺少行情快照时保持阻断", async () => {
+		const user = userEvent.setup();
+		render(<ASharesPage />, { wrapper: wrapper() });
+		await user.click(screen.getByRole("button", { name: "AI 解读" }));
+		expect(screen.getByRole("dialog", { name: "AI 解读" })).toHaveTextContent("行情 snapshot");
 	});
 });

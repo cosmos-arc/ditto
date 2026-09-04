@@ -14,7 +14,13 @@ function formatTime(date: Date): string {
  * Pages that use StatusBar must add `pb-[var(--height-status-bar)]` to their layout root
  * to prevent content from being hidden behind the bar.
  */
-export function StatusBar() {
+export function StatusBar({
+	spanRail = false,
+	reserveRightRail = false,
+}: {
+	readonly spanRail?: boolean;
+	readonly reserveRightRail?: boolean;
+}) {
 	const [time, setTime] = useState(() => formatTime(new Date()));
 
 	useEffect(() => {
@@ -30,8 +36,12 @@ export function StatusBar() {
 			role="status"
 			aria-label="系统状态"
 			className={
-				"fixed bottom-0 right-0 z-50 " +
-				"left-(--width-rail) " +
+				"fixed bottom-0 z-50 " +
+				(reserveRightRail
+					? "left-0 right-(--width-rail) "
+					: spanRail
+						? "left-0 right-0 "
+						: "left-(--width-rail) right-0 ") +
 				"flex items-center gap-4 px-3 " +
 				"h-[var(--height-status-bar)] " +
 				"bg-(--color-surface-0) border-t border-(--color-border-subtle) " +

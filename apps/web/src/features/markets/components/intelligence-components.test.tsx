@@ -1,62 +1,30 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
-import { intelligenceHandlers } from "@/mocks/handlers/intelligence";
-import { server } from "@/mocks/server";
+import { describe, expect, it } from "vitest";
+import { IntelligencePage } from "./intelligence-page";
 
-import { IntelligenceFlowView } from "./intelligence-flow-view";
-import { IntelligenceFundamentalsView } from "./intelligence-fundamentals-view";
-import { IntelligenceMacroView } from "./intelligence-macro-view";
-
-function createQueryClient(): QueryClient {
-	return new QueryClient({
-		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
-	});
+function wrapper() {
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	return ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	);
 }
 
-function createWrapper() {
-	const qc = createQueryClient();
-	return function Wrapper({ children }: { children: ReactNode }) {
-		return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
-	};
-}
-
-beforeEach(() => server.use(...intelligenceHandlers));
-
-describe("IntelligenceFlowView", () => {
-	it("渲染资金流向", async () => {
-		render(<IntelligenceFlowView />, { wrapper: createWrapper() });
-
-		await expect(screen.findByText("科技")).resolves.toBeInTheDocument();
+describe("IntelligencePage", () => {
+	it("experimental 宏观数据默认关闭", () => {
+		render(<IntelligencePage />, { wrapper: wrapper() });
+		expect(screen.getByText("实验数据未启用")).toBeInTheDocument();
+		expect(screen.queryByText("PMI 制造业")).not.toBeInTheDocument();
 	});
 
-	it("显示北向资金", async () => {
-		render(<IntelligenceFlowView />, { wrapper: createWrapper() });
-
-		await expect(screen.findByText(/45\.8/)).resolves.toBeInTheDocument();
-	});
-});
-
-describe("IntelligenceMacroView", () => {
-	it("渲染宏观数据", async () => {
-		render(<IntelligenceMacroView />, { wrapper: createWrapper() });
-
+	it("经用户显式允许后按日期查询宏观指标", async () => {
+		const user = userEvent.setup();
+		render(<IntelligencePage />, { wrapper: wrapper() });
+		await user.click(screen.getByRole("checkbox", { name: /允许 experimental/ }));
 		await expect(screen.findByText("PMI 制造业")).resolves.toBeInTheDocument();
-	});
-
-	it("显示经济日历", async () => {
-		render(<IntelligenceMacroView />, { wrapper: createWrapper() });
-
-		const elements = await screen.findAllByText(/CPI 同比/);
-		expect(elements.length).toBeGreaterThanOrEqual(1);
-	});
-});
-
-describe("IntelligenceFundamentalsView", () => {
-	it("渲染财报日历", async () => {
-		render(<IntelligenceFundamentalsView />, { wrapper: createWrapper() });
-
-		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		expect((await screen.findAllByText("2026-07-31")).length).toBe(2);
+		await expect(screen.findByText(/snapshot identity 未报告/)).resolves.toBeInTheDocument();
 	});
 });

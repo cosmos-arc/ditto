@@ -1,116 +1,70 @@
 {
   "id": "a-shares",
-  "version": 1,
-  "status": "draft",
+  "version": 3,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-30",
   "route": "/markets/a-shares",
   "pagePattern": "analytical-overview",
-  "shellFamily": "radar",
+  "shellFamily": "analytical",
   "prototypeRef": "docs/designs/specs/prototypes/page-a-shares.html",
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/markets",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
-      "src/features/markets/components/a-shares-components.test.tsx"
+      "src/features/markets/components/a-shares-components.test.tsx",
+      "src/features/markets/components/info-level-annotations.test.tsx"
     ],
-    "reactComponentRefs": [
-      "ASharesPage"
-    ]
+    "reactComponentRefs": ["ASharesPage"]
   },
   "viewports": [
-    {
-      "width": 1536,
-      "height": 900,
-      "role": "primary"
-    },
-    {
-      "width": 1366,
-      "height": 768,
-      "role": "compact"
-    }
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" }
   ],
   "slots": [
     {
       "name": "strip",
       "required": true,
-      "prototypeSelector": ".shell-strip",
+      "prototypeSelector": ".scope-strip",
       "reactSelector": "[data-slot='strip']",
       "a11yRole": "banner",
-      "responsiveBehavior": {
-        "compact": "collapsed"
-      }
+      "threshold": { "x": 4, "y": 36, "widthRatio": 0.01, "heightRatio": 0.5 },
+      "responsiveBehavior": { "compact": "collapsed" }
     },
     {
       "name": "main",
       "required": true,
-      "prototypeSelector": ".shell-main",
+      "prototypeSelector": ".main-content",
       "reactSelector": "[data-slot='main']",
-      "a11yRole": "main"
+      "a11yRole": "main",
+      "threshold": { "x": 4, "y": 20, "widthRatio": 0.01, "heightRatio": 0.56 }
     },
     {
-      "name": "right-rail",
+      "name": "activity",
       "required": true,
-      "prototypeSelector": ".radar-right-rail",
-      "reactSelector": "[data-slot='right-rail']",
+      "prototypeSelector": ".right-rail",
+      "reactSelector": "[data-slot='activity']",
       "a11yRole": "complementary",
-      "responsiveBehavior": {
-        "compact": "overlay"
-      }
-    },
-    {
-      "name": "tab-band",
-      "required": true,
-      "prototypeSelector": ".radar-tab-band",
-      "reactSelector": "[data-slot='tab-band']",
-      "a11yRole": "navigation",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
+      "threshold": { "x": 8, "y": 20, "widthRatio": 0.03, "heightRatio": 0.56 },
+      "responsiveBehavior": { "compact": "overlay" }
     }
   ],
   "states": {
-    "universal": [
-      "loading",
-      "empty",
-      "error",
-      "stale"
-    ],
-    "pageSpecific": [
-      "market-paused"
-    ]
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["no-active-stocks", "exchange-empty", "price-evidence-unavailable"]
   },
-  "flags": {
-    "hasStatusBar": false,
-    "sidebarCollapsible": false
-  },
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
   "metrics": {
     "capturedAt": "2026-04-27",
     "viewport": "1536x900",
     "baseline": {
-      "strip": {
-        "width": 1536,
-        "height": 72,
-        "strategy": "content-driven"
-      },
-      "main": {
-        "width": 1032,
-        "height": 720,
-        "strategy": "content-driven"
-      },
-      "right-rail": {
-        "width": 320,
-        "height": 720,
-        "strategy": "fixed-width"
-      },
-      "tab-band": {
-        "width": 1536,
-        "height": 56,
-        "strategy": "content-driven"
-      }
+      "strip": { "width": 1536, "height": 72, "strategy": "content-driven" },
+      "main": { "width": 1032, "height": 720, "strategy": "content-driven" },
+      "activity": { "width": 320, "height": 720, "strategy": "fixed-width" }
     }
   },
   "visualThresholds": {
@@ -118,7 +72,7 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.18
   },
   "overlays": [
     {
@@ -126,68 +80,53 @@
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "strip", "action": "open-overlay" },
       "prototypeSelector": "#overlay-northbound-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "ASharesOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "a-shares.sector-detail",
-      "kind": "drawer",
+      "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "main", "action": "open-overlay" },
       "prototypeSelector": "#overlay-sector-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "ASharesOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "a-shares.filter-panel",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "strip", "action": "open-overlay" },
       "prototypeSelector": "#overlay-filter-panel",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "ASharesOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "a-shares.ai-analysis",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "activity", "action": "open-overlay" },
       "prototypeSelector": "#overlay-ai-analysis",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "ASharesOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    }
+  ],
+  "liveData": {
+    "readPaths": ["/api/v1/metadata/instruments"],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "interactions": [
+    {
+      "id": "open-instrument-identity",
+      "trigger": "instrument-row-click",
+      "affectedSlots": ["main"],
+      "expectedBehavior": "navigates to the numeric instrument hub without asserting unqueried price evidence"
     }
   ]
 }

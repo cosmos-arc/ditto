@@ -1,6 +1,8 @@
 import { useMatches, useRouter } from "@tanstack/react-router";
+import { DOMAINS, type DomainId } from "@/features/navigation/types";
 import { HeaderUtilityBar } from "./header-utility-bar";
 import { PageTitleBlock } from "./page-title-block";
+import { SHELL_HEADER_EXTENSION_ID } from "./shell-header-extension";
 
 /**
  * Resolves the page title from route matches.
@@ -33,6 +35,7 @@ function resolveTitle(matches: readonly { routeId?: string }[], router: RouterWi
 }
 
 interface ShellHeaderProps {
+	readonly activeDomain?: DomainId;
 	readonly onOpenAgent?: () => void;
 }
 
@@ -40,10 +43,11 @@ interface ShellHeaderProps {
  * ShellHeader -- 68px global top bar.
  * Shows: dynamic page title (from route static data), spacer, action controls.
  */
-export function ShellHeader({ onOpenAgent }: ShellHeaderProps) {
+export function ShellHeader({ activeDomain = "home", onOpenAgent }: ShellHeaderProps) {
 	const matches = useMatches();
 	const router = useRouter() as unknown as RouterWithStaticTitles;
 	const title = resolveTitle(matches, router);
+	const domainLabel = DOMAINS.find((candidate) => candidate.id === activeDomain)?.label ?? "Today";
 
 	return (
 		<header
@@ -53,10 +57,16 @@ export function ShellHeader({ onOpenAgent }: ShellHeaderProps) {
 				"z-5 relative after:absolute after:bottom-0 after:inset-x-0 after:h-px",
 			].join(" ")}
 		>
+			<span
+				data-domain-identity={activeDomain}
+				className="shrink-0 rounded-full border border-(--color-border-subtle) bg-(--color-surface-strip) px-2 py-1 text-xs font-semibold tracking-[0.08em] text-(--color-signature-fg) uppercase"
+			>
+				<span className="sr-only">当前产品域：</span>
+				{domainLabel}
+			</span>
 			<PageTitleBlock title={title} />
 
-			{/* Spacer pushes actions to the right */}
-			<div className="flex-1" />
+			<div id={SHELL_HEADER_EXTENSION_ID} className="flex min-w-0 flex-1 items-center" />
 
 			<HeaderUtilityBar onOpenAgent={onOpenAgent} />
 		</header>

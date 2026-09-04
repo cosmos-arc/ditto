@@ -13,6 +13,15 @@ vi.mock("@tanstack/react-router", async () => {
 	return {
 		...actual,
 		useParams: () => ({ id: "strat-001" }),
+		Link: ({
+			children,
+			to,
+			params,
+		}: {
+			readonly children: ReactNode;
+			readonly to: string;
+			readonly params?: Readonly<Record<string, string>>;
+		}) => <a href={params?.id ? to.replace("$id", params.id) : to}>{children}</a>,
 	};
 });
 

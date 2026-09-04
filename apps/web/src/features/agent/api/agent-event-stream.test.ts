@@ -48,4 +48,36 @@ describe("recoverable Agent event stream", () => {
 		await vi.waitFor(() => expect(onState).toHaveBeenCalledWith("cursor-expired"));
 		expect(stream.cursor).toBe(99);
 	});
+
+	it("reconnects after a transport failure and resumes from the last durable cursor", async () => {
+		const fetcher = vi
+			.fn<typeof fetch>()
+			.mockRejectedValueOnce(new TypeError("simulated network disconnect"))
+			.mockImplementationOnce(async (_input, init) => {
+				expect(new Headers(init?.headers).get("Last-Event-ID")).toBe("11");
+				return new Response(event(12, "run_completed"), {
+					status: 200,
+					headers: { "Content-Type": "text/event-stream" },
+				});
+			});
+		const onEvent = vi.fn();
+		const onState = vi.fn();
+		const stream = createRecoverableAgentEventStream({
+			path: "/v1/agent/runs/run-reconnect/events",
+			initialCursor: 11,
+			fetcher,
+			minimumRetryMs: 1,
+			maximumRetryMs: 1,
+			onEvent,
+			onState,
+		});
+
+		stream.start();
+		await vi.waitFor(() => expect(onEvent).toHaveBeenCalledWith(expect.objectContaining({ id: 12 })));
+		expect(onState).toHaveBeenCalledWith("error");
+		expect(onState).toHaveBeenCalledWith("reconnecting");
+		expect(onState).toHaveBeenLastCalledWith("complete");
+		expect(fetcher).toHaveBeenCalledTimes(2);
+		expect(stream.cursor).toBe(12);
+	});
 });

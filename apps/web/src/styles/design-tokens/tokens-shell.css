@@ -37,11 +37,15 @@
 	/* Analytical */
 	--shell-analytical-activity-width: 300px;
 	--shell-analytical-band-height: 220px;
-	--shell-trading-analysis-band-height: 180px;
+	--shell-portfolio-analysis-band-height: 180px;
 	/* Radar (Cross-market) */
 	--shell-radar-right-rail-width: 300px;
 	/* Catalog */
 	--shell-catalog-detail-width: 320px;
 	/* Ops */
 	--shell-ops-detail-width: 340px;
+	/* Studio */
+	--shell-studio-bottom-height: 10.75rem;
+	--shell-alpha-source-width: 17.25rem;
+	--shell-alpha-inspector-width: 22.5rem;
 }

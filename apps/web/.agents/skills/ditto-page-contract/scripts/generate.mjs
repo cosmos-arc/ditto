@@ -115,7 +115,6 @@ function generateTS(contracts) {
   lines.push("export type PageLandingRouteStatus = \"missing\" | \"scaffolded\" | \"implemented\";");
   lines.push("export type PageLandingContractStatus = \"missing\" | \"draft\" | \"generated\" | \"verified\";");
   lines.push("export type PageLandingOverlayStatus = \"none\" | \"gallery-only\" | \"triggerable\" | \"implemented\";");
-  lines.push("export type PageLandingVisualAuditStatus = \"missing\" | \"queued\" | \"implemented\" | \"verified\";");
   lines.push("export type PageOverlayKind = \"drawer\" | \"sheet\" | \"modal\" | \"alert-dialog\" | \"toast\" | \"inline\";");
   lines.push("export type PageOverlayCloseBehavior = \"escape\" | \"outside-click\" | \"primary-action\";");
   lines.push("");
@@ -124,7 +123,8 @@ function generateTS(contracts) {
   lines.push("  featureModule: string;");
   lines.push("  contractStatus: PageLandingContractStatus;");
   lines.push("  overlayStatus: PageLandingOverlayStatus;");
-  lines.push("  visualAuditStatus: PageLandingVisualAuditStatus;");
+  lines.push("  prototypeVerified: boolean;");
+  lines.push("  reactParityVerified: boolean;");
   lines.push("  reactTestRefs?: string[];");
   lines.push("  reactComponentRefs?: string[];");
   lines.push("}");
@@ -267,10 +267,67 @@ function generateMJS(contracts) {
   lines.push("    min-height: 0 !important;");
   lines.push("    flex: 0 0 auto !important;");
   lines.push("  }");
+	lines.push("  #default-view > .shell-radar {");
+	lines.push("    align-items: stretch !important;");
+	lines.push("    overflow: hidden !important;");
+	lines.push("  }");
+	lines.push("  #default-view > .shell-radar > .shell-body {");
+	lines.push("    height: 100% !important;");
+	lines.push("    min-height: 0 !important;");
+	lines.push("    overflow: hidden !important;");
+	lines.push("  }");
+	lines.push("  #default-view > .shell-radar > .shell-body > .shell-header,");
+	lines.push("  #default-view > .shell-radar > .shell-body > .context-bar,");
+	lines.push("  #default-view > .shell-radar > .shell-body > .scope-strip,");
+	lines.push("  #default-view > .shell-radar > .shell-body > .status-bar {");
+	lines.push("    flex-shrink: 0 !important;");
+	lines.push("  }");
+	lines.push("  #default-view > .shell-radar > .shell-body > .shell-workspace {");
+	lines.push("    flex: 1 1 auto !important;");
+	lines.push("    min-height: 0 !important;");
+	lines.push("    overflow: hidden !important;");
+	lines.push("  }");
+	lines.push("  #default-view > .shell-radar .shell-workspace > .main-content,");
+	lines.push("  #default-view > .shell-radar .shell-workspace > .right-rail {");
+	lines.push("    height: 100% !important;");
+	lines.push("    min-height: 0 !important;");
+	lines.push("    overflow: auto !important;");
+	lines.push("  }");
+	lines.push("  #default-view > .shell-hub {");
+	lines.push("    padding-bottom: 0 !important;");
+	lines.push("  }");
+	lines.push('  #default-view > .shell-hub .tab-panel[aria-hidden="false"] {');
+	lines.push("    grid-area: main !important;");
+	lines.push("    height: 100% !important;");
+	lines.push("    min-height: 0 !important;");
+	lines.push("  }");
+	lines.push("  #default-view > .shell-studio > .studio-logs {");
+	lines.push("    height: 132px !important;");
+	lines.push("    min-height: 132px !important;");
+	lines.push("  }");
+	lines.push("  #default-view:has(> .shell-studio) > .status-bar {");
+	lines.push("    width: calc(100% - 56px) !important;");
+	lines.push("    margin-left: 56px !important;");
+	lines.push("  }");
+	lines.push("  @media (max-width: 1280px) {");
+	lines.push("    #default-view > .shell-studio {");
+	lines.push("      --prototype-studio-source-width: 200px !important;");
+	lines.push("      --prototype-studio-inspector-width: 280px !important;");
+	lines.push("    }");
+	lines.push("  }");
+	lines.push('  #default-view > [class*="shell"] > .danger-confirmation-summary {');
+	lines.push("    display: none !important;");
+	lines.push("  }");
   lines.push("  #default-view > .status-bar {");
   lines.push("    height: 24px !important;");
   lines.push("    flex: 0 0 auto !important;");
   lines.push("  }");
+	lines.push('  #default-view:has(> .status-bar) > [class*="shell"],');
+	lines.push("  #default-view:has(> .status-bar) > .ai-shell,");
+	lines.push("  #default-view:has(> .status-bar) > .intel-shell,");
+	lines.push("  #default-view:has(> .status-bar) > .risk-shell {");
+	lines.push("    height: calc(100vh - 24px) !important;");
+	lines.push("  }");
   lines.push("`;");
   lines.push("");
 
@@ -324,8 +381,24 @@ function generateMJS(contracts) {
       reactTargets.status = "[data-slot='status-bar']";
     }
 
+    const shellThreshold = { x: 4, y: 4, widthRatio: 0.03, heightRatio: 0.05 };
+    const contentThreshold = { x: 8, y: 8, widthRatio: 0.03, heightRatio: 0.03 };
+    const targetThresholds = {};
+    for (const key of Object.keys(protoTargets)) {
+      targetThresholds[key] = shellThreshold;
+    }
+    for (const slot of c.slots) {
+      targetThresholds[slot.name] = { ...shellThreshold, ...(slot.threshold ?? {}) };
+    }
+    for (const sub of c.subSlots ?? []) {
+      targetThresholds[sub.name] = { ...contentThreshold, ...(sub.threshold ?? {}) };
+    }
+
     lines.push("  {");
     lines.push(`    route: "${c.route}",`);
+		if (c.resolvedRoute) {
+			lines.push(`    resolvedRoute: ${JSON.stringify(c.resolvedRoute)},`);
+		}
     lines.push(`    name: "${c.id}",`);
     lines.push(`    prototype: "${filename}",`);
 
@@ -343,6 +416,9 @@ function generateMJS(contracts) {
     }
     lines.push("    },");
 
+    pushJsonProperty(lines, "targetThresholds", targetThresholds);
+    pushJsonProperty(lines, "visualThresholds", c.visualThresholds);
+
     lines.push("  },");
   }
 
@@ -357,14 +433,14 @@ function generateMJS(contracts) {
  */
 function PROTOTYPE_APP_TARGETS_raw(c) {
   const targets = {
+    shell: "#default-view > [class*='shell']",
     rail: ".shell-rail",
     header: ".shell-header",
   };
 
-  // Override header for specific shell families
-  if (c.shellFamily === "object-hub") {
-    targets.header = ".object-header";
-  } else if (c.shellFamily === "studio") {
+  // Studio prototypes use a distinct top-level header. Object hubs retain
+  // `.shell-header`; `.object-header` is only the nested identity block.
+  if (c.shellFamily === "studio") {
     targets.header = ".studio-header";
   }
 
