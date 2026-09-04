@@ -19,6 +19,9 @@
 	--data-state-updating-fg: var(--brand-accent);
 	--data-state-stale-fg: var(--text-data-stale);
 	--data-state-disconnected-fg: var(--text-secondary);
+	--data-fresh-color: oklch(0.92 0.004 253);
+	--data-recent-color: oklch(0.92 0.004 253 / 0.8);
+	--data-stale-color: oklch(0.92 0.004 253 / 0.5);
 
 	/* ── Chart Pane ── */
 	--chart-bg: var(--surface-app);
@@ -29,6 +32,12 @@
 	--chart-axis-text: var(--text-tertiary);
 	--chart-axis-line: var(--border-subtle);
 	--chart-zero-line: oklch(1 0 0 / 0.2);
+	--chart-palette-1: var(--asset-equity);
+	--chart-palette-2: var(--asset-fixed-income);
+	--chart-palette-3: var(--asset-commodity);
+	--chart-palette-4: var(--asset-crypto);
+	--chart-palette-5: var(--asset-fx);
+	--chart-palette-6: var(--asset-volatility);
 
 	/* ── Chart Series (derived from market tokens, with alpha) ── */
 	--chart-series-up: var(--market-up-fg);
@@ -42,6 +51,8 @@
 	--sparkline-width: 48px;
 	--sparkline-height: 20px;
 	--sparkline-stroke-width: 1.5px;
+	--sparkline-color: oklch(0.6 0.18 235);
+	--sparkline-negative-color: oklch(0.65 0.2 25);
 
 	/* ── Heatmap ── */
 	/* Sequential scale: single-direction magnitude (5 steps) */
@@ -50,6 +61,11 @@
 	--heatmap-3-bg: oklch(1 0 0 / 0); /* neutral midpoint */
 	--heatmap-4-bg: oklch(from var(--market-up-fg) l c h / 0.24);
 	--heatmap-5-bg: oklch(from var(--market-up-fg) l c h / 0.42);
+	--heatmap-scale-0: oklch(0.3 0.04 253);
+	--heatmap-scale-1: oklch(0.45 0.08 235);
+	--heatmap-scale-2: oklch(0.55 0.12 235);
+	--heatmap-scale-3: oklch(0.65 0.16 235);
+	--heatmap-scale-4: oklch(0.72 0.18 235);
 
 	/* ── Asset Class Colors (7 qualitative colors, Paul Tol bright, colorblind-safe) ── */
 	--asset-equity: oklch(0.623 0.127 252); /* blue */
@@ -66,6 +82,16 @@
 	--status-error-color: var(--red-500);
 	--status-pulse-duration: 2s;
 	--status-pulse-easing: ease-in-out;
+	--status-led-healthy: oklch(0.72 0.17 155);
+	--status-led-degraded: oklch(0.78 0.14 65);
+	--status-led-warning: oklch(0.8 0.16 90);
+	--status-led-critical: oklch(0.6 0.22 25);
+	--status-led-live: oklch(0.75 0.15 195);
+	--status-led-idle: oklch(0.55 0.03 253);
+	--status-led-error: oklch(0.65 0.2 25);
+	--status-led-info: oklch(0.68 0.12 253);
+	--risk-gauge-track: oklch(1 0 0 / 0.06);
+	--risk-gauge-fg: oklch(0.64 0.12 235);
 }
 
 /* ── Light Mode Data Viz Adjustments ──

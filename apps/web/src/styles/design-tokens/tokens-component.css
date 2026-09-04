@@ -64,6 +64,7 @@
 	/* ── Status Indicator ── */
 	--status-dot-size: 6px;
 	--status-dot-size-lg: 8px;
+	--tooltip-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
 
 	/* ── Checkbox ── */
 	--checkbox-size: 14px;

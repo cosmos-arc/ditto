@@ -24,6 +24,7 @@
 	--surface-muted: oklch(0.17 0.01 253);
 	/* Elevated: raised interactive — buttons, gallery headers, overlay cards */
 	--surface-elevated: var(--neutral-75);
+	--surface-hover: oklch(1 0 0 / 0.05);
 
 	/* ── Text Hierarchy (5 levels) ──
    * Usage rules:
@@ -64,6 +65,8 @@
 
 	/* ── Brand Accent (semantic) ── */
 	--brand-accent: var(--brand-500);
+	/* Cross-runtime alias consumed by Tailwind and the canonical prototypes. */
+	--color-accent: var(--brand-accent);
 	--brand-accent-hover: var(--brand-400);
 	--brand-accent-subtle: oklch(from var(--brand-500) l c h / 0.1);
 	--brand-accent-fg: oklch(0.99 0.002 253);
@@ -73,6 +76,7 @@
 	--brand-signature-muted: oklch(0.66 0.04 74);
 	--brand-signature-line: oklch(0.62 0.04 74);
 	--brand-signature-subtle: oklch(0.76 0.055 74 / 0.08);
+	--brand-signature-highlight: oklch(84% 0.04 74);
 
 	/* ── Icon ── */
 	--icon-primary: var(--text-secondary);
@@ -106,6 +110,10 @@
 	/* ── Frosted Glass (surface at reduced opacity for header/bar effects) ── */
 	--surface-frosted: oklch(from var(--surface-app) l c h / 0.85);
 	--surface-frosted-subtle: oklch(from var(--surface-app) l c h / 0.8);
+
+	/* ── Shared elevation and motion effects ── */
+	--focus-ring-shadow: 0 0 0 1.5px var(--color-accent), 0 0 0 4px oklch(from var(--color-accent) l c h / 0.25);
+	--queue-hover-shadow: 0 1px 4px oklch(0 0 0 / 0.12);
 }
 
 /* --- Domain Signature Colors --- */
@@ -153,6 +161,7 @@
  * Mirrors dark mode where higher elevation → higher lightness.
  */
 [data-theme="light"] {
+	--surface-hover: oklch(0 0 0 / 0.05);
 	/* Surface Elevation — white → gray steps
    * Hierarchy: app (brightest) → panel-base → strip (subtle separator) → panel-elevated → overlay → modal
    * Strip sits between panel-base and panel-elevated as a subtle divider,
