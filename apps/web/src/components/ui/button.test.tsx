@@ -1,0 +1,28 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { Button, buttonVariants } from "./button";
+
+describe("Button", () => {
+	it("should render with default variant", () => {
+		render(<Button>Click me</Button>);
+		expect(screen.getByRole("button", { name: "Click me" })).toBeInTheDocument();
+	});
+
+	it("should apply variant classes", () => {
+		render(<Button variant="outline">Outline</Button>);
+		const button = screen.getByRole("button");
+		expect(button).toHaveClass("border");
+	});
+
+	it("should be disabled when disabled prop is set", () => {
+		render(<Button disabled>Disabled</Button>);
+		expect(screen.getByRole("button")).toBeDisabled();
+	});
+
+	it("does not use shadcn default token names", () => {
+		const classes = buttonVariants();
+		expect(classes).not.toContain("bg-primary");
+		expect(classes).not.toContain("ring-ring");
+		expect(classes).not.toContain("border-border");
+	});
+});

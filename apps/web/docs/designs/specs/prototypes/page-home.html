@@ -1,0 +1,2851 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-home
+  Edition: v1.1
+  Generated: 2026-04-02
+  Updated: 2026-04-22
+
+  Tabs: 0 (Home 无 tab 系统)
+
+  Overlays: 4
+  - overlay-signal-detail (Drawer: 信号详情) [covered]
+  - overlay-order-confirm (Modal: 订单确认) [covered]
+  - overlay-edit-workspace (Drawer: 编辑工作台) [covered]
+  - overlay-ai-advice (Drawer: AI 建议详情) [covered]
+
+  Note: my-workspace 已从默认视图移除（pending product spec），overlay 保留。
+
+  State Variants: 6 components × 3 states (empty/loading/error)
+  - global-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - decision-card: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] (merged intelligence stream)
+  - data-health: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+
+  Coverage Score: 100% (30/30 states covered)
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="home">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Home</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base → semantic → domain → data-viz → interaction → density → component → shell → style) -->
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <!-- Mock Data -->
+  <script src="shared/mock-data.js"></script>
+
+  <style>
+    /* ── Gate 0: Hide prototype tooling in default-view ── */
+    :root:has(#view-default:checked) .proto-nav { display: none !important; }
+    :root:has(#view-default:checked) #default-view > .style-label { display: none !important; }
+    :root:has(#view-default:checked) #default-view { height: 100dvh !important; }
+
+    /* ── Rail toggle icons ── */
+    .rail-bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    /* ── Subtle scrollbar for low-frequency panels ── */
+    .panel-body.scrollbar-subtle::-webkit-scrollbar-thumb {
+      background: transparent;
+    }
+    .panel-body.scrollbar-subtle:hover::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+    }
+
+    /* ── Style label for comparison (L4 — prototype annotation) ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Header avatar brass ring ── */
+    .shell-home .header-avatar {
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 24%, var(--border-subtle));
+    }
+
+    /* ══════════════════════════════════════════════
+     * R1: Material layer — Graphite Studio triple
+     * ══════════════════════════════════════════════ */
+
+    /* ── Rail logo brass presence ── */
+    .shell-home .rail-logo {
+      color: var(--brand-signature-fg);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* ── Header search refined hover ── */
+    .shell-home .header-search:hover {
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 18%, var(--border-default));
+      background: var(--surface-panel-elevated);
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-home .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    /* ── Header title structural accent ── */
+    .shell-home .header-title {
+      position: relative;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
+    }
+
+    /* ── Rail active: domain-tinted selection ── */
+    .shell-home .rail-icon.active {
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 24%, var(--border-subtle));
+    }
+
+    /* ── Decision Card visual anchor — left brand border ── */
+    .shell-home .decision-card {
+      display: grid;
+      grid-template-columns: minmax(280px, 4fr) minmax(360px, 5fr) minmax(174px, 2fr);
+      gap: var(--space-12);
+      align-items: stretch;
+      padding: var(--space-10) var(--space-14);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 22%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base));
+    }
+
+    /* ── Decision card left edge emphasis ── */
+    .shell-home .decision-card::before {
+      content: '';
+      position: absolute;
+      left: -1px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: color-mix(in oklch, var(--brand-signature-fg) 36%, var(--border-subtle));
+      pointer-events: none;
+    }
+
+    /* ── Icon semantic color classes (replaces inline styles) ── */
+    .icon-healthy   { color: var(--system-healthy-fg); }
+    .icon-brand     { color: var(--brand-accent); }
+    .icon-warning   { color: var(--system-degraded-fg); }
+    .icon-muted     { color: var(--text-tertiary); }
+    .icon-agent     { color: var(--agent-running-fg); }
+    .icon-risk      { color: var(--risk-high-fg); }
+
+    /* ── Panel grow utility (replaces inline flex:1) ── */
+    .panel-grow { flex: 1; }
+
+    /* ── Collapsible strip wrapper for Global Pulse ── */
+    .collapsible-strip[data-contract-slot="global-pulse-wrapper"] {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      overflow: hidden;
+      background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
+    }
+    .collapsible-strip[data-contract-slot="global-pulse-wrapper"] .global-pulse {
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .collapsible-strip[data-contract-slot="global-pulse-wrapper"] .collapsible-strip-header {
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .collapsible-strip[data-collapsed-state="true"][data-contract-slot="global-pulse-wrapper"] .collapsible-strip-header {
+      border-bottom: none;
+    }
+
+    /* ── Panel subtitle & Alert timestamp — upgraded to 12px in layout-base.css ── */
+
+    /* ── Shell children elevation above noise layer ── */
+    .shell-home > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Noise texture overlay ── */
+    .noise-layer {
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.042;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Decision routing label — inherits layout-base.css base, no override needed ── */
+
+    /* ── Queue item active state ── */
+    .queue-item:active {
+      background: var(--interaction-hover-strong-bg);
+    }
+
+    /* ── Decision CTA primary — enhanced brand presence ── */
+    .shell-home .decision-cta.primary:hover {
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+
+    /* ── Decision CTA active/pressed state ── */
+    .decision-cta {
+      min-width: 72px;
+      justify-content: center;
+    }
+    .decision-cta:active {
+      transform: scale(0.97);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    /* Pending count badge next to CTA */
+    .cta-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      margin-left: var(--space-4);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1;
+      color: var(--risk-critical-fg);
+      background: color-mix(in oklch, var(--risk-critical-fg) 12%, transparent);
+      border-radius: 999px;
+    }
+
+    /* ── Decision routing label — brass tint for brand consistency ── */
+    .shell-home .decision-routing-label {
+      color: var(--brand-signature-fg);
+    }
+
+    /* ── Metric sub — enhanced readability ── */
+    .shell-home .metric-sub {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    .shell-home .collapsible-strip-title {
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Panel header separator — brass tint for consistency ── */
+    .shell-home .panel-header {
+      border-bottom-color: color-mix(in oklch, var(--brand-signature-fg) 8%, var(--border-subtle));
+    }
+
+    /* ── Panel title refined typography ── */
+    .shell-home .panel-title {
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Panel subtitle — slightly warmer for brand feel ── */
+    .shell-home .panel-subtitle {
+      color: color-mix(in oklch, var(--brand-signature-fg) 20%, var(--text-tertiary));
+    }
+
+    /* ── Context section disclosure — refined ── */
+    .shell-home .context-section-disclosure {
+      border: 1px solid transparent;
+      padding-left: var(--space-8);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .shell-home .context-section-disclosure:hover {
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 12%, transparent);
+    }
+
+    /* ── Context section dual-line separator — light from above ── */
+    .shell-home .context-section + .context-section {
+      position: relative;
+    }
+    .shell-home .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--overlay-3);
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Micro-animations — living data feel
+     * ══════════════════════════════════════════════ */
+
+    /* Pulse dot — live indicator breathing */
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Critical alert dot — faster urgency pulse */
+    @keyframes dot-critical-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Task breathe — running items subtle opacity */
+    @keyframes task-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.88; }
+    }
+
+    /* Value flash — data update feedback */
+    @keyframes value-flash {
+      0%   { opacity: 0.85; transform: translateY(0.5px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Alert critical dot pulse with ring expansion */
+    .shell-home .alert-dot.critical {
+      animation: dot-critical-pulse 2s ease-in-out infinite;
+      position: relative;
+    }
+    .shell-home .alert-dot.critical::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1px solid var(--risk-critical-fg);
+      opacity: 0;
+      animation: critical-ring 2s ease-out infinite;
+    }
+    @keyframes critical-ring {
+      0% { transform: scale(0.8); opacity: 0.6; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
+    /* Health degraded dot pulse */
+    .shell-home .health-dot.degraded {
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: Indicator semantic symbols (replaces hardcoded ▲▼)
+     * ══════════════════════════════════════════════ */
+    .indicator-up::before {
+      content: var(--indicator-up-sym, '▲');
+      color: var(--market-up-fg, var(--market-strong-fg));
+      font-size: 0.85em;
+      margin-right: 2px;
+    }
+    .indicator-down::before {
+      content: var(--indicator-down-sym, '▼');
+      color: var(--market-down-fg, var(--market-weak-fg));
+      font-size: 0.85em;
+      margin-right: 2px;
+    }
+    .status-value.indicator-down {
+      color: var(--market-down-fg);
+    }
+    .decision-judgment-metric .status-value:not(.up):not(.down):not(.indicator-down):not(.warning):not(.positive):not(.negative) {
+      color: var(--text-primary);
+    }
+
+    /* ── Status dot — live indicator lamp ── */
+    .status-dot {
+      display: inline-block;
+      width: var(--space-4);
+      height: var(--space-4);
+      border-radius: 50%;
+      margin-right: var(--space-4);
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .status-dot.live {
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .status-dot.running {
+      width: 3px;
+      height: 3px;
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .status-dot.paused {
+      width: 3px;
+      height: 3px;
+      background: var(--text-disabled);
+    }
+
+    /* ── Sparkline inline SVG ── */
+    .sparkline {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: var(--space-2);
+      flex-shrink: 0;
+      background: transparent;
+      opacity: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * R2: My Workspace — REMOVED (pending product spec)
+     * ══════════════════════════════════════════════ */
+
+    /* ══════════════════════════════════════════════
+     * Global Pulse — L3 compact status strip
+     * ══════════════════════════════════════════════ */
+    .global-pulse {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(104px, 1fr));
+      align-items: stretch;
+      min-height: 56px;
+      padding: 0;
+      background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      color: var(--text-secondary);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .global-pulse::-webkit-scrollbar {
+      display: none;
+    }
+    .global-pulse-item {
+      display: grid;
+      align-content: center;
+      gap: var(--space-1);
+      min-width: 104px;
+      padding: var(--space-6) var(--space-8);
+      border-right: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    .global-pulse-item:last-child {
+      border-right: 0;
+    }
+    .global-pulse-item[data-operating-category="risk"],
+    .global-pulse-item[data-operating-category="data"] {
+      background: color-mix(in oklch, var(--risk-high-fg) 4%, transparent);
+    }
+    .global-pulse-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .global-pulse-value {
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+    }
+    .global-pulse-value.warning { color: var(--risk-medium-fg); }
+    .global-pulse-value.positive { color: var(--market-up-fg); }
+    .global-pulse-note {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+    .global-pulse-note.positive { color: var(--market-up-fg); }
+    .global-pulse-note.warning { color: var(--risk-medium-fg); }
+
+    /* Pulse group separators: Account | Risk | Operations */
+    .global-pulse-item.pulse-separator {
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    /* Hero pulse items — signature visual weight */
+    .global-pulse-item--hero {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: var(--space-1) var(--space-8);
+      align-content: center;
+    }
+    .global-pulse-item--hero .global-pulse-label {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .global-pulse-item--hero .global-pulse-value {
+      grid-column: 1;
+      grid-row: 2;
+      font-size: var(--font-size-24);
+    }
+    .global-pulse-item--hero .global-pulse-note {
+      grid-column: 1;
+      grid-row: 3;
+    }
+    .global-pulse-item--hero .hero-sparkline {
+      grid-column: 2;
+      grid-row: 1 / -1;
+      align-self: center;
+    }
+    .global-pulse-item--hero[data-direction="up"] {
+      background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);
+    }
+    .global-pulse-item--hero[data-direction="down"] {
+      background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);
+    }
+    @media (max-width: 1023px) {
+      .global-pulse { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .decision-card-judgment {
+      margin: 0;
+      color: var(--text-primary);
+      font-family: var(--font-family-heading);
+      font-size: var(--font-size-20);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.35;
+    }
+    @keyframes border-breathe {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    .decision-card-risk {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-8);
+    }
+    .decision-card-risk .status-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+    }
+    .decision-card-risk .status-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-18);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+    }
+    .decision-card-evidence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-6);
+    }
+    .decision-card-evidence span {
+      padding: var(--space-2) var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+      white-space: nowrap;
+    }
+    .decision-impact {
+      display: grid;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+    .impact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-6);
+    }
+    .impact-row {
+      display: grid;
+      gap: var(--space-3);
+      min-width: 0;
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 60%, transparent);
+    }
+    .impact-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .impact-values {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-4);
+      color: var(--text-secondary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .impact-after {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+    .impact-arrow {
+      color: var(--prototype-light-readable-text, var(--text-quaternary));
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+    }
+    .impact-cost {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .decision-execution {
+      display: grid;
+      align-content: center;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+    .decision-cta-row {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    /* ── Decision primary metric enhanced presence ── */
+    .decision-primary .metric-value {
+      font-size: 20px;
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+    }
+    /* Signature moment: PnL value uses color without extra decoration */
+    [data-theme="dark"] .decision-primary .metric-value.positive {
+      color: var(--market-up-fg);
+    }
+
+    /* ── R2 POLISH: Activate value-flash on PnL (one-shot on load) ── */
+    .decision-primary .metric-value {
+      animation: value-flash 400ms ease-out;
+    }
+
+    /* ── Numeric data: tabular alignment ── */
+    .pulse-value,
+    .metric-value,
+    .metric-sub,
+    .status-value,
+    .pulse-metric-value,
+    .alert-time,
+    .health-status,
+    .panel-count,
+    .research-item-source,
+    .finding-source,
+    .queue-item-source,
+    .decision-judgment-text {
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+      letter-spacing: 0;
+    }
+
+    /* ── Global pulse stagger reveal (R2 animate) ── */
+    .global-pulse-item {
+      animation: card-reveal 400ms ease-out both;
+    }
+    .global-pulse-item:nth-child(1) { animation-delay: 0ms; }
+    .global-pulse-item:nth-child(2) { animation-delay: 40ms; }
+    .global-pulse-item:nth-child(3) { animation-delay: 80ms; }
+    .global-pulse-item:nth-child(4) { animation-delay: 120ms; }
+    .global-pulse-item:nth-child(5) { animation-delay: 160ms; }
+    .global-pulse-item:nth-child(6) { animation-delay: 200ms; }
+    .global-pulse-item:nth-child(7) { animation-delay: 240ms; }
+    .global-pulse-item:nth-child(8) { animation-delay: 280ms; }
+    @keyframes card-reveal {
+      from { opacity: 0; transform: translateY(3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .shell-home *,
+      .shell-home *::before,
+      .shell-home *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Light mode fixes
+     * ══════════════════════════════════════════════ */
+    [data-theme="light"] .shell-home .context-section + .context-section::before {
+      background: var(--border-subtle);
+    }
+    [data-theme="light"] .shell-home {
+      --prototype-light-readable-text: var(--neutral-600);
+      --prototype-light-muted-text: var(--neutral-500);
+    }
+    [data-theme="light"] .noise-layer {
+      opacity: 0.008;
+    }
+
+    /* ── Status bar brand tint (dark mode) ── */
+    [data-theme="dark"] .shell-home .shell-status-bar {
+      background: color-mix(in oklch, var(--brand-signature-fg) 8%, var(--surface-strip));
+      border-top: 1px solid color-mix(in oklch, var(--brand-signature-fg) 8%, var(--border-subtle));
+    }
+    [data-theme="dark"] .shell-home .shell-status-bar .status-bar-separator {
+      background: color-mix(in oklch, var(--brand-signature-fg) 14%, var(--border-subtle));
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Signal detail drawer */
+    :root:has(#overlay-signal-detail:checked)
+      [data-overlay="overlay-signal-detail"] { display: flex; }
+
+    /* Order confirm modal */
+    :root:has(#overlay-order-confirm:checked)
+      [data-overlay="overlay-order-confirm"] { display: flex; }
+
+    /* Edit workspace drawer */
+    :root:has(#overlay-edit-workspace:checked)
+      [data-overlay="overlay-edit-workspace"] { display: flex; }
+
+    /* AI advice drawer */
+    :root:has(#overlay-ai-advice:checked)
+      [data-overlay="overlay-ai-advice"] { display: flex; }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-16);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Inline-style replacement utilities
+     * ══════════════════════════════════════════════ */
+
+    /* Cursor utility — label/button interactive pointer */
+    .cursor-pointer { cursor: pointer; }
+
+    /* Decision judgment label — expand touch target without visual padding */
+    .decision-judgment > .cursor-pointer {
+      display: block;
+      position: relative;
+      padding: var(--space-2) var(--space-16) var(--space-2) 0;
+      margin: calc(var(--space-2) * -1) calc(var(--space-16) * -1) calc(var(--space-2) * -1) 0;
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .decision-judgment > .cursor-pointer::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-4);
+    }
+    .decision-judgment > .cursor-pointer:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .decision-judgment > .cursor-pointer::after {
+      content: '›';
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: var(--font-size-14);
+      color: var(--prototype-light-readable-text, var(--text-quaternary));
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .decision-judgment > .cursor-pointer:hover::after {
+      opacity: 1;
+    }
+
+    /* Decision KPI metrics micro-divider — Brass signature */
+    .shell-home .decision-judgment-metrics {
+      position: relative;
+      padding-top: var(--space-8);
+    }
+    .shell-home .decision-judgment-metrics::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, var(--brand-signature-fg) 10%, var(--border-subtle));
+    }
+
+    /* Overlay field semantic value colors */
+    .val-weak    { color: var(--market-weak-fg); }
+    .val-strong  { color: var(--market-strong-fg); }
+    .val-healthy { color: var(--system-healthy-fg); }
+    .val-risk    { color: var(--risk-high-fg); }
+
+    /* Overlay body descriptive paragraph */
+    .overlay-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .overlay-desc--relaxed {
+      line-height: 1.7;
+    }
+
+    /* Edit workspace: widget checklist */
+    .widget-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+    .widget-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .widget-item input[type="checkbox"] {
+      accent-color: var(--brand-accent);
+    }
+
+    /* Edit workspace: layout preview area */
+    .layout-preview {
+      border: 1px dashed var(--border-default);
+      border-radius: var(--radius-4);
+      padding: var(--space-12);
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+    }
+
+    /* OK checkmark icon (replaces inline color on ✓ state icons) */
+    .icon-ok { color: var(--system-healthy-fg); }
+
+    /* Data health trust gauge */
+    .health-gauge {
+      display: flex;
+      gap: 1px;
+      height: 4px;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: var(--space-6);
+    }
+    .health-gauge-segment {
+      flex: 1;
+      border-radius: 1px;
+    }
+    .health-gauge-segment.healthy { background: var(--system-healthy-fg); }
+    .health-gauge-segment.degraded { background: var(--system-degraded-fg); }
+
+    /* ══════════════════════════════════════════════
+     * R3: Information visualization enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Queue disclosure refined ── */
+    .shell-home .queue-disclosure {
+      border: 1px solid transparent;
+      padding-left: var(--space-8);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .shell-home .queue-disclosure:hover {
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 12%, transparent);
+    }
+
+    /* ── Queue item tags — refined with subtle border ── */
+    .shell-home .queue-item-tag {
+      border: 1px solid transparent;
+    }
+    .shell-home .queue-item-tag.trade {
+      border-color: color-mix(in oklch, var(--brand-accent) 20%, transparent);
+    }
+    .shell-home .queue-item-tag.priority {
+      border-color: color-mix(in oklch, var(--risk-high-fg) 20%, transparent);
+    }
+
+    /* ── Queue item P1 urgency edge ── */
+    .shell-home .queue-item:has(.queue-item-bar.p1) {
+      position: relative;
+      box-shadow: inset 0 0 0 1px var(--border-strong);
+    }
+
+    /* Queue item hover elevation */
+    .queue-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .queue-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 12%, var(--border-subtle));
+    }
+
+    /* ── Queue item priority bar contrast ── */
+    .queue-item:hover .queue-item-bar.p1 {
+      background: var(--risk-high-fg);
+    }
+    .queue-item:hover .queue-item-bar.p2 {
+      background: var(--system-degraded-fg);
+    }
+    .worklist-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+    .worklist-summary-item {
+      display: grid;
+      gap: var(--space-2);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 56%, transparent);
+    }
+    .worklist-summary-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      white-space: nowrap;
+    }
+    .worklist-summary-value {
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+    }
+    .worklist-table {
+      display: grid;
+      gap: 1px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      overflow: hidden;
+      background: var(--border-subtle);
+    }
+    .worklist-header,
+    .worklist-row {
+      display: grid;
+      grid-template-columns: 38px 56px minmax(128px, 1.1fr) minmax(220px, 2fr) 78px 76px;
+      align-items: center;
+      gap: var(--space-8);
+      min-width: 0;
+      padding: var(--space-5) var(--space-8);
+      background: color-mix(in oklch, var(--surface-panel-base) 94%, transparent);
+    }
+    .worklist-header {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .worklist-row {
+      min-height: 34px;
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .worklist-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .worklist-row.queue-item {
+      display: grid;
+      gap: var(--space-8);
+      padding: var(--space-5) var(--space-8);
+    }
+    .worklist-row.queue-item:hover {
+      margin: 0;
+      padding: var(--space-5) var(--space-8);
+    }
+    .worklist-priority {
+      justify-self: start;
+      min-width: 28px;
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      color: var(--text-primary);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      text-align: center;
+    }
+    .worklist-priority.p1 { background: var(--risk-high-bg); color: var(--risk-high-fg); }
+    .worklist-priority.p2 { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
+    .worklist-priority.p3 { background: var(--interaction-hover-subtle-bg); color: var(--text-tertiary); }
+    .worklist-type {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+    }
+    .worklist-object {
+      min-width: 0;
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .worklist-impact {
+      min-width: 0;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .worklist-sla {
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .worklist-action {
+      min-width: 0;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    /* ── Pulse metric hover lift ── */
+    .shell-sidebar .pulse-metric {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-4);
+      margin: calc(var(--space-4) * -1);
+    }
+    .shell-sidebar .pulse-metric:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Decision banner KPI row */
+    .decision-kpi-row {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-4);
+    }
+    .decision-kpi-row .decision-judgment-metric {
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .decision-kpi-row .decision-judgment-metric:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * R4: Brand-tinted surface depth
+     * ══════════════════════════════════════════════ */
+
+    /* Main content area structural depth */
+    .shell-home .main-primary {
+      position: relative;
+      border-top: 1px solid color-mix(in oklch, var(--brand-signature-fg) 10%, var(--border-subtle));
+    }
+    .shell-home .main-primary > * {
+      position: relative;
+      z-index: 1;
+    }
+    .shell-home .panel:hover {
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 18%, var(--border-subtle));
+      background: var(--surface-panel-elevated);
+    }
+
+    /* ── Context section title brass accent line (brand signature) ── */
+    .shell-home .context-section-title {
+      position: relative;
+      padding-left: var(--space-10);
+    }
+    .shell-home .context-section-title::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 12px;
+      border-radius: 1.5px;
+      background: color-mix(in oklch, var(--brand-signature-fg) 42%, var(--border-default));
+    }
+
+    /* ── Sidebar context rail premium polish ── */
+    .shell-home .context-section {
+      transition: background var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    [data-theme="dark"] .shell-home .context-section:hover {
+      background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base));
+    }
+
+    /* ── Alert row alternating subtle banding ── */
+    .shell-home .alert-row:nth-child(even) {
+      background: color-mix(in oklch, var(--text-quaternary) 3%, transparent);
+      border-radius: var(--radius-2);
+    }
+
+    /* ── Alert row urgency hover ── */
+    .shell-home .alert-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .shell-home .alert-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Finding icon badge — semantic differentiation ── */
+    .shell-home .finding-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-4);
+      flex-shrink: 0;
+    }
+    .shell-home .finding-icon.icon-agent {
+      background: color-mix(in oklch, var(--agent-running-fg) 10%, transparent);
+    }
+    .shell-home .finding-icon.icon-risk {
+      background: color-mix(in oklch, var(--risk-high-fg) 10%, transparent);
+    }
+    .shell-home .finding-icon.icon-brand {
+      background: color-mix(in oklch, var(--brand-accent) 10%, transparent);
+    }
+
+    /* ── Finding item interaction ── */
+    .shell-home .finding-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-4);
+      margin: calc(var(--space-4) * -1);
+    }
+    .shell-home .finding-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Activity Feed — unified timeline
+     * ══════════════════════════════════════════════ */
+    .activity-feed {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .activity-item {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid transparent;
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      position: relative;
+    }
+    .activity-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    /* Timeline dot — connects activity cadence */
+    .activity-item:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: calc(var(--space-6) * -1);
+      height: calc(var(--space-6) + var(--space-2));
+      width: 1px;
+      background: var(--border-subtle);
+      pointer-events: none;
+    }
+    /* Semantic full-frame tint for activity items */
+    .event-signal-buy {
+      border-color: color-mix(in oklch, var(--market-up-fg) 20%, transparent);
+    }
+    .event-signal-sell {
+      border-color: color-mix(in oklch, var(--market-down-fg) 20%, transparent);
+    }
+    .event-risk {
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 20%, transparent);
+    }
+    .event-data {
+      border-color: color-mix(in oklch, var(--system-degraded-fg) 20%, transparent);
+    }
+    .event-agent {
+      border-color: color-mix(in oklch, var(--brand-accent) 18%, transparent);
+    }
+    .activity-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .activity-icon.icon-brand {
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      color: var(--brand-accent);
+    }
+    .activity-icon.icon-warning {
+      background: color-mix(in oklch, var(--system-degraded-fg) 12%, transparent);
+      color: var(--system-degraded-fg);
+    }
+    .activity-icon.icon-healthy {
+      background: color-mix(in oklch, var(--system-healthy-fg) 12%, transparent);
+      color: var(--system-healthy-fg);
+    }
+    .activity-icon.icon-muted {
+      background: color-mix(in oklch, var(--text-tertiary) 8%, transparent);
+      color: var(--text-tertiary);
+    }
+    .activity-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .activity-text {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      line-height: 1.4;
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .activity-tag {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-2);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .activity-tag.trade    { background: var(--brand-accent-subtle); color: var(--brand-accent); border: 1px solid color-mix(in oklch, var(--brand-accent) 20%, transparent); }
+    .activity-tag.risk     { background: var(--risk-high-bg); color: var(--risk-high-fg); border: 1px solid color-mix(in oklch, var(--risk-high-fg) 20%, transparent); }
+    .activity-tag.research { background: color-mix(in oklch, var(--purple-500) 12%, transparent); color: var(--purple-500); }
+    .activity-tag.platform { background: color-mix(in oklch, var(--brand-500) 12%, transparent); color: var(--brand-500); }
+    .activity-summary {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-top: var(--space-1);
+    }
+    .activity-source {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: var(--space-1);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .activity-item[data-stream-entry="insight"] {
+      background: color-mix(in oklch, var(--agent-running-fg) 4%, transparent);
+      border: 1px solid color-mix(in oklch, var(--agent-running-fg) 10%, transparent);
+    }
+    .activity-item[data-stream-entry="insight"]::before {
+      display: none;
+    }
+    .constraint-stack {
+      display: grid;
+      gap: var(--space-6);
+    }
+    .constraint-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-8);
+      align-items: baseline;
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 56%, transparent);
+    }
+    .constraint-label {
+      min-width: 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .constraint-value {
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .constraint-value.warning {
+      color: var(--risk-medium-fg);
+    }
+    .sidebar-collapsed-strip {
+      display: none;
+      flex-direction: column;
+      gap: var(--space-8);
+      align-items: center;
+      width: 100%;
+    }
+    .sidebar-collapsed-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      color: var(--text-secondary);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 56%, transparent);
+      position: relative;
+    }
+    .sidebar-collapsed-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .sidebar-collapsed-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--risk-high-fg);
+      color: var(--text-inverse);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      line-height: 14px;
+      text-align: center;
+    }
+    .shell-home[data-sidebar-state="collapsed"] {
+      grid-template-columns: var(--shell-rail-width) 1fr var(--shell-sidebar-collapsed-width);
+    }
+    .shell-home[data-sidebar-state="collapsed"] .context-rail {
+      align-items: center;
+      padding: var(--space-8) 0;
+      gap: var(--space-8);
+    }
+    .shell-home[data-sidebar-state="collapsed"] .context-section {
+      display: none;
+    }
+    .shell-home[data-sidebar-state="collapsed"] .sidebar-collapsed-strip {
+      display: flex;
+    }
+    .shell-home[data-sidebar-state="collapsed"] .sidebar-toggle {
+      margin-top: auto;
+    }
+
+    /* ── Research icon badge — semantic differentiation ── */
+    .shell-home .research-item-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-4);
+      flex-shrink: 0;
+    }
+    .shell-home .research-item-icon.icon-healthy {
+      background: color-mix(in oklch, var(--system-healthy-fg) 10%, transparent);
+    }
+    .shell-home .research-item-icon.icon-warning {
+      background: color-mix(in oklch, var(--system-degraded-fg) 10%, transparent);
+    }
+    .shell-home .research-item-icon.icon-muted {
+      background: color-mix(in oklch, var(--text-tertiary) 8%, transparent);
+    }
+
+    /* ── Research item interaction ── */
+    .shell-home .research-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-4);
+      margin: calc(var(--space-4) * -1);
+    }
+    .shell-home .research-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Regime tag hover contrast ── */
+    .regime-tag {
+      border: 1px solid transparent;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .regime-tag:hover {
+      border-color: color-mix(in oklch, var(--text-secondary) 18%, var(--border-subtle));
+    }
+
+    /* ── Alert dot critical pulse speed variation ── */
+    .alert-row:nth-child(1) .alert-dot.critical {
+      animation-duration: 1.8s;
+    }
+    .alert-row:nth-child(2) .alert-dot.critical {
+      animation-duration: 2.2s;
+    }
+
+    /* ── Decision card brass structural line ── */
+    .shell-home .panel[data-contract-slot="decision-card"] {
+      position: relative;
+      border-top-color: color-mix(in oklch, var(--brand-signature-fg) 18%, var(--border-subtle));
+    }
+    .shell-home .panel[data-contract-slot="decision-card"] > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Decision banner KPI enhanced depth ── */
+    .shell-home .decision-judgment-metric {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+    }
+    .shell-home .decision-judgment-metric:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Sidebar positioning context ── */
+    .shell-home .shell-sidebar {
+      position: relative;
+    }
+    .shell-home .context-rail {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Light mode surface tuning ── */
+    [data-theme="light"] .shell-home .context-section:hover {
+      background: color-mix(in oklch, var(--brand-signature-fg) 4%, var(--surface-panel-base));
+    }
+
+    /* ── Health item hover feedback ── */
+    .shell-home .health-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding: var(--space-6) var(--space-8);
+      margin: 0 calc(var(--space-8) * -1);
+    }
+    .shell-home .health-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .shell-home .health-normal-summary {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      padding: var(--space-4) 0;
+    }
+
+    /* ── Health gauge segment hover ── */
+    .health-gauge-segment {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .health-gauge-segment:hover {
+      opacity: 0.8;
+    }
+
+    /* ── Panel count badge — refined ── */
+    .shell-home .panel-count {
+      background: color-mix(in oklch, var(--brand-signature-fg) 10%, transparent);
+      color: var(--brand-signature-fg);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Notification badge dot — attention pulse ── */
+    .shell-home .badge-dot {
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    /* ── Panel action — consistent sizing ── */
+    .panel-action {
+      min-width: 72px;
+      justify-content: center;
+    }
+
+    /* ── Panel action enhanced focus ── */
+    .panel-action:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ── Sidebar toggle brass tint ── */
+    .shell-home .sidebar-toggle:hover {
+      color: var(--brand-signature-fg);
+    }
+
+    /* ── Collapsed Sidebar Gallery Mock ── */
+    .gallery-collapsed-sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: var(--shell-sidebar-collapsed-width);
+      gap: var(--space-8, 8px);
+      padding: var(--space-12, 12px) 0;
+      background: var(--surface-panel-elevated);
+      border-left: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      overflow: hidden;
+    }
+    .gallery-collapsed-btn {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-6);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .gallery-collapsed-btn svg { width: 20px; height: 20px; }
+    .gallery-badge-count {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--risk-critical-fg);
+      color: var(--text-inverse);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+      line-height: 1;
+    }
+    .gallery-led-dot {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+    }
+
+    /* ── In-page state variant cards ── */
+    .state-stale-variant[data-state="stale"] {
+      border: 1px dashed var(--border-default);
+      opacity: 0.7;
+    }
+
+    .interaction-selected {
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
+      background: var(--interaction-selected-bg);
+      padding: var(--space-8);
+      border-radius: var(--radius-4, 4px);
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg class="noise-svg-source" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+
+  <div class="style-label" aria-hidden="true">Compact 适中 · 12px · 36px rows · 56px rail · A股</div>
+
+  <div class="shell-v2 shell-home" data-sidebar-shell data-sidebar-state="expanded">
+    <!-- R1: Noise texture overlay -->
+    <div class="noise-layer" aria-hidden="true"></div>
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon active" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <h1 class="header-title">首页</h1>
+      <div class="header-spacer"></div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <div class="command-context-actions" data-command-context-route="/" data-command-context-object="600519" data-command-context-actions="review-signal, open-risk, open-orders, explain-priority" hidden></div>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══ Status Bar (L3 — lightweight operational status) ═══ -->
+    <footer class="shell-status-bar" role="status" aria-label="首页市场与数据状态">
+      <div class="status-bar-item">
+        <span class="status-bar-label">盘中</span>
+        <span class="status-bar-value">2026-03-28 · 盘中交易</span>
+      </div>
+      <div class="status-bar-separator"></div>
+      <div class="status-bar-item">
+        <span class="status-bar-label">市场</span>
+        <span class="status-bar-value">沪深300 <span>3,432</span> · <span class="indicator-up">+0.82%</span></span>
+      </div>
+      <div class="status-bar-separator"></div>
+      <div class="status-bar-item">
+        <span class="status-bar-label">数据源</span>
+        <span class="status-bar-value">5/7 数据源正常</span>
+      </div>
+    </footer>
+
+
+    <!-- ═══ Main Content (Decision Card + Execution Queue + Signals/Findings) ═══ -->
+    <div class="shell-main" id="main-content">
+      <!-- ═══ Global Pulse (L3 — compact operational status, collapsible) ═══ -->
+    <div class="collapsible-strip" data-collapsible-strip data-contract-slot="global-pulse-wrapper" aria-label="全局操作总览">
+      <div class="collapsible-strip-header">
+        <span class="collapsible-strip-title">全局脉搏</span>
+        <span class="collapsible-strip-count">8 指标</span>
+        <button class="collapsible-strip-toggle" data-strip-toggle="全局脉搏" aria-expanded="true" aria-label="折叠 全局脉搏" type="button">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+      </div>
+      <div class="collapsible-content" id="home-global-pulse-content">
+        <div class="collapsible-inner">
+    <div class="global-pulse" data-contract-slot="global-pulse" data-operating-summary aria-label="今日全局操作总览" data-reveal="fade-up" data-secondary-context>
+      <span class="global-pulse-item global-pulse-item--hero" data-operating-metric data-operating-category="account" data-direction="up" data-tooltip="账户总权益 ¥25,432,180">
+        <span class="global-pulse-label freshness-realtime">总权益</span>
+        <span class="global-pulse-value">¥25.43M</span>
+        <span class="global-pulse-note positive">+12.6% 本月</span>
+        <svg role="img" class="hero-sparkline" data-sparkline='{"data":[22.1,22.8,23.5,24.1,24.6,25.0,25.43],"series":"up","fill":true,"width":48,"height":20}' aria-label="总权益趋势"></svg>
+      </span>
+      <span class="global-pulse-item global-pulse-item--hero" data-operating-metric data-operating-category="account" data-direction="up" data-tooltip="今日收益 ¥182,400">
+        <span class="global-pulse-label freshness-realtime">日盈亏</span>
+        <span class="global-pulse-value positive">+0.72%</span>
+        <span class="global-pulse-note">¥182.4K</span>
+        <svg role="img" class="hero-sparkline" data-sparkline='{"data":[0.12,0.28,0.35,0.41,0.52,0.65,0.72],"series":"up","fill":true,"width":48,"height":20}' aria-label="日盈亏走势"></svg>
+      </span>
+      <span class="global-pulse-item global-pulse-item--hero pulse-separator" data-operating-metric data-operating-category="risk" data-direction="down" data-tooltip="风险预算剩余 21%，科技集中度占用偏高">
+        <span class="global-pulse-label freshness-realtime">风险预算</span>
+        <span class="global-pulse-value warning">21%</span>
+        <span class="global-pulse-note warning">集中度占用</span>
+        <svg role="img" class="hero-sparkline" data-sparkline='{"data":[42,38,35,30,28,25,21],"series":"down","fill":true,"width":48,"height":20}' aria-label="风险预算趋势"></svg>
+      </span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="risk" data-tooltip="VaR 已超过 95% 历史分位，组合回撤 -3.8%">
+        <span class="global-pulse-label freshness-realtime">VaR / 回撤</span>
+        <span class="global-pulse-value warning">95%</span>
+        <span class="global-pulse-note">DD -3.8%</span>
+      </span>
+      <span class="global-pulse-item pulse-separator" data-operating-metric data-operating-category="work" data-tooltip="6 项待处理，含 2 项 P1 和 2 项 P2">
+        <span class="global-pulse-label freshness-delayed">待处理</span>
+        <span class="global-pulse-value">6</span>
+        <span class="global-pulse-note">P1 2 / P2 2</span>
+      </span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="execution" data-tooltip="待下单 1，阻塞订单 0，成交回报正常">
+        <span class="global-pulse-label freshness-realtime">执行</span>
+        <span class="global-pulse-value">1 待下单</span>
+        <span class="global-pulse-note">0 阻塞</span>
+      </span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="model" data-tooltip="1 个模型漂移预警，2 个回测待审">
+        <span class="global-pulse-label freshness-delayed">模型</span>
+        <span class="global-pulse-value warning">1 异常</span>
+        <span class="global-pulse-note">2 待审</span>
+      </span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="data" data-tooltip="2 个数据源降级：财报延迟、另类数据陈旧">
+        <span class="global-pulse-label freshness-delayed">数据</span>
+        <span class="global-pulse-value warning">2 降级</span>
+        <span class="global-pulse-note">5/7 正常</span>
+      </span>
+    </div>
+        </div>
+      </div>
+    </div>
+
+      <!-- Primary: Decision Card + Execution Queue -->
+      <div class="main-primary">
+        <!-- Decision Card: primary decision + risk evidence + next action -->
+        <div class="panel" data-contract-slot="decision-card" data-primary-answer data-primary-weight="dominant" data-command-decision-card aria-label="影响范围：全局账户、市场和优先事项">
+          <section class="decision-card" data-reveal="fade-up">
+            <!-- Left: today's primary decision -->
+            <div class="decision-primary">
+              <span class="metric-label">今日主决策</span>
+              <p class="decision-card-judgment" data-answer-judgment>优先复核贵州茅台卖出信号，组合回撤接近预警线。</p>
+              <span class="metric-sub" data-answer-scope>全局账户 · 交易信号 · 风控集中度</span>
+            </div>
+            <!-- Middle: expected impact if the action is adopted -->
+            <div class="decision-impact" data-decision-impact aria-label="采纳主决策后的影响预览">
+              <div class="impact-grid">
+                <div class="impact-row" data-impact-row data-impact-kind="concentration" data-answer-evidence>
+                  <span class="impact-label">科技集中度</span>
+                  <span class="impact-values"><span data-impact-before>37.2%</span><span class="impact-arrow">→</span><span class="impact-after" data-impact-after>34.8%</span></span>
+                  <svg role="img" data-sparkline='{"data":[38.1,37.8,37.5,37.2,36.5,35.8,34.8],"series":"down","fill":true,"width":40,"height":14}' aria-label="科技集中度趋势"></svg>
+                </div>
+                <div class="impact-row" data-impact-row data-impact-kind="var" data-answer-evidence>
+                  <span class="impact-label">VaR 分位</span>
+                  <span class="impact-values"><span data-impact-before>95%</span><span class="impact-arrow">→</span><span class="impact-after" data-impact-after data-answer-metric>92%</span></span>
+                  <svg role="img" data-sparkline='{"data":[92,93,94,95,94.5,93,92],"series":"neutral","fill":true,"width":40,"height":14}' aria-label="VaR 分位趋势"></svg>
+                </div>
+                <div class="impact-row" data-impact-row data-impact-kind="risk-budget" data-answer-evidence>
+                  <span class="impact-label">风险预算</span>
+                  <span class="impact-values"><span data-impact-before>21%</span><span class="impact-arrow">→</span><span class="impact-after" data-impact-after>27%</span></span>
+                  <svg role="img" data-sparkline='{"data":[18,19,20,21,23,25,27],"series":"up","fill":true,"width":40,"height":14}' aria-label="风险预算趋势"></svg>
+                </div>
+              </div>
+              <span class="impact-cost" data-impact-cost>预估冲击成本 ¥5.9K · 交易后仍保留消费核心仓位</span>
+            </div>
+            <!-- Right: next action -->
+            <div class="decision-execution">
+              <span class="decision-routing-label">下一步</span>
+              <div class="decision-cta-row">
+                <label for="overlay-signal-detail" class="decision-cta primary" role="button" tabindex="0" data-answer-action>复核信号 (1/7)</label>
+                <button class="decision-cta secondary" type="button">查看风控 <span class="cta-badge">3</span></button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Today's Priority Items — Main Work Surface -->
+        <div class="panel panel-grow" data-contract-slot="pending-actions" data-selected-object-region data-reveal="fade-up" data-secondary-context>
+          <div class="panel-header">
+            <span class="panel-title">今日优先事项 <span class="panel-subtitle">多来源待办</span></span>
+            <span class="panel-count">6</span>
+            <div class="panel-actions">
+              <button class="panel-action">查看全部 →</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="worklist-summary" aria-label="今日优先事项摘要">
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">需复核</span>
+                <span class="worklist-summary-value">3</span>
+              </div>
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">需执行</span>
+                <span class="worklist-summary-value">1</span>
+              </div>
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">阻塞风险</span>
+                <span class="worklist-summary-value">2</span>
+              </div>
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">最短 SLA</span>
+                <span class="worklist-summary-value">12m</span>
+              </div>
+            </div>
+
+            <div class="worklist-table" role="table" aria-label="今日优先事项工作队列">
+              <div class="worklist-header" role="row">
+                <span>级别</span>
+                <span>类型</span>
+                <span>对象</span>
+                <span>影响</span>
+                <span>SLA</span>
+                <span>动作</span>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P1" data-reveal="fade-up" data-reveal-delay="50">
+                <span class="worklist-priority p1 queue-item-tag priority" data-worklist-level>P1</span>
+                <span class="worklist-type" data-worklist-domain>交易</span>
+                <span class="worklist-object" data-worklist-object>贵州茅台 600519</span>
+                <span class="worklist-impact" data-worklist-impact>卖出信号 87% · 采纳后 VaR 95% → 92%</span>
+                <span class="worklist-sla" data-worklist-sla>12m</span>
+                <label for="overlay-signal-detail" class="panel-action worklist-action cursor-pointer" data-worklist-action>复核</label>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P1" data-reveal="fade-up" data-reveal-delay="100">
+                <span class="worklist-priority p1 queue-item-tag priority" data-worklist-level>P1</span>
+                <span class="worklist-type" data-worklist-domain>风控</span>
+                <span class="worklist-object" data-worklist-object>科技集中度</span>
+                <span class="worklist-impact" data-worklist-impact>37.2% 超 35% 上限 · 需降至 34.8%</span>
+                <span class="worklist-sla" data-worklist-sla>18m</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>查看</button>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P2">
+                <span class="worklist-priority p2 queue-item-tag priority" data-worklist-level>P2</span>
+                <span class="worklist-type" data-worklist-domain>研究</span>
+                <span class="worklist-object" data-worklist-object>价值因子 Q1</span>
+                <span class="worklist-impact" data-worklist-impact>Sharpe 1.42 · 最大回撤 -8.3% · 待部署判断</span>
+                <span class="worklist-sla" data-worklist-sla>今日</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>报告</button>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P2">
+                <span class="worklist-priority p2 queue-item-tag priority" data-worklist-level>P2</span>
+                <span class="worklist-type" data-worklist-domain>模型</span>
+                <span class="worklist-object" data-worklist-object>情绪 Alpha v2</span>
+                <span class="worklist-impact" data-worklist-impact>IC 0.041 → 0.028 · 低于监控阈值</span>
+                <span class="worklist-sla" data-worklist-sla>2h</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>诊断</button>
+              </div>
+              <div class="worklist-row" role="row" data-worklist-row data-priority="P3">
+                <span class="worklist-priority p3" data-worklist-level>P3</span>
+                <span class="worklist-type" data-worklist-domain>平台</span>
+                <span class="worklist-object" data-worklist-object>Tushare API</span>
+                <span class="worklist-impact" data-worklist-impact>4,820 / 5,000 次 · 3 小时后重置</span>
+                <span class="worklist-sla" data-worklist-sla>3h</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>用量</button>
+              </div>
+              <div class="worklist-row" role="row" data-worklist-row data-priority="P3">
+                <span class="worklist-priority p3" data-worklist-level>P3</span>
+                <span class="worklist-type" data-worklist-domain>数据</span>
+                <span class="worklist-object" data-worklist-object>沪深300 1m K线</span>
+                <span class="worklist-impact" data-worklist-impact>14:32–14:33 缺失 · 自动补全中</span>
+                <span class="worklist-sla" data-worklist-sla>42m</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>详情</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Intelligence Stream (merged activity + AI insights) -->
+        <div class="panel" data-contract-slot="recent-signals" data-selected-object-region data-reveal="fade-up" data-reveal-delay="150" data-secondary-context>
+          <div class="panel-header">
+            <span class="panel-title">智能脉络 <span class="panel-subtitle">事件 · 洞察 · 约束</span></span>
+            <button class="panel-action">查看全部 →</button>
+          </div>
+          <div class="panel-body scrollbar-subtle">
+            <div class="activity-feed" data-intelligence-stream aria-label="活动与 AI 洞察合并时间线">
+              <!-- T1: Signal event (most recent) -->
+              <div class="activity-item event-signal-buy" data-stream-entry="activity" data-activity-type="signal">
+                <span class="activity-icon icon-brand">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag trade">信号</span>
+                    五粮液（000858）买入信号触发
+                  </div>
+                  <div class="activity-summary">Alpha v3 置信度 82%，RSI 超卖反弹 + 北向增配。</div>
+                  <div class="activity-source">策略引擎 · 25分钟前</div>
+                </div>
+              </div>
+              <!-- T2: AI correlation insight -->
+              <div class="activity-item event-agent" data-stream-entry="insight" data-activity-type="insight">
+                <span class="activity-icon icon-agent">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag platform">洞察</span>
+                    贵州茅台↔沪深300 相关性 0.82 → 0.65
+                  </div>
+                  <div class="activity-summary">市场风格切换信号增强，当前组合偏向单一因子，需与卖出信号联动复核。</div>
+                  <div class="activity-source">风控监控 · 1小时前</div>
+                </div>
+              </div>
+              <!-- T3: Model monitoring event -->
+              <div class="activity-item event-risk" data-stream-entry="activity" data-activity-type="model">
+                <span class="activity-icon icon-warning">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag risk">告警</span>
+                    情绪 Alpha v2 IC 持续下降
+                  </div>
+                  <div class="activity-summary">近 5 日 IC 0.041 → 0.028，低于监控阈值。</div>
+                  <div class="activity-source">模型监控 · 2小时前</div>
+                </div>
+              </div>
+              <!-- T4: Data-source insight -->
+              <div class="activity-item event-data" data-stream-entry="insight" data-activity-type="insight">
+                <span class="activity-icon icon-risk">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag risk">约束</span>
+                    财报数据延迟已持续 2 小时
+                  </div>
+                  <div class="activity-summary">上交所接口响应超时，基本面相关因子本轮只作为次级证据，建议切换备用源。</div>
+                  <div class="activity-source">数据监控 · 2小时前</div>
+                </div>
+              </div>
+              <!-- T5: Backtest completed -->
+              <div class="activity-item event-agent" data-stream-entry="activity" data-activity-type="backtest">
+                <span class="activity-icon icon-healthy">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag research">回测</span>
+                    价值因子 Q1 回测完成
+                  </div>
+                  <div class="activity-summary">Sharpe 1.42，最大回撤 -8.3%，建议审阅。</div>
+                  <div class="activity-source">回测引擎 · 1小时前</div>
+                </div>
+              </div>
+              <!-- T6: Factor research event -->
+              <div class="activity-item event-agent" data-stream-entry="activity" data-activity-type="research">
+                <span class="activity-icon icon-muted">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag platform">研究</span>
+                    新因子「北向持仓变化率」验证中
+                  </div>
+                  <div class="activity-summary">初步 IC 0.055，待 3 个月滚动验证。</div>
+                  <div class="activity-source">因子研究 · 4小时前</div>
+                </div>
+              </div>
+              <!-- T7: Strategy optimization -->
+              <div class="activity-item event-agent" data-stream-entry="activity" data-activity-type="research">
+                <span class="activity-icon icon-muted">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag platform">策略</span>
+                    行业轮动策略参数优化完成
+                  </div>
+                  <div class="activity-summary">Sharpe +0.15，待人工复核后部署。</div>
+                  <div class="activity-source">优化引擎 · 6小时前</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ Sidebar (full-height context rail: Market Pulse → Alerts → Health) ═══ -->
+    <div class="shell-sidebar" id="home-sidebar" data-sidebar>
+      <div class="context-rail" data-command-center-rail data-secondary-context>
+        <div class="sidebar-collapsed-strip" data-sidebar-collapsed-strip aria-label="折叠侧栏摘要" aria-hidden="true">
+          <span class="sidebar-collapsed-icon" title="市场脉搏">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 14l4-4 3 2 7-7"/><path d="M13 5h4v4"/></svg>
+          </span>
+          <span class="sidebar-collapsed-icon" title="全局预警">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2h.01"/></svg>
+            <span class="sidebar-collapsed-badge">4</span>
+          </span>
+          <span class="sidebar-collapsed-icon" title="下单前约束">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 4h10v12H5z"/><path d="M8 8h4"/><path d="M8 11h4"/><path d="M8 14h2"/></svg>
+          </span>
+          <span class="sidebar-collapsed-icon" title="数据健康">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 2-6 2-6-.9-6-2z"/><path d="M4 6v4c0 1.1 2.7 2 6 2s6-.9 6-2V6"/><path d="M4 10v4c0 1.1 2.7 2 6 2s6-.9 6-2v-4"/></svg>
+            <span class="sidebar-collapsed-badge">2</span>
+          </span>
+        </div>
+        <!-- Market Pulse (context-first, lightest background data) -->
+        <details class="context-section" data-collapse-priority="l2" data-contract-slot="market-pulse" data-reveal="fade-right" data-reveal-delay="100" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">市场脉搏</span>
+            <span class="collapse-count">4 指标</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="pulse-metric">
+              <span class="pulse-metric-label" data-tooltip="沪深300 指数实时行情">沪深300</span>
+              <span class="pulse-metric-value up" data-tooltip="沪深300 现价 3,432，涨幅 +0.82%"><span>3,432</span> · +0.82%
+                <svg role="img" data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"series":"up","fill":true,"width":48,"height":16}' aria-label="沪深300走势"></svg>
+              </span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label" data-tooltip="IVIX 隐含波动率指数">波动率</span>
+              <span class="pulse-metric-value" data-tooltip="IVIX 18.52，波动率持续回落">IVIX <span>18.52</span> · <span class="indicator-down">-3.1%</span>
+                <svg role="img" data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"series":"down","fill":true,"width":48,"height":16}' aria-label="IVIX 走势"></svg>
+              </span>
+            </div>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label" data-tooltip="上涨/下跌股票数量比">涨跌比</span>
+              <span class="pulse-metric-value up">2.1:1 · <span class="indicator-up">偏多</span></span>
+            </div>
+            <details>
+              <summary class="context-section-disclosure">更多指标</summary>
+            <div class="pulse-metric">
+              <span class="pulse-metric-label" data-tooltip="沪股通+深股通 北向资金流入">北向资金</span>
+              <span class="pulse-metric-value up" data-tooltip="北向资金净流入 +12.4 亿，连续 3 日净流入">+<span>12.4</span> 亿
+                <svg role="img" data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"series":"up","fill":true,"width":48,"height":16}' aria-label="北向资金走势"></svg>
+              </span>
+            </div>
+            </details>
+          </div>
+        </details>
+
+        <!-- Global Alerts -->
+        <details class="context-section" data-collapse-priority="l2" data-contract-slot="global-alerts" data-reveal="fade-right" data-reveal-delay="200" open data-secondary-context>
+          <summary class="context-section-header">
+            <span class="context-section-title">全局预警</span>
+            <span class="collapse-count panel-count">4</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="alert-row">
+              <span class="alert-dot critical"></span>
+              <span class="alert-title" data-tooltip="VaR 已超过 95% 历史分位，建议关注仓位风险">组合 VaR 突破 95% 分位</span>
+              <span class="alert-time">8分钟前</span>
+            </div>
+            <div class="alert-row">
+              <span class="alert-dot critical"></span>
+              <span class="alert-title" data-tooltip="中信证券 API 连接中断，交易执行可能受影响">券商连接中断 — 中信证券</span>
+              <span class="alert-time">15分钟前</span>
+            </div>
+            <details>
+              <summary class="context-section-disclosure">低优先级预警</summary>
+            <div class="alert-row">
+              <span class="alert-dot warning"></span>
+              <span class="alert-title" data-tooltip="近 5 日 IC 下降，建议检查模型参数">模型漂移 — 情绪 Alpha v2</span>
+              <span class="alert-time">1小时前</span>
+            </div>
+            <div class="alert-row">
+              <span class="alert-dot info"></span>
+              <span class="alert-title" data-tooltip="上交所接口响应超时，建议切换备用源">财报数据延迟</span>
+              <span class="alert-time">2小时前</span>
+            </div>
+            </details>
+          </div>
+          <div class="context-section-footer">
+            <button class="panel-action">查看全部预警 →</button>
+          </div>
+        </details>
+
+        <!-- Decision Constraints -->
+        <details class="context-section" data-collapse-priority="l2" data-contract-slot="decision-constraints" data-reveal="fade-right" data-reveal-delay="250" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">下单前约束</span>
+            <span class="collapse-count">4 条</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="constraint-stack">
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="卖出 600519 后科技集中度仍需控制在规则上限以内">集中度目标</span>
+                <span class="constraint-value">≤ 35%</span>
+              </div>
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="单笔市价单预估冲击成本">冲击成本</span>
+                <span class="constraint-value warning">¥5.9K</span>
+              </div>
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="券商连接当前可用，但需确认成交回报">券商通道</span>
+                <span class="constraint-value">中信可用</span>
+              </div>
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="财报数据延迟，基本面因子只作为次级证据">证据可信度</span>
+                <span class="constraint-value warning">次级</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Data Health (system trust check) -->
+        <details class="context-section" open data-collapse-priority="l3" data-contract-slot="data-health" data-reveal="fade-right" data-reveal-delay="300">
+          <summary class="context-section-header">
+            <span class="context-section-title">数据健康</span>
+            <span class="collapse-count">5 数据源</span>
+            <span class="collapse-summary">3 正常 · 2 降级</span>
+          </summary>
+          <div class="context-section-body health-preview-body">
+            <!-- Health summary bar — visual data trust gauge -->
+            <div class="health-gauge" aria-label="数据健康度: 3/5 正常">
+              <div class="health-gauge-segment healthy" title="行情数据"></div>
+              <div class="health-gauge-segment healthy" title="期权链"></div>
+              <div class="health-gauge-segment degraded" title="财报数据"></div>
+              <div class="health-gauge-segment healthy" title="新闻资讯"></div>
+              <div class="health-gauge-segment degraded" title="另类数据"></div>
+            </div>
+            <div class="health-normal-summary" aria-label="正常数据源折叠显示">正常 3：行情数据 / 期权链 / 新闻资讯</div>
+            <div class="health-item">
+              <span class="health-dot degraded"></span>
+              <span class="health-label" data-tooltip="财报数据源 — 当前延迟">财报数据</span>
+              <span class="health-status warning">延迟</span>
+            </div>
+            <div class="health-item">
+              <span class="health-dot degraded"></span>
+              <span class="health-label" data-tooltip="另类数据源 — 数据陈旧 3 天">另类数据</span>
+              <span class="health-status warning">陈旧（3天）</span>
+            </div>
+          </div>
+          <div class="health-preview-footer">
+            <button class="panel-action">查看详情 →</button>
+          </div>
+        </details>
+
+        <!-- Sidebar Toggle -->
+        <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="home-sidebar" aria-expanded="true" aria-label="折叠侧边栏" title="折叠侧边栏">&#x00BB;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: Signal Detail (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-signal-detail">
+      <label class="overlay-dismiss" for="overlay-signal-detail" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="信号详情">
+        <div class="overlay-header">
+          <span class="overlay-title">信号详情</span>
+          <label for="overlay-signal-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h2>信号摘要</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的</span>
+            <span class="overlay-field-value">贵州茅台（600519）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">信号类型</span>
+            <span class="overlay-field-value val-weak">卖出</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">策略</span>
+            <span class="overlay-field-value">Alpha v3</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">触发条件</span>
+            <span class="overlay-field-value">RSI 背离 + 放量确认</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">置信度</span>
+            <span class="overlay-field-value">87%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的当前状态</span>
+            <span class="overlay-field-value val-healthy">正常交易</span>
+          </div>
+
+          <h2>风险评估</h2>
+          <p class="overlay-desc">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
+
+          <div class="overlay-actions">
+
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">采纳信号</label>
+            <button class="overlay-btn overlay-btn-secondary">查看完整信号</button>
+            <button class="overlay-btn overlay-btn-danger">驳回</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: Order Confirm (Modal 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-order-confirm">
+      <label class="overlay-dismiss" for="overlay-order-confirm" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认订单" data-high-risk-confirmation data-high-risk-kind="order-submit">
+        <div class="overlay-header">
+          <span class="overlay-title">确认订单</span>
+          <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">确认后将提交 600519 贵州茅台卖出市价单 200 股。订单进入券商通道后不可在 Ditto 内直接撤销，只能走订单撤单流程。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">交易前后</div>
+              <div class="risk-confirmation-list">
+                <div class="risk-confirmation-item"><span>持仓</span><span class="risk-confirmation-value">200 股 → 0 股</span></div>
+                <div class="risk-confirmation-item"><span>集中度</span><span class="risk-confirmation-value">37.2% → 34.8%</span></div>
+                <div class="risk-confirmation-item"><span>预计冲击成本</span><span class="risk-confirmation-value">¥5.9K</span></div>
+              </div>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">Alpha v3 卖出信号 87%，RSI 背离与放量确认，风险预算从 27% 回落至 21%。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">将记录操作者、信号来源、订单参数、风险校验快照和确认时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">提交后可在订单台账查看状态；未成交部分可从 Orders Ledger 发起撤单。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>取消，返回复核</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-danger cursor-pointer" data-confirm-control data-danger-action>确认提交订单</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: Edit Workspace (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-edit-workspace">
+      <label class="overlay-dismiss" for="overlay-edit-workspace" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="编辑工作台">
+        <div class="overlay-header">
+          <span class="overlay-title">编辑工作台</span>
+          <label for="overlay-edit-workspace" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h2>可用 Widget</h2>
+          <div class="widget-list">
+            <label class="widget-item">
+              <input type="checkbox" checked> 持仓概览
+            </label>
+            <label class="widget-item">
+              <input type="checkbox" checked> 关注列表
+            </label>
+            <label class="widget-item">
+              <input type="checkbox"> 快捷入口
+            </label>
+            <label class="widget-item">
+              <input type="checkbox"> 市场日历
+            </label>
+          </div>
+
+          <h2>当前布局预览</h2>
+          <div class="layout-preview">
+            持仓概览（顶部全宽）<br>
+            关注列表 · 研究进展（并排）<br>
+            AI 洞察（底部全宽）
+          </div>
+
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">重置默认</button>
+            <button class="overlay-btn overlay-btn-primary">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay D: AI Advice (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-ai-advice">
+      <label class="overlay-dismiss" for="overlay-ai-advice" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="AI 操作建议">
+        <div class="overlay-header">
+          <span class="overlay-title">AI 操作建议</span>
+          <label for="overlay-ai-advice" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h2>建议全文</h2>
+          <p class="overlay-desc overlay-desc--relaxed">
+            当前市场波动回落，北向资金连续 3 日净流入，但科技板块拥挤度偏高。建议关注：(1) 科技板块适度减配至 30% 以下；(2) 关注消费板块轮动信号；(3) 沪深 300 指数增强策略近期表现优异，可考虑增配。
+          </p>
+
+          <h2>关联数据支撑</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">IVIX</span>
+            <span class="overlay-field-value">18.52 <span class="val-weak">(-3.1%)</span></span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">北向资金</span>
+            <span class="overlay-field-value val-strong">+12.4 亿</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">科技板块集中度</span>
+            <span class="overlay-field-value val-risk">37.2%</span>
+          </div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-primary">采纳建议</button>
+            <label for="overlay-ai-advice" class="overlay-btn overlay-btn-secondary cursor-pointer">暂时忽略</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Overlay triggers: edit-workspace checkbox (placed outside queue-item context) -->
+
+
+  <!-- Overlay trigger: ai-advice checkbox -->
+
+
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+
+  </section>
+
+<section id="states-gallery" class="proto-section">
+      <div class="gallery-grid">
+        <div class="gallery-group" data-component="other">
+          <div class="gallery-group__label">other</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-empty">
+          <div class="state-empty-icon">!</div>
+          <div class="state-empty-title">数据需要刷新</div>
+          <div class="state-empty-desc">账户、行情与风控快照已超过 5 分钟未更新</div>
+          <button class="state-empty-cta">刷新数据</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Selected State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="selected">
+        <div class="state-empty">
+          <div class="state-empty-icon icon-ok">✓</div>
+          <div class="state-empty-title">已选中优先事项</div>
+          <div class="state-empty-desc">右侧上下文同步展示信号、风险和数据健康状态</div>
+          <button class="state-empty-cta">查看关联对象</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📊</div>
+          <div class="state-empty-title">开始使用 Ditto</div>
+          <div class="state-empty-desc">连接数据源后展示实时行情指标、盈亏状态与风险监控</div>
+          <button class="state-empty-cta">连接数据源</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">行情数据加载失败</div>
+          <div class="state-error-desc">无法获取实时行情数据，请检查网络连接或稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">📋</div>
+              <div class="state-empty-title">暂无持仓数据</div>
+              <div class="state-empty-desc">连接券商账户或导入持仓后，此处展示组合概览与市场判断</div>
+              <button class="state-empty-cta">导入持仓</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-heading"></div>
+              <div class="skeleton skeleton-text"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">组合数据加载失败</div>
+              <div class="state-error-desc">无法获取账户持仓与盈亏信息，请检查券商连接状态</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon icon-ok">✓</div>
+              <div class="state-empty-title">暂无待处理事项</div>
+              <div class="state-empty-desc">所有任务已处理完毕，一切正常运行</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">待办加载失败</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🧩</div>
+              <div class="state-empty-title">工作台为空</div>
+              <div class="state-empty-desc">添加 Widget 开始自定义你的工作台</div>
+              <label for="overlay-edit-workspace" class="state-empty-cta cursor-pointer">编辑工作台</label>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">工作台加载失败</div>
+              <div class="state-error-desc">无法加载工作台配置，将使用默认布局</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🔬</div>
+              <div class="state-empty-title">暂无近期研究活动</div>
+              <div class="state-empty-desc">研究进展将在此处实时展示，包括因子验证、策略优化和模型监控</div>
+              <button class="state-empty-cta">开始研究</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">研究数据加载失败</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon">🤖</div>
+              <div class="state-empty-title">暂无 Agent 活动</div>
+              <div class="state-empty-desc">AI 洞察将在此处展示跨域关联分析和智能发现</div>
+              <button class="state-empty-cta">启动分析</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">AI 服务异常</div>
+              <div class="state-error-desc">Agent 服务暂时不可用，请稍后重试</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon icon-ok">✓</div>
+              <div class="state-empty-title">一切正常 — 无活跃预警</div>
+              <div class="state-empty-desc">当前无风险预警、数据异常或系统告警</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">预警服务异常</div>
+              <div class="state-error-desc">无法获取预警信息，请检查服务连接状态</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+            <div class="state-empty">
+              <div class="state-empty-icon icon-ok">✓</div>
+              <div class="state-empty-title">所有数据源正常</div>
+              <div class="state-empty-desc">行情、财报、另类数据等全部数据源运行正常，无延迟或异常</div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+            <div class="state-loading">
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-text"></div>
+            </div>
+          </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+            <div class="state-error">
+              <div class="state-error-icon">!</div>
+              <div class="state-error-title">数据源连接异常</div>
+              <div class="state-error-desc">多个数据源连接中断，部分数据可能不可靠，建议检查网络或切换备用源</div>
+              <button class="state-error-retry">重试</button>
+            </div>
+          </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="collapsed-sidebar">
+          <div class="gallery-group__label">Collapsed Sidebar</div>
+          <div class="gallery-cards">
+            <div class="gallery-card">
+              <div class="gallery-card__label">折叠态侧边栏 — 56px 浓缩信息栏</div>
+              <div class="gallery-card__preview">
+                <div class="gallery-collapsed-sidebar">
+                  <div class="gallery-collapsed-btn" title="市场脉搏" aria-label="市场脉搏">
+                    <svg role="img" data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"series":"up","width":24,"height":12}' aria-label="市场脉搏缩略走势"></svg>
+                  </div>
+                  <div class="gallery-collapsed-btn" title="全局预警 (3)" aria-label="全局预警 (3)">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <path d="M10 3L10 10M10 10L7 7M10 10L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 17H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="gallery-badge-count">3</span>
+                  </div>
+                  <div class="gallery-collapsed-btn" title="数据健康 (healthy)" aria-label="数据健康 (healthy)">
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <path d="M10 3C5.58 3 2 6.58 2 11H10V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M10 3C14.42 3 18 6.58 18 11H10V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <rect x="2" y="13" width="16" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <span class="gallery-led-dot"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<section id="overlays-gallery" class="proto-section">
+      <div class="gallery-grid gallery-grid--overlays">
+        <div class="gallery-group" data-component="overlays">
+          <div class="gallery-group__label">弹层设计</div>
+          <div class="gallery-cards">
+
+    <div class="gallery-card" data-overlay-ref="overlay-signal-detail">
+      <div class="gallery-card__label">信号详情 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="信号详情">
+          <div class="overlay-header">
+            <span class="overlay-title">信号详情</span>
+          </div>
+          <div class="overlay-body">
+            <h2>信号摘要</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标的</span>
+              <span class="overlay-field-value">贵州茅台（600519）</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">信号类型</span>
+              <span class="overlay-field-value val-weak">卖出</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">策略</span>
+              <span class="overlay-field-value">Alpha v3</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">触发条件</span>
+              <span class="overlay-field-value">RSI 背离 + 放量确认</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">置信度</span>
+              <span class="overlay-field-value">87%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标的当前状态</span>
+              <span class="overlay-field-value val-healthy">正常交易</span>
+            </div>
+            <h2>风险评估</h2>
+            <p class="overlay-desc">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
+            <div class="overlay-actions">
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">采纳信号</label>
+              <button class="overlay-btn overlay-btn-secondary">查看完整信号</button>
+              <button class="overlay-btn overlay-btn-danger">驳回</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-order-confirm">
+      <div class="gallery-card__label">确认订单 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认订单" data-high-risk-confirmation data-high-risk-kind="order-submit">
+          <div class="overlay-header">
+            <span class="overlay-title">确认订单</span>
+          </div>
+          <div class="overlay-body">
+            <div class="risk-confirmation-grid">
+              <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">确认后将提交 600519 贵州茅台卖出市价单 200 股。订单进入券商通道后不可在 Ditto 内直接撤销，只能走订单撤单流程。</p>
+              </div>
+              <div class="risk-confirmation-block" data-before-after>
+                <div class="risk-confirmation-title">交易前后</div>
+                <div class="risk-confirmation-list">
+                  <div class="risk-confirmation-item"><span>持仓</span><span class="risk-confirmation-value">200 股 → 0 股</span></div>
+                  <div class="risk-confirmation-item"><span>集中度</span><span class="risk-confirmation-value">37.2% → 34.8%</span></div>
+                  <div class="risk-confirmation-item"><span>预计冲击成本</span><span class="risk-confirmation-value">¥5.9K</span></div>
+                </div>
+              </div>
+              <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                <div class="risk-confirmation-title">对象清单</div>
+                <p class="risk-confirmation-copy">Alpha v3 卖出信号 87%，RSI 背离与放量确认，风险预算从 27% 回落至 21%。</p>
+              </div>
+              <div class="risk-confirmation-block" data-audit-record>
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">将记录操作者、信号来源、订单参数、风险校验快照和确认时间。</p>
+              </div>
+              <div class="risk-confirmation-block" data-recovery-path>
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">提交后可在订单台账查看状态；未成交部分可从 Orders Ledger 发起撤单。</p>
+              </div>
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>取消，返回复核</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-danger cursor-pointer" data-confirm-control data-danger-action>确认提交订单</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-edit-workspace">
+      <div class="gallery-card__label">编辑工作台 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="编辑工作台">
+          <div class="overlay-header">
+            <span class="overlay-title">编辑工作台</span>
+          </div>
+          <div class="overlay-body">
+            <h2>可用 Widget</h2>
+            <div class="widget-list">
+              <label class="widget-item">
+                <input type="checkbox" checked> 持仓概览
+              </label>
+              <label class="widget-item">
+                <input type="checkbox" checked> 关注列表
+              </label>
+              <label class="widget-item">
+                <input type="checkbox"> 快捷入口
+              </label>
+              <label class="widget-item">
+                <input type="checkbox"> 市场日历
+              </label>
+            </div>
+            <h2>当前布局预览</h2>
+            <div class="layout-preview">
+              持仓概览（顶部全宽）<br>
+              关注列表 · 研究进展（并排）<br>
+              AI 洞察（底部全宽）
+            </div>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">重置默认</button>
+              <button class="overlay-btn overlay-btn-primary">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-ai-advice">
+      <div class="gallery-card__label">AI 操作建议 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="AI 操作建议">
+          <div class="overlay-header">
+            <span class="overlay-title">AI 操作建议</span>
+          </div>
+          <div class="overlay-body">
+            <h2>建议全文</h2>
+            <p class="overlay-desc overlay-desc--relaxed">
+              当前市场波动回落，北向资金连续 3 日净流入，但科技板块拥挤度偏高。建议关注：(1) 科技板块适度减配至 30% 以下；(2) 关注消费板块轮动信号；(3) 沪深 300 指数增强策略近期表现优异，可考虑增配。
+            </p>
+            <h2>关联数据支撑</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">IVIX</span>
+              <span class="overlay-field-value">18.52 <span class="val-weak">(-3.1%)</span></span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">北向资金</span>
+              <span class="overlay-field-value val-strong">+12.4 亿</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">科技板块集中度</span>
+              <span class="overlay-field-value val-risk">37.2%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-signal-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-order-confirm" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-edit-workspace" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-ai-advice" class="overlay-radio sr-only">
+</body>
+</html>

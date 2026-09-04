@@ -1,0 +1,14 @@
+{
+  "schema": "ditto.r3-research-frontend-evidence-manifest",
+  "version": 1,
+  "entries": [
+    {
+      "relative_path": "docs/review/r3-research-acceptance/deterministic/report.json",
+      "sha256": "2aae6a908f5993e11f0125c1ac4732326dc71312293725bed1a99053be7e7f40",
+      "mode": "deterministic_fixture",
+      "generated_at": "2026-08-01T02:46:17Z",
+      "source_commit": "7f4d277783b97a650e18238ec3c276e64602a13d",
+      "command": "bunx vitest run src/features/research/components/experiment-create-page.test.tsx src/features/research/components/experiment-detail-page.test.tsx src/features/research/components/experiment-run-recovery.test.tsx src/features/research/components/review-detail-page.test.tsx src/features/research/components/review-queue-page.test.tsx src/features/research/live-boundary.test.tsx"
+    }
+  ]
+}

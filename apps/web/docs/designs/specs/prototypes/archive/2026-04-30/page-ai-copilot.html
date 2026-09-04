@@ -1,0 +1,3640 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-ai-copilot
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 4 (radio)
+  - copilot-market-analysis (Market Analysis) [checked, default]
+  - copilot-stock-discovery (Stock Discovery) [covered]
+  - copilot-strategy-draft (Strategy Draft) [covered]
+  - copilot-factor-discovery (Factor Discovery) [covered]
+
+  Overlays: 3
+  - overlay-save-conclusion (Sheet: 保存结论) [covered]
+  - overlay-send-workspace (Drawer: 发送到工作区) [covered]
+  - overlay-session-template (Sheet: 会话模板) [covered]
+
+  State Variants: 5 components × 3 states (empty/loading/error)
+  - copilot-header: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - mode-switch: default[covered] loading[n/a] empty[n/a] failed[n/a] stale[n/a] selected[n/a]
+  - sessions: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - conversation-output: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - context-panel: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="ai">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — AI Copilot</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="../../shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="../../tokens-style.css">
+
+  <!-- Layout + Components -->
+  <link rel="stylesheet" href="../../shared/layout-shell.css">
+  <link rel="stylesheet" href="../../shared/layout-gallery.css">
+  <link rel="stylesheet" href="../../shared/layout-components.css">
+  <link rel="stylesheet" href="../../shared/layout-overlay.css">
+  <link rel="stylesheet" href="../../shared/layout-state.css">
+  <link rel="stylesheet" href="../../shared/theme-switcher.css">
+
+  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
+  <link rel="stylesheet" href="../../shared/prototype-toggles.css">
+
+  <style>
+    /* Style label for comparison */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .header-btn-badge:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .mode-tab:focus-visible,
+    .session-item:focus-visible,
+    .action-card:focus-visible,
+    .overlay-btn:focus-visible,
+    .state-empty-cta:focus-visible,
+    .state-error-retry:focus-visible,
+    .state-stale-retry:focus-visible,
+    .category-pill:focus-visible,
+    .radio-option:focus-visible,
+    .copilot-tab:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
+      border-radius: var(--radius-4);
+      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    /* ══════════════════════════════════════════════
+     * AI Copilot Shell — three-column Studio layout
+     * Rail | [Sessions | Conversation+Output | Context]
+     * ══════════════════════════════════════════════ */
+    .shell-copilot {
+      display: grid;
+      grid-template-columns: var(--shell-rail-width) var(--copilot-sessions-width) 1fr var(--copilot-context-width);
+      grid-template-rows: var(--shell-header-height) auto 1fr;
+      grid-template-areas:
+        "rail header header header"
+        "rail modes  modes  modes"
+        "rail sessions conversation context";
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    :root {
+      --copilot-sessions-width: 220px;
+      --copilot-context-width: 280px;
+    }
+
+    .shell-copilot .shell-rail {
+      grid-area: rail;
+    }
+    .shell-copilot .shell-header {
+      grid-area: header;
+      height: var(--shell-header-height);
+    }
+    .shell-copilot .copilot-modes {
+      grid-area: modes;
+    }
+    .shell-copilot .copilot-sessions {
+      grid-area: sessions;
+    }
+    .shell-copilot .copilot-conversation {
+      grid-area: conversation;
+    }
+    .shell-copilot .copilot-context {
+      grid-area: context;
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-copilot .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-copilot .shell-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--brand-signature-line) 50%,
+        transparent 100%
+      );
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    /* Brand anchor: header title underline */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-8);
+    }
+
+    /* Rail logo */
+    .rail-logo {
+      color: var(--brand-accent);
+    }
+
+    /* Brand anchor: rail active indicator */
+    .rail-icon.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Mode Switch Strip
+     * ══════════════════════════════════════════════ */
+    .copilot-modes {
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-4);
+      height: calc(var(--density-strip-height) - 4px);
+    }
+
+    .mode-tabs {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .mode-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .mode-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .mode-tab.active {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent-subtle);
+    }
+
+    .mode-tab svg {
+      width: 14px;
+      height: 14px;
+      margin-right: var(--space-4);
+      flex-shrink: 0;
+    }
+
+    .mode-spacer { flex: 1; }
+
+    .mode-status {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .mode-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--agent-running-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    .mode-context-panels {
+      flex-shrink: 0;
+      padding: var(--space-8) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-base) 76%, var(--surface-app));
+    }
+
+    .mode-context-panel {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-12);
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      padding: var(--space-8) var(--space-10);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-elevated);
+    }
+
+    .mode-context-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .mode-context-kicker {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .mode-context-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .mode-context-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.45;
+    }
+
+    .mode-context-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: var(--space-4);
+      min-width: 220px;
+    }
+
+    .mode-context-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: var(--space-2) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--badge-md-radius);
+      background: var(--surface-strip);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+      white-space: nowrap;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Sessions Sidebar (left, 220px)
+     * ══════════════════════════════════════════════ */
+    .copilot-sessions {
+      background: var(--surface-panel-base);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .sessions-search {
+      padding: var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .sessions-search-input {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .sessions-search-input:hover {
+      border-color: var(--border-default);
+    }
+    .sessions-search-input svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .sessions-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: var(--space-4) 0;
+    }
+
+    .sessions-group-label {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: var(--space-6) var(--space-10);
+    }
+
+    .session-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: var(--space-6) var(--space-10);
+      margin: 1px var(--space-4);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .session-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .session-item.active {
+      background: var(--brand-accent-subtle);
+    }
+
+    .session-item-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-item.active .session-item-title {
+      color: var(--brand-accent);
+    }
+
+    .session-item-meta {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .session-item-template {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-10);
+      margin: 1px var(--space-4);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: 1px dashed var(--border-default);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .session-item-template:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--brand-accent);
+    }
+    .session-item-template svg {
+      width: 14px;
+      height: 14px;
+      color: var(--brand-accent);
+      flex-shrink: 0;
+    }
+    .session-item-template span {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .session-item-note {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .session-item-note svg {
+      width: 12px;
+      height: 12px;
+      color: var(--amber-500);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Conversation + Structured Output (center)
+     * ══════════════════════════════════════════════ */
+    .copilot-conversation {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .conversation-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: var(--density-gutter);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-16);
+    }
+
+    /* ── Message ── */
+    .message {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .message-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .message-avatar.ai {
+      background: var(--agent-running-bg);
+      color: var(--agent-running-fg);
+    }
+
+    .message-avatar.user {
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+    }
+
+    .message-sender {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .message-time {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* Message action toolbar — appears on hover */
+    .message-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-left: auto;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .message:hover .message-actions {
+      opacity: 1;
+    }
+    .message-action-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-2);
+      border: none;
+      background: transparent;
+      color: var(--text-quaternary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .message-action-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+    .message-action-btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .message-content {
+      padding-left: 36px;
+    }
+
+    .message-content p {
+      font-size: var(--font-size-13);
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin-bottom: var(--space-8);
+    }
+
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-content strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .message-content code {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      color: var(--code-text);
+    }
+
+    .message-content ul {
+      padding-left: var(--space-16);
+      margin: var(--space-4) 0 var(--space-8);
+    }
+
+    .message-content li {
+      font-size: var(--font-size-13);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-4);
+    }
+
+    .message-content li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ── Structured Output Card ── */
+    .structured-card {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--card-padding);
+      margin-top: var(--space-8);
+      position: relative;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .structured-card:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 2px 12px var(--brand-accent-subtle);
+    }
+    .structured-card:hover .structured-card-title {
+      color: var(--brand-accent);
+    }
+
+    .structured-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--brand-accent) 50%,
+        transparent 100%
+      );
+      border-radius: var(--card-radius) var(--card-radius) 0 0;
+    }
+
+    .structured-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+
+    .structured-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .structured-card-title svg {
+      width: 14px;
+      height: 14px;
+      color: var(--brand-accent);
+    }
+
+    /* ── Confidence Tags ── */
+    .confidence-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: 1px var(--space-6);
+      border-radius: var(--badge-md-radius);
+      font-size: var(--font-size-10);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .confidence-tag.high {
+      background: var(--risk-low-bg);
+      color: var(--risk-low-fg);
+    }
+
+    .confidence-tag.medium {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+
+    .confidence-tag.low {
+      background: var(--risk-high-bg);
+      color: var(--risk-high-fg);
+    }
+
+    .confidence-tag-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .confidence-tag.high .confidence-tag-dot { background: var(--risk-low-fg); }
+    .confidence-tag.medium .confidence-tag-dot { background: var(--risk-medium-fg); }
+    .confidence-tag.low .confidence-tag-dot { background: var(--risk-high-fg); }
+
+    /* ── 因子假设表格 ── */
+    .factor-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--space-8);
+    }
+
+    .factor-table th {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      padding: var(--space-4) var(--space-8);
+      border-bottom: 1px solid var(--border-default);
+    }
+
+    .factor-table td {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      padding: var(--space-6) var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: top;
+      font-feature-settings: 'tnum' 1;
+    }
+
+    .factor-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .factor-table .factor-name {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .factor-table .factor-code {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+    }
+
+    .factor-table .factor-metric {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ── Conversation Input Bar (bottom fixed) ── */
+    .conversation-input {
+      flex-shrink: 0;
+      padding: var(--space-8) var(--density-gutter);
+      padding-bottom: calc(var(--space-8) + 1.5rem);
+      background: var(--surface-app);
+      border-top: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    /* Subtle gradient fade at top of input area */
+    .conversation-input::before {
+      content: '';
+      position: absolute;
+      top: -16px;
+      left: 0;
+      right: 0;
+      height: 16px;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        var(--surface-app)
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .input-wrapper {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--input-radius);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+      overflow: hidden;
+    }
+    .input-wrapper:hover {
+      border-color: var(--border-strong);
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--agent-running-fg);
+      box-shadow: 0 0 0 3px var(--agent-running-bg);
+    }
+
+
+    .input-send-btn {
+      width: var(--density-action-height);
+      height: var(--density-action-height);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-4);
+      background: var(--agent-running-fg);
+      color: var(--text-inverse);
+      border: none;
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      flex-shrink: 0;
+    }
+    .input-send-btn:hover {
+      background: var(--brand-accent-hover);
+      box-shadow: 0 0 12px var(--brand-accent-subtle);
+    }
+    .input-send-btn:active {
+      transform: scale(0.92);
+    }
+    .input-send-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Context Sidebar (right, 280px)
+     * ══════════════════════════════════════════════ */
+    .copilot-context {
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .copilot-context .context-rail {
+      position: relative;
+    }
+
+    /* Brand anchor: context panel top glow bar */
+    .copilot-context .context-rail::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--brand-accent) 50%,
+        transparent 100%
+      );
+      z-index: 1;
+    }
+
+    .copilot-context .context-section:nth-child(1) {
+      flex: 3;
+      min-height: 0;
+    }
+    .copilot-context .context-section:nth-child(2) {
+      flex: 3;
+      min-height: 0;
+    }
+    .copilot-context .context-section:nth-child(3) {
+      flex: 2.5;
+      min-height: 0;
+    }
+    .copilot-context .context-section:last-child {
+      flex: 2.5;
+      min-height: 0;
+    }
+
+    /* Section highlight line */
+    .copilot-context .context-section + .context-section {
+      border-top: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .copilot-context .context-section + .context-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--overlay-3);
+      pointer-events: none;
+    }
+
+    /* ── Context Object Chips ── */
+    .object-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+
+    .object-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--badge-md-radius);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .object-chip:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .object-chip-type {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .object-chip-name {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .object-chip-market {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-size: var(--font-size-10);
+    }
+
+    .object-chip-market.up { color: var(--market-up-fg); }
+    .object-chip-market.down { color: var(--market-down-fg); }
+
+    /* ── Evidence Chain ── */
+    .evidence-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    .evidence-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Evidence timeline connector */
+    .evidence-item::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 16px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .evidence-item:last-child::before {
+      display: none;
+    }
+
+    .evidence-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .evidence-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 2px solid var(--border-default);
+      background: var(--surface-panel-base);
+      flex-shrink: 0;
+    }
+
+    .evidence-dot.recent {
+      border-color: var(--brand-accent);
+      background: var(--brand-accent);
+    }
+
+    .evidence-source {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .evidence-time {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+
+    .evidence-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+      padding-left: 15px;
+    }
+
+    /* ── Stale evidence indicator ── */
+    .evidence-item.stale .evidence-dot {
+      border-color: var(--data-quality-delayed-fg);
+      background: var(--data-quality-delayed-bg);
+    }
+    .evidence-item.stale .evidence-time {
+      color: var(--data-quality-delayed-fg);
+    }
+    .evidence-item.stale .evidence-source {
+      color: var(--text-data-stale);
+    }
+    .evidence-item.stale .evidence-desc {
+      color: var(--text-data-stale);
+    }
+    .evidence-stale-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0 var(--space-4);
+      font-size: var(--font-size-10);
+      color: var(--data-quality-delayed-fg);
+      background: var(--data-quality-delayed-bg);
+      border-radius: var(--radius-2);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Action Cards ── */
+    .action-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      margin-bottom: var(--space-4);
+    }
+
+    .action-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .action-card:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-default);
+      box-shadow: 0 1px 6px oklch(0 0 0 / 0.08);
+    }
+
+    .action-card-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .action-card-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .action-card-icon.brand {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    .action-card-icon.green {
+      background: var(--risk-low-bg);
+      color: var(--risk-low-fg);
+    }
+
+    .action-card-icon.amber {
+      background: var(--risk-medium-bg);
+      color: var(--risk-medium-fg);
+    }
+
+    .action-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .action-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .action-card:hover .action-card-title {
+      color: var(--brand-accent);
+    }
+
+    .action-card-desc {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .action-card-arrow {
+      color: var(--text-quaternary);
+      flex-shrink: 0;
+    }
+
+    .action-card-arrow svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Status bar (terminal DNA)
+     * ══════════════════════════════════════════════ */
+    .status-bar {
+      position: static;
+      display: flex;
+      align-items: center;
+      height: 1.5rem;
+      width: calc(100% - var(--shell-rail-width));
+      margin-left: var(--shell-rail-width);
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+
+    #default-view > .status-bar {
+      position: static;
+      height: 1.5rem !important;
+      flex-shrink: 0;
+      overflow: hidden !important;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+
+    .status-spacer { flex: 1; }
+
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Header button with badge ── */
+    .header-btn-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-btn-badge:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    /* ── Header action buttons ── */
+    .header-action-btn {
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-6);
+      color: var(--icon-secondary);
+      cursor: pointer;
+      position: relative;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-action-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--icon-primary);
+    }
+
+    .header-avatar {
+      width: var(--header-avatar-size);
+      height: var(--header-avatar-size);
+      border-radius: 50%;
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+    }
+
+    .header-spacer { flex: 1; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    /* ── Button styles ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-10);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid var(--border-default);
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* ── Copilot header CTA buttons ── */
+    .header-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-10);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      border-radius: var(--btn-radius);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .header-cta.primary {
+      color: var(--text-inverse);
+      background: var(--brand-accent);
+      border: 1px solid var(--brand-accent);
+    }
+
+    .header-cta.primary:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .header-cta.primary svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .header-cta.ghost {
+      color: var(--text-tertiary);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .header-cta.ghost:hover {
+      border-color: var(--border-default);
+      color: var(--text-secondary);
+    }
+
+    .header-cta.ghost svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Noise material texture
+     * ══════════════════════════════════════════════ */
+    .shell-copilot {
+      position: relative;
+    }
+    .shell-copilot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .shell-copilot::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--brand-accent) 50%,
+        transparent 100%
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-copilot > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Animations (3 total: dot-pulse, card-subtle-in, thinking-shimmer)
+     * ══════════════════════════════════════════════ */
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Reusable entrance animation — shared by messages, cards, tabs, steps */
+    @keyframes card-subtle-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Message entrance */
+    .message {
+      animation: card-subtle-in var(--motion-duration-slow) var(--motion-easing-emphasis) both;
+    }
+    .message:nth-child(1) { animation-delay: 100ms; }
+    .message:nth-child(2) { animation-delay: 200ms; }
+    .message:nth-child(3) { animation-delay: 300ms; }
+    .message:nth-child(4) { animation-delay: 400ms; }
+    .message:nth-child(5) { animation-delay: 500ms; }
+    .message:nth-child(6) { animation-delay: 600ms; }
+
+    /* Structured card entrance */
+    .structured-card {
+      animation: card-subtle-in var(--motion-duration-slow) var(--motion-easing-emphasis) both;
+    }
+
+    /* Mode tab entrance — stagger */
+    .mode-tab {
+      animation: card-subtle-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .mode-tabs .mode-tab:nth-child(1) { animation-delay: 50ms; }
+    .mode-tabs .mode-tab:nth-child(2) { animation-delay: 100ms; }
+    .mode-tabs .mode-tab:nth-child(3) { animation-delay: 150ms; }
+    .mode-tabs .mode-tab:nth-child(4) { animation-delay: 200ms; }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .message, .structured-card, .mode-tab, .status-indicator,
+      .thinking-step, .ai-thinking, .ai-thinking-dot,
+      .thinking-chain::after {
+        transition: none !important;
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Activation Rules (prototype-toggles.css)
+     * Radio tab system: 4 modes for Copilot
+     * ══════════════════════════════════════════════ */
+
+    /* Default: Market Analysis panel visible */
+    .shell-copilot:has(#copilot-market-analysis:checked)
+      [data-panel="copilot-market-analysis"] { display: flex; }
+    .shell-copilot:has(#copilot-market-analysis:checked)
+      [data-tab="copilot-market-analysis"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent-subtle);
+    }
+
+    /* Stock Discovery */
+    .shell-copilot:has(#copilot-stock-discovery:checked)
+      [data-panel="copilot-stock-discovery"] { display: flex; }
+    .shell-copilot:has(#copilot-stock-discovery:checked)
+      [data-tab="copilot-stock-discovery"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent-subtle);
+    }
+
+    /* Strategy Draft */
+    .shell-copilot:has(#copilot-strategy-draft:checked)
+      [data-panel="copilot-strategy-draft"] { display: flex; }
+    .shell-copilot:has(#copilot-strategy-draft:checked)
+      [data-tab="copilot-strategy-draft"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent-subtle);
+    }
+
+    /* Factor Discovery */
+    .shell-copilot:has(#copilot-factor-discovery:checked)
+      [data-panel="copilot-factor-discovery"] { display: flex; }
+    .shell-copilot:has(#copilot-factor-discovery:checked)
+      [data-tab="copilot-factor-discovery"] {
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent-subtle);
+    }
+
+    /* Panel base — hide all panels by default, show only checked */
+    .tab-panels .tab-panel {
+      display: none;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* 保存结论 Sheet */
+    :root:has(#overlay-save-conclusion:checked)
+      [data-overlay="overlay-save-conclusion"] { display: flex; }
+
+    /* 发送到工作区 Drawer */
+    :root:has(#overlay-send-workspace:checked)
+      [data-overlay="overlay-send-workspace"] { display: flex; }
+
+    /* 会话模板 Sheet */
+    :root:has(#overlay-session-template:checked)
+      [data-overlay="overlay-session-template"] { display: flex; }
+
+    [data-overlay] .overlay-surface {
+      animation: none;
+    }
+
+    /* ── Overlay content refinement ── */
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+    .overlay-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-16);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
+    .overlay-body h4:first-child { margin-top: 0; }
+
+    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
+
+    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
+    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
+    .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
+    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Interactive Components (extracted inline styles)
+     * ══════════════════════════════════════════════ */
+
+    /* ── Overlay clickable labels ── */
+    .overlay-label-btn { cursor: pointer; }
+    .overlay-label-action { cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+    .overlay-label-row { cursor: pointer; display: flex; align-items: center; }
+
+    /* ── Radio option cards (workspace / template selectors) ── */
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+    }
+    .radio-option--lg { padding: var(--space-8); transition: border-color var(--motion-duration-normal); }
+    .radio-option--selected {
+      background: var(--brand-accent-subtle);
+      border-color: var(--brand-accent);
+    }
+    .radio-option--unselected { background: var(--surface-panel-elevated); }
+    .radio-option input[type="radio"] { accent-color: var(--brand-accent); }
+
+    .radio-option__title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .radio-option__title--brand { color: var(--brand-accent); }
+    .radio-option__desc {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Category radio pills (save conclusion) ── */
+    .category-pills {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .category-pill {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .category-pill--selected {
+      background: var(--brand-accent-subtle);
+      border: 1px solid var(--brand-accent);
+      color: var(--brand-accent);
+    }
+    .category-pill--unselected {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+    .category-pill input[type="radio"] { accent-color: var(--brand-accent); }
+
+    /* ── Tag badges ── */
+    .tag-list {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .tag-badge {
+      padding: 2px var(--space-6);
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      border-radius: var(--radius-2);
+      font-size: var(--font-size-10);
+    }
+
+    /* ── Overlay description text ── */
+    .overlay-desc-text {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ── Overlay info box ── */
+    .overlay-info-box {
+      padding: var(--space-6) var(--space-8);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+    }
+
+    /* ── Radio option stack (vertical list) ── */
+    .radio-option-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    /* ── Spacer utility ── */
+    .spacer-8 { height: var(--space-8); }
+
+    /* ── Status token highlight ── */
+    .status-token-highlight { color: var(--brand-accent); }
+
+    /* ── Mode switch default state placeholder ── */
+    .mode-switch-default {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-8);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ══════════════════════════════════════════════
+     * AI Conversation Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Chat bubble visual differentiation ── */
+    .message--user .message-content {
+      position: relative;
+    }
+    .message--user .message-content p {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6) var(--radius-6) var(--radius-6) var(--radius-2);
+      padding: var(--space-8) var(--space-12);
+      position: relative;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .message--user:hover .message-content p {
+      border-color: var(--border-default);
+    }
+
+    .message--ai .message-content {
+      position: relative;
+    }
+
+    /* AI message — subtle brand-tinted left accent */
+    .message--ai .message-content::before {
+      content: '';
+      position: absolute;
+      left: 24px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      border-radius: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        var(--agent-running-fg) 30%,
+        transparent
+      );
+      pointer-events: none;
+    }
+
+    /* User message hover — subtle right accent */
+    .message--user .message-content::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -8px;
+      transform: translateY(-50%) scaleY(0);
+      transform-origin: center;
+      width: 3px;
+      height: 16px;
+      border-radius: 2px;
+      background: var(--brand-accent);
+      opacity: 0;
+      transition: transform var(--motion-duration-normal) var(--motion-easing-emphasis),
+                  opacity var(--motion-duration-normal) var(--motion-easing-emphasis);
+    }
+    .message--user:hover .message-content::after {
+      transform: translateY(-50%) scaleY(1);
+      opacity: 1;
+    }
+
+    /* AI thinking indicator — pulsing shimmer */
+    .ai-thinking {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-12);
+      margin-bottom: var(--space-12);
+      margin-left: 36px;
+      background: var(--agent-running-bg);
+      border: 1px solid var(--brand-accent-subtle);
+      border-radius: var(--radius-6);
+      position: relative;
+      overflow: hidden;
+    }
+    /* Shimmer sweep animation */
+    .ai-thinking::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--agent-running-fg) 8%, transparent) 50%,
+        transparent 100%
+      );
+      animation: thinking-shimmer 2.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes thinking-shimmer {
+      0%   { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .ai-thinking-dots {
+      display: flex;
+      gap: 4px;
+    }
+    .ai-thinking-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--agent-running-fg);
+      animation: dot-pulse 1.4s ease-in-out infinite;
+    }
+    .ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+    .ai-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+    .ai-thinking-label {
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    /* ── Thinking chain / reasoning collapsible ── */
+    .thinking-chain {
+      margin: var(--space-4) 0 var(--space-8) 36px;
+      border-left: 2px solid var(--border-subtle);
+      padding-left: var(--space-10);
+      position: relative;
+      overflow: hidden;
+    }
+    .thinking-chain::before {
+      content: '';
+      position: absolute;
+      left: -2px;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      background: linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--agent-running-fg) 40%, transparent),
+        var(--border-subtle)
+      );
+    }
+    .thinking-step {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+      opacity: 0;
+      animation: card-subtle-in 0.4s var(--motion-easing-emphasis) forwards;
+    }
+    .thinking-step:nth-child(1) { animation-delay: 0.1s; }
+    .thinking-step:nth-child(2) { animation-delay: 0.3s; }
+    .thinking-step:nth-child(3) { animation-delay: 0.5s; }
+
+    .thinking-step-icon {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border-default);
+      flex-shrink: 0;
+      margin-top: 4px;
+      transition: background var(--motion-duration-normal) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .thinking-step-icon--active {
+      background: var(--agent-running-fg);
+      box-shadow: 0 0 6px var(--agent-running-fg);
+      animation: dot-pulse 2.5s ease-in-out infinite;
+    }
+
+    /* ── Code block formatting ── */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: var(--radius-4);
+      padding: var(--space-8) var(--space-12);
+      margin: var(--space-8) 0;
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      color: var(--code-text);
+      line-height: 1.7;
+      overflow-x: auto;
+      position: relative;
+    }
+    .code-block::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: var(--space-4);
+      right: var(--space-8);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .code-block .code-keyword { color: var(--brand-accent); }
+    .code-block .code-string { color: var(--market-up-fg); }
+    .code-block .code-comment { color: var(--text-quaternary); font-style: italic; }
+    .code-block .code-number { color: var(--market-up-fg); font-family: var(--font-family-numeric); }
+
+    /* ── Confidence bar (visual indicator per AI message) ── */
+    .confidence-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      margin-top: var(--space-6);
+      padding-left: 36px;
+    }
+    .confidence-bar-track {
+      flex: 1;
+      height: 3px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+      max-width: 120px;
+      position: relative;
+    }
+    .confidence-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transform-origin: left center;
+      transition: transform 0.8s var(--motion-easing-emphasis),
+                  opacity 0.8s var(--motion-easing-emphasis);
+      position: relative;
+    }
+    /* Confidence fill shimmer */
+    .confidence-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 12px;
+      height: 100%;
+      border-radius: 0 2px 2px 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        oklch(from currentColor l c h / 0.4)
+      );
+      opacity: 0;
+      transition: opacity var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .confidence-bar:hover .confidence-bar-fill::after {
+      opacity: 1;
+    }
+    .confidence-bar-fill.high { background: var(--risk-low-fg); width: 88%; }
+    .confidence-bar-fill.medium { background: var(--risk-medium-fg); width: 65%; }
+    .confidence-bar-fill.low { background: var(--risk-high-fg); width: 35%; }
+    .confidence-bar-label {
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ── Enhanced input area ── */
+    .input-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: calc(var(--input-radius) + 1px);
+      background: linear-gradient(
+        135deg,
+        var(--brand-accent) 0%,
+        transparent 50%
+      );
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      pointer-events: none;
+    }
+    .input-wrapper:focus-within::before {
+      opacity: 1;
+    }
+    .input-attachments {
+      display: flex;
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-12) 0;
+    }
+    .input-attachment {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: 2px var(--space-6);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .input-attachment svg { width: 10px; height: 10px; }
+
+    /* Input row: text + kbd + send button */
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+    }
+    .input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-13);
+      color: var(--text-primary);
+    }
+    .input-row input::placeholder {
+      color: var(--text-quaternary);
+    }
+    .input-row kbd {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-4);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      color: var(--text-quaternary);
+    }
+
+    /* ── Message source attribution ── */
+    .message-attribution {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      margin-top: var(--space-4);
+      padding-left: 36px;
+    }
+    .message-attribution-source {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .message-attribution-source svg { width: 10px; height: 10px; }
+
+    /* ── AI thinking avatar (smaller) ── */
+    .ai-thinking-avatar {
+      width: 20px;
+      height: 20px;
+      font-size: var(--font-size-10);
+    }
+    .ai-thinking .ai-thinking-avatar {
+      background: var(--agent-running-bg);
+      color: var(--agent-running-fg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Inline Cleanup — extracted from inline styles
+     * ══════════════════════════════════════════════ */
+
+    /* ── Copilot inner tab strip ── */
+    .copilot-tab-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-4) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+    .copilot-tab-btn {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) var(--space-10);
+      border-radius: var(--radius-4);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .copilot-tab-btn:hover:not(.active) {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .copilot-tab-btn.active {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+    .copilot-tab-panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .copilot-tab-panel--scroll {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--density-gutter);
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── Analysis timeline ── */
+    .analysis-timeline {
+      margin-bottom: var(--space-16);
+    }
+    .analysis-timeline-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-12);
+    }
+    .analysis-step {
+      padding: var(--space-8) 0;
+      border-left: 2px solid var(--brand-accent);
+      margin-left: 6px;
+      padding-left: var(--space-12);
+      position: relative;
+    }
+    .analysis-step--muted {
+      border-left-color: oklch(from var(--brand-accent) l c h / 0.4);
+    }
+    .analysis-step--subtle {
+      border-left-color: var(--border-subtle);
+    }
+    .analysis-step-dot {
+      position: absolute;
+      left: -5px;
+      top: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+    }
+    .analysis-step-dot--muted { background: var(--border-default); }
+    .analysis-step-dot--subtle { background: var(--border-subtle); }
+    .analysis-step-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .analysis-step-desc {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+      margin-top: var(--space-2);
+    }
+    .analysis-step-source {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: var(--space-2);
+    }
+
+    /* ── Flow info section ── */
+    .flow-section { margin-top: var(--space-12); }
+    .flow-label {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-6);
+    }
+    .flow-legend {
+      display: flex;
+      justify-content: space-between;
+      margin-top: var(--space-4);
+    }
+    .flow-legend-item {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Recommendation cards ── */
+    .rec-card {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--card-padding);
+      margin-bottom: var(--space-10);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+    .rec-card:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.10);
+    }
+    .rec-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+    .rec-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .rec-card:hover .rec-card-title {
+      color: var(--brand-accent);
+    }
+    .rec-card-desc {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+      margin-bottom: var(--space-8);
+    }
+    .rec-panel-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-12);
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg class="sr-only" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label">Graphite Studio — AI Copilot · Compact · A股</div>
+
+  <div class="shell-copilot shell-studio">
+    <!-- ======== Rail ======== -->
+    <nav class="shell-rail" data-contract-slot="rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+        </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="rail-bottom">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ======== Header ======== -->
+    <header class="shell-header" data-contract-slot="header">
+      <span class="header-title">AI Copilot<span class="header-subtitle">智能工作台</span></span>
+      <div class="header-spacer"></div>
+      <div class="header-actions" role="toolbar" aria-label="页面操作">
+
+        <label for="overlay-session-template" class="header-cta primary overlay-label-btn" tabindex="0" role="button" title="新建对话">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          新建对话
+        </label>
+
+        <label for="overlay-save-conclusion" class="header-cta ghost overlay-label-btn" tabindex="0" role="button" title="保存笔记">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h8l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M12 3v5h5"/></svg>
+          保存笔记
+        </label>
+        <button class="header-cta ghost" tabindex="0" role="button" title="导出">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v9m0 0l-3-3m3 3l3-3M4 16v1a1 1 0 001 1h10a1 1 0 001-1v-1"/></svg>
+          导出
+        </button>
+        <div class="switcher-sep"></div>
+        <div class="theme-switcher">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-sep"></div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+          </div>
+        </div>
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        </div>
+        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+      </div>
+    </header>
+
+    <!-- ======== Mode Switch (Radio Tab System) ======== -->
+    <div class="copilot-modes tab-group" data-tab-group="copilot" role="tablist" aria-label="AI 模式">
+      <!-- Radio inputs for tab state -->
+      <input type="radio" name="copilot-mode" id="copilot-market-analysis"
+             checked class="tab-radio sr-only">
+      <input type="radio" name="copilot-mode" id="copilot-stock-discovery"
+             class="tab-radio sr-only">
+      <input type="radio" name="copilot-mode" id="copilot-strategy-draft"
+             class="tab-radio sr-only">
+      <input type="radio" name="copilot-mode" id="copilot-factor-discovery"
+             class="tab-radio sr-only">
+
+      <div class="mode-tabs">
+        <label for="copilot-market-analysis" id="copilot-tab-market-analysis" class="mode-tab" role="tab" data-tab="copilot-market-analysis" tabindex="0" aria-controls="panel-copilot-market-analysis">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+          市场分析
+        </label>
+        <label for="copilot-stock-discovery" id="copilot-tab-stock-discovery" class="mode-tab" role="tab" data-tab="copilot-stock-discovery" tabindex="0" aria-controls="panel-copilot-stock-discovery">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+          个股发现
+        </label>
+        <label for="copilot-strategy-draft" id="copilot-tab-strategy-draft" class="mode-tab" role="tab" data-tab="copilot-strategy-draft" tabindex="0" aria-controls="panel-copilot-strategy-draft">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          策略草案
+        </label>
+        <label for="copilot-factor-discovery" id="copilot-tab-factor-discovery" class="mode-tab" role="tab" data-tab="copilot-factor-discovery" tabindex="0" aria-controls="panel-copilot-factor-discovery">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+          因子发现
+        </label>
+      </div>
+      <div class="mode-spacer"></div>
+      <div class="mode-status">
+        <span class="mode-status-dot" data-tooltip="AI 服务运行中"></span>
+        AI 就绪
+      </div>
+    </div>
+
+    <!-- ======== Sessions Sidebar (220px) ======== -->
+    <aside class="copilot-sessions" data-contract-slot="sessions" aria-label="会话列表">
+      <div class="sessions-search">
+        <div class="sessions-search-input">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+          搜索会话...
+        </div>
+      </div>
+      <div class="sessions-body">
+        <!-- Templates -->
+        <div class="sessions-group-label">快速开始</div>
+        <div class="session-item-template" tabindex="0" role="button">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          <span>市场全景分析</span>
+        </div>
+        <div class="session-item-template" tabindex="0" role="button">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          <span>因子假设验证</span>
+        </div>
+        <div class="session-item-template" tabindex="0" role="button">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+          <span>策略草案生成</span>
+        </div>
+
+        <!-- History -->
+        <div class="sessions-group-label">历史会话</div>
+        <div class="session-item active" tabindex="0" role="button" data-tooltip="当前会话 · 沪深300风格因子分析">
+          <span class="session-item-title">沪深300风格因子分析</span>
+          <span class="session-item-meta">今天 14:20 · 市场分析</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button" data-tooltip="因子发现 · 6 条消息">
+          <span class="session-item-title">北向资金流入预测模型</span>
+          <span class="session-item-meta">今天 11:05 · 因子发现</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button" data-tooltip="市场分析 · 8 条消息">
+          <span class="session-item-title">新能源板块拥挤度评估</span>
+          <span class="session-item-meta">昨天 16:30 · 市场分析</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button" data-tooltip="策略草案 · 4 条消息">
+          <span class="session-item-title">动量反转策略初稿</span>
+          <span class="session-item-meta">昨天 10:15 · 策略草案</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button" data-tooltip="个股发现 · 3 条消息">
+          <span class="session-item-title">高股息选股筛选</span>
+          <span class="session-item-meta">3月29日 · 个股发现</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button" data-tooltip="市场分析 · 12 条消息">
+          <span class="session-item-title">量价背离信号复盘</span>
+          <span class="session-item-meta">3月28日 · 市场分析</span>
+        </div>
+
+        <!-- Saved Notes -->
+        <div class="sessions-group-label">保存的笔记</div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">
+            <span class="session-item-note">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+            </span>
+            小盘价值风格 Alpha 源
+          </span>
+          <span class="session-item-meta">3月30日 · 2 条引用</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">
+            <span class="session-item-note">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+            </span>
+            北向资金领先指标验证
+          </span>
+          <span class="session-item-meta">3月28日 · 4 条引用</span>
+        </div>
+        <div class="session-item" tabindex="0" role="button">
+          <span class="session-item-title">
+            <span class="session-item-note">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+            </span>
+            板块轮动时序特征
+          </span>
+          <span class="session-item-meta">3月25日 · 1 条引用</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ======== Conversation + Structured Output ======== -->
+    <main class="copilot-conversation" id="main-content" data-contract-slot="main">
+      <!-- JS Tabs: conversation / analysis / recommendations -->
+      <div data-tabs="copilot-tabs" class="copilot-tab-panel">
+        <div class="copilot-tab-strip">
+          <button data-tab-target="conversation" class="copilot-tab-btn active">对话</button>
+          <button data-tab-target="analysis" class="copilot-tab-btn">分析步骤</button>
+          <button data-tab-target="recommendations" class="copilot-tab-btn">推荐结论</button>
+        </div>
+
+        <div class="mode-context-panels" aria-label="AI 模式上下文">
+          <section class="mode-context-panel" id="panel-copilot-market-analysis" data-panel="copilot-market-analysis" role="tabpanel" aria-labelledby="copilot-tab-market-analysis">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">市场分析 · 市场结构扫描</strong>
+              <span class="mode-context-desc">聚合指数、行业轮动与风格暴露，优先回答宏观结构和因子表现。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="市场分析关注点">
+              <span class="mode-context-pill">市场结构</span>
+              <span class="mode-context-pill">风格因子</span>
+              <span class="mode-context-pill">证据链</span>
+            </div>
+          </section>
+          <section class="mode-context-panel" id="panel-copilot-stock-discovery" data-panel="copilot-stock-discovery" role="tabpanel" aria-labelledby="copilot-tab-stock-discovery">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">个股发现 · 候选池筛选</strong>
+              <span class="mode-context-desc">从财务质量、资金流和估值约束生成候选个股，并保留可追溯筛选理由。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="个股发现关注点">
+              <span class="mode-context-pill">高股息</span>
+              <span class="mode-context-pill">低波动</span>
+              <span class="mode-context-pill">资金净流入</span>
+            </div>
+          </section>
+          <section class="mode-context-panel" id="panel-copilot-strategy-draft" data-panel="copilot-strategy-draft" role="tabpanel" aria-labelledby="copilot-tab-strategy-draft">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">策略草案 · 规则组装</strong>
+              <span class="mode-context-desc">把因子假设转成可编辑的入场、调仓、风控和回测参数草案。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="策略草案关注点">
+              <span class="mode-context-pill">入场条件</span>
+              <span class="mode-context-pill">调仓频率</span>
+              <span class="mode-context-pill">风控约束</span>
+            </div>
+          </section>
+          <section class="mode-context-panel" id="panel-copilot-factor-discovery" data-panel="copilot-factor-discovery" role="tabpanel" aria-labelledby="copilot-tab-factor-discovery">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">因子发现 · 假设生成</strong>
+              <span class="mode-context-desc">从新闻、龙虎榜和财报线索提取可验证因子，并输出初始 IC / IR 验证路径。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="因子发现关注点">
+              <span class="mode-context-pill">新闻线索</span>
+              <span class="mode-context-pill">龙虎榜</span>
+              <span class="mode-context-pill">财报异动</span>
+            </div>
+          </section>
+        </div>
+
+        <!-- Tab Panel: Conversation (existing content) -->
+        <div data-tab-panel="conversation" class="copilot-tab-panel">
+      <div class="conversation-body" data-mouse-glow="true">
+        <!-- Message 1: User -->
+        <div class="message message--user" data-reveal="fade-up" data-reveal-delay="0">
+          <div class="message-header">
+            <span class="message-avatar user">C</span>
+            <span class="message-sender">我</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:20:35 CST">14:20</span>
+          </div>
+          <div class="message-content">
+            <p>帮我分析一下当前沪深300的风格因子表现，重点关注价值、动量和质量因子。最近一周的 IC 和 IR 表现如何？有没有值得关注的因子假设？</p>
+          </div>
+        </div>
+
+        <!-- Message 2: AI -->
+        <div class="message message--ai" data-reveal="fade-up" data-reveal-delay="80">
+          <div class="message-header">
+            <span class="message-avatar ai">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            </span>
+            <span class="message-sender">Ditto AI</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:20:48 CST · 推理耗时 3.8s">14:20</span>
+            <div class="message-actions">
+              <button class="message-action-btn" data-tooltip="复制回复" aria-label="复制">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="9" height="9" rx="1"/><path d="M4 14V5a1 1 0 011-1h9"/></svg>
+              </button>
+              <button class="message-action-btn" data-tooltip="有帮助" aria-label="有帮助">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="message-content">
+            <!-- Thinking Chain Visualization -->
+            <div class="thinking-chain">
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>检索沪深300成分股近 5 日风格因子暴露度</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>计算 IC / IR 滚动窗口指标（60日/120日）</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon"></span>
+                <span>识别偏离历史均值的异常信号（波动率、换手率）</span>
+              </div>
+            </div>
+
+            <p>基于过去 5 个交易日（3月25日-3月31日）的数据，沪深300成分股的<strong>风格因子表现</strong>如下：</p>
+            <ul>
+              <li><strong>价值因子 (BP, EP_TTM)</strong>：IC = -0.032，IR = -0.51。连续第三周 IC 为负，价值风格持续承压，可能与成长板块资金回流有关。</li>
+              <li><strong>动量因子 (ROC_20)</strong>：IC = 0.078，IR = 1.24。动量因子表现强劲，5日和20日动量均呈现显著正向选股能力。</li>
+              <li><strong>质量因子 (ROE_ttm, DebtRatio)</strong>：IC = 0.045，IR = 0.72。质量因子稳定正向，ROE 单因子贡献最大。</li>
+            </ul>
+            <p>值得关注的是，<strong>波动率因子</strong>和<strong>换手率因子</strong>出现了与历史均值显著偏离的信号，我建议生成一个因子假设卡片进行深入验证。</p>
+
+            <!-- Structured Output: Factor Hypothesis Card -->
+            <div class="structured-card">
+              <div class="structured-card-header">
+                <span class="structured-card-title">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+                  因子假设 — 低波动率溢价
+                </span>
+                <span class="confidence-tag high" data-tooltip="AI 置信度: 92% — 基于 IC/IR 交叉验证">
+                  <span class="confidence-tag-dot"></span>
+                  高置信
+                </span>
+              </div>
+              <table class="factor-table">
+                <thead>
+                  <tr>
+                    <th>属性</th>
+                    <th>详情</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="factor-name">因子名称</td>
+                    <td><span class="factor-name">低波动率溢价</span> <span class="factor-code">LOWVOL_PREM</span></td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">核心逻辑</td>
+                    <td>低波动率股票在市场不确定性上升期间（VIX > 22、A50 期权限波 > 2%）呈现超额收益，与 Beta 低敏和杠杆约束假说一致</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">数据源</td>
+                    <td>Wind 日线波动率 · 聚宽因子库 · 东方财富板块资金流</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">验证方法</td>
+                    <td>分层回测（5 分位）· Fama-MacBeth 回归 · IC/IR 滚动窗口（60 日/120 日）</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">初始指标</td>
+                    <td class="factor-metric">
+                      IC = 0.092 (5d) · IR = 1.48 · 多空年化收益 12.3% · 最大回撤 -4.2%
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Confidence Bar -->
+            <div class="confidence-bar">
+              <span class="confidence-bar-label">综合置信度</span>
+              <div class="confidence-bar-track">
+                <div class="confidence-bar-fill high"></div>
+              </div>
+              <span class="confidence-bar-label">88%</span>
+            </div>
+
+            <!-- Source Attribution -->
+            <div class="message-attribution">
+              <span class="message-attribution-source">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+                Wind 因子库 · Tushare 行情 · 东方财富板块资金流
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message 3: User -->
+        <div class="message message--user" data-reveal="fade-up" data-reveal-delay="160">
+          <div class="message-header">
+            <span class="message-avatar user">C</span>
+            <span class="message-sender">我</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:22:11 CST">14:22</span>
+          </div>
+          <div class="message-content">
+            <p>这个低波动率溢价假设看起来不错。能把这个假设和当前的市场状态结合一下吗？另外质量因子的 ROE 细分维度有哪些值得关注的？</p>
+          </div>
+        </div>
+
+        <!-- Message 4: AI -->
+        <div class="message message--ai" data-reveal="fade-up" data-reveal-delay="240">
+          <div class="message-header">
+            <span class="message-avatar ai">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            </span>
+            <span class="message-sender">Ditto AI</span>
+            <span class="message-time" data-tooltip="2026-04-06 14:22:33 CST · 推理耗时 4.2s">14:22</span>
+            <div class="message-actions">
+              <button class="message-action-btn" data-tooltip="复制回复" aria-label="复制">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="9" height="9" rx="1"/><path d="M4 14V5a1 1 0 011-1h9"/></svg>
+              </button>
+              <button class="message-action-btn" data-tooltip="有帮助" aria-label="有帮助">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="message-content">
+            <!-- Thinking Chain Visualization -->
+            <div class="thinking-chain">
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>关联宏观指标 PMI、A50 隐含波动率与因子假设</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon thinking-step-icon--active"></span>
+                <span>交叉验证北向资金偏好与低 Beta 防御性配置</span>
+              </div>
+              <div class="thinking-step">
+                <span class="thinking-step-icon"></span>
+                <span>拆解 ROE 质量因子至稳定性、动量、资产周转率三维</span>
+              </div>
+            </div>
+
+            <p>好的，结合当前市场状态来看，低波动率溢价假设有<strong>三重支撑</strong>：</p>
+            <ul>
+              <li><strong>宏观层面</strong>：PMI 连续 2 月位于荣枯线以下，市场不确定性指标偏高（A50 隐含波动率 23.8%），低波动策略在风险厌恶环境下通常跑赢。</li>
+              <li><strong>资金层面</strong>：北向资金连续 5 日净流出，偏好低贝塔、高股息标的的防御性配置倾向明显。</li>
+              <li><strong>技术层面</strong>：沪深300指数近 20 日历史波动率降至 14.2%，处于近 1 年的 25% 分位，波动率压缩后往往迎来方向选择。</li>
+            </ul>
+            <p>关于<strong>ROE 质量因子的细分维度</strong>：</p>
+            <ul>
+              <li><strong>ROE 稳定性</strong>（5 年 ROE 标准差 &lt; 3%）：IC = 0.061，IR = 0.97，表现优于绝对 ROE 水平</li>
+              <li><strong>ROE 动量</strong>（ROE_QoQ 变化率）：IC = 0.038，IR = 0.61，环比改善的公司更受关注</li>
+              <li><strong>资产周转率</strong>（总资产周转率同比变化）：IC = 0.053，IR = 0.84，运营效率提升是质量因子的增量信息</li>
+            </ul>
+            <p>已生成第二个因子假设卡片，建议优先验证 <strong>ROE 稳定性</strong> 维度。</p>
+
+            <!-- Structured Output: Factor Hypothesis Card 2 -->
+            <div class="structured-card">
+              <div class="structured-card-header">
+                <span class="structured-card-title">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+                  因子假设 — ROE 稳定性溢价
+                </span>
+                <span class="confidence-tag medium" data-tooltip="AI 置信度: 68% — 需更多数据验证">
+                  <span class="confidence-tag-dot"></span>
+                  中置信
+                </span>
+              </div>
+              <table class="factor-table">
+                <thead>
+                  <tr>
+                    <th>属性</th>
+                    <th>详情</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="factor-name">因子名称</td>
+                    <td><span class="factor-name">ROE 稳定性溢价</span> <span class="factor-code">ROE_STABILITY</span></td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">核心逻辑</td>
+                    <td>连续 5 年 ROE 标准差低于 3% 的公司，在市场下行期表现出更强的抗跌能力和估值支撑</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">数据源</td>
+                    <td>Wind 财务数据 · 东方财富 Choice · Tushare 财报日历</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">验证方法</td>
+                    <td>分组回测 + 牛熊市分层 · IC 滚动衰减分析 · 与低波动率因子的正交化</td>
+                  </tr>
+                  <tr>
+                    <td class="factor-name">初始指标</td>
+                    <td class="factor-metric">
+                      IC = 0.061 (5d) · IR = 0.97 · 多空年化收益 8.7% · 信息比率 0.92
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Code Block: Factor validation pseudo-query -->
+            <div class="code-block" data-lang="sql" data-reveal="fade-up" data-reveal-delay="300">
+<span class="code-comment">-- ROE 稳定性因子验证查询</span>
+<span class="code-keyword">SELECT</span> ticker, roe_stddev_5y, roe_qoq, asset_turnover_yoy
+<span class="code-keyword">FROM</span> factor_exposure.<span class="code-string">hs300_roe_quality</span>
+<span class="code-keyword">WHERE</span> roe_stddev_5y &lt; <span class="code-number">0.03</span>
+  <span class="code-keyword">AND</span> roe_qoq &gt; <span class="code-number">0</span>
+<span class="code-keyword">ORDER BY</span> asset_turnover_yoy <span class="code-keyword">DESC</span>
+<span class="code-keyword">LIMIT</span> <span class="code-number">20</span>;
+            </div>
+
+            <!-- Confidence Bar -->
+            <div class="confidence-bar">
+              <span class="confidence-bar-label">综合置信度</span>
+              <div class="confidence-bar-track">
+                <div class="confidence-bar-fill medium"></div>
+              </div>
+              <span class="confidence-bar-label">65%</span>
+            </div>
+
+            <!-- Source Attribution -->
+            <div class="message-attribution">
+              <span class="message-attribution-source">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+                Wind 宏观数据 · 东方财富 Choice · Tushare 财报日历
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+        </div><!-- /data-tab-panel="conversation" -->
+
+        <!-- Tab Panel: Analysis Steps (ScrollReveal timeline) -->
+        <div data-tab-panel="analysis" class="copilot-tab-panel--scroll">
+          <div class="analysis-timeline">
+            <h3 class="analysis-timeline-title">分析推理时间线</h3>
+
+            <div data-reveal="fade-up" data-reveal-delay="0" class="analysis-step">
+              <div class="analysis-step-dot"></div>
+              <div class="analysis-step-title">步骤 1 — 数据检索</div>
+              <div class="analysis-step-desc">检索沪深300成分股近 5 日风格因子暴露度，获取价值、动量、质量三大因子维度的截面数据</div>
+              <div class="analysis-step-source">数据源：Wind 因子库 · 聚宽因子库</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="100" class="analysis-step">
+              <div class="analysis-step-dot"></div>
+              <div class="analysis-step-title">步骤 2 — IC/IR 计算</div>
+              <div class="analysis-step-desc">计算 IC/IR 滚动窗口指标（60日/120日），识别偏离历史均值的异常信号（波动率、换手率）</div>
+              <div class="analysis-step-source">方法：Fama-MacBeth 回归 · 分层回测</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="200" class="analysis-step">
+              <div class="analysis-step-dot"></div>
+              <div class="analysis-step-title">步骤 3 — 宏观关联验证</div>
+              <div class="analysis-step-desc">关联宏观指标 PMI、A50 隐含波动率与因子假设，交叉验证北向资金偏好与低 Beta 防御性配置</div>
+              <div class="analysis-step-source">数据源：Wind 宏观数据 · 东方财富 Choice</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="300" class="analysis-step analysis-step--muted">
+              <div class="analysis-step-dot analysis-step-dot--muted"></div>
+              <div class="analysis-step-title">步骤 4 — ROE 质量拆解</div>
+              <div class="analysis-step-desc">拆解 ROE 质量因子至稳定性（5年标准差）、动量（QoQ 变化率）、资产周转率三维度</div>
+              <div class="analysis-step-source">结果：ROE 稳定性 IC=0.061 IR=0.97 最优</div>
+            </div>
+
+            <div data-reveal="fade-up" data-reveal-delay="400" class="analysis-step analysis-step--subtle">
+              <div class="analysis-step-dot analysis-step-dot--subtle"></div>
+              <div class="analysis-step-title">步骤 5 — 假设生成与置信度评估</div>
+              <div class="analysis-step-desc">生成 LOWVOL_PREM（高置信 92%）和 ROE_STABILITY（中置信 68%）两个因子假设卡片</div>
+              <div class="analysis-step-source">令牌消耗：3,847 · 推理耗时 4.2s</div>
+            </div>
+          </div>
+
+          <!-- FlowBar: 信息流向 -->
+          <div class="flow-section">
+            <div class="flow-label">信息流向</div>
+            <div data-flow='{"segments":[{"label":"市场数据","value":30},{"label":"模型推理","value":25},{"label":"信号生成","value":20},{"label":"决策输出","value":25}]}' aria-label="信息流向"></div>
+            <div class="flow-legend">
+              <span class="flow-legend-item">市场数据 30%</span>
+              <span class="flow-legend-item">模型推理 25%</span>
+              <span class="flow-legend-item">信号生成 20%</span>
+              <span class="flow-legend-item">决策输出 25%</span>
+            </div>
+          </div>
+        </div><!-- /data-tab-panel="analysis" -->
+
+        <!-- Tab Panel: Recommendations (ConfidenceBars) -->
+        <div data-tab-panel="recommendations" class="copilot-tab-panel--scroll">
+          <h3 class="rec-panel-title">推荐结论</h3>
+
+          <div class="rec-card">
+            <div class="rec-card-header">
+              <span class="rec-card-title">低波动率溢价因子</span>
+              <span class="confidence-tag high"><span class="confidence-tag-dot"></span>高置信</span>
+            </div>
+            <div class="rec-card-desc">低波动率股票在市场不确定性上升期间呈现超额收益，IC=0.092 IR=1.48 多空年化收益 12.3%</div>
+            <div data-confidence="0.92" data-confidence-label="High"></div>
+          </div>
+
+          <div class="rec-card">
+            <div class="rec-card-header">
+              <span class="rec-card-title">ROE 稳定性溢价因子</span>
+              <span class="confidence-tag medium"><span class="confidence-tag-dot"></span>中置信</span>
+            </div>
+            <div class="rec-card-desc">连续 5 年 ROE 标准差低于 3% 的公司，在市场下行期表现出更强的抗跌能力，IC=0.061 IR=0.97</div>
+            <div data-confidence="0.68" data-confidence-label="Medium"></div>
+          </div>
+
+          <div class="rec-card">
+            <div class="rec-card-header">
+              <span class="rec-card-title">动量反转复合信号</span>
+              <span class="confidence-tag medium"><span class="confidence-tag-dot"></span>中置信</span>
+            </div>
+            <div class="rec-card-desc">5日与20日动量共振 + 波动率压缩后方向选择信号，需进一步验证正交性，IC=0.078 IR=1.24</div>
+            <div data-confidence="0.76" data-confidence-label="Medium-High"></div>
+          </div>
+        </div><!-- /data-tab-panel="recommendations" -->
+
+      </div><!-- /data-tabs="copilot-tabs" -->
+
+      <!-- AI Thinking Indicator (shows AI is processing) -->
+      <div class="ai-thinking">
+        <span class="message-avatar ai ai-thinking-avatar">
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </span>
+        <div class="ai-thinking-dots">
+          <span class="ai-thinking-dot"></span>
+          <span class="ai-thinking-dot"></span>
+          <span class="ai-thinking-dot"></span>
+        </div>
+        <span class="ai-thinking-label">Ditto AI 正在思考...</span>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="conversation-input">
+        <div class="input-wrapper">
+          <div class="input-attachments">
+            <span class="input-attachment">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
+              沪深300风格因子分析
+            </span>
+          </div>
+          <div class="input-row">
+            <input type="text" placeholder="继续分析..." aria-label="输入消息">
+            <kbd>Enter</kbd>
+            <button class="input-send-btn" tabindex="0" role="button" aria-label="发送" data-tooltip="发送消息 (Enter)">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10l7-7v4.5h7v5h-7V17L3 10z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ======== Context Sidebar (280px) ======== -->
+    <aside class="copilot-context" data-contract-slot="sidebar" aria-label="上下文面板">
+      <div class="context-rail">
+        <!-- Section 1: Related Objects -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">相关对象</span>
+            <span class="panel-count">8</span>
+          </div>
+          <div class="context-section-body">
+            <div class="object-chips">
+              <span class="object-chip" data-tooltip="沪深300 · 当前分析标的">
+                <span class="object-chip-type">指数</span>
+                <span class="object-chip-name">沪深300</span>
+              </span>
+              <span class="object-chip" data-tooltip="中证500 · 日涨跌">
+                <span class="object-chip-type">指数</span>
+                <span class="object-chip-name">中证500</span>
+                <span class="object-chip-market up">+0.82%</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">指数</span>
+                <span class="object-chip-name">创业板指</span>
+                <span class="object-chip-market down">-1.24%</span>
+              </span>
+              <span class="object-chip" data-tooltip="低波动率溢价因子 · IC=0.092">
+                <span class="object-chip-type">因子</span>
+                <span class="object-chip-name">LOWVOL_PREM</span>
+              </span>
+              <span class="object-chip" data-tooltip="ROE 稳定性因子 · IC=0.061">
+                <span class="object-chip-type">因子</span>
+                <span class="object-chip-name">ROE_STABILITY</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">板块</span>
+                <span class="object-chip-name">新能源</span>
+                <span class="object-chip-market down">-0.56%</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">板块</span>
+                <span class="object-chip-name">银行</span>
+                <span class="object-chip-market up">+0.45%</span>
+              </span>
+              <span class="object-chip">
+                <span class="object-chip-type">宏观</span>
+                <span class="object-chip-name">PMI</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Evidence Chain -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">证据链</span>
+          </div>
+          <div class="context-section-body">
+            <div class="evidence-item" data-tooltip="数据源：Wind 因子库 · 最新">
+              <div class="evidence-header">
+                <span class="evidence-dot recent"></span>
+                <span class="evidence-source">Wind 因子库</span>
+                <span class="evidence-time">14:32:08</span>
+              </div>
+              <span class="evidence-desc">LOWVOL_PREM IC(5d) = 0.092，滚动 IR(60d) = 1.48</span>
+            </div>
+            <div class="evidence-item" data-tooltip="数据源：东方财富 Choice · 新鲜">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">东方财富 Choice</span>
+                <span class="evidence-time">14:31:15</span>
+              </div>
+              <span class="evidence-desc">ROE 稳定性因子 IC(5d) = 0.061，资产周转率 IC = 0.053</span>
+            </div>
+            <div class="evidence-item" data-tooltip="数据源：Tushare 行情 · 新鲜">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">Tushare 行情</span>
+                <span class="evidence-time">14:30:00</span>
+              </div>
+              <span class="evidence-desc">沪深300 20日历史波动率降至 14.2%（25% 分位）</span>
+            </div>
+            <div class="evidence-item" data-tooltip="数据源：Wind 宏观数据 · 新鲜">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">Wind 宏观数据</span>
+                <span class="evidence-time">14:28:30</span>
+              </div>
+              <span class="evidence-desc">PMI 连续 2 月低于荣枯线，北向资金连续 5 日净流出</span>
+            </div>
+            <div class="evidence-item stale" data-tooltip="数据已过期 · 最后更新 14:20:00">
+              <div class="evidence-header">
+                <span class="evidence-dot"></span>
+                <span class="evidence-source">聚宽因子库</span>
+                <span class="evidence-stale-badge">
+                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+                  过期
+                </span>
+                <span class="evidence-time">14:20:00</span>
+              </div>
+              <span class="evidence-desc">动量因子 IC(5d) = 0.078，质量因子 IC = 0.045</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Actionable Actions -->
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">可执行操作</span>
+          </div>
+          <div class="context-section-body">
+            <label for="overlay-send-workspace" class="action-card" tabindex="0" role="button">
+              <span class="action-card-icon brand">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
+              </span>
+              <div class="action-card-body">
+                <span class="action-card-title">发送到因子分析</span>
+                <span class="action-card-desc">LOWVOL_PREM + ROE_STABILITY</span>
+              </div>
+              <span class="action-card-arrow">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+              </span>
+            </label>
+            <label for="overlay-send-workspace" class="action-card" tabindex="0" role="button">
+              <span class="action-card-icon green">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+              </span>
+              <div class="action-card-body">
+                <span class="action-card-title">加入策略工作室</span>
+                <span class="action-card-desc">低波 + 质量 双因子策略草案</span>
+              </div>
+              <span class="action-card-arrow">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+              </span>
+            </label>
+            <label for="overlay-save-conclusion" class="action-card" tabindex="0" role="button">
+              <span class="action-card-icon amber">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
+              </span>
+              <div class="action-card-body">
+                <span class="action-card-title">保存为笔记</span>
+                <span class="action-card-desc">含 2 个因子假设 + 5 条证据</span>
+              </div>
+              <span class="action-card-arrow">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 保存结论 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-save-conclusion">
+      <label class="overlay-dismiss" for="overlay-save-conclusion" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存结论">
+        <div class="overlay-header">
+          <span class="overlay-title">保存结论</span>
+          <label for="overlay-save-conclusion" class="overlay-close" role="button" tabindex="0" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>结论内容预览</h4>
+          <p class="overlay-desc-text">基于沪深300风格因子分析，发现低波动率溢价因子（IC=0.092, IR=1.48）和 ROE 稳定性溢价因子（IC=0.061, IR=0.97）具备进一步验证价值。</p>
+
+          <h4>笔记分类</h4>
+          <div class="tag-list">
+            <label class="category-pill category-pill--selected">
+              <input type="radio" name="note-category" checked> 因子研究
+            </label>
+            <label class="category-pill category-pill--unselected">
+              <input type="radio" name="note-category"> 市场分析
+            </label>
+            <label class="category-pill category-pill--unselected">
+              <input type="radio" name="note-category"> 策略相关
+            </label>
+          </div>
+
+          <h4>标签</h4>
+          <div class="tag-list">
+            <span class="tag-badge">低波动率</span>
+            <span class="tag-badge">ROE稳定性</span>
+            <span class="tag-badge">沪深300</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-primary overlay-label-btn">保存</label>
+            <label for="overlay-save-conclusion" class="overlay-btn overlay-btn-secondary overlay-label-btn">取消</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 发送到工作区 (Drawer 右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-send-workspace">
+      <label class="overlay-dismiss" for="overlay-send-workspace" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="发送到工作区">
+        <div class="overlay-header">
+          <span class="overlay-title">发送到工作区</span>
+          <label for="overlay-send-workspace" class="overlay-close" role="button" tabindex="0" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>选择目标工作区</h4>
+          <div class="radio-option-stack">
+            <label class="radio-option radio-option--selected">
+              <input type="radio" name="workspace-target" checked>
+              <div>
+                <div class="radio-option__title radio-option__title--brand">因子分析</div>
+                <div class="radio-option__desc">因子验证工作台</div>
+              </div>
+            </label>
+            <label class="radio-option radio-option--unselected">
+              <input type="radio" name="workspace-target">
+              <div>
+                <div class="radio-option__title">策略工作室</div>
+                <div class="radio-option__desc">策略构建与回测</div>
+              </div>
+            </label>
+            <label class="radio-option radio-option--unselected">
+              <input type="radio" name="workspace-target">
+              <div>
+                <div class="radio-option__title">研究工作区</div>
+                <div class="radio-option__desc">研究报告工作区</div>
+              </div>
+            </label>
+            <label class="radio-option radio-option--unselected">
+              <input type="radio" name="workspace-target">
+              <div>
+                <div class="radio-option__title">情报中心</div>
+                <div class="radio-option__desc">情报中心</div>
+              </div>
+            </label>
+          </div>
+
+          <h4>附加说明</h4>
+          <div class="overlay-info-box">
+            将发送 2 个因子假设（LOWVOL_PREM + ROE_STABILITY）和 5 条证据链到目标工作区
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-primary overlay-label-btn">发送</label>
+            <label for="overlay-send-workspace" class="overlay-btn overlay-btn-secondary overlay-label-btn">取消</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: 会话模板 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-session-template">
+      <label class="overlay-dismiss" for="overlay-session-template" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="会话模板">
+        <div class="overlay-header">
+          <span class="overlay-title">新建对话</span>
+          <label for="overlay-session-template" class="overlay-close" role="button" tabindex="0" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h4>选择对话模板</h4>
+          <div class="radio-option-stack">
+            <label class="radio-option radio-option--lg radio-option--selected">
+              <input type="radio" name="session-template" checked>
+              <div>
+                <div class="radio-option__title">空白对话</div>
+                <div class="radio-option__desc">从零开始自由探索</div>
+              </div>
+            </label>
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
+              <div>
+                <div class="radio-option__title">市场日报</div>
+                <div class="radio-option__desc">每日市场概览与关键数据解读</div>
+              </div>
+            </label>
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
+              <div>
+                <div class="radio-option__title">个股深度</div>
+                <div class="radio-option__desc">个股基本面、技术面、资金面全维度分析</div>
+              </div>
+            </label>
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
+              <div>
+                <div class="radio-option__title">行业比较</div>
+                <div class="radio-option__desc">跨行业横向对比与轮动分析</div>
+              </div>
+            </label>
+            <label class="radio-option radio-option--lg radio-option--unselected">
+              <input type="radio" name="session-template">
+              <div>
+                <div class="radio-option__title">因子挖掘预设</div>
+                <div class="radio-option__desc">预配置因子假设验证流程</div>
+              </div>
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-session-template" class="overlay-btn overlay-btn-primary overlay-label-btn">创建对话</label>
+            <label for="overlay-session-template" class="overlay-btn overlay-btn-secondary overlay-label-btn">取消</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ State Variants ═══ -->
+
+  <!-- Sessions 列表 State Variants -->
+
+
+
+
+  <!-- Conversation + Output State Variants -->
+
+
+
+
+  <!-- Context 面板 State Variants -->
+
+
+
+
+  <!-- Copilot Header State Variants -->
+
+
+
+
+  <!-- Mode Switch State Variants -->
+
+
+  <!-- Status Bar -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator" aria-hidden="true" data-tooltip="系统运行正常"></span>
+    <span class="status-live">在线</span>
+    <span class="status-sep">|</span>
+    <span>AI 模型 GPT-4o</span>
+    <span class="status-sep">|</span>
+    <span>令牌 <span class="status-token-highlight" data-counter="3847" data-counter-decimals="0" data-counter-duration="1200">0</span></span>
+    <span class="status-sep">|</span>
+    <span>市场分析模式</span>
+    <span class="status-sep">|</span>
+    <span>14:22 CST</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+K</span> 搜索
+  </div>
+
+  <script src="../../shared/theme-switcher.js"></script>
+  <script src="../../shared/prototype-interactions.js"></script>
+
+  <!-- Overlay trigger: send-workspace checkbox -->
+
+
+  </section>
+
+<section id="states-gallery" class="proto-section">
+      <div class="gallery-grid">
+        <div class="gallery-group" data-component="Sessions">
+          <div class="gallery-group__label">会话列表</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">会话列表 — 空状态</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12a1 1 0 011 1v8a1 1 0 01-1 1H7l-3 3V5a1 1 0 011-1z"/></svg></div>
+        <div class="state-empty-title">暂无历史会话</div>
+        <div class="state-empty-desc">开始新的 AI 分析对话，会话记录将自动保存到此处</div>
+        <label for="overlay-session-template" class="state-empty-cta overlay-label-btn">新建对话</label>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">会话列表 — 加载中</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">会话列表 — 错误</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">会话加载失败</div>
+        <div class="state-error-desc">无法获取会话列表，请检查网络连接后重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">会话列表 — 数据过期</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">会话列表数据过期</div>
+          <div class="state-stale-desc">会话记录最后同步于 10 分钟前，最新对话可能未显示</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Conversation">
+          <div class="gallery-group__label">对话</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">对话 — 空状态</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="7" r="3"/><path d="M4 14v-1a6 6 0 0112 0v1"/><circle cx="10" cy="7" r="1"/><path d="M7 5v-1M13 5v-1"/></svg></div>
+        <div class="state-empty-title">开始新的分析</div>
+        <div class="state-empty-desc">输入你的问题，AI Copilot 将从数据中提取洞察、生成因子假设或策略草案</div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">对话 — 加载中</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+        <div class="spacer-8"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">对话 — 错误</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">AI 服务不可用</div>
+        <div class="state-error-desc">AI 服务暂时不可用，请稍后重试。如持续失败请联系管理员</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">对话 — 数据过期</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">AI 回复引用数据过期</div>
+          <div class="state-stale-desc">部分分析结论基于 20 分钟前的市场数据，因子指标可能有变化</div>
+          <button class="state-stale-retry">刷新数据并重新分析</button>
+        </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Context Panel">
+          <div class="gallery-group__label">上下文面板</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">上下文面板 — 空状态</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.5 5.5l-9 9M15.5 5.5l-3-3-9 9 3 3 9-9M15.5 5.5l-3 3"/></svg></div>
+        <div class="state-empty-title">暂无关联上下文</div>
+        <div class="state-empty-desc">对话中引用的数据对象、证据链和操作建议将自动出现在此处</div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">上下文面板 — 加载中</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-badge"></div>
+        <div class="skeleton skeleton-badge"></div>
+        <div class="skeleton skeleton-badge"></div>
+        <div class="spacer-8"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">上下文面板 — 错误</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">上下文加载失败</div>
+        <div class="state-error-desc">无法获取关联数据对象和证据链，请稍后重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">上下文面板 — 数据过期</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">上下文数据过期</div>
+          <div class="state-stale-desc">相关对象价格和证据链数据最后更新于 15 分钟前</div>
+          <button class="state-stale-retry">同步最新数据</button>
+        </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Copilot Header">
+          <div class="gallery-group__label">Copilot 头部</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Copilot 头部 — 空状态</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.93 4.93l2.12 2.12M12.95 12.95l2.12 2.12M4.93 15.07l2.12-2.12M12.95 7.05l2.12-2.12"/></svg></div>
+        <div class="state-empty-title">AI Copilot 就绪</div>
+        <div class="state-empty-desc">选择一个分析模式，开始使用 AI 辅助投资研究</div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Copilot 头部 — 加载中</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Copilot 头部 — 错误</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">AI 服务连接失败</div>
+        <div class="state-error-desc">无法连接到 AI 后端服务，请检查网络或联系管理员</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Copilot 头部 — 数据过期</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">AI 模型状态过期</div>
+          <div class="state-stale-desc">模型连接信息最后刷新于 5 分钟前，当前就绪状态可能不准确</div>
+          <button class="state-stale-retry">检查连接</button>
+        </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Mode Switch">
+          <div class="gallery-group__label">模式切换</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">模式切换 — 默认状态</div>
+      <div class="gallery-card__preview">
+	<div class="state-variant-content" data-state="default">
+      <div class="mode-switch-default">
+        模式切换为纯交互组件，仅有默认状态。通过单选标签系统切换。
+      </div>
+    </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<section id="overlays-gallery" class="proto-section">
+      <div class="gallery-grid gallery-grid--overlays">
+        <div class="gallery-group" data-component="overlays">
+          <div class="gallery-group__label">弹层设计</div>
+          <div class="gallery-cards">
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">保存结论 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存结论">
+          <div class="overlay-header">
+            <span class="overlay-title">保存结论</span>
+          </div>
+          <div class="overlay-body">
+            <h4>结论内容预览</h4>
+            <p class="overlay-desc-text">基于沪深300风格因子分析，发现低波动率溢价因子（IC=0.092, IR=1.48）和 ROE 稳定性溢价因子（IC=0.061, IR=0.97）具备进一步验证价值。</p>
+
+            <h4>笔记分类</h4>
+            <div class="tag-list">
+              <label class="category-pill category-pill--selected">
+                <input type="radio" name="note-category" checked> 因子研究
+              </label>
+              <label class="category-pill category-pill--unselected">
+                <input type="radio" name="note-category"> 市场分析
+              </label>
+              <label class="category-pill category-pill--unselected">
+                <input type="radio" name="note-category"> 策略相关
+              </label>
+            </div>
+
+            <h4>标签</h4>
+            <div class="tag-list">
+              <span class="tag-badge">低波动率</span>
+              <span class="tag-badge">ROE稳定性</span>
+              <span class="tag-badge">沪深300</span>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-primary">保存</button>
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">发送到工作区 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="发送到工作区">
+          <div class="overlay-header">
+            <span class="overlay-title">发送到工作区</span>
+          </div>
+          <div class="overlay-body">
+            <h4>选择目标工作区</h4>
+            <div class="radio-option-stack">
+              <label class="radio-option radio-option--selected">
+                <input type="radio" name="workspace-target" checked>
+                <div>
+                  <div class="radio-option__title radio-option__title--brand">因子分析</div>
+                  <div class="radio-option__desc">因子验证工作台</div>
+                </div>
+              </label>
+              <label class="radio-option radio-option--unselected">
+                <input type="radio" name="workspace-target">
+                <div>
+                  <div class="radio-option__title">策略工作室</div>
+                  <div class="radio-option__desc">策略构建与回测</div>
+                </div>
+              </label>
+              <label class="radio-option radio-option--unselected">
+                <input type="radio" name="workspace-target">
+                <div>
+                  <div class="radio-option__title">研究工作区</div>
+                  <div class="radio-option__desc">研究报告工作区</div>
+                </div>
+              </label>
+              <label class="radio-option radio-option--unselected">
+                <input type="radio" name="workspace-target">
+                <div>
+                  <div class="radio-option__title">情报中心</div>
+                  <div class="radio-option__desc">情报中心</div>
+                </div>
+              </label>
+            </div>
+
+            <h4>附加说明</h4>
+            <div class="overlay-info-box">
+              将发送 2 个因子假设（LOWVOL_PREM + ROE_STABILITY）和 5 条证据链到目标工作区
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-primary">发送</button>
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card">
+      <div class="gallery-card__label">新建对话 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="会话模板">
+          <div class="overlay-header">
+            <span class="overlay-title">新建对话</span>
+          </div>
+          <div class="overlay-body">
+            <h4>选择对话模板</h4>
+            <div class="radio-option-stack">
+              <label class="radio-option radio-option--lg radio-option--selected">
+                <input type="radio" name="session-template" checked>
+                <div>
+                  <div class="radio-option__title">空白对话</div>
+                  <div class="radio-option__desc">从零开始自由探索</div>
+                </div>
+              </label>
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
+                <div>
+                  <div class="radio-option__title">市场日报</div>
+                  <div class="radio-option__desc">每日市场概览与关键数据解读</div>
+                </div>
+              </label>
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
+                <div>
+                  <div class="radio-option__title">个股深度</div>
+                  <div class="radio-option__desc">个股基本面、技术面、资金面全维度分析</div>
+                </div>
+              </label>
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
+                <div>
+                  <div class="radio-option__title">行业比较</div>
+                  <div class="radio-option__desc">跨行业横向对比与轮动分析</div>
+                </div>
+              </label>
+              <label class="radio-option radio-option--lg radio-option--unselected">
+                <input type="radio" name="session-template">
+                <div>
+                  <div class="radio-option__title">因子挖掘预设</div>
+                  <div class="radio-option__desc">预配置因子假设验证流程</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-primary">创建对话</button>
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-session-template" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-save-conclusion" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-send-workspace" class="overlay-radio sr-only">
+</body>
+</html>

@@ -1,0 +1,60 @@
+import { useQuery } from "@tanstack/react-query";
+import { apiClient, withQueryParams } from "@/lib/api-client";
+import type {
+	GetFactorsResponse,
+	GetResearchRunsResponse,
+	GetReviewQueueResponse,
+	PaginatedRequest,
+	ResearchPulseResponse,
+} from "@/types";
+
+export function useResearchPulse() {
+	return useQuery({
+		queryKey: ["research", "pulse"],
+		queryFn: () => apiClient.get<ResearchPulseResponse>("/research/pulse"),
+	});
+}
+
+export function useFactors(params?: PaginatedRequest) {
+	return useQuery({
+		queryKey: ["research", "factors", params],
+		queryFn: () => apiClient.get<GetFactorsResponse>(withQueryParams("/factors", params)),
+	});
+}
+
+export function useResearchRuns() {
+	return useQuery({
+		queryKey: ["research", "runs"],
+		queryFn: () => apiClient.get<GetResearchRunsResponse>("/research/runs"),
+	});
+}
+
+export { useCandidateEvidence } from "./use-candidate-evidence";
+export { useCandidateSelection } from "./use-candidate-selection";
+export {
+	useExperiment,
+	useExperimentArtifacts,
+	useExperimentCandidates,
+	useExperimentComparison,
+	useExperimentGates,
+	useExperimentSelectionEvidence,
+} from "./use-experiment";
+export { useExperimentLaunch } from "./use-experiment-launch";
+export { useExperimentControl, useExperimentRetryFold } from "./use-experiment-mutations";
+export { useExperimentPreflight } from "./use-experiment-preflight";
+export { useExperiments } from "./use-experiments";
+export { useHoldoutEvaluation } from "./use-holdout-evaluation";
+export { useReviewPacket } from "./use-review-packet";
+export { useReviews } from "./use-reviews";
+
+export function useReviewQueue() {
+	return useQuery({
+		queryKey: ["research", "review-queue"],
+		queryFn: () => apiClient.get<GetReviewQueueResponse>("/research/review-queue"),
+	});
+}
+
+export { useFactorCatalog } from "./use-factor-catalog";
+export { useFactorAnalysis, useFactorDetail, useFactorDiagnostics } from "./use-factor-detail";
+export { isCompleteRegimeScope, regimeDiagnosticsKeys, useRegimeDiagnostics } from "./use-regime-diagnostics";
+export { universeKeys, useUniverseCommands, useUniverseMembers, useUniverses } from "./use-universes";

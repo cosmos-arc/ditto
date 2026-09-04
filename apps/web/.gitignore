@@ -1,0 +1,122 @@
+# ──────────────────────────────────────────────
+# Dependencies
+# ──────────────────────────────────────────────
+node_modules/
+
+# ──────────────────────────────────────────────
+# Build output
+# ──────────────────────────────────────────────
+dist/
+build/Release
+*.tsbuildinfo
+
+# ──────────────────────────────────────────────
+# Vite
+# ──────────────────────────────────────────────
+*.local
+.vite/
+vite.config.*.timestamp-*
+
+# ──────────────────────────────────────────────
+# Environment variables
+# ──────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ──────────────────────────────────────────────
+# TanStack Router (auto-generated)
+# ──────────────────────────────────────────────
+src/routeTree.gen.ts
+.tanstack/
+
+# ──────────────────────────────────────────────
+# Test
+# ──────────────────────────────────────────────
+coverage/
+*.lcov
+
+# MSW
+public/mockServiceWorker.js
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright-mcp/
+
+# ──────────────────────────────────────────────
+# Visual audit (screenshots, reports, metrics)
+# ──────────────────────────────────────────────
+docs/review/visual-audit/
+
+# ──────────────────────────────────────────────
+# Contract generator (auto-generated)
+# ──────────────────────────────────────────────
+src/features/shell/page-contracts.generated.ts
+scripts/visual-audit.config.generated.mjs
+
+# ──────────────────────────────────────────────
+# Linter / formatter cache
+# ──────────────────────────────────────────────
+.eslintcache
+.stylelintcache
+.biome/
+.cache/ditto-agent-harness/
+
+# ──────────────────────────────────────────────
+# Claude Code local settings (hooks, MCP, personal allow)
+# ──────────────────────────────────────────────
+.claude/settings.local.json
+.claude/worktrees/
+
+# Codex project hooks are tracked; local state remains ignored elsewhere.
+!.codex/
+!.codex/hooks.json
+
+# ──────────────────────────────────────────────
+# IDE
+# ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.vsix
+
+# ──────────────────────────────────────────────
+# OS
+# ──────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ──────────────────────────────────────────────
+# Logs
+# ──────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ──────────────────────────────────────────────
+# Package manager (project uses bun)
+# ──────────────────────────────────────────────
+.pnpm-store
+.yarn/
+.pnp.*
+*.tgz
+bun-metadata.json
+
+# ──────────────────────────────────────────────
+# Deployment
+# ──────────────────────────────────────────────
+.wrangler/
+.vercel/
+.netlify/
+.serverless/

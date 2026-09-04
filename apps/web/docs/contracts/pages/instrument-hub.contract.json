@@ -1,0 +1,202 @@
+{
+  "id": "instrument-hub",
+  "version": 3,
+  "status": "contract-ready",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-08-30",
+  "route": "/instruments/$id",
+  "resolvedRoute": "/instruments/1000001",
+  "pagePattern": "object-hub",
+  "shellFamily": "object-hub",
+  "prototypeRef": "docs/designs/specs/prototypes/page-instrument-hub.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/instruments",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/instruments/components/instrument-components.test.tsx",
+      "src/features/instruments/components/info-level-annotations.test.tsx"
+    ],
+    "reactComponentRefs": ["InstrumentHubPage"]
+  },
+  "viewports": [
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" }
+  ],
+  "slots": [
+    {
+      "name": "header",
+      "required": true,
+      "prototypeSelector": ".shell-header",
+      "reactSelector": "[data-slot='header']",
+      "a11yRole": "banner",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.11
+      },
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "meta",
+      "required": true,
+      "prototypeSelector": ".object-header",
+      "reactSelector": "[data-slot='meta']",
+      "a11yRole": "banner",
+      "threshold": {
+        "x": 200,
+        "y": 64,
+        "widthRatio": 1,
+        "heightRatio": 0.12
+      },
+      "responsiveBehavior": { "compact": "reflow" }
+    },
+    {
+      "name": "tabs",
+      "required": true,
+      "prototypeSelector": ".hub-tabs",
+      "reactSelector": "[data-testid='object-hub-tabs']",
+      "a11yRole": "navigation",
+      "threshold": {
+        "x": 4,
+        "y": 24,
+        "widthRatio": 0.03,
+        "heightRatio": 0.2
+      },
+      "responsiveBehavior": { "compact": "reflow" }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".hub-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main",
+      "threshold": {
+        "x": 4,
+        "y": 24,
+        "widthRatio": 0.36,
+        "heightRatio": 0.31
+      }
+    },
+    {
+      "name": "bottom",
+      "required": true,
+      "prototypeSelector": ".hub-bottom",
+      "reactSelector": "[data-slot='bottom']",
+      "a11yRole": "region",
+      "threshold": {
+        "x": 4,
+        "y": 165,
+        "widthRatio": 0.36,
+        "heightRatio": 0.82
+      },
+      "responsiveBehavior": { "compact": "collapsed" }
+    }
+  ],
+  "states": {
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["not-found", "invalid-id", "bars-empty", "snapshot-identity-missing", "experimental-disabled"]
+  },
+  "flags": { "hasStatusBar": true, "sidebarCollapsible": false },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "meta": { "width": 1536, "height": 112, "strategy": "content-driven" },
+      "tabs": { "width": 1536, "height": 48, "strategy": "content-driven" },
+      "main": { "width": 1536, "height": 590, "strategy": "content-driven" },
+      "bottom": { "width": 1536, "height": 140, "strategy": "content-driven" }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.04
+  },
+  "overlays": [
+    {
+      "id": "instrument-hub.chart-toolbar",
+      "kind": "inline",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "main", "action": "toggle" },
+      "prototypeSelector": "#overlay-chart-toolbar",
+      "reactComponent": "InstrumentPageOverlays",
+      "closeBehavior": ["primary-action"]
+    },
+    {
+      "id": "instrument-hub.news-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "main", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-news-detail",
+      "reactComponent": "InstrumentPageOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    },
+    {
+      "id": "instrument-hub.announcement-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "main", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-announcement-detail",
+      "reactComponent": "InstrumentPageOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    },
+    {
+      "id": "instrument-hub.add-watchlist",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "bottom", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-add-watchlist",
+      "reactComponent": "InstrumentPageOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    },
+    {
+      "id": "instrument-hub.send-research",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "bottom", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-send-research",
+      "reactComponent": "InstrumentPageOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    },
+    {
+      "id": "instrument-hub.halt-detail",
+      "kind": "modal",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "meta", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-halt-detail",
+      "reactComponent": "InstrumentPageOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    }
+  ],
+  "liveData": {
+    "readPaths": [
+      "/api/v1/metadata/instruments/{instrument_id}",
+      "/api/v1/market/bars"
+    ],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "interactions": [
+    {
+      "id": "select-bars-date-range",
+      "trigger": "date-input-change",
+      "affectedSlots": ["main"],
+      "expectedBehavior": "requeries non-experimental unadjusted bars for one positive numeric instrument id and keeps missing snapshot identity visible"
+    }
+  ]
+}

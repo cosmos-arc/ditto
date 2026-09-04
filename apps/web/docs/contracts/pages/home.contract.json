@@ -1,0 +1,298 @@
+{
+  "id": "home",
+  "version": 3,
+  "status": "contract-ready",
+  "createdAt": "2026-04-16",
+  "updatedAt": "2026-08-29",
+  "route": "/",
+  "pagePattern": "global-command-center",
+  "shellFamily": "command-center",
+  "prototypeRef": "docs/designs/specs/prototypes/page-home.html",
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#home-command-center"
+  ],
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/home",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/home/components/home-components.test.tsx",
+      "src/features/home/hooks/home-hooks.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "HomePage"
+    ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/manual/daily-decision/v3"
+    ],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "pulse",
+      "required": true,
+      "infoLevel": "l2",
+      "prototypeSelector": ".shell-status-bar",
+      "reactSelector": "[data-slot='pulse-strip']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "infoLevel": "l2",
+      "prototypeSelector": ".shell-main",
+      "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
+      "a11yRole": "main"
+    },
+    {
+      "name": "sidebar",
+      "required": true,
+      "infoLevel": "l2",
+      "prototypeSelector": ".shell-sidebar",
+      "reactSelector": "[data-slot='sidebar-rail']",
+      "layoutStrategy": "fixed-width",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "subSlots": [
+    {
+      "name": "decision-banner",
+      "parentSlot": "main",
+      "infoLevel": "l2",
+      "prototypeSelector": "[data-contract-slot='decision-card']",
+      "reactSelector": "[data-testid='decision-banner']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    },
+    {
+      "name": "priority-queue",
+      "parentSlot": "main",
+      "infoLevel": "l2",
+      "prototypeSelector": "[data-contract-slot='pending-actions']",
+      "reactSelector": "[data-testid='priority-queue']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    },
+    {
+      "name": "secondary",
+      "parentSlot": "main",
+      "infoLevel": "l0",
+      "prototypeSelector": "[data-contract-slot='recent-signals']",
+      "reactSelector": "[data-slot='home-secondary']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "no-alerts",
+      "has-critical",
+      "daily-brief-stale",
+      "pending-approvals",
+      "priority-findings",
+      "signal-evidence-open",
+      "order-handoff-confirm",
+      "workspace-settings-open",
+      "decision-evidence-open"
+    ]
+  },
+  "interactions": [
+    {
+      "id": "sidebar-collapse",
+      "trigger": "sidebar-toggle",
+      "affectedSlots": [
+        "sidebar",
+        "main"
+      ],
+      "expectedBehavior": "sidebar width changes and main area expands"
+    },
+    {
+      "id": "signal-evidence",
+      "trigger": "priority-item-detail",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens read-only signal evidence and requires an explicit handoff before trading review"
+    },
+    {
+      "id": "workspace-settings",
+      "trigger": "workspace-settings-button",
+      "affectedSlots": [
+        "sidebar",
+        "main"
+      ],
+      "expectedBehavior": "opens persisted UI preferences and changes only implemented settings"
+    },
+    {
+      "id": "decision-evidence",
+      "trigger": "decision-evidence-button",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens a read-only Daily Decision V3 evidence summary without invoking a model"
+    }
+  ],
+  "flags": {
+    "hasStatusBar": false,
+    "sidebarCollapsible": true
+  },
+  "metrics": {
+    "capturedAt": "2026-04-16",
+    "viewport": "1536x900",
+    "baseline": {
+      "pulse": {
+        "width": 1536,
+        "height": 0,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1200,
+        "height": 0,
+        "strategy": "content-driven"
+      },
+      "sidebar": {
+        "width": 260,
+        "height": 900,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.05
+  },
+  "overlays": [
+    {
+      "id": "home.signal-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "select-priority-item"
+      },
+      "prototypeSelector": "#overlay-signal-detail",
+      "reactComponent": "HomeSignalEvidenceDrawer",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "home.order-confirm",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "prepare-order-handoff"
+      },
+      "prototypeSelector": "#overlay-order-confirm",
+      "reactComponent": "HomeOrderHandoffDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "home.edit-workspace",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-workspace-settings"
+      },
+      "prototypeSelector": "#overlay-edit-workspace",
+      "reactComponent": "HomeWorkspaceSettingsSheet",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "home.ai-advice",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-decision-evidence"
+      },
+      "prototypeSelector": "#overlay-ai-advice",
+      "reactComponent": "HomeDecisionEvidenceDrawer",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

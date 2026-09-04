@@ -1,0 +1,83 @@
+/* ─────────────────────────────────────────────
+ * Ditto Theme Switcher — Shared Header Controls
+ * Direct icon toggles for appearance + density.
+ * ───────────────────────────────────────────── */
+
+.preference-icon-btn {
+  color: var(--icon-secondary);
+}
+
+.preference-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.preference-icon-btn:hover {
+  color: var(--icon-primary);
+}
+
+.preference-icon-btn[data-preference-active="true"] {
+  color: var(--header-control-fg, var(--text-secondary));
+  background: var(--header-control-bg, transparent);
+}
+
+/* ── Legacy inline switcher support outside shell header ── */
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.switcher-group {
+  display: flex;
+  align-items: center;
+  background: var(--surface-panel-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-4);
+  padding: 2px;
+  gap: 1px;
+}
+
+.switcher-group-label {
+  font-size: var(--font-size-10);
+  color: var(--text-quaternary);
+  padding: 0 var(--space-6);
+  user-select: none;
+  letter-spacing: 0;
+}
+
+.switcher-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  height: var(--density-action-height);
+  padding: 0 var(--space-8);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-3);
+  cursor: pointer;
+  transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+              background var(--motion-duration-fast) var(--motion-easing-standard);
+  white-space: nowrap;
+}
+
+.switcher-btn:hover {
+  color: var(--text-secondary);
+  background: var(--interaction-hover-subtle-bg);
+}
+
+.switcher-btn[aria-pressed="true"],
+.switcher-btn[aria-checked="true"] {
+  color: var(--text-primary);
+  background: var(--interaction-selected-bg);
+}
+
+.switcher-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border-subtle);
+}

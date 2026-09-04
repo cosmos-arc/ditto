@@ -1,0 +1,24 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Sub-perceptual Atmosphere
+ * Background color micro-shifts for contextual identity.
+ * Values default to zero; JS hook (useAtmosphere) adjusts at runtime.
+ * ───────────────────────────────────────────── */
+
+:root {
+	--atmosphere-hue-shift: 0; /* ±7 degrees, set by JS hook */
+	--atmosphere-chroma-boost: 0; /* ±0.002 */
+	--atmosphere-lightness-shift: 0; /* ±0.003 */
+	--atmosphere-breathe-duration: 45s;
+
+	--surface-app-atmosphere: oklch(
+		calc(0.166 + var(--atmosphere-lightness-shift)) calc(0.01 + var(--atmosphere-chroma-boost))
+			calc(253 + var(--atmosphere-hue-shift))
+	);
+}
+
+[data-theme="light"] {
+	--surface-app-atmosphere: oklch(
+		calc(0.988 + var(--atmosphere-lightness-shift)) calc(0.001 + var(--atmosphere-chroma-boost))
+			calc(253 + var(--atmosphere-hue-shift))
+	);
+}

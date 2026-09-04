@@ -1,0 +1,315 @@
+/* ── Data Freshness Indicators ── */
+/* Three-level visual hierarchy for data recency:
+ *   realtime = pulsing green dot (live market data)
+ *   delayed  = static gray dot (snapshots, fundamentals, estimates)
+ *   eod      = no indicator (end-of-day / historical)
+ *
+ * Token colors defined in tokens-domain.css:
+ *   --freshness-realtime-color → --system-healthy-fg (green)
+ *   --freshness-delayed-color  → --text-disabled (neutral gray)
+ *
+ * Usage: Apply to data label or value containers.
+ * The ::after dot auto-positions to the right of the element.
+ */
+.freshness-realtime::after,
+.freshness-delayed::after {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin-left: var(--space-4);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.freshness-realtime::after {
+  background: var(--system-healthy-fg);
+  animation: dot-pulse 3s ease-in-out infinite;
+}
+
+.freshness-delayed::after {
+  background: var(--text-disabled);
+}
+
+/* ── Pill / Tag ── */
+.pill {
+  font-size: var(--font-size-10);
+  font-weight: var(--font-weight-medium);
+  padding: var(--compact-padding-y) var(--space-8);
+  border-radius: var(--radius-12);
+  white-space: nowrap;
+}
+
+.pill-green  { background: var(--market-up-bg); color: var(--market-up-fg); }
+.pill-red    { background: var(--market-down-bg); color: var(--market-down-fg); }
+.pill-amber  { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
+.pill-blue   { background: var(--brand-accent-subtle); color: var(--brand-accent); }
+.pill-neutral { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+
+
+/* ── Loading / Skeleton ── */
+.state-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6, 8px);
+  padding: var(--space-12, 16px);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 25%,
+    var(--surface-overlay) 50%,
+    var(--surface-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-4, 4px);
+}
+
+.skeleton-text {
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-text-sm {
+  height: 10px;
+  width: 70%;
+}
+
+.skeleton-heading {
+  height: 16px;
+  width: 40%;
+}
+
+.skeleton-row {
+  height: 36px;
+  width: 100%;
+}
+
+.skeleton-bar {
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-block {
+  height: 120px;
+  width: 100%;
+}
+
+.skeleton-card {
+  height: 80px;
+  width: 100%;
+  border-radius: var(--radius-6, 6px);
+}
+
+.skeleton-chart {
+  height: 160px;
+  width: 100%;
+  border-radius: var(--radius-6, 6px);
+}
+
+.skeleton-badge {
+  display: inline-block;
+  height: 20px;
+  width: 56px;
+  border-radius: var(--radius-12, 12px);
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Data Tick — numeric value update micro-animation ── */
+@keyframes data-tick {
+  0%   { opacity: 0.85; transform: translateX(2px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.data-updated {
+  animation: data-tick var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
+/* ── Sparkline Pulse — trailing dot indicator on sparklines ── */
+@keyframes sparkline-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.sparkline-dot {
+  animation: sparkline-pulse 3s ease-in-out infinite;
+}
+
+/* ── Alert Stream Animations ── */
+@keyframes alert-slide-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes alert-flash-border {
+  0%, 100% { border-top-color: transparent; }
+  50%      { border-top-color: var(--risk-critical-fg); }
+}
+
+.alert-item--new {
+  animation: alert-slide-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+}
+
+.alert-item--critical {
+  border-top: 2px solid transparent;
+  animation: alert-flash-border 200ms ease-in-out 2;
+}
+
+.alert-dismissing {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+/* ── Semantic Feedback Motion ── */
+.semantic-value-flash {
+  animation: semantic-value-flash var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+  font-variant-numeric: tabular-nums;
+}
+
+.semantic-status-transition {
+  transition:
+    background-color var(--motion-duration-normal) var(--motion-easing-standard),
+    border-color var(--motion-duration-normal) var(--motion-easing-standard),
+    color var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
+.threshold-crossed {
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+  animation: threshold-crossed var(--motion-duration-slow) var(--motion-easing-emphasis) both;
+}
+
+.linked-region-pulse {
+  animation: linked-region-pulse var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+}
+
+/* ── Dot pulse — live indicator breathing (shared by freshness-realtime, status-dot.live, etc.) ── */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes semantic-value-flash {
+  from {
+    opacity: 0.82;
+    transform: translateY(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes threshold-crossed {
+  0% {
+    outline-color: color-mix(in oklch, var(--risk-critical-fg) 32%, transparent);
+    outline-width: 1px;
+  }
+  55% {
+    outline-color: color-mix(in oklch, var(--risk-critical-fg) 46%, transparent);
+    outline-width: 2px;
+  }
+  100% {
+    outline-color: transparent;
+    outline-width: 1px;
+  }
+}
+
+@keyframes linked-region-pulse {
+  0% {
+    border-color: color-mix(in oklch, var(--brand-accent) 34%, var(--border-subtle));
+  }
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .dot-pulse,
+  .dot-critical-pulse,
+  .price-breathe,
+  .tab-fade-in,
+  .all-clear-icon,
+  .alert-dot.critical,
+  .alert-dot.critical::after,
+  .alert-slide-in,
+  .badge-dot,
+  .breach-dot.critical,
+  .breach-dot.warn,
+  .health-dot.degraded,
+  .health-metric-dot.down,
+  .object-status-dot,
+  .phase-dot,
+  .progress-fill,
+  .regime-timeline-segment--active::after,
+  .resource-bar-fill.critical::after,
+  .tab-group [data-panel],
+  .object-shell [data-panel],
+  .trace-section,
+  .pin-toast,
+  .spinner,
+  .test-spinner,
+  .stale-pulse,
+  .status-dot.connecting::before,
+  .status-dot.live,
+  .status-dot.running,
+  .status-indicator,
+  .status-live,
+  .status-pill.running,
+  .strategy-status-dot,
+  .topo-node.topo-down,
+  .topo-node.topo-warn,
+  [class*="breathe"],
+  [class*="pulse"],
+  [class*="spin"],
+  .data-updated,
+  .sparkline-dot {
+    animation: none !important;
+  }
+
+  .tab-fade-in,
+  .context-section,
+  .hub-tab,
+  .tab-group [data-panel],
+  .object-shell [data-panel],
+  .trace-section,
+  .pin-toast,
+  [class*="-enter"],
+  [class$="enter"],
+  [class*="entrance"],
+  [class*="fade-in"],
+  [class*="reveal"],
+  [data-reveal] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .prototype-chart-crosshair-x,
+  .prototype-chart-crosshair-y,
+  .prototype-chart-tooltip {
+    transition: none !important;
+  }
+}

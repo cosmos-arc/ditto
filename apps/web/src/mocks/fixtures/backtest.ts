@@ -1,0 +1,168 @@
+import type { components } from "@/types/generated/api";
+
+type RunResponse = components["schemas"]["RunResponse"];
+type BacktestReportResponse = components["schemas"]["BacktestReportResponse"];
+type NavPointResponse = components["schemas"]["NavPointResponse"];
+type BenchmarkNavResponse = components["schemas"]["BenchmarkNavResponse"];
+type TradeResponse = components["schemas"]["TradeResponse"];
+type AuditRecordResponse = components["schemas"]["AuditRecordResponse"];
+
+export const mockBacktestRuns: RunResponse[] = [
+	{
+		run_id: "bt-001",
+		strategy_id: "seed_etf_industry_rotation",
+		strategy_version: "4",
+		mode: "backtest",
+		status: "completed",
+		started_at: "2026-08-28T09:00:00Z",
+		completed_at: "2026-08-28T09:14:00Z",
+		error_message: "",
+		parent_run_id: "",
+		benchmark_return: 7.4,
+		progress_pct: 100,
+		current_step: "completed",
+		completed_days: 244,
+		total_days: 244,
+	},
+	{
+		run_id: "bt-002",
+		strategy_id: "seed_etf_trend_following",
+		strategy_version: "3",
+		mode: "backtest",
+		status: "running",
+		started_at: "2026-08-29T11:00:00Z",
+		completed_at: "",
+		error_message: "",
+		parent_run_id: "",
+		benchmark_return: null,
+		progress_pct: 64,
+		current_step: "walk-forward fold 3",
+		completed_days: 128,
+		total_days: 200,
+	},
+	{
+		run_id: "bt-003",
+		strategy_id: "seed_stock_picking",
+		strategy_version: "2",
+		mode: "backtest",
+		status: "failed",
+		started_at: "2026-08-27T08:00:00Z",
+		completed_at: "2026-08-27T08:02:00Z",
+		error_message: "snapshot certification failed",
+		parent_run_id: "",
+		benchmark_return: null,
+		progress_pct: 12,
+		current_step: "data certification",
+		completed_days: 0,
+		total_days: 244,
+	},
+];
+
+export const mockBacktestReport = {
+	run_id: "bt-001",
+	period: { start: "2025-01-01", end: "2025-12-31" },
+	initial_cash: 1_000_000,
+	final_nav: 1.182,
+	rebalance_freq: "monthly",
+	nav_series: null,
+	aggregated_trade_stats: {
+		total_trades: 24,
+		long_trades: 24,
+		short_trades: 0,
+		win_trades: 14,
+		loss_trades: 10,
+		win_rate: 0.5833,
+		profit_factor: 1.65,
+		avg_win: 14800,
+		avg_loss: -8900,
+		avg_win_loss_ratio: 1.66,
+		max_consecutive_wins: 4,
+		max_consecutive_losses: 3,
+		avg_holding_days: 18.4,
+		median_holding_days: 16,
+		best_trade: 32000,
+		worst_trade: -18000,
+		avg_trade_return_pct: 0.012,
+	},
+	alpha_stats: {
+		annualized_return: 0.182,
+		annualized_volatility: 0.1,
+		sharpe_ratio: 1.82,
+		sortino_ratio: 2.35,
+		max_drawdown: -0.125,
+		max_drawdown_duration_days: 28,
+		calmar_ratio: 1.45,
+		information_ratio: 0.73,
+		tracking_error: 0.06,
+		beta: 0.82,
+		alpha_annualized: 0.11,
+		total_turnover: 3.2,
+		avg_turnover_per_rebalance: 0.27,
+		total_fees: 3120,
+		net_return_after_cost: 0.174,
+		cost_drag: 0.008,
+	},
+} satisfies BacktestReportResponse;
+
+export const mockBacktestNav = [
+	{ trade_date: "2025-01-02", nav: 1 },
+	{ trade_date: "2025-02-28", nav: 1.018 },
+	{ trade_date: "2025-04-30", nav: 1.056 },
+	{ trade_date: "2025-06-30", nav: 1.041 },
+	{ trade_date: "2025-08-29", nav: 1.104 },
+	{ trade_date: "2025-10-31", nav: 1.136 },
+	{ trade_date: "2025-12-31", nav: 1.182 },
+] satisfies NavPointResponse[];
+
+export const mockBacktestBenchmark = {
+	run_id: "bt-001",
+	dates: mockBacktestNav.map((point) => point.trade_date),
+	navs: [1, 1.007, 1.022, 1.018, 1.046, 1.061, 1.074],
+	benchmark_return: 7.4,
+} satisfies BenchmarkNavResponse;
+
+export const mockBacktestTrades = [
+	{
+		trade_date: "2025-04-03",
+		instrument_id: 600519,
+		direction: "long",
+		entry_date: "2025-03-03",
+		exit_date: "2025-04-03",
+		entry_price: 1500,
+		exit_price: 1625,
+		quantity: 100,
+		pnl: 12500,
+	},
+	{
+		trade_date: "2025-09-18",
+		instrument_id: 300750,
+		direction: "long",
+		entry_date: "2025-08-01",
+		exit_date: "2025-09-18",
+		entry_price: 220,
+		exit_price: 249.5,
+		quantity: 300,
+		pnl: 8850,
+	},
+] satisfies TradeResponse[];
+
+export const mockBacktestAudit = [
+	{
+		id: 7,
+		run_id: "bt-001",
+		trade_date: "2025-04-03",
+		record_type: "execution.fill",
+		instrument_id: 600519,
+		payload: { order_id: "order-7", snapshot_id: "snapshot-cn-2025-04-03" },
+		created_at: "2026-08-28T09:08:00Z",
+	},
+	{
+		id: 8,
+		run_id: "bt-001",
+		trade_date: "2025-12-31",
+		record_type: "backtest.completed",
+		instrument_id: null,
+		payload: { completed_days: 244 },
+		created_at: "2026-08-28T09:14:00Z",
+	},
+] satisfies AuditRecordResponse[];

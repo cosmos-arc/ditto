@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ditto Product Architecture"
+  short_description: "Design information architecture and page blueprints"
+  default_prompt: "Use $ditto-product-arch to define or audit the product architecture for this change."

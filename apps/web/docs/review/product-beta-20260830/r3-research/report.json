@@ -1,0 +1,48 @@
+{
+  "schema": "ditto.r3-research-frontend-acceptance",
+  "version": 1,
+  "generated_at": "2026-08-30T05:42:06Z",
+  "source_commit": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+  "mode": "deterministic_fixture",
+  "passed": true,
+  "release_status": "RELEASE_ACCEPTANCE_BLOCKED",
+  "r2_live_gate": "NOT_EVALUATED",
+  "scope": {
+    "mode": "deterministic_fixture",
+    "runtime": "jsdom + isolated MSW HTTP fixtures",
+    "proves": [
+      "studio_experiment_review_flow",
+      "refresh_recovery",
+      "hard_gate_blocked_ui",
+      "typed_live_boundary"
+    ],
+    "doesNotProve": [
+      "provider_entitlement",
+      "certified_live_data",
+      "live_96_month_history",
+      "real_browser_acceptance",
+      "production_recovery"
+    ]
+  },
+  "command": {
+    "name": "ui-contract-suite",
+    "command": [
+      "bunx",
+      "vitest",
+      "run",
+      "src/features/research/components/experiment-create-page.test.tsx",
+      "src/features/research/components/experiment-detail-page.test.tsx",
+      "src/features/research/components/experiment-run-recovery.test.tsx",
+      "src/features/research/components/review-detail-page.test.tsx",
+      "src/features/research/components/review-queue-page.test.tsx",
+      "src/features/research/live-boundary.test.tsx"
+    ],
+    "returncode": 0,
+    "stdout": "\n RUN  v4.1.2 /Users/chevy/Desktop/code/ditto-app\n\n\n Test Files  6 passed (6)\n      Tests  26 passed (26)\n   Start at  13:42:03\n   Duration  2.26s (transform 2.24s, setup 1.98s, import 2.85s, tests 2.90s, environment 2.82s)\n\n",
+    "stderr": "",
+    "passed": true,
+    "artifact_hashes": {
+      "command_transcript": "d19844f281e09a78463ece95a57e03a310aa758f7f97c98947df4e4b23e02f38"
+    }
+  }
+}

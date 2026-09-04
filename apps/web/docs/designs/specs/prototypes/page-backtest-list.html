@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-backtest-list
+  Edition: v1
+  Generated: 2026-04-21
+
+  Tabs: 0 (Backtest List 无 tab 系统)
+
+  Overlays: 1
+  - overlay-backtest-compare (Drawer: 回测对比) [covered]
+
+  State Variants: 2 components x 3-6 states
+  - filter-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[covered] bulk[n/a]
+  - backtest-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] compare[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Research / Backtest</title>
+
+  <link rel="stylesheet" href="shared/fonts.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    .style-label {
+      position: fixed; top: var(--space-8); right: var(--space-8); z-index: 999;
+      font-family: var(--font-family-ui); font-size: var(--font-size-10);
+      color: var(--brand-signature-fg); background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle); padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4); pointer-events: none; letter-spacing: 0;
+    }
+    .skip-link {
+      position: absolute; left: -9999px; top: 0; z-index: 999;
+      padding: var(--space-4) var(--space-8); border-radius: var(--radius-4);
+      background: var(--surface-overlay); color: var(--text-primary); font-size: var(--font-size-12);
+    }
+    .skip-link:focus { left: var(--space-16); }
+    .header-subtitle { font-size: var(--font-size-12); font-weight: var(--font-weight-regular); color: var(--text-tertiary); margin-left: var(--space-8); letter-spacing: 0; }
+    .header-title-group { display: flex; align-items: baseline; }
+    .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 1 auto;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1200px) {
+      .filter-toolbar {
+        gap: var(--space-6);
+        overflow: hidden;
+      }
+
+      .filter-divider {
+        display: none;
+      }
+
+      .filter-group {
+        min-width: 0;
+        gap: var(--space-4);
+        flex: 0 1 auto;
+      }
+
+      .filter-search {
+        width: 140px;
+      }
+
+      .filter-chip {
+        min-width: 0;
+        max-width: 8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .filter-spacer {
+        min-width: var(--space-8);
+        flex: 1 1 var(--space-8);
+      }
+
+      .filter-count {
+        flex: 0 0 auto;
+        max-width: 7rem;
+      }
+    }
+
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header    header"
+        "rail toolbar toolbar   toolbar"
+        "rail summary separator detail"
+        "rail table   separator detail";
+      contain: paint;
+    }
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-catalog .catalog-detail { box-shadow: none; }
+    .catalog-table-inner { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+    .catalog-table-inner .table-container { flex: 1; overflow-y: auto; background: var(--surface-app); }
+    .catalog-table-inner .table-footer { flex-shrink: 0; }
+
+    /* ── Backtest status pill ── */
+    .bt-status {
+      display: inline-flex; align-items: center; font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium); padding: 1px var(--space-8);
+      border-radius: var(--radius-12); white-space: nowrap;
+    }
+    .bt-status::before {
+      content: '';
+      width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+      margin-right: var(--space-4); opacity: 0.78;
+    }
+    .bt-status.completed { background: var(--market-up-bg); color: var(--market-up-fg); }
+    .bt-status.running { background: var(--brand-accent-subtle); color: var(--brand-accent); }
+    .bt-status.failed { background: var(--market-down-bg); color: var(--market-down-fg); }
+    .bt-status.queued { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .bt-status.stale { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
+
+    .backtest-summary {
+      grid-area: summary;
+      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: center; gap: var(--space-12);
+      padding: var(--space-6) var(--density-gutter);
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      min-height: var(--density-strip-height);
+    }
+    .backtest-summary-item {
+      display: flex; align-items: center; gap: var(--space-6); min-width: 0;
+      font-size: var(--font-size-10); color: var(--text-tertiary);
+    }
+    .backtest-summary-item .bs-label { white-space: nowrap; }
+    .backtest-summary-item .bs-value {
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary);
+    }
+    .backtest-summary-item .bs-value.positive { color: var(--system-healthy-fg); }
+    .backtest-summary-item .bs-value.negative { color: var(--system-down-fg); }
+
+    .backtest-name-stack { display: flex; flex-direction: column; gap: 1px; }
+    .backtest-name-stack .cell-ticker { line-height: 1.2; }
+    .backtest-meta { color: var(--text-tertiary); font-size: var(--font-size-10); line-height: 1.2; }
+    .metric-delta { margin-right: var(--space-4); color: currentColor; font-size: var(--font-size-10); }
+    .data-table tr.row { cursor: pointer; }
+    .data-table tr.row:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+    .col-backtest-name { width: 16%; }
+    .col-backtest-strategy { width: 15%; }
+    .col-backtest-range { width: 10%; }
+    .col-backtest-sharpe { width: 8%; }
+    .col-backtest-return { width: 9%; }
+    .col-backtest-mdd { width: 8%; }
+    .col-backtest-status { width: 10%; }
+    .col-backtest-finished { width: 12%; }
+    .col-backtest-action { width: 12%; }
+    .row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-6); }
+    .row-action {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 24px; padding: 0 var(--space-6); border-radius: var(--radius-4);
+      color: var(--text-tertiary); cursor: pointer; font-size: var(--font-size-12);
+    }
+    .row-action:hover { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .row-action[aria-disabled="true"] { cursor: default; pointer-events: none; color: var(--text-tertiary); }
+    .row-action[aria-disabled="true"]:hover { background: transparent; color: var(--text-tertiary); }
+    .row-action.primary { color: var(--brand-accent); }
+    /* bar width utility classes for micro-bar */
+    .bar-w-18 .micro-bar-fill { width: 18%; }
+    .bar-w-23 .micro-bar-fill { width: 23%; }
+    .bar-w-26 .micro-bar-fill { width: 26%; }
+    .bar-w-27 .micro-bar-fill { width: 27%; }
+    .bar-w-31 .micro-bar-fill { width: 31%; }
+    .bar-w-38 .micro-bar-fill { width: 38%; }
+    .bar-w-65 .micro-bar-fill { width: 65%; }
+    .bar-w-74 .micro-bar-fill { width: 74%; }
+    .bar-w-95 .micro-bar-fill { width: 95%; }
+    /* best sharpe highlight */
+    .best-sharpe { position: relative; }
+    .best-sharpe::after { content: "★"; font-size: var(--font-size-10); color: var(--brand-accent); margin-left: var(--space-4); }
+
+    .catalog-detail .context-section { flex: 0 0 auto; }
+    .catalog-detail .context-section-body { flex: 0 0 auto; overflow: visible; }
+    .detail-actions { display: grid; gap: var(--space-8); }
+    .detail-actions .btn,
+    .detail-actions .row-action { width: 100%; justify-content: center; }
+    .detail-actions .row-action { border: 1px solid var(--border-default); color: var(--text-secondary); }
+    .detail-actions .row-action:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+    .detail-hero { display: flex; flex-direction: column; gap: var(--space-10); }
+    .detail-title-line { display: flex; flex-direction: column; gap: var(--space-4); }
+    .detail-live-chip {
+      align-self: flex-start; font-size: var(--font-size-10); color: var(--brand-accent);
+      background: var(--brand-accent-subtle); border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, transparent);
+      border-radius: var(--radius-12); padding: 1px var(--space-8);
+    }
+    .detail-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); }
+    .detail-kpi {
+      border: 1px solid var(--border-subtle); border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-base) 82%, transparent);
+      padding: var(--space-6);
+    }
+    .detail-kpi-label { display: block; font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .detail-kpi-value {
+      display: block; margin-top: 1px; font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14); color: var(--text-primary);
+    }
+    .equity-sparkline { width: 100%; height: 72px; display: block; }
+    .spark-area { fill: color-mix(in oklch, var(--brand-accent) 12%, transparent); }
+    .spark-line { fill: none; stroke: var(--brand-accent); stroke-width: 2; }
+    .drawdown-bars { display: flex; flex-direction: column; gap: var(--space-6); }
+    .drawdown-row {
+      display: grid; grid-template-columns: 58px 1fr 42px; align-items: center; gap: var(--space-8);
+      font-size: var(--font-size-11); color: var(--text-tertiary);
+    }
+    .drawdown-track { height: 5px; border-radius: var(--radius-12); background: var(--surface-panel-raised); overflow: hidden; }
+    .drawdown-fill { display: block; height: 100%; border-radius: inherit; background: var(--risk-medium-fg); }
+    .w-24 { width: 24%; }
+    .w-31 { width: 31%; }
+    .w-58 { width: 58%; }
+
+    /* ── Overlay activation ── */
+    :root:has(#overlay-backtest-compare:checked) [data-overlay="overlay-backtest-compare"] { display: flex; }
+    .overlay-close { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: var(--font-size-16); padding: var(--space-2); line-height: 1; }
+    .overlay-close:hover { color: var(--text-secondary); }
+    .compare-curve {
+      width: 100%; height: 120px; border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4); background: var(--surface-panel-base); margin-top: var(--space-6);
+    }
+    .compare-table {
+      display: grid; grid-template-columns: 1fr 72px 72px; gap: 0;
+      border: 1px solid var(--border-subtle); border-radius: var(--radius-4); overflow: hidden;
+    }
+    .compare-table span {
+      padding: var(--space-5) var(--space-8); border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+    }
+    .compare-table span:nth-last-child(-n + 3) { border-bottom: 0; }
+    .compare-table .metric { color: var(--text-tertiary); }
+    .compare-table .best { color: var(--brand-accent); }
+
+    .state-variant .state-variant-content { background: var(--surface-app); }
+    .data-table tr.row.selected { background: color-mix(in oklch, var(--brand-accent) 5%, transparent); }
+    .data-table tr.row.selected td:first-child { box-shadow: inset 0 0 0 1px var(--interaction-selected-border); }
+
+    .stale-banner { padding: var(--space-12); display: flex; align-items: center; gap: var(--space-6); }
+    .stale-dot-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--system-degraded-fg); display: inline-block; flex-shrink: 0; }
+    .stale-banner-text { font-size: var(--font-size-12); color: var(--system-degraded-fg); }
+
+    @media (prefers-reduced-motion: reduce) { .btn { transition: none !important; } }
+    .data-table th:nth-child(2),
+    .data-table td:nth-child(2) { min-width: 9rem; }
+    .data-table th:nth-child(6),
+    .data-table td:nth-child(6) { min-width: 5.5rem; }
+  </style>
+</head>
+<body>
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <input type="checkbox" id="overlay-backtest-compare" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+    <a class="skip-link" href="#main-content">跳至主要内容</a>
+    <div class="style-label" aria-hidden="true">Graphite Studio — 回测列表 · Compact · A股</div>
+
+    <div class="shell-catalog catalog-shell" data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
+      <!-- ═══ Rail ═══ -->
+      <nav class="shell-rail" aria-label="主导航">
+        <div class="rail-logo">D</div>
+        <div class="rail-nav">
+          <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+          <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+          <a class="rail-icon active" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+          <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+          <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+        </div>
+
+      </nav>
+
+      <!-- ═══ Header ═══ -->
+      <header class="shell-header" role="toolbar" aria-label="回测列表工具栏">
+        <div class="header-title-group">
+          <h1 class="header-title">回测列表</h1>
+          <span class="header-subtitle">Research · Backtest</span>
+        </div>
+        <div class="header-spacer"></div>
+        <div class="header-btn-group">
+          <label for="overlay-backtest-compare" class="btn ov-label-btn">回测对比</label>
+          <button class="btn btn-primary">新建回测</button>
+        </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <div class="command-context-actions" data-command-context-route="/research/backtest" data-command-context-object="BT-20260410-003" data-command-context-actions="add-to-compare, view-curve, copy-params, generate-report" hidden></div>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+      <!-- ═══ Filter Toolbar ═══ -->
+      <div class="filter-toolbar" data-contract-slot="header">
+        <div class="filter-group">
+          <span class="filter-label">搜索:</span>
+          <input type="text" class="filter-search" placeholder="搜索回测名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索回测名称...">
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">策略:</span>
+          <button class="filter-chip active">全部</button>
+          <button class="filter-chip">Alpha-Momentum</button>
+          <button class="filter-chip">Multi-Factor</button>
+          <button class="filter-chip">Sector-Rotation</button>
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">状态:</span>
+          <button class="filter-chip active">全部</button>
+          <button class="filter-chip">已完成</button>
+          <button class="filter-chip">运行中</button>
+          <button class="filter-chip">失败</button>
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">时间:</span>
+          <button class="filter-chip active">近 30 日</button>
+          <button class="filter-chip">本季度</button>
+          <button class="filter-chip">全部</button>
+        </div>
+        <div class="filter-spacer"></div>
+        <span class="filter-count" data-active-filters-summary>共 <span>10 次回测</span></span>
+      </div>
+
+      <!-- ═══ Backtest Summary ═══ -->
+      <div class="backtest-summary" data-primary-answer-equivalent data-primary-weight="dominant" data-catalog-task="backtest-comparison" aria-label="影响范围：当前回测列表筛选结果">
+        <div class="backtest-summary-item" data-answer-evidence>
+          <span class="bs-label" data-answer-judgment>可加入对比</span>
+          <span class="bs-value positive" data-answer-metric>7 / 10</span>
+        </div>
+        <div class="backtest-summary-item">
+          <span class="bs-label">失败</span>
+          <span class="bs-value">1</span>
+        </div>
+        <div class="backtest-summary-item" data-answer-evidence>
+          <span class="bs-label">当前基线</span>
+          <span class="bs-value">MOM-v2</span>
+        </div>
+        <div class="backtest-summary-item" data-answer-evidence>
+          <span class="bs-label">中位 MDD</span>
+          <span class="bs-value negative">-9.2%</span>
+        </div>
+        <div class="backtest-summary-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看最佳 Sharpe 回测">
+          <span class="bs-label">最佳 Sharpe</span>
+          <span class="bs-value positive">2.12</span>
+        </div>
+      </div>
+
+      <!-- ═══ Main Table Area ═══ -->
+      <div class="catalog-table" data-contract-slot="main" data-selected-object-region data-secondary-context>
+        <div class="catalog-table-inner" id="main-content">
+          <div class="table-container">
+            <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="回测列表">
+              <caption class="sr-only">回测列表：共 10 次回测</caption>
+              <colgroup>
+                <col class="col-backtest-name">
+                <col class="col-backtest-strategy">
+                <col class="col-backtest-range">
+                <col class="col-backtest-sharpe">
+                <col class="col-backtest-return">
+                <col class="col-backtest-mdd">
+                <col class="col-backtest-status">
+                <col class="col-backtest-finished">
+                <col class="col-backtest-action">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" class="sorted">名称 <span class="sort-icon">▲</span></th>
+                  <th scope="col">策略</th>
+                  <th scope="col">区间</th>
+                  <th scope="col" class="right">Sharpe <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">年化收益 <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">MDD <span class="sort-icon"></span></th>
+                  <th scope="col">状态</th>
+                  <th scope="col" class="right">完成时间</th>
+                  <th scope="col" class="right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="row selected" data-row-selection-marker tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">MOM-v3-2024Q1</span>
+                      <span class="backtest-meta">沪深300 · 日频</span>
+                    </div>
+                  </td>
+                  <td>Alpha-Momentum-v3</td>
+                  <td>2024Q1</td>
+                  <td class="right numeric cell-change-up heat-bg-5 best-sharpe"><span class="metric-delta">▲</span>2.12</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>32.5%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-23"><span class="metric-delta">▼</span>-6.8%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status completed">已完成</span></td>
+                  <td class="right numeric">04-20 15:32</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action primary">对比</label><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">MF-Enh-full-2025</span>
+                      <span class="backtest-meta">全市场 · 月频换仓</span>
+                    </div>
+                  </td>
+                  <td>Multi-Factor-Enhanced</td>
+                  <td>2025 全年</td>
+                  <td class="right numeric cell-change-up heat-bg-5"><span class="metric-delta">▲</span>1.85</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>24.3%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-31"><span class="metric-delta">▼</span>-9.2%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status completed">已完成</span></td>
+                  <td class="right numeric">04-19 10:15</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action primary">对比</label><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">SR-2026-H1</span>
+                      <span class="backtest-meta">行业轮动 · 周频</span>
+                    </div>
+                  </td>
+                  <td>Sector-Rotation</td>
+                  <td>2026H1</td>
+                  <td class="right numeric cell-change-up heat-bg-3"><span class="metric-delta">▲</span>1.42</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>16.2%</td>
+                  <td class="right numeric cell-change-down heat-bg-3 bar-w-38"><span class="metric-delta">▼</span>-11.5%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status running">运行中</span></td>
+                  <td class="right numeric">--</td>
+                  <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">等待完成</span><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">MOM-v3-stress</span>
+                      <span class="backtest-meta">压力样本 · 去杠杆期</span>
+                    </div>
+                  </td>
+                  <td>Alpha-Momentum-v3</td>
+                  <td>2020-22</td>
+                  <td class="right numeric cell-change-down heat-bg-2"><span class="metric-delta">▼</span>0.68</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>5.2%</td>
+                  <td class="right numeric cell-change-down heat-bg-1 bar-w-74"><span class="metric-delta">▼</span>-22.3%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status completed">已完成</span></td>
+                  <td class="right numeric">04-18 08:45</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">MF-Enh-H2-2025</span>
+                      <span class="backtest-meta">增强多因子 · H2</span>
+                    </div>
+                  </td>
+                  <td>Multi-Factor-Enhanced</td>
+                  <td>2025H2</td>
+                  <td class="right numeric cell-change-up heat-bg-3"><span class="metric-delta">▲</span>1.28</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>18.6%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-27"><span class="metric-delta">▼</span>-8.1%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status completed">已完成</span></td>
+                  <td class="right numeric">04-17 16:20</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">TM-crash-test</span>
+                      <span class="backtest-meta">宏观择时 · 极端行情</span>
+                    </div>
+                  </td>
+                  <td>Timing-Macro</td>
+                  <td>2018H1-19H1</td>
+                  <td class="right numeric cell-change-down heat-bg-1"><span class="metric-delta">▼</span>0.35</td>
+                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-2.1%</td>
+                  <td class="right numeric cell-change-down heat-bg-1 bar-w-95"><span class="metric-delta">▼</span>-28.6%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status failed">失败</span></td>
+                  <td class="right numeric">04-16 11:05</td>
+                  <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">失败诊断</span><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">MOM-v3-Q4-2025</span>
+                      <span class="backtest-meta">动量复核 · Q4</span>
+                    </div>
+                  </td>
+                  <td>Alpha-Momentum-v3</td>
+                  <td>2025Q4</td>
+                  <td class="right numeric cell-change-up heat-bg-4"><span class="metric-delta">▲</span>1.55</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>20.1%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-18"><span class="metric-delta">▼</span>-5.4%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status completed">已完成</span></td>
+                  <td class="right numeric">04-15 14:30</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">VAL-Q2-2025</span>
+                      <span class="backtest-meta">价值反转 · 中证800</span>
+                    </div>
+                  </td>
+                  <td>Value-Reversal</td>
+                  <td>2025Q2</td>
+                  <td class="right numeric cell-change-up heat-bg-3"><span class="metric-delta">▲</span>1.34</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>15.8%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-26"><span class="metric-delta">▼</span>-7.9%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status completed">已完成</span></td>
+                  <td class="right numeric">04-14 17:05</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">SENT-alpha-drift</span>
+                      <span class="backtest-meta">情绪 Alpha · 漂移</span>
+                    </div>
+                  </td>
+                  <td>Sentiment-Alpha-v2</td>
+                  <td>24H2-25H1</td>
+                  <td class="right numeric cell-change-down heat-bg-1"><span class="metric-delta">▼</span>0.42</td>
+                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-4.8%</td>
+                  <td class="right numeric cell-change-down heat-bg-2 bar-w-65"><span class="metric-delta">▼</span>-19.6%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
+                  <td><span class="bt-status stale">需复核</span></td>
+                  <td class="right numeric">04-13 09:18</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="backtest-name-stack">
+                      <span class="cell-ticker">LIQ-hedge-queued</span>
+                      <span class="backtest-meta">流动性对冲 · 排队</span>
+                    </div>
+                  </td>
+                  <td>Liquidity-Hedge</td>
+                  <td>2026YTD</td>
+                  <td class="right numeric muted">--</td>
+                  <td class="right numeric muted">--</td>
+                  <td class="right numeric muted">--</td>
+                  <td><span class="bt-status queued">排队中</span></td>
+                  <td class="right numeric">--</td>
+                  <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">排队中</span><span class="row-action">查看</span></span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
+          </div>
+          <div class="table-footer">
+            <div class="table-footer-info">
+              <span>共 10 次回测</span>
+              <span>最后同步 2026-04-21 09:42</span>
+            </div>
+            <div class="table-footer-actions">
+              <span class="pagination-ellipsis">...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Detail Panel ═══ -->
+      <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320" aria-valuetext="调整详情面板宽度 320 像素"></div>
+
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
+        <div class="context-section" data-collapse-priority="l1">
+          <div class="context-section-header">
+            <span class="context-section-title">对比预览</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-hero">
+              <div class="detail-title-line">
+                <div class="detail-ticker">MOM-v3-2024Q1</div>
+                <div class="detail-meta">
+                  <span><span class="meta-label">策略</span><span class="meta-value">Alpha-Momentum-v3</span></span>
+                  <span><span class="meta-label">基线</span><span class="meta-value">MOM-v2</span></span>
+                  <span><span class="meta-label">区间</span><span class="meta-value">2024-Q1</span></span>
+                </div>
+              </div>
+              <span class="detail-live-chip">Backtest Engine 已固化</span>
+              <div class="detail-kpi-grid">
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">Sharpe</span>
+                  <span class="detail-kpi-value">2.12</span>
+                </div>
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">年化收益</span>
+                  <span class="detail-kpi-value">32.5%</span>
+                </div>
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">最大回撤</span>
+                  <span class="detail-kpi-value">-6.8%</span>
+                </div>
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">胜率</span>
+                  <span class="detail-kpi-value">62.3%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">净值曲线</span>
+            <span class="collapse-count">1 曲线</span>
+          </summary>
+          <div class="context-section-body">
+            <svg class="equity-sparkline" viewBox="0 0 260 72" role="img" aria-label="MOM-v3-2024Q1 净值曲线稳步上行">
+              <path class="spark-area" d="M0 58 L22 54 L44 50 L66 47 L88 39 L110 42 L132 33 L154 29 L176 31 L198 22 L220 20 L242 14 L260 10 L260 72 L0 72 Z"/>
+              <path class="spark-line" d="M0 58 L22 54 L44 50 L66 47 L88 39 L110 42 L132 33 L154 29 L176 31 L198 22 L220 20 L242 14 L260 10"/>
+            </svg>
+          </div>
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">诊断摘要</span>
+            <span class="collapse-count">3 项</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="drawdown-bars">
+              <div class="drawdown-row">
+                <span>MDD</span>
+                <span class="drawdown-track"><span class="drawdown-fill w-31"></span></span>
+                <span class="numeric">-6.8%</span>
+              </div>
+              <div class="drawdown-row">
+                <span>压力期</span>
+                <span class="drawdown-track"><span class="drawdown-fill w-58"></span></span>
+                <span class="numeric">-12.4%</span>
+              </div>
+              <div class="drawdown-row">
+                <span>恢复</span>
+                <span class="drawdown-track"><span class="drawdown-fill w-24"></span></span>
+                <span class="numeric">8 日</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
+          <div class="context-section-header">
+            <span class="context-section-title">操作</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-actions">
+              <button class="btn btn-primary w-full">查看曲线</button>
+              <label for="overlay-backtest-compare" class="row-action primary">加入对比</label>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ═══ Overlay Containers ═══ -->
+    <div class="overlays">
+      <div class="overlay-backdrop" data-overlay="overlay-backtest-compare">
+        <label class="overlay-dismiss" for="overlay-backtest-compare" aria-label="关闭"></label>
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="回测对比">
+          <div class="overlay-header">
+            <span class="overlay-title">回测对比</span>
+            <label for="overlay-backtest-compare" class="overlay-close" aria-label="关闭">&#10005;</label>
+          </div>
+          <div class="overlay-body">
+            <p>MOM-v3-2024Q1 与 MF-Enh-full-2025 已加入对比，适合确认收益质量、回撤路径和配置差异。</p>
+
+            <h2>对比回测</h2>
+            <div class="sv-pad-6-0">
+              <div class="overlay-field">
+                <span class="overlay-field-label">回测 A</span>
+                <span class="overlay-field-value">MOM-v3-2024Q1 · Sharpe 2.12</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">回测 B</span>
+                <span class="overlay-field-value">MF-Enh-full-2025 · Sharpe 1.85</span>
+              </div>
+            </div>
+
+            <h2>绩效指标</h2>
+            <div class="compare-table" aria-label="回测绩效指标对比">
+              <span class="metric">指标</span><span>A</span><span>B</span>
+              <span class="metric">Sharpe</span><span class="best">2.12 ★</span><span>1.85</span>
+              <span class="metric">年化</span><span class="best">32.5% ★</span><span>24.3%</span>
+              <span class="metric">MDD</span><span class="best">-6.8% ★</span><span>-9.2%</span>
+              <span class="metric">换手</span><span>1.8x</span><span class="best">1.4x ★</span>
+            </div>
+
+            <h2>净值叠加</h2>
+            <svg class="compare-curve" viewBox="0 0 320 120" role="img" aria-label="两组回测净值曲线对比">
+              <path class="spark-line" d="M12 98 L48 91 L84 82 L120 70 L156 64 L192 48 L228 42 L264 29 L308 20"/>
+              <path d="M12 104 L48 96 L84 88 L120 83 L156 72 L192 62 L228 54 L264 45 L308 38" fill="none" stroke="var(--text-secondary)" stroke-width="2"/>
+            </svg>
+
+            <div class="overlay-actions">
+              <label for="overlay-backtest-compare" class="overlay-btn overlay-btn-secondary ov-label-btn">关闭</label>
+              <label for="overlay-backtest-compare" class="overlay-btn overlay-btn-primary ov-label-btn">导出对比</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="filter-bar">
+        <div class="gallery-group__label">筛选工具栏</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-text"></div>
+                  <div class="skeleton skeleton-text-sm"></div>
+                  <div class="skeleton skeleton-text-sm"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-title">暂无可筛选回测</div>
+                  <div class="state-empty-desc">Backtest Engine 尚未返回策略、状态或时间聚合</div>
+                  <button class="state-empty-cta">刷新筛选</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">筛选项加载失败</div>
+                  <div class="state-error-desc">无法读取策略、状态与时间范围聚合</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="selected">
+                <div class="batch-bar" data-batch-action-bar>
+                  <span class="batch-count">已选筛选：Alpha-Momentum / 已完成 / Sharpe 降序</span>
+                  <span class="batch-spacer"></span>
+                  <button class="btn btn-sm">清除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="gallery-group" data-component="backtest-table">
+        <div class="gallery-group__label">回测表格</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">BT</div>
+                  <div class="state-empty-title">暂无回测记录</div>
+                  <div class="state-empty-desc">还没有执行过任何回测，选择一个策略开始回测</div>
+                  <button class="state-empty-cta">新建回测</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">回测列表加载失败</div>
+                  <div class="state-error-desc">无法获取回测记录，请检查网络连接后重试</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Stale State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="stale">
+                <div class="stale-banner">
+                  <span class="stale-dot-indicator"></span>
+                  <span class="stale-banner-text">回测状态已过期 · 运行中的回测可能已完成</span>
+                  <button class="btn btn-sm">刷新</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="selected">
+                <div class="sv-bulk-card">
+                  <div class="sv-bulk-title">MOM-v3-2024Q1 · Sharpe 2.12</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Compare State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="compare">
+                <div class="batch-bar">
+                  <span class="batch-count">已选 2 次回测：MOM-v3-2024Q1 / MF-Enh-full-2025</span>
+                  <span class="batch-spacer"></span>
+                  <label for="overlay-backtest-compare" class="btn btn-sm ov-label-btn">打开对比</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层设计</div>
+        <div class="gallery-cards">
+
+          <div class="gallery-card" data-overlay-ref="overlay-backtest-compare">
+            <div class="gallery-card__label">回测对比 (Drawer)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="回测对比">
+                <div class="overlay-header">
+                  <span class="overlay-title">回测对比</span>
+                  <button class="overlay-close" aria-label="关闭">x</button>
+                </div>
+                <div class="overlay-body">
+                  <h2>对比回测 (2)</h2>
+                  <div class="sv-pad-6-0">
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">回测 A</span>
+                      <span class="overlay-field-value">MOM-v3-2024Q1</span>
+                    </div>
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">回测 B</span>
+                      <span class="overlay-field-value">MF-Enh-full-2025</span>
+                    </div>
+                  </div>
+
+                  <h2>绩效对比</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">Sharpe (A)</span>
+                    <span class="overlay-field-value">2.12</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">Sharpe (B)</span>
+                    <span class="overlay-field-value">1.85</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">年化 (A)</span>
+                    <span class="overlay-field-value">32.5%</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">年化 (B)</span>
+                    <span class="overlay-field-value">24.3%</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">MDD (A)</span>
+                    <span class="overlay-field-value">-6.8%</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">MDD (B)</span>
+                    <span class="overlay-field-value">-9.2%</span>
+                  </div>
+
+                  <h2>收益曲线对比</h2>
+                  <div class="skeleton skeleton-chart"></div>
+
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">关闭</button>
+                    <button class="overlay-btn overlay-btn-primary">导出对比</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

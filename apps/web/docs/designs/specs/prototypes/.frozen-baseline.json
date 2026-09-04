@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "baselineId": "frontend-recovery-m0-2026-08-29",
+  "baselineCommit": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+  "capturedAt": "2026-08-29",
+  "browserVersion": "147.0.7727.15",
+  "prototypeCount": 28,
+  "entries": [
+    {
+      "id": "a-shares",
+      "file": "page-a-shares.html",
+      "viewport": "1536x900",
+      "sourceSha256": "d696ca97f321369df94a5b0546286551d4f4706fad4665b966146c1b4e21418c",
+      "screenshotSha256": "6d30a3ec48508bc473510223b3e6399e285f4ed2b3b373c6e43f821057fca61a",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/a-shares.png"
+    },
+    {
+      "id": "agent-console-v2",
+      "file": "page-agent-console-v2.html",
+      "viewport": "1536x900",
+      "sourceSha256": "8bd951d762471907eeb6be57df2004cf527b2672a067e936243d16d180a496b7",
+      "screenshotSha256": "2fde72a8a30b77844ae1456c9f35c48806a03d3e7e71e0f172447ad11f17a2d3",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/agent-console-v2.png"
+    },
+    {
+      "id": "alpha-explorer",
+      "file": "page-alpha-explorer.html",
+      "viewport": "1536x1080",
+      "sourceSha256": "655a6376ea7759a0eb20e43742f401bc0aac90a3ad97ee0d08fb0e64a401f5fe",
+      "screenshotSha256": "4096751ee204074f022c7f3cfe36bad98624d3b7a7e32a23ef767e1707cf76b5",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/alpha-explorer.png"
+    },
+    {
+      "id": "backtest-list",
+      "file": "page-backtest-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "3323a60c0576e13a69a87fd516ddb61e8f0981e23bdf47ca607ec7b74519bc21",
+      "screenshotSha256": "41690b93e527a0a4ff9223c29131551c1615b9a3c4fc57fe0332aaf3cd82913e",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/backtest-list.png"
+    },
+    {
+      "id": "backtest-result",
+      "file": "page-backtest-result.html",
+      "viewport": "1536x900",
+      "sourceSha256": "a389284050d3c12a063e39b40c2e9a81bd5cca1163fa4eab36783d948b85f736",
+      "screenshotSha256": "3b05efab5da7a9e5b044afe4158b4ddc457323521553a2c5d185c75eaa7d2c4b",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/backtest-result.png"
+    },
+    {
+      "id": "cross-market",
+      "file": "page-cross-market.html",
+      "viewport": "1536x900",
+      "sourceSha256": "0e0ccd4a88660bd4750ed8015a1ff906a34a8c7cb17474f3ab0b673469c85ca9",
+      "screenshotSha256": "7f0c89b52c6bb8fa5d8474eacc76e8c4f22b68e41c44a24270c3e90e2fa47005",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/cross-market.png"
+    },
+    {
+      "id": "experiment-list",
+      "file": "page-experiment-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "6fe7f687082897f26824b51e0b031a6a71ebf8c8253cefaebfd7be26195783cc",
+      "screenshotSha256": "0cdb6605517f3bd52e99cdf3776dec8a6365467d5731f2f384d3412ca555c2f7",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/experiment-list.png"
+    },
+    {
+      "id": "factor-analysis",
+      "file": "page-factor-analysis.html",
+      "viewport": "1536x900",
+      "sourceSha256": "c6be1cd0c7f5a81eaf455e79a37343535852fdf8e1cb29e76e96f72b0ae664e8",
+      "screenshotSha256": "5f6c9d0c84f3c7aa755cb379b0b2c26aaae692ce63203ccdf9e7c4f25a963829",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/factor-analysis.png"
+    },
+    {
+      "id": "factor-list",
+      "file": "page-factor-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "3668ac661c56b241aec8c1b99a2c49ae29a2648540e0ab0eeb885f57464a9b80",
+      "screenshotSha256": "6b4363a33d9dd4835df6d69892a3db653c13e7a400c9d8079606e547c22d1b53",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/factor-list.png"
+    },
+    {
+      "id": "home",
+      "file": "page-home.html",
+      "viewport": "1536x900",
+      "sourceSha256": "0f6a9c61c5424f28818c71a5d578dc43ccabd2090ff0d9449e58788b4d51b5f4",
+      "screenshotSha256": "6d7b33cdc2363048a61721405b246fbbd3bc9cd108bac17c9efb67c87c5b8c21",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/home.png"
+    },
+    {
+      "id": "instrument-hub",
+      "file": "page-instrument-hub.html",
+      "viewport": "1536x900",
+      "sourceSha256": "79d333ec1371e5cfe7eac7b188d81d51b0f2710644f042c752199b6a560c3fc5",
+      "screenshotSha256": "9347f3944e1ae5cd8cec31320edc527c6a9a8d30d2dc4af68b06e11e8c0f5b4e",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/instrument-hub.png"
+    },
+    {
+      "id": "markets-calendar",
+      "file": "page-markets-calendar.html",
+      "viewport": "1536x900",
+      "sourceSha256": "621f2b75c45158516f855f22976fe2d96723b236dd6997bc38ec027891de157a",
+      "screenshotSha256": "f413e64a36db75fb0c636dcfb54b9dec02ac2e2aea89d0cc4d958130f2de1afe",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/markets-calendar.png"
+    },
+    {
+      "id": "markets-intelligence",
+      "file": "page-markets-intelligence.html",
+      "viewport": "1536x900",
+      "sourceSha256": "406aef24a428191338dfd2a12d846cff4cf945e5a00fad372e1ad5bdebf6d033",
+      "screenshotSha256": "998ede4310b7cdfad0d6e8f9abd93bf4006662cd4255b60faabf07c0bdd6f718",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/markets-intelligence.png"
+    },
+    {
+      "id": "markets-screener",
+      "file": "page-markets-screener.html",
+      "viewport": "1536x900",
+      "sourceSha256": "410c591522ca12d74d549e4bd065c728493e9ea76e70e266ee5c2f9caac86cbe",
+      "screenshotSha256": "1f1208e3147dd3db9116b4d528f8e4373f8eb4cd796d27e25b77b4323105d055",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/markets-screener.png"
+    },
+    {
+      "id": "orders-ledger",
+      "file": "page-orders-ledger.html",
+      "viewport": "1536x900",
+      "sourceSha256": "857dabc95807bdfa8e0e2d161a0e2544481857f4279c781fff2c214fbe5717bf",
+      "screenshotSha256": "8cdbd2408a4b2e4b9bc0cf1dc497900bff777a8c7aa20e74f55bc9144c57cc41",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/orders-ledger.png"
+    },
+    {
+      "id": "platform",
+      "file": "page-platform.html",
+      "viewport": "1536x900",
+      "sourceSha256": "0af99837ecac4d59fca9714a8a3b746bf6fe51885e9ece6844bfc78dbbcd6aa8",
+      "screenshotSha256": "a753dbf964308965cdced9cc2ec71fd0c015b3523f1b46a433f12dabf614ed32",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/platform.png"
+    },
+    {
+      "id": "platform-settings",
+      "file": "page-platform-settings.html",
+      "viewport": "1536x900",
+      "sourceSha256": "6da49a9e87633737f88b72e1fff401ba5bb9df70eaecdda90a3ec97e93bd104d",
+      "screenshotSha256": "47b23b11cdcd2ed45e5593928e5f1912043fdee3d74fe208351ac6a02cc200f0",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/platform-settings.png"
+    },
+    {
+      "id": "portfolio",
+      "file": "page-portfolio.html",
+      "viewport": "1536x900",
+      "sourceSha256": "809b41b78c5a589cfb7f2adcd3bbfa993f25185d2df55ffa81ee7bbcaafa5c25",
+      "screenshotSha256": "a6b23c2dc6a690ef1dc7f504f3855ae417788800c9577e2210be20bfd368f53c",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/portfolio.png"
+    },
+    {
+      "id": "regime-monitor",
+      "file": "page-regime-monitor.html",
+      "viewport": "1536x900",
+      "sourceSha256": "f8d5d2252ba39e9f0258e541dccbe3a6232f9ad053fc473a3ed206e6765e8521",
+      "screenshotSha256": "706fd4ba0277f7037908568778a9d6d793f9a5c46eca0ce02e879990291647a8",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/regime-monitor.png"
+    },
+    {
+      "id": "research",
+      "file": "page-research.html",
+      "viewport": "1536x900",
+      "sourceSha256": "02bc482f577e7c35aad2185c10ea588330f6f463669762fa004b649b9e18c487",
+      "screenshotSha256": "ee4e974c32955d20f7ea0750a6b8a244206b4eeabda03ffa629e8e24a9e934e3",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/research.png"
+    },
+    {
+      "id": "risk-center",
+      "file": "page-risk-center.html",
+      "viewport": "1536x900",
+      "sourceSha256": "20148192a72621151aeed9c7ec77b595dfd5ea17c9569cdf7549ffa7a20aba69",
+      "screenshotSha256": "84434202d536333a42c29a97614287e66c7e6428ae83b8b5f66b90bb1c38cef3",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/risk-center.png"
+    },
+    {
+      "id": "signals-inbox",
+      "file": "page-signals-inbox.html",
+      "viewport": "1536x900",
+      "sourceSha256": "64392128a96cde0c9578a370baf5e6362e0caa6d66ffb2851b659a7be86009df",
+      "screenshotSha256": "4e990c0ddd8296ff867bfb582513f4d8b01279b9520a29cf3e3f11ea6c950378",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/signals-inbox.png"
+    },
+    {
+      "id": "strategies-detail",
+      "file": "page-strategies-detail.html",
+      "viewport": "1536x900",
+      "sourceSha256": "0abe3fa540cde344393569d20a0c3bc3ae494746fdd6c77b890ed95f792e3463",
+      "screenshotSha256": "d1e2bd3866ad1c07dd77dfa18d58412d105d2a3fbb4d24394b0e26201fdbca1f",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/strategies-detail.png"
+    },
+    {
+      "id": "strategy-list",
+      "file": "page-strategy-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "e220aeaf090c1c1f0cd851a106db369af0f8f2d4bd7928260c5721248d39cf62",
+      "screenshotSha256": "73c5caaf56048bac8802b6b7a7a3f109f766a67ffd5715413fad274e814099d2",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/strategy-list.png"
+    },
+    {
+      "id": "strategy-studio",
+      "file": "page-strategy-studio.html",
+      "viewport": "1536x900",
+      "sourceSha256": "f34c5ef87a1ba859ada579da12716f8948fe3f1920d49140af271e4aa0d3b175",
+      "screenshotSha256": "a951000d6140303f0d8fbf0ef69971e42fd3a66ed1ca5a9232ad6dd0224bae64",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/strategy-studio.png"
+    },
+    {
+      "id": "trading-overview",
+      "file": "page-trading-overview.html",
+      "viewport": "1536x900",
+      "sourceSha256": "9b61647a37dc69ffdfd321185153a36b2b71d6f667b25592d66bc54c664932d4",
+      "screenshotSha256": "fbc1c2b126ed57725a9022973a19e4ac927547801237abb869f9e411044d2af4",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/trading-overview.png"
+    },
+    {
+      "id": "universe-list",
+      "file": "page-universe-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "57c94c3f912654eb3deb1e2f6f07c415f2e8297eab5862737a3a9ef09ceb3349",
+      "screenshotSha256": "75a60b9556b65abe5737fa649688000e2c0b88d632fa13bef25003a9b07cf120",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/universe-list.png"
+    },
+    {
+      "id": "watchlist",
+      "file": "page-watchlist.html",
+      "viewport": "1536x900",
+      "sourceSha256": "ebfd67f16a8a8012cfef5affa36b94a425bc2af73aee6e871369260bba4dddaf",
+      "screenshotSha256": "5f12f89fef4815e5f3cc6bd9c5805ab71e45fd66297565aec2d1de1ca90d967b",
+      "screenshotRef": "test-results/prototype-baseline/2026-08-29/watchlist.png"
+    }
+  ]
+}

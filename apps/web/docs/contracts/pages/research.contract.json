@@ -1,0 +1,325 @@
+{
+  "id": "research",
+  "version": 3,
+  "status": "contract-ready",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-08-30",
+  "route": "/research",
+  "pagePattern": "analytical-overview",
+  "shellFamily": "analytical",
+  "prototypeRef": "docs/designs/specs/prototypes/page-research.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/research",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/research/components/info-level-annotations.test.tsx",
+      "src/features/research/components/research-components.test.tsx",
+      "src/features/research/components/research-page-workspace.test.tsx",
+      "src/features/research/live-boundary.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "ResearchPage"
+    ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/research/factors",
+      "/api/v1/research/experiments",
+      "/api/v1/research/reviews",
+      "/api/v1/research/factors/{factor_id}/diagnostics"
+    ],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "strip",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": "[data-contract-slot='strip']",
+      "reactSelector": "[data-slot='strip']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": "[data-contract-slot='main']",
+      "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
+      "a11yRole": "main"
+    },
+    {
+      "name": "activity",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": "[data-contract-slot='activity']",
+      "reactSelector": "[data-slot='activity']",
+      "layoutStrategy": "fixed-width",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "analysis",
+      "required": true,
+      "infoLevel": "l2",
+      "prototypeSelector": "[data-contract-slot='analysis']",
+      "reactSelector": "[data-slot='analysis']",
+      "layoutStrategy": "flex",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "subSlots": [
+    {
+      "name": "factor-monitor",
+      "parentSlot": "main",
+      "infoLevel": "l1",
+      "prototypeSelector": "#panel-factors .monitor-panel",
+      "reactSelector": "[data-testid='research-factor-monitor']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    },
+    {
+      "name": "research-activity",
+      "parentSlot": "activity",
+      "infoLevel": "l1",
+      "prototypeSelector": "#panel-factors .activity-stack",
+      "reactSelector": "[data-testid='research-activity']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "no-runs",
+      "factor-catalog-empty",
+      "evidence-scope-missing",
+      "run-detail-open",
+      "review-action-open"
+    ]
+  },
+  "interactions": [
+    {
+      "id": "create-research-artifact",
+      "trigger": "header-create-action",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens the matching backtest, strategy or experiment sheet without creating server state"
+    },
+    {
+      "id": "inspect-run",
+      "trigger": "recent-run-row",
+      "affectedSlots": [
+        "activity",
+        "main"
+      ],
+      "expectedBehavior": "opens a read-only run drawer linked to the persisted experiment detail"
+    },
+    {
+      "id": "inspect-review",
+      "trigger": "review-queue-row",
+      "affectedSlots": [
+        "activity",
+        "main"
+      ],
+      "expectedBehavior": "opens a read-only review handoff and never treats a missing review packet as approved"
+    },
+    {
+      "id": "switch-analysis",
+      "trigger": "analysis-tab",
+      "affectedSlots": [
+        "analysis"
+      ],
+      "expectedBehavior": "switches the local analysis dimension while preserving the factor catalog and evidence scope"
+    }
+  ],
+  "flags": {
+    "hasStatusBar": false,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-08-29",
+    "viewport": "1536x900",
+    "baseline": {
+      "strip": {
+        "width": 1480,
+        "height": 36,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1180,
+        "height": 616,
+        "strategy": "content-driven"
+      },
+      "activity": {
+        "width": 300,
+        "height": 796,
+        "strategy": "fixed-width"
+      },
+      "analysis": {
+        "width": 1180,
+        "height": 180,
+        "strategy": "flex"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.051
+  },
+  "overlays": [
+    {
+      "id": "research.new-backtest",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-new-backtest",
+      "reactComponent": "ResearchOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "research.new-strategy",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-new-strategy",
+      "reactComponent": "ResearchOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "research.new-experiment",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-new-experiment",
+      "reactComponent": "ResearchOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "research.run-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-run-detail",
+      "reactComponent": "ResearchOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "research.review-action",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-review-action",
+      "reactComponent": "ResearchOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}
