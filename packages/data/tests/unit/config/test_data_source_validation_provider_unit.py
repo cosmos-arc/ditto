@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from ditto_data.config import DataSourceSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
-from ditto_platform.foundation import InitScope
+from ditto_platform.foundation import Environment, InitScope
 
 
 class TestDataSourceValidationProviderConstruction:
@@ -63,6 +64,48 @@ class TestTushareTokenValidation:
         provider = DataSourceValidationProvider(
             DataSourceSettings(tushare_token="resolved_token_xyz")
         )
+        result = provider.initialize(tmp_path)
+
+        assert result.success is True
+
+    @pytest.mark.parametrize(
+        "token",
+        [
+            "your_token_here",
+            "YourTokenHere",
+            "YOUR-TUSHARE-TOKEN",
+            "<replace-with-your-token>",
+            "${TUSHARE_TOKEN}",
+            "example_token",
+            "ditto-isolated-placeholder",
+        ],
+    )
+    def test_production_documentation_placeholder_token_fails_closed(
+        self,
+        tmp_path: Path,
+        token: str,
+    ) -> None:
+        """Documentation sentinels must never earn production readiness."""
+        provider = DataSourceValidationProvider(
+            DataSourceSettings(tushare_token=token),
+            environment=Environment.PRODUCTION,
+        )
+
+        result = provider.initialize(tmp_path)
+
+        assert result.success is False
+        assert result.message == "TUSHARE_TOKEN is a documentation placeholder"
+
+    def test_development_can_use_explicit_offline_placeholder(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The isolated development profile remains network-independent."""
+        provider = DataSourceValidationProvider(
+            DataSourceSettings(tushare_token="ditto-isolated-placeholder"),
+            environment=Environment.DEVELOPMENT,
+        )
+
         result = provider.initialize(tmp_path)
 
         assert result.success is True

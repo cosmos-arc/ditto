@@ -27,7 +27,7 @@ class TestCLIDataRootPassthrough:
     """CLI --data-root 参数传递测试."""
 
     def test_data_root_not_set_as_env_var(self, tmp_path: Path) -> None:
-        """--data-root 参数不应设置 DITTO_DATA_ROOT 环境变量（消除副作用）."""
+        """--data-root 参数不应设置 DITTO_STATE_ROOT 环境变量（消除副作用）."""
         custom_root = str(tmp_path / "custom_data")
 
         with patch.dict(os.environ, {}, clear=True):
@@ -35,7 +35,7 @@ class TestCLIDataRootPassthrough:
 
             assert result.exit_code == 0
             # 环境变量不应被设置（消除副作用）
-            assert os.getenv("DITTO_DATA_ROOT") is None
+            assert os.getenv("DITTO_STATE_ROOT") is None
 
     def test_data_root_not_set_when_not_provided(self, tmp_path: Path) -> None:
         """不提供 --data-root 参数时不应设置环境变量."""
@@ -44,18 +44,18 @@ class TestCLIDataRootPassthrough:
             result = runner.invoke(app, ["version"])
 
             assert result.exit_code == 0
-            # 不应设置 DITTO_DATA_ROOT
-            assert os.getenv("DITTO_DATA_ROOT") is None
+            # 不应设置 DITTO_STATE_ROOT
+            assert os.getenv("DITTO_STATE_ROOT") is None
 
     def test_existing_env_not_overridden(self, tmp_path: Path) -> None:
         """--data-root 参数不应覆盖已存在的环境变量（显式传递，无副作用）."""
         custom_root = str(tmp_path / "custom_data")
         existing_value = "/existing/path"
 
-        with patch.dict(os.environ, {"DITTO_DATA_ROOT": existing_value}, clear=False):
+        with patch.dict(os.environ, {"DITTO_STATE_ROOT": existing_value}, clear=False):
             result = runner.invoke(app, [f"--data-root={custom_root}", "version"])
 
             assert result.exit_code == 0
             # CLI 参数不应覆盖环境变量（消除副作用）
             # data_root 存储在 ctx.obj 中，不设置 os.environ
-            assert os.getenv("DITTO_DATA_ROOT") == existing_value
+            assert os.getenv("DITTO_STATE_ROOT") == existing_value

@@ -4,11 +4,12 @@ import sqlite3
 from contextlib import closing
 from pathlib import Path
 
+import pytest
 from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_features.config import FeatureArtifactStoreSettings
-from ditto_platform.foundation import InitScope
+from ditto_platform.foundation import ConfigInitError, Environment, InitScope
 
 
 def test_config_provider_init_coordinator_creates_feature_artifact_dirs(
@@ -20,6 +21,7 @@ def test_config_provider_init_coordinator_creates_feature_artifact_dirs(
         DataStoreSettings(data_root=data_root),
         FeatureArtifactStoreSettings(data_root=data_root),
         DataSourceSettings(tushare_token="resolved-test-token"),
+        Environment.TESTING,
     )
 
     results = coordinator.initialize(
@@ -47,3 +49,27 @@ def test_config_provider_init_coordinator_creates_feature_artifact_dirs(
         "risk_state_snapshots",
         "daily_risk_reports",
     } <= tables
+
+
+def test_config_provider_prevents_readiness_with_production_documentation_token(
+    tmp_path: Path,
+) -> None:
+    """Composition must wire the production environment into source readiness."""
+    data_root = tmp_path / "data"
+    coordinator = ConfigProvider().init_coordinator(
+        DataStoreSettings(data_root=data_root),
+        FeatureArtifactStoreSettings(data_root=data_root),
+        DataSourceSettings(tushare_token="your_token_here"),
+        Environment.PRODUCTION,
+    )
+
+    with pytest.raises(ConfigInitError) as raised:
+        coordinator.initialize(
+            scope=InitScope.STARTUP,
+            data_root=data_root,
+        )
+
+    assert raised.value.failed_providers == ["data_source_validation"]
+    assert raised.value.details == {
+        "data_source_validation": "TUSHARE_TOKEN is a documentation placeholder"
+    }

@@ -30,7 +30,7 @@ def create_executor(
 
     Note:
         data_root 参数目前暂未使用，ConfigProvider 仍通过
-        环境变量 DITTO_DATA_ROOT 获取配置。后续重构可改为
+        环境变量 DITTO_STATE_ROOT 获取配置。后续重构可改为
         显式参数传递。
 
     """

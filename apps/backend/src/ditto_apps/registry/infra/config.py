@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
-import shutil
-import subprocess
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -31,7 +29,8 @@ from ditto_platform.foundation import (
 )
 from ditto_platform.services import NotificationSettings
 
-from ditto_apps.config import load_env_file
+from ditto_apps.config import RuntimePaths, load_env_file, load_runtime_paths
+from ditto_apps.config.runtime import RuntimeConfigurationError
 from ditto_apps.registry.infra.init_providers import (
     MetadataDbInitProvider,
     R4RiskSchemaInitProvider,
@@ -54,16 +53,18 @@ def data_store_settings_type() -> type[_DataStoreSettings]:
 
 def load_data_store_settings(
     config_loader: ConfigLoader | None = None,
+    runtime_paths: RuntimePaths | None = None,
 ) -> _DataStoreSettings:
     """加载数据存储配置。"""
-    loader = (
-        config_loader if config_loader is not None else ConfigLoader(get_environment())
+    environment = get_environment()
+    paths = runtime_paths or load_runtime_paths(environment)
+    loader = config_loader or ConfigLoader(
+        environment,
+        config_root=paths.config_root,
     )
     values: dict[str, Any] = load_env_file(loader, "data_store")
 
-    # 支持 CLI/API 透传的环境变量覆盖
-    if override := os.getenv("DITTO_DATA_ROOT"):
-        values["data_root"] = override
+    values["data_root"] = paths.state_root
     if override := os.getenv("SQLITE_PATH"):
         values["sqlite_path"] = override
     if override := os.getenv("DUCKDB_PATH"):
@@ -188,9 +189,18 @@ class ConfigProvider(Provider):
         return get_environment()
 
     @provide
-    def config_loader(self, environment: Environment) -> ConfigLoader:
+    def config_loader(
+        self,
+        environment: Environment,
+        runtime_paths: RuntimePaths,
+    ) -> ConfigLoader:
         """提供配置文件加载器。"""
-        return ConfigLoader(environment)
+        return ConfigLoader(environment, config_root=runtime_paths.config_root)
+
+    @provide
+    def runtime_paths(self, environment: Environment) -> RuntimePaths:
+        """提供部署层显式运行时路径。"""
+        return load_runtime_paths(environment)
 
     @provide
     def init_coordinator(
@@ -198,6 +208,7 @@ class ConfigProvider(Provider):
         data_store_settings: _DataStoreSettings,
         feature_artifact_store_settings: FeatureArtifactStoreSettings,
         data_source_settings: DataSourceSettings,
+        environment: Environment,
     ) -> ConfigInitCoordinator:
         """配置初始化协调器（注册所有 providers）."""
         coordinator = ConfigInitCoordinator()
@@ -209,7 +220,12 @@ class ConfigProvider(Provider):
                 )
             )
         )
-        coordinator.register(DataSourceValidationProvider(data_source_settings))
+        coordinator.register(
+            DataSourceValidationProvider(
+                data_source_settings,
+                environment=environment,
+            )
+        )
         coordinator.register(MetadataDbInitProvider())
         coordinator.register(R4RiskSchemaInitProvider())
         return coordinator
@@ -231,9 +247,13 @@ class ConfigProvider(Provider):
         return Settings(system=system, observability=observability)
 
     @provide
-    def data_store_settings(self, config_loader: ConfigLoader) -> _DataStoreSettings:
+    def data_store_settings(
+        self,
+        config_loader: ConfigLoader,
+        runtime_paths: RuntimePaths,
+    ) -> _DataStoreSettings:
         """加载数据存储配置。"""
-        return load_data_store_settings(config_loader)
+        return load_data_store_settings(config_loader, runtime_paths)
 
     @provide
     def feature_artifact_store_settings(
@@ -294,15 +314,13 @@ class ConfigProvider(Provider):
         config_loader: ConfigLoader,
         environment: Environment,
     ) -> DQSettings:
-        """加载 DQ 配置并注入环境与项目根目录。"""
+        """加载 DQ 配置并在验证前注入部署层配置根目录。"""
         dq_values = load_env_file(config_loader, "dq")
-        settings = DQSettings.model_validate(dq_values)
-        return settings.model_copy(
-            update={
-                "environment": environment.value,
-                "config_root": config_loader.config_root,
-            }
+        dq_values.update(
+            environment=environment.value,
+            config_root=config_loader.config_root,
         )
+        return DQSettings.model_validate(dq_values)
 
     @provide
     def notification_settings(
@@ -333,17 +351,23 @@ class ConfigProvider(Provider):
 
         解析优先级（每个字段独立）::
 
-            环境变量 DITTO_RESEARCH_CODE_VERSION / _ENVIRONMENT_LOCK_HASH
-              > git rev-parse HEAD / pixi.lock sha256（C3 真实值）
-              > ResearchExecutionSettings 默认值（testing/staging fallback）
+            production: 完整且同提交的 Git SHA + pixi.lock SHA-256
+            development/testing: 环境变量 > 确定性 fallback
 
-        TESTING 环境跳过 git/lockfile I/O 以保持测试确定性；DEVELOPMENT 与
-        PRODUCTION 总是尝试读取真实值，缺失时静默退回默认值。
+        构建系统负责注入版本；运行时不读取 checkout 或工具链文件。
         """
+        code_version = _resolve_research_code_version(environment)
+        lock_hash = _resolve_research_environment_lock_hash(environment)
+        if environment is Environment.PRODUCTION:
+            return _production_research_execution_settings(
+                code_version=code_version,
+                environment_lock_hash=lock_hash,
+            )
+
         values: dict[str, Any] = {}
-        if code_version := _resolve_research_code_version(environment):
+        if code_version:
             values["code_version"] = code_version
-        if lock_hash := _resolve_research_environment_lock_hash(environment):
+        if lock_hash:
             values["environment_lock_hash"] = lock_hash
         return (
             ResearchExecutionSettings(**values)
@@ -362,58 +386,45 @@ class ConfigProvider(Provider):
         return DataCache[Any](ttl_seconds=300, max_size=10000)
 
 
-# 仓库根目录（config.py 位于 ditto_apps 包根下 registry 子目录的 infra 模块）
-_PROJECT_ROOT = Path(__file__).resolve().parents[6]
-_PIXI_LOCK_PATH = _PROJECT_ROOT / "pixi.lock"
-_GIT_HEAD_TIMEOUT_SECONDS = 5
+_FULL_GIT_SHA = re.compile(r"[0-9a-f]{40}\Z")
+_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+
+
+def _production_research_execution_settings(
+    *,
+    code_version: str | None,
+    environment_lock_hash: str | None,
+) -> ResearchExecutionSettings:
+    """Require one exact release commit and dependency lock in production."""
+    if code_version is None or _FULL_GIT_SHA.fullmatch(code_version) is None:
+        raise RuntimeConfigurationError(
+            "DITTO_RESEARCH_CODE_VERSION must be a full lowercase Git SHA in production"
+        )
+    if (
+        environment_lock_hash is None
+        or _SHA256.fullmatch(environment_lock_hash) is None
+    ):
+        raise RuntimeConfigurationError(
+            "DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH must be a production SHA-256"
+        )
+    product_git_sha = os.getenv("DITTO_GIT_SHA")
+    if product_git_sha != code_version:
+        raise RuntimeConfigurationError(
+            "DITTO_GIT_SHA must equal DITTO_RESEARCH_CODE_VERSION in production"
+        )
+    return ResearchExecutionSettings(
+        code_version=code_version,
+        environment_lock_hash=environment_lock_hash,
+    )
 
 
 def _resolve_research_code_version(environment: Environment) -> str | None:
-    """
-    Resolve code_version: env override > git HEAD > None (use default).
-
-    TESTING skips git I/O to keep tests deterministic; DEVELOPMENT and
-    PRODUCTION always attempt ``git rev-parse HEAD`` and silently fall back to
-    the settings default when git is unavailable (e.g. tarball deploys).
-    """
-    if override := os.getenv("DITTO_RESEARCH_CODE_VERSION"):
-        return override
-    if environment is Environment.TESTING:
-        return None
-    git_path = shutil.which("git")
-    if git_path is None:
-        logger.debug("git binary not on PATH; using default code_version")
-        return None
-    try:
-        result = subprocess.run(  # noqa: S603 - git_path 来自 shutil.which，args 全部为静态字符串
-            [git_path, "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=_GIT_HEAD_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.SubprocessError):
-        logger.debug("git rev-parse HEAD unavailable; using default code_version")
-        return None
-    sha = result.stdout.strip()
-    return sha or None
+    """Resolve code version only from deployment metadata."""
+    del environment
+    return os.getenv("DITTO_RESEARCH_CODE_VERSION") or None
 
 
 def _resolve_research_environment_lock_hash(environment: Environment) -> str | None:
-    """
-    Resolve environment_lock_hash: env override > pixi.lock sha256 > None.
-
-    TESTING skips lockfile I/O to keep tests deterministic; DEVELOPMENT and
-    PRODUCTION hash ``pixi.lock`` when present and silently fall back to the
-    settings default when the lockfile is missing.
-    """
-    if override := os.getenv("DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH"):
-        return override
-    if environment is Environment.TESTING:
-        return None
-    try:
-        content = _PIXI_LOCK_PATH.read_bytes()
-    except OSError:
-        logger.debug("pixi.lock unavailable; using default environment_lock_hash")
-        return None
-    return hashlib.sha256(content).hexdigest()
+    """Resolve lock hash only from deployment metadata."""
+    del environment
+    return os.getenv("DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH") or None

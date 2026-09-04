@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from ditto_platform.foundation import (
+    Environment,
     InitResult,
     InitScope,
 )
@@ -14,6 +16,37 @@ from ditto_data.config.data_source import DataSourceSettings
 
 __all__ = ["DataSourceValidationProvider"]
 
+_TOKEN_SEPARATOR = re.compile(r"[^a-z0-9]+")
+_DOCUMENTATION_WORDS = frozenset(
+    {
+        "changeme",
+        "dummy",
+        "example",
+        "fake",
+        "placeholder",
+        "replace",
+        "sample",
+        "test",
+        "your",
+    }
+)
+_COMPACT_DOCUMENTATION_TOKENS = frozenset(
+    {
+        "dummytoken",
+        "exampletoken",
+        "faketoken",
+        "placeholdertoken",
+        "replacewithyourtoken",
+        "sampletoken",
+        "testtoken",
+        "tusharetoken",
+        "yourtoken",
+        "yourtokenhere",
+        "yourtusharetoken",
+        "yourtusharetokenhere",
+    }
+)
+
 
 class DataSourceValidationProvider:
     """
@@ -22,8 +55,14 @@ class DataSourceValidationProvider:
     职责：校验数据源所需的配置项（如 API Token）。
     """
 
-    def __init__(self, settings: DataSourceSettings | None = None) -> None:
+    def __init__(
+        self,
+        settings: DataSourceSettings | None = None,
+        *,
+        environment: Environment = Environment.DEVELOPMENT,
+    ) -> None:
         self._settings = settings or DataSourceSettings()
+        self._environment = environment
 
     @property
     def name(self) -> str:
@@ -48,6 +87,10 @@ class DataSourceValidationProvider:
         token = self._settings.tushare_token
         if not token.strip():
             errors.append("TUSHARE_TOKEN is not set or empty")
+        elif self._environment is Environment.PRODUCTION and _is_placeholder_token(
+            token
+        ):
+            errors.append("TUSHARE_TOKEN is a documentation placeholder")
 
         if errors:
             message = "; ".join(errors)
@@ -68,3 +111,15 @@ class DataSourceValidationProvider:
             success=True,
             message="All data source config checks passed",
         )
+
+
+def _is_placeholder_token(token: str) -> bool:
+    """Recognize documentation sentinels without logging credential material."""
+    normalized = _TOKEN_SEPARATOR.sub("_", token.casefold()).strip("_")
+    words = frozenset(normalized.split("_"))
+    compact = normalized.replace("_", "")
+    return (
+        normalized in {"token", "tushare_token"}
+        or compact in _COMPACT_DOCUMENTATION_TOKENS
+        or bool(words & _DOCUMENTATION_WORDS)
+    )
