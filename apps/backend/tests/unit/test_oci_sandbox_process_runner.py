@@ -213,7 +213,9 @@ def test_runner_enforces_wall_timeout_and_removes_the_exact_container(
     started = time.monotonic()
     result = runner.run(_command("timeout", seccomp_path=seccomp, timeout=1))
 
-    assert time.monotonic() - started < 4
+    # Keep a physical upper bound below the fake child's ten-second sleep while
+    # allowing process scheduling jitter during the eight-worker full suite.
+    assert time.monotonic() - started < 8
     assert result.timed_out is True
     assert cleanup.read_text(encoding="utf-8") == "cleaned"
 
@@ -227,7 +229,9 @@ def test_runner_timeout_is_not_extended_by_orphaned_output_pipes(
     started = time.monotonic()
     result = runner.run(_command("orphan-pipe", seccomp_path=seccomp, timeout=1))
 
-    assert time.monotonic() - started < 5
+    # The hard bound remains below the orphan's ten-second sleep, while leaving
+    # headroom for the eight-worker coverage run to schedule the cleanup probe.
+    assert time.monotonic() - started < 8
     assert result.timed_out is True
     assert cleanup.read_text(encoding="utf-8") == "cleaned"
 

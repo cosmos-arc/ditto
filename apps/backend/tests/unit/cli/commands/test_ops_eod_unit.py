@@ -194,12 +194,14 @@ def test_run_eod_never_enters_prefect_engine_in_real_import_process() -> None:
     )
 
     # 固定为当前解释器、静态参数且 shell=False；子进程用于隔离真实 Prefect import。
+    # 全量 coverage 会同时启动八个解释器，超时只约束测试基础设施，不参与
+    # “不得进入 Prefect engine”的行为断言，因此为冷导入保留调度余量。
     result = subprocess.run(  # noqa: S603
         [sys.executable, "-c", script],
         check=False,
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=90,
     )
 
     assert result.returncode == 0, result.stderr or result.stdout
