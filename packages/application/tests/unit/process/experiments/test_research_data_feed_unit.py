@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import date
 from inspect import Parameter, signature
 from io import BytesIO
+from typing import cast
 
 import polars as pl
 import pytest
@@ -22,6 +24,7 @@ from ditto_application.processes.experiments.execution_contracts import (
 )
 from ditto_application.processes.experiments.research_data_feed import (
     FrozenResearchDataFrames,
+    ResearchDataEvidenceManifest,
     ResearchDataFeed,
     ResearchFrameKind,
     VerifiedResearchFrame,
@@ -1508,3 +1511,184 @@ def test_verified_frame_self_verifies_and_parses_exact_parquet_bytes() -> None:
         "source_snapshot_ids",
         "artifact_bytes",
     }
+
+
+def _feed_for_runtime_verification() -> tuple[
+    ResearchDataFeed,
+    ResearchSnapshotBinding,
+    str,
+]:
+    frames = _minimal_frames()
+    snapshot = _snapshot(frames)
+    manifest_hash = feed_module.research_data_feed_manifest_hash(snapshot)
+    return (
+        ResearchDataFeed(
+            snapshot=snapshot,
+            frames=frames,
+            start_date="2026-01-02",
+            end_date="2026-01-05",
+            knowledge_lag_days=0,
+            expected_manifest_hash=manifest_hash,
+        ),
+        snapshot,
+        manifest_hash,
+    )
+
+
+def _verify_runtime_state(
+    feed: object,
+    *,
+    expected_snapshot: object,
+    expected_start_date: object = "2026-01-02",
+    expected_end_date: object = "2026-01-05",
+    expected_knowledge_lag_days: object = 0,
+    expected_benchmark: object = None,
+    expected_manifest_hash: object,
+) -> None:
+    ResearchDataFeed.require_verified_state(
+        cast("ResearchDataFeed", feed),
+        expected_snapshot=cast("ResearchSnapshotBinding", expected_snapshot),
+        expected_start_date=cast("str", expected_start_date),
+        expected_end_date=cast("str", expected_end_date),
+        expected_knowledge_lag_days=cast("int", expected_knowledge_lag_days),
+        expected_benchmark=cast("ExactBenchmarkBinding | None", expected_benchmark),
+        expected_manifest_hash=cast("str | None", expected_manifest_hash),
+    )
+
+
+def _expect_runtime_drift(field: str, factory: Callable[[], object]) -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        factory()
+    assert exc_info.value.details["reason"] == "research_data_feed_state_drift"
+    assert exc_info.value.details["field"] == field
+
+
+class TestResearchDataFeedRuntimeVerificationEdges:
+    pytestmark = pytest.mark.pit
+
+    def test_rejects_nonexact_feed_and_expected_value_types(self) -> None:
+        feed, snapshot, manifest_hash = _feed_for_runtime_verification()
+        cases: tuple[tuple[str, Callable[[], object]], ...] = (
+            (
+                "type",
+                lambda: _verify_runtime_state(
+                    object(),
+                    expected_snapshot=snapshot,
+                    expected_manifest_hash=manifest_hash,
+                ),
+            ),
+            (
+                "expected_snapshot",
+                lambda: _verify_runtime_state(
+                    feed,
+                    expected_snapshot=object(),
+                    expected_manifest_hash=manifest_hash,
+                ),
+            ),
+            (
+                "expected_start_date",
+                lambda: _verify_runtime_state(
+                    feed,
+                    expected_snapshot=snapshot,
+                    expected_start_date=1,
+                    expected_manifest_hash=manifest_hash,
+                ),
+            ),
+            (
+                "expected_end_date",
+                lambda: _verify_runtime_state(
+                    feed,
+                    expected_snapshot=snapshot,
+                    expected_end_date=1,
+                    expected_manifest_hash=manifest_hash,
+                ),
+            ),
+            (
+                "expected_knowledge_lag_days",
+                lambda: _verify_runtime_state(
+                    feed,
+                    expected_snapshot=snapshot,
+                    expected_knowledge_lag_days=True,
+                    expected_manifest_hash=manifest_hash,
+                ),
+            ),
+            (
+                "expected_benchmark",
+                lambda: _verify_runtime_state(
+                    feed,
+                    expected_snapshot=snapshot,
+                    expected_benchmark=object(),
+                    expected_manifest_hash=manifest_hash,
+                ),
+            ),
+            (
+                "expected_manifest_hash",
+                lambda: _verify_runtime_state(
+                    feed,
+                    expected_snapshot=snapshot,
+                    expected_manifest_hash=1,
+                ),
+            ),
+        )
+
+        for field, factory in cases:
+            _expect_runtime_drift(field, factory)
+
+    def test_rejects_each_forged_internal_identity_node(self) -> None:
+        cases: tuple[tuple[str, str, object], ...] = (
+            ("snapshot", "_snapshot", object()),
+            ("frames", "_frames", object()),
+            ("start_date", "_start_date", 1),
+            ("end_date", "_end_date", 1),
+            ("knowledge_lag_days", "_knowledge_lag_days", True),
+            ("benchmark", "_benchmark", object()),
+            ("benchmark_id", "_benchmark_id", "99"),
+            ("expected_manifest_hash", "_expected_manifest_hash", 1),
+            ("evidence_manifest", "_evidence_manifest", object()),
+        )
+
+        for field, attribute, forged in cases:
+            feed, snapshot, manifest_hash = _feed_for_runtime_verification()
+            object.__setattr__(feed, attribute, forged)
+            _expect_runtime_drift(
+                field,
+                lambda feed=feed, snapshot=snapshot, manifest_hash=manifest_hash: (
+                    _verify_runtime_state(
+                        feed,
+                        expected_snapshot=snapshot,
+                        expected_manifest_hash=manifest_hash,
+                    )
+                ),
+            )
+
+    def test_rejects_typed_manifest_and_frame_identity_drift(self) -> None:
+        feed, snapshot, manifest_hash = _feed_for_runtime_verification()
+        manifest = cast(
+            "ResearchDataEvidenceManifest",
+            vars(feed)["_evidence_manifest"],
+        )
+        object.__setattr__(
+            feed,
+            "_evidence_manifest",
+            replace(manifest, canonical_hash="0" * 64),
+        )
+        _expect_runtime_drift(
+            "evidence_manifest",
+            lambda: _verify_runtime_state(
+                feed,
+                expected_snapshot=snapshot,
+                expected_manifest_hash=manifest_hash,
+            ),
+        )
+
+        feed, snapshot, manifest_hash = _feed_for_runtime_verification()
+        frames = cast("FrozenResearchDataFrames", vars(feed)["_frames"])
+        object.__setattr__(frames.bars, "verified_content_hash", "0" * 64)
+        _expect_runtime_drift(
+            "bars",
+            lambda: _verify_runtime_state(
+                feed,
+                expected_snapshot=snapshot,
+                expected_manifest_hash=manifest_hash,
+            ),
+        )

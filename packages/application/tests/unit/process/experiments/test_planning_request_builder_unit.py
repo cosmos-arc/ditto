@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import UserDict
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, date, datetime, timedelta
 from types import MappingProxyType
 from typing import cast
@@ -30,8 +30,11 @@ from ditto_analysis.experiments.trial_ledger import (
     PromotionObjective,
 )
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.experiments import _planning_request_identity
 from ditto_application.processes.experiments._planning_request_identity import (
+    plain_planning_value,
     planning_request_hash,
+    validate_planning_request_graph,
 )
 from ditto_application.processes.experiments.planning import (
     BaselineDescriptor,
@@ -68,6 +71,7 @@ from ditto_application.strategy_spec_deserialization import (
     canonical_spec_payload_for_record,
     deserialize_strategy_spec,
 )
+from ditto_backtest.context_inputs import ContextInputKind, ReplayContextInputRef
 from ditto_strategy.alpha.seeds import SEED_STRATEGY_SPECS
 from ditto_strategy.models import StrategySpecRecord
 
@@ -134,6 +138,24 @@ def _plain_json(value: object) -> object:
     if type(value) in {list, tuple}:
         items = cast("list[object] | tuple[object, ...]", value)
         return [_plain_json(item) for item in items]
+    return value
+
+
+def _javascript_json_number_round_trip(value: object) -> object:
+    """Model JSON.parse/stringify's loss of an integral float lexical suffix."""
+    if type(value) is dict:
+        source = cast("dict[str, object]", value)
+        return {
+            key: _javascript_json_number_round_trip(item)
+            for key, item in source.items()
+        }
+    if type(value) is list:
+        return [
+            _javascript_json_number_round_trip(item)
+            for item in cast("list[object]", value)
+        ]
+    if type(value) is float and value.is_integer():
+        return int(value)
     return value
 
 
@@ -468,6 +490,50 @@ def test_builder_decodes_every_field_into_the_exact_planning_contract() -> None:
     assert request.created_at == _NOW
 
 
+def test_builder_accepts_semantically_identical_browser_json_numbers() -> None:
+    original = _planning_document()
+    browser_round_trip = cast(
+        "PlanningDocument",
+        _javascript_json_number_round_trip(original),
+    )
+
+    request = build_experiment_planning_request(browser_round_trip)
+
+    assert (
+        request.strategy_record.spec_hash
+        == _mapping_at(original, "strategy")["spec_hash"]
+    )
+    assert planning_request_hash(request) == planning_request_hash(
+        build_experiment_planning_request(original)
+    )
+
+
+def test_stock_strategy_hash_survives_browser_integral_float_round_trip() -> None:
+    seed = SEED_STRATEGY_SPECS["seed_stock_selection_rotation"]
+    original_spec = cast(
+        "dict[str, object]",
+        orjson.loads(orjson.dumps(asdict(seed))),
+    )
+    browser_spec = cast(
+        "dict[str, object]",
+        _javascript_json_number_round_trip(original_spec),
+    )
+
+    def record(spec_json: dict[str, object]) -> StrategySpecRecord:
+        return StrategySpecRecord(
+            strategy_id=seed.strategy_id,
+            name=seed.name,
+            spec_json=spec_json,
+            version=2,
+            created_at="2026-07-30T00:00:00Z",
+            tags=seed.tags,
+        )
+
+    assert canonical_spec_hash_for_record(record(browser_spec)) == (
+        canonical_spec_hash_for_record(record(original_spec))
+    )
+
+
 def test_builder_freezes_replay_context_inputs_into_request_identity() -> None:
     without_context = _planning_document()
     document = _planning_document()
@@ -725,3 +791,235 @@ def test_builder_deep_freezes_strategy_spec_without_breaking_identity_codecs() -
 
     assert planning_request_hash(request)
     assert canonical_spec_payload_for_record(request.strategy_record)
+
+
+def _expect_request_identity_invalid(
+    reason: str,
+    factory: Callable[[], object],
+) -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        factory()
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert exc_info.value.details["reason"] == reason
+
+
+class TestPlanningRequestIdentityEdges:
+    pytestmark = pytest.mark.pit
+
+    def test_plain_value_supports_exact_json_scalars_and_containers(self) -> None:
+        source = MappingProxyType(
+            {
+                "none": None,
+                "bool": True,
+                "int": 1,
+                "float": 1.5,
+                "text": "value",
+                "nested": (1, [2]),
+            }
+        )
+
+        copied = plain_planning_value(source)
+
+        assert copied == {
+            "none": None,
+            "bool": True,
+            "int": 1,
+            "float": 1.5,
+            "text": "value",
+            "nested": [1, [2]],
+        }
+
+    def test_plain_value_rejects_nonfinite_cycles_keys_and_foreign_types(self) -> None:
+        for value in (float("nan"), float("inf"), float("-inf")):
+            _expect_request_identity_invalid(
+                "non_finite_planning_request_value",
+                lambda value=value: plain_planning_value(value),
+            )
+
+        cyclic_mapping: dict[str, object] = {}
+        cyclic_mapping["self"] = cyclic_mapping
+        _expect_request_identity_invalid(
+            "cyclic_planning_request_value",
+            lambda: plain_planning_value(cyclic_mapping),
+        )
+
+        cyclic_list: list[object] = []
+        cyclic_list.append(cyclic_list)
+        _expect_request_identity_invalid(
+            "cyclic_planning_request_value",
+            lambda: plain_planning_value(cyclic_list),
+        )
+
+        _expect_request_identity_invalid(
+            "invalid_planning_request_mapping_key",
+            lambda: plain_planning_value({1: "value"}),
+        )
+        _expect_request_identity_invalid(
+            "invalid_planning_request_value_type",
+            lambda: plain_planning_value({"not", "json"}),
+        )
+
+    def test_parameter_types_are_bound_into_the_matrix_identity(self) -> None:
+        request = build_experiment_planning_request(_planning_document())
+        matrix = CandidateMatrixSpec(
+            baseline=request.matrix_spec.baseline,
+            axes=(ParameterAxis("mixed", (True, 1, 1.5, "value")),),
+            candidate_limit=5,
+        )
+        changed = replace(
+            request,
+            matrix_spec=matrix,
+            promotion_objective=_promotion_objective(matrix),
+            budget=replace(request.budget, candidate_limit=5),
+        )
+
+        assert planning_request_hash(changed)
+
+    def test_matrix_graph_rejects_mutated_baseline_axes_and_derived_json(self) -> None:
+        request = build_experiment_planning_request(_planning_document())
+
+        matrix = replace(request.matrix_spec)
+        object.__setattr__(matrix.baseline, "payload", dict(matrix.baseline.payload))
+        _expect_request_identity_invalid(
+            "invalid_planning_request_matrix_graph",
+            lambda: validate_planning_request_graph(
+                replace(request, matrix_spec=matrix)
+            ),
+        )
+
+        request = build_experiment_planning_request(_planning_document())
+        matrix = replace(request.matrix_spec)
+        object.__setattr__(matrix, "axes", [*matrix.axes])
+        _expect_request_identity_invalid(
+            "invalid_planning_request_matrix_graph",
+            lambda: validate_planning_request_graph(
+                replace(request, matrix_spec=matrix)
+            ),
+        )
+
+        request = build_experiment_planning_request(_planning_document())
+        matrix = replace(request.matrix_spec)
+        object.__setattr__(matrix, "axes", (object(),))
+        _expect_request_identity_invalid(
+            "invalid_planning_request_matrix_graph",
+            lambda: validate_planning_request_graph(
+                replace(request, matrix_spec=matrix)
+            ),
+        )
+
+        request = build_experiment_planning_request(_planning_document())
+        matrix = replace(request.matrix_spec)
+        axis = matrix.axes[0]
+        object.__setattr__(axis, "values", [*axis.values])
+        _expect_request_identity_invalid(
+            "invalid_planning_request_matrix_graph",
+            lambda: validate_planning_request_graph(
+                replace(request, matrix_spec=matrix)
+            ),
+        )
+
+        request = build_experiment_planning_request(_planning_document())
+        matrix = replace(request.matrix_spec)
+        object.__setattr__(matrix.baseline, "canonical_json", "{}")
+        _expect_request_identity_invalid(
+            "noncanonical_planning_request_matrix_graph",
+            lambda: validate_planning_request_graph(
+                replace(request, matrix_spec=matrix)
+            ),
+        )
+
+    def test_context_input_refs_require_exact_unique_canonical_order(self) -> None:
+        request = build_experiment_planning_request(_planning_document())
+        object.__setattr__(request, "context_input_refs", [])
+        _expect_request_identity_invalid(
+            "invalid_planning_request_graph",
+            lambda: validate_planning_request_graph(request),
+        )
+
+        request = build_experiment_planning_request(_planning_document())
+        object.__setattr__(request, "context_input_refs", (object(),))
+        _expect_request_identity_invalid(
+            "invalid_planning_request_graph",
+            lambda: validate_planning_request_graph(request),
+        )
+
+        first = ReplayContextInputRef(
+            context_kind=ContextInputKind.TECHNICAL_ANALYSIS,
+            context_id="technical:1",
+            content_hash="a" * 64,
+            as_of="2026-07-30T00:00:00Z",
+            knowledge_cutoff="2026-07-30T00:00:00Z",
+            publication_cutoff="2026-07-30T00:00:00Z",
+            source_snapshot_ids=("snapshot:technical",),
+        )
+        second = ReplayContextInputRef(
+            context_kind=ContextInputKind.MARKET_CONTEXT,
+            context_id="market:1",
+            content_hash="b" * 64,
+            as_of="2026-07-30T00:00:00Z",
+            knowledge_cutoff="2026-07-30T00:00:00Z",
+            publication_cutoff="2026-07-30T00:00:00Z",
+            source_snapshot_ids=("snapshot:market",),
+        )
+        request = build_experiment_planning_request(_planning_document())
+        object.__setattr__(request, "context_input_refs", (first, first))
+        _expect_request_identity_invalid(
+            "invalid_planning_request_context_inputs",
+            lambda: validate_planning_request_graph(request),
+        )
+
+        request = build_experiment_planning_request(_planning_document())
+        object.__setattr__(request, "context_input_refs", (first, second))
+        _expect_request_identity_invalid(
+            "noncanonical_planning_request_context_inputs",
+            lambda: validate_planning_request_graph(request),
+        )
+
+    def test_rebuilt_requirements_and_candidate_limit_must_remain_exact(self) -> None:
+        request = build_experiment_planning_request(_planning_document())
+        requirement = request.dataset_requirements[0]
+        object.__setattr__(
+            requirement,
+            "expected_snapshot_ids",
+            ("snapshot-z", "snapshot-a"),
+        )
+        _expect_request_identity_invalid(
+            "noncanonical_planning_request_dataset_requirement",
+            lambda: validate_planning_request_graph(request),
+        )
+
+        request = build_experiment_planning_request(_planning_document())
+        object.__setattr__(
+            request.matrix_spec,
+            "candidate_limit",
+            request.budget.candidate_limit + 1,
+        )
+        _expect_request_identity_invalid(
+            "planning_request_candidate_limit_mismatch",
+            lambda: validate_planning_request_graph(request),
+        )
+
+    def test_hash_detects_request_payload_drift_between_identity_reads(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        request = build_experiment_planning_request(_planning_document())
+        calls = 0
+
+        def changing_payload(_: object) -> dict[str, object]:
+            nonlocal calls
+            calls += 1
+            return {"revision": calls}
+
+        monkeypatch.setattr(
+            _planning_request_identity,
+            "_request_payload",
+            changing_payload,
+        )
+
+        with pytest.raises(AppProcessError) as exc_info:
+            planning_request_hash(request)
+        assert exc_info.value.details == {
+            "code": "REPRODUCIBILITY_FAILED",
+            "reason": "planning_request_identity_mutated",
+        }
