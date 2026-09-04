@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -239,30 +240,148 @@ def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
     return VerificationResult(True, "\n\n".join(output)[-MAX_FEEDBACK:])
 
 
-def changed_paths(root: Path) -> list[str]:
-    """Return tracked paths changed relative to HEAD."""
+def _git_nul_paths(root: Path, arguments: Sequence[str]) -> set[str]:
     result = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=ACDMRT", "HEAD"],
+        ["git", *arguments],
+        cwd=root,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            result.stderr.decode(errors="replace").strip()
+            or f"unable to run git {' '.join(arguments)}"
+        )
+    return {
+        os.fsdecode(raw)
+        for raw in result.stdout.split(b"\0")
+        if raw
+    }
+
+
+def changed_paths(root: Path) -> list[str]:
+    """Return every staged, unstaged, deleted, renamed, or untracked path."""
+    tracked = _git_nul_paths(
+        root,
+        (
+            "diff",
+            "--name-only",
+            "-z",
+            "--no-renames",
+            "--diff-filter=ACDMRT",
+            "HEAD",
+            "--",
+        ),
+    )
+    untracked = _git_nul_paths(
+        root, ("ls-files", "--others", "--exclude-standard", "-z", "--")
+    )
+    return sorted(tracked | untracked)
+
+
+_FINGERPRINT_CONFIGS = (
+    ".importlinter",
+    ".pre-commit-config.yaml",
+    "biome.json",
+    "bun.lock",
+    "bunfig.toml",
+    "package.json",
+    "pixi.lock",
+    "pixi.toml",
+    "pyproject.toml",
+    "apps/web/package.json",
+    "apps/web/tsconfig.json",
+    "apps/web/tsconfig.app.json",
+    "apps/web/tsconfig.node.json",
+    "apps/web/vitest.config.ts",
+)
+
+
+def _git_text(root: Path, *arguments: str) -> str:
+    result = subprocess.run(
+        ["git", *arguments],
         cwd=root,
         capture_output=True,
         text=True,
         check=False,
     )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or "unable to inspect git diff")
-    return sorted(line for line in result.stdout.splitlines() if line)
+    return result.stdout.strip() if result.returncode == 0 else "unavailable"
+
+
+def _file_fingerprint(path: Path) -> dict[str, object]:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return {"state": "deleted"}
+    if path.is_symlink():
+        content = os.fsencode(os.readlink(path))
+        kind = "symlink"
+    elif path.is_file():
+        content = path.read_bytes()
+        kind = "file"
+    else:
+        content = b""
+        kind = "other"
+    return {
+        "state": "present",
+        "kind": kind,
+        "mode": f"{metadata.st_mode & 0o7777:04o}",
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+
+def _tool_versions(root: Path) -> dict[str, str]:
+    commands = {
+        "bun": ("bun", "--version"),
+        "git": ("git", "--version"),
+        "pixi": ("pixi", "--version"),
+        "python": (sys.executable, "--version"),
+    }
+    versions: dict[str, str] = {}
+    for name, command in commands.items():
+        try:
+            result = subprocess.run(
+                command,
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError:
+            versions[name] = "unavailable"
+            continue
+        output = (result.stdout or result.stderr).strip()
+        versions[name] = output if result.returncode == 0 and output else "unavailable"
+    return versions
+
+
+def change_manifest(root: Path, paths: Sequence[str] | None = None) -> dict[str, object]:
+    """Build the canonical evidence hashed by a verification receipt."""
+    selected = sorted(paths if paths is not None else changed_paths(root))
+    head = _git_text(root, "rev-parse", "HEAD")
+    upstream_base = _git_text(root, "merge-base", "HEAD", "origin/main")
+    base = head if upstream_base == "unavailable" else upstream_base
+    return {
+        "schema_version": 1,
+        "base_sha": base,
+        "head_sha": head,
+        "changes": {
+            relative: _file_fingerprint(root / relative) for relative in selected
+        },
+        "configs": {
+            relative: _file_fingerprint(root / relative)
+            for relative in _FINGERPRINT_CONFIGS
+        },
+        "tools": _tool_versions(root),
+    }
 
 
 def diff_digest(root: Path) -> str:
-    result = subprocess.run(
-        ["git", "diff", "--binary", "HEAD"],
-        cwd=root,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.decode(errors="replace").strip())
-    return hashlib.sha256(result.stdout).hexdigest()
+    manifest = change_manifest(root)
+    encoded = json.dumps(
+        manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8", errors="surrogateescape")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _is_harness(path: str) -> bool:
@@ -387,6 +506,17 @@ def run_verification(
 
 
 def receipt_path(root: Path, digest: str) -> Path:
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        raw_git_dir = Path(result.stdout.strip())
+        git_dir = raw_git_dir if raw_git_dir.is_absolute() else root / raw_git_dir
+        return git_dir.resolve() / "ditto-agent-harness" / "receipts" / f"{digest}.json"
     return root / CACHE_DIR / f"{digest}.json"
 
 
@@ -416,6 +546,7 @@ def stop_decision(
                     "digest": digest,
                     "level": level,
                     "paths": list(paths),
+                    "evidence": change_manifest(root, paths),
                     "verified_at": datetime.now(_UTC).isoformat(),
                 },
                 ensure_ascii=False,

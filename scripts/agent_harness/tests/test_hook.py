@@ -9,6 +9,7 @@ from scripts.agent_harness.hook import (
     VerificationResult,
     changed_paths,
     classify_diff,
+    diff_digest,
     extract_python_paths,
     policy_violation,
     receipt_path,
@@ -79,6 +80,50 @@ class PathExtractionTests(unittest.TestCase):
             source.unlink()
 
             assert changed_paths(root) == ["deleted.py"]
+
+    def test_untracked_file_is_changed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.com"],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Fixture"], cwd=root, check=True
+            )
+            tracked = root / "tracked.txt"
+            tracked.write_text("tracked\n", encoding="utf-8")
+            subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
+            (root / "new-source.ts").write_text("export const value = 1;\n", encoding="utf-8")
+
+            assert changed_paths(root) == ["new-source.ts"]
+
+    def test_untracked_content_change_invalidates_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.com"],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Fixture"], cwd=root, check=True
+            )
+            tracked = root / "tracked.txt"
+            tracked.write_text("tracked\n", encoding="utf-8")
+            subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
+            untracked = root / "new-source.ts"
+            untracked.write_text("export const value = 1;\n", encoding="utf-8")
+            before = diff_digest(root)
+
+            untracked.write_text("export const value = 2;\n", encoding="utf-8")
+
+            assert diff_digest(root) != before
 
 
 class CommandPolicyTests(unittest.TestCase):
