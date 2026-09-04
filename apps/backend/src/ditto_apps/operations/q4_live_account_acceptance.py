@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import math
 import os
 import re
 from collections.abc import Mapping, Sequence
@@ -199,8 +200,8 @@ def positive_number(value: object, *, field: str) -> float:
     if not isinstance(value, int | float) or isinstance(value, bool):
         raise ValueError(f"{field} must be numeric")
     number = float(value)
-    if number <= 0:
-        raise ValueError(f"{field} must be positive")
+    if not math.isfinite(number) or number <= 0:
+        raise ValueError(f"{field} must be positive finite")
     return number
 
 
