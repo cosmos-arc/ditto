@@ -52,12 +52,35 @@ def test_container_listeners_use_bridge_interface_behind_loopback_publication() 
     )
 
     assert '"--host", "0.0.0.0"' in dockerfile
-    assert "--host 0.0.0.0" in compose["services"]["ditto-api"]["command"]
-    assert "--host 0.0.0.0" in compose["services"]["ditto-job"]["command"]
+    api_command = compose["services"]["ditto-api"]["command"]
+    host_index = api_command.index("--host")
+    assert api_command[host_index + 1] == "0.0.0.0"  # noqa: S104 - bridge bind
+    job_command = compose["services"]["ditto-job"]["command"]
+    job_script = job_command[0] if isinstance(job_command, list) else job_command
+    assert "--host 0.0.0.0" in job_script
 
 
-def test_container_data_root_override_matches_application_settings() -> None:
-    """Deployment must set the environment variable consumed by ConfigProvider."""
+def test_prefect_job_shell_program_is_one_entrypoint_argument() -> None:
+    """Compose must pass the complete server/readiness/worker program to ``sh -c``."""
+    compose = yaml.safe_load(
+        (PROJECT_ROOT / "deploy" / "docker" / "docker-compose.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    job = compose["services"]["ditto-job"]
+
+    assert job["entrypoint"] == ["/bin/sh", "-c"]
+    assert isinstance(job["command"], list)
+    assert len(job["command"]) == 1
+    script = job["command"][0]
+    assert "prefect server start --host 0.0.0.0 &" in script
+    assert "server_pid=$$!" in script
+    assert "urllib.request.urlopen" in script
+    assert "exec prefect worker start --pool default" in script
+
+
+def test_container_runtime_roots_and_readiness_match_application_contract() -> None:
+    """Deployment must provide exact runtime roots and use the real readiness gate."""
     dockerfile = (PROJECT_ROOT / "deploy" / "docker" / "Dockerfile").read_text(
         encoding="utf-8"
     )
@@ -67,12 +90,27 @@ def test_container_data_root_override_matches_application_settings() -> None:
         )
     )
 
-    assert "DITTO_DATA_ROOT=/app/data" in dockerfile
-    assert "DITTO_DATA_DIR" not in dockerfile
+    expected_roots = {
+        "DITTO_CONFIG_ROOT": "/opt/ditto",
+        "DITTO_STATE_ROOT": "/var/lib/ditto/state",
+        "DITTO_CACHE_ROOT": "/var/cache/ditto",
+    }
+    for name, value in expected_roots.items():
+        assert f"{name}={value}" in dockerfile
+    assert "DITTO_DATA_ROOT" not in dockerfile
+    assert "/readyz" in dockerfile
     for service_name in ("ditto-api", "ditto-job"):
         environment = compose["services"][service_name]["environment"]
-        assert "DITTO_DATA_ROOT=/app/data" in environment
-        assert not any(item.startswith("DITTO_DATA_DIR=") for item in environment)
+        for name, value in expected_roots.items():
+            assert environment[name] == value
+        assert "DITTO_DATA_ROOT" not in environment
+
+    api = compose["services"]["ditto-api"]
+    assert "/readyz" in " ".join(api["healthcheck"]["test"])
+    cors_origins = api["environment"]["DITTO_CORS_ORIGINS"]
+    assert "http://127.0.0.1:5173" in cors_origins
+    assert "http://localhost:5173" in cors_origins
+    assert "*" not in cors_origins
 
 
 def test_local_prefect_runbook_is_loopback_only() -> None:

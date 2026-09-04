@@ -70,7 +70,7 @@ repos:
         language: system
         pass_filenames: false
         require_serial: true
-        files: '^(?:AGENTS\.md|CLAUDE\.md|packages/[^/]+/(?:AGENTS|CLAUDE)\.md|\.agents/|\.claude/|\.codex/|scripts/agent_harness/|docs/engineering/(?:agent-harness|testing)\.md|\.github/workflows/(?:ci|e2e-validation)\.yml|pixi\.toml|\.pre-commit-config\.yaml)'
+        files: '^(?:AGENTS\.md|CLAUDE\.md|packages/[^/]+/(?:AGENTS|CLAUDE)\.md|\.agents/|\.claude/|\.codex/|tooling/agent_harness/|docs/engineering/(?:agent-harness|testing)\.md|\.github/workflows/(?:ci|e2e-validation)\.yml|pixi\.toml|\.pre-commit-config\.yaml)'
 
       # --------------------------------------------------------
       # pytest (pre-push 阶段)

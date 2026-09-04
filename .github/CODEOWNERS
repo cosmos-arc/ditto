@@ -1,0 +1,26 @@
+# Default ownership keeps every repository surface reviewable.
+* @ChevyWang
+
+# Delivery, supply-chain and release evidence.
+/.github/ @ChevyWang
+/deploy/ @ChevyWang
+/tooling/release/ @ChevyWang
+/.github/renovate.json @ChevyWang
+/pixi.toml @ChevyWang
+/pixi.lock @ChevyWang
+/package.json @ChevyWang
+/bun.lock @ChevyWang
+
+# Cross-stack API contracts require both provider and consumer review.
+/contracts/ @ChevyWang
+/tooling/contracts/ @ChevyWang
+/apps/backend/src/ditto_apps/api/ @ChevyWang
+/apps/backend/src/ditto_apps/models/ @ChevyWang
+/apps/web/src/api/ @ChevyWang
+
+# Risk-bearing capability planes.
+/packages/strategy/ @ChevyWang
+/packages/portfolio/ @ChevyWang
+/packages/risk/ @ChevyWang
+/packages/execution/ @ChevyWang
+/packages/backtest/ @ChevyWang

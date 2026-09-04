@@ -1,50 +1,57 @@
-# codecov.yml
-# Ditto 覆盖率报告配置
+codecov:
+  require_ci_to_pass: true
 
 coverage:
   precision: 2
   round: down
-  range: "60...100"
-
+  range: "80...100"
   status:
     project:
-      default:
-        target: 80%
-        threshold: 2%
-
+      backend:
+        flags: [backend]
+        target: 90%
+        threshold: 0%
+      backend-critical:
+        flags: [backend-critical]
+        target: 90%
+        threshold: 0%
+      web:
+        flags: [web]
+        target: 85%
+        threshold: 0%
     patch:
-      default:
-        target: 80%
+      backend:
+        flags: [backend]
+        target: 90%
+        threshold: 0%
+      web:
+        flags: [web]
+        target: 90%
         threshold: 0%
 
-  flags:
-    core-strategy:
-      paths:
-        - packages/engine/src/ditto_engine/alpha/
-        - packages/engine/src/ditto_engine/portfolio/
-      target: 90%
-
-    data:
-      paths:
-        - packages/data/src/
-      target: 85%
-
-    infra:
-      paths:
-        - packages/infra/src/
-      target: 80%
-
-    server:
-      paths:
-        - interfaces/src/
-      target: 80%
+flags:
+  backend:
+    paths:
+      - apps/backend/src/
+      - packages/
+    carryforward: false
+  backend-critical:
+    paths:
+      - packages/backtest/src/
+      - packages/execution/src/
+      - packages/portfolio/src/
+      - packages/risk/src/
+    carryforward: false
+  web:
+    paths:
+      - apps/web/src/
+    carryforward: false
 
 ignore:
-  - "**/__init__.py"
+  - "**/tests/**"
   - "**/conftest.py"
-  - "scripts/**"
-  - "tests/**"
-  - "**/migrations/**"
+  - "apps/web/src/api/generated/**"
+  - "apps/web/src/routeTree.gen.ts"
 
 comment:
   layout: "header,diff,flags,files"

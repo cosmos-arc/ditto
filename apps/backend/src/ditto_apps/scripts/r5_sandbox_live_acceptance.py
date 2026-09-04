@@ -369,7 +369,7 @@ def _attack_cases() -> tuple[_AttackCase, ...]:
             textwrap.dedent("""
                 import os
                 def fit(training_stream):
-                    paths = ('/workspace', '/repo', '/Users/chevy/Desktop/code/ditto')
+                    paths = ('/workspace', '/repo', '/host', '/mnt/host')
                     return {'blocked': not any(os.path.exists(path) for path in paths)}
                 def score(visible_window, immutable_model_state):
                     return []

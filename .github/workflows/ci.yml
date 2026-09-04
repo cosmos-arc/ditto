@@ -1,12 +1,3 @@
-# .github/workflows/ci.yml
-# Ditto CI Pipeline - 基于实际项目结构设计
-#
-# 特点：
-# - 使用 Pixi 包管理器
-# - Monorepo 与 Agent Harness 变更检测
-# - 分层测试策略（unit → integration）
-# - 前端工作流预留
-
 name: CI
 
 on:
@@ -14,313 +5,357 @@ on:
     branches: [main]
   push:
     branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.13"
+  PIXI_VERSION: v0.73.0
 
 jobs:
-  # ============================================================
-  # Stage 1: 变更检测
-  # ============================================================
-  changes:
-    name: Detect Changes
+  repository-policy:
+    name: Repository policy
     runs-on: ubuntu-latest
-    outputs:
-      python: ${{ steps.filter.outputs.python }}
-      infra: ${{ steps.filter.outputs.infra }}
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          filters: |
-            python:
-              - 'packages/**/*.py'
-              - 'scripts/**/*.py'
-              - 'pyproject.toml'
-              - 'pixi.toml'
-              - 'pixi.lock'
-              - '.importlinter'
-              - 'AGENTS.md'
-              - 'CLAUDE.md'
-              - 'packages/*/AGENTS.md'
-              - 'packages/*/CLAUDE.md'
-              - '.agents/**'
-              - '.claude/**'
-              - '.codex/**'
-              - 'scripts/agent_harness/**'
-              - 'docs/engineering/agent-harness.md'
-              - 'docs/engineering/testing.md'
-              - '.pre-commit-config.yaml'
-            infra:
-              - '.github/**'
-              - 'deploy/**'
-              - 'Dockerfile*'
-              - 'docker-compose*.yml'
-
-  # ============================================================
-  # Stage 2: 架构审计门禁（新增）
-  # ============================================================
-  audit:
-    name: Architecture Audit
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
-          pixi-version: v0.39.5
+          pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
-          locked: true
+          frozen: true
           environments: dev
+      - name: Validate delivery policy
+        run: pixi run -e dev python -m pytest tooling/release/tests/test_repository_policy.py -q -n 0
 
-      - name: Architecture check
-        run: pixi run -e dev arch-check
-
-      - name: Type check
-        run: pixi run -e dev type --all
-
-      - name: Fast tests
-        run: pixi run -e dev test --fast
-
-      - name: Agent harness check
-        run: pixi run -e dev harness-check
-
-  # ============================================================
-  # Stage 3: Python 代码质量检查（并行）
-  # ============================================================
-  lint:
-    name: lint
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
+  backend-quality:
+    name: Backend format and lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          pixi-version: v0.39.5
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
-          locked: true
-          environments: dev # 使用 dev 环境，包含代码质量工具
-
-      - name: Ruff lint
-        run: pixi run -e dev ruff check --output-format=github .
-
-      - name: Ruff format check
-        run: pixi run -e dev ruff format --check --diff .
-
-  type-check:
-    name: type-check
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
-        with:
-          pixi-version: v0.39.5
-          cache: true
-          locked: true
-          environments: dev # 使用 dev 环境，包含代码质量工具
-
-      - name: Pyright type check
-        run: pixi run -e dev type --all
-
-  # ============================================================
-  # Stage 3: 测试套件（分层执行）
-  # ============================================================
-  test-unit:
-    name: test-unit
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
-        with:
-          pixi-version: v0.39.5
-          cache: true
-          locked: true
-          environments: dev # 使用 dev 环境，包含代码质量工具
-
-      - name: Run unit tests
-        run: |
-          # 全包单元测试：并行
-          pixi run -e dev pytest packages/*/tests/unit/ \
-            -n auto \
-            --cov=packages \
-            --cov-report=xml:coverage-unit.xml \
-            --cov-report=term-missing \
-            --cov-fail-under=80 \
-            --junitxml=junit-unit.xml \
-            -v \
-            --durations=10
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage-unit.xml
-          flags: unit
-          fail_ci_if_error: false
-          # 对于公开仓库，不需要 token
-          # token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-unit
-          path: junit-unit.xml
-
-  # ============================================================
-  # Stage 3b: Golden E2E 回归（合成数据全链路，进 PR 门禁）
-  # ============================================================
-  golden-e2e:
-    name: golden-e2e
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
-        with:
-          pixi-version: v0.39.5
-          cache: true
-          locked: true
+          frozen: true
           environments: dev
+      - name: Package contracts
+        run: pixi run -e dev package-contract-check
+      - name: Formatting
+        run: pixi run -e dev fmt-check
+      - name: Lint
+        run: pixi run -e dev lint
 
-      - name: Golden E2E
-        run: pixi run -e dev pytest packages/apps/tests/integration/test_golden_e2e.py packages/apps/tests/integration/test_stock_selection_golden_e2e.py -v
+  backend-types:
+    name: Backend types
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          frozen: true
+          environments: dev
+      - name: Strict type check
+        run: pixi run -e dev type --all --clean
 
-  # ============================================================
-  # Stage 3c: macOS Apple Silicon compatibility gate
-  # ============================================================
-  macos-arm64:
-    name: macos-arm64
-    needs: changes
-    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
-    runs-on: macos-15
+  backend-tests:
+    name: Backend tests and coverage
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Assert Apple Silicon runner
-        run: test "$(uname -m)" = "arm64"
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          pixi-version: v0.39.5
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
-          locked: true
+          frozen: true
           environments: dev
-
-      - name: Architecture and static checks
-        run: |
-          pixi run -e dev arch-check
-          pixi run -e dev fmt-check
-          pixi run -e dev lint
-          pixi run -e dev type --tests
-
-      - name: R4 target tests
-        run: |
-          pixi run -e dev pytest --no-cov \
-            packages/features/tests/unit/risk_estimation/test_covariance_estimator_unit.py \
-            packages/features/tests/unit/risk_estimation/test_factor_risk_estimator_unit.py \
-            packages/portfolio/tests/unit/rebalancing/test_cvxpy_optimizer_unit.py \
-            packages/portfolio/tests/unit/rebalancing/test_r4_benchmark_harness_unit.py \
-            packages/risk/tests/unit/test_risk_contracts_unit.py \
-            packages/risk/tests/unit/test_continuous_risk_gate_unit.py \
-            packages/risk/tests/unit/test_r4_tail_risk_unit.py \
-            packages/application/tests/unit/process/portfolio/ \
-            packages/application/tests/unit/process/risk/ \
-            packages/application/tests/unit/process/execution/test_paper_trading_process_unit.py \
-            packages/application/tests/unit/process/strategy/test_backtest_service_unit.py::TestBacktestServiceOptions::test_r4_ports_are_forwarded_to_engine_options \
-            packages/application/tests/unit/query/test_daily_decision_v3_unit.py \
-            packages/apps/tests/unit/registry/test_r4_risk_persistence_unit.py \
-            packages/apps/tests/integration/api/test_trade_api_integration.py::TestDailyDecision::test_v3_returns_typed_risk_and_reconciliation_sections \
-            packages/backtest/tests/unit/test_continuous_risk_runtime_steps.py \
-            packages/backtest/tests/unit/test_portfolio_construction_step.py \
-            packages/backtest/tests/unit/test_engine_result_unit.py::TestBacktestCheckpoint::test_r4_runtime_state_attests_optimizer_and_risk_evidence_v3 \
-            packages/backtest/tests/unit/test_engine_result_unit.py::TestBacktestCheckpoint::test_v3_runtime_state_rejects_missing_risk_state \
-            packages/backtest/tests/integration/test_risk_integration.py \
-            -q
-
-      - name: CVXPY solver smoke test
-        run: |
-          pixi run -e dev python -c 'import cvxpy as cp; installed = set(cp.installed_solvers()); assert {"OSQP", "CLARABEL"} <= installed, installed'
-
-  # ============================================================
-  # Stage 4: 构建验证（仅 main 分支）
-  # ============================================================
-  build:
-    name: Build Validation
-    needs: [lint, type-check, test-unit]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+      - name: Test with coverage policy
+        env:
+          COVERAGE_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: pixi run -e dev backend-coverage
+      - name: Publish backend coverage
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          pixi-version: v0.39.5
+          disable_search: true
+          fail_ci_if_error: true
+          files: coverage.xml
+          flags: backend,backend-critical
+          use_oidc: true
+      - name: PIT correctness suite
+        run: pixi run -e dev pit
+      - name: Upload coverage evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-coverage-${{ github.run_id }}
+          path: |
+            coverage.json
+            coverage.xml
+          if-no-files-found: error
+          retention-days: 14
+
+  architecture-harness:
+    name: Architecture and agent harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
-          locked: true
-          environments: dev # 使用 dev 环境，包含代码质量工具
+          frozen: true
+          environments: dev
+      - name: Architecture boundaries
+        run: pixi run -e dev arch-check
+      - name: Agent harness
+        run: pixi run -e dev harness-check
 
-      # 验证各包可以正常构建
-      - name: Build packages
-        run: |
-          cd packages/infra && pixi run python -m build --wheel --outdir ../../dist/
-          cd ../kernel && pixi run python -m build --wheel --outdir ../../dist/
-          cd ../data && pixi run python -m build --wheel --outdir ../../dist/
-          cd ../analytics && pixi run python -m build --wheel --outdir ../../dist/
-          cd ../engine && pixi run python -m build --wheel --outdir ../../dist/
-          cd ../app && pixi run python -m build --wheel --outdir ../../dist/
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+  web-quality:
+    name: Web lint, types, tests and build
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          name: dist
-          path: dist/
-          retention-days: 7
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - name: Frozen Web install
+        run: bun install --frozen-lockfile
+      - name: Web CI
+        run: bun --cwd apps/web run ci
+      - name: Publish Web coverage
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          disable_search: true
+          fail_ci_if_error: true
+          files: apps/web/coverage/coverage-final.json
+          flags: web
+          use_oidc: true
+      - name: Upload Web build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 14
 
-  # ============================================================
-  # 最终状态汇总（用于 Branch Protection）
-  # ============================================================
-  ci-success:
-    name: ci-success
-    needs: [audit, lint, type-check, test-unit, golden-e2e, macos-arm64]
-    if: always()
+  api-contract:
+    name: OpenAPI compatibility and generated types
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          frozen: true
+          environments: dev
+      - uses: ./.github/actions/setup-bun
+      - name: Frozen Web install
+        run: bun install --frozen-lockfile
+      - name: Fetch pinned oasdiff distribution
+        env:
+          OASDIFF_VERSION: 1.28.0
+        run: |
+          mkdir -p "$RUNNER_TEMP/oasdiff"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/checksums.txt" \
+            --output "$RUNNER_TEMP/oasdiff/checksums.txt"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            --output "$RUNNER_TEMP/oasdiff/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+      - name: Contract gate
+        env:
+          DITTO_OASDIFF_DIST_DIR: ${{ runner.temp }}/oasdiff
+        run: pixi run -e dev python -m tooling.contracts.check_contract --base-ref origin/main
+
+  system-e2e:
+    name: Supervised backend-Web system test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          frozen: true
+          environments: dev
+      - uses: ./.github/actions/setup-bun
+      - name: Frozen Web install
+        run: bun install --frozen-lockfile
+      - name: Run supervised system test
+        run: pixi run -e dev test-system
+
+  release-cohort:
+    name: Release cohort policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          frozen: true
+          environments: dev
+      - name: Test cohort generator
+        run: pixi run -e dev python -m pytest tooling/release/tests/test_cohort_manifest.py -q -n 0
+
+  container-smoke:
+    name: Container build and readiness smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build immutable runtime image
+        env:
+          IMAGE: ditto-ci:${{ github.sha }}
+        run: |
+          environment_lock_sha256="$(sha256sum pixi.lock | cut -d ' ' -f 1)"
+          docker build \
+            --pull \
+            --file deploy/docker/Dockerfile \
+            --tag "$IMAGE" \
+            --build-arg "DITTO_GIT_SHA=${{ github.sha }}" \
+            --build-arg "DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH=$environment_lock_sha256" \
+            .
+      - name: Verify non-root runtime and readiness
+        env:
+          IMAGE: ditto-ci:${{ github.sha }}
+        run: |
+          test "$(docker image inspect --format '{{.Config.User}}' "$IMAGE")" = "65532:65532"
+          container_id="$(docker run --detach --rm --env TUSHARE_TOKEN=ci-smoke-offline-credential --publish 127.0.0.1:18000:8000 "$IMAGE")"
+          trap 'docker logs "$container_id"; docker stop "$container_id"' EXIT
+          for attempt in $(seq 1 60); do
+            echo "readiness attempt $attempt/60"
+            if curl --fail --silent --show-error http://127.0.0.1:18000/readyz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+
+  platform-smoke:
+    name: Platform smoke (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            os: macos-14
+          - name: windows-x64
+            os: windows-2025
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          frozen: true
+          environments: dev
+      - uses: ./.github/actions/setup-bun
+      - name: Bootstrap the supported toolchain
+        run: pixi run -e dev bootstrap
+      - name: macOS backend gate
+        if: ${{ matrix.name == 'macos-arm64' }}
+        run: pixi run -e dev check-backend
+      - name: macOS Web gate
+        if: ${{ matrix.name == 'macos-arm64' }}
+        run: pixi run -e dev check-web
+      - name: Windows backend type gate
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: pixi run -e dev type-all
+      - name: Windows Web type gate
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: pixi run -e dev web-type
+      - name: Windows API and CLI smoke
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: pixi run -e dev platform-smoke-windows
+
+  security-supply-chain:
+    name: Security and supply chain
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/security.yml
+
+  ci-gate:
+    name: CI gate
+    if: ${{ always() }}
+    needs:
+      - repository-policy
+      - backend-quality
+      - backend-types
+      - backend-tests
+      - architecture-harness
+      - web-quality
+      - api-contract
+      - system-e2e
+      - release-cohort
+      - container-smoke
+      - platform-smoke
+      - security-supply-chain
+    permissions: {}
     runs-on: ubuntu-latest
     steps:
-      - name: Check required jobs
+      - name: Require every semantic job to succeed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          results=("${{ needs.audit.result }}" "${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}" "${{ needs.golden-e2e.result }}" "${{ needs.macos-arm64.result }}")
-          for result in "${results[@]}"; do
-            case "$result" in
-              success|skipped) ;;
-              *)
-                echo "::error::One or more required CI checks did not succeed"
-                exit 1
-                ;;
-            esac
-          done
-          echo "All required CI checks passed!"
+          python3 - <<'PY'
+          import json
+          import os
+
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          failures = {
+              name: value["result"]
+              for name, value in needs.items()
+              if value["result"] != "success"
+          }
+          if len(needs) != 12 or failures:
+              raise SystemExit(f"CI fail-closed: expected 12 successes, failures={failures}")
+          PY

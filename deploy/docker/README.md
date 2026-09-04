@@ -1,143 +1,67 @@
-# Ditto Docker 部署
+# Ditto 容器部署
 
-本目录包含 Ditto 量化系统的 Docker 部署配置。
+该目录描述单机、loopback-only 的 Ditto API 与 Prefect worker 部署。生产 compose 不隐式构建，也不接受 `latest` 作为默认值：调用方必须通过 `DITTO_IMAGE` 提供已验证的镜像引用，推荐 `registry/name@sha256:<digest>`。
 
-## 架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Docker Host                             │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐  ┌─────────────────────────────────┐  │
-│  │   ditto-api     │  │   ditto-job                     │  │
-│  │   FastAPI       │  │   Prefect Server + Worker       │  │
-│  │   :8000         │  │   :4200                         │  │
-│  └────────┬────────┘  └───────────────┬─────────────────┘  │
-│           │                           │                     │
-│           └─────────────┬─────────────┘                     │
-│                         ▼                                   │
-│           ┌──────────────────────────────┐                  │
-│           │   /opt/ditto/                │                  │
-│           │   ├── data/  (业务数据)      │                  │
-│           │   ├── logs/  (日志)          │                  │
-│           │   │   ├── api/               │                  │
-│           │   │   └── job/               │                  │
-│           │   └── prefect/ (Prefect DB)  │                  │
-│           └──────────────────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 快速开始
-
-### 1. 创建数据目录
+## 构建与验证
 
 ```bash
-sudo mkdir -p /opt/ditto/{data,prefect,logs/api,logs/job}
+docker build --pull -f deploy/docker/Dockerfile -t ditto:dev .
+docker run --rm \
+  --env TUSHARE_TOKEN='<runtime-token>' \
+  -p 127.0.0.1:8000:8000 \
+  ditto:dev
+curl --fail http://127.0.0.1:8000/readyz
 ```
 
-### 2. 配置环境变量
+镜像使用固定 digest 的 builder/runtime base，多阶段构建，最终进程以 `65532:65532` 运行。容器内不调用 Pixi；只执行构建阶段生成的冻结环境。
+
+## Compose
+
+创建并授权持久目录：
 
 ```bash
-cp .env.example .env.local
-# 编辑 .env.local，设置 TUSHARE_TOKEN
+sudo install -d -o 65532 -g 65532 \
+  /opt/ditto/state \
+  /opt/ditto/cache \
+  /opt/ditto/prefect \
+  /opt/ditto/logs/api \
+  /opt/ditto/logs/job
 ```
 
-### 3. 构建并启动
+启动时必须提供镜像身份：
 
 ```bash
-# 构建镜像
-docker compose build
-
-# 启动服务
-docker compose --env-file .env.local up -d
+DITTO_IMAGE='registry.example/ditto@sha256:<digest>' \
+  TUSHARE_TOKEN='<runtime-token>' \
+  docker compose -f deploy/docker/docker-compose.yml up -d
 ```
 
-### 4. 验证服务
+本地构建可显式使用 `DITTO_IMAGE=ditto:dev`，但不可作为发布证据。宿主端口只绑定 `127.0.0.1`。
+
+## 运行时目录契约
+
+| 变量 | 容器路径 | 用途 |
+|---|---|---|
+| `DITTO_CONFIG_ROOT` | `/opt/ditto` | 包含 `config/<environment>` 的只读配置根 |
+| `DITTO_STATE_ROOT` | `/var/lib/ditto/state` | 业务状态与数据库 |
+| `DITTO_CACHE_ROOT` | `/var/cache/ditto` | 可丢弃缓存 |
+| `LOG_DIR` | `/var/log/ditto` | 应用日志 |
+| `PREFECT_HOME` | `/var/lib/ditto/prefect` | Prefect 状态 |
+
+旧 `DITTO_DATA_ROOT` 不再由部署层设置，仅保留应用内过渡兼容。
+
+## 探针与安全边界
+
+- `/healthz` 只表示进程存活。
+- `/readyz` 验证启动、config/state/cache 和生产数据源凭证；文档占位值不会获得 production readiness。
+- 根文件系统只读；state、cache、logs、Prefect 和 `/tmp` 是显式可写边界。
+- `no-new-privileges` 开启，镜像无 root 运行入口。
+
+查看状态：
 
 ```bash
-# 健康检查
-curl http://localhost:8000/healthz
-curl http://localhost:4200/api/health
-
-# 查看日志
-docker compose logs -f ditto-api
-docker compose logs -f ditto-job
+DITTO_IMAGE='registry.example/ditto@sha256:<digest>' \
+  TUSHARE_TOKEN='<runtime-token>' \
+  docker compose -f deploy/docker/docker-compose.yml ps
+curl --fail http://127.0.0.1:8000/readyz
 ```
-
-## 访问地址
-
-| 服务 | 地址 |
-|------|------|
-| API | http://localhost:8000 |
-| API Docs | http://localhost:8000/docs |
-| Prefect UI | http://localhost:4200 |
-
-## 日常运维
-
-```bash
-# 查看日志
-docker compose logs -f ditto-api
-docker compose logs -f ditto-job
-
-# 重启服务
-docker compose restart ditto-api
-docker compose restart ditto-job
-
-# 更新部署
-git pull
-docker compose build
-docker compose up -d
-
-# 停止服务
-docker compose down
-```
-
-## 环境变量
-
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| DITTO_VERSION | 镜像版本 | latest |
-| ENVIRONMENT | 运行环境 | production |
-| DITTO_DATA_PATH | 数据目录 | /opt/ditto/data |
-| DITTO_LOGS_PATH | 日志目录 | /opt/ditto/logs |
-| PREFECT_DATA_PATH | Prefect 数据目录 | /opt/ditto/prefect |
-| TUSHARE_TOKEN | Tushare API Token | (必须设置) |
-
-## 资源配置
-
-| 服务 | 内存限制 | 说明 |
-|------|----------|------|
-| ditto-api | 1GB | API 服务 |
-| ditto-job | 2GB | Prefect Server + Worker |
-
-## 故障排查
-
-### 容器无法启动
-
-```bash
-# 查看容器日志
-docker compose logs ditto-api
-docker compose logs ditto-job
-
-# 检查容器状态
-docker compose ps
-```
-
-### 权限问题
-
-```bash
-# 确保 Docker 用户有权限访问 /opt/ditto
-sudo chown -R $USER:$USER /opt/ditto
-```
-
-### 网络问题
-
-```bash
-# 检查网络连接
-docker network ls
-docker network inspect ditto-network
-```
-
-## 相关文档
-
-- [Observability 部署](../observability/README.md)

@@ -1,11 +1,14 @@
 """Deterministic report contracts for the physical R5 sandbox acceptance."""
 
+# pyright: reportPrivateUsage=false
+
 from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
 
 import orjson
+from ditto_apps.scripts import r5_sandbox_live_acceptance as subject
 from ditto_apps.scripts.r5_sandbox_live_acceptance import (
     finalize_report,
     validate_live_report,
@@ -43,3 +46,13 @@ def test_live_report_validator_recomputes_every_execution_attestation() -> None:
     forged = finalize_report(report)
     assert verify_report(forged) is True
     assert validate_live_report(forged) is False
+
+
+def test_host_mount_probe_is_portable_and_contains_no_developer_path() -> None:
+    host_mount = next(
+        case for case in subject._attack_cases() if case.name == "host_mount"
+    )
+
+    assert "/Users/" not in host_mount.source
+    for generic_mount in ("/workspace", "/repo", "/host", "/mnt/host"):
+        assert generic_mount in host_mount.source

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "enabledManagers": [
+    "docker-compose",
+    "dockerfile",
+    "github-actions",
+    "npm",
+    "pixi"
+  ],
+  "automerge": false,
+  "dependencyDashboard": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 6am on monday"
+    ]
+  },
+  "minimumReleaseAge": "7 days",
+  "labels": [
+    "dependencies"
+  ],
+  "rangeStrategy": "pin",
+  "packageRules": [
+    {
+      "description": "Keep GitHub Actions in one reviewed cohort",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Keep Docker tags and immutable digests synchronized",
+      "matchManagers": [
+        "dockerfile",
+        "docker-compose"
+      ],
+      "groupName": "container-images",
+      "pinDigests": true
+    },
+    {
+      "description": "Group Web patch and minor updates",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "groupName": "web-dependencies"
+    },
+    {
+      "description": "Group Pixi patch and minor updates",
+      "matchManagers": [
+        "pixi"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "groupName": "python-dependencies"
+    },
+    {
+      "description": "Major updates always require isolated review",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": null
+    }
+  ]
+}

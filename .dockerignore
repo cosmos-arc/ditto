@@ -23,17 +23,29 @@ env/
 # Testing
 .pytest_cache/
 .coverage
+coverage.json
+coverage.xml
 htmlcov/
 .tox/
 .nox/
+**/tests/
 
 # Build artifacts
 dist/
 build/
 *.whl
 
-# Documentation
-docs/_build/
+# Documentation and non-runtime monorepo surfaces
+docs/
+.agents/
+.claude/
+.codex/
+.github/
+apps/web/
+artifacts/
+contracts/
+node_modules/
+tooling/
 
 # Local config (sensitive)
 .env
