@@ -34,9 +34,8 @@ __all__ = [
     "run_live_acceptance",
 ]
 
-_REPO_ROOT = Path(__file__).resolve().parents[5]
-_DEFAULT_OUTPUT = _REPO_ROOT / "artifacts" / "acceptance" / "r3-report.json"
-_DEFAULT_MANIFEST = _REPO_ROOT / "docs" / "evidence" / "r3" / "manifest.json"
+_DEFAULT_OUTPUT = Path("artifacts/acceptance/r3-report.json")
+_DEFAULT_MANIFEST = Path("docs/evidence/r3/manifest.json")
 _OUTPUT_LIMIT = 12_000
 _SCHEMA = "ditto.r3-research-acceptance"
 _MANIFEST_SCHEMA = "ditto.r3-evidence-manifest"
@@ -163,6 +162,7 @@ class R3LiveAcceptanceReport:
 class LiveAcceptanceRequest:
     """Explicit filesystem and release guards for one Task 18 run."""
 
+    workspace_root: Path
     output: Path
     manifest: Path
     r2_evidence: Path
@@ -210,23 +210,23 @@ def _pytest(*targets: str) -> tuple[str, ...]:
 
 def deterministic_commands() -> tuple[CommandSpec, ...]:
     """Return the frozen Task 17 deterministic acceptance command set."""
-    governance_wrapper = "packages/apps/tests/e2e/test_r3_governance_recovery.py"
+    governance_wrapper = "apps/backend/tests/e2e/test_r3_governance_recovery.py"
     backup_target = (
         f"{governance_wrapper}::test_fixture_backup_restore_preserves_domain_identity"
     )
     openapi_target = (
-        "packages/apps/tests/unit/api/test_openapi_snapshot_unit.py::"
+        "apps/backend/tests/unit/api/test_openapi_snapshot_unit.py::"
         + "test_static_openapi_matches_canonical_runtime_contract"
     )
     return (
         CommandSpec("backend-check", ("pixi", "run", "-e", "dev", "check")),
         CommandSpec(
             "stock-golden",
-            _pytest("packages/apps/tests/e2e/test_r3_stock_selection_golden.py"),
+            _pytest("apps/backend/tests/e2e/test_r3_stock_selection_golden.py"),
         ),
         CommandSpec(
             "etf-golden",
-            _pytest("packages/apps/tests/e2e/test_r3_etf_research_golden.py"),
+            _pytest("apps/backend/tests/e2e/test_r3_etf_research_golden.py"),
         ),
         CommandSpec(
             "governance-recovery",
@@ -240,7 +240,7 @@ def deterministic_commands() -> tuple[CommandSpec, ...]:
         ),
         CommandSpec(
             "scheduler-literal-128",
-            _pytest("packages/apps/tests/e2e/test_r3_scheduler_capacity.py"),
+            _pytest("apps/backend/tests/e2e/test_r3_scheduler_capacity.py"),
         ),
         CommandSpec(
             "isolated-backup-restore",
@@ -249,14 +249,14 @@ def deterministic_commands() -> tuple[CommandSpec, ...]:
         CommandSpec(
             "openapi-zero-diff",
             _pytest(openapi_target),
-            artifact_paths=("docs/openapi/v1.json",),
+            artifact_paths=("contracts/openapi/v1.json",),
         ),
     )
 
 
 def live_commands() -> tuple[CommandSpec, ...]:
     """Return the frozen Task 18 live command set in release order."""
-    target = "packages/apps/tests/e2e/test_r3_live_acceptance.py"
+    target = "apps/backend/tests/e2e/test_r3_live_acceptance.py"
     return (
         CommandSpec(
             "stock-live-golden",
@@ -309,24 +309,25 @@ def _hash_file(path: Path) -> str:
 def _run_command(
     spec: CommandSpec,
     *,
+    workspace_root: Path,
     command_runner: CommandRunner,
 ) -> CommandResult:
-    result = command_runner(spec.name, spec.command, _REPO_ROOT)
+    result = command_runner(spec.name, spec.command, workspace_root)
     hashes = dict(result.artifact_hashes)
     for relative_path in spec.artifact_paths:
-        artifact = _REPO_ROOT / relative_path
+        artifact = workspace_root / relative_path
         if artifact.is_file():
             hashes[relative_path] = _hash_file(artifact)
     return replace(result, artifact_hashes=hashes)
 
 
-def _source_commit() -> str:
+def _source_commit(workspace_root: Path) -> str:
     git_executable = shutil.which("git")
     if git_executable is None:
         raise RuntimeError("git executable is required for acceptance evidence")
     completed = subprocess.run(  # noqa: S603 - resolved git executable only
         (git_executable, "rev-parse", "HEAD"),
-        cwd=_REPO_ROOT,
+        cwd=workspace_root,
         check=True,
         capture_output=True,
         text=True,
@@ -365,12 +366,13 @@ def _write_json(path: Path, value: object) -> None:
     path.write_bytes(_canonical_json(value))
 
 
-def _relative_path(path: Path) -> str:
-    return os.path.relpath(path.resolve(), start=_REPO_ROOT).replace(os.sep, "/")
+def _relative_path(path: Path, *, workspace_root: Path) -> str:
+    return os.path.relpath(path.resolve(), start=workspace_root).replace(os.sep, "/")
 
 
 def _write_manifest(
     *,
+    workspace_root: Path,
     manifest: Path,
     output: Path,
     generated_at: str,
@@ -386,7 +388,10 @@ def _write_manifest(
                     "command": invocation,
                     "generated_at": generated_at,
                     "mode": mode,
-                    "relative_path": _relative_path(output),
+                    "relative_path": _relative_path(
+                        output,
+                        workspace_root=workspace_root,
+                    ),
                     "sha256": _hash_file(output),
                     "source_commit": source_commit,
                 }
@@ -399,6 +404,7 @@ def _write_manifest(
 
 def run_fixture_acceptance(
     *,
+    workspace_root: Path,
     output: Path,
     manifest: Path,
     checked_at: datetime | None = None,
@@ -406,15 +412,23 @@ def run_fixture_acceptance(
     command_runner: CommandRunner = _subprocess_runner,
     invocation: str = (
         "pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance "
-        "--fixture --output artifacts/acceptance/r3-report.json"
+        "--fixture --workspace-root . "
+        "--output artifacts/acceptance/r3-report.json"
     ),
 ) -> R3AcceptanceReport:
     """Run deterministic seams and persist blocked release truth plus hashes."""
+    workspace_root = _validated_workspace_root(workspace_root)
+    output = _workspace_path(workspace_root, output, default=output)
+    manifest = _workspace_path(workspace_root, manifest, default=manifest)
     now = checked_at or datetime.now(UTC)
     generated_at = now.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    commit = source_commit or _source_commit()
+    commit = source_commit or _source_commit(workspace_root)
     results = tuple(
-        _run_command(spec, command_runner=command_runner)
+        _run_command(
+            spec,
+            workspace_root=workspace_root,
+            command_runner=command_runner,
+        )
         for spec in deterministic_commands()
     )
     failures = tuple(result.name for result in results if not result.passed)
@@ -448,6 +462,7 @@ def run_fixture_acceptance(
     )
     _write_json(output, asdict(report))
     _write_manifest(
+        workspace_root=workspace_root,
         manifest=manifest,
         output=output,
         generated_at=generated_at,
@@ -528,15 +543,37 @@ def run_live_acceptance(
     invocation: str = (
         "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m "
         "ditto_apps.scripts.r3_research_acceptance --real-data "
+        "--workspace-root . "
         "--require-certified --require-both-golden-lanes "
         "--r2-evidence artifacts/acceptance/r2-report.json "
         "--output artifacts/acceptance/r3-report.json"
     ),
 ) -> R3LiveAcceptanceReport:
     """Run live acceptance only after exact opt-in and verified R2 evidence."""
+    workspace_root = _validated_workspace_root(request.workspace_root)
+    request = replace(
+        request,
+        workspace_root=workspace_root,
+        output=_workspace_path(workspace_root, request.output, default=request.output),
+        manifest=_workspace_path(
+            workspace_root,
+            request.manifest,
+            default=request.manifest,
+        ),
+        r2_evidence=_workspace_path(
+            workspace_root,
+            request.r2_evidence,
+            default=request.r2_evidence,
+        ),
+        r2_source_manifest=_workspace_path(
+            workspace_root,
+            request.r2_source_manifest,
+            default=request.r2_source_manifest,
+        ),
+    )
     now = checked_at or datetime.now(UTC)
     generated_at = now.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    commit = source_commit or _source_commit()
+    commit = source_commit or _source_commit(request.workspace_root)
     failures: list[str] = []
     if environment.get(_LIVE_OPT_IN) != "1":
         failures.append("real_data_opt_in_missing")
@@ -567,7 +604,11 @@ def run_live_acceptance(
             request.r2_source_manifest,
         ):
             results = tuple(
-                _run_command(spec, command_runner=command_runner)
+                _run_command(
+                    spec,
+                    workspace_root=request.workspace_root,
+                    command_runner=command_runner,
+                )
                 for spec in live_commands()
             )
         failures.extend(result.name for result in results if not result.passed)
@@ -581,6 +622,7 @@ def run_live_acceptance(
     )
     _write_json(request.output, asdict(report))
     _write_manifest(
+        workspace_root=request.workspace_root,
         manifest=request.manifest,
         output=request.output,
         generated_at=generated_at,
@@ -596,42 +638,85 @@ def _parser() -> argparse.ArgumentParser:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--fixture", action="store_true")
     mode.add_argument("--real-data", action="store_true")
+    parser.add_argument("--workspace-root", type=Path, required=True)
     parser.add_argument("--require-certified", action="store_true")
     parser.add_argument("--require-both-golden-lanes", action="store_true")
     parser.add_argument("--r2-evidence", type=Path)
     parser.add_argument("--r2-source-manifest", type=Path)
-    parser.add_argument("--output", type=Path, default=_DEFAULT_OUTPUT)
-    parser.add_argument("--manifest", type=Path, default=_DEFAULT_MANIFEST)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--manifest", type=Path)
     return parser
+
+
+def _workspace_path(
+    workspace_root: Path,
+    configured: Path | None,
+    *,
+    default: Path,
+) -> Path:
+    """Resolve an engineering artifact path against the explicit workspace."""
+    path = configured or default
+    return path if path.is_absolute() else workspace_root / path
+
+
+def _validated_workspace_root(workspace_root: Path) -> Path:
+    """Require an absolute existing directory for all checkout-aware tooling."""
+    if not workspace_root.is_absolute():
+        raise ValueError("workspace_root must be an absolute path")
+    resolved = workspace_root.resolve(strict=True)
+    if not resolved.is_dir():
+        raise ValueError("workspace_root must be a directory")
+    return resolved
 
 
 def main(argv: list[str] | None = None) -> int:
     """Run fixture or explicitly authorized, content-verified live acceptance."""
     args = _parser().parse_args(argv)
-    output = args.output
-    manifest = args.manifest
-    if not isinstance(output, Path) or not isinstance(manifest, Path):
-        raise TypeError("acceptance output and manifest must be paths")
+    if not isinstance(args.workspace_root, Path):
+        raise TypeError("workspace root must be a path")
+    workspace_root = _validated_workspace_root(args.workspace_root.absolute())
+    output = _workspace_path(
+        workspace_root,
+        args.output,
+        default=_DEFAULT_OUTPUT,
+    )
+    manifest = _workspace_path(
+        workspace_root,
+        args.manifest,
+        default=_DEFAULT_MANIFEST,
+    )
     if args.fixture:
         report: R3AcceptanceReport | R3LiveAcceptanceReport = run_fixture_acceptance(
+            workspace_root=workspace_root,
             output=output,
             manifest=manifest,
         )
     else:
         if not isinstance(args.r2_evidence, Path):
             _parser().error("--r2-evidence is required with --real-data")
+        r2_evidence = _workspace_path(
+            workspace_root,
+            args.r2_evidence,
+            default=args.r2_evidence,
+        )
         source_manifest = args.r2_source_manifest
         if source_manifest is None:
-            source_manifest = args.r2_evidence.with_name(
-                f"{args.r2_evidence.stem}.manifest{args.r2_evidence.suffix}"
+            source_manifest = r2_evidence.with_name(
+                f"{r2_evidence.stem}.manifest{r2_evidence.suffix}"
             )
         if not isinstance(source_manifest, Path):
             raise TypeError("R2 source manifest must be a path")
+        source_manifest = _workspace_path(
+            workspace_root,
+            source_manifest,
+            default=source_manifest,
+        )
         report = run_live_acceptance(
             request=LiveAcceptanceRequest(
+                workspace_root=workspace_root,
                 output=output,
                 manifest=manifest,
-                r2_evidence=args.r2_evidence,
+                r2_evidence=r2_evidence,
                 r2_source_manifest=source_manifest,
                 require_certified=bool(args.require_certified),
                 require_both_golden_lanes=bool(args.require_both_golden_lanes),

@@ -40,6 +40,7 @@ def test_fixture_report_is_engineering_pass_but_release_blocked(
     output = tmp_path / "artifacts" / "r3-report.json"
     manifest = tmp_path / "evidence" / "manifest.json"
     report = run_fixture_acceptance(
+        workspace_root=tmp_path,
         output=output,
         manifest=manifest,
         checked_at=datetime(2026, 8, 1, 1, 2, 3, tzinfo=UTC),
@@ -119,6 +120,18 @@ def test_runner_executes_every_required_acceptance_seam() -> None:
     )
 
 
+def test_fixture_runner_rejects_relative_workspace_root(tmp_path: Path) -> None:
+    """The engineering seam must never fall back to process-CWD semantics."""
+    with pytest.raises(ValueError, match="workspace_root must be an absolute path"):
+        run_fixture_acceptance(
+            workspace_root=Path("relative-workspace"),
+            output=tmp_path / "r3-report.json",
+            manifest=tmp_path / "manifest.json",
+            source_commit="a" * 40,
+            command_runner=_passing_runner,
+        )
+
+
 def test_any_failed_command_fails_engineering_acceptance_but_not_release_truth(
     tmp_path: Path,
 ) -> None:
@@ -137,6 +150,7 @@ def test_any_failed_command_fails_engineering_acceptance_but_not_release_truth(
         )
 
     report = run_fixture_acceptance(
+        workspace_root=tmp_path,
         output=tmp_path / "r3-report.json",
         manifest=tmp_path / "manifest.json",
         checked_at=datetime(2026, 8, 1, tzinfo=UTC),
@@ -196,6 +210,8 @@ def test_live_cli_requires_exact_mode_and_release_guards(tmp_path: Path) -> None
     args = acceptance._parser().parse_args(
         [
             "--real-data",
+            "--workspace-root",
+            str(tmp_path),
             "--require-certified",
             "--require-both-golden-lanes",
             "--r2-evidence",
@@ -209,13 +225,21 @@ def test_live_cli_requires_exact_mode_and_release_guards(tmp_path: Path) -> None
 
     assert args.real_data is True
     assert args.fixture is False
+    assert args.workspace_root == tmp_path
     assert args.require_certified is True
     assert args.require_both_golden_lanes is True
     assert args.r2_evidence == report
     assert args.r2_source_manifest == source_manifest
 
     with pytest.raises(SystemExit):
-        acceptance._parser().parse_args(["--fixture", "--real-data"])
+        acceptance._parser().parse_args(
+            [
+                "--fixture",
+                "--real-data",
+                "--workspace-root",
+                str(tmp_path),
+            ]
+        )
 
 
 def test_live_runner_without_explicit_environment_opt_in_is_blocked(
@@ -232,6 +256,7 @@ def test_live_runner_without_explicit_environment_opt_in_is_blocked(
 
     result = acceptance.run_live_acceptance(
         request=acceptance.LiveAcceptanceRequest(
+            workspace_root=tmp_path,
             output=tmp_path / "r3-report.json",
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
@@ -258,6 +283,7 @@ def test_content_verified_ready_r2_source_runs_live_command_contract(
     report, source_manifest = _write_r2_source_manifest(tmp_path)
     result = acceptance.run_live_acceptance(
         request=acceptance.LiveAcceptanceRequest(
+            workspace_root=tmp_path,
             output=tmp_path / "r3-report.json",
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
@@ -324,6 +350,7 @@ def test_live_runner_binds_verified_r2_source_only_while_commands_run(
 
     result = acceptance.run_live_acceptance(
         request=acceptance.LiveAcceptanceRequest(
+            workspace_root=tmp_path,
             output=tmp_path / "r3-report.json",
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
@@ -355,6 +382,7 @@ def test_live_runner_does_not_execute_when_r2_manifest_hash_drifts(
 
     result = acceptance.run_live_acceptance(
         request=acceptance.LiveAcceptanceRequest(
+            workspace_root=tmp_path,
             output=tmp_path / "r3-report.json",
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
@@ -395,6 +423,7 @@ def test_live_runner_fails_release_when_one_live_command_fails(
 
     result = acceptance.run_live_acceptance(
         request=acceptance.LiveAcceptanceRequest(
+            workspace_root=tmp_path,
             output=tmp_path / "r3-report.json",
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,
@@ -422,6 +451,7 @@ def test_r2_source_manifest_rejects_parent_path_escape(tmp_path: Path) -> None:
 
     result = acceptance.run_live_acceptance(
         request=acceptance.LiveAcceptanceRequest(
+            workspace_root=tmp_path,
             output=tmp_path / "r3-report.json",
             manifest=tmp_path / "r3-manifest.json",
             r2_evidence=report,

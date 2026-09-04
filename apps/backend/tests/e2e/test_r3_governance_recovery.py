@@ -12,6 +12,12 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import pytest
+from apps.backend.tests.integration.api import (
+    test_r3_strategy_publish_api_integration as publish_support,
+)
+from apps.backend.tests.integration.research.test_r3_backup_restore import (
+    test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet as _backup_restore,
+)
 from packages.application.tests.integration.test_r3_governance_recovery_golden import (
     test_active_pointer_switches_to_new_version as _pointer_swap,
 )
@@ -23,12 +29,6 @@ from packages.application.tests.integration.test_r3_governance_recovery_golden i
 )
 from packages.application.tests.integration.test_r3_governance_recovery_golden import (
     test_stale_pointer_revision_is_mapped_to_typed_command_error as _stale_cas,
-)
-from packages.apps.tests.integration.api import (
-    test_r3_strategy_publish_api_integration as publish_support,
-)
-from packages.apps.tests.integration.research.test_r3_backup_restore import (
-    test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet as _backup_restore,
 )
 
 pytestmark = [pytest.mark.e2e, pytest.mark.integration]
