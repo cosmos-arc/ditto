@@ -1,4 +1,4 @@
-"""CLI wrapper for the final cross-repository R3 live evidence bundle."""
+"""CLI wrapper for the final single-commit R3 live evidence bundle."""
 
 from __future__ import annotations
 
@@ -32,10 +32,9 @@ def _head(repo: Path) -> str:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend-repo", required=True, type=Path)
-    parser.add_argument("--frontend-repo", required=True, type=Path)
+    parser.add_argument("--workspace-root", required=True, type=Path)
     parser.add_argument("--backend-live-evidence-root", required=True, type=Path)
-    parser.add_argument("--frontend-live-evidence-root", required=True, type=Path)
+    parser.add_argument("--web-live-evidence-root", required=True, type=Path)
     parser.add_argument("--r2-report", required=True, type=Path)
     parser.add_argument("--r2-source-manifest", required=True, type=Path)
     parser.add_argument("--r3-report", required=True, type=Path)
@@ -45,21 +44,19 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--r2-command", required=True)
     parser.add_argument("--r3-command", required=True)
-    parser.add_argument("--frontend-command", required=True)
+    parser.add_argument("--web-command", required=True)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     """Resolve exact commits, generate the release bundle, and print its JSON."""
     args = _parser().parse_args(argv)
-    backend_repo = args.backend_repo.expanduser().resolve(strict=True)
-    frontend_repo = args.frontend_repo.expanduser().resolve(strict=True)
+    workspace_root = args.workspace_root.expanduser().resolve(strict=True)
     manifest = build_live_release_evidence(
         LiveReleaseEvidenceRequest(
-            backend_repo=backend_repo,
-            frontend_repo=frontend_repo,
+            workspace_root=workspace_root,
             backend_live_evidence_root=args.backend_live_evidence_root,
-            frontend_live_evidence_root=args.frontend_live_evidence_root,
+            web_live_evidence_root=args.web_live_evidence_root,
             r2_report=args.r2_report,
             r2_source_manifest=args.r2_source_manifest,
             r3_report=args.r3_report,
@@ -67,11 +64,10 @@ def main(argv: list[str] | None = None) -> int:
             r2_archive_root=args.r2_archive_root,
             r3_archive_root=args.r3_archive_root,
             output=args.output,
-            backend_commit=_head(backend_repo),
-            frontend_commit=_head(frontend_repo),
+            git_sha=_head(workspace_root),
             r2_command=args.r2_command,
             r3_command=args.r3_command,
-            frontend_command=args.frontend_command,
+            web_command=args.web_command,
         )
     )
     sys.stdout.write(

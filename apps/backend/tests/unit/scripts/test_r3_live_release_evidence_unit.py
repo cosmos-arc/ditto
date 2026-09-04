@@ -1,4 +1,4 @@
-"""Contracts for the cross-repository Task 18 live release evidence bundle."""
+"""Contracts for the monorepo Task 18 live release evidence bundle."""
 
 from __future__ import annotations
 
@@ -73,19 +73,17 @@ def _write_lane(root: Path, lane: str, *, suffix: str) -> dict[str, object]:
 
 
 def _request(tmp_path: Path) -> tuple[LiveReleaseEvidenceRequest, dict[str, object]]:
-    backend_repo = tmp_path / "backend"
-    frontend_repo = tmp_path / "frontend"
+    workspace_root = tmp_path / "workspace"
     backend_live = tmp_path / "runtime" / "r3-live"
-    frontend_live = frontend_repo / "docs" / "review" / "r3" / "live"
-    backend_repo.mkdir()
-    frontend_repo.mkdir()
+    frontend_live = workspace_root / "apps" / "web" / "docs" / "review" / "r3" / "live"
+    workspace_root.mkdir()
 
     planning = _write_lane(backend_live, "stock", suffix="1")
     _write_lane(backend_live, "etf", suffix="2")
     _write(backend_live / "governance" / f"{'3' * 64}.json", {"actor": "chevy"})
     _write(backend_live / "recovery" / f"{'4' * 64}.json", {"domain_matches": True})
 
-    r2_dir = backend_repo / "artifacts" / "acceptance"
+    r2_dir = workspace_root / "artifacts" / "acceptance"
     r2_report = r2_dir / "r2-report.json"
     r2_report_hash = _write(r2_report, {"mode": "live", "status": "ready"})
     group_path = r2_dir / "r2-live-evidence" / "provider-entitlement.json"
@@ -126,7 +124,7 @@ def _request(tmp_path: Path) -> tuple[LiveReleaseEvidenceRequest, dict[str, obje
         },
     )
 
-    r3_report = backend_repo / "artifacts" / "acceptance" / "r3-report.json"
+    r3_report = workspace_root / "artifacts" / "acceptance" / "r3-report.json"
     _write(
         r3_report,
         {
@@ -137,7 +135,7 @@ def _request(tmp_path: Path) -> tuple[LiveReleaseEvidenceRequest, dict[str, obje
             "source_commit": "a" * 40,
         },
     )
-    openapi = backend_repo / "docs" / "openapi" / "v1.json"
+    openapi = workspace_root / "contracts" / "openapi" / "v1.json"
     _write(openapi, {"openapi": "3.1.0"})
 
     browser_report = frontend_live / "report.json"
@@ -148,7 +146,7 @@ def _request(tmp_path: Path) -> tuple[LiveReleaseEvidenceRequest, dict[str, obje
             "mode": "real_data",
             "passed": True,
             "release_status": "RELEASE_ACCEPTANCE_PASSED",
-            "source_commit": "b" * 40,
+            "source_commit": "a" * 40,
         },
     )
     screenshot = frontend_live / "01-studio.png"
@@ -161,40 +159,46 @@ def _request(tmp_path: Path) -> tuple[LiveReleaseEvidenceRequest, dict[str, obje
             "entries": [
                 {
                     "relative_path": browser_report.relative_to(
-                        frontend_repo
+                        workspace_root
                     ).as_posix(),
                     "sha256": browser_report_hash,
                 },
                 {
-                    "relative_path": screenshot.relative_to(frontend_repo).as_posix(),
+                    "relative_path": screenshot.relative_to(workspace_root).as_posix(),
                     "sha256": screenshot_hash,
                 },
             ],
             "generated_at": "2026-08-01T09:05:00Z",
             "mode": "real_data",
             "schema": "ditto.r3-research-frontend-evidence-manifest",
-            "source_commit": "b" * 40,
+            "source_commit": "a" * 40,
             "version": 2,
         },
     )
 
     request = LiveReleaseEvidenceRequest(
-        backend_repo=backend_repo,
-        frontend_repo=frontend_repo,
+        workspace_root=workspace_root,
         backend_live_evidence_root=backend_live,
-        frontend_live_evidence_root=frontend_live,
+        web_live_evidence_root=frontend_live,
         r2_report=r2_report,
         r2_source_manifest=r2_manifest,
         r3_report=r3_report,
         openapi_path=openapi,
-        r2_archive_root=backend_repo / "docs" / "evidence" / "r2" / "20260801T090000Z",
-        r3_archive_root=backend_repo / "docs" / "evidence" / "r3" / "20260801T090000Z",
-        output=backend_repo / "docs" / "evidence" / "r3" / "manifest.json",
-        backend_commit="a" * 40,
-        frontend_commit="b" * 40,
+        r2_archive_root=workspace_root
+        / "docs"
+        / "evidence"
+        / "r2"
+        / "20260801T090000Z",
+        r3_archive_root=workspace_root
+        / "docs"
+        / "evidence"
+        / "r3"
+        / "20260801T090000Z",
+        output=workspace_root / "docs" / "evidence" / "r3" / "manifest.json",
+        git_sha="a" * 40,
         r2_command="r2-live-command",
         r3_command="r3-live-command",
-        frontend_command="frontend-live-command",
+        web_command="web-live-command",
     )
     return request, planning
 
@@ -210,9 +214,8 @@ def test_final_bundle_archives_redacted_evidence_and_binds_all_release_identitie
     )
 
     assert manifest["schema"] == "ditto.r3-live-release-evidence-manifest"
-    assert manifest["version"] == 1
-    assert manifest["backend_commit"] == "a" * 40
-    assert manifest["frontend_commit"] == "b" * 40
+    assert manifest["version"] == 2
+    assert manifest["git_sha"] == "a" * 40
     assert (
         manifest["openapi_hash"]
         == hashlib.sha256(request.openapi_path.read_bytes()).hexdigest()
@@ -226,14 +229,16 @@ def test_final_bundle_archives_redacted_evidence_and_binds_all_release_identitie
         == hashlib.sha256(request.r2_source_manifest.read_bytes()).hexdigest()
     )
 
-    stock = manifest["lanes"]["stock"]
+    lanes = manifest["lanes"]
+    assert isinstance(lanes, dict)
+    stock = lanes["stock"]
+    assert isinstance(stock, dict)
     expected_cost_hash = hashlib.sha256(
         orjson.dumps(stock_planning["cost_model"], option=orjson.OPT_SORT_KEYS)
     ).hexdigest()
     assert stock == {
-        "backend_commit": "a" * 40,
         "cost_hash": expected_cost_hash,
-        "frontend_commit": "b" * 40,
+        "git_sha": "a" * 40,
         "openapi_hash": manifest["openapi_hash"],
         "packet_bundle_hash": "f" * 64,
         "parameter_hash": "c" * 64,
@@ -263,18 +268,20 @@ def test_final_bundle_archives_redacted_evidence_and_binds_all_release_identitie
         "sha256",
         "source_commit",
     }
-    assert manifest["artifacts"]
-    assert all(required <= set(item) for item in manifest["artifacts"])
+    artifacts = manifest["artifacts"]
+    assert isinstance(artifacts, list)
+    assert artifacts
+    assert all(isinstance(item, dict) and required <= set(item) for item in artifacts)
     assert request.output.is_file()
     assert (request.r2_archive_root / "manifest.json").is_file()
     assert any(request.r3_archive_root.rglob("*.json"))
 
 
-def test_final_bundle_fails_closed_on_browser_artifact_hash_drift(
+def test_final_bundle_fails_closed_on_web_artifact_hash_drift(
     tmp_path: Path,
 ) -> None:
     request, _ = _request(tmp_path)
-    (request.frontend_live_evidence_root / "01-studio.png").write_bytes(b"drift")
+    (request.web_live_evidence_root / "01-studio.png").write_bytes(b"drift")
 
-    with pytest.raises(ValueError, match="frontend evidence hash drift"):
+    with pytest.raises(ValueError, match="Web evidence hash drift"):
         build_live_release_evidence(request)

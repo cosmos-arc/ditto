@@ -1,4 +1,4 @@
-"""Build the final redacted, cross-repository Task 18 evidence manifest."""
+"""Build the final redacted, single-commit Task 18 evidence manifest."""
 
 from __future__ import annotations
 
@@ -29,10 +29,9 @@ _R2_GROUPS = (
 class LiveReleaseEvidenceRequest:
     """Exact live inputs and immutable archive targets for the final bundle."""
 
-    backend_repo: Path
-    frontend_repo: Path
+    workspace_root: Path
     backend_live_evidence_root: Path
-    frontend_live_evidence_root: Path
+    web_live_evidence_root: Path
     r2_report: Path
     r2_source_manifest: Path
     r3_report: Path
@@ -40,11 +39,10 @@ class LiveReleaseEvidenceRequest:
     r2_archive_root: Path
     r3_archive_root: Path
     output: Path
-    backend_commit: str
-    frontend_commit: str
+    git_sha: str
     r2_command: str
     r3_command: str
-    frontend_command: str
+    web_command: str
 
 
 def _canonical(value: object) -> bytes:
@@ -190,40 +188,40 @@ def _r2_sources(request: LiveReleaseEvidenceRequest) -> tuple[tuple[Path, str], 
     return tuple(sorted(sources.items(), key=lambda item: item[1]))
 
 
-def _frontend_sources(
+def _web_sources(
     request: LiveReleaseEvidenceRequest,
 ) -> tuple[dict[str, object], tuple[tuple[Path, str, str], ...], Path]:
-    manifest_path = request.frontend_live_evidence_root / "manifest.json"
-    manifest = _object(manifest_path, label="frontend live manifest")
+    manifest_path = request.web_live_evidence_root / "manifest.json"
+    manifest = _object(manifest_path, label="Web live manifest")
     if (
         manifest.get("mode") != "real_data"
-        or manifest.get("source_commit") != request.frontend_commit
+        or manifest.get("source_commit") != request.git_sha
     ):
-        raise ValueError("frontend live manifest does not bind the exact commit")
+        raise ValueError("Web live manifest does not bind the monorepo commit")
     raw_entries = manifest.get("entries")
     if not isinstance(raw_entries, list) or not raw_entries:
-        raise ValueError("frontend live manifest has no artifacts")
+        raise ValueError("Web live manifest has no artifacts")
     sources: list[tuple[Path, str, str]] = []
     for index, value in enumerate(cast("list[object]", raw_entries)):
         try:
             path, relative, expected_hash = _entry_path(
-                request.frontend_repo,
+                request.workspace_root,
                 value,
-                label=f"frontend evidence[{index}]",
+                label=f"Web evidence[{index}]",
             )
         except ValueError as exc:
             if "hash drift" in str(exc):
-                raise ValueError("frontend evidence hash drift") from exc
+                raise ValueError("Web evidence hash drift") from exc
             raise
         sources.append((path, relative, expected_hash))
-    report_path = request.frontend_live_evidence_root / "report.json"
+    report_path = request.web_live_evidence_root / "report.json"
     _validated_report(
         report_path,
-        label="frontend live report",
-        source_commit=request.frontend_commit,
+        label="Web live report",
+        source_commit=request.git_sha,
     )
     if report_path.resolve(strict=True) not in {item[0] for item in sources}:
-        raise ValueError("frontend manifest does not bind its live report")
+        raise ValueError("Web manifest does not bind its live report")
     return manifest, tuple(sources), manifest_path.resolve(strict=True)
 
 
@@ -323,15 +321,15 @@ def _archive_entry(
     command: str,
 ) -> dict[str, str]:
     return _artifact_entry(
-        repository="backend",
+        repository="monorepo",
         relative_path=_repo_relative(
-            request.backend_repo,
+            request.workspace_root,
             target,
-            label="backend archive",
+            label="workspace archive",
         ),
         content_hash=_hash_file(target),
         generated_at=generated_at,
-        source_commit=request.backend_commit,
+        source_commit=request.git_sha,
         command=command,
     )
 
@@ -409,24 +407,24 @@ def _archive_r3_backend(
         )
     for path in (request.r3_report, request.openapi_path):
         resolved, relative = _inside(
-            request.backend_repo,
+            request.workspace_root,
             path,
-            label="backend evidence",
+            label="workspace evidence",
         )
         artifacts.append(
             _artifact_entry(
-                repository="backend",
+                repository="monorepo",
                 relative_path=relative,
                 content_hash=_hash_file(resolved),
                 generated_at=generated_at,
-                source_commit=request.backend_commit,
+                source_commit=request.git_sha,
                 command=request.r3_command,
             )
         )
     return artifacts
 
 
-def _frontend_artifacts(
+def _web_artifacts(
     request: LiveReleaseEvidenceRequest,
     *,
     sources: tuple[tuple[Path, str, str], ...],
@@ -434,28 +432,28 @@ def _frontend_artifacts(
     generated_at: str,
 ) -> list[dict[str, str]]:
     resolved, relative = _inside(
-        request.frontend_repo,
+        request.workspace_root,
         manifest_path,
-        label="frontend live manifest",
+        label="Web live manifest",
     )
     artifacts = [
         _artifact_entry(
-            repository="frontend",
+            repository="monorepo",
             relative_path=relative,
             content_hash=_hash_file(resolved),
             generated_at=generated_at,
-            source_commit=request.frontend_commit,
-            command=request.frontend_command,
+            source_commit=request.git_sha,
+            command=request.web_command,
         )
     ]
     artifacts.extend(
         _artifact_entry(
-            repository="frontend",
+            repository="monorepo",
             relative_path=source_relative,
             content_hash=content_hash,
             generated_at=generated_at,
-            source_commit=request.frontend_commit,
-            command=request.frontend_command,
+            source_commit=request.git_sha,
+            command=request.web_command,
         )
         for _path, source_relative, content_hash in sources
     )
@@ -468,15 +466,12 @@ def build_live_release_evidence(
     generated_at: datetime | None = None,
 ) -> dict[str, object]:
     """Validate, safely archive, and bind the final R2/R3 live evidence set."""
-    if _COMMIT.fullmatch(request.backend_commit) is None:
-        raise ValueError("backend commit must be a full lowercase Git SHA")
-    if _COMMIT.fullmatch(request.frontend_commit) is None:
-        raise ValueError("frontend commit must be a full lowercase Git SHA")
-    backend_repo = request.backend_repo.resolve(strict=True)
-    _frontend_repo = request.frontend_repo.resolve(strict=True)
-    _inside_future(backend_repo, request.r2_archive_root, label="R2 archive root")
-    _inside_future(backend_repo, request.r3_archive_root, label="R3 archive root")
-    _inside_future(backend_repo, request.output, label="R3 manifest output")
+    if _COMMIT.fullmatch(request.git_sha) is None:
+        raise ValueError("git_sha must be a full lowercase Git SHA")
+    workspace_root = request.workspace_root.resolve(strict=True)
+    _inside_future(workspace_root, request.r2_archive_root, label="R2 archive root")
+    _inside_future(workspace_root, request.r3_archive_root, label="R3 archive root")
+    _inside_future(workspace_root, request.output, label="R3 manifest output")
     if request.r2_archive_root.exists() or request.r3_archive_root.exists():
         raise ValueError("live evidence archive roots must be new")
 
@@ -484,11 +479,9 @@ def build_live_release_evidence(
     r3_report = _validated_report(
         request.r3_report,
         label="R3 live report",
-        source_commit=request.backend_commit,
+        source_commit=request.git_sha,
     )
-    frontend_manifest, frontend_sources, frontend_manifest_path = _frontend_sources(
-        request
-    )
+    web_manifest, web_sources, web_manifest_path = _web_sources(request)
     live_root = request.backend_live_evidence_root.resolve(strict=True)
     lane_identities = {
         lane: _lane_identity(live_root, lane) for lane in ("stock", "etf")
@@ -507,9 +500,9 @@ def build_live_release_evidence(
         r3_report.get("generated_at"),
         label="R3 report generated_at",
     )
-    frontend_generated = _string(
-        frontend_manifest.get("generated_at"),
-        label="frontend manifest generated_at",
+    web_generated = _string(
+        web_manifest.get("generated_at"),
+        label="Web manifest generated_at",
     )
 
     artifacts = _archive_r2(request, r2_sources, generated_at=generated)
@@ -522,11 +515,11 @@ def build_live_release_evidence(
         )
     )
     artifacts.extend(
-        _frontend_artifacts(
+        _web_artifacts(
             request,
-            sources=frontend_sources,
-            manifest_path=frontend_manifest_path,
-            generated_at=frontend_generated,
+            sources=web_sources,
+            manifest_path=web_manifest_path,
+            generated_at=web_generated,
         )
     )
 
@@ -537,8 +530,7 @@ def build_live_release_evidence(
     lanes = {
         lane: {
             **identity,
-            "backend_commit": request.backend_commit,
-            "frontend_commit": request.frontend_commit,
+            "git_sha": request.git_sha,
             "openapi_hash": openapi_hash,
         }
         for lane, identity in lane_identities.items()
@@ -548,8 +540,7 @@ def build_live_release_evidence(
             unique_artifacts.values(),
             key=lambda item: (item["repository"], item["relative_path"]),
         ),
-        "backend_commit": request.backend_commit,
-        "frontend_commit": request.frontend_commit,
+        "git_sha": request.git_sha,
         "generated_at": generated,
         "lanes": lanes,
         "mode": "live",
@@ -557,7 +548,7 @@ def build_live_release_evidence(
         "r2_manifest_hash": _hash_file(request.r2_source_manifest),
         "r2_report_hash": _hash_file(request.r2_report),
         "schema": "ditto.r3-live-release-evidence-manifest",
-        "version": 1,
+        "version": 2,
     }
     request.output.parent.mkdir(parents=True, exist_ok=True)
     request.output.write_bytes(_canonical(manifest))
