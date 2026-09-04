@@ -1,5 +1,5 @@
 {
-  "include": ["packages/*/tests"],
+  "include": ["packages/*/tests", "apps/backend/tests", "tooling/**/tests"],
   "exclude": ["**/__pycache__", ".pixi", ".venv"],
   "pythonVersion": "3.13",
   "pythonPlatform": "All",
@@ -19,7 +19,7 @@
     "packages/backtest/src",
     "packages/analysis/src",
     "packages/application/src",
-    "packages/apps/src"
+    "apps/backend/src"
   ],
   "reportMissingTypeStubs": "none",
   "reportUnknownMemberType": "none",
