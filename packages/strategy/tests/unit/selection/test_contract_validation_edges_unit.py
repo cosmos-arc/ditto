@@ -118,6 +118,19 @@ def test_factor_weight_cannot_exceed_one() -> None:
     assert exc_info.value.details["reason"] == "invalid_selection_factor_weight"
 
 
+def test_value_contracts_reject_untyped_text_number_and_positive_integer() -> None:
+    with pytest.raises(StrategySpecError) as text_exc:
+        SelectionFactorValue("", 0.5)
+    with pytest.raises(StrategySpecError) as number_exc:
+        SelectionFactorWeight("momentum", cast("float", True))
+    with pytest.raises(StrategySpecError) as integer_exc:
+        replace(_spec(), top_k=0)
+
+    assert text_exc.value.details["reason"] == "invalid_selection_text"
+    assert number_exc.value.details["reason"] == "invalid_selection_number"
+    assert integer_exc.value.details["reason"] == "invalid_selection_integer"
+
+
 @pytest.mark.parametrize(
     "states",
     [
@@ -132,6 +145,26 @@ def test_spec_rejects_normal_or_duplicate_excluded_limit_states(
         replace(_spec(), excluded_limit_states=states)
 
     assert exc_info.value.details["reason"] == "invalid_selection_limit_policy"
+
+
+@pytest.mark.parametrize(
+    ("factor_weights", "reason"),
+    [
+        ("momentum", "invalid_selection_sequence"),
+        (
+            (cast("SelectionFactorWeight", "momentum"),),
+            "invalid_selection_sequence_item",
+        ),
+    ],
+)
+def test_spec_requires_an_ordered_typed_factor_sequence(
+    factor_weights: object,
+    reason: str,
+) -> None:
+    with pytest.raises(StrategySpecError) as exc_info:
+        replace(_spec(), factor_weights=factor_weights)
+
+    assert exc_info.value.details["reason"] == reason
 
 
 def test_instrument_rejects_duplicate_factor_values() -> None:
@@ -151,6 +184,26 @@ def test_instrument_rejects_untyped_limit_state() -> None:
         )
 
     assert exc_info.value.details["reason"] == "invalid_selection_limit_state"
+
+
+def test_instrument_optional_fields_accept_none_and_reject_invalid_values() -> None:
+    optional = replace(
+        _instrument(),
+        industry_id=None,
+        listing_days=None,
+        is_st=None,
+    )
+    assert optional.industry_id is None
+    assert optional.listing_days is None
+    assert optional.is_st is None
+
+    with pytest.raises(StrategySpecError) as listing_exc:
+        replace(_instrument(), listing_days=cast("int", -1))
+    with pytest.raises(StrategySpecError) as bool_exc:
+        replace(_instrument(), is_st=cast("bool", "false"))
+
+    assert listing_exc.value.details["reason"] == "invalid_selection_integer"
+    assert bool_exc.value.details["reason"] == "invalid_selection_boolean"
 
 
 @pytest.mark.pit
@@ -177,6 +230,10 @@ def test_input_bundle_requires_lineage_and_unique_instruments() -> None:
 
     assert lineage_exc.value.details["reason"] == "missing_selection_lineage"
     assert duplicate_exc.value.details["reason"] == "duplicate_selection_instrument"
+
+    with pytest.raises(StrategySpecError) as source_exc:
+        replace(bundle, source_snapshot_ids=("source-1", "source-1"))
+    assert source_exc.value.details["reason"] == "duplicate_selection_identity"
 
 
 def test_input_bundle_requires_a_typed_selection_spec() -> None:
@@ -272,3 +329,17 @@ def test_run_requires_contiguous_ranks_and_unique_output_instruments() -> None:
 
     assert rank_exc.value.details["reason"] == "invalid_selection_rank_order"
     assert duplicate_exc.value.details["reason"] == "duplicate_selection_output"
+
+
+@pytest.mark.pit
+def test_run_revalidates_temporal_visibility() -> None:
+    run = _run()
+    future = _NOW + timedelta(seconds=1)
+
+    with pytest.raises(StrategySpecError) as unaware_exc:
+        replace(run, as_of=datetime(2026, 9, 4))
+    with pytest.raises(StrategySpecError) as cutoff_exc:
+        replace(run, publication_cutoff=future)
+
+    assert unaware_exc.value.details["reason"] == "invalid_selection_time"
+    assert cutoff_exc.value.details["reason"] == "invalid_selection_cutoff"
