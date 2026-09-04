@@ -1,10 +1,9 @@
 """D7 cross-check: composite (nested) expressions vs independent polars reference.
 
 Compositions cover scalar(ts), cs(scalar), ts+binary+if_else, multi-arg
-coalesce, and scalar-wrapped rolling-window / correlation ops. Combinations of
-the form cs(ts(...)) are intentionally avoided: polars nested ``.over()`` with
-different group keys returns all-null without materialization (see the cs_rank
-known-issue note), which is a codegen-architecture matter outside D7 scope.
+coalesce, and scalar-wrapped rolling-window / correlation ops. The owning
+cross-section suite also covers cs_rank(ts(...)) against a materialized
+reference because Polars cannot directly nest windows with different keys.
 """
 
 from __future__ import annotations

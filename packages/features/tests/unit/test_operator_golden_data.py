@@ -13,9 +13,7 @@ Design notes
   ``ts_pct_change`` which shift by the user-specified period directly).
 * Rolling aggregations use ``min_samples=window``, so the first
   ``(window - 1)`` output slots after the shift are always null.
-* Cross-section operators (cs_*) operate over the entire frame (rank /
-  len) or grouped by time keys (scale, zscore, demean) depending on the
-  codegen implementation.
+* Cross-section operators (cs_*) operate within the configured time keys.
 """
 
 from __future__ import annotations
@@ -596,30 +594,25 @@ class TestTsArgmin:
 
 
 class TestCsRank:
-    """cs_rank(x): rank(method='ordinal') / pl.len() over entire frame."""
+    """cs_rank(x): ordinal rank / row count within each trade date."""
 
     def test_cs_rank_close_on_sample_frame(self) -> None:
-        """On the two-entity sample frame, close values sorted by ordinal rank:
-        7.5(1), 8(2), 8(3), 8(4), 9(5), 10(6), 10(7), 11(8), 11(9), 12(10),
-        15(11), 20(12).  Divided by total rows (12).
-        Frame order: [10,11,10,12,15,8, 8,7.5,8,9,11,20]
-        Ordinal ranks: [6,8,7,10,11,2, 3,1,4,5,9,12]
-        """
+        """The larger close ranks 1.0 and the smaller ranks 0.5 per date."""
         df = _sample_frame()
         result = _eval_expr(df, "cs_rank(close)")
         expected = [
-            6.0 / 12.0,  # inst1, close=10
-            8.0 / 12.0,  # inst1, close=11
-            7.0 / 12.0,  # inst1, close=10
-            10.0 / 12.0,  # inst1, close=12
-            11.0 / 12.0,  # inst1, close=15
-            2.0 / 12.0,  # inst1, close=8
-            3.0 / 12.0,  # inst2, close=8
-            1.0 / 12.0,  # inst2, close=7.5
-            4.0 / 12.0,  # inst2, close=8
-            5.0 / 12.0,  # inst2, close=9
-            9.0 / 12.0,  # inst2, close=11
-            12.0 / 12.0,  # inst2, close=20
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            1.0,
         ]
         _assert_values(result, "value", expected)
 

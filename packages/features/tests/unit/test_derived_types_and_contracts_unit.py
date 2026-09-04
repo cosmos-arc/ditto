@@ -152,6 +152,10 @@ class TestP0OperatorSpecs:
         """Cross-section operators are registered."""
         assert name in P0_OPERATOR_SPECS
 
+    def test_cs_rank_version_records_partitioned_semantics(self) -> None:
+        """The cache identity changes with cs_rank's corrected time partitioning."""
+        assert P0_OPERATOR_SPECS["cs_rank"].version == "2.0.0"
+
     @pytest.mark.parametrize(
         "name",
         [
