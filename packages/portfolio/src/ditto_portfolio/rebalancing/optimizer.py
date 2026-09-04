@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from importlib.metadata import version
 from typing import Any, cast
 
@@ -46,7 +47,12 @@ class CVXPYPortfolioOptimizer:
             return self._failure(request, exc.code, str(exc))
         try:
             values, solver, status, objective = self._solve(request, prepared)
-        except (_cp.error.SolverError, ValueError, ArithmeticError) as exc:
+        except (
+            _cp.error.SolverError,
+            ValueError,
+            ArithmeticError,
+            RuntimeWarning,
+        ) as exc:
             return self._failure(request, "solver_error", str(exc))
         if status != _cp.OPTIMAL or values is None:
             return self._failure(
@@ -126,7 +132,9 @@ class CVXPYPortfolioOptimizer:
             prepared,
             initial_values,
         )
-        if len(active) == len(initial_values):
+        if len(active) == len(initial_values) and np.all(
+            initial_values >= minimum - request.policy.constraint_tolerance
+        ):
             return initial
         if not active:
             return None, solver, "active_set_empty", objective
@@ -270,7 +278,9 @@ class CVXPYPortfolioOptimizer:
         options: dict[str, float | bool] = {"time_limit": timeout_seconds}
         if solver == "OSQP":
             options.update(eps_abs=1e-9, eps_rel=1e-9, polishing=True)
-        _cp.Problem.solve(problem, solver=solver, verbose=False, **options)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            _cp.Problem.solve(problem, solver=solver, verbose=False, **options)
 
     def _standard_constraints(
         self,
