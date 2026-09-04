@@ -1,7 +1,8 @@
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useBacktestResult } from "../hooks";
+import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api-client";
+import { useBacktestReport } from "../hooks";
 
 const LOADING_METRIC_IDS = [
 	"sharpe",
@@ -17,35 +18,49 @@ interface BacktestKpiStripProps {
 }
 
 export function BacktestKpiStrip({ jobId }: BacktestKpiStripProps) {
-	const { data, isLoading, refetch } = useBacktestResult(jobId);
+	const query = useBacktestReport(jobId);
 
-	if (isLoading) {
+	if (query.isLoading) {
 		return (
-			<div className="flex gap-3 px-4 py-3">
+			<div className="flex h-14 gap-3 px-4 py-2.5">
 				{LOADING_METRIC_IDS.map((metricId) => (
 					<LoadingSkeleton key={metricId} variant="metric" className="flex-1" />
 				))}
 			</div>
 		);
 	}
+	const alpha = query.data?.alphaStats;
+	const trades = query.data?.tradeStats;
+
+	if (query.error || !alpha) {
+		const message = query.error
+			? query.error instanceof ApiError
+				? `${query.error.status} ${query.error.errorCode ?? "BACKTEST_REPORT_ERROR"}: ${query.error.message}`
+				: query.error.message
+			: "绩效统计尚未发布";
+		return (
+			<div className="flex h-14 items-center gap-3 border-b border-(--color-border-subtle) px-4">
+				<div>
+					<p className="text-xs font-medium text-(--color-foreground-secondary)">绩效证据 · 未评估</p>
+					<p role={query.error ? "alert" : undefined} className="mt-0.5 text-xs text-(--color-foreground-tertiary)">
+						{message}
+					</p>
+				</div>
+				<Button size="sm" variant="outline" className="ml-auto" onClick={() => void query.refetch()}>
+					重试绩效报告
+				</Button>
+			</div>
+		);
+	}
 
 	return (
-		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			{data && (
-				<div className="flex gap-3 px-4 py-3">
-					<Metric variant="strip" label="Sharpe" value={data.statistics.sharpe.toFixed(2)} />
-					<Metric variant="strip" label="最大回撤" value={`${data.statistics.mdd}%`} trend="down" />
-					<Metric variant="strip" label="胜率" value={`${data.statistics.winRate.toFixed(1)}%`} />
-					<Metric
-						variant="strip"
-						label="年化收益"
-						value={`${data.statistics.annualizedReturn}%`}
-						trend={data.statistics.annualizedReturn >= 0 ? "up" : "down"}
-					/>
-					<Metric variant="strip" label="盈亏比" value={data.statistics.plRatio.toFixed(2)} />
-					<Metric variant="strip" label="换手率" value={`${data.statistics.turnover.toFixed(1)}x`} />
-				</div>
-			)}
-		</DittoErrorBoundary>
+		<div className="flex h-14 min-w-max items-center gap-5 overflow-x-auto border-b border-(--color-border-subtle) px-4">
+			<Metric variant="strip" label="Sharpe" value={alpha.sharpeRatio.toFixed(2)} />
+			<Metric variant="strip" label="最大回撤" value={`${Math.abs(alpha.maxDrawdown * 100).toFixed(1)}%`} />
+			<Metric variant="strip" label="年化收益" value={`${(alpha.annualizedReturn * 100).toFixed(1)}%`} />
+			<Metric variant="strip" label="Sortino" value={alpha.sortinoRatio.toFixed(2)} />
+			<Metric variant="strip" label="总换手" value={`${alpha.totalTurnover.toFixed(1)}x`} />
+			<Metric variant="strip" label="胜率" value={trades ? `${(trades.winRate * 100).toFixed(1)}%` : "未评估"} />
+		</div>
 	);
 }

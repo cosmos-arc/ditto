@@ -8,13 +8,13 @@ export interface Domain {
 	readonly path: string;
 }
 
-export type DomainId = "home" | "markets" | "research" | "trading" | "platform";
+export type DomainId = "home" | "markets" | "research" | "portfolio" | "system";
 
 /** 所有域配置 */
 export const DOMAINS: readonly Domain[] = [
-	{ id: "home", label: "首页", path: "/" },
-	{ id: "markets", label: "市场", path: "/markets" },
-	{ id: "research", label: "研究", path: "/research" },
-	{ id: "trading", label: "交易", path: "/trading" },
-	{ id: "platform", label: "平台", path: "/platform" },
+	{ id: "home", label: "Today", path: "/" },
+	{ id: "markets", label: "Markets", path: "/markets" },
+	{ id: "research", label: "Research", path: "/research" },
+	{ id: "portfolio", label: "Portfolio", path: "/portfolio" },
+	{ id: "system", label: "System", path: "/system" },
 ] as const;

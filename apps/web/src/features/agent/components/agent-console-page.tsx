@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShellHeaderExtension } from "@/features/shell/components/shell-header-extension";
 import { cn } from "@/lib/utils";
 import {
 	useAgentApproval,
@@ -13,6 +14,7 @@ import {
 	useAgentRun,
 	useAgentRuns,
 	useAgentSessions,
+	useExecuteAgentRun,
 } from "../hooks";
 import type {
 	AgentApprovalView,
@@ -47,6 +49,15 @@ export type AgentConsoleSearch = {
 	readonly contextType?: string;
 	readonly contextId?: string;
 	readonly objective?: string;
+};
+
+export type AgentConsoleSurface = "approval-inbox" | "research-lab" | "system-ops" | "unified";
+
+const SURFACE_COPY: Record<AgentConsoleSurface, { readonly label: string; readonly title: string }> = {
+	"approval-inbox": { label: "Agent Approval Inbox", title: "Approval Inbox · Exact actions" },
+	"research-lab": { label: "Research Agent Lab", title: "Research Agent Lab · Strategy Author" },
+	"system-ops": { label: "System Agent Ops", title: "System Agent Ops · Runtime supervision" },
+	unified: { label: "Agent Console", title: "Agent Console" },
 };
 
 type InspectorSelection =
@@ -477,6 +488,16 @@ function EvidenceSpine({
 					<p className="text-sm text-(--color-foreground-secondary)">{run.objective ?? "内容未在展示契约中提供"}</p>
 					<Meta label="objective hash" value={run.objectiveHash} mono />
 				</SpineNode>
+				{run.executionPlan && (
+					<SpineNode label="PIT authority" status="bound">
+						<Meta label="decision" value={run.executionPlan.decisionTime} mono />
+						<Meta label="knowledge" value={run.executionPlan.knowledgeCutoff} mono />
+						<Meta label="publication" value={run.executionPlan.publicationCutoff} mono />
+						<Meta label="snapshot" value={run.executionPlan.sourceSnapshotId} mono />
+						<Meta label="universe" value={run.executionPlan.allowedUniverse.join(", ")} mono />
+						<Meta label="tools" value={run.executionPlan.allowedTools.join(", ")} mono />
+					</SpineNode>
+				)}
 				{run.toolRecords.map((record) => (
 					<SpineNode key={record.callId} label={`Tool · ${record.toolName}`}>
 						<Meta label="call" value={record.callId} mono />
@@ -537,14 +558,23 @@ function RunDetail({
 	run,
 	streamState,
 	onCancel,
+	onExecute,
 	onInspect,
+	executionError,
+	isExecuting,
+	canExecute,
 }: {
 	readonly run: AgentRunView;
 	readonly streamState: string;
 	readonly onCancel: () => void;
+	readonly onExecute: () => void;
 	readonly onInspect: (value: InspectorSelection) => void;
+	readonly executionError: Error | null;
+	readonly isExecuting: boolean;
+	readonly canExecute: boolean;
 }) {
 	const cancellable = !TERMINAL_RUN.has(run.status);
+	const executable = run.status === "queued" && run.executionPlan !== null && canExecute;
 	return (
 		<div className="flex h-full flex-col">
 			<div className="border-b border-(--color-border-subtle) p-(--density-panel-padding)">
@@ -555,6 +585,17 @@ function RunDetail({
 					</div>
 					<div className="flex items-center gap-2">
 						<StatusBadge status={run.status} />
+						{executable && (
+							<Button
+								className="hidden xl:inline-flex"
+								type="button"
+								size="sm"
+								disabled={isExecuting}
+								onClick={onExecute}
+							>
+								{isExecuting ? "执行中…" : "执行 Run"}
+							</Button>
+						)}
 						{cancellable && (
 							<Button
 								className="hidden xl:inline-flex"
@@ -568,6 +609,11 @@ function RunDetail({
 						)}
 					</div>
 				</div>
+				{executionError && (
+					<p role="alert" className="mt-3 text-xs text-(--color-risk-critical-fg)">
+						{executionError.message}
+					</p>
+				)}
 				<div className="mt-3 grid gap-1 sm:grid-cols-2">
 					<Meta
 						label="context"
@@ -884,10 +930,12 @@ export function AgentConsolePage({
 	initialSearch = {},
 	search: controlledSearch,
 	onSearchChange,
+	surface = "unified",
 }: {
 	readonly initialSearch?: AgentConsoleSearch;
 	readonly search?: AgentConsoleSearch;
 	readonly onSearchChange?: (search: AgentConsoleSearch) => void;
+	readonly surface?: AgentConsoleSurface;
 }) {
 	const [localSearch, setLocalSearch] = useState(() => normalizeSearch(initialSearch));
 	const search = normalizeSearch(controlledSearch ?? localSearch);
@@ -913,6 +961,7 @@ export function AgentConsolePage({
 	};
 	const [drawerOpen, setDrawerOpen] = useState(false);
 	const capability = useAgentCapability();
+	const executeRun = useExecuteAgentRun();
 	const sessionList = useAgentSessions(search.sessionOffset);
 	const runList = useAgentRuns({
 		status: search.tab === "runs" && search.status ? (search.status as AgentRunStatus) : undefined,
@@ -964,10 +1013,18 @@ export function AgentConsolePage({
 	const streamState =
 		search.tab === "runs" ? runStream : search.tab === "campaigns" ? campaignStream : "not applicable";
 	const runCancellable = Boolean(run && !TERMINAL_RUN.has(run.status));
+	const runExecutable = Boolean(
+		run &&
+			run.status === "queued" &&
+			run.executionPlan &&
+			capability.data?.enabled === true &&
+			capability.data.runtimeState === "available",
+	);
 	const campaignCancellable = Boolean(
 		campaign && !TERMINAL_CAMPAIGN.has(campaign.status) && campaign.status !== "draft",
 	);
-	const hasMobileActions = runCancellable || campaign?.status === "draft" || campaignCancellable || Boolean(approval);
+	const hasMobileActions =
+		runCancellable || runExecutable || campaign?.status === "draft" || campaignCancellable || Boolean(approval);
 	const currentPageSummary =
 		search.tab === "runs" && runList.data
 			? {
@@ -988,66 +1045,75 @@ export function AgentConsolePage({
 							total: approvalList.data.pagination.total,
 						}
 					: null;
+	const surfaceCopy = SURFACE_COPY[surface];
+	const showRuns = surface !== "approval-inbox";
+	const showCampaigns = surface !== "approval-inbox";
+	const showApprovals = surface === "approval-inbox" || surface === "unified";
 
 	return (
 		<section
 			data-slot="shell"
-			aria-label="Agent Console"
-			className="flex h-full min-h-0 flex-col overflow-y-auto bg-(--color-surface-1) text-(--color-foreground) xl:overflow-hidden"
+			aria-label={surfaceCopy.label}
+			className="flex h-full min-h-0 flex-col overflow-hidden bg-(--color-surface-1) text-(--color-foreground)"
 		>
-			<header
-				data-slot="agent-header"
-				data-info-level="l1"
-				className="agent-header border-b border-(--color-border-subtle) bg-(--color-surface-2) px-4 py-3"
-			>
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<div>
-						<p className="text-[11px] font-medium tracking-[0.18em] text-(--color-platform-accent-text) uppercase">
-							R5 · Governed Research
-						</p>
-						<h1 className="mt-1 text-lg font-semibold">Agent Console</h1>
-					</div>
-					<div className="flex flex-wrap items-center gap-2 text-xs">
+			<ShellHeaderExtension>
+				<div
+					data-slot="shell-header-extension"
+					role="status"
+					aria-label="Agent runtime"
+					className="flex min-w-0 flex-1 items-center justify-between gap-3 overflow-hidden"
+				>
+					<div className="flex min-w-0 items-center gap-2 text-xs">
 						<StatusBadge status={capability.data?.runtimeState ?? (capability.isLoading ? "loading" : "unavailable")} />
-						<span className="font-data text-(--color-foreground-secondary)">
+						<span className="shrink-0 font-data text-(--color-foreground-secondary)">
 							provider {capability.data?.provider ?? "not configured"}
 						</span>
-						<span className="font-data text-(--color-foreground-secondary)">
+						<span className="hidden shrink-0 font-data text-(--color-foreground-secondary) 2xl:inline">
 							profiles {capability.data?.availableProfiles.join("/") || "none"}
 						</span>
-						<span className="text-(--color-foreground-tertiary)">
-							checked {formatDate(capability.data?.checkedAt ?? null)}
-						</span>
+						{runtimeMessage && (
+							<span className="truncate text-(--color-risk-warning-fg)">
+								{runtimeMessage} ·{" "}
+								{capability.data?.enabled === true && capability.data.runtimeState !== "available"
+									? "模型执行已禁用；可仅创建并保留 queued run。"
+									: "历史 projection 保持可读；新建动作已禁用。"}
+							</span>
+						)}
 					</div>
+					<span className="hidden shrink-0 font-data text-[11px] text-(--color-foreground-tertiary) xl:inline">
+						checked {formatDate(capability.data?.checkedAt ?? null)}
+					</span>
 				</div>
-				{runtimeMessage && (
-					<p role="status" className="mt-2 text-xs text-(--color-risk-warning-fg)">
-						{runtimeMessage} · 历史 projection 保持可读；新建动作已禁用。
-					</p>
-				)}
-			</header>
+			</ShellHeaderExtension>
 			<div
 				data-slot="task-toolbar"
-				className="flex flex-col items-stretch gap-3 border-b border-(--color-border-subtle) bg-(--color-surface-panel-base) px-4 py-2 sm:flex-row sm:items-center sm:justify-between"
+				data-info-level="l1"
+				data-info-unit="agent-task-toolbar"
+				className="flex h-[42px] shrink-0 flex-row items-center justify-between gap-3 overflow-hidden border-b border-(--color-border-subtle) bg-(--color-surface-panel-base) px-4"
 			>
-				<Tabs
-					value={search.tab}
-					onValueChange={(value) =>
-						updateSearch({
-							tab: value as AgentTab,
-							selected: undefined,
-							sessionId: undefined,
-							status: undefined,
-							offset: 0,
-						})
-					}
-				>
-					<TabsList className="agent-tabs" variant="line" aria-label="Agent task views">
-						<TabsTrigger value="runs">Runs</TabsTrigger>
-						<TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-						<TabsTrigger value="approvals">Approvals</TabsTrigger>
-					</TabsList>
-				</Tabs>
+				<div className="flex min-w-0 items-center gap-3">
+					<span className="hidden shrink-0 text-xs font-medium text-(--color-foreground-secondary) 2xl:inline">
+						{surfaceCopy.title}
+					</span>
+					<Tabs
+						value={search.tab}
+						onValueChange={(value) =>
+							updateSearch({
+								tab: value as AgentTab,
+								selected: undefined,
+								sessionId: undefined,
+								status: undefined,
+								offset: 0,
+							})
+						}
+					>
+						<TabsList className="agent-tabs" variant="line" aria-label="Agent task views">
+							{showRuns && <TabsTrigger value="runs">Runs</TabsTrigger>}
+							{showCampaigns && <TabsTrigger value="campaigns">Campaigns</TabsTrigger>}
+							{showApprovals && <TabsTrigger value="approvals">Approvals</TabsTrigger>}
+						</TabsList>
+					</Tabs>
+				</div>
 				<div className="flex flex-wrap items-center justify-end gap-2">
 					{search.tab === "runs" && (
 						<>
@@ -1131,12 +1197,12 @@ export function AgentConsolePage({
 			</div>
 			<div
 				data-slot="workspace"
-				className="grid min-h-0 flex-none grid-cols-1 xl:flex-1 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]"
+				className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[18rem_minmax(0,1fr)_23.25rem]"
 			>
 				<aside
 					data-slot="source"
 					aria-label="Agent projections"
-					className="list-panel min-h-40 overflow-y-auto border-b border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:border-r xl:border-b-0"
+					className="list-panel min-h-40 overflow-y-auto border-b border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:min-h-0 xl:border-r xl:border-b-0"
 				>
 					<div className="border-b border-(--color-border-subtle) px-3 py-2">
 						<p className="text-xs font-medium">
@@ -1231,7 +1297,7 @@ export function AgentConsolePage({
 						</>
 					)}
 				</aside>
-				<main data-slot="main" className="main-panel min-h-[30rem] min-w-0 bg-(--color-surface-2)">
+				<main data-slot="main" className="main-panel min-h-0 min-w-0 overflow-y-auto bg-(--color-surface-panel-base)">
 					<PanelState
 						error={
 							search.tab === "runs"
@@ -1273,8 +1339,12 @@ export function AgentConsolePage({
 						<RunDetail
 							run={run}
 							streamState={runStream}
+							canExecute={runExecutable}
 							onCancel={() => setRunCancelOpen(true)}
+							onExecute={() => executeRun.mutate({ runId: run.runId, revision: run.revision })}
 							onInspect={setInspectorSelection}
+							executionError={executeRun.error}
+							isExecuting={executeRun.isPending}
 						/>
 					)}
 					{search.tab === "campaigns" && campaign && (
@@ -1293,7 +1363,7 @@ export function AgentConsolePage({
 				<aside
 					data-slot="inspector"
 					aria-label="Projection inspector"
-					className="inspector min-h-56 border-t border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:border-t-0 xl:border-l"
+					className="inspector min-h-56 overflow-y-auto border-t border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:min-h-0 xl:border-t-0 xl:border-l"
 				>
 					<Inspector
 						selection={inspectorSelection}
@@ -1305,13 +1375,24 @@ export function AgentConsolePage({
 					/>
 				</aside>
 			</div>
-			<div data-slot="mobile-controls" className="sticky bottom-0 z-10 xl:static">
+			<div data-slot="mobile-controls" className="sticky bottom-0 z-10 flex-none xl:static">
 				{hasMobileActions && (
 					<nav
 						data-slot="mobile-actions"
 						aria-label="Selected task actions"
 						className="flex gap-2 border-t border-(--color-border-subtle) bg-(--color-surface-panel-base) px-4 py-2 xl:hidden"
 					>
+						{runExecutable && run && (
+							<Button
+								className="flex-1"
+								type="button"
+								size="sm"
+								disabled={executeRun.isPending}
+								onClick={() => executeRun.mutate({ runId: run.runId, revision: run.revision })}
+							>
+								{executeRun.isPending ? "执行中…" : "执行 Run"}
+							</Button>
+						)}
 						{runCancellable && (
 							<Button
 								className="flex-1"
@@ -1356,7 +1437,7 @@ export function AgentConsolePage({
 					data-slot="status-bar"
 					role="status"
 					aria-live="polite"
-					className="flex flex-wrap items-center gap-(--section-gap) border-t border-(--color-border-subtle) bg-(--color-surface-0) px-4 py-2 font-data text-[11px] text-(--color-foreground-tertiary)"
+					className="flex h-(--height-status-bar) items-center gap-(--section-gap) overflow-hidden border-t border-(--color-border-subtle) bg-(--color-surface-0) px-4 font-data text-[11px] text-(--color-foreground-tertiary)"
 				>
 					<span>projection {selectedProjectionStatus}</span>
 					<span>stream {streamState}</span>

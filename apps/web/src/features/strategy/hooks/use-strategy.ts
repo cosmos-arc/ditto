@@ -9,6 +9,7 @@ export function useStrategy(id: string) {
 	return useQuery({
 		queryKey: strategyKeys.detail(id),
 		queryFn: () => fetchStrategy(id).then(mapStrategyDetail),
+		enabled: id.length > 0,
 	});
 }
 

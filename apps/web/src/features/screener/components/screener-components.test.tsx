@@ -1,59 +1,40 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { marketsHandlers } from "@/mocks/handlers/markets";
-import { server } from "@/mocks/server";
-import { CompareCart } from "./compare-cart";
-import { ScreenerResults } from "./screener-results";
-import { ScreenerToolbar } from "./screener-toolbar";
+import { useScreenerStore } from "../stores/screener.store";
+import { ScreenerPage } from "./screener-page";
 
-function createQueryClient(): QueryClient {
-	return new QueryClient({
-		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
-	});
+function wrapper() {
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	return ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	);
 }
 
-function createWrapper() {
-	const qc = createQueryClient();
-	return function Wrapper({ children }: { children: ReactNode }) {
-		return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
-	};
-}
-
-beforeEach(() => server.use(...marketsHandlers));
-
-describe("ScreenerToolbar", () => {
-	it("渲染预设标签", async () => {
-		render(<ScreenerToolbar />, { wrapper: createWrapper() });
-		await expect(screen.findByText("高股息")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("低估值")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("高成长")).resolves.toBeInTheDocument();
-	});
-
-	it("显示筛选标题", async () => {
-		render(<ScreenerToolbar />, { wrapper: createWrapper() });
-		await expect(screen.findByText("筛选条件")).resolves.toBeInTheDocument();
-	});
+beforeEach(() => {
+	useScreenerStore.setState({ selectedIds: [] });
 });
 
-describe("ScreenerResults", () => {
-	it("渲染结果标题", async () => {
-		render(<ScreenerResults />, { wrapper: createWrapper() });
-		await expect(screen.findByText("筛选结果")).resolves.toBeInTheDocument();
-	});
-
-	it("显示标的结果列表", async () => {
-		render(<ScreenerResults />, { wrapper: createWrapper() });
+describe("ScreenerPage", () => {
+	it("按公开 metadata 身份字段筛选", async () => {
+		const user = userEvent.setup();
+		render(<ScreenerPage />, { wrapper: wrapper() });
 		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		await user.type(screen.getByLabelText("搜索代码或名称"), "宁德");
 		await expect(screen.findByText("宁德时代")).resolves.toBeInTheDocument();
-		await expect(screen.findByText("比亚迪")).resolves.toBeInTheDocument();
+		expect(screen.queryByText("贵州茅台")).not.toBeInTheDocument();
 	});
-});
 
-describe("CompareCart", () => {
-	it("无选中时不渲染", () => {
-		const { container } = render(<CompareCart />, { wrapper: createWrapper() });
-		expect(container.innerHTML).toBe("");
+	it("结果只显示 metadata 字段并支持身份对比", async () => {
+		const user = userEvent.setup();
+		render(<ScreenerPage />, { wrapper: wrapper() });
+		await expect(screen.findByText("600519 · SSE")).resolves.toBeInTheDocument();
+		expect(screen.queryByText(/PE /)).not.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "对比 贵州茅台" }));
+		await expect(screen.findByText(/已选 1 个标的/)).resolves.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "打开对比" }));
+		expect(screen.getByRole("dialog", { name: "身份对比" })).toHaveTextContent("已选择");
 	});
 });

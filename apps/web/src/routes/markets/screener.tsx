@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ScreenerPage } from "@/features/screener";
+import { SelectionWorkspacePage } from "@/features/selection";
 
 export const Route = createFileRoute("/markets/screener")({
-	component: ScreenerPage,
-	staticData: { title: "市场筛选" },
+	component: SelectionWorkspacePage,
+	staticData: { title: "Selection Workspace" },
 });

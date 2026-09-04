@@ -19,14 +19,14 @@ function iconChildren(domainId: DomainId): React.ReactNode {
 					<path d="M13 13l4 4" />
 				</>
 			);
-		case "trading":
+		case "portfolio":
 			return (
 				<>
 					<rect x="3" y="6" width="14" height="10" rx="1" />
 					<path d="M3 10h14M7 6v10M13 6v10" />
 				</>
 			);
-		case "platform":
+		case "system":
 			return (
 				<>
 					<rect x="3" y="3" width="6" height="6" rx="1" />

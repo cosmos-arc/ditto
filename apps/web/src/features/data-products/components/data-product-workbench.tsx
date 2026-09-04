@@ -26,8 +26,21 @@ function WorkbenchEmpty() {
 			<PanelHeader title="尚无 R2 数据产品" />
 			<PanelBody className="p-4">
 				<p className="max-w-[68ch] text-sm text-(--color-foreground-secondary)">
-					先运行 acceptance fixture 建立 19 项 hard-scope contract，再刷新真实 API。页面不会使用 prototype fixture
+					先运行 acceptance fixture 建立 22 项 hard-scope contract，再刷新真实 API。页面不会使用 prototype fixture
 					伪造就绪状态。
+				</p>
+			</PanelBody>
+		</Panel>
+	);
+}
+
+function UncertifiedDetail({ datasetId }: { readonly datasetId: string }) {
+	return (
+		<Panel className="h-full">
+			<PanelHeader title="认证证据尚未建立" subtitle={datasetId} />
+			<PanelBody className="p-(--density-panel-padding)">
+				<p className="max-w-[68ch] text-sm text-(--color-foreground-secondary)">
+					当前产品没有 active certification。覆盖、质量以及证据与许可视图保持 fail closed，不请求不存在的认证详情。
 				</p>
 			</PanelBody>
 		</Panel>
@@ -41,14 +54,18 @@ export function DataProductWorkbench() {
 	const products = productsQuery.data ?? [];
 	const activeProduct = products.find((product) => product.dataset_id === selectedId) ?? products[0];
 	const activeId = activeProduct?.dataset_id ?? "";
-	const coverageQuery = useDataProductCoverage(activeId);
-	const qualityQuery = useDataProductQuality(activeId);
-	const runsQuery = useDataProductRuns(activeId);
-	const evidenceQuery = useDataProductEvidence(activeId);
-	const licenseQuery = useDataProductLicense(activeId);
+	const hasActiveCertification = activeProduct?.active_certification_report_id != null;
+	const coverageQuery = useDataProductCoverage(activeId, undefined, view === "coverage" && hasActiveCertification);
+	const qualityQuery = useDataProductQuality(activeId, undefined, view === "quality" && hasActiveCertification);
+	const runsQuery = useDataProductRuns(activeId, undefined, view === "runs");
+	const evidenceQuery = useDataProductEvidence(activeId, undefined, view === "evidence" && hasActiveCertification);
+	const licenseQuery = useDataProductLicense(activeId, undefined, view === "evidence" && hasActiveCertification);
 
 	function detailPanel() {
 		if (!activeProduct) return <WorkbenchEmpty />;
+		if (!hasActiveCertification && (view === "coverage" || view === "quality" || view === "evidence")) {
+			return <UncertifiedDetail datasetId={activeId} />;
+		}
 		if (view === "coverage")
 			return (
 				<DataProductCoverage
@@ -100,7 +117,7 @@ export function DataProductWorkbench() {
 
 	if (productsQuery.isLoading)
 		return (
-			<div data-domain="platform" className="h-full">
+			<div data-domain="system" className="h-full">
 				<CatalogLayout
 					toolbar={toolbar}
 					main={
@@ -126,7 +143,7 @@ export function DataProductWorkbench() {
 		);
 	if (productsQuery.isError)
 		return (
-			<div data-domain="platform" className="h-full">
+			<div data-domain="system" className="h-full">
 				<CatalogLayout
 					toolbar={toolbar}
 					main={
@@ -153,13 +170,13 @@ export function DataProductWorkbench() {
 		);
 	if (products.length === 0)
 		return (
-			<div data-domain="platform" className="h-full">
+			<div data-domain="system" className="h-full">
 				<CatalogLayout toolbar={toolbar} main={<WorkbenchEmpty />} />
 			</div>
 		);
 
 	return (
-		<div data-domain="platform" className="h-full">
+		<div data-domain="system" className="h-full">
 			<CatalogLayout
 				className="pb-(--height-status-bar) max-lg:grid-cols-1 max-lg:grid-rows-[auto_minmax(16rem,1fr)_minmax(18rem,1.2fr)] max-lg:[grid-template-areas:'toolbar'_'main'_'detail']"
 				toolbar={toolbar}

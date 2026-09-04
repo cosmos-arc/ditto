@@ -1,20 +1,24 @@
 import { HttpResponse, http, type RequestHandler } from "msw";
-import { mockRegimeCurrent, mockRegimeDrivers, mockRegimeHistory, mockRegimeStrategyImpact } from "../fixtures/regime";
+import { mockRegimeDiagnostics } from "../fixtures/regime";
+
+const REQUIRED_QUERY = [
+	"snapshot_id",
+	"snapshot_manifest_hash",
+	"benchmark_instrument_id",
+	"start_date",
+	"end_date",
+	"knowledge_cutoff",
+] as const;
 
 export const regimeHandlers: RequestHandler[] = [
-	http.get("/api/research/regime/current", () => {
-		return HttpResponse.json(mockRegimeCurrent);
-	}),
-
-	http.get("/api/research/regime/drivers", () => {
-		return HttpResponse.json(mockRegimeDrivers);
-	}),
-
-	http.get("/api/research/regime/history", () => {
-		return HttpResponse.json(mockRegimeHistory);
-	}),
-
-	http.get("/api/research/regime/strategy-impact", () => {
-		return HttpResponse.json(mockRegimeStrategyImpact);
+	http.get("/api/v1/market/regime", ({ request }) => {
+		const query = new URL(request.url).searchParams;
+		if (REQUIRED_QUERY.some((key) => !query.get(key))) {
+			return HttpResponse.json(
+				{ detail: "complete exact scope is required", error_code: "REGIME_DIAGNOSTICS_INVALID" },
+				{ status: 422 },
+			);
+		}
+		return HttpResponse.json({ data: mockRegimeDiagnostics });
 	}),
 ];

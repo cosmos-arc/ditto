@@ -15,6 +15,7 @@ const DATASET_IDS = [
 	"stock_daily",
 	"etf_daily",
 	"index_daily",
+	"global_index_daily",
 	"adj_factor",
 	"fund_adj",
 	"stock_status",
@@ -27,6 +28,8 @@ const DATASET_IDS = [
 	"valuation_metrics",
 	"macro_indicators",
 	"commodity_daily",
+	"industry_classification",
+	"industry_mapping",
 ] as const;
 
 function createWrapper(): ({ children }: { readonly children: ReactNode }) => ReactNode {
@@ -138,11 +141,35 @@ beforeEach(() => {
 });
 
 describe("DataProductWorkbench", () => {
-	it("renders all 19 hard-scope products with text-based certification state", async () => {
+	it("does not request certification-only detail views for an uncertified product", async () => {
+		const requestedViews: string[] = [];
+		server.use(
+			http.get("/api/v1/data-products", () =>
+				HttpResponse.json({
+					data: overviewRows().map((product) => ({
+						...product,
+						active_certification_report_id: null,
+					})),
+				}),
+			),
+			http.get("/api/v1/data-products/:datasetId/:view", ({ params }) => {
+				requestedViews.push(String(params.view));
+				return HttpResponse.json({ detail: "not certified" }, { status: 404 });
+			}),
+		);
+
+		render(<DataProductWorkbench />, { wrapper: createWrapper() });
+
+		expect(await screen.findByText("0 / 22")).toBeInTheDocument();
+		await new Promise((resolve) => setTimeout(resolve, 25));
+		expect(requestedViews).toEqual([]);
+	});
+
+	it("renders all 22 hard-scope products with text-based certification state", async () => {
 		render(<DataProductWorkbench />, { wrapper: createWrapper() });
 
 		const catalog = await screen.findByRole("table", { name: "R2 数据产品目录" });
-		expect(within(catalog).getAllByRole("row")).toHaveLength(20);
+		expect(within(catalog).getAllByRole("row")).toHaveLength(23);
 		expect(within(catalog).getByRole("button", { name: /calendar/ })).toHaveTextContent("已认证");
 		expect(within(catalog).getByRole("button", { name: /stock_basic/ })).toHaveTextContent("待认证");
 		expect(screen.getByText("Bundle readiness: blocked")).toBeInTheDocument();

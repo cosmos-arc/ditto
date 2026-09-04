@@ -11,6 +11,7 @@ import {
 	createAgentSession,
 	createRecoverableAgentEventStream,
 	decideAgentApproval,
+	executeAgentRun,
 	fetchAgentCapability,
 	fetchDecisionOpinion,
 	getAgentApproval,
@@ -53,10 +54,11 @@ export function useAgentSessions(offset = 0) {
 	});
 }
 
-export function useAgentRuns(filters: AgentRunFilters) {
+export function useAgentRuns(filters: AgentRunFilters, enabled = true) {
 	return useQuery({
 		queryKey: agentQueryKeys.runs(filters),
 		queryFn: () => listAgentRuns(filters),
+		enabled,
 		placeholderData: keepPreviousData,
 		staleTime: STALE_TIME_MS,
 	});
@@ -114,18 +116,33 @@ export function useCreateAgentRun() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (
-			command: CreateAgentRunInput & { readonly retentionClass: "ephemeral" | "standard" | "audit" },
+			command: CreateAgentRunInput & {
+				readonly executeImmediately?: boolean;
+				readonly retentionClass: "ephemeral" | "standard" | "audit";
+			},
 		) => {
 			let sessionId = command.sessionId;
 			if (!sessionId) {
 				const session = await createAgentSession(command.retentionClass, `${command.idempotencyKey}:session`);
 				sessionId = session.sessionId;
 			}
-			return createAgentRun({ ...command, sessionId });
+			const created = await createAgentRun({ ...command, sessionId });
+			return command.executeImmediately ? executeAgentRun(created) : created;
 		},
 		onSuccess: (run) => {
 			void queryClient.invalidateQueries({ queryKey: agentQueryKeys.all });
 			queryClient.setQueryData(agentQueryKeys.run(run.runId), run);
+		},
+	});
+}
+
+export function useExecuteAgentRun() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (run: Pick<AgentRunView, "runId" | "revision">) => executeAgentRun(run),
+		onSuccess: (run) => {
+			queryClient.setQueryData(agentQueryKeys.run(run.runId), run);
+			void queryClient.invalidateQueries({ queryKey: [...agentQueryKeys.all, "runs"] });
 		},
 	});
 }

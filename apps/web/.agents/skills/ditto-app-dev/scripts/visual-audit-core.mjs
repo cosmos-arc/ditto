@@ -1,3 +1,5 @@
+import pixelmatch from "pixelmatch";
+
 export const DEFAULT_VIEWPORT = { width: 1536, height: 900 };
 export const DEFAULT_OUT_DIR = "docs/review/visual-audit";
 export const NAVIGATION_WAIT_UNTIL = "load";
@@ -8,6 +10,15 @@ export function isSuccessfulResponseStatus(status) {
 
 export function shouldIgnoreRequestFailure(resourceType, errorText) {
 	return resourceType === "script" && errorText === "net::ERR_ABORTED";
+}
+
+export function isIgnorableAssetUrl(url) {
+	if (!url) return false;
+	try {
+		return new URL(url).pathname === "/favicon.ico";
+	} catch {
+		return false;
+	}
 }
 
 export const USAGE = `Usage:
@@ -124,6 +135,87 @@ export function validateTargetKeyParity(config) {
 	return warnings;
 }
 
+export function calculatePixelDiffRatio(prototype, react, threshold = 0.2) {
+	if (prototype.width !== react.width || prototype.height !== react.height) {
+		throw new Error("Visual audit image dimensions must match");
+	}
+
+	const totalPixels = prototype.width * prototype.height;
+	if (totalPixels === 0) return 0;
+	const mismatchedPixels = pixelmatch(
+		prototype.data,
+		react.data,
+		undefined,
+		prototype.width,
+		prototype.height,
+		{ threshold },
+	);
+	return mismatchedPixels / totalPixels;
+}
+
+const FLOAT_EPSILON = 1e-9;
+
+export function evaluateVisualAudit(metrics, config) {
+	const failures = [];
+	const visualThresholds = config.visualThresholds;
+	const targetWarnings = metrics.warnings.targets ?? [];
+	const pageWarnings = [...(metrics.warnings.prototype ?? []), ...(metrics.warnings.react ?? [])];
+	const missingSelectors = pageWarnings.filter((warning) => warning.startsWith("Missing selector"));
+	const consoleErrors = pageWarnings.filter((warning) => warning.startsWith("console error:"));
+	const pageErrors = pageWarnings.filter(
+		(warning) => !warning.startsWith("Missing selector") && !warning.startsWith("console error:"),
+	);
+
+	pushCountFailure(failures, "target-mismatch", targetWarnings.length, visualThresholds.targetMismatch);
+	pushCountFailure(failures, "missing-selector", missingSelectors.length, visualThresholds.missingSelectors);
+	pushCountFailure(failures, "console-error", consoleErrors.length, visualThresholds.consoleErrors);
+	pushCountFailure(failures, "page-error", pageErrors.length, visualThresholds.pageErrors);
+
+	for (const [target, threshold] of Object.entries(config.targetThresholds ?? {})) {
+		const prototypeRect = metrics.prototype[target]?.rect;
+		const reactRect = metrics.react[target]?.rect;
+		if (!prototypeRect || !reactRect) continue;
+
+		pushGeometryFailure(failures, target, "x", Math.abs(reactRect.x - prototypeRect.x), threshold.x);
+		pushGeometryFailure(failures, target, "y", Math.abs(reactRect.y - prototypeRect.y), threshold.y);
+		pushGeometryFailure(
+			failures,
+			target,
+			"width-ratio",
+			Math.abs(reactRect.width - prototypeRect.width) / Math.max(Math.abs(prototypeRect.width), 1),
+			threshold.widthRatio,
+		);
+		pushGeometryFailure(
+			failures,
+			target,
+			"height-ratio",
+			Math.abs(reactRect.height - prototypeRect.height) / Math.max(Math.abs(prototypeRect.height), 1),
+			threshold.heightRatio,
+		);
+	}
+
+	if (typeof metrics.pixelDiffRatio !== "number") {
+		failures.push({ code: "pixel-diff-missing", actual: null, allowed: visualThresholds.pixelDiffRatio });
+	} else if (metrics.pixelDiffRatio - visualThresholds.pixelDiffRatio > FLOAT_EPSILON) {
+		failures.push({
+			code: "pixel-diff",
+			actual: metrics.pixelDiffRatio,
+			allowed: visualThresholds.pixelDiffRatio,
+		});
+	}
+
+	return { passed: failures.length === 0, failures };
+}
+
+function pushCountFailure(failures, code, actual, allowed) {
+	if (actual > allowed) failures.push({ code, actual, allowed });
+}
+
+function pushGeometryFailure(failures, target, dimension, actual, allowed) {
+	if (typeof allowed !== "number" || actual - allowed <= FLOAT_EPSILON) return;
+	failures.push({ code: `geometry-${dimension}`, target, actual, allowed });
+}
+
 /**
  * Properties to skip when reporting style diffs.
  * These are structural/layout props already covered by the Rect Deltas table,
@@ -147,6 +239,12 @@ export function renderReport(metrics) {
 	const lines = [
 		`# Visual Audit: ${metrics.name}`,
 		"",
+		...(metrics.evaluation
+			? [
+					`- Result: **${metrics.evaluation.passed ? "PASS" : "FAIL"}**`,
+					`- Pixel diff: **${formatPercent(metrics.pixelDiffRatio)}**`,
+				]
+			: []),
 		`- Route: \`${metrics.route}\``,
 		`- React URL: ${metrics.urls.react}`,
 		`- Prototype URL: ${metrics.urls.prototype}`,
@@ -158,6 +256,10 @@ export function renderReport(metrics) {
 		"| Target | Prototype | React | \u0394x | \u0394y | \u0394w | \u0394h |",
 		"| --- | --- | --- | ---: | ---: | ---: | ---: |",
 	];
+
+	if (metrics.evaluation && !metrics.evaluation.passed) {
+		lines.splice(8, 0, "## Blocking Failures", "", ...metrics.evaluation.failures.map(formatAuditFailure), "");
+	}
 
 	for (const name of names) {
 		const prototype = metrics.prototype[name];
@@ -303,6 +405,15 @@ function formatRect(rect) {
 
 function formatNumber(value) {
 	return Number.isInteger(value) ? `${value}` : value.toFixed(2);
+}
+
+function formatPercent(value) {
+	return typeof value === "number" ? `${(value * 100).toFixed(2)}%` : "missing";
+}
+
+function formatAuditFailure(failure) {
+	const target = failure.target ? ` (${failure.target})` : "";
+	return `- ${failure.code}${target}: actual ${failure.actual}, allowed ${failure.allowed}`;
 }
 
 function truncate(value) {

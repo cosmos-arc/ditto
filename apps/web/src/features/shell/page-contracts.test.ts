@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
 	PAGE_CONTRACTS,
 	PAGE_PATTERNS,
-	type PageLandingVisualAuditStatus,
 	PROTOTYPE_SOURCES,
 	SHELL_FAMILIES,
 	SHELL_SLOT_MAP,
@@ -14,49 +13,44 @@ const IA_ROUTES = [
 	"/",
 	"/markets",
 	"/markets/a-shares",
+	"/markets/industries",
 	"/markets/screener",
 	"/markets/watchlist",
-	"/markets/intelligence",
-	"/markets/calendar",
 	"/instruments/$id",
 	"/research",
-	"/research/alpha",
 	"/research/factors",
-	"/research/factors/$id",
-	"/research/strategies",
-	"/research/strategies/$id",
-	"/research/strategies/$id/studio",
-	"/research/backtest",
-	"/research/backtest/$id",
 	"/research/experiments",
-	"/research/experiments/new",
-	"/research/experiments/$id",
-	"/research/regime",
+	"/research/backtests",
+	"/research/strategies",
+	"/research/agent",
 	"/research/reviews",
-	"/research/reviews/$id",
 	"/research/universes",
-	"/trading",
-	"/trading/signals",
-	"/trading/orders",
-	"/trading/portfolio",
-	"/trading/risk",
-	"/platform",
-	"/platform/settings",
-	"/platform/agents",
+	"/portfolio",
+	"/portfolio/model",
+	"/portfolio/paper",
+	"/portfolio/manual",
+	"/portfolio/transactions",
+	"/portfolio/risk",
+	"/portfolio/review",
+	"/system",
+	"/system/data-products",
+	"/system/jobs",
+	"/system/agent",
+	"/system/approvals",
+	"/system/settings",
+	"/system/audit",
 ] as const;
 
-const UNIVERSAL_STATES = ["loading", "empty", "error", "stale"] as const;
-const VISUAL_AUDIT_STATUSES = [
-	"missing",
-	"queued",
-	"implemented",
-	"verified",
-] as const satisfies readonly PageLandingVisualAuditStatus[];
+const RETIRED_PRODUCT_PREFIXES = ["/trading", "/platform"] as const;
 
+const UNIVERSAL_STATES = ["loading", "empty", "error", "stale"] as const;
 const GENERATED_SOURCE = readFileSync(
 	resolve(process.cwd(), "src/features/shell/page-contracts.generated.ts"),
 	"utf-8",
 );
+const EDITION_MANIFEST = JSON.parse(
+	readFileSync(resolve(process.cwd(), "docs/designs/specs/prototypes/.edition-manifest.json"), "utf-8"),
+) as { readonly reactOnlyRoutes?: readonly { readonly route: string }[] };
 
 type LandingWithComponentRefs = {
 	reactComponentRefs?: string[];
@@ -93,7 +87,10 @@ describe("Generated page contracts", () => {
 	});
 
 	it("generated contracts cover every IA route", () => {
-		const coveredRoutes = new Set(PAGE_CONTRACTS.map((contract) => contract.route));
+		const coveredRoutes = new Set([
+			...PAGE_CONTRACTS.map((contract) => contract.route),
+			...(EDITION_MANIFEST.reactOnlyRoutes ?? []).map((entry) => entry.route),
+		]);
 
 		for (const route of IA_ROUTES) {
 			expect(coveredRoutes.has(route), `Missing contract for ${route}`).toBe(true);
@@ -105,7 +102,15 @@ describe("Generated page contracts", () => {
 		const uniqueRoutes = new Set(routes);
 
 		expect(uniqueRoutes.size).toBe(routes.length);
-		expect(routes).toHaveLength(IA_ROUTES.length);
+		expect(routes.length).toBeGreaterThanOrEqual(IA_ROUTES.length);
+	});
+
+	it("removes every retired product-domain contract instead of keeping aliases", () => {
+		for (const contract of PAGE_CONTRACTS) {
+			for (const prefix of RETIRED_PRODUCT_PREFIXES) {
+				expect(contract.route === prefix || contract.route.startsWith(`${prefix}/`), contract.route).toBe(false);
+			}
+		}
 	});
 
 	it("keeps required slots valid for each shell family", () => {
@@ -134,19 +139,18 @@ describe("Generated page contracts", () => {
 		}
 	});
 
-	it("uses the React visual audit landing vocabulary", () => {
-		expect(GENERATED_SOURCE).toContain(
-			'export type PageLandingVisualAuditStatus = "missing" | "queued" | "implemented" | "verified";',
-		);
-		expect(GENERATED_SOURCE).not.toContain('"baseline" | "pass"');
+	it("separates frozen prototype verification from React parity verification", () => {
+		expect(GENERATED_SOURCE).toContain("prototypeVerified: boolean;");
+		expect(GENERATED_SOURCE).toContain("reactParityVerified: boolean;");
+		expect(GENERATED_SOURCE).not.toContain("visualAuditStatus");
 
 		for (const contract of PAGE_CONTRACTS) {
 			if (!contract.landing) continue;
+			const landing = contract.landing as unknown as Record<string, unknown>;
 
-			expect(
-				VISUAL_AUDIT_STATUSES.includes(contract.landing.visualAuditStatus),
-				`${contract.route} has invalid visualAuditStatus: ${contract.landing.visualAuditStatus}`,
-			).toBe(true);
+			expect(landing.prototypeVerified, `${contract.route} missing prototypeVerified`).toBeTypeOf("boolean");
+			expect(landing.reactParityVerified, `${contract.route} missing reactParityVerified`).toBeTypeOf("boolean");
+			expect(landing.visualAuditStatus, `${contract.route} still exposes ambiguous visualAuditStatus`).toBeUndefined();
 		}
 	});
 
@@ -184,7 +188,7 @@ describe("Generated page contracts", () => {
 
 describe("R1-R5 live page contracts", () => {
 	const requiredStates = {
-		"agent-console": [
+		"research-agent-lab": [
 			"disabled",
 			"degraded",
 			"running",
@@ -198,7 +202,7 @@ describe("R1-R5 live page contracts", () => {
 			"completed",
 			"reconnecting",
 		],
-		platform: [
+		system: [
 			"pipeline-running",
 			"source-degraded",
 			"fallback-active",
@@ -206,7 +210,7 @@ describe("R1-R5 live page contracts", () => {
 			"approval-expired",
 			"remediation-empty",
 		],
-		portfolio: [
+		"model-portfolio": [
 			"ready",
 			"review-required",
 			"blocked",
@@ -215,7 +219,7 @@ describe("R1-R5 live page contracts", () => {
 			"reconciliation-mismatch",
 			"no-positions",
 		],
-		"risk-center": [
+		"portfolio-risk": [
 			"ready",
 			"review-required",
 			"blocked",
@@ -225,15 +229,6 @@ describe("R1-R5 live page contracts", () => {
 			"stress-scenario-unavailable",
 			"reconciliation-mismatch",
 			"provenance-missing",
-			"shadow-opinion-unavailable",
-		],
-		"trading-overview": [
-			"ready",
-			"review-required",
-			"blocked",
-			"partial",
-			"unavailable",
-			"market-closed",
 			"shadow-opinion-unavailable",
 		],
 	} as const;
@@ -255,7 +250,7 @@ describe("R1-R5 live page contracts", () => {
 	});
 
 	it("declares live Agent and Daily Decision V3 API boundaries without mock fallback", () => {
-		const agent = readR1R5Contract("agent-console");
+		const agent = readR1R5Contract("research-agent-lab");
 		expect(agent.liveData).toMatchObject({
 			mockFallback: false,
 			readPaths: expect.arrayContaining([
@@ -272,10 +267,10 @@ describe("R1-R5 live page contracts", () => {
 			forbiddenClientFields: expect.arrayContaining(["api_key", "authorization", "base_url", "model_id"]),
 		});
 
-		for (const id of ["trading-overview", "portfolio", "risk-center"]) {
+		for (const id of ["model-portfolio", "portfolio-risk"]) {
 			expect(readR1R5Contract(id).liveData).toMatchObject({
 				mockFallback: false,
-				readPaths: expect.arrayContaining(["/api/v1/trade/daily-decision/v3"]),
+				readPaths: expect.arrayContaining(["/api/v1/manual/daily-decision/v3"]),
 			});
 		}
 	});

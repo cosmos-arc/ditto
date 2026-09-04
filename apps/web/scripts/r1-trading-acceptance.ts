@@ -441,7 +441,7 @@ async function openLivePage(page: Page, reactBase: string, route: string, reques
 	await page.addStyleTag({ content: VISUAL_STABILITY_CSS });
 
 	const usesPrototypeMocks = await page.evaluate(async () => {
-		const runtimeModulePath = "/src/features/trading/api/runtime.ts";
+		const runtimeModulePath = "/src/features/portfolio/api/runtime.ts";
 		const runtime = await import(runtimeModulePath);
 		return runtime.shouldUsePrototypeMocks();
 	});
@@ -594,7 +594,7 @@ async function captureOverviewState(
 	const path = screenshotPath(resolve(PROJECT_ROOT, options.outDir), evidence);
 
 	try {
-		await openLivePage(page, options.reactBase, "/trading", requests);
+		await openLivePage(page, options.reactBase, "/portfolio/model", requests);
 		const workspace = page.getByRole("region", { name: "Daily Decision 工作区" });
 		await workspace.waitFor();
 		await assertViewportIntegrity(page);
@@ -645,7 +645,7 @@ async function captureOverviewState(
 
 		// Capture from a fresh navigation so focus/scroll probes cannot leave Chromium
 		// compositor state in the evidence frame.
-		await openLivePage(page, options.reactBase, "/trading", requests);
+		await openLivePage(page, options.reactBase, "/portfolio/model", requests);
 		await page.waitForTimeout(300);
 		const captureScroller =
 			evidence.viewport.name === "desktop"
@@ -686,7 +686,7 @@ async function captureOverviewState(
 
 	return {
 		...evidence,
-		route: "/trading",
+		route: "/portfolio/model",
 		screenshot: relative(PROJECT_ROOT, path),
 		assertions,
 	};
@@ -702,7 +702,7 @@ async function captureReviewFills(
 	const path = screenshotPath(resolve(PROJECT_ROOT, options.outDir), evidence);
 
 	try {
-		await openLivePage(page, options.reactBase, "/trading", requests);
+		await openLivePage(page, options.reactBase, "/portfolio/model", requests);
 		const workspace = page.getByRole("region", { name: "Daily Decision 工作区" });
 		const secondFill = workspace.getByText("fill-intent-510300-002", { exact: true });
 		await secondFill.scrollIntoViewIfNeeded();
@@ -728,7 +728,7 @@ async function captureReviewFills(
 
 	return {
 		...evidence,
-		route: "/trading",
+		route: "/portfolio/model",
 		screenshot: relative(PROJECT_ROOT, path),
 		assertions,
 	};
@@ -744,7 +744,7 @@ async function captureFillReview(
 	const path = screenshotPath(resolve(PROJECT_ROOT, options.outDir), evidence);
 
 	try {
-		await openLivePage(page, options.reactBase, "/trading/signals", requests);
+		await openLivePage(page, options.reactBase, "/portfolio/review", requests);
 		await page.getByRole("button", { name: /#510300/u }).click();
 		const trigger = page.getByRole("button", { name: "录入手工成交" });
 		await trigger.waitFor();
@@ -822,7 +822,7 @@ async function captureFillReview(
 
 	return {
 		...evidence,
-		route: "/trading/signals",
+		route: "/portfolio/review",
 		screenshot: relative(PROJECT_ROOT, path),
 		assertions,
 	};
@@ -838,7 +838,7 @@ async function captureMultiFillLedger(
 	const path = screenshotPath(resolve(PROJECT_ROOT, options.outDir), evidence);
 
 	try {
-		await openLivePage(page, options.reactBase, "/trading/orders", requests);
+		await openLivePage(page, options.reactBase, "/portfolio/transactions", requests);
 		await page.getByText("fill-intent-510300-002", { exact: true }).waitFor();
 		invariant(await page.getByText("fill-intent-510300-001", { exact: true }).isVisible(), "first ledger fill missing");
 		invariant(
@@ -865,7 +865,7 @@ async function captureMultiFillLedger(
 
 	return {
 		...evidence,
-		route: "/trading/orders",
+		route: "/portfolio/transactions",
 		screenshot: relative(PROJECT_ROOT, path),
 		assertions,
 	};
@@ -882,7 +882,7 @@ async function captureFillCorrection(
 	const originalFillId = "fill-intent-510300-001";
 
 	try {
-		await openLivePage(page, options.reactBase, "/trading/orders", requests);
+		await openLivePage(page, options.reactBase, "/portfolio/transactions", requests);
 		const trigger = page.getByRole("button", { name: `替换成交 ${originalFillId}` });
 		await trigger.click();
 		const dialog = page.getByRole("dialog", { name: "替换成交" });
@@ -939,7 +939,7 @@ async function captureFillCorrection(
 
 	return {
 		...evidence,
-		route: "/trading/orders",
+		route: "/portfolio/transactions",
 		screenshot: relative(PROJECT_ROOT, path),
 		assertions,
 	};

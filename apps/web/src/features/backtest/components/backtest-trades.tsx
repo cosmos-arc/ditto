@@ -1,50 +1,89 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useBacktestResult } from "../hooks";
+import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api-client";
+import { useBacktestTrades } from "../hooks";
 
 interface BacktestTradesProps {
 	readonly jobId: string;
 }
 
 const SIDE_VARIANT: Record<string, "trade" | "risk"> = {
-	BUY: "trade",
-	SELL: "risk",
+	buy: "trade",
+	long: "trade",
+	sell: "risk",
+	short: "risk",
 };
 
 export function BacktestTrades({ jobId }: BacktestTradesProps) {
-	const { data, isLoading, refetch } = useBacktestResult(jobId);
+	const query = useBacktestTrades(jobId);
+	if (query.isLoading) return <LoadingSkeleton variant="table" rows={8} />;
+	if (query.error) {
+		const message =
+			query.error instanceof ApiError
+				? `${query.error.status} ${query.error.errorCode ?? "BACKTEST_TRADES_ERROR"}: ${query.error.message}`
+				: query.error.message;
+		return (
+			<div className="rounded-(--radius-md) border border-(--color-led-danger) bg-(--color-surface-1) p-4 text-xs">
+				<p role="alert" className="text-(--color-led-danger)">
+					{message}
+				</p>
+				<Button size="sm" variant="outline" className="mt-3" onClick={() => void query.refetch()}>
+					重试成交记录
+				</Button>
+			</div>
+		);
+	}
+	const trades = query.data ?? [];
 
 	return (
-		<ContextSection title="交易记录" count={data?.trades.length}>
-			{isLoading && <LoadingSkeleton variant="table" rows={8} />}
-			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-				{data && (
-					<div className="space-y-1">
-						{data.trades.map((trade) => (
-							<div
-								key={trade.id}
-								className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-							>
-								<div className="flex items-center gap-3">
-									<StatusBadge variant={SIDE_VARIANT[trade.side] ?? "default"} label={trade.side} size="sm" />
-									<span className="font-medium">{trade.name}</span>
-									<span className="text-xs text-(--color-foreground-tertiary)">{trade.code}</span>
-								</div>
-								<div className="flex items-center gap-4 text-(--color-foreground-tertiary)">
-									<span>{trade.price.toFixed(2)}</span>
-									<span>{trade.shares} 股</span>
-									<span className={trade.pnl >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}>
-										{trade.pnl >= 0 ? "+" : ""}
-										{trade.pnl.toLocaleString()}
-									</span>
-								</div>
+		<section className="overflow-hidden rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1)">
+			<div className="grid grid-cols-[minmax(12rem,1.2fr)_6rem_minmax(12rem,1.4fr)_7rem_8rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+				<span>Instrument</span>
+				<span>Direction</span>
+				<span>Entry → Exit</span>
+				<span>Quantity</span>
+				<span className="text-right">PnL</span>
+			</div>
+			{trades.length === 0 ? (
+				<p className="p-4 text-xs text-(--color-foreground-tertiary)">当前运行没有成交记录。</p>
+			) : (
+				<div className="divide-y divide-(--color-border-subtle)">
+					{trades.map((trade) => (
+						<div
+							key={`${trade.instrumentId}:${trade.tradeDate}:${trade.entryDate}:${trade.exitDate}:${trade.quantity}`}
+							data-info-level="l2"
+							data-info-unit="trade-record"
+							className="grid grid-cols-[minmax(12rem,1.2fr)_6rem_minmax(12rem,1.4fr)_7rem_8rem] items-center px-3 py-3 text-xs hover:bg-(--color-interaction-hover-subtle-bg)"
+						>
+							<div>
+								<p className="font-medium text-(--color-foreground)">Instrument #{trade.instrumentId}</p>
+								<p className="font-data text-xs text-(--color-foreground-tertiary)">{trade.tradeDate}</p>
 							</div>
-						))}
-					</div>
-				)}
-			</DittoErrorBoundary>
-		</ContextSection>
+							<StatusBadge
+								variant={SIDE_VARIANT[trade.direction.toLowerCase()] ?? "default"}
+								label={trade.direction}
+								size="sm"
+							/>
+							<div className="font-data text-(--color-foreground-secondary)">
+								<p>
+									{trade.entryDate} @ {trade.entryPrice.toFixed(2)}
+								</p>
+								<p>
+									{trade.exitDate} @ {trade.exitPrice.toFixed(2)}
+								</p>
+							</div>
+							<span className="font-data">{trade.quantity.toLocaleString("en-US")}</span>
+							<span
+								className={`text-right font-data ${trade.pnl >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}`}
+							>
+								{trade.pnl >= 0 ? "+" : ""}
+								{trade.pnl.toLocaleString("en-US")}
+							</span>
+						</div>
+					))}
+				</div>
+			)}
+		</section>
 	);
 }

@@ -1,0 +1,14 @@
+{
+  "schema": "ditto.r3-research-frontend-evidence-manifest",
+  "version": 1,
+  "entries": [
+    {
+      "relative_path": "docs/review/product-beta-20260830/r3-research/report.json",
+      "sha256": "b81409f79998c22a36099031403125f826594cc436f0c16da2aab07ede254979",
+      "mode": "deterministic_fixture",
+      "generated_at": "2026-08-30T05:42:06Z",
+      "source_commit": "bfe30989b1aebb0ff891c8e97406b51bc6212ace",
+      "command": "bunx vitest run src/features/research/components/experiment-create-page.test.tsx src/features/research/components/experiment-detail-page.test.tsx src/features/research/components/experiment-run-recovery.test.tsx src/features/research/components/review-detail-page.test.tsx src/features/research/components/review-queue-page.test.tsx src/features/research/live-boundary.test.tsx"
+    }
+  ]
+}

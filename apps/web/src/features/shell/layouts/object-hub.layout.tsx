@@ -30,7 +30,7 @@ export function ObjectHubLayout({ meta, tabs, main, bottom, className }: ObjectH
 				</div>
 			)}
 			{tabs && (
-				<div className="min-h-0 overflow-hidden [grid-area:tabs]" data-slot="tabs">
+				<div className="min-h-0 overflow-hidden [grid-area:tabs]" data-slot="tabs" data-testid="object-hub-tabs">
 					{tabs}
 				</div>
 			)}

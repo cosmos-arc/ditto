@@ -1,211 +1,236 @@
+import { useState } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
-import { PrototypeOnlyEmpty } from "@/components/domain/prototype-only-empty";
+import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { CatalogInstrument } from "@/features/instruments/api/instrument-catalog";
 import { RadarLayout, StatusBar } from "@/features/shell";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
-import { shouldUsePrototypeMocks } from "@/features/trading/api/runtime";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useMarketContext } from "../hooks";
-import { CapitalRotationTable } from "./capital-rotation-table";
-import { MacroDriversBar } from "./macro-drivers-bar";
-import { MarketCardGrid } from "./market-card-grid";
+import { ErrorState } from "@/lib/error-boundary";
+import type { MarketContext } from "../api/market-evidence";
+import { useMarketCatalog, useMarketContext } from "../hooks";
+import { MarketsOverviewOverlay, type MarketsOverviewOverlayId, marketsOverviewActions } from "./market-page-overlays";
 
-/* ── Context Bar ── */
+const CONTEXT_CATEGORIES = new Set(["global", "rates", "fx", "commodity", "macro"]);
 
-function MarketContextBar() {
-	// L1: first-screen primary context metrics
-
-	const { data, isLoading, refetch } = useMarketContext();
-
-	if (isLoading) return <LoadingSkeleton variant="metric" className="h-8" />;
-
-	return (
-		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<ContextBar>
-				<ContextBarItem label="市态" value={data?.regime ?? "—"} />
-				<ContextBarSep />
-				<ContextBarItem label="波动" value={`${data?.volatility ?? "—"}%`} />
-				<ContextBarSep />
-				<ContextBarItem label="美元" value={data?.usdStrength ?? "—"} />
-				{data && data.alertCount > 0 && (
-					<>
-						<ContextBarSep />
-						<ContextBarItem label="预警" value={data.alertCount} color="down" />
-					</>
-				)}
-			</ContextBar>
-		</DittoErrorBoundary>
-	);
+function countBy(items: readonly CatalogInstrument[], field: "asset_class" | "exchange") {
+	const counts = new Map<string, number>();
+	for (const item of items) counts.set(item[field], (counts.get(item[field]) ?? 0) + 1);
+	return [...counts.entries()].sort(([left], [right]) => left.localeCompare(right));
 }
 
-/* ── Mock Data ── */
-
-const MOCK_EVENTS = [
-	{ text: "科技板块资金净流入 +12.3 亿", time: "5分钟前", severity: "up" as const },
-	{ text: "北向资金转为净卖出", time: "15分钟前", severity: "down" as const },
-	{ text: "沪深300 期权 PCR 升至 1.2", time: "30分钟前", severity: "neutral" as const },
-	{ text: "创业板指突破 2100 关口", time: "1小时前", severity: "up" as const },
-];
-
-const MOCK_FLOWS = [
-	{ sector: "科技", flow: "+12.3亿", dir: "up" as const },
-	{ sector: "消费", flow: "+5.8亿", dir: "up" as const },
-	{ sector: "金融", flow: "-3.2亿", dir: "down" as const },
-	{ sector: "医药", flow: "+2.1亿", dir: "up" as const },
-	{ sector: "新能源", flow: "-8.5亿", dir: "down" as const },
-];
-
-const MOCK_SCOPE_TEXT =
-	"A股三大指数集体收涨，沪指涨0.85%报3,285点。北向资金净流入12.3亿，科技板块领涨。市场风险偏好持续回升，建议关注动量因子表现。";
-
-const CORRELATION_LABELS = ["沪深300", "创业板", "恒生", "标普500"] as const;
-
-const CORRELATION_MATRIX: ReadonlyArray<ReadonlyArray<number>> = [
-	[1.0, 0.85, 0.62, 0.35],
-	[0.85, 1.0, 0.55, 0.28],
-	[0.62, 0.55, 1.0, 0.45],
-	[0.35, 0.28, 0.45, 1.0],
-];
-
-function correlationCellClass(value: number, rowIdx: number, colIdx: number): string {
-	if (rowIdx === colIdx) {
-		return "bg-(--color-surface-2) text-(--color-foreground-muted) ring-1 ring-(--color-border-subtle) self";
-	}
-	if (value >= 0.7) {
-		return "bg-(--color-accent)/18 text-(--color-accent) ring-1 ring-(--color-accent)/30 accent";
-	}
-	if (value >= 0.4) {
-		return "bg-(--color-accent)/8 text-(--color-foreground-secondary) moderate";
-	}
-	return "bg-(--color-surface-1) text-(--color-foreground-muted) muted";
+function statusLabel(status?: MarketContext["status"]): string {
+	if (status === "ready") return "Ready";
+	if (status === "degraded") return "Degraded";
+	if (status === "blocked") return "Blocked";
+	return "Loading";
 }
 
-/* ── Scope Strip (extracted to own slot) ── */
-
-function ScopeStrip() {
-	return (
-		<div
-			data-slot="scope-strip"
-			data-testid="scope-strip"
-			data-info-level="l1"
-			data-info-unit="scope-strip"
-			className="rounded-(--radius-sm) border-l-2 border-l-(--color-accent) bg-(--color-surface-1) px-3 py-2"
-		>
-			<span className="mb-1 block text-xs font-medium uppercase tracking-wide text-(--color-foreground-tertiary)">
-				今日解读
-			</span>
-			<p className="text-base leading-relaxed text-(--color-foreground-secondary)">{MOCK_SCOPE_TEXT}</p>
-		</div>
-	);
+function regimeLabel(label?: MarketContext["regime_label"]): string {
+	if (label === "risk_on") return "Risk On";
+	if (label === "risk_off") return "Risk Off";
+	if (label === "balanced") return "Balanced";
+	return "No conclusion";
 }
 
-/* ── Cross-Market Matrix ── */
+function formatMetric(value: number, unit: string): string {
+	if (unit === "ratio") return `${(value * 100).toFixed(2)}%`;
+	return `${value.toFixed(3)} ${unit}`;
+}
 
-function CrossMarketMatrix() {
+function contextSummary(context?: MarketContext): string {
+	if (!context) return "正在解析已认证数据产品与 exact source snapshots。";
+	if (context.status === "blocked") {
+		return `缺少 ${context.missing_inputs.length} 项核心输入，系统不会输出伪完整市场结论。`;
+	}
+	if (context.status === "degraded") {
+		return "结论可用但存在缺失、冲突或不确定项；下游决策应降低置信度。";
+	}
+	return "结论由版本化公式计算，并保留 driver、影响链与 immutable evidence。";
+}
+
+function RegimePanel({ context }: { readonly context: MarketContext }) {
 	return (
-		<ContextSection title="跨市场相关性" data-info-level="l2" data-info-unit="cross-market-matrix">
-			<div data-slot="cross-market-matrix" data-testid="cross-market-matrix" className="overflow-x-auto pb-2">
-				<div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-					<div className="text-xs text-(--color-foreground-tertiary)">
-						强相关焦点 <span className="font-data text-(--color-accent)">沪深300/创业板 0.85</span>
+		<Panel data-info-level="l1" data-info-unit="market-regime">
+			<PanelHeader title="Regime" subtitle={context.feature_version} />
+			<PanelBody className="p-4">
+				<div className="flex items-end justify-between gap-4">
+					<div>
+						<p className="text-xs uppercase tracking-[0.14em] text-(--color-foreground-tertiary)">Conclusion</p>
+						<p className="mt-1 text-2xl font-semibold text-(--color-foreground)">{regimeLabel(context.regime_label)}</p>
 					</div>
-					<div className="flex items-center gap-1 font-data text-xs text-(--color-foreground-tertiary)">
-						<span>0</span>
-						<div className="h-1.5 w-20 rounded-full bg-linear-to-r from-(--color-surface-1) via-(--color-accent)/12 to-(--color-accent)/45" />
-						<span>+1</span>
+					<div className="text-right">
+						<p className="font-data text-2xl tabular-nums text-(--color-foreground)">
+							{context.regime_score === null ? "—" : context.regime_score.toFixed(3)}
+						</p>
+						<p className="text-xs text-(--color-foreground-tertiary)">normalized score</p>
 					</div>
 				</div>
-				<table className="w-full table-fixed border-collapse text-sm">
-					<caption className="sr-only">跨市场相关性矩阵，颜色越亮表示正相关越强</caption>
-					<thead>
-						<tr>
-							<th className="p-1.5 text-left font-medium text-(--color-foreground-muted)" aria-label="行标签" />
-							{CORRELATION_LABELS.map((label) => (
-								<th key={label} className="p-1.5 text-center font-medium text-(--color-foreground-tertiary)">
-									{label}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{CORRELATION_MATRIX.map((row, rowIdx) => (
-							<tr key={CORRELATION_LABELS[rowIdx]}>
-								<td className="p-1.5 font-medium text-(--color-foreground-tertiary)">{CORRELATION_LABELS[rowIdx]}</td>
-								{row.map((value, colIdx) => (
-									<td
-										key={`${CORRELATION_LABELS[rowIdx]}-${CORRELATION_LABELS[colIdx]}`}
-										data-testid={`corr-${rowIdx}-${colIdx}`}
-										className={`rounded-(--radius-sm) p-1.5 text-center font-data tabular-nums transition-transform hover:scale-105 ${correlationCellClass(value, rowIdx, colIdx)}`}
-										aria-label={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]}: 相关系数 ${value.toFixed(2)}`}
-										title={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]} · 相关系数 ${value.toFixed(2)}`}
-									>
-										{value.toFixed(2)}
-									</td>
-								))}
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-		</ContextSection>
+				<div className="mt-4 border-t border-(--color-border-subtle) pt-3">
+					<p className="text-xs text-(--color-foreground-tertiary)">{contextSummary(context)}</p>
+				</div>
+			</PanelBody>
+		</Panel>
 	);
 }
 
-/* ── Right Rail ── */
-
-function MarketRightRail() {
+function DriverPanel({ context }: { readonly context: MarketContext }) {
 	return (
-		<div className="flex flex-col">
-			<Panel data-info-level="l1" data-info-unit="market-events">
-				<PanelHeader
-					title="市场事件"
-					actions={
-						<button
-							type="button"
-							className="text-xs text-(--color-foreground-secondary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg) rounded-(--radius-sm) px-1.5 py-0.5"
-						>
-							查看全部 →
-						</button>
-					}
-				/>
-				<PanelBody className="p-3">
-					<div className="flex flex-col gap-1">
-						{MOCK_EVENTS.map((event) => (
+		<Panel data-info-level="l2" data-info-unit="regime-drivers">
+			<PanelHeader title="Driver attribution" count={context.drivers.length} />
+			<PanelBody className="p-3">
+				{context.drivers.length === 0 ? (
+					<p className="text-sm text-(--color-foreground-tertiary)">Blocked：没有可归因 driver。</p>
+				) : (
+					<div className="space-y-1.5">
+						{context.drivers.map((driver) => (
 							<div
-								key={`${event.text}-${event.time}`}
-								data-info-level="l3"
-								data-info-unit="market-event-item"
-								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+								key={driver.name}
+								className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-(--radius-sm) bg-(--color-surface-muted) px-3 py-2"
 							>
+								<div>
+									<p className="font-code text-xs text-(--color-foreground)">{driver.name}</p>
+									<p className="text-xs text-(--color-foreground-tertiary)">{driver.category}</p>
+								</div>
 								<span
-									className={`inline-block size-1.5 shrink-0 rounded-full ${event.severity === "up" ? "bg-(--color-market-up-fg)" : event.severity === "down" ? "bg-(--color-market-down-fg)" : "bg-(--color-foreground-muted)"}`}
-								/>
-								<span className="min-w-0 flex-1 truncate text-xs text-(--color-foreground)">{event.text}</span>
-								<span className="shrink-0 font-data text-xs tabular-nums text-(--color-foreground-muted)">
-									{event.time}
+									className={
+										driver.direction === "supportive"
+											? "font-data text-sm text-(--color-accent)"
+											: driver.direction === "pressuring"
+												? "font-data text-sm text-(--color-foreground-secondary)"
+												: "font-data text-sm text-(--color-foreground-secondary)"
+									}
+								>
+									{driver.contribution >= 0 ? "+" : ""}
+									{driver.contribution.toFixed(3)}
 								</span>
 							</div>
 						))}
 					</div>
+				)}
+			</PanelBody>
+		</Panel>
+	);
+}
+
+function FactsPanel({ context }: { readonly context: MarketContext }) {
+	const metrics = context.metrics.filter((metric) => CONTEXT_CATEGORIES.has(metric.category));
+	return (
+		<Panel data-info-level="l2" data-info-unit="macro-cross-market">
+			<PanelHeader title="Macro & Cross-Market" count={metrics.length} />
+			<PanelBody>
+				{metrics.length === 0 ? (
+					<p className="p-4 text-sm text-(--color-foreground-tertiary)">没有通过 PIT cutoff 的宏观或跨市场事实。</p>
+				) : (
+					<div className="divide-y divide-(--color-border-subtle)">
+						{metrics.map((metric) => (
+							<div key={`${metric.category}:${metric.name}`} className="grid grid-cols-[1fr_auto] gap-4 px-4 py-3">
+								<div className="min-w-0">
+									<p className="font-code text-xs text-(--color-foreground)">{metric.name}</p>
+									<p className="mt-0.5 truncate text-xs text-(--color-foreground-tertiary)">{metric.evidence_ref}</p>
+								</div>
+								<div className="text-right">
+									<p className="font-data text-sm tabular-nums text-(--color-foreground)">
+										{formatMetric(metric.value, metric.unit)}
+									</p>
+									<p className="text-xs text-(--color-foreground-tertiary)">
+										{metric.category} · {metric.trend} · {metric.freshness}
+									</p>
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+			</PanelBody>
+		</Panel>
+	);
+}
+
+function ImpactPanel({ context }: { readonly context: MarketContext }) {
+	return (
+		<Panel data-info-level="l2" data-info-unit="market-impact-chain">
+			<PanelHeader title="Downstream impact chain" count={context.impacts.length} />
+			<PanelBody>
+				<div className="divide-y divide-(--color-border-subtle)">
+					{context.impacts.map((impact) => (
+						<div
+							key={`${impact.target_domain}:${impact.target}`}
+							className="grid grid-cols-[6rem_1fr_auto] gap-3 px-4 py-3 text-sm"
+						>
+							<span className="font-code text-xs uppercase text-(--color-foreground-tertiary)">
+								{impact.target_domain}
+							</span>
+							<span className="text-(--color-foreground)">{impact.target}</span>
+							<span className="text-xs text-(--color-foreground-secondary)">
+								{impact.direction} · {impact.rationale_driver}
+							</span>
+						</div>
+					))}
+					{context.impacts.length === 0 && (
+						<p className="p-4 text-sm text-(--color-foreground-tertiary)">Blocked 状态不生成下游影响。</p>
+					)}
+				</div>
+			</PanelBody>
+		</Panel>
+	);
+}
+
+function EvidenceRail({
+	context,
+	exchangeCounts,
+}: {
+	readonly context?: MarketContext;
+	readonly exchangeCounts: [string, number][];
+}) {
+	return (
+		<div className="space-y-3 p-3">
+			<Panel data-info-level="l1" data-info-unit="market-context-evidence">
+				<PanelHeader title="PIT evidence" subtitle={context?.feature_version} />
+				<PanelBody className="p-3">
+					{context ? (
+						<div className="space-y-3">
+							<div>
+								<p className="text-xs text-(--color-foreground-tertiary)">as_of / knowledge / publication</p>
+								<p className="mt-1 break-all font-code text-xs text-(--color-foreground-secondary)">{context.as_of}</p>
+								<p className="break-all font-code text-xs text-(--color-foreground-tertiary)">
+									{context.knowledge_cutoff}
+								</p>
+								<p className="break-all font-code text-xs text-(--color-foreground-tertiary)">
+									{context.publication_cutoff}
+								</p>
+							</div>
+							<div className="border-t border-(--color-border-subtle) pt-3">
+								<p className="text-xs text-(--color-foreground-tertiary)">Exact source snapshots</p>
+								<ul className="mt-1 space-y-1">
+									{context.source_snapshot_ids.map((snapshotId) => (
+										<li key={snapshotId} className="break-all font-code text-xs text-(--color-foreground-secondary)">
+											{snapshotId}
+										</li>
+									))}
+								</ul>
+							</div>
+							{context.uncertainties.length > 0 && (
+								<div className="border-t border-(--color-border-subtle) pt-3">
+									<p className="text-xs text-(--color-risk-warning)">{context.uncertainties.join(" · ")}</p>
+								</div>
+							)}
+						</div>
+					) : (
+						<p className="text-sm text-(--color-foreground-tertiary)">等待 certification evidence。</p>
+					)}
 				</PanelBody>
 			</Panel>
-			<Panel data-info-level="l1" data-info-unit="capital-flows">
-				<PanelHeader title="资金流向" />
+			<Panel data-info-level="l2" data-info-unit="exchange-coverage">
+				<PanelHeader title="交易所覆盖" subtitle="metadata identities" />
 				<PanelBody className="p-3">
-					<div className="flex flex-col gap-1">
-						{MOCK_FLOWS.map((item) => (
+					<div className="space-y-2">
+						{exchangeCounts.map(([exchange, count]) => (
 							<div
-								key={item.sector}
-								className="flex items-center justify-between rounded-(--radius-sm) px-2 py-1.5 transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+								key={exchange}
+								className="flex items-center justify-between rounded-md bg-(--color-surface-muted) px-3 py-2"
 							>
-								<span className="text-xs text-(--color-foreground-secondary)">{item.sector}</span>
-								<span
-									className={`font-data text-xs tabular-nums ${item.dir === "up" ? "text-(--color-market-up-fg)" : "text-(--color-market-down-fg)"}`}
-								>
-									{item.flow}
-								</span>
+								<span className="font-mono text-sm">{exchange}</span>
+								<span className="font-data text-sm text-(--color-foreground-tertiary)">{count}</span>
 							</div>
 						))}
 					</div>
@@ -215,48 +240,138 @@ function MarketRightRail() {
 	);
 }
 
-/* ── Page ── */
-
 export function MarketsPage() {
-	if (!shouldUsePrototypeMocks()) {
-		return (
-			<>
-				<PrototypeOnlyEmpty domain="Markets" />
-				<StatusBar />
-			</>
-		);
-	}
+	const [activeOverlay, setActiveOverlay] = useState<MarketsOverviewOverlayId | null>(null);
+	const catalogQuery = useMarketCatalog({ limit: 100 });
+	const contextQuery = useMarketContext();
+	const items = catalogQuery.data?.items ?? [];
+	const exchangeCounts = countBy(items, "exchange");
+	const assetCounts = countBy(items, "asset_class");
+	const context = contextQuery.data;
 
 	return (
 		<>
 			<RadarLayout
 				className="pb-(--height-status-bar)"
-				contextBar={<MarketContextBar />}
-				scopeStrip={<ScopeStrip />}
-				main={
-					<div className="flex flex-col gap-(--section-gap) p-(--density-panel-padding)">
-						<MarketCardGrid />
-						<Tabs defaultValue="macro" className="flex flex-col gap-(--section-gap)">
-							<TabsList>
-								<TabsTrigger value="macro">宏观驱动</TabsTrigger>
-								<TabsTrigger value="rotation">资金轮动</TabsTrigger>
-								<TabsTrigger value="correlation">跨市场相关性</TabsTrigger>
-							</TabsList>
-							<TabsContent value="macro">
-								<MacroDriversBar />
-							</TabsContent>
-							<TabsContent value="rotation">
-								<CapitalRotationTable />
-							</TabsContent>
-							<TabsContent value="correlation">
-								<CrossMarketMatrix />
-							</TabsContent>
-						</Tabs>
+				contextBar={
+					<ContextBar>
+						<ContextBarItem
+							label="市场状态"
+							value={statusLabel(context?.status)}
+							color="muted"
+							className={
+								context?.status === "ready"
+									? "[&>span:last-child]:text-(--color-system-healthy)"
+									: context?.status === "blocked"
+										? "[&>span:last-child]:text-(--color-system-down)"
+										: context?.status === "degraded"
+											? "[&>span:last-child]:text-(--color-risk-warning)"
+											: undefined
+							}
+						/>
+						<ContextBarSep />
+						<ContextBarItem label="Regime" value={regimeLabel(context?.regime_label)} />
+						<ContextBarSep />
+						<ContextBarItem label="Snapshots" value={context?.source_snapshot_ids.length ?? 0} />
+						<ContextBarSep />
+						<ContextBarItem
+							label="标的覆盖"
+							value={catalogQuery.data ? `${catalogQuery.data.total} 个标的` : "加载中"}
+						/>
+					</ContextBar>
+				}
+				scopeStrip={
+					<div
+						data-info-level="l1"
+						data-info-unit="market-boundary"
+						className="border-l-2 border-l-(--color-accent) bg-(--color-surface-1) px-4 py-2"
+					>
+						<div className="flex flex-wrap items-center gap-3">
+							<div className="min-w-0 flex-1">
+								<p className="text-sm font-medium text-(--color-foreground)">市场覆盖</p>
+								<p className="mt-0.5 text-xs text-(--color-foreground-tertiary)">
+									{contextSummary(context)} 当前仍未加载价格、涨跌、资金流或相关性，不会把缺失事实包装成市场解读。
+								</p>
+							</div>
+							<PageActionBar ariaLabel="市场页面操作" actions={marketsOverviewActions} onOpen={setActiveOverlay} />
+						</div>
 					</div>
 				}
-				rightRail={<MarketRightRail />}
+				main={
+					<div className="flex min-h-[42rem] flex-col gap-(--section-gap) p-(--density-panel-padding)">
+						{contextQuery.isLoading && <LoadingSkeleton variant="table" rows={5} />}
+						{contextQuery.isError && (
+							<Panel data-info-level="l1" data-info-unit="market-context-error">
+								<PanelHeader title="MarketContext blocked" />
+								<PanelBody className="p-4">
+									<p role="alert" className="text-sm text-(--color-system-down)">
+										无法解析已认证 exact source snapshots；没有回退到 latest 数据。
+									</p>
+								</PanelBody>
+							</Panel>
+						)}
+						{context && (
+							<>
+								<div className="grid gap-(--section-gap) xl:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
+									<RegimePanel context={context} />
+									<DriverPanel context={context} />
+								</div>
+								<FactsPanel context={context} />
+								<ImpactPanel context={context} />
+							</>
+						)}
+						{catalogQuery.isLoading && <LoadingSkeleton variant="table" rows={5} />}
+						{catalogQuery.isError && <ErrorState onRetry={() => void catalogQuery.refetch()} />}
+						{catalogQuery.data && (
+							<ContextSection
+								title="标的身份目录"
+								count={catalogQuery.data.total}
+								data-info-level="l3"
+								data-info-unit="instrument-directory"
+							>
+								<div className="overflow-x-auto">
+									<table className="w-full text-sm">
+										<thead className="text-left text-xs text-(--color-foreground-tertiary)">
+											<tr>
+												{["名称", "代码", "资产类别", "交易所", "状态"].map((label) => (
+													<th key={label} className="px-3 py-2 font-medium">
+														{label}
+													</th>
+												))}
+											</tr>
+										</thead>
+										<tbody>
+											{items.map((item) => (
+												<tr
+													key={item.instrument_id}
+													data-info-level="l3"
+													data-info-unit="instrument-row"
+													className="border-t border-(--color-border-subtle)"
+												>
+													<td className="px-3 py-2 font-medium">{item.name}</td>
+													<td className="px-3 py-2 font-mono text-(--color-foreground-secondary)">{item.ticker}</td>
+													<td className="px-3 py-2">{item.asset_class}</td>
+													<td className="px-3 py-2">{item.exchange}</td>
+													<td className="px-3 py-2">{item.is_active ? "活跃" : "非活跃"}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</ContextSection>
+						)}
+					</div>
+				}
+				rightRail={<EvidenceRail context={context} exchangeCounts={exchangeCounts} />}
 			/>
 			<StatusBar />
+			<MarketsOverviewOverlay
+				active={activeOverlay}
+				assetSummary={assetCounts.map(([name, count]) => `${name} ${count}`).join(" · ")}
+				exchangeSummary={exchangeCounts.map(([name, count]) => `${name} ${count}`).join(" · ")}
+				onClose={() => setActiveOverlay(null)}
+				total={catalogQuery.data?.total ?? 0}
+			/>
 		</>
 	);
 }

@@ -1,52 +1,74 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useMarketCalendar } from "../hooks";
+import { ContextSection } from "@/components/domain/context-section";
+import { useDataProductCoverage } from "@/features/data-products";
+import { ErrorState } from "@/lib/error-boundary";
 
 export function MarketCalendarList() {
-	const { data, isLoading, refetch } = useMarketCalendar();
+	const query = useDataProductCoverage("calendar");
 
-	if (isLoading) {
-		return (
-			<div data-info-level="l1" data-info-unit="calendar-content" className="flex flex-col gap-1 p-4">
-				<h2
-					data-info-level="l1"
-					data-info-unit="calendar-title"
-					className="text-lg font-medium text-(--color-foreground) mb-3"
-				>
-					市场日历
-				</h2>
-				<LoadingSkeleton variant="table" rows={8} columns={4} />
-			</div>
-		);
-	}
+	if (query.isLoading) return <LoadingSkeleton variant="table" rows={6} />;
+	if (query.isError) return <ErrorState onRetry={() => void query.refetch()} />;
+	if (!query.data) return null;
+
+	const coverage = query.data;
+	const milestones = [
+		["原始覆盖起点", coverage.raw_from ?? "未报告"],
+		["完整覆盖起点", coverage.complete_from ?? "未报告"],
+		["认证覆盖起点", coverage.certified_from ?? "未报告"],
+	] as const;
 
 	return (
-		<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
-			<div data-info-level="l1" data-info-unit="calendar-content" className="flex flex-col gap-1 p-4">
-				<h2 className="text-lg font-medium text-(--color-foreground) mb-3">市场日历</h2>
-				{data?.items.map((item) => (
-					<div
-						key={`${item.date}-${item.time}-${item.country}-${item.title}`}
-						className="flex items-center justify-between gap-3 py-2 border-b border-(--color-border) last:border-b-0"
-					>
-						<div className="flex flex-col gap-0.5 min-w-0">
-							<span className="text-sm text-(--color-foreground) truncate">{item.title}</span>
-							<span className="text-xs text-(--color-foreground-tertiary)">
-								{item.date} {item.time} · {item.country} · {item.type}
+		<div data-info-level="l1" data-info-unit="calendar-content" className="flex flex-col gap-4 p-4">
+			<ContextSection title="交易日历覆盖" data-info-level="l2" data-info-unit="coverage-milestones">
+				<div className="grid gap-3 sm:grid-cols-3">
+					{milestones.map(([label, value]) => (
+						<div
+							key={label}
+							data-info-level="l3"
+							data-info-unit="coverage-milestone"
+							className="rounded-lg border border-(--color-border-subtle) bg-(--color-surface-1) p-4"
+						>
+							<p className="text-xs text-(--color-foreground-tertiary)">{label}</p>
+							<p className="mt-2 font-mono text-base font-semibold">{value}</p>
+						</div>
+					))}
+				</div>
+			</ContextSection>
+			<ContextSection title="分区完整性" data-info-level="l2" data-info-unit="partition-integrity">
+				<div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.6fr)]">
+					<div className="rounded-lg border border-(--color-border-subtle) bg-(--color-surface-1) p-4">
+						<div className="flex items-end justify-between">
+							<div>
+								<p className="text-xs text-(--color-foreground-tertiary)">实际 / 预期分区</p>
+								<p className="mt-1 font-data text-2xl font-semibold">
+									{coverage.actual_partitions.toLocaleString()} / {coverage.expected_partitions.toLocaleString()}
+								</p>
+							</div>
+							<span
+								className={
+									coverage.unapproved_gaps.length > 0 ? "text-(--color-risk-warning)" : "text-(--color-system-healthy)"
+								}
+							>
+								{coverage.unapproved_gaps.length > 0
+									? `存在 ${coverage.unapproved_gaps.length} 个未批准缺口`
+									: "无未批准缺口"}
 							</span>
 						</div>
-						<span
-							className={`text-xs font-medium shrink-0 px-2 py-0.5 rounded-full ${
-								item.importance === "high"
-									? "bg-(--color-risk-warning)/10 text-(--color-risk-warning)"
-									: "bg-(--color-surface-2) text-(--color-foreground-tertiary)"
-							}`}
-						>
-							{item.importance === "high" ? "重要" : "一般"}
-						</span>
 					</div>
-				))}
-			</div>
-		</DittoErrorBoundary>
+					<div className="rounded-lg border border-(--color-border-subtle) bg-(--color-surface-1) p-4">
+						<p className="text-xs text-(--color-foreground-tertiary)">阻断分区</p>
+						{coverage.unapproved_gaps.length === 0 ? (
+							<p className="mt-2 text-sm">无</p>
+						) : (
+							<ul className="mt-2 space-y-1 font-mono text-sm text-(--color-risk-warning)">
+								{coverage.unapproved_gaps.map((gap) => (
+									<li key={gap}>{gap}</li>
+								))}
+							</ul>
+						)}
+					</div>
+				</div>
+			</ContextSection>
+		</div>
 	);
 }

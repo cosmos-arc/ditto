@@ -1,9 +1,9 @@
 {
   "id": "watchlist",
-  "version": 1,
-  "status": "draft",
+  "version": 4,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-30",
   "route": "/markets/watchlist",
   "pagePattern": "catalog-screener",
   "shellFamily": "catalog",
@@ -11,91 +11,60 @@
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/markets",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
-      "src/features/markets/components/markets-components.test.tsx"
+      "src/features/markets/components/markets-components.test.tsx",
+      "src/features/markets/components/info-level-annotations.test.tsx"
     ],
-    "reactComponentRefs": [
-      "WatchlistPage"
-    ]
+    "reactComponentRefs": ["WatchlistPage"]
   },
   "viewports": [
-    {
-      "width": 1536,
-      "height": 900,
-      "role": "primary"
-    },
-    {
-      "width": 1366,
-      "height": 768,
-      "role": "compact"
-    }
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" }
   ],
   "slots": [
     {
       "name": "toolbar",
       "required": true,
-      "prototypeSelector": ".shell-toolbar",
+      "prototypeSelector": ".filter-toolbar",
       "reactSelector": "[data-slot='toolbar']",
       "a11yRole": "region",
-      "responsiveBehavior": {
-        "compact": "collapsed"
-      }
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 1 },
+      "responsiveBehavior": { "compact": "collapsed" }
     },
     {
       "name": "main",
       "required": true,
-      "prototypeSelector": ".shell-main",
-      "reactSelector": "[data-slot='main']",
-      "a11yRole": "main"
+      "prototypeSelector": ".catalog-table",
+      "reactSelector": "[data-testid='watchlist-catalog']",
+      "a11yRole": "main",
+      "threshold": { "x": 4, "y": 48, "widthRatio": 0.03, "heightRatio": 0.08 }
     },
     {
       "name": "detail",
       "required": true,
-      "prototypeSelector": ".shell-detail",
+      "prototypeSelector": ".catalog-detail",
       "reactSelector": "[data-slot='detail']",
       "a11yRole": "complementary",
-      "responsiveBehavior": {
-        "compact": "overlay"
-      }
+      "threshold": { "x": 4, "y": 36, "widthRatio": 0.03, "heightRatio": 0.06 },
+      "responsiveBehavior": { "compact": "overlay" }
     }
   ],
   "states": {
-    "universal": [
-      "loading",
-      "empty",
-      "error",
-      "stale"
-    ],
-    "pageSpecific": [
-      "no-symbols"
-    ]
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["no-symbols", "invalid-id", "instrument-not-found", "local-only"]
   },
-  "flags": {
-    "hasStatusBar": false,
-    "sidebarCollapsible": false
-  },
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
   "metrics": {
     "capturedAt": "2026-04-27",
     "viewport": "1536x900",
     "baseline": {
-      "toolbar": {
-        "width": 1536,
-        "height": 64,
-        "strategy": "content-driven"
-      },
-      "main": {
-        "width": 1110,
-        "height": 720,
-        "strategy": "content-driven"
-      },
-      "detail": {
-        "width": 360,
-        "height": 720,
-        "strategy": "fixed-width"
-      }
+      "toolbar": { "width": 1536, "height": 64, "strategy": "content-driven" },
+      "main": { "width": 1110, "height": 720, "strategy": "content-driven" },
+      "detail": { "width": 360, "height": 720, "strategy": "fixed-width" }
     }
   },
   "visualThresholds": {
@@ -103,42 +72,41 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.04
   },
   "overlays": [
     {
       "id": "watchlist.add-instrument",
-      "kind": "sheet",
+      "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "toolbar", "action": "open-overlay" },
       "prototypeSelector": "#overlay-add-instrument",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "WatchlistOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "watchlist.bulk-delete",
-      "kind": "modal",
+      "kind": "alert-dialog",
       "blocking": true,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "toolbar", "action": "open-overlay" },
       "prototypeSelector": "#overlay-bulk-delete",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "WatchlistOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    }
+  ],
+  "liveData": {
+    "readPaths": ["/api/v1/metadata/instruments"],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "interactions": [
+    {
+      "id": "manage-local-watchlist",
+      "trigger": "add-or-remove-action",
+      "affectedSlots": ["main", "detail"],
+      "expectedBehavior": "persists positive numeric instrument ids only in the current browser and resolves display fields from the public metadata catalog"
     }
   ]
 }

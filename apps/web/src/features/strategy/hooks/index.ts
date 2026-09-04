@@ -1,7 +1,9 @@
+export { useCreateStrategy } from "./use-create-strategy";
 export { useNodeDescriptors } from "./use-node-descriptors";
 export { useStrategies } from "./use-strategies";
 export { useStrategy } from "./use-strategy";
 export { useStrategyActive } from "./use-strategy-active";
+export { useStrategyAuthorPreview } from "./use-strategy-author-preview";
 export { useStrategyEvents } from "./use-strategy-events";
 export { useStrategySave } from "./use-strategy-save";
 export { useStrategyValidation } from "./use-strategy-validation";

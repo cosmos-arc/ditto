@@ -13,11 +13,11 @@ export interface ResearchSection {
  */
 export const RESEARCH_SECTIONS: readonly ResearchSection[] = [
 	{ label: "总览", path: "/research", exact: true },
-	{ label: "因子", path: "/research/factors" },
-	{ label: "策略", path: "/research/strategies" },
-	{ label: "实验", path: "/research/experiments" },
-	{ label: "审查", path: "/research/reviews" },
-	{ label: "回测", path: "/research/backtest" },
-	{ label: "Regime", path: "/research/regime" },
 	{ label: "股票池", path: "/research/universes" },
+	{ label: "因子", path: "/research/factors" },
+	{ label: "实验", path: "/research/experiments" },
+	{ label: "回测", path: "/research/backtests" },
+	{ label: "策略", path: "/research/strategies" },
+	{ label: "Agent Lab", path: "/research/agent" },
+	{ label: "审查", path: "/research/reviews" },
 ] as const;

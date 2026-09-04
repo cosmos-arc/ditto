@@ -3,9 +3,9 @@ export type {
 	DataProductCoverage,
 	DataProductEvidence,
 	DataProductLicense,
-	DataProductOverview,
 	DataProductQuality,
 	DataProductRun,
+	DataProductView,
 } from "./api";
 export { DEFAULT_DATA_PRODUCT_PROFILE, dataProductKeys } from "./api";
 export { DataProductWorkbench } from "./components";

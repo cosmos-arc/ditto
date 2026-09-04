@@ -22,7 +22,13 @@ export function DataHealthSection() {
 	const { data, isLoading } = useDataHealth();
 
 	return (
-		<ContextSection title="数据健康" defaultOpen data-info-level="l1" data-info-unit="data-health">
+		<ContextSection
+			title="数据健康"
+			defaultOpen
+			data-info-level="l1"
+			data-info-unit="data-health"
+			className="[&_[data-slot=context-section-header]>span:first-child]:ml-2 [&_[data-slot=context-section-header]>span:first-child]:pl-2.5"
+		>
 			{isLoading && <LoadingSkeleton variant="table" rows={4} />}
 			{data && (
 				<div className="flex flex-col gap-1">

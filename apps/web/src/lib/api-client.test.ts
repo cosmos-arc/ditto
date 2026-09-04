@@ -8,14 +8,14 @@ afterEach(() => {
 describe("withQueryParams", () => {
 	it("appends scalar query params and skips empty values", () => {
 		expect(
-			withQueryParams("/platform/pipelines", {
+			withQueryParams("/system/pipelines", {
 				page: 2,
 				pageSize: 20,
 				search: "",
 				enabled: true,
 				empty: undefined,
 			}),
-		).toBe("/platform/pipelines?page=2&pageSize=20&search=&enabled=true");
+		).toBe("/system/pipelines?page=2&pageSize=20&search=&enabled=true");
 	});
 
 	it("serializes structured params for GET-backed filters", () => {
@@ -38,11 +38,11 @@ describe("apiClient", () => {
 		);
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(apiClient.get<{ readonly status: string }>("/v1/trade/daily-decision")).resolves.toEqual({
+		await expect(apiClient.get<{ readonly status: string }>("/v1/manual/daily-decision")).resolves.toEqual({
 			status: "ready",
 		});
 
-		expect(fetchMock).toHaveBeenCalledWith("/api/v1/trade/daily-decision", expect.objectContaining({ method: "GET" }));
+		expect(fetchMock).toHaveBeenCalledWith("/api/v1/manual/daily-decision", expect.objectContaining({ method: "GET" }));
 	});
 
 	it("preserves the response envelope when pagination is part of the consumer contract", async () => {
@@ -86,7 +86,7 @@ describe("apiClient", () => {
 		);
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(apiClient.get("/v1/trade/intents")).rejects.toMatchObject({
+		await expect(apiClient.get("/v1/manual/intents")).rejects.toMatchObject({
 			name: "ApiError",
 			status: 409,
 			message: "invalid transition",

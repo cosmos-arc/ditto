@@ -124,7 +124,7 @@ export function AgentAuthorPreview({ approval }: { readonly approval: AgentAppro
 				审批后必须从{" "}
 				<a
 					className="font-data text-(--color-accent) hover:underline"
-					href={`/platform/agents?tab=runs&selected=${encodeURIComponent(approval.runId)}`}
+					href={`/research/agent?tab=runs&selected=${encodeURIComponent(approval.runId)}`}
 				>
 					Run {approval.runId}
 				</a>{" "}

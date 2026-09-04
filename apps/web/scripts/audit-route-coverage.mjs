@@ -2,55 +2,15 @@
 
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
+import { auditRouteCoverage, deriveExpectedProductRoutes, normalizeRoute } from "./audit-route-coverage-core.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const ROUTES_DIR = resolve(ROOT, "src/routes");
-
-const IA_ROUTES = [
-	"/",
-	"/markets",
-	"/markets/a-shares",
-	"/markets/screener",
-	"/markets/watchlist",
-	"/markets/intelligence",
-	"/markets/calendar",
-	"/instruments/$id",
-	"/research",
-	"/research/factors",
-	"/research/factors/$id",
-	"/research/strategies",
-	"/research/strategies/$id",
-	"/research/strategies/$id/studio",
-	"/research/backtest",
-	"/research/backtest/$id",
-	"/research/experiments",
-	"/research/experiments/new",
-	"/research/experiments/$id",
-	"/research/node-descriptors",
-	"/research/regime",
-	"/research/reviews",
-	"/research/reviews/$id",
-	"/research/universes",
-	"/trading",
-	"/trading/signals",
-	"/trading/orders",
-	"/trading/portfolio",
-	"/trading/risk",
-	"/platform",
-	"/platform/agents",
-	"/platform/data-products",
-	"/platform/settings",
-];
-
-const DEV_ONLY_ROUTES = ["/showcase"];
-const LAYOUT_ONLY_ROUTES = ["/instruments"];
+const CONTRACTS_DIR = resolve(ROOT, "docs/contracts/pages");
+const EDITION_MANIFEST_PATH = resolve(ROOT, "docs/designs/specs/prototypes/.edition-manifest.json");
+const ALLOWED_NON_PRODUCT_ROUTES = ["/showcase", "/research/node-descriptors", "/instruments"];
 
 const ROUTE_CALL_PATTERN = /createFileRoute\(\s*["'`]([^"'`]+)["'`]\s*\)/g;
-
-function normalizeRoute(route) {
-	const normalized = route.replace(/\/+$/, "");
-	return normalized === "" ? "/" : normalized;
-}
 
 async function collectRouteFiles(directory) {
 	const entries = await readdir(directory, { withFileTypes: true });
@@ -69,6 +29,20 @@ async function collectRouteFiles(directory) {
 	}
 
 	return files;
+}
+
+async function readProductRouteSources() {
+	const [contractFiles, manifestSource] = await Promise.all([
+		readdir(CONTRACTS_DIR),
+		readFile(EDITION_MANIFEST_PATH, "utf-8"),
+	]);
+	const contracts = await Promise.all(
+		contractFiles
+			.filter((file) => file.endsWith(".contract.json"))
+			.sort()
+			.map(async (file) => JSON.parse(await readFile(resolve(CONTRACTS_DIR, file), "utf-8"))),
+	);
+	return deriveExpectedProductRoutes(contracts, JSON.parse(manifestSource));
 }
 
 async function readActualRoutes() {
@@ -110,17 +84,14 @@ function formatRouteList(title, routes) {
 	return [title, ...routes.map((route) => `  - ${route}`)];
 }
 
-const actualEntries = await readActualRoutes();
+const [actualEntries, expectedRoutes] = await Promise.all([readActualRoutes(), readProductRouteSources()]);
 const actualRouteGroups = groupByRoute(actualEntries);
 const actualRoutes = [...actualRouteGroups.keys()].sort();
-const expectedRoutes = new Set(IA_ROUTES);
-const devOnlyRoutes = new Set(DEV_ONLY_ROUTES);
-const layoutOnlyRoutes = new Set(LAYOUT_ONLY_ROUTES);
-
-const missingRoutes = IA_ROUTES.filter((route) => !actualRouteGroups.has(route));
-const unexpectedRoutes = actualRoutes.filter(
-	(route) => !expectedRoutes.has(route) && !devOnlyRoutes.has(route) && !layoutOnlyRoutes.has(route),
-);
+const { missingRoutes, unexpectedRoutes } = auditRouteCoverage({
+	expectedRoutes,
+	actualRoutes,
+	allowedNonProductRoutes: ALLOWED_NON_PRODUCT_ROUTES,
+});
 const failures = [
 	...formatRouteList("Missing IA routes:", missingRoutes),
 	...formatRouteList("Unexpected product routes:", unexpectedRoutes),
@@ -132,4 +103,4 @@ if (failures.length > 0) {
 	process.exit(1);
 }
 
-console.log(`[audit:routes] ${IA_ROUTES.length} IA routes covered.`);
+console.log(`[audit:routes] ${expectedRoutes.length} contract/manifest product routes covered.`);

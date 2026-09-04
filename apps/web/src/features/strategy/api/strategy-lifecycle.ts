@@ -4,6 +4,8 @@ import type { StrategyResponse } from "./strategies";
 
 export type StrategySpecValidateRequest = components["schemas"]["StrategySpecValidateRequest"];
 export type StrategySpecValidationResponse = components["schemas"]["StrategySpecValidationResponse"];
+export type StrategyAuthorPreviewRequest = components["schemas"]["StrategyAuthorPreviewRequest"];
+export type StrategyAuthorPreviewResponse = components["schemas"]["StrategyAuthorPreviewResponse"];
 export type CreateStrategyRequest = components["schemas"]["CreateStrategyRequest"];
 export type UpdateStrategyRequest = components["schemas"]["UpdateStrategyRequest"];
 export type GovernanceDecisionRequest = components["schemas"]["GovernanceDecisionRequest"];
@@ -33,9 +35,20 @@ export function validateSpec(
 	} satisfies StrategySpecValidateRequest);
 }
 
+/** Run every detached Author stage without saving, reviewing, or publishing. */
+export function previewStrategyAuthor(
+	strategyId: string,
+	version: number,
+	payload: StrategyAuthorPreviewRequest,
+): Promise<StrategyAuthorPreviewResponse> {
+	return apiClient.post<StrategyAuthorPreviewResponse>(`${versionedPath(strategyId, version)}/author-preview`, payload);
+}
+
 /** 创建新策略（`POST /v1/strategies`），用于 Studio 新建 draft。 */
-export function createStrategy(payload: CreateStrategyRequest): Promise<StrategyResponse> {
-	return apiClient.post<StrategyResponse>("/v1/strategies", payload);
+export function createStrategy(payload: CreateStrategyRequest, idempotencyKey: string): Promise<StrategyResponse> {
+	return apiClient.post<StrategyResponse>("/v1/strategies", payload, {
+		headers: { "Idempotency-Key": idempotencyKey },
+	});
 }
 
 /** 更新策略（`PUT /v1/strategies/{id}`），version 字段为乐观锁，走 governance create_draft(parent)。 */

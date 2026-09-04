@@ -3,8 +3,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
+import { PNG } from "pngjs";
 import { PROTOTYPE_NORMALIZE_CSS, VISUAL_AUDIT_PAGES } from "../../../../scripts/visual-audit.config.generated.mjs";
 import {
+	calculatePixelDiffRatio,
+	evaluateVisualAudit,
+	isIgnorableAssetUrl,
 	isSuccessfulResponseStatus,
 	NAVIGATION_WAIT_UNTIL,
 	parseArgs,
@@ -14,6 +18,20 @@ import {
 	USAGE,
 	validateTargetKeyParity,
 } from "./visual-audit-core.mjs";
+
+const FIXED_NOW = "2026-08-25T09:30:00+08:00";
+const VISUAL_SETTLE_MS = 750;
+const DETERMINISTIC_CSS = `
+  *, *::before, *::after {
+    animation: none !important;
+    caret-color: transparent !important;
+    transition: none !important;
+  }
+  .reveal-up {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+`;
 
 const STYLE_PROPS = [
 	// Layout
@@ -109,7 +127,11 @@ function createPageIssueCollector(page) {
 	});
 	page.on("response", (response) => {
 		const request = response.request();
-		if (request.resourceType() === "document" || isSuccessfulResponseStatus(response.status())) {
+		if (
+			request.resourceType() === "document" ||
+			isSuccessfulResponseStatus(response.status()) ||
+			isIgnorableAssetUrl(response.url())
+		) {
 			return;
 		}
 		issues.push(`response ${response.status()} ${request.resourceType()} ${response.url()}`);
@@ -119,6 +141,9 @@ function createPageIssueCollector(page) {
 	});
 	page.on("console", (message) => {
 		if (message.type() !== "error") {
+			return;
+		}
+		if (isIgnorableAssetUrl(message.location().url)) {
 			return;
 		}
 		const text = message.text().trim();
@@ -198,6 +223,24 @@ async function openPage(page, url) {
 	}
 }
 
+async function prepareDeterministicPage(page) {
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await page.addInitScript((fixedNow) => {
+		const NativeDate = Date;
+		const epoch = NativeDate.parse(fixedNow);
+		class FrozenDate extends NativeDate {
+			constructor(...args) {
+				super(...(args.length === 0 ? [epoch] : args));
+			}
+
+			static now() {
+				return epoch;
+			}
+		}
+		Object.defineProperty(globalThis, "Date", { configurable: true, value: FrozenDate });
+	}, FIXED_NOW);
+}
+
 async function auditPage(browser, config, options) {
 	const urls = buildUrls(config, options);
 	const routeOutDir = join(options.outDir, config.name);
@@ -210,27 +253,35 @@ async function auditPage(browser, config, options) {
 	const targetWarnings = validateTargetKeyParity(config);
 
 	try {
+		await Promise.all([prepareDeterministicPage(prototypePage), prepareDeterministicPage(reactPage)]);
 		await openPage(prototypePage, urls.prototype);
-		await prototypePage.addStyleTag({ content: PROTOTYPE_NORMALIZE_CSS });
+		await prototypePage.addStyleTag({ content: `${PROTOTYPE_NORMALIZE_CSS}\n${DETERMINISTIC_CSS}` });
 		await prototypePage.waitForLoadState("networkidle");
-		await prototypePage.waitForFunction(() => document.fonts.ready);
+		await prototypePage.evaluate(() => document.fonts.ready);
 
 		await openPage(reactPage, urls.react);
-		await reactPage.waitForFunction(() => document.fonts.ready);
+		await reactPage.addStyleTag({ content: DETERMINISTIC_CSS });
+		await reactPage.waitForSelector("[data-slot='header']", { state: "attached", timeout: 10_000 });
+		await reactPage.waitForTimeout(VISUAL_SETTLE_MS);
+		await reactPage.evaluate(() => document.fonts.ready);
 
 		const prototype = await captureTargetMetrics(prototypePage, config.prototypeTargets);
 		const react = await captureTargetMetrics(reactPage, config.reactTargets);
 
-		await prototypePage.screenshot({
+		const prototypeScreenshot = await prototypePage.screenshot({
 			path: join(routeOutDir, "prototype.png"),
 			fullPage: false,
 		});
-		await reactPage.screenshot({
+		const reactScreenshot = await reactPage.screenshot({
 			path: join(routeOutDir, "react.png"),
 			fullPage: false,
 		});
+		const pixelDiffRatio = calculatePixelDiffRatio(
+			PNG.sync.read(prototypeScreenshot),
+			PNG.sync.read(reactScreenshot),
+		);
 
-		const metrics = {
+		const capturedMetrics = {
 			capturedAt: new Date().toISOString(),
 			route: config.route,
 			resolvedRoute: config.resolvedRoute ?? config.route,
@@ -240,12 +291,15 @@ async function auditPage(browser, config, options) {
 			viewport: options.viewport,
 			prototype: prototype.metrics,
 			react: react.metrics,
+			pixelDiffRatio,
 			warnings: {
 				targets: targetWarnings,
 				prototype: [...prototype.warnings, ...prototypeIssues.issues],
 				react: [...react.warnings, ...reactIssues.issues],
 			},
 		};
+		const evaluation = evaluateVisualAudit(capturedMetrics, config);
+		const metrics = { ...capturedMetrics, evaluation };
 
 		await writeFile(join(routeOutDir, "metrics.json"), `${JSON.stringify(metrics, null, 2)}\n`, "utf8");
 		await writeFile(join(routeOutDir, "report.md"), renderReport(metrics), "utf8");
@@ -254,6 +308,8 @@ async function auditPage(browser, config, options) {
 			name: config.name,
 			route: config.route,
 			outDir: routeOutDir,
+			passed: evaluation.passed,
+			failures: evaluation.failures,
 			warnings: metrics.warnings.targets.length + metrics.warnings.prototype.length + metrics.warnings.react.length,
 		};
 	} finally {
@@ -278,7 +334,16 @@ async function main() {
 		}
 
 		for (const result of results) {
-			console.log(`Wrote ${result.route} (${result.name}) to ${result.outDir} with ${result.warnings} warnings`);
+			console.log(
+				`${result.passed ? "PASS" : "FAIL"} ${result.route} (${result.name}) -> ${result.outDir} with ${result.warnings} warnings`,
+			);
+		}
+
+		const failed = results.filter((result) => !result.passed);
+		if (failed.length > 0) {
+			throw new Error(
+				`Visual audit failed for ${failed.map((result) => `${result.route}: ${result.failures.length} blocker(s)`).join(", ")}`,
+			);
 		}
 	} finally {
 		await browser.close();

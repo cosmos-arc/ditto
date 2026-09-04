@@ -1,8 +1,8 @@
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
-import type { DataProductOverview as DataProductOverviewModel } from "../api";
+import type { DataProductView } from "../api";
 
 interface DataProductOverviewProps {
-	readonly product: DataProductOverviewModel;
+	readonly product: DataProductView;
 	readonly certifiedCount: number;
 	readonly totalCount: number;
 }
@@ -65,6 +65,20 @@ export function DataProductOverview({ product, certifiedCount, totalCount }: Dat
 					<div>
 						<dt className="text-xs text-(--color-foreground-tertiary)">Schedule</dt>
 						<dd className="mt-1 font-data text-sm text-(--color-foreground)">{product.schedule}</dd>
+					</div>
+					<div>
+						<dt className="text-xs text-(--color-foreground-tertiary)">Frequency</dt>
+						<dd className="mt-1 font-data text-sm text-(--color-foreground)">{product.frequency}</dd>
+					</div>
+					<div>
+						<dt className="text-xs text-(--color-foreground-tertiary)">Schema</dt>
+						<dd className="mt-1 break-all font-code text-xs text-(--color-foreground)">{product.schema_version}</dd>
+					</div>
+					<div>
+						<dt className="text-xs text-(--color-foreground-tertiary)">Timezone / Currency</dt>
+						<dd className="mt-1 font-data text-sm text-(--color-foreground)">
+							{product.timezone} · {product.currency ?? "N/A"}
+						</dd>
 					</div>
 					<div>
 						<dt className="text-xs text-(--color-foreground-tertiary)">R2 scope</dt>

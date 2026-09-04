@@ -57,6 +57,23 @@ describe("StatusBar", () => {
 		expect(bar.className).toContain("h-[var(--height-status-bar)]");
 	});
 
+	it("can span the rail for prototypes whose status bar starts at the viewport edge", () => {
+		const { container } = render(<StatusBar spanRail />);
+		const bar = container.firstChild as HTMLElement;
+
+		expect(bar.className).toContain("left-0");
+		expect(bar.className).toContain("right-0");
+		expect(bar.className).not.toContain("left-(--width-rail)");
+	});
+
+	it("can span the left rail while reserving a right rail boundary", () => {
+		const { container } = render(<StatusBar reserveRightRail />);
+		const bar = container.firstChild as HTMLElement;
+
+		expect(bar.className).toContain("left-0");
+		expect(bar.className).toContain("right-(--width-rail)");
+	});
+
 	it("has border-top with subtle color", () => {
 		const { container } = render(<StatusBar />);
 		const bar = container.firstChild as HTMLElement;

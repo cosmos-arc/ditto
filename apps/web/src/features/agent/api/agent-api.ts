@@ -25,6 +25,7 @@ type AgentRunResponse = components["schemas"]["AgentRunResponse"];
 type AgentApprovalResponse = components["schemas"]["AgentApprovalResponse"];
 type AgentCampaignResponse = components["schemas"]["AgentCampaignResponse"];
 type AgentRunCreateRequest = components["schemas"]["AgentRunCreateRequest"];
+type AgentRunExecuteRequest = components["schemas"]["AgentRunExecuteRequest"];
 type AgentSessionCreateRequest = components["schemas"]["AgentSessionCreateRequest"];
 type AgentApprovalDecisionRequest = components["schemas"]["AgentApprovalDecisionRequest"];
 type AgentCampaignCreateRequest = components["schemas"]["AgentCampaignCreateRequest"];
@@ -110,6 +111,21 @@ export function mapAgentRun(response: AgentRunResponse): AgentRunView {
 				}
 			: null,
 		failureCode: response.failure_code,
+		executionPlan: response.execution_plan
+			? {
+					allowedTools: response.execution_plan.allowed_tools,
+					allowedUniverse: response.execution_plan.allowed_universe,
+					authorityHash: response.execution_plan.authority_hash,
+					decisionTime: response.execution_plan.decision_time,
+					egressClass: response.execution_plan.egress_class,
+					executionEligibleAt: response.execution_plan.execution_eligible_at,
+					knowledgeCutoff: response.execution_plan.knowledge_cutoff,
+					licenseClass: response.execution_plan.license_class,
+					maxOutputTokens: response.execution_plan.max_output_tokens,
+					publicationCutoff: response.execution_plan.publication_cutoff,
+					sourceSnapshotId: response.execution_plan.source_snapshot_id,
+				}
+			: null,
 		eventCursor: response.event_cursor,
 		projectionState: response.projection_state,
 		projectionReason: response.projection_reason,
@@ -193,22 +209,6 @@ function mapCampaign(response: AgentCampaignResponse): AgentCampaignView {
 		projectionVersion: response.projection_version,
 		projectionUpdatedAt: response.projection_updated_at,
 	};
-}
-
-function canonicalize(value: unknown): unknown {
-	if (Array.isArray(value)) return value.map(canonicalize);
-	if (typeof value !== "object" || value === null) return value;
-	return Object.fromEntries(
-		Object.entries(value)
-			.sort(([left], [right]) => left.localeCompare(right))
-			.map(([key, item]) => [key, canonicalize(item)]),
-	);
-}
-
-export async function canonicalSha256(value: unknown): Promise<string> {
-	const bytes = new TextEncoder().encode(JSON.stringify(canonicalize(value)));
-	const digest = await crypto.subtle.digest("SHA-256", bytes);
-	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function fetchAgentCapability(): Promise<AgentCapabilityView> {
@@ -303,22 +303,33 @@ export async function createAgentSession(
 }
 
 export async function createAgentRun(input: CreateAgentRunInput): Promise<AgentRunView> {
-	const authorityPayload = {
+	const payload: AgentRunCreateRequest = {
 		context: input.context ? { context_id: input.context.contextId, context_type: input.context.contextType } : null,
+		execution_scope: {
+			allowed_universe: [...input.executionScope.allowedUniverse],
+			decision_time: input.executionScope.decisionTime,
+			knowledge_cutoff: input.executionScope.knowledgeCutoff,
+			max_output_tokens: input.executionScope.maxOutputTokens,
+			publication_cutoff: input.executionScope.publicationCutoff,
+			source_snapshot_id: input.executionScope.sourceSnapshotId,
+		},
 		max_model_spend_usd: input.maxModelSpendUsd,
 		max_model_tokens: input.maxModelTokens,
 		model_profile: input.modelProfile,
 		objective: input.objective,
 		session_id: input.sessionId,
 	};
-	const payload: AgentRunCreateRequest = {
-		...authorityPayload,
-		authority_hash: await canonicalSha256(authorityPayload),
-	};
 	return mapAgentRun(
 		await apiClient.post<AgentRunResponse>("/v1/agent/runs", payload, {
 			headers: { "Idempotency-Key": input.idempotencyKey },
 		}),
+	);
+}
+
+export async function executeAgentRun(run: Pick<AgentRunView, "runId" | "revision">): Promise<AgentRunView> {
+	const payload: AgentRunExecuteRequest = { expected_revision: run.revision };
+	return mapAgentRun(
+		await apiClient.post<AgentRunResponse>(`/v1/agent/runs/${encodeURIComponent(run.runId)}/execute`, payload),
 	);
 }
 

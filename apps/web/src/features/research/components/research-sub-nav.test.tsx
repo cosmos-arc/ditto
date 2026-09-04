@@ -17,14 +17,14 @@ vi.mock("@tanstack/react-router", async () => {
 	};
 });
 
-const SECTION_LABELS = ["总览", "因子", "策略", "实验", "审查", "回测", "Regime", "股票池"] as const;
+const SECTION_LABELS = ["总览", "股票池", "因子", "实验", "回测", "策略", "Agent Lab", "审查"] as const;
 
 describe("ResearchSubNav", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	it("renders the 8 main research section entries", () => {
+	it("renders the 8 target research section entries", () => {
 		render(<ResearchSubNav />);
 		for (const label of SECTION_LABELS) {
 			expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
@@ -59,8 +59,11 @@ describe("ResearchSubNav", () => {
 	it("renders links with correct href paths and omits node-descriptors", () => {
 		render(<ResearchSubNav />);
 		expect(screen.getByTestId("link-/research")).toBeInTheDocument();
+		expect(screen.getByTestId("link-/research/universes")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/research/factors")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/research/strategies")).toBeInTheDocument();
+		expect(screen.getByTestId("link-/research/backtests")).toBeInTheDocument();
+		expect(screen.getByTestId("link-/research/agent")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/research/reviews")).toBeInTheDocument();
 		expect(screen.queryByTestId("link-/research/node-descriptors")).not.toBeInTheDocument();
 	});

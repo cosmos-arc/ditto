@@ -3,7 +3,7 @@ import type { paths } from "@/types/generated/api";
 type Assert<T extends true> = T;
 
 export type RequiredLiveApiPath =
-	| "/api/v1/trade/daily-decision/v3"
+	| "/api/v1/manual/daily-decision/v3"
 	| "/api/v1/agent/capabilities"
 	| "/api/v1/agent/sessions"
 	| "/api/v1/agent/runs"

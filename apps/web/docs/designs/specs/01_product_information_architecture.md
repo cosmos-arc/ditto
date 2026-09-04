@@ -1,10 +1,12 @@
 # Ditto 产品信息架构
-### v2.1
+### v4.0
 
-> Ditto v1 的正式产品信息架构文档。
+> Ditto 的正式产品信息架构文档。
 > 本文档用于替代旧的"大而全产品设计稿"，作为后续 UI 设计、AI 设计探索、AICoding 落地的唯一上游产品结构输入。
 >
-> **v2.1 变更摘要**：在 AI 域拆散嵌入的基础上，新增 Research 域业务页 `/research/alpha`，承载因子发现、AutoResearch 审阅和 Factor Lab 工作流。域结构保持 5 域，路由总数为 28。
+> **v4.0 变更摘要（2026-08-31）**：冻结 D1—D16，并把五域从产品命名落实为唯一目标路由；`/trading/*`、`/platform/*` 不再保留兼容、redirect 或双路由。
+>
+> **解释优先级**：本文的 v4.0 目标路由表和后端[工作站实施计划](../../../../ditto/docs/plans/2026-08-31-ditto-personal-quant-workstation-implementation-plan.md)是当前实施事实源。下文保留的旧路径只用于解释历史页面能力如何归并，不授权兼容实现。
 
 ---
 
@@ -12,9 +14,9 @@
 
 Ditto 不是很多金融页面的集合，也不是研究、交易、平台管理三四套子系统的拼装。
 
-Ditto 的本质是一个面向个人量化研究与实盘闭环的专业工作台，服务的核心链路只有一条：
+Ditto 的本质是一个本地优先的 A 股量化决策与组合管理专业工作台，服务的核心链路只有一条：
 
-**Observe → Discover → Research → Validate → Execute → Monitor / Improve**
+**Observe → Discover → Research → Validate → Decide → Record → Review / Improve**
 
 因此，本文件的目标不是罗列全部能力，而是明确：
 
@@ -56,41 +58,43 @@ Ditto 的本质是一个面向个人量化研究与实盘闭环的专业工作�
 
 ---
 
-## 2. Ditto v1 的产品定位
+## 2. Ditto 的产品定位
 
 Ditto 定位为：
 
-**面向个人量化研究与实盘闭环的全市场专业工作台**
+**面向个人全栈量化投资者的本地优先 A 股量化决策、Paper Trading 与手工账户管理工作站**
+
+核心可决策资产是 A 股个股与 A 股 ETF。A 股核心/行业指数、全球核心指数、利率、汇率、商品和宏观数据用于解释 A 股市场环境与风险，不扩展为全球证券交易。系统不连接 A 股券商，不提交、修改或撤销真实订单。
 
 它覆盖五个核心产品域：
 
-- Home
+- Today
 - Markets
 - Research
-- Trading
-- Platform
+- Portfolio
+- System
 
 这五个域不是五套独立产品，而是围绕同一条量化工作流展开的五个工作面。
 
-> **v2.0 说明**：AI 域已拆散。Copilot 升级为全局 Sidecar（不属于任何域），Agent Console 迁入 Platform 域。AI 因子发现/策略生成等能力嵌入 Research 域对应页面。详见 §13 AI 嵌入方案。
+> AI 域已拆散。Copilot 是全局 Sidecar（不属于任何域），Agent Lab 位于 `/research/agent`，Agent Ops 位于 `/system/agent`。AI 因子发现/策略生成等能力嵌入 Research 域对应页面。详见 §13 AI 嵌入方案。
 
 ### 2.1 用户画像
 
 Ditto v1 聚焦两类核心用户：
 
-#### Persona A: 全职量化交易员
+#### Persona A: 全栈个人量化投资者
 
 - **背景**: 3-8 年量化交易经验，日均 8+ 小时与数据/代码打交道
-- **工作流**: Observe → Research → Strategy → Backtest → Execute → Monitor 的完整闭环，每天多次循环
-- **痛点**: 工具碎片化（Wind 看数据、Python 写策略、券商客户端下单），缺乏一站式工作台；信号复核和风控监控分散在多个系统
-- **对 Ditto 的核心期待**: "少切换工具，多输出决策"——从发现到执行在一个工作台内完成
+- **工作流**: Observe → Discover → Research → Validate → Decide → Record → Review 的完整闭环
+- **痛点**: 市场环境、行业强弱、选股、研究、Paper、实际账户记录和风控分散在多个工具
+- **对 Ditto 的核心期待**: "少切换工具，多输出决策"——从发现到组合和复盘在一个工作台内完成
 - **密度偏好**: 高密度（多数据并排对比，表格优先于图形）
 
 #### Persona B: 技术型投资者
 
 - **背景**: 1-5 年投资经验，有编程基础（Python/R），正在从主观交易转向量化
 - **工作流**: 以 Observe → Discover 为主，Research/Strategy 处于学习和实验阶段，Execute 依赖半自动
-- **痛点**: 学习量化门槛高，回测结果难以判断好坏，不确定策略是否值得实盘
+- **痛点**: 学习量化门槛高，回测结果难以判断好坏，不确定策略是否值得进入 Paper 或实际组合观察
 - **对 Ditto 的核心期待**: "帮我看清市场和策略状态"——降低量化入门的判断成本
 - **密度偏好**: 中等密度（信息层级清晰，渐进展示）
 
@@ -109,30 +113,30 @@ Ditto 的实际使用者是团队内部成员，核心角色分为三类：
 - **技术栈**: Python + Jupyter，通过 Ditto 的 Code Mode 和外部 Python 环境衔接
 - **核心诉求**: 因子预处理流程顺畅、回测结果可信、策略迭代效率高
 
-**角色 2：交易执行者（Trading-Heavy）**
+**角色 2：组合管理者（Portfolio-Heavy）**
 
-- **核心工作流**: Home → Trading Overview → Signals → Orders（Flow A 交易分支）
+- **核心工作流**: Today → Signals → Model/Paper/我的账户 → Risk → Review
 - **日使用时段**: 交易时段（9:15-15:00）为主，盘后查看归因
-- **主力页面**: Home / Trading Overview / Signals Inbox / Risk Center
+- **主力页面**: Today / Portfolio Overview / Signals Inbox / Paper Account / 我的账户 / Risk Center
 - **密度偏好**: 高密度（Dense 模式），信号复核需快速扫描
-- **设备环境**: 双屏（主屏 Ditto + 辅屏券商客户端），1920×1080+
-- **核心诉求**: 信号复核速度、涨跌停/停牌实时感知、盘后复盘效率
+- **设备环境**: 单屏或双屏，1920×1080+
+- **核心诉求**: 信号复核速度、Paper 连续性、实际交易录入与更正、账户偏差和盘后复盘效率
 
-**角色 3：系统维护者（Platform-Heavy）**
+**角色 3：系统维护者（System-Heavy）**
 
-- **核心工作流**: Platform → 数据质量监控 → 配置管理
+- **核心工作流**: System → 数据质量监控 → 配置管理
 - **日使用时段**: 非交易时段为主（盘前检查、盘后维护）
-- **主力页面**: Platform Ops Console / Settings
+- **主力页面**: System Ops Console / Settings
 - **密度偏好**: 中等密度（Compact 模式），关注系统状态而非交易数据
 - **核心诉求**: 数据源状态一目了然、异常快速定位、配置变更可追溯
 
 **角色间的协同关系**：
 
 ```
-策略研究员 ──生成信号──→ 交易执行者 ──反馈执行情况──→ 策略研究员
+策略研究员 ──生成信号──→ 组合管理者 ──反馈 Paper/实际记录──→ 策略研究员
                               │
                               └──风控异常──→ 策略研究员（Flow D）
-系统维护者 ←──依赖── 交易执行者 + 策略研究员（数据/通道/系统健康）
+系统维护者 ←──依赖── 组合管理者 + 策略研究员（数据/任务/系统健康）
 ```
 
 ### 2.2 Ditto v1 的核心价值
@@ -140,7 +144,7 @@ Ditto 的实际使用者是团队内部成员，核心角色分为三类：
 Ditto v1 最重要的不是"能力覆盖多完整"，而是以下三点是否成立：
 
 1. 能否快速感知市场与系统当前状态
-2. 能否把研究、回测、信号、订单、风险串成连续闭环
+2. 能否把宏观/市场、行业、选股、研究、回测、信号、Model/Paper/Manual、风险串成连续闭环
 3. 能否在高密专业工作流中保持低噪声、高效率、长期可用
 
 ### 2.3 Ditto v1 不是这些东西
@@ -163,7 +167,7 @@ Ditto v1 只优先做强主工作流上的核心页面与核心对象。
 
 优先级最高的链路是：
 
-**市场观察 → 对象发现 → 研究分析 → 策略构建 → 回测验证 → 信号复核 → 订单执行 → 风险监控 → 持续改进**
+**宏观/市场观察 → 行业与个股发现 → 研究分析 → 策略构建 → 回测验证 → 信号复核 → Model/Paper/Manual 记录 → 风险监控 → 持续改进**
 
 ### 3.2 v1 优先做深的能力
 
@@ -175,19 +179,20 @@ Ditto v1 只优先做强主工作流上的核心页面与核心对象。
 - 因子分析
 - 策略构建与编辑
 - 回测结果
-- 交易总览
+- 组合总览
 - 信号中心
-- 订单执行流水
+- Paper 订单与成交流水
+- 我的账户（手工记录、导入和追加式更正）
 - 风险中心
 - AI Copilot（全局 Sidecar）
-- Agent Console（Platform 域）
+- Agent Console（System 域）
 - 平台健康控制台
 
 ### 3.3 v1 明确降级或后置的能力
 
 以下内容可以保留路由或轻能力，但不作为 v1 高优独立产品设计重点：
 
-- Home 下的多个独立子页
+- Today 下的多个独立子页
 - Markets Map 作为重页面
 - 完整 ML 平台化工作流
 - 平台账户与权限管理的重建设
@@ -200,19 +205,19 @@ Ditto v1 只优先做强主工作流上的核心页面与核心对象。
 
 Ditto 一级导航固定为五个，不再扩展：
 
-- Home
+- Today
 - Markets
 - Research
-- Trading
-- Platform
+- Portfolio
+- System
 
 这是 Ditto v1 的稳定产品骨架。
 
-> **v2.0 说明**：AI 从一级导航中移除。Copilot 以全局 Sidecar 形式存在（任何页面可唤出），Agent Console 归入 Platform 域。
+> AI 从一级导航中移除。Copilot 以全局 Sidecar 形式存在（任何页面可唤出），Agent Console 归入 System 域。
 
 ### 4.1 一级域的职责定义
 
-#### Home
+#### Today
 
 回答："今天先做什么"
 
@@ -224,67 +229,70 @@ Ditto 一级导航固定为五个，不再扩展：
 
 回答："为什么做、怎么做"
 
-#### Trading
+#### Portfolio
 
-回答："怎么做、风险如何"
+回答："模型、Paper 和我的实际账户发生了什么"
 
-#### Platform
+#### System
 
 回答："系统是否正常"
 
 ---
 
-## 5. 最终推荐 Sitemap
+## 5. 最终目标 Sitemap
 
-下面是 Ditto v1 的推荐站点地图。
+下面是 Ditto v1 的唯一目标站点地图。路由硬切不提供 redirect。
 
 ```text
 Ditto
 │
-├── Home (1)
+├── Today (1)
 │   └── /
 │
-├── Markets (7)
+├── Markets (6)
 │   ├── /markets                  ← 全市场总览（Cross-Market Overview）
 │   ├── /markets/a-shares         ← 中国 A 股总览
+│   ├── /markets/industries       ← 行业轮动与行业 Inspector
 │   ├── /markets/screener
 │   ├── /markets/watchlist
-│   ├── /markets/intelligence
-│   ├── /markets/calendar
 │   └── /instruments/[id]
 │
-├── Research (12)
+├── Research (8)
 │   ├── /research
-│   ├── /research/alpha             ← Alpha Explorer（因子发现 / AutoResearch 审阅 / Factor Lab，v2.1）
+│   ├── /research/universes
 │   ├── /research/factors
-│   ├── /research/factors/[id]
-│   ├── /research/strategies
-│   ├── /research/strategies/[id]   ← Strategy Detail（查看态）
-│   ├── /research/strategies/[id]/studio
-│   ├── /research/backtest
-│   ├── /research/backtest/[id]
 │   ├── /research/experiments
-│   ├── /research/regime
-│   └── /research/universes        ← 从 Markets 移入（v2.0）
+│   ├── /research/backtests
+│   ├── /research/strategies
+│   ├── /research/agent           ← Agent Lab / Strategy Author
+│   └── /research/reviews
 │
-├── Trading (5)
-│   ├── /trading
-│   ├── /trading/signals
-│   ├── /trading/orders
-│   ├── /trading/portfolio        ← 合并原 /trading/positions + /trading/trades（v2.0）
-│   └── /trading/risk
+├── Portfolio (7)
+│   ├── /portfolio                ← 三组合总览与比较
+│   ├── /portfolio/model
+│   ├── /portfolio/paper
+│   ├── /portfolio/manual
+│   ├── /portfolio/transactions
+│   ├── /portfolio/risk
+│   └── /portfolio/review
 │
-├── Platform (3)
-│   ├── /platform                 ← 平台运维总览（Data Quality + Pipelines + Alerts）
-│   ├── /platform/settings        ← 集中配置（Data Providers + Brokers + Settings）
-│   └── /platform/agents          ← Agent Console（从 /ai/agent 迁入，v2.0）
+├── System (7)
+│   ├── /system                   ← 系统运维总览
+│   ├── /system/data-products
+│   ├── /system/jobs
+│   ├── /system/agent            ← Agent Ops
+│   ├── /system/approvals
+│   ├── /system/settings         ← 只读 Data Providers；无 Broker
+│   └── /system/audit
 │
 └── Global (非路由)
     ├── AI Copilot Sidecar        ← 全局右侧可折叠面板，上下文感知
     └── Regime Indicator          ← Shell 级全局组件（Status Bar 胶囊 → 展开面板）
 ```
 
-**路由统计**：5 域，28 条路由 + 2 个全局组件。
+**目标路由统计**：5 域，29 条主路由 + 2 个全局组件。对象详情使用参数化子路由，不恢复旧产品域。
+
+**硬切清单**：删除 `/trading`、`/platform` 及其子路由；删除旧 route contracts、navigation entries 和 feature 命名；不添加兼容 redirect、双读或别名。
 
 > **v2.1 变更**：
 > - 新增 `/research/alpha`，作为 Research 域内的 Alpha Explorer，不恢复 AI 一级域
@@ -304,7 +312,7 @@ Ditto
 
 这部分是 Ditto v1 信息架构与旧大稿最大的区别，也是后续设计必须遵循的结构性调整。
 
-### 6.1 Home 只保留一个强首页
+### 6.1 Today 只保留一个强首页
 
 旧方案中的以下页面不再作为高优独立产品页面设计：
 
@@ -312,15 +320,15 @@ Ditto
 - `/home/quick-actions`
 - `/home/alerts-summary`
 
-它们应整合为 `/` 首页中的核心区块、查看全部视图或全局命令入口，而不是继续发展为独立页面体系。
+它们应整合为 `/` Today 中的核心区块、查看全部视图或全局命令入口，而不是继续发展为独立页面体系。
 
-### 6.2 Markets 域重构为完整域
+### 6.2 Markets 域围绕 A 股决策重构
 
-Markets 不再等于中国 A 股页，而是覆盖跨市场扫描与单市场下钻的完整域。
+Markets 同时覆盖环境扫描与 A 股下钻，但全球市场只作为参照，不形成可交易市场域。
 
-- `/markets` → 全市场总览（Cross-Market Overview），核心动词 scan / compare
+- `/markets` → 市场环境总览，覆盖全球核心指数、利率、汇率、商品、宏观与 A 股市场状态，核心动词 scan / compare / explain
 - `/markets/a-shares` → 中国 A 股总览，核心动词 structure scan
-- 后续扩展 `/markets/hk`、`/markets/us`、`/markets/fx`、`/markets/rates`、`/markets/commodities`
+- 全球参照优先作为 `/markets` 的矩阵和下钻视图，不建立全球证券交易、外币账户或结算心智
 
 详见 [全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)。
 
@@ -367,8 +375,8 @@ Markets 不再等于中国 A 股页，而是覆盖跨市场扫描与单市场下
 **v2.0 重大调整**：AI 域作为一级域不再存在。AI 能力以嵌入方式分布在各域中：
 
 - **Copilot** → 全局 Sidecar（右侧可折叠面板），任何页面可唤出，不属于任何域
-- **Agent Console** → `/platform/agents`（从 `/ai/agent` 迁入 Platform 域）
-- **AI Overview** 内容 → 拆分归入 Home（Daily Brief / Priority Findings）和 Platform/Agents
+- **Agent Console** → `/platform/agents`（技术路径，产品归入 System 域）
+- **AI Overview** 内容 → 拆分归入 Today（Daily Brief / Priority Findings）和 System/Agents
 - **AI 因子发现 / 策略生成** → 嵌入 Research 域对应页面
 
 详见 §13 AI 嵌入方案。
@@ -379,37 +387,39 @@ ML 能力保留，但不在 v1 中作为一级重页面与重型平台推进。
 
 只有在真实训练、注册、部署、监控闭环足够成熟后，再升级为更重的产品结构。
 
-### 6.8 Platform 扩展为运维 + Agent 管理
+### 6.8 System 承接运维 + Agent 管理
 
-Platform 不做"后台大全"，聚焦：
+System 不做"后台大全"，聚焦：
 
 - 数据是否可信
 - 任务是否正常
-- 通道是否可用
+- 只读数据源是否可用
 - 系统是否异常
 - Agent 运行状态与审批（v2.0 新增）
 
-**v2.0 调整**：Agent Console 从 `/ai/agent` 迁入 `/platform/agents`，Platform 域从 2 路由扩展为 3 路由。
+Agent Ops 使用 `/system/agent`；Research 内的业务 Agent 工作台使用 `/research/agent`。旧 `/ai/agent` 与 `/platform/agents` 均不保留。
 
-### 6.9 Trading Positions/Trades 合并为 Portfolio
+### 6.9 Portfolio 明确三类组合事实
 
-**v2.0 调整**：`/trading/positions` 和 `/trading/trades` 合并为 `/trading/portfolio`，内部通过 tab 切换：
+Portfolio 只使用 `/portfolio/*` 路径，并按账户事实切换：
 
-- Positions（持仓）
-- Trades（成交流水）
-- Attribution（归因分析）
+- Model（目标组合与调仓意图）
+- Paper（模拟订单、成交、现金、持仓与 PnL）
+- 我的账户（Manual 实际交易与现金事件、持仓和归因）
+
+三者可以比较，不得共用一套可变持仓记录来伪装不同账户。
 
 ---
 
 ## 7. 五个一级域的结构说明
 
-### 7.1 Home
+### 7.1 Today
 
 **角色**：Global Command Center（定向/分流型）
 
 **核心动词**：orient（理解 → 分流）
 
-**目标**：在登录后第一时间帮助用户完成优先级判断与下一步分流。Home 是雷达，不是驾驶舱——它回答"今天先做什么"和"该去哪个工作区"，不承担执行操作。
+**目标**：在登录后第一时间帮助用户完成优先级判断与下一步分流。Today 是雷达，不是驾驶舱——它回答"今天先做什么"和"该去哪个工作区"，不承担组合写入操作。
 
 **包含内容**：
 
@@ -430,7 +440,7 @@ Platform 不做"后台大全"，聚焦：
 
 **冷启动引导**：
 
-新用户首次进入 Home 时，核心区块可能为空（无持仓、无信号、无研究进展）。此时 Home 应：
+新用户首次进入 Today 时，核心区块可能为空（无持仓、无信号、无研究进展）。此时 Today 应：
 - Status Banner 显示"开始使用 Ditto"引导 CTA，而非空白或默认数据
 - 今日优先事项区域显示 2-3 条"快速入门"引导（添加第一个观察标的 / 运行第一次回测 / 配置数据源）
 - 市场脉搏始终展示（不依赖用户状态，作为持续可用的环境信息）
@@ -458,10 +468,10 @@ Platform 不做"后台大全"，聚焦：
 以下 A 股特有能力不作为独立路由，而是嵌入现有页面：
 
 - **龙虎榜**: 嵌入 A 股总览（`/markets/a-shares`）的 Bottom Tab Band
-- **两融数据**: 嵌入 A 股总览 Bottom Tab Band 和 Trading Overview Session Strip
+- **两融数据**: 嵌入 A 股总览 Bottom Tab Band 和 Portfolio Overview Session Strip
 - **北向资金深度**: 嵌入 A 股总览 Right Rail（分时净流入、持仓 Top10 变动）
 - **停牌/复牌状态**: 嵌入 Instrument Hub Object Header（状态标识 + Meta Strip 日期）
-- **交易阶段指示**: 嵌入 Trading Overview Session Strip（集合竞价/连续竞价/午休/收盘）
+- **交易阶段指示**: 嵌入 Portfolio Overview Session Strip（集合竞价/连续竞价/午休/收盘）
 
 > **扩展预留**: 债券（可转债 T+0 套利）、公募基金、C-REITs 为 v2+ 扩展点。Instrument Hub 的 Tab 设计应为不同资产类型预留差异视图。
 
@@ -506,63 +516,56 @@ Platform 不做"后台大全"，聚焦：
 7. Regime
 8. Universes
 
-### 7.4 Trading
+### 7.4 Portfolio
 
-**角色**：Execute + Monitor 的主工作域
+**角色**：Decide + Record + Review 的主工作域
 
-**目标**：让信号复核、订单执行和风险控制形成真正的实盘闭环。
+**目标**：让信号复核、目标组合、Paper 模拟、手工实际账户、风险与复盘形成可重建的个人组合闭环。
 
-**主要页面**：
+**主要页面**：`/portfolio`、`/portfolio/model`、`/portfolio/paper`、`/portfolio/manual`、`/portfolio/transactions`、`/portfolio/risk`、`/portfolio/review`。
 
-- `/trading`
-- `/trading/signals`
-- `/trading/orders`
-- `/trading/portfolio`（v2.0 合并原 `/trading/positions` + `/trading/trades`）
-- `/trading/risk`
+Portfolio 内必须明确区分 Model、Paper 和“我的账户·手工记录”，不得显示券商连接或真实下单心智。
 
-> **v2.0 调整**：`/trading/positions` 和 `/trading/trades` 合并为 `/trading/portfolio`，内部通过 Positions / Trades / Attribution 三个 tab 切换。
+**Portfolio Overview 核心结构**（v3.0）：
 
-**Trading Overview 新增**（v2.0）：
-
-- **Signal-to-Order Pipeline Strip**：L2 水平进度条，展示信号池 → 待复核 → 已下单 → 成交的实时流转状态。
+- **Market-to-Portfolio Evidence Strip**：展示宏观/全球 → A 股市场 → 行业 → 个股 → 信号 → Model/Paper/Manual → 风险/归因的可下钻证据链。
+- **三类事实切换**：Model 是目标与意图；Paper 是模拟订单/成交产生的账户；Manual 是用户实际账户的手工事实账本。
+- **Paper Pipeline**：展示信号池 → 待复核 → Paper Order → Simulated Fill → Reconciled，禁止使用会暗示真实券商写入的文案。
+- **Manual Event Ledger**：支持无 Signal 的买卖、入金、出金、费用、税费、分红和转入转出，以及保留原事实的 void/replace 更正。
 
 **A 股交易规则 UI 约束**：
 
-Trading 域必须在 UI 中体现以下 A 股交易规则：
+Portfolio 域的 Paper 模拟与账户解释必须体现以下 A 股市场规则：
 
 - **T+1 交收**: 持仓表中必须区分"可卖数量"和"冻结数量"（当日买入不可卖出）
 - **涨跌停校验**: 信号复核时必须检查标的是否处于涨跌停状态（涨停时买入信号无效，跌停时卖出信号无效）
-- **订单类型**: 支持限价委托和市价委托，集合竞价时段支持竞价限价单
+- **Paper 订单类型**: 可模拟限价和市价撮合；所有成交必须显示撮合、费用与滑点假设
 - **最小交易单位**: 最小买入 100 股（1 手），卖出可零股
 - **ST/\*ST 约束**: ST 标的涨跌停 ±5%，策略 Universe 筛选应支持排除 ST
 
 **优先级排序**：
 
-1. Trading Overview
+1. Portfolio Overview
 2. Signals Inbox
-3. Portfolio（Positions / Trades / Attribution）
-4. Orders / Execution Ledger
+3. Paper Account（Orders / Fills / Cash / Positions / PnL）
+4. 我的账户（Manual Events / Positions / Cash / Attribution）
 5. Risk Center
 
-### 7.5 Platform
+### 7.5 System
 
 **角色**：Ops Console + Agent 管理
 
-**目标**：管理和感知数据、任务、通道、系统的健康状况，以及 Agent 运行状态与审批。
+**目标**：管理和感知只读数据源、任务、系统健康状况，以及 Agent 运行状态与审批。
 
-**主要页面**：
+**主要页面**：`/system`、`/system/data-products`、`/system/jobs`、`/system/agent`、`/system/approvals`、`/system/settings`、`/system/audit`。
 
-- `/platform` — 平台运维总览（Data Quality + Pipelines/Jobs + System Alerts + Health Strip）
-- `/platform/settings` — 集中配置（Data Providers + Brokers + 通用 Settings）
-- `/platform/agents` — Agent Console（v2.0 从 `/ai/agent` 迁入）
-
-> **v1 收敛说明**: Data Providers 和 Brokers 在用户仅有 1 个数据源和 1 个券商的早期阶段，不需要独立管理页面。通过 `/platform/settings` 的 Tab 视图承接。v2 若接入 3+ 数据源/券商时可拆分为独立路由。详见 [Platform 域收敛决策](../../docs/designs/decisions/2026-03-31-product-arch-audit-fixes.md)。
+> **v3.0 边界**：Broker 不是等待拆分的设置项，而是产品明确排除的能力。实时行情 Provider 只能使用只读合同，不能携带账户查询、下单、撤单或成交回报权限。
 
 **优先级排序**：
 
-1. Platform Ops Overview
+1. System Ops Overview
 2. Agent Console
-3. Settings（Data Providers / Brokers / 通用）
+3. Settings（只读 Data Providers / 通用）
 
 ---
 
@@ -622,23 +625,23 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 - `/trading/signals`
 - `/platform`（Data Quality / Pipelines 作为 tab 承载于 Ops Console）
 
-### 8.7 Ledger / Execution Console
+### 8.7 Paper / Manual Ledger
 
 适用：
 
 - `/trading/orders`
 
-### 8.8 Config / Integration Console
+### 8.8 Config / Data Provider Console
 
 适用：
 
-- `/platform/settings`（Data Providers / Brokers 作为 tab 承载于 Settings）
+- `/platform/settings`（只读 Data Providers 与通用设置；不含 Broker）
 
 > **映射说明**：Shell（物理壳层布局）和 Pattern（交互模式）描述不同维度。同一 Pattern 可对应多种 Shell 布局（如 Ledger Pattern 在 Shell 层用 Catalog 壳层的表格+详情面板结构），这是正常的维度差异，不是矛盾。
 >
 > **v2.0 映射变更**：
 > - `/ai`、`/ai/copilot`、`/ai/agent` 不再作为独立路由（AI 域已拆散）
-> - `/trading/positions`、`/trading/trades` 合并为 `/trading/portfolio`，归属 Analytical Overview Workspace
+> - `/trading/positions`、`/trading/trades` 合并为 `/trading/portfolio`，迁移期归属 Portfolio 的 Analytical Overview Workspace
 > - `/markets/universes` 移至 Research 域，归属 Catalog / Screener Workspace
 > - `/markets/chart-lab` 降级为 Instrument Hub tab，不再独立映射
 > - `/platform/agents` 新增，归属 Studio / Builder
@@ -652,12 +655,12 @@ Ditto v1 不应按所有页面平均推进。
 
 ### 第一批：必须先定的 6 页
 
-1. Home Command Center
+1. Today
 2. Markets Overview
 3. Markets Screener
 4. Research Workspace
-5. Trading Overview
-6. Platform Ops Console
+5. Portfolio Overview
+6. System Ops Console
 
 ### 第二批：形成闭环的 5 页
 
@@ -667,20 +670,21 @@ Ditto v1 不应按所有页面平均推进。
 10. Backtest Result
 11. Signals Inbox
 
-### 第三批：执行与 Agent 深化的 4 页
+### 第三批：账户、风险与 Agent 深化的 5 页
 
-12. Orders / Execution Ledger
-13. Risk Center
-14. Portfolio（Positions / Trades / Attribution）
-15. Agent Console（`/platform/agents`）
+12. Paper Account / Simulation Ledger
+13. 我的账户 / Manual Event Ledger
+14. Risk Center
+15. Model/Paper/Manual Attribution
+16. Agent Console（`/platform/agents`）
 
 ---
 
 ## 10. 全局产品规则
 
-### 10.1 Ditto 的首页不是门户页，是决策页
+### 10.1 Today 不是门户页，是决策页
 
-Home 只负责定优先级与分流，不负责承载完整子系统。
+Today 只负责定优先级与分流，不负责承载完整子系统。
 
 ### 10.2 页面优先围绕对象与工作流组织，而不是围绕菜单树组织
 
@@ -692,11 +696,11 @@ Ditto 的结构必须强调"我现在在处理什么"，而不是"这个功能�
 
 ### 10.4 AI 能力必须服从 Ditto 的统一工作台语法
 
-Copilot 和 Agent 不是外部聊天产品，而是 Ditto 工作流的一部分。Copilot 以全局 Sidecar 形式存在，Agent Console 归入 Platform 域。AI 能力嵌入各业务域，而非形成独立产品心智。
+Copilot 和 Agent 不是外部聊天产品，而是 Ditto 工作流的一部分。Copilot 以全局 Sidecar 形式存在，Agent Console 归入 System 域。AI 能力嵌入各业务域，而非形成独立产品心智。
 
-### 10.5 Platform 必须保持专业控制台语法，而不是后台管理语法
+### 10.5 System 必须保持专业控制台语法，而不是后台管理语法
 
-Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管理，而不是传统管理后台的表单堆叠。
+System 的重点是状态、任务、日志、修复、可用性和 Agent 管理，而不是传统管理后台的表单堆叠。
 
 ---
 
@@ -705,12 +709,12 @@ Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管�
 以下思路在 Ditto v1 中不再推荐继续沿用：
 
 - 以"所有能力都做成独立页面"为目标
-- 让 Home 下挂多个重页面
+- 让 Today 下挂多个重页面
 - 让 Markets Map 成为平权核心页
 - 让 Builder 和 Editor 成为两个割裂工作流
 - 让 AI 市场分析、AI 选股、AI 策略助手成为三个独立子产品
 - 让 AI 成为独立一级域（v2.0 已拆散嵌入各业务域）
-- 让 Platform 朝"权限后台大全"方向发展
+- 让 System 朝"权限后台大全"方向发展
 - 让 ML 平台成为 v1 主战场
 
 ---
@@ -833,6 +837,15 @@ Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管�
 ---
 
 ## Changelog
+
+### 2026-08-30 — v3.0
+
+- **[产品边界]** 核心可决策资产确认为 A 股个股与 ETF；全球核心市场与宏观数据只作为 A 股环境参照。
+- **[Discover 主干]** 行业强弱、轮动、个股筛选/排名/比较升级为一级核心流程。
+- **[执行边界]** 移除券商下单心智；实时行情 Provider 只读。
+- **[账户模型]** 明确 Model、Paper、Manual 三类事实和 Paper/Manual 双账本。
+- **[一级域]** 用户可见心智调整为 Today / Markets / Research / Portfolio / System；旧路径仅作迁移兼容。
+- **[设计与验收]** 保留 Graphite Studio，以市场到组合证据链为产品签名，以真实数据和端到端任务而非页面数量验收。
 
 ### 2026-05-02 — v2.1
 

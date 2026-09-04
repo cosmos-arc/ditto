@@ -3,7 +3,7 @@ import type { components } from "@/types/generated/api";
 
 export const DEFAULT_DATA_PRODUCT_PROFILE = "research_daily";
 
-export type DataProductOverview = components["schemas"]["DataProductOverviewResponse"];
+export type DataProductView = components["schemas"]["DataProductViewResponse"];
 export type DataProductCoverage = components["schemas"]["DataProductCoverageResponse"];
 export type DataProductCheck = components["schemas"]["DataProductCheckResponse"];
 export type DataProductQuality = components["schemas"]["DataProductQualityResponse"];
@@ -28,8 +28,8 @@ function productPath(datasetId: string, view: string, profile: string): string {
 	return withQueryParams(`/v1/data-products/${encodeURIComponent(datasetId)}/${view}`, { profile });
 }
 
-export function fetchDataProducts(profile = DEFAULT_DATA_PRODUCT_PROFILE): Promise<readonly DataProductOverview[]> {
-	return apiClient.get<readonly DataProductOverview[]>(withQueryParams("/v1/data-products", { profile }));
+export function fetchDataProducts(profile = DEFAULT_DATA_PRODUCT_PROFILE): Promise<readonly DataProductView[]> {
+	return apiClient.get<readonly DataProductView[]>(withQueryParams("/v1/data-products", { profile }));
 }
 
 export function fetchDataProductCoverage(

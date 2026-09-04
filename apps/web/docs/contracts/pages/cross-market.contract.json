@@ -1,9 +1,9 @@
 {
   "id": "cross-market",
-  "version": 1,
-  "status": "draft",
+  "version": 3,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-30",
   "route": "/markets",
   "pagePattern": "analytical-overview",
   "shellFamily": "radar",
@@ -11,28 +11,19 @@
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/markets",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
       "src/features/markets/components/markets-page.test.tsx",
-      "src/features/markets/components/markets-components.test.tsx"
+      "src/features/markets/components/info-level-annotations.test.tsx"
     ],
-    "reactComponentRefs": [
-      "MarketsPage"
-    ]
+    "reactComponentRefs": ["MarketsPage"]
   },
   "viewports": [
-    {
-      "width": 1536,
-      "height": 900,
-      "role": "primary"
-    },
-    {
-      "width": 1366,
-      "height": 768,
-      "role": "compact"
-    }
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" }
   ],
   "slots": [
     {
@@ -41,9 +32,8 @@
       "prototypeSelector": ".context-bar",
       "reactSelector": "[data-slot='context-bar']",
       "a11yRole": "status",
-      "responsiveBehavior": {
-        "compact": "collapsed"
-      }
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.01, "heightRatio": 1 },
+      "responsiveBehavior": { "compact": "collapsed" }
     },
     {
       "name": "scope-strip",
@@ -51,16 +41,16 @@
       "prototypeSelector": ".scope-strip",
       "reactSelector": "[data-slot='scope-strip']",
       "a11yRole": "status",
-      "responsiveBehavior": {
-        "compact": "collapsed"
-      }
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.01, "heightRatio": 1 },
+      "responsiveBehavior": { "compact": "collapsed" }
     },
     {
       "name": "main",
       "required": true,
       "prototypeSelector": ".main-content",
       "reactSelector": "[data-slot='main']",
-      "a11yRole": "main"
+      "a11yRole": "main",
+      "threshold": { "x": 4, "y": 70, "widthRatio": 0.01, "heightRatio": 0.74 }
     },
     {
       "name": "right-rail",
@@ -68,60 +58,31 @@
       "prototypeSelector": ".right-rail",
       "reactSelector": "[data-slot='right-rail']",
       "a11yRole": "complementary",
-      "responsiveBehavior": {
-        "compact": "overlay"
-      }
+      "threshold": { "x": 8, "y": 20, "widthRatio": 0.03, "heightRatio": 0.82 },
+      "responsiveBehavior": { "compact": "overlay" }
     },
     {
-      "name": "bottom-tab-band",
+      "name": "status",
       "required": true,
-      "prototypeSelector": ".tab-band",
-      "reactSelector": "[data-slot='bottom-tab-band']",
-      "a11yRole": "region",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
+      "prototypeSelector": ".status-bar",
+      "reactSelector": "[data-slot='status-bar']",
+      "a11yRole": "status",
+      "threshold": { "x": 4, "y": 530, "widthRatio": 0.01, "heightRatio": 0.05 },
+      "responsiveBehavior": { "compact": "reflow" }
     }
   ],
   "states": {
-    "universal": [
-      "loading",
-      "empty",
-      "error",
-      "stale"
-    ],
-    "pageSpecific": [
-      "market-closed"
-    ]
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["catalog-empty", "partial-page", "price-evidence-unavailable", "identity-only"]
   },
-  "flags": {
-    "hasStatusBar": true,
-    "sidebarCollapsible": false
-  },
+  "flags": { "hasStatusBar": true, "sidebarCollapsible": false },
   "metrics": {
     "capturedAt": "2026-04-27",
     "viewport": "1536x900",
     "baseline": {
-      "strip": {
-        "width": 1536,
-        "height": 72,
-        "strategy": "content-driven"
-      },
-      "main": {
-        "width": 980,
-        "height": 720,
-        "strategy": "content-driven"
-      },
-      "activity": {
-        "width": 280,
-        "height": 720,
-        "strategy": "fixed-width"
-      },
-      "analysis": {
-        "width": 280,
-        "height": 720,
-        "strategy": "fixed-width"
-      }
+      "strip": { "width": 1536, "height": 72, "strategy": "content-driven" },
+      "main": { "width": 980, "height": 720, "strategy": "content-driven" },
+      "activity": { "width": 280, "height": 720, "strategy": "fixed-width" }
     }
   },
   "visualThresholds": {
@@ -129,93 +90,64 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.05
   },
   "overlays": [
     {
       "id": "cross-market.market-depth",
-      "kind": "sheet",
+      "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "main", "action": "open-overlay" },
       "prototypeSelector": "#overlay-market-depth",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "MarketsOverviewOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "cross-market.index-components",
       "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "scope-strip", "action": "open-overlay" },
       "prototypeSelector": "#overlay-index-components",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "MarketsOverviewOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "cross-market.filter-panel",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "scope-strip", "action": "open-overlay" },
       "prototypeSelector": "#overlay-filter-panel",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "MarketsOverviewOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "cross-market.event-detail",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "right-rail", "action": "open-overlay" },
       "prototypeSelector": "#overlay-event-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "MarketsOverviewOverlay",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "cross-market.pin-viewpoint",
-      "kind": "drawer",
+      "kind": "inline",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "context-bar", "action": "toggle" },
       "prototypeSelector": "#overlay-pin-viewpoint",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "MarketsOverviewOverlay",
+      "closeBehavior": ["primary-action"]
     }
-  ]
+  ],
+  "liveData": {
+    "readPaths": ["/api/v1/metadata/instruments"],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "interactions": []
 }

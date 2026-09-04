@@ -1,6 +1,6 @@
 # Ditto App Agent Guide
 
-Ditto App 是 Ditto A 股 ETF 量化平台的 React SPA。它负责研究、市场、交易和平台操作界面；后端 API 与运行时领域规则属于相邻 `ditto` 仓库。
+Ditto App 是 Ditto 本地优先 A 股个股与 ETF 量化决策、Paper Trading 和手工账户管理工作站的 React SPA。它负责 Today、Markets、Research、Portfolio 和 System 五个产品域；宏观与全球核心市场数据用于解释 A 股环境，系统不连接券商下单。后端 API 与运行时领域规则属于相邻 `ditto` 仓库。
 
 ## 事实优先级
 

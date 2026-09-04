@@ -951,8 +951,8 @@ function getDomainFromRoute(route: string | null | undefined): (typeof railDomai
 	if (route === "/") return "home";
 	if (route === "/markets" || route.startsWith("/markets/")) return "markets";
 	if (route === "/research" || route.startsWith("/research/")) return "research";
-	if (route === "/trading" || route.startsWith("/trading/")) return "trading";
-	if (route === "/platform" || route.startsWith("/platform/")) return "platform";
+	if (route === "/portfolio" || route.startsWith("/portfolio/")) return "trading";
+	if (route === "/system" || route.startsWith("/system/")) return "platform";
 
 	return null;
 }

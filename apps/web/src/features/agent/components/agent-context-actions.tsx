@@ -7,13 +7,14 @@ function agentHref(contextType: string, contextId: string, objective: string): s
 		contextId,
 		objective,
 	});
-	return `/platform/agents?${search.toString()}`;
+	return `/research/agent?${search.toString()}`;
 }
 
 export function AgentContextActions({
 	authorObjective,
 	contextId,
 	contextType,
+	evidenceLabel = "请求证据分析",
 	evidenceObjective,
 	className,
 }: {
@@ -21,6 +22,7 @@ export function AgentContextActions({
 	readonly className?: string;
 	readonly contextId: string;
 	readonly contextType: string;
+	readonly evidenceLabel?: string;
 	readonly evidenceObjective: string;
 }) {
 	return (
@@ -29,7 +31,7 @@ export function AgentContextActions({
 			data-agent-context={`${contextType}:${contextId}`}
 		>
 			<Button asChild size="sm" variant="outline">
-				<a href={agentHref(contextType, contextId, evidenceObjective)}>请求证据分析</a>
+				<a href={agentHref(contextType, contextId, evidenceObjective)}>{evidenceLabel}</a>
 			</Button>
 			{authorObjective && (
 				<Button asChild size="sm" variant="outline">

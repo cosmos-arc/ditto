@@ -91,56 +91,76 @@ export function CandidateComparison({
 					className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1"
 				/>
 			</label>
-			<div className="divide-y divide-(--color-border-subtle) border-y border-(--color-border-subtle)">
-				{candidates.map((candidate) => {
-					const isPinned = pinned.includes(candidate.candidate_id);
-					return (
-						<div
-							key={candidate.candidate_id}
-							className="grid gap-2 py-2 text-xs sm:grid-cols-[auto_1fr_auto_auto] sm:items-center"
-						>
-							<input
-								type="checkbox"
-								aria-label={`Pin ${candidate.candidate_id}`}
-								checked={isPinned}
-								disabled={!isPinned && pinned.length >= 4}
-								onChange={() => toggle(candidate.candidate_id)}
-							/>
-							<div>
-								<strong>{candidate.candidate_id}</strong>
-								<code className="ml-2">{JSON.stringify(candidate.parameters)}</code>
-							</div>
-							<button type="button" onClick={() => onInspect?.(candidate.candidate_id)} className="underline">
-								查看证据
-							</button>
-							<button
-								type="button"
-								data-candidate-role={candidate.is_baseline ? "baseline" : "eligible"}
-								disabled={
-									!selectionEvidenceReady ||
-									!comparison ||
-									comparison.revision !== revision ||
-									candidate.is_baseline ||
-									!isPinned ||
-									!rationale.trim() ||
-									selection !== null ||
-									mutation.isPending
-								}
-								onClick={() => select(candidate.candidate_id)}
-								className="rounded-(--radius-sm) border border-(--color-border-strong) px-2 py-1 disabled:opacity-50"
+			<div className="overflow-hidden rounded-(--radius-sm) border border-(--color-border-subtle)">
+				<div className="hidden grid-cols-[24px_150px_minmax(0,1fr)_72px_72px] gap-2 bg-(--color-surface-strip) px-3 py-1.5 text-xs uppercase tracking-[0.06em] text-(--color-foreground-tertiary) sm:grid">
+					<span>Pin</span>
+					<span>Candidate</span>
+					<span>Parameters</span>
+					<span>Evidence</span>
+					<span>Promotion</span>
+				</div>
+				<div className="divide-y divide-(--color-border-subtle)">
+					{candidates.map((candidate) => {
+						const isPinned = pinned.includes(candidate.candidate_id);
+						return (
+							<div
+								key={candidate.candidate_id}
+								className="grid gap-2 px-3 py-2 text-xs transition-colors hover:bg-(--color-interaction-hover-subtle-bg) sm:grid-cols-[24px_150px_minmax(0,1fr)_72px_72px] sm:items-center"
 							>
-								选择为晋级候选 {candidate.candidate_id}
-							</button>
-						</div>
-					);
-				})}
+								<input
+									type="checkbox"
+									aria-label={`Pin ${candidate.candidate_id}`}
+									checked={isPinned}
+									disabled={!isPinned && pinned.length >= 4}
+									onChange={() => toggle(candidate.candidate_id)}
+								/>
+								<strong className="font-data font-medium">{candidate.candidate_id}</strong>
+								<code className="min-w-0 truncate text-(--color-foreground-secondary)">
+									{JSON.stringify(candidate.parameters)}
+								</code>
+								<button
+									type="button"
+									onClick={() => onInspect?.(candidate.candidate_id)}
+									className="text-left text-(--color-accent) hover:underline"
+								>
+									查看证据
+								</button>
+								<button
+									type="button"
+									aria-label={`选择为晋级候选 ${candidate.candidate_id}`}
+									data-candidate-role={candidate.is_baseline ? "baseline" : "eligible"}
+									disabled={
+										!selectionEvidenceReady ||
+										!comparison ||
+										comparison.revision !== revision ||
+										candidate.is_baseline ||
+										!isPinned ||
+										!rationale.trim() ||
+										selection !== null ||
+										mutation.isPending
+									}
+									onClick={() => select(candidate.candidate_id)}
+									className="rounded-(--radius-sm) border border-(--color-border-strong) px-2 py-1 text-(--color-foreground-secondary) disabled:opacity-50"
+								>
+									晋级
+								</button>
+							</div>
+						);
+					})}
+				</div>
 			</div>
 			{comparison && (
-				<div className="flex flex-col gap-1">
+				<div className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-3 py-2">
 					<p className="font-data text-xs break-all">
-						comparison {comparison.payload_hash} · revision {comparison.revision}
+						<span className="text-(--color-foreground-tertiary)">COMPARISON</span> {comparison.payload_hash} · revision{" "}
+						{comparison.revision}
 					</p>
-					<code className="block break-all text-xs">{JSON.stringify(comparison.payload)}</code>
+					<details className="mt-2 text-xs">
+						<summary className="cursor-pointer text-(--color-foreground-secondary)">查看比较载荷</summary>
+						<code className="mt-2 block break-all border-t border-(--color-border-subtle) pt-2">
+							{JSON.stringify(comparison.payload)}
+						</code>
+					</details>
 				</div>
 			)}
 			{error && (

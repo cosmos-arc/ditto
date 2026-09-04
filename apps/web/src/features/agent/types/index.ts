@@ -57,6 +57,23 @@ export type AgentRunUsageView = {
 	readonly exhaustedReason: string | null;
 };
 
+export type AgentRunExecutionScope = {
+	readonly decisionTime: string;
+	readonly knowledgeCutoff: string;
+	readonly publicationCutoff: string;
+	readonly sourceSnapshotId: string;
+	readonly allowedUniverse: readonly string[];
+	readonly maxOutputTokens: number;
+};
+
+export type AgentRunExecutionPlanView = AgentRunExecutionScope & {
+	readonly allowedTools: readonly string[];
+	readonly authorityHash: string;
+	readonly licenseClass: string;
+	readonly egressClass: "cloud_allowed";
+	readonly executionEligibleAt: "not_applicable";
+};
+
 export type AgentRunStatus =
 	| "queued"
 	| "running"
@@ -89,6 +106,7 @@ export type AgentRunView = {
 	readonly guardrail: AgentGuardrailView | null;
 	readonly usage: AgentRunUsageView | null;
 	readonly failureCode: string | null;
+	readonly executionPlan: AgentRunExecutionPlanView | null;
 	readonly eventCursor: number;
 	readonly projectionState: "complete" | "partial";
 	readonly projectionReason: string | null;
@@ -207,6 +225,7 @@ export type CreateAgentRunInput = {
 	readonly maxModelSpendUsd: string;
 	readonly modelProfile: "balanced" | "quality";
 	readonly context?: AgentContextView | null;
+	readonly executionScope: AgentRunExecutionScope;
 	readonly idempotencyKey: string;
 };
 

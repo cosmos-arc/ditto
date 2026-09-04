@@ -18,6 +18,7 @@ export function GlobalAlertsSection() {
 			defaultOpen
 			data-info-level="l1"
 			data-info-unit="global-alerts"
+			className="[&_[data-slot=context-section-header]>span:first-child]:ml-2 [&_[data-slot=context-section-header]>span:first-child]:pl-2.5"
 		>
 			{isLoading && <LoadingSkeleton variant="table" rows={3} />}
 			<DittoErrorBoundary
@@ -28,6 +29,9 @@ export function GlobalAlertsSection() {
 			>
 				{alertsData && (
 					<div className="flex flex-col">
+						{alertsData.alerts.length === 0 && (
+							<p className="px-3 py-3 text-xs text-(--color-foreground-tertiary)">当前决策快照没有阻断告警</p>
+						)}
 						{alertsData.alerts.map((alert) => (
 							<AlertRow key={alert.id} severity={alert.severity} title={alert.title} time={alert.time} />
 						))}

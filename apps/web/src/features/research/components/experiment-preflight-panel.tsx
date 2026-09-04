@@ -36,7 +36,7 @@ export function ExperimentPreflightPanel({
 							Preflight 已过期
 						</p>
 					)}
-					<div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+					<div className="grid grid-cols-2 gap-2">
 						<Metric label="Status" value={preflight.status} />
 						<Metric label="Candidates" value={String(preflight.candidateCount)} />
 						<Metric label="Eligible history" value={`${preflight.eligibleMonthCount} 个月`} />
@@ -48,7 +48,7 @@ export function ExperimentPreflightPanel({
 					</div>
 					<div className="divide-y divide-(--color-border-subtle) border-y border-(--color-border-subtle)">
 						{preflight.checks.map((check) => (
-							<div key={check.ruleId} className="grid gap-1 py-2 text-xs xl:grid-cols-[12rem_5rem_1fr_1fr]">
+							<div key={check.ruleId} className="grid gap-1 py-2 text-xs">
 								<span className="font-data">{check.ruleId}</span>
 								<span>{check.outcome}</span>
 								<code className="break-all">observed {JSON.stringify(check.observed)}</code>

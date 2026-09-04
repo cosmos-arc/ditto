@@ -9,6 +9,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { ContextSection } from "@/components/domain/context-section";
+import { Button } from "@/components/ui/button";
 import { useStrategyGovernance } from "../hooks/use-strategy-governance";
 import { DecisionDialog, PublishDialog } from "./governance-dialogs";
 
@@ -22,9 +23,6 @@ interface ReviewDecisionPanelProps {
 	readonly bundleHash: string;
 	readonly experimentId?: string;
 }
-
-const ACTION_BUTTON_CLASS =
-	"rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg)";
 
 export function ReviewDecisionPanel({
 	strategyId,
@@ -50,43 +48,41 @@ export function ReviewDecisionPanel({
 
 	return (
 		<ContextSection title="Decision Form">
-			<div className="flex flex-wrap items-center gap-2 p-(--density-panel-padding)">
+			<div className="flex flex-wrap items-center gap-2 p-3">
 				{isPending && (
 					<>
-						<button
-							type="button"
-							className={ACTION_BUTTON_CLASS}
+						<Button
+							size="sm"
 							disabled={hardReviewBlocked}
 							title={hardReviewBlocked ? "hard-gate 阻断，不可批准" : "批准审查"}
 							onClick={() => !hardReviewBlocked && setDialog("approve")}
 						>
 							批准
-						</button>
-						<button type="button" className={ACTION_BUTTON_CLASS} onClick={() => setDialog("reject")}>
+						</Button>
+						<Button size="sm" variant="outline" onClick={() => setDialog("reject")}>
 							驳回
-						</button>
+						</Button>
 					</>
 				)}
 				{reviewOutcome === "approved" && (
 					<>
-						<button
-							type="button"
-							className={ACTION_BUTTON_CLASS}
+						<Button
+							size="sm"
 							disabled={!canPublish}
 							title={canPublish ? "使用 review packet 的 bundle_hash 发布" : "hard-gate 阻断，不可发布"}
 							onClick={() => canPublish && setDialog("publish")}
 						>
 							发布
-						</button>
-						<button type="button" className={ACTION_BUTTON_CLASS} onClick={() => setDialog("deprecate")}>
+						</Button>
+						<Button size="sm" variant="destructive" onClick={() => setDialog("deprecate")}>
 							弃用
-						</button>
+						</Button>
 					</>
 				)}
 				{reviewOutcome === "rejected" && (
-					<a href={`/research/strategies/${encodeURIComponent(strategyId)}/studio`} className={ACTION_BUTTON_CLASS}>
-						克隆为新草稿
-					</a>
+					<Button asChild size="sm" variant="outline">
+						<a href={`/research/strategies/${encodeURIComponent(strategyId)}/studio`}>克隆为新草稿</a>
+					</Button>
 				)}
 				{!isPending && reviewOutcome !== "approved" && reviewOutcome !== "rejected" && (
 					<span className="text-xs text-(--color-foreground-tertiary)">当前结论 {reviewOutcome}，无可执行动作。</span>

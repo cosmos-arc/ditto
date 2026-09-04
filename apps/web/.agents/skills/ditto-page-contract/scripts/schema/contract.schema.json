@@ -54,6 +54,11 @@
       "pattern": "^/",
       "description": "路由路径"
     },
+    "resolvedRoute": {
+      "type": "string",
+      "pattern": "^/",
+      "description": "动态路由用于视觉验收的可加载样例路径（可包含查询参数）"
+    },
     "pagePattern": {
       "type": "string",
       "enum": [
@@ -210,7 +215,8 @@
         "featureModule",
         "contractStatus",
         "overlayStatus",
-        "visualAuditStatus"
+        "prototypeVerified",
+        "reactParityVerified"
       ],
       "properties": {
         "reactRouteStatus": {
@@ -226,10 +232,8 @@
           "type": "string",
           "enum": ["none", "gallery-only", "triggerable", "implemented"]
         },
-        "visualAuditStatus": {
-          "type": "string",
-          "enum": ["missing", "queued", "implemented", "verified"]
-        },
+        "prototypeVerified": { "type": "boolean" },
+        "reactParityVerified": { "type": "boolean" },
         "reactTestRefs": {
           "type": "array",
           "items": {

@@ -1,0 +1,377 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-31T17:02:54.031Z",
+  "status": "passed",
+  "base_url": "http://127.0.0.1:5174",
+  "boundary": "Visual, responsive, keyboard-focus, and browser-console audit over deterministic loading/blocked states. The backend was intentionally unavailable; this is not UI-08 live journey evidence.",
+  "viewports": [
+    {
+      "width": 1200,
+      "height": 900
+    },
+    {
+      "width": 1366,
+      "height": 900
+    },
+    {
+      "width": 1536,
+      "height": 900
+    }
+  ],
+  "routes": [
+    {
+      "name": "today",
+      "path": "/"
+    },
+    {
+      "name": "markets",
+      "path": "/markets"
+    },
+    {
+      "name": "research",
+      "path": "/research"
+    },
+    {
+      "name": "portfolio",
+      "path": "/portfolio/model"
+    },
+    {
+      "name": "system",
+      "path": "/system/data-products"
+    }
+  ],
+  "checks": {
+    "horizontal_overflow": "passed",
+    "keyboard_focus": "passed",
+    "console_errors": "passed",
+    "visual_review": "passed"
+  },
+  "console_errors": [],
+  "observations": [
+    {
+      "width": 1200,
+      "route": "/",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1200,
+      "documentScrollWidth": 1200,
+      "h1": [
+        "首页"
+      ],
+      "innerWidth": 1200,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 18,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1200,
+      "route": "/markets",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1200,
+      "documentScrollWidth": 1200,
+      "h1": [
+        "跨市场总览"
+      ],
+      "innerWidth": 1200,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 15,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(128, 133, 139) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1200,
+      "route": "/research",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1200,
+      "documentScrollWidth": 1200,
+      "h1": [
+        "研究工作区"
+      ],
+      "innerWidth": 1200,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 20,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1200,
+      "route": "/portfolio/model",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1200,
+      "documentScrollWidth": 1200,
+      "h1": [
+        "Model Portfolio"
+      ],
+      "innerWidth": 1200,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 12,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(128, 132, 138) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1200,
+      "route": "/system/data-products",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1200,
+      "documentScrollWidth": 1200,
+      "h1": [
+        "数据产品",
+        "数据产品工作台"
+      ],
+      "innerWidth": 1200,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 17,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 132, 137) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1366,
+      "route": "/",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1366,
+      "documentScrollWidth": 1366,
+      "h1": [
+        "首页"
+      ],
+      "innerWidth": 1366,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 18,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(128, 133, 139) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1366,
+      "route": "/markets",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1366,
+      "documentScrollWidth": 1366,
+      "h1": [
+        "跨市场总览"
+      ],
+      "innerWidth": 1366,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 15,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1366,
+      "route": "/research",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1366,
+      "documentScrollWidth": 1366,
+      "h1": [
+        "研究工作区"
+      ],
+      "innerWidth": 1366,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 20,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(128, 132, 138) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1366,
+      "route": "/portfolio/model",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1366,
+      "documentScrollWidth": 1366,
+      "h1": [
+        "Model Portfolio"
+      ],
+      "innerWidth": 1366,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 12,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1366,
+      "route": "/system/data-products",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1366,
+      "documentScrollWidth": 1366,
+      "h1": [
+        "数据产品",
+        "数据产品工作台"
+      ],
+      "innerWidth": 1366,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 17,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 132, 137) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1536,
+      "route": "/",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1536,
+      "documentScrollWidth": 1536,
+      "h1": [
+        "首页"
+      ],
+      "innerWidth": 1536,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 18,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1536,
+      "route": "/markets",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1536,
+      "documentScrollWidth": 1536,
+      "h1": [
+        "跨市场总览"
+      ],
+      "innerWidth": 1536,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 15,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1536,
+      "route": "/research",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1536,
+      "documentScrollWidth": 1536,
+      "h1": [
+        "研究工作区"
+      ],
+      "innerWidth": 1536,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 20,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1536,
+      "route": "/portfolio/model",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1536,
+      "documentScrollWidth": 1536,
+      "h1": [
+        "Model Portfolio"
+      ],
+      "innerWidth": 1536,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 12,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    },
+    {
+      "width": 1536,
+      "route": "/system/data-products",
+      "bodyScrollHeight": 900,
+      "bodyScrollWidth": 1536,
+      "documentScrollWidth": 1536,
+      "h1": [
+        "数据产品",
+        "数据产品工作台"
+      ],
+      "innerWidth": 1536,
+      "title": "Ditto - 量化交易平台",
+      "visibleButtons": 17,
+      "focus": {
+        "boxShadow": "none",
+        "focusVisible": true,
+        "label": "Today",
+        "outline": "rgb(127, 130, 134) auto 1px",
+        "tag": "A"
+      }
+    }
+  ],
+  "screenshots": [
+    "1200-today.png",
+    "1200-markets.png",
+    "1200-research.png",
+    "1200-portfolio.png",
+    "1200-system.png",
+    "1366-today.png",
+    "1366-markets.png",
+    "1366-research.png",
+    "1366-portfolio.png",
+    "1366-system.png",
+    "1536-today.png",
+    "1536-markets.png",
+    "1536-research.png",
+    "1536-portfolio.png",
+    "1536-system.png"
+  ],
+  "representative_visual_review": [
+    "1200-today.png",
+    "1366-portfolio.png",
+    "1536-system.png"
+  ]
+}

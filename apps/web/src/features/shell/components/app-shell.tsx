@@ -22,6 +22,7 @@ export function AppShell({ children }: AppShellProps) {
 
 	return (
 		<div
+			data-slot="app-shell"
 			className={
 				"relative grid h-screen w-screen overflow-hidden " +
 				"grid-cols-[var(--width-rail)_minmax(0,1fr)] " +
@@ -32,10 +33,10 @@ export function AppShell({ children }: AppShellProps) {
 				<Rail />
 			</div>
 			<div className="col-start-2">
-				<ShellHeader onOpenAgent={() => setIsAgentLauncherOpen(true)} />
+				<ShellHeader activeDomain={activeDomain} onOpenAgent={() => setIsAgentLauncherOpen(true)} />
 			</div>
 			<div className="relative col-start-2 row-start-2 min-h-0 overflow-hidden">{children}</div>
-			<AgentLauncherSidecar open={isAgentLauncherOpen} onOpenChange={setIsAgentLauncherOpen} />
+			<AgentLauncherSidecar domain={activeDomain} open={isAgentLauncherOpen} onOpenChange={setIsAgentLauncherOpen} />
 			<NoiseLayer />
 		</div>
 	);

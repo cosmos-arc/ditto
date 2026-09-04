@@ -54,13 +54,28 @@ const tokenStabilizationSpec = join(
 const expectedActiveRoutePrototypeCount = 28;
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const auditedPrototypeFiles = ["page-alpha-explorer.html", "page-agent-console-v2.html"] as const;
-const landingVisualAuditStatuses = ["missing", "queued", "implemented", "verified"] as const;
+const retiredRoutePrototypeIds = new Set([
+	"alpha-explorer",
+	"trading-overview",
+	"regime-monitor",
+	"markets-intelligence",
+	"markets-calendar",
+]);
+const currentContractIdByPrototypeId = new Map([
+	["platform", "system"],
+	["portfolio", "portfolio-overview"],
+	["agent-console-v2", "research-agent-lab"],
+	["orders-ledger", "portfolio-transactions"],
+	["risk-center", "portfolio-risk"],
+	["platform-settings", "system-settings"],
+]);
 const landingSyncFields = [
 	"reactRouteStatus",
 	"featureModule",
 	"contractStatus",
 	"overlayStatus",
-	"visualAuditStatus",
+	"prototypeVerified",
+	"reactParityVerified",
 ] as const;
 const prototypeStructuralDimensionTokens = {
 	"--panel-header-height": "38px",
@@ -69,14 +84,13 @@ const prototypeStructuralDimensionTokens = {
 	"--surface-noise-opacity": "0.018",
 } as const;
 
-type LandingVisualAuditStatus = (typeof landingVisualAuditStatuses)[number];
-
 type LandingStatus = {
 	reactRouteStatus?: string;
 	featureModule?: string;
 	contractStatus?: string;
 	overlayStatus?: string;
-	visualAuditStatus?: string;
+	prototypeVerified?: boolean;
+	reactParityVerified?: boolean;
 };
 
 type ManifestPage = {
@@ -96,9 +110,7 @@ type PageContract = {
 	prototypeRef: string;
 	nextPrototypeRef?: string;
 	shellFamily: string;
-	landing?: LandingStatus & {
-		visualAuditStatus?: LandingVisualAuditStatus;
-	};
+	landing?: LandingStatus;
 	overlays?: Array<{ id: string; prototypeSelector: string }>;
 	nextOverlays?: Array<{ prototypeSelector: string }>;
 	nextSlots?: unknown[];
@@ -188,6 +200,14 @@ function readContracts(): PageContract[] {
 		.filter((file) => file.endsWith(".json"))
 		.map((file) => readJson<PageContract>(join(contractsDir, file)));
 	return contractsCache;
+}
+
+function findPrimaryContract(page: ManifestPage): PageContract | undefined {
+	const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
+	const contractId = currentContractIdByPrototypeId.get(page.id) ?? page.id;
+	return readContracts().find(
+		(contract) => contract.id === contractId && contract.prototypeRef === prototypeRef,
+	);
 }
 
 function countMatches(value: string, pattern: RegExp): number {
@@ -2566,23 +2586,30 @@ describe("prototype design consistency", () => {
 	});
 
 	it("keeps active prototype landing status in sync with page contracts", () => {
-		const contractByPrototype = new Map(
-			readContracts().map((contract) => [contract.prototypeRef, contract]),
-		);
 		const violations: string[] = [];
 
 		for (const page of activePages()) {
-			const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
-			const contract = contractByPrototype.get(prototypeRef);
-			const manifestStatus = page.landing?.visualAuditStatus;
+			const contract = findPrimaryContract(page);
 
 			if (!contract) {
-				violations.push(`${page.id}:missing-contract`);
+				if (
+					!retiredRoutePrototypeIds.has(page.id) ||
+					page.landing?.reactRouteStatus !== "superseded" ||
+					page.landing.contractStatus !== "retired" ||
+					page.landing.reactParityVerified !== false
+				) {
+					violations.push(`${page.id}:missing-current-contract-without-retirement`);
+				}
 				continue;
 			}
 
-			if (!manifestStatus || !landingVisualAuditStatuses.includes(manifestStatus as LandingVisualAuditStatus)) {
-				violations.push(`${page.id}:invalid-manifest-status:${manifestStatus ?? "missing-field"}`);
+			if (typeof page.landing?.prototypeVerified !== "boolean") {
+				violations.push(`${page.id}:invalid-prototype-verification`);
+				continue;
+			}
+
+			if (typeof page.landing.reactParityVerified !== "boolean") {
+				violations.push(`${page.id}:invalid-react-parity-verification`);
 				continue;
 			}
 
@@ -2603,23 +2630,28 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
-	it("keeps every active prototype visual audit verified in manifest and page contracts", () => {
-		const contractByPrototype = new Map(
-			readContracts().map((contract) => [contract.prototypeRef, contract]),
-		);
+	it("records prototype status explicitly and limits parity claims to verified current contracts", () => {
 		const violations: string[] = [];
 
 		for (const page of activePages()) {
-			const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
-			const contract = contractByPrototype.get(prototypeRef);
-			const manifestStatus = page.landing?.visualAuditStatus;
-			const contractStatus = contract?.landing?.visualAuditStatus;
+			const contract = findPrimaryContract(page);
+			const manifestStatus = page.landing?.prototypeVerified;
+			const manifestParity = page.landing?.reactParityVerified;
 
-			if (manifestStatus !== "verified") {
+			if (typeof manifestStatus !== "boolean") {
 				violations.push(`${page.id}:manifest:${manifestStatus ?? "missing"}`);
 			}
-			if (contractStatus !== "verified") {
-				violations.push(`${page.id}:contract:${contractStatus ?? "missing"}`);
+			if (typeof manifestParity !== "boolean") {
+				violations.push(`${page.id}:manifest-parity:${manifestParity ?? "missing"}`);
+			}
+			if (
+				manifestParity === true &&
+				(page.landing?.contractStatus !== "verified" ||
+					contract?.landing?.prototypeVerified !== true ||
+					contract.landing.reactParityVerified !== true ||
+					contract.landing.contractStatus !== "verified")
+			) {
+				violations.push(`${page.id}:parity-without-verified-current-contract`);
 			}
 		}
 
@@ -2631,7 +2663,9 @@ describe("prototype design consistency", () => {
 			page.id.startsWith("agent-console"),
 		);
 		const activeAgentConsolePages = agentConsolePages.filter(isActiveRoutePrototype);
-		const canonicalContract = readContracts().find((contract) => contract.id === "agent-console");
+		const canonicalContracts = readContracts().filter((contract) =>
+			["agent-approvals", "research-agent-lab", "system-agent-ops"].includes(contract.id),
+		);
 
 		expect(activeAgentConsolePages.map((page) => page.file)).toEqual([
 			"page-agent-console-v2.html",
@@ -2640,12 +2674,19 @@ describe("prototype design consistency", () => {
 		expect(legacyAgentConsole?.status).toBe("removed-specimen");
 		expect(legacyAgentConsole?.file).toBe("");
 		expect(existsSync(join(prototypesDir, "page-agent-console.html"))).toBe(false);
-		expect(canonicalContract?.prototypeRef).toBe(
-			"docs/designs/specs/prototypes/page-agent-console-v2.html",
-		);
-		expect(canonicalContract?.nextPrototypeRef).toBeUndefined();
-		expect(canonicalContract?.nextSlots).toBeUndefined();
-		expect(canonicalContract?.nextOverlays).toBeUndefined();
+		expect(canonicalContracts.map((contract) => contract.id).sort()).toEqual([
+			"agent-approvals",
+			"research-agent-lab",
+			"system-agent-ops",
+		]);
+		for (const contract of canonicalContracts) {
+			expect(contract.prototypeRef).toBe(
+				"docs/designs/specs/prototypes/page-agent-console-v2.html",
+			);
+			expect(contract.nextPrototypeRef).toBeUndefined();
+			expect(contract.nextSlots).toBeUndefined();
+			expect(contract.nextOverlays).toBeUndefined();
+		}
 	});
 
 	it("keeps deprecated AI route specimens in the prototype archive", () => {
@@ -3559,41 +3600,44 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
-	it("does not mark pages with overlay ids as overlayStatus none", () => {
+	it("backs every triggerable prototype overlay status with overlay markup", () => {
 		const offenders = readManifest()
 			.pages.filter(isActiveRoutePrototype)
 			.filter((page) => {
 				const html = readPrototypeHtml(page);
 
-				return /id="overlay-[^"]+"/.test(html) && page.landing?.overlayStatus === "none";
+				return (
+					page.landing?.overlayStatus === "triggerable" &&
+					!/id="overlay-[^"]+"/.test(html)
+				);
 			})
 			.map((page) => page.id);
 
 		expect(offenders).toEqual([]);
 	});
 
-	it("registers every active prototype overlay in page contracts", () => {
-		const contractByPrototype = new Map<string, Set<string>>();
-		for (const contract of readContracts()) {
-			const overlaySelectors = new Set(
-				contract.overlays?.map((overlay) => overlay.prototypeSelector) ?? [],
-			);
-			contractByPrototype.set(contract.prototypeRef, overlaySelectors);
-
-			if (contract.nextPrototypeRef) {
-				const nextOverlaySelectors = new Set(
-					(contract.nextOverlays ?? contract.overlays)?.map((overlay) => overlay.prototypeSelector) ?? [],
-				);
-				contractByPrototype.set(contract.nextPrototypeRef, nextOverlaySelectors);
-			}
-		}
-
+	it("registers every parity-claimed triggerable prototype overlay in current contracts", () => {
 		const missing: string[] = [];
 		for (const page of readManifest().pages) {
 			if (!isActiveRoutePrototype(page)) continue;
-
-			const selectors =
-				contractByPrototype.get(`docs/designs/specs/prototypes/${page.file}`) ?? new Set();
+			const contract = findPrimaryContract(page);
+			if (
+				contract?.landing?.reactParityVerified !== true ||
+				contract.landing.overlayStatus !== "triggerable"
+			) {
+				continue;
+			}
+			const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
+			const selectors = new Set(
+				readContracts()
+					.filter(
+						(candidate) =>
+							candidate.prototypeRef === prototypeRef &&
+							candidate.landing?.reactParityVerified === true &&
+							candidate.landing.overlayStatus === "triggerable",
+					)
+					.flatMap((candidate) => candidate.overlays?.map((overlay) => overlay.prototypeSelector) ?? []),
+			);
 
 			for (const id of getOverlayIds(readPrototypeHtml(page))) {
 				if (![...selectors].some((selector) => selectorReferencesOverlayId(selector, id))) {
@@ -3632,17 +3676,17 @@ describe("prototype design consistency", () => {
 	});
 
 	it("matches known shell family decisions from blueprints", () => {
-		const expectedShellFamilies = new Map([
-			["cross-market", "radar"],
-			["agent-console", "studio"],
-			["experiment-list", "catalog"],
-		]);
+		const expectedShellFamilies = [
+			{ prototypeId: "cross-market", contractId: "cross-market", shellFamily: "radar" },
+			{ prototypeId: "agent-console-v2", contractId: "research-agent-lab", shellFamily: "studio" },
+			{ prototypeId: "experiment-list", contractId: "experiment-list", shellFamily: "catalog" },
+		] as const;
 		const manifest = readManifest();
 		const contractById = new Map(readContracts().map((contract) => [contract.id, contract.shellFamily]));
 
-		for (const [id, shellFamily] of expectedShellFamilies) {
-			expect(manifest.pages.find((page) => page.id === id)?.shellFamily).toBe(shellFamily);
-			expect(contractById.get(id)).toBe(shellFamily);
+		for (const { prototypeId, contractId, shellFamily } of expectedShellFamilies) {
+			expect(manifest.pages.find((page) => page.id === prototypeId)?.shellFamily).toBe(shellFamily);
+			expect(contractById.get(contractId)).toBe(shellFamily);
 		}
 	});
 

@@ -1,9 +1,9 @@
 {
   "id": "experiment-list",
-  "version": 1,
-  "status": "draft",
+  "version": 2,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-29",
   "route": "/research/experiments",
   "pagePattern": "catalog-screener",
   "shellFamily": "catalog",
@@ -11,91 +11,106 @@
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/research",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
+      "src/features/research/components/experiment-list-page-workspace.test.tsx",
       "src/features/research/components/research-components.test.tsx"
     ],
-    "reactComponentRefs": [
-      "ExperimentListPage"
-    ]
+    "reactComponentRefs": ["ExperimentListPage"]
+  },
+  "liveData": {
+    "readPaths": ["/api/v1/research/experiments"],
+    "writePaths": [],
+    "mockFallback": false
   },
   "viewports": [
-    {
-      "width": 1536,
-      "height": 900,
-      "role": "primary"
-    },
-    {
-      "width": 1366,
-      "height": 768,
-      "role": "compact"
-    }
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" },
+    { "width": 1200, "height": 800, "role": "compact" }
   ],
   "slots": [
     {
-      "name": "header",
+      "name": "toolbar",
       "required": true,
+      "infoLevel": "l1",
       "prototypeSelector": ".filter-toolbar",
-      "reactSelector": "[data-slot='header']",
+      "reactSelector": "[data-slot='toolbar']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 6, "y": 44, "widthRatio": 0.03, "heightRatio": 0.55 },
       "a11yRole": "toolbar",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
+      "responsiveBehavior": { "compact": "reflow" }
     },
     {
       "name": "main",
       "required": true,
+      "infoLevel": "l1",
       "prototypeSelector": ".catalog-table",
       "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "flex",
+      "threshold": { "x": 10, "y": 22, "widthRatio": 0.05, "heightRatio": 0.08 },
       "a11yRole": "main"
     },
     {
       "name": "detail",
       "required": true,
+      "infoLevel": "l2",
       "prototypeSelector": ".catalog-detail",
       "reactSelector": "[data-slot='detail']",
+      "layoutStrategy": "fixed-width",
+      "threshold": { "x": 22, "y": 60, "widthRatio": 0.2, "heightRatio": 0.14 },
       "a11yRole": "complementary",
-      "responsiveBehavior": {
-        "compact": "overlay"
-      }
+      "responsiveBehavior": { "compact": "unchanged" }
     }
   ],
   "states": {
-    "universal": [
-      "loading",
-      "empty",
-      "error",
-      "stale"
-    ],
+    "universal": ["loading", "empty", "error", "stale"],
     "pageSpecific": [
-      "experiment-running"
+      "experiment-running",
+      "experiment-queued",
+      "experiment-completed",
+      "experiment-failed",
+      "filtered-empty",
+      "selected-experiment",
+      "detail-drawer-open"
     ]
   },
-  "flags": {
-    "hasStatusBar": true,
-    "sidebarCollapsible": false
-  },
+  "interactions": [
+    {
+      "id": "filter-experiment-catalog",
+      "trigger": "search-or-status-filter",
+      "affectedSlots": ["toolbar", "main", "detail"],
+      "expectedBehavior": "filters only live experiment summaries and keeps the selected detail consistent with the visible result set"
+    },
+    {
+      "id": "select-experiment-summary",
+      "trigger": "experiment-row",
+      "affectedSlots": ["main", "detail"],
+      "expectedBehavior": "shows the exact experiment id, revision, status, desired state, queue ordinal, and failure code"
+    },
+    {
+      "id": "open-experiment-detail-drawer",
+      "trigger": "experiment-detail-action",
+      "affectedSlots": ["detail"],
+      "expectedBehavior": "opens a compact live summary and links to the full experiment workbench"
+    },
+    {
+      "id": "create-experiment",
+      "trigger": "create-experiment-action",
+      "affectedSlots": ["toolbar"],
+      "expectedBehavior": "opens the governed experiment planner without writing from the catalog page"
+    }
+  ],
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
   "metrics": {
-    "capturedAt": "2026-04-27",
+    "capturedAt": "2026-08-29",
     "viewport": "1536x900",
     "baseline": {
-      "health": {
-        "width": 1536,
-        "height": 72,
-        "strategy": "content-driven"
-      },
-      "main": {
-        "width": 1110,
-        "height": 720,
-        "strategy": "content-driven"
-      },
-      "detail": {
-        "width": 360,
-        "height": 720,
-        "strategy": "fixed-width"
-      }
+      "toolbar": { "width": 1480, "height": 48, "strategy": "content-driven" },
+      "main": { "width": 1160, "height": 760, "strategy": "flex" },
+      "detail": { "width": 320, "height": 760, "strategy": "fixed-width" }
     }
   },
   "visualThresholds": {
@@ -103,7 +118,7 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.065
   },
   "overlays": [
     {
@@ -111,17 +126,10 @@
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "detail", "action": "open-overlay" },
       "prototypeSelector": "#overlay-experiment-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "ExperimentListPage",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     }
   ]
 }

@@ -30,7 +30,7 @@ describe("HomePage info-level annotations", () => {
 		render(<HomePage />, { wrapper: createWrapper() });
 
 		// Wait for all data to load (banner text appears after mock resolves)
-		await screen.findByText("今日盈亏");
+		await screen.findByText("温和风险偏好");
 
 		const l1Units = document.querySelectorAll("[data-info-level='l1']");
 		const l1UnitNames = Array.from(l1Units).map((el) => el.getAttribute("data-info-unit"));
@@ -43,17 +43,16 @@ describe("HomePage info-level annotations", () => {
 		expect(l1Units).toHaveLength(5);
 	});
 
-	it("annotates 3 L2 information units", async () => {
+	it("annotates 2 L2 information units", async () => {
 		render(<HomePage />, { wrapper: createWrapper() });
 
-		await screen.findByText("今日盈亏");
+		await screen.findByText("温和风险偏好");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
 		expect(l2UnitNames).toContain("research-progress");
 		expect(l2UnitNames).toContain("agent-findings");
-		expect(l2UnitNames).toContain("workspace-placeholder");
-		expect(l2Units).toHaveLength(3);
+		expect(l2Units).toHaveLength(2);
 	});
 });

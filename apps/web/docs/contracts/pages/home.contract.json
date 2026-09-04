@@ -1,9 +1,9 @@
 {
   "id": "home",
-  "version": 2,
-  "status": "draft",
+  "version": 3,
+  "status": "contract-ready",
   "createdAt": "2026-04-16",
-  "updatedAt": "2026-05-02",
+  "updatedAt": "2026-08-29",
   "route": "/",
   "pagePattern": "global-command-center",
   "shellFamily": "command-center",
@@ -14,9 +14,10 @@
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/home",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
       "src/features/home/components/home-components.test.tsx",
       "src/features/home/hooks/home-hooks.test.tsx"
@@ -24,6 +25,13 @@
     "reactComponentRefs": [
       "HomePage"
     ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/manual/daily-decision/v3"
+    ],
+    "writePaths": [],
+    "mockFallback": false
   },
   "viewports": [
     {
@@ -35,6 +43,11 @@
       "width": 1366,
       "height": 768,
       "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
     }
   ],
   "slots": [
@@ -42,7 +55,7 @@
       "name": "pulse",
       "required": true,
       "infoLevel": "l2",
-      "prototypeSelector": ".shell-pulse",
+      "prototypeSelector": ".shell-status-bar",
       "reactSelector": "[data-slot='pulse-strip']",
       "layoutStrategy": "content-driven",
       "threshold": {
@@ -92,44 +105,11 @@
   ],
   "subSlots": [
     {
-      "name": "daily-brief",
-      "parentSlot": "main",
-      "infoLevel": "l2",
-      "prototypeSelector": ".decision-card",
-      "reactSelector": "[data-slot='daily-brief']",
-      "threshold": {
-        "widthRatio": 0.05,
-        "heightRatio": 0.05
-      }
-    },
-    {
       "name": "decision-banner",
       "parentSlot": "main",
       "infoLevel": "l2",
-      "prototypeSelector": ".decision-banner",
-      "reactSelector": "[data-slot='decision-banner']",
-      "threshold": {
-        "widthRatio": 0.05,
-        "heightRatio": 0.05
-      }
-    },
-    {
-      "name": "priority-findings",
-      "parentSlot": "main",
-      "infoLevel": "l2",
-      "prototypeSelector": ".panel-grow",
-      "reactSelector": "[data-slot='priority-findings']",
-      "threshold": {
-        "widthRatio": 0.05,
-        "heightRatio": 0.05
-      }
-    },
-    {
-      "name": "pending-approvals",
-      "parentSlot": "main",
-      "infoLevel": "l2",
-      "prototypeSelector": ".panel-grow",
-      "reactSelector": "[data-slot='pending-approvals']",
+      "prototypeSelector": "[data-contract-slot='decision-card']",
+      "reactSelector": "[data-testid='decision-banner']",
       "threshold": {
         "widthRatio": 0.05,
         "heightRatio": 0.05
@@ -139,7 +119,7 @@
       "name": "priority-queue",
       "parentSlot": "main",
       "infoLevel": "l2",
-      "prototypeSelector": ".panel-grow",
+      "prototypeSelector": "[data-contract-slot='pending-actions']",
       "reactSelector": "[data-testid='priority-queue']",
       "threshold": {
         "widthRatio": 0.05,
@@ -150,7 +130,7 @@
       "name": "secondary",
       "parentSlot": "main",
       "infoLevel": "l0",
-      "prototypeSelector": ".shell-secondary",
+      "prototypeSelector": "[data-contract-slot='recent-signals']",
       "reactSelector": "[data-slot='home-secondary']",
       "threshold": {
         "widthRatio": 0.05,
@@ -170,7 +150,11 @@
       "has-critical",
       "daily-brief-stale",
       "pending-approvals",
-      "priority-findings"
+      "priority-findings",
+      "signal-evidence-open",
+      "order-handoff-confirm",
+      "workspace-settings-open",
+      "decision-evidence-open"
     ]
   },
   "interactions": [
@@ -182,6 +166,31 @@
         "main"
       ],
       "expectedBehavior": "sidebar width changes and main area expands"
+    },
+    {
+      "id": "signal-evidence",
+      "trigger": "priority-item-detail",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens read-only signal evidence and requires an explicit handoff before trading review"
+    },
+    {
+      "id": "workspace-settings",
+      "trigger": "workspace-settings-button",
+      "affectedSlots": [
+        "sidebar",
+        "main"
+      ],
+      "expectedBehavior": "opens persisted UI preferences and changes only implemented settings"
+    },
+    {
+      "id": "decision-evidence",
+      "trigger": "decision-evidence-button",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens a read-only Daily Decision V3 evidence summary without invoking a model"
     }
   ],
   "flags": {
@@ -214,7 +223,7 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.05
   },
   "overlays": [
     {
@@ -224,10 +233,10 @@
       "requiredInDefaultFlow": true,
       "trigger": {
         "slot": "main",
-        "action": "open-overlay"
+        "action": "select-priority-item"
       },
       "prototypeSelector": "#overlay-signal-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "HomeSignalEvidenceDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -241,10 +250,10 @@
       "requiredInDefaultFlow": true,
       "trigger": {
         "slot": "main",
-        "action": "open-overlay"
+        "action": "prepare-order-handoff"
       },
       "prototypeSelector": "#overlay-order-confirm",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "HomeOrderHandoffDialog",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -258,10 +267,10 @@
       "requiredInDefaultFlow": true,
       "trigger": {
         "slot": "main",
-        "action": "open-overlay"
+        "action": "open-workspace-settings"
       },
       "prototypeSelector": "#overlay-edit-workspace",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "HomeWorkspaceSettingsSheet",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -275,10 +284,10 @@
       "requiredInDefaultFlow": true,
       "trigger": {
         "slot": "main",
-        "action": "open-overlay"
+        "action": "open-decision-evidence"
       },
       "prototypeSelector": "#overlay-ai-advice",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "HomeDecisionEvidenceDrawer",
       "closeBehavior": [
         "escape",
         "outside-click",

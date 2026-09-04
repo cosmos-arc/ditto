@@ -34,9 +34,14 @@ describe("Agent launcher sidecar", () => {
 		await user.click(trigger);
 
 		expect(screen.getByRole("dialog", { name: "Agent 工作入口" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "进入 Agent Console" })).toHaveAttribute(
+		expect(screen.getByRole("link", { name: "进入 Research Agent Lab" })).toHaveAttribute(
 			"href",
-			"/platform/agents?tab=runs",
+			"/research/agent?tab=runs",
+		);
+		expect(screen.getByRole("link", { name: "System Agent Ops" })).toHaveAttribute("href", "/system/agent?tab=runs");
+		expect(screen.getByRole("link", { name: "Approval Inbox" })).toHaveAttribute(
+			"href",
+			"/system/approvals?tab=approvals",
 		);
 		expect(screen.queryByText("Copilot")).not.toBeInTheDocument();
 
@@ -54,5 +59,23 @@ describe("Agent launcher sidecar", () => {
 		await user.keyboard("{Escape}");
 
 		expect(screen.queryByRole("dialog", { name: "Agent 工作入口" })).not.toBeInTheDocument();
+	});
+
+	it.each([
+		["/", "home", "Today"],
+		["/markets/a-shares", "markets", "Markets"],
+		["/research/factors", "research", "Research"],
+		["/portfolio/model", "portfolio", "Portfolio"],
+		["/system/jobs", "system", "System"],
+	] as const)("binds %s to the %s governed context", async (pathname, domain, label) => {
+		mockUseLocation.mockReturnValue({ pathname });
+		const user = userEvent.setup();
+		render(<AppShell>content</AppShell>);
+
+		await user.click(screen.getByRole("button", { name: "打开 Agent 工作入口" }));
+
+		const sidecar = screen.getByRole("dialog", { name: "Agent 工作入口" });
+		expect(sidecar).toHaveAttribute("data-agent-context-domain", domain);
+		expect(sidecar).toHaveTextContent(`当前上下文 · ${label}`);
 	});
 });

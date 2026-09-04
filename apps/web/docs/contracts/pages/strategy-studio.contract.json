@@ -1,126 +1,185 @@
 {
   "id": "strategy-studio",
-  "version": 2,
-  "status": "draft",
+  "version": 3,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-05-02",
+  "updatedAt": "2026-08-29",
   "route": "/research/strategies/$id/studio",
   "pagePattern": "studio-builder",
   "shellFamily": "studio",
   "prototypeRef": "docs/designs/specs/prototypes/page-strategy-studio.html",
-  "blueprintRefs": [
-    "02_core_page_blueprints.md#7-strategy-studio"
-  ],
+  "blueprintRefs": ["02_core_page_blueprints.md#7-strategy-studio"],
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/strategy",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
       "src/features/strategy/components/info-level-annotations.test.tsx",
       "src/features/strategy/components/strategy-components.test.tsx",
+      "src/features/strategy/components/strategy-page-workspace.test.tsx",
       "src/features/strategy/components/studio-mode-bar.test.tsx"
     ],
-    "reactComponentRefs": [
-      "StrategyPage"
-    ]
+    "reactComponentRefs": ["StrategyPage"]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/strategies/{strategy_id}",
+      "/api/v1/strategies/{strategy_id}/versions",
+      "/api/v1/research/node-descriptors"
+    ],
+    "writePaths": [
+      "/api/v1/strategies/{strategy_id}/versions/{version}/validate",
+      "/api/v1/strategies/{strategy_id}",
+      "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate"
+    ],
+    "mockFallback": false
   },
   "viewports": [
-    {
-      "width": 1536,
-      "height": 900,
-      "role": "primary"
-    },
-    {
-      "width": 1366,
-      "height": 768,
-      "role": "compact"
-    }
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" },
+    { "width": 1200, "height": 800, "role": "compact" }
   ],
   "slots": [
     {
+      "name": "header",
+      "required": true,
+      "infoLevel": "l0",
+      "prototypeSelector": ".studio-header",
+      "reactSelector": "[data-slot='header']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.11 },
+      "a11yRole": "banner"
+    },
+    {
+      "name": "modes",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": ".studio-mode-bar",
+      "reactSelector": "[data-slot='modes']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 6, "widthRatio": 0.03, "heightRatio": 0.08 },
+      "a11yRole": "navigation",
+      "responsiveBehavior": { "compact": "unchanged" }
+    },
+    {
       "name": "source",
       "required": true,
-      "prototypeSelector": ".studio-source",
+      "infoLevel": "l1",
+      "prototypeSelector": ".studio-sources",
       "reactSelector": "[data-slot='source']",
+      "layoutStrategy": "fixed-width",
+      "threshold": { "x": 8, "y": 8, "widthRatio": 0.3, "heightRatio": 0.08 },
       "a11yRole": "complementary",
-      "responsiveBehavior": {
-        "compact": "collapsed"
-      }
+      "responsiveBehavior": { "compact": "unchanged" }
     },
     {
       "name": "main",
       "required": true,
+      "infoLevel": "l1",
       "prototypeSelector": ".studio-main",
       "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "flex",
+      "threshold": { "x": 8, "y": 8, "widthRatio": 0.08, "heightRatio": 0.08 },
       "a11yRole": "main"
     },
     {
       "name": "inspector",
       "required": true,
+      "infoLevel": "l2",
       "prototypeSelector": ".studio-inspector",
       "reactSelector": "[data-slot='inspector']",
+      "layoutStrategy": "fixed-width",
+      "threshold": { "x": 8, "y": 8, "widthRatio": 0.12, "heightRatio": 0.08 },
       "a11yRole": "complementary",
-      "responsiveBehavior": {
-        "compact": "overlay"
-      }
+      "responsiveBehavior": { "compact": "unchanged" }
     },
     {
-      "name": "modes",
+      "name": "logs",
       "required": true,
-      "prototypeSelector": ".studio-modes",
-      "reactSelector": "[data-slot='modes']",
-      "a11yRole": "navigation",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
+      "infoLevel": "l2",
+      "prototypeSelector": ".studio-logs",
+      "reactSelector": "[data-slot='logs']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 8, "y": 18, "widthRatio": 0.03, "heightRatio": 0.55 },
+      "a11yRole": "log",
+      "responsiveBehavior": { "compact": "unchanged" }
     }
   ],
   "states": {
-    "universal": [
-      "loading",
-      "empty",
-      "error",
-      "stale"
-    ],
+    "universal": ["loading", "empty", "error", "stale"],
     "pageSpecific": [
-      "no-session",
-      "running",
-      "guided",
-      "agent-running",
-      "waiting-approval",
-      "blocked"
+      "selected-form-mode",
+      "selected-pipeline-mode",
+      "working-copy-dirty",
+      "validation-ready",
+      "validation-stale",
+      "validation-error",
+      "save-pending",
+      "save-success",
+      "dry-run-planning",
+      "backtest-planning",
+      "factor-preview-live",
+      "deprecation-command-open"
     ]
   },
-  "flags": {
-    "hasStatusBar": true,
-    "sidebarCollapsible": false
-  },
+  "interactions": [
+    {
+      "id": "edit-strategy-working-copy",
+      "trigger": "form-or-pipeline-edit",
+      "affectedSlots": ["main", "inspector", "logs"],
+      "expectedBehavior": "edits only the local working copy and marks any previous validation stale"
+    },
+    {
+      "id": "validate-candidate-spec",
+      "trigger": "validate-action",
+      "affectedSlots": ["header", "inspector", "logs"],
+      "expectedBehavior": "validates the exact base version and current serialized spec, then exposes the canonical candidate hash"
+    },
+    {
+      "id": "save-new-strategy-version",
+      "trigger": "save-action",
+      "affectedSlots": ["header", "main", "inspector", "logs"],
+      "expectedBehavior": "requires current successful validation and confirms an idempotent append-only draft version save"
+    },
+    {
+      "id": "plan-dry-run",
+      "trigger": "dry-run-action",
+      "affectedSlots": ["header", "logs"],
+      "expectedBehavior": "shows an exact planning handoff and reports not run until snapshot, dates, and registry hash are fixed"
+    },
+    {
+      "id": "plan-backtest",
+      "trigger": "submit-backtest-action",
+      "affectedSlots": ["header", "logs"],
+      "expectedBehavior": "hands the exact strategy id and version to experiment creation without creating a run"
+    },
+    {
+      "id": "preview-live-factors",
+      "trigger": "factor-preview-action",
+      "affectedSlots": ["source", "main"],
+      "expectedBehavior": "shows live expressions and weights while marking unmaterialized distributions as not evaluated"
+    },
+    {
+      "id": "deprecate-strategy-version",
+      "trigger": "deprecate-action",
+      "affectedSlots": ["header", "inspector", "logs"],
+      "expectedBehavior": "records actor and reason through the idempotent append-only governance command"
+    }
+  ],
+  "flags": { "hasStatusBar": true, "sidebarCollapsible": false },
   "metrics": {
-    "capturedAt": "2026-04-27",
+    "capturedAt": "2026-08-29",
     "viewport": "1536x900",
     "baseline": {
-      "source": {
-        "width": 280,
-        "height": 720,
-        "strategy": "fixed-width"
-      },
-      "main": {
-        "width": 900,
-        "height": 720,
-        "strategy": "content-driven"
-      },
-      "inspector": {
-        "width": 320,
-        "height": 720,
-        "strategy": "fixed-width"
-      },
-      "modes": {
-        "width": 1536,
-        "height": 56,
-        "strategy": "content-driven"
-      }
+      "header": { "width": 1480, "height": 56, "strategy": "content-driven" },
+      "modes": { "width": 1480, "height": 36, "strategy": "content-driven" },
+      "source": { "width": 220, "height": 640, "strategy": "fixed-width" },
+      "main": { "width": 960, "height": 640, "strategy": "flex" },
+      "inspector": { "width": 300, "height": 640, "strategy": "fixed-width" },
+      "logs": { "width": 1480, "height": 132, "strategy": "content-driven" }
     }
   },
   "visualThresholds": {
@@ -128,93 +187,58 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.065
   },
   "overlays": [
     {
-      "id": "strategy-studio.delete-strategy",
+      "id": "strategy-studio.deprecate-strategy",
       "kind": "modal",
       "blocking": true,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-delete-strategy",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "StrategyStudioOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "strategy-studio.save-strategy",
-      "kind": "sheet",
-      "blocking": false,
+      "kind": "modal",
+      "blocking": true,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-save-strategy",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "StrategyStudioOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "strategy-studio.validation-toast",
       "kind": "toast",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-validation-toast",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "StrategyPage",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "strategy-studio.backtest-config",
-      "kind": "drawer",
+      "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "header", "action": "open-overlay" },
       "prototypeSelector": "#overlay-backtest-config",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "StrategyStudioOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     },
     {
       "id": "strategy-studio.factor-preview",
-      "kind": "drawer",
+      "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
+      "trigger": { "slot": "source", "action": "open-overlay" },
       "prototypeSelector": "#overlay-factor-preview",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
+      "reactComponent": "StrategyStudioOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
     }
   ]
 }

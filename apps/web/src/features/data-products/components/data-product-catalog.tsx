@@ -1,8 +1,8 @@
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
-import type { DataProductOverview } from "../api";
+import type { DataProductView } from "../api";
 
 interface DataProductCatalogProps {
-	readonly products: readonly DataProductOverview[];
+	readonly products: readonly DataProductView[];
 	readonly selectedId: string;
 	readonly onSelect: (datasetId: string) => void;
 }
@@ -18,7 +18,7 @@ export function DataProductCatalog({ products, selectedId, onSelect }: DataProdu
 							<tr>
 								<th className="px-3 py-2 font-medium">Dataset</th>
 								<th className="px-3 py-2 font-medium">Maturity</th>
-								<th className="px-3 py-2 font-medium">Schedule</th>
+								<th className="px-3 py-2 font-medium">Frequency</th>
 								<th className="px-3 py-2 font-medium">Certification</th>
 							</tr>
 						</thead>
@@ -42,7 +42,7 @@ export function DataProductCatalog({ products, selectedId, onSelect }: DataProdu
 											</button>
 										</td>
 										<td className="px-3 py-1.5 font-data text-(--color-foreground-secondary)">{product.maturity}</td>
-										<td className="px-3 py-1.5 font-data text-(--color-foreground-tertiary)">{product.schedule}</td>
+										<td className="px-3 py-1.5 font-data text-(--color-foreground-tertiary)">{product.frequency}</td>
 										<td
 											className={
 												certified

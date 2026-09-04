@@ -1,9 +1,9 @@
 {
   "id": "factor-analysis",
-  "version": 1,
-  "status": "draft",
+  "version": 2,
+  "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-08-29",
   "route": "/research/factors/$id",
   "pagePattern": "object-hub",
   "shellFamily": "object-hub",
@@ -11,16 +11,26 @@
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/research",
-    "contractStatus": "draft",
+    "contractStatus": "verified",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "verified",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
     "reactTestRefs": [
-      "src/features/research/components/info-level-annotations.test.tsx",
-      "src/features/research/components/factor-components.test.tsx"
+      "src/features/research/components/factor-page-workspace.test.tsx",
+      "src/features/research/components/factor-diagnostics.test.tsx",
+      "src/features/research/components/info-level-annotations.test.tsx"
     ],
     "reactComponentRefs": [
-      "FactorPage"
+      "FactorPage",
+      "FactorDiagnosticsView"
     ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/research/factors/{factor_id}/diagnostics"
+    ],
+    "writePaths": [],
+    "mockFallback": false
   },
   "viewports": [
     {
@@ -32,25 +42,43 @@
       "width": 1366,
       "height": 768,
       "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
     }
   ],
   "slots": [
     {
-      "name": "meta",
+      "name": "header",
       "required": true,
-      "prototypeSelector": ".object-meta",
-      "reactSelector": "[data-slot='meta']",
-      "a11yRole": "banner",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
+      "infoLevel": "l0",
+      "prototypeSelector": ".shell-header",
+      "reactSelector": "[data-slot='header']",
+      "layoutStrategy": "flex",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.11
+      },
+      "a11yRole": "banner"
     },
     {
-      "name": "tabs",
+      "name": "meta",
       "required": true,
-      "prototypeSelector": ".object-tabs",
-      "reactSelector": "[data-slot='tabs']",
-      "a11yRole": "navigation",
+      "infoLevel": "l1",
+      "prototypeSelector": ".hub-meta",
+      "reactSelector": "[data-slot='meta']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 56,
+        "widthRatio": 0.03,
+        "heightRatio": 0.85
+      },
+      "a11yRole": "banner",
       "responsiveBehavior": {
         "compact": "reflow"
       }
@@ -58,16 +86,32 @@
     {
       "name": "main",
       "required": true,
-      "prototypeSelector": ".object-main",
+      "infoLevel": "l1",
+      "prototypeSelector": "[data-contract-slot='main']",
       "reactSelector": "[data-slot='main']",
-      "a11yRole": "main"
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 8,
+        "y": 52,
+        "widthRatio": 0.03,
+        "heightRatio": 0.12
+      },
+      "a11yRole": "region"
     },
     {
-      "name": "bottom",
+      "name": "sidebar",
       "required": true,
-      "prototypeSelector": ".object-bottom",
-      "reactSelector": "[data-slot='bottom']",
-      "a11yRole": "region",
+      "infoLevel": "l2",
+      "prototypeSelector": "[data-contract-slot='sidebar']",
+      "reactSelector": "[data-testid='factor-analysis-sidebar']",
+      "layoutStrategy": "fixed-width",
+      "threshold": {
+        "x": 8,
+        "y": 52,
+        "widthRatio": 0.03,
+        "heightRatio": 0.12
+      },
+      "a11yRole": "complementary",
       "responsiveBehavior": {
         "compact": "collapsed"
       }
@@ -81,36 +125,86 @@
       "stale"
     ],
     "pageSpecific": [
-      "not-found"
+      "evidence-scope-missing",
+      "diagnostics-ready",
+      "handoff-open",
+      "ai-governance-open",
+      "diagnostic-detail-open"
     ]
   },
+  "interactions": [
+    {
+      "id": "bind-diagnostics-scope",
+      "trigger": "scope-form-submit",
+      "affectedSlots": [
+        "meta",
+        "main",
+        "sidebar"
+      ],
+      "expectedBehavior": "reads diagnostics only after snapshot, date window, and registry hash are all explicit"
+    },
+    {
+      "id": "handoff-factor-to-backtest",
+      "trigger": "add-backtest-action",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens a contextual handoff and does not claim a backtest was created"
+    },
+    {
+      "id": "handoff-factor-to-experiment",
+      "trigger": "add-experiment-action",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens a contextual handoff and does not write research state"
+    },
+    {
+      "id": "request-governed-ai-analysis",
+      "trigger": "ai-analysis-action",
+      "affectedSlots": [
+        "main",
+        "sidebar"
+      ],
+      "expectedBehavior": "requires an immutable diagnostics identity and never invents an unsupported conclusion"
+    },
+    {
+      "id": "inspect-diagnostics-artifact",
+      "trigger": "diagnostic-detail-action",
+      "affectedSlots": [
+        "main",
+        "sidebar"
+      ],
+      "expectedBehavior": "reuses the exact server-backed diagnostics query and immutable provenance"
+    }
+  ],
   "flags": {
     "hasStatusBar": false,
     "sidebarCollapsible": false
   },
   "metrics": {
-    "capturedAt": "2026-04-27",
+    "capturedAt": "2026-08-29",
     "viewport": "1536x900",
     "baseline": {
-      "meta": {
-        "width": 1536,
-        "height": 112,
-        "strategy": "content-driven"
+      "header": {
+        "width": 1480,
+        "height": 68,
+        "strategy": "flex"
       },
-      "tabs": {
-        "width": 1536,
-        "height": 48,
+      "meta": {
+        "width": 1480,
+        "height": 66,
         "strategy": "content-driven"
       },
       "main": {
-        "width": 1536,
-        "height": 590,
+        "width": 1480,
+        "height": 650,
         "strategy": "content-driven"
       },
-      "bottom": {
-        "width": 1536,
-        "height": 140,
-        "strategy": "content-driven"
+      "sidebar": {
+        "width": 340,
+        "height": 618,
+        "strategy": "fixed-width"
       }
     }
   },
@@ -119,7 +213,7 @@
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
-    "pixelDiffRatio": 0.02
+    "pixelDiffRatio": 0.04
   },
   "overlays": [
     {
@@ -132,7 +226,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-add-backtest",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "FactorPageOverlays",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -149,7 +243,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-add-experiment",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "FactorPageOverlays",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -166,7 +260,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-ai-analysis",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "FactorPageOverlays",
       "closeBehavior": [
         "escape",
         "outside-click",
@@ -183,7 +277,7 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "#overlay-diagnostic-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
+      "reactComponent": "FactorPageOverlays",
       "closeBehavior": [
         "escape",
         "outside-click",

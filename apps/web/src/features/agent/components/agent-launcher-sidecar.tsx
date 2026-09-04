@@ -1,13 +1,16 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { DOMAINS, type DomainId } from "@/features/navigation/types";
 
 interface AgentLauncherSidecarProps {
+	readonly domain: DomainId;
 	readonly open: boolean;
 	readonly onOpenChange: (open: boolean) => void;
 }
 
-export function AgentLauncherSidecar({ open, onOpenChange }: AgentLauncherSidecarProps) {
+export function AgentLauncherSidecar({ domain, open, onOpenChange }: AgentLauncherSidecarProps) {
 	const returnFocusRef = useRef<HTMLElement | null>(null);
+	const domainLabel = DOMAINS.find((candidate) => candidate.id === domain)?.label ?? "Today";
 
 	useEffect(() => {
 		if (!open) return;
@@ -32,6 +35,7 @@ export function AgentLauncherSidecar({ open, onOpenChange }: AgentLauncherSideca
 			aria-modal="false"
 			aria-label="Agent 工作入口"
 			data-slot="agent-launcher-sidecar"
+			data-agent-context-domain={domain}
 			className="fixed top-0 right-0 z-40 grid h-screen w-(--width-drawer) max-w-[calc(100vw-var(--width-rail))] grid-rows-[auto_1fr] border-l border-(--color-border-subtle) bg-(--color-surface-panel-base) shadow-[0_0_32px_color-mix(in_oklch,var(--color-accent)_10%,transparent)]"
 		>
 			<header className="flex h-(--height-header) items-center justify-between border-b border-(--color-border-subtle) px-(--spacing-4)">
@@ -51,6 +55,9 @@ export function AgentLauncherSidecar({ open, onOpenChange }: AgentLauncherSideca
 				</button>
 			</header>
 			<div className="flex min-h-0 flex-col gap-5 overflow-y-auto p-(--spacing-4)">
+				<p className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs font-medium text-(--color-foreground-secondary)">
+					当前上下文 · {domainLabel}
+				</p>
 				<section className="border-b border-(--color-border-subtle) pb-4">
 					<p className="text-xs font-medium text-(--color-foreground)">受治理研究入口</p>
 					<p className="mt-2 text-xs leading-relaxed text-(--color-foreground-secondary)">
@@ -66,14 +73,14 @@ export function AgentLauncherSidecar({ open, onOpenChange }: AgentLauncherSideca
 						</p>
 					</div>
 					<Button asChild className="w-full">
-						<a href="/platform/agents?tab=runs">进入 Agent Console</a>
+						<a href="/research/agent?tab=runs">进入 Research Agent Lab</a>
 					</Button>
 					<div className="grid grid-cols-2 gap-2">
 						<Button asChild variant="outline" size="sm">
-							<a href="/platform/agents?tab=approvals">Approval Inbox</a>
+							<a href="/system/agent?tab=runs">System Agent Ops</a>
 						</Button>
 						<Button asChild variant="outline" size="sm">
-							<a href="/platform/agents?tab=campaigns">Campaigns</a>
+							<a href="/system/approvals?tab=approvals">Approval Inbox</a>
 						</Button>
 					</div>
 				</section>

@@ -1,3 +1,4 @@
+export { type AlphaExplorerMode, AlphaExplorerPage, type AlphaExplorerSearch } from "./components/alpha-explorer-page";
 export { ExperimentCreatePage } from "./components/experiment-create-page";
 export { ExperimentDetailPage } from "./components/experiment-detail-page";
 export { ExperimentListPage } from "./components/experiment-list-page";
@@ -10,7 +11,4 @@ export { ResearchSubNav } from "./components/research-sub-nav";
 export { ReviewDetailPage } from "./components/review-detail-page";
 export { ReviewQueuePage } from "./components/review-queue-page";
 export { UniverseListPage } from "./components/universe-list-page";
-export { useRegimeCurrent } from "./hooks/use-regime-current";
-export { useRegimeDrivers } from "./hooks/use-regime-drivers";
-export { useRegimeHistory } from "./hooks/use-regime-history";
-export { useRegimeStrategyImpact } from "./hooks/use-regime-strategy-impact";
+export { useRegimeDiagnostics } from "./hooks/use-regime-diagnostics";

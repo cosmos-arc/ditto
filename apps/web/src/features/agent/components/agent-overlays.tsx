@@ -42,6 +42,11 @@ function idempotencyKey(prefix: string): string {
 	return `${prefix}:${crypto.randomUUID()}`;
 }
 
+function isAwareDateTime(value: string): boolean {
+	const normalized = value.trim();
+	return /(?:Z|[+-]\d{2}:\d{2})$/u.test(normalized) && Number.isFinite(Date.parse(normalized));
+}
+
 function Field({
 	label,
 	value,
@@ -104,7 +109,18 @@ export function AgentRunCreateSheet({
 	const [maxSpend, setMaxSpend] = useState("3.00");
 	const [localContextType, setLocalContextType] = useState(contextType);
 	const [localContextId, setLocalContextId] = useState(contextId);
+	const [decisionTime, setDecisionTime] = useState("");
+	const [knowledgeCutoff, setKnowledgeCutoff] = useState("");
+	const [publicationCutoff, setPublicationCutoff] = useState("");
+	const [sourceSnapshotId, setSourceSnapshotId] = useState("");
+	const [allowedUniverse, setAllowedUniverse] = useState("");
+	const [maxOutputTokens, setMaxOutputTokens] = useState(1024);
 	const profiles = capability?.availableProfiles ?? [];
+	const modelExecutionAvailable = capability?.runtimeState === "available";
+	const normalizedUniverse = allowedUniverse
+		.split(",")
+		.map((item) => item.trim())
+		.filter((item, index, values) => item.length > 0 && values.indexOf(item) === index);
 	useEffect(() => {
 		if (!open) return;
 		setObjective(initialObjective);
@@ -121,10 +137,19 @@ export function AgentRunCreateSheet({
 		profiles.includes(profile) &&
 		objective.trim().length > 0 &&
 		maxTokens > 0 &&
+		maxOutputTokens > 0 &&
+		maxOutputTokens <= maxTokens &&
 		Number(maxSpend) > 0 &&
+		isAwareDateTime(decisionTime) &&
+		isAwareDateTime(knowledgeCutoff) &&
+		isAwareDateTime(publicationCutoff) &&
+		Date.parse(publicationCutoff) <= Date.parse(knowledgeCutoff) &&
+		Date.parse(knowledgeCutoff) <= Date.parse(decisionTime) &&
+		sourceSnapshotId.trim().length > 0 &&
+		normalizedUniverse.length > 0 &&
 		!create.isPending;
 
-	function submit(): void {
+	function submit(executeImmediately: boolean): void {
 		if (!canCreate) return;
 		create.mutate(
 			{
@@ -133,6 +158,15 @@ export function AgentRunCreateSheet({
 						? { contextType: localContextType.trim(), contextId: localContextId.trim() }
 						: null,
 				idempotencyKey: idempotencyKey("agent-run"),
+				executeImmediately,
+				executionScope: {
+					allowedUniverse: normalizedUniverse,
+					decisionTime: decisionTime.trim(),
+					knowledgeCutoff: knowledgeCutoff.trim(),
+					maxOutputTokens,
+					publicationCutoff: publicationCutoff.trim(),
+					sourceSnapshotId: sourceSnapshotId.trim(),
+				},
 				maxModelSpendUsd: maxSpend,
 				maxModelTokens: maxTokens,
 				modelProfile: profile,
@@ -163,6 +197,14 @@ export function AgentRunCreateSheet({
 							className="rounded-(--radius-sm) bg-(--color-risk-warning-bg) p-3 text-xs text-(--color-risk-warning-fg)"
 						>
 							runtime 当前不可创建：{capability?.degradationReason ?? "capability unavailable"}
+						</p>
+					)}
+					{capability?.enabled === true && !modelExecutionAvailable && (
+						<p
+							role="alert"
+							className="rounded-(--radius-sm) bg-(--color-risk-warning-bg) p-3 text-xs text-(--color-risk-warning-fg)"
+						>
+							模型执行不可用：{capability.degradationReason ?? "model lane unavailable"}。可先仅创建并保留 queued run。
 						</p>
 					)}
 					<label className="text-xs text-(--color-foreground-secondary)">
@@ -224,6 +266,78 @@ export function AgentRunCreateSheet({
 							</select>
 						</label>
 					</div>
+					<section className="rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-strip) p-3">
+						<div className="mb-3">
+							<p className="text-xs font-medium text-(--color-foreground)">PIT 执行范围</p>
+							<p className="mt-1 text-xs text-(--color-foreground-tertiary)">
+								服务端会把这些时间边界、数据快照和只读工具白名单绑定为 authority。
+							</p>
+						</div>
+						<div className="grid gap-3 sm:grid-cols-2">
+							<label className="text-xs text-(--color-foreground-secondary)">
+								<span className="mb-1 block">Decision time (UTC/offset)</span>
+								<input
+									aria-label="Decision time"
+									className={INPUT_CLASS}
+									placeholder="2026-08-25T08:00:00Z"
+									value={decisionTime}
+									onChange={(event) => setDecisionTime(event.currentTarget.value)}
+								/>
+							</label>
+							<label className="text-xs text-(--color-foreground-secondary)">
+								<span className="mb-1 block">Knowledge cutoff</span>
+								<input
+									aria-label="Knowledge cutoff"
+									className={INPUT_CLASS}
+									placeholder="2026-08-25T07:55:00Z"
+									value={knowledgeCutoff}
+									onChange={(event) => setKnowledgeCutoff(event.currentTarget.value)}
+								/>
+							</label>
+							<label className="text-xs text-(--color-foreground-secondary)">
+								<span className="mb-1 block">Publication cutoff</span>
+								<input
+									aria-label="Publication cutoff"
+									className={INPUT_CLASS}
+									placeholder="2026-08-25T07:50:00Z"
+									value={publicationCutoff}
+									onChange={(event) => setPublicationCutoff(event.currentTarget.value)}
+								/>
+							</label>
+							<label className="text-xs text-(--color-foreground-secondary)">
+								<span className="mb-1 block">Source snapshot</span>
+								<input
+									aria-label="Source snapshot"
+									className={INPUT_CLASS}
+									placeholder="snapshot-certified-..."
+									value={sourceSnapshotId}
+									onChange={(event) => setSourceSnapshotId(event.currentTarget.value)}
+								/>
+							</label>
+							<label className="text-xs text-(--color-foreground-secondary)">
+								<span className="mb-1 block">Allowed universe</span>
+								<input
+									aria-label="Allowed universe"
+									className={INPUT_CLASS}
+									placeholder="510300.SH, 510500.SH"
+									value={allowedUniverse}
+									onChange={(event) => setAllowedUniverse(event.currentTarget.value)}
+								/>
+							</label>
+							<label className="text-xs text-(--color-foreground-secondary)">
+								<span className="mb-1 block">Max output tokens</span>
+								<input
+									aria-label="Max output tokens"
+									className={INPUT_CLASS}
+									type="number"
+									min={1}
+									max={maxTokens}
+									value={maxOutputTokens}
+									onChange={(event) => setMaxOutputTokens(event.currentTarget.valueAsNumber)}
+								/>
+							</label>
+						</div>
+					</section>
 					<details>
 						<summary className="cursor-pointer text-xs text-(--color-foreground-secondary)">覆盖硬预算</summary>
 						<div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -256,8 +370,11 @@ export function AgentRunCreateSheet({
 					<Button type="button" variant="outline" disabled={create.isPending} onClick={() => onOpenChange(false)}>
 						取消
 					</Button>
-					<Button type="button" disabled={!canCreate} onClick={submit}>
-						创建 Run
+					<Button type="button" variant="outline" disabled={!canCreate} onClick={() => submit(false)}>
+						仅创建
+					</Button>
+					<Button type="button" disabled={!canCreate || !modelExecutionAvailable} onClick={() => submit(true)}>
+						创建并执行
 					</Button>
 				</SheetFooter>
 			</SheetContent>

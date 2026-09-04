@@ -8,12 +8,14 @@ interface AnalyticalLayoutProps {
 	analysis?: ReactNode;
 	/** Whether the activity panel is collapsed (v3 interaction framework) */
 	activityCollapsed?: boolean;
+	/** Let the lower analysis band use the full content width instead of stopping at the activity rail. */
+	analysisSpansActivity?: boolean;
 	/** Optional extra class names for the root grid container */
 	className?: string;
 }
 
 /**
- * AnalyticalLayout — /markets/*, /research/*, /trading/*.
+ * AnalyticalLayout — /markets/*, /research/*, /portfolio/*.
  * Grid: scope strip + optional banner + main (+ optional activity rail) + optional analysis band.
  *
  * Two modes:
@@ -27,6 +29,7 @@ export function AnalyticalLayout({
 	activity,
 	analysis,
 	activityCollapsed,
+	analysisSpansActivity = false,
 	className,
 }: AnalyticalLayoutProps) {
 	const hasBanner = Boolean(banner);
@@ -39,7 +42,7 @@ export function AnalyticalLayout({
 			: "grid-cols-[1fr_var(--width-activity)]"
 		: "grid-cols-[1fr]";
 	const rows = buildRows(hasBanner, hasAnalysis);
-	const areas = buildAreas(hasBanner, hasAnalysis, hasActivity);
+	const areas = buildAreas(hasBanner, hasAnalysis, hasActivity, analysisSpansActivity);
 	const narrowRows = hasActivity ? buildNarrowRows(hasBanner, hasAnalysis) : "";
 	const narrowAreas = hasActivity ? buildNarrowAreas(hasBanner, hasAnalysis) : "";
 
@@ -95,31 +98,40 @@ export function AnalyticalLayout({
 
 function buildRows(hasBanner: boolean, hasAnalysis: boolean): string {
 	if (hasBanner && hasAnalysis) {
-		return "grid-rows-[auto_auto_1fr_var(--height-analysis-band)]";
+		return "grid-rows-[minmax(var(--height-strip-min,0px),auto)_auto_minmax(var(--height-main-min,0px),1fr)_var(--height-analysis-band)]";
 	}
 	if (hasBanner) {
-		return "grid-rows-[auto_auto_1fr]";
+		return "grid-rows-[minmax(var(--height-strip-min,0px),auto)_auto_1fr]";
 	}
 	if (hasAnalysis) {
-		return "grid-rows-[auto_1fr_var(--height-analysis-band)]";
+		return "grid-rows-[minmax(var(--height-strip-min,0px),auto)_minmax(var(--height-main-min,0px),1fr)_var(--height-analysis-band)]";
 	}
-	return "grid-rows-[auto_1fr]";
+	return "grid-rows-[minmax(var(--height-strip-min,0px),auto)_1fr]";
 }
 
-function buildAreas(hasBanner: boolean, hasAnalysis: boolean, hasActivity: boolean): string {
+function buildAreas(
+	hasBanner: boolean,
+	hasAnalysis: boolean,
+	hasActivity: boolean,
+	analysisSpansActivity: boolean,
+): string {
 	if (hasActivity) {
-		const m = "main_activity";
-		const a = "analysis_activity";
 		if (hasBanner && hasAnalysis) {
-			return `[grid-template-areas:"strip_strip""banner_banner""${m}""${a}"]`;
+			if (analysisSpansActivity) {
+				return '[grid-template-areas:"strip_strip""banner_banner""main_activity""analysis_analysis"]';
+			}
+			return '[grid-template-areas:"strip_strip""banner_banner""main_activity""analysis_activity"]';
 		}
 		if (hasBanner) {
-			return `[grid-template-areas:"strip_strip""banner_banner""${m}"]`;
+			return '[grid-template-areas:"strip_strip""banner_banner""main_activity"]';
 		}
 		if (hasAnalysis) {
-			return `[grid-template-areas:"strip_strip""${m}""${a}"]`;
+			if (analysisSpansActivity) {
+				return '[grid-template-areas:"strip_strip""main_activity""analysis_analysis"]';
+			}
+			return '[grid-template-areas:"strip_strip""main_activity""analysis_activity"]';
 		}
-		return `[grid-template-areas:"strip_strip""${m}"]`;
+		return '[grid-template-areas:"strip_strip""main_activity"]';
 	}
 	// Single-column: all areas span full width
 	if (hasBanner && hasAnalysis) {

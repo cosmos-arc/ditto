@@ -2,8 +2,8 @@
 version: "1.0"
 name: Ditto Graphite Studio
 description: >
-  Personal quantitative research and live-trading professional workstation.
-  Terminal-style workspace with high information density.
+  Local-first A-share stock and ETF quantitative decision, paper-trading,
+  and manual-account workstation with high information density.
 
 colors:
   # ── L1 Neutral Primitives (15 levels) — hue 253, reduced chroma ──
@@ -363,7 +363,7 @@ atmosphere:
 
 **Core Principle**: > Visuals serve judgment first, operation second, aesthetics last. Beauty emerges from efficiency, not from decoration overlaid on efficiency.
 
-**Product Positioning**: Personal quantitative research and live-trading professional workstation. Terminal-style workspace with high information density. Covers Home, Markets, Research, Trading, and Platform as five product domains; AI is embedded intelligence surfaced through Home, Platform Agents, and the global Copilot sidecar.
+**Product Positioning**: Local-first A-share stock and ETF quantitative decision, paper-trading, and manual-account workstation. Macro, domestic-index, and global core-market data explain the A-share environment; Ditto never routes real broker orders. The five product domains are Today, Markets, Research, Portfolio, and System. AI is embedded intelligence surfaced through Today, System Agents, and the global Copilot sidecar.
 
 **Reference Aesthetics**: Linear / Vercel / Raycast — modern SaaS clean style with balanced density. Graphite Studio direction.
 
@@ -383,17 +383,17 @@ Selected for its balance between professionalism and visual energy. Not too cold
 
 ### Signature: Brass (hue 74)
 
-Used for accent warmth in home and trading domains. Conveys premium quality without garishness. Applied to signature indicators, header underlines, rail light bars.
+Used for accent warmth in Today and Portfolio domains. Conveys premium quality without garishness. Applied to signature indicators, header underlines, rail light bars.
 
 ### Domain Signatures
 
 | Domain | Hue | Color | Personality |
 |--------|-----|-------|-------------|
-| trading | 74 | Brass | Warm, operational |
+| portfolio | 74 | Brass | Warm, accountable |
 | markets | 220 | Cyan | Calm observation |
 | research | 300 | Purple | Thinking, exploration |
-| platform | 235 | Lapis | Order, control |
-| home | 74 | Brass | Warm welcome |
+| system | 235 | Lapis | Order, control |
+| today | 74 | Brass | Warm orientation |
 
 AI is not a product domain signature. Copilot and Agent experiences inherit the current page domain and use model / agent capability tokens for confidence, evidence, and approval states.
 
@@ -464,7 +464,7 @@ AI is not a product domain signature. Copilot and Agent experiences inherit the 
 
 ### Shell Chrome
 
-- Rail is domain navigation only: Home, Markets, Research, Trading, Platform.
+- Rail is domain navigation only: Today, Markets, Research, Portfolio, System.
 - Header utilities are fixed and global: command, Copilot, notifications, help, account.
 - Theme and density live inside Account / View Preferences, not as permanent header segments.
 - Local filter/search/export/columns actions belong to workspace or data toolbars.
@@ -473,11 +473,11 @@ AI is not a product domain signature. Copilot and Agent experiences inherit the 
 
 | Type | Pattern | Examples |
 |------|---------|----------|
-| Dashboard | Banner + grid panels | Home, Trading Overview, Risk Center |
+| Dashboard | Banner + grid panels | Today, Portfolio Overview, Risk Center |
 | List | Table + filters + detail | Strategy List, Factor List, Experiment List |
 | Detail | Object center + context rail | Instrument Hub, Strategy Detail, Backtest Result |
 | Builder | Editor + preview + config | Strategy Studio, Copilot Sidecar |
-| Console | Terminal + activity + logs | Agent Console, Platform Settings |
+| Console | Terminal + activity + logs | Agent Console, System Settings |
 
 ### Workspace Rules
 

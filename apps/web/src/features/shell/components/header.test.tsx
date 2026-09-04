@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ShellHeader } from "./header";
+import { ShellHeaderExtension } from "./shell-header-extension";
 
 // Mock TanStack Router's useMatches and useRouter
 const mockUseMatches = vi.fn().mockReturnValue([]);
@@ -37,6 +38,13 @@ describe("ShellHeader", () => {
 		expect(screen.getByText("市场")).toBeInTheDocument();
 	});
 
+	it("shows the active five-domain identity independently from the page title", () => {
+		const { container } = render(<ShellHeader activeDomain="portfolio" />);
+		const identity = container.querySelector("[data-domain-identity='portfolio']");
+
+		expect(identity).toHaveTextContent("当前产品域：Portfolio");
+	});
+
 	it("shows no title when route static data has no title", () => {
 		mockRoutesById["/x"] = { options: { staticData: {} } };
 		mockUseMatches.mockReturnValue([{ routeId: "/x" }]);
@@ -51,9 +59,9 @@ describe("ShellHeader", () => {
 	});
 
 	it("picks the last match with a title (most specific route)", () => {
-		mockRoutesById["/trading"] = { options: { staticData: { title: "交易" } } };
-		mockRoutesById["/trading/orders"] = { options: { staticData: { title: "订单管理" } } };
-		mockUseMatches.mockReturnValue([{ routeId: "/trading" }, { routeId: "/trading/orders" }]);
+		mockRoutesById["/portfolio"] = { options: { staticData: { title: "交易" } } };
+		mockRoutesById["/portfolio/orders"] = { options: { staticData: { title: "订单管理" } } };
+		mockUseMatches.mockReturnValue([{ routeId: "/portfolio" }, { routeId: "/portfolio/orders" }]);
 		render(<ShellHeader />);
 		expect(screen.getByText("订单管理")).toBeInTheDocument();
 	});
@@ -71,6 +79,20 @@ describe("ShellHeader", () => {
 		expect(screen.getByRole("button", { name: "通知" })).toHaveAttribute("data-shell-utility", "notifications");
 		expect(screen.getByRole("button", { name: "帮助" })).toHaveAttribute("data-shell-utility", "help");
 		expect(screen.getByRole("button", { name: "账户与视图偏好" })).toHaveAttribute("data-shell-utility", "account");
+	});
+
+	it("hosts route-specific controls without introducing a second header", () => {
+		render(
+			<>
+				<ShellHeader />
+				<ShellHeaderExtension>
+					<button type="button">Alpha mode</button>
+				</ShellHeaderExtension>
+			</>,
+		);
+
+		expect(screen.getByRole("button", { name: "Alpha mode" })).toBeInTheDocument();
+		expect(screen.getAllByRole("banner")).toHaveLength(1);
 	});
 
 	it("does not render permanent density or theme segmented controls in the header", () => {

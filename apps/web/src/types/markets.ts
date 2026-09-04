@@ -1,8 +1,9 @@
 import type { FilterCondition, PaginatedRequest, PaginatedResponse, SparklinePoint } from "./common";
+import type { components, operations } from "./generated/api";
 
 // === Request Types ===
 
-export type GetMarketContextRequest = undefined;
+export type GetMarketContextRequest = operations["market_get_context"]["parameters"]["query"];
 
 export type GetScopeStripRequest = undefined;
 
@@ -49,12 +50,7 @@ export type GetIntelligenceDetailRequest = {
 // === Response Types ===
 
 /** 市场上下文 */
-export type MarketContextResponse = {
-	readonly regime: string;
-	readonly volatility: number;
-	readonly usdStrength: number;
-	readonly alertCount: number;
-};
+export type MarketContextResponse = components["schemas"]["MarketContextResponse"];
 
 /** 市场解读 */
 export type ScopeStripResponse = {

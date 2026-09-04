@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -40,15 +40,66 @@ function useWorkbenchHandlers(): void {
 }
 
 describe("ExperimentDetailPage", () => {
-	it("fans out durable detail, candidates, gates, comparison, artifacts and stock exposure", async () => {
+	it("renders the exact experiment revision in a governed object hub", async () => {
+		const user = userEvent.setup();
 		useWorkbenchHandlers();
 		render(<ExperimentDetailPage experimentId="exp-1042" />, { wrapper });
 
-		await expect(screen.findByText("history_96_months")).resolves.toBeInTheDocument();
+		await screen.findByText("completed · finalized · revision 9");
+		const workspace = screen.getByRole("region", { name: "实验运行工作台" });
+		expect(document.querySelector("[data-slot='meta']")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='tabs']")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='main']")).toBeInTheDocument();
+		expect(document.querySelector("[data-slot='bottom']")).toBeInTheDocument();
+		expect(within(workspace).getByText("completed · finalized · revision 9")).toBeInTheDocument();
+		expect(within(workspace).getByText("seed_stock_selection@1")).toBeInTheDocument();
+		expect(screen.getByRole("tablist", { name: "实验工作台视图" })).toBeInTheDocument();
+
+		await user.click(screen.getByRole("tab", { name: "验证与门禁" }));
+		expect(screen.getByText("history_96_months")).toBeInTheDocument();
+		await user.click(screen.getByRole("tab", { name: "产物与证据" }));
+		expect(screen.getByText("candidate-bundle-2")).toBeInTheDocument();
+		await user.click(screen.getByRole("tab", { name: "候选与选择" }));
+		await user.click(screen.getAllByRole("button", { name: "查看证据" })[0]!);
+		expect(screen.getByRole("tab", { name: "候选证据 · candidate-1" })).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByText("Candidate evidence · candidate-1")).toBeInTheDocument();
+	});
+
+	it("keeps a typed detail failure recoverable without inventing workbench data", async () => {
+		const user = userEvent.setup();
+		let calls = 0;
+		server.use(
+			http.get("/api/v1/research/experiments/:id", () => {
+				calls += 1;
+				return calls === 1
+					? HttpResponse.json(
+							{ detail: "experiment detail unavailable", error_code: "EXPERIMENT_DETAIL_UNAVAILABLE" },
+							{ status: 503 },
+						)
+					: HttpResponse.json({ data: mockExperimentDetail });
+			}),
+		);
+		render(<ExperimentDetailPage experimentId="exp-1042" />, { wrapper });
+
+		expect(await screen.findByText(/503 EXPERIMENT_DETAIL_UNAVAILABLE/)).toBeInTheDocument();
+		expect(screen.queryByText("seed_stock_selection@1")).not.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "重试实验详情" }));
+		expect(await screen.findByRole("tablist", { name: "实验工作台视图" })).toBeInTheDocument();
+		expect(calls).toBe(2);
+	});
+
+	it("fans out durable detail, candidates, gates, comparison, artifacts and stock exposure", async () => {
+		const user = userEvent.setup();
+		useWorkbenchHandlers();
+		render(<ExperimentDetailPage experimentId="exp-1042" />, { wrapper });
+
+		await user.click(await screen.findByRole("tab", { name: "验证与门禁" }));
+		expect(screen.getByText("history_96_months")).toBeInTheDocument();
+		expect(screen.getByText("partial fold failure")).toBeInTheDocument();
+		await user.click(screen.getByRole("tab", { name: "产物与证据" }));
 		expect(screen.getByText("candidate-bundle-2")).toBeInTheDocument();
 		await expect(screen.findByText(/technology/)).resolves.toBeInTheDocument();
 		expect(screen.getByText(/size_bucket_weights/)).toBeInTheDocument();
-		expect(screen.getByText("partial fold failure")).toBeInTheDocument();
 	});
 
 	it("keeps partial resource failures visible and caps local comparison pins at four", async () => {
@@ -62,9 +113,10 @@ describe("ExperimentDetailPage", () => {
 		render(<ExperimentDetailPage experimentId="exp-1042" />, { wrapper });
 
 		await expect(screen.findByText(/COMPARISON_UNAVAILABLE/)).resolves.toBeInTheDocument();
-		expect(screen.getByText("candidate-bundle-2")).toBeInTheDocument();
 		for (let index = 1; index <= 4; index += 1) await user.click(screen.getByLabelText(`Pin candidate-${index}`));
 		expect(screen.getByLabelText("Pin candidate-5")).toBeDisabled();
+		await user.click(screen.getByRole("tab", { name: "产物与证据" }));
+		expect(screen.getByText("candidate-bundle-2")).toBeInTheDocument();
 	});
 
 	it("keeps candidate promotion locked while aggregate selection evidence is unpublished", async () => {
