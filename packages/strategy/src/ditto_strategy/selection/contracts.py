@@ -337,6 +337,13 @@ class SelectionInstrumentInput:
             "listing_days",
             _optional_non_negative_int(self.listing_days, field_name="listing_days"),
         )
+        if self.limit_state is not None and not isinstance(
+            self.limit_state, SelectionLimitState
+        ):
+            raise _error(
+                "selection limit_state must be SelectionLimitState or None",
+                reason="invalid_selection_limit_state",
+            )
         object.__setattr__(
             self,
             "tracking_error",
@@ -416,7 +423,12 @@ class SelectionInputBundle:
                 "selection requires source_snapshot_ids",
                 reason="missing_selection_lineage",
             )
-        if isinstance(self.seed, bool) or self.seed < 0:
+        if not isinstance(self.spec, StockSelectionSpec | EtfSelectionSpec):
+            raise _error(
+                "selection spec must be StockSelectionSpec or EtfSelectionSpec",
+                reason="invalid_selection_spec",
+            )
+        if type(self.seed) is not int or self.seed < 0:
             raise _error(
                 "selection seed must be a non-negative integer",
                 reason="invalid_selection_seed",
@@ -534,6 +546,11 @@ class SelectionExclusion:
     def __post_init__(self) -> None:
         """Validate stable exclusion evidence."""
         _positive_int(self.instrument_id, field_name="instrument_id")
+        if not isinstance(self.reason_code, SelectionExclusionReason):
+            raise _error(
+                "selection exclusion reason_code must be SelectionExclusionReason",
+                reason="invalid_selection_exclusion_reason",
+            )
         for field_name in ("instrument_name", "stage", "detail"):
             object.__setattr__(
                 self,
@@ -567,14 +584,26 @@ class SelectionRun:
         """Validate one complete and non-overlapping saved result."""
         for field_name in ("input_hash", "spec_hash"):
             value = getattr(self, field_name)
-            if len(value) != _SHA256_HEX_LENGTH or any(
-                char not in "0123456789abcdef" for char in value
+            if (
+                not isinstance(value, str)
+                or len(value) != _SHA256_HEX_LENGTH
+                or any(char not in "0123456789abcdef" for char in value)
             ):
                 raise _error(
                     f"selection {field_name} must be lowercase SHA-256",
                     reason="invalid_selection_hash",
                     field_name=field_name,
                 )
+        if not isinstance(self.asset_kind, SelectionAssetKind):
+            raise _error(
+                "selection asset_kind must be SelectionAssetKind",
+                reason="invalid_selection_asset_kind",
+            )
+        if not isinstance(self.status, SelectionRunStatus):
+            raise _error(
+                "selection status must be SelectionRunStatus",
+                reason="invalid_selection_run_status",
+            )
         for field_name in ("spec_id", "spec_version", "universe_snapshot_id"):
             object.__setattr__(
                 self,
@@ -589,7 +618,7 @@ class SelectionRun:
                 field_name="industry_rotation_snapshot_id",
             ),
         )
-        if isinstance(self.seed, bool) or self.seed < 0:
+        if type(self.seed) is not int or self.seed < 0:
             raise _error(
                 "selection seed must be a non-negative integer",
                 reason="invalid_selection_seed",
