@@ -24,6 +24,7 @@
 	--badge-md-padding-y: 2px;
 	--badge-md-padding-x: var(--space-6);
 	--badge-md-radius: var(--radius-4);
+	--badge-md-height: 20px;
 	--badge-pill-radius: var(--radius-12);
 	--badge-font-size: var(--font-size-10);
 	--badge-font-weight: var(--font-weight-medium);

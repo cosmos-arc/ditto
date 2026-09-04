@@ -1,10 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const prototypesDir = "docs/designs/specs/prototypes";
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
-const verifier = ".agents/skills/ditto-design-cycle/scripts/verify-gates.mjs";
+const verifier = resolve(
+	import.meta.dirname,
+	"../../..",
+	".agents/skills/ditto-design-cycle/scripts/verify-gates.mjs",
+);
 export const gateViewports = [
 	{ name: "VP-STANDARD", width: 1536, height: 1080 },
 	{ name: "VP-COMPACT", width: 1366, height: 768 },

@@ -182,7 +182,13 @@ function readPrototypeHtml(page: ManifestPage): string {
 }
 
 function getOverlayIds(html: string): string[] {
-	return [...new Set([...html.matchAll(/id="(overlay-[^"]+)"/g)].map((match) => match[1]))];
+	return [
+		...new Set(
+			[...html.matchAll(/id="(overlay-[^"]+)"/g)].flatMap((match) =>
+				match[1] === undefined ? [] : [match[1]],
+			),
+		),
+	];
 }
 
 function selectorReferencesOverlayId(selector: string, id: string): boolean {
@@ -292,7 +298,8 @@ function getMediaBlocksMatching(css: string, pattern: RegExp): string[] {
 
 function getMediaMaxWidth(selector: string): number | undefined {
 	const maxWidthMatch = /\(\s*max-width\s*:\s*(\d+)px\s*\)/i.exec(selector);
-	return maxWidthMatch ? Number.parseInt(maxWidthMatch[1], 10) : undefined;
+	const capturedWidth = maxWidthMatch?.[1];
+	return capturedWidth === undefined ? undefined : Number.parseInt(capturedWidth, 10);
 }
 
 function canContainStyleRulesAtRule(selector: string): boolean {
@@ -341,7 +348,7 @@ function readTopLevelCssRules(
 				body: block.body,
 				start: offset + index,
 				end: offset + block.end,
-				mediaMaxWidth,
+				...(mediaMaxWidth === undefined ? {} : { mediaMaxWidth }),
 				atRuleContext,
 			});
 		}
@@ -366,9 +373,10 @@ function getSelectorRuleBodies(css: string, selector: string): string[] {
 function hasDeclaration(body: string | undefined, property: string, valuePattern: RegExp): boolean {
 	if (!body) return false;
 
-	return [...body.matchAll(new RegExp(`${property}\\s*:\\s*([^;]+)`, "gi"))].some((match) =>
-		valuePattern.test(match[1].trim()),
-	);
+	return [...body.matchAll(new RegExp(`${property}\\s*:\\s*([^;]+)`, "gi"))].some((match) => {
+		const value = match[1];
+		return value !== undefined && valuePattern.test(value.trim());
+	});
 }
 
 function getLineNumber(value: string, index: number): number {
@@ -392,7 +400,8 @@ function declarationHasNonNoneValue(body: string, property: "outline"): boolean 
 	const declaration = new RegExp(`${property}\\s*:\\s*([^;]+)`, "gi");
 
 	return [...body.matchAll(declaration)].some((match) => {
-		const value = match[1].trim();
+		const value = match[1]?.trim();
+		if (value === undefined) return false;
 		return !/^none(?:\s*!important)?$/i.test(value);
 	});
 }
@@ -403,7 +412,8 @@ function hasFocusSelector(selector: string): boolean {
 
 function hasFocusRingBoxShadow(body: string): boolean {
 	return [...body.matchAll(/box-shadow\s*:\s*([^;]+)/gi)].some((match) => {
-		const value = match[1].trim();
+		const value = match[1]?.trim();
+		if (value === undefined) return false;
 		if (/^none(?:\s*!important)?$/i.test(value)) return false;
 
 		return (
@@ -750,15 +760,26 @@ function readTokenCssBundle(): string {
 }
 
 function extractCustomPropertyDefinitions(css: string): Set<string> {
-	return new Set([...css.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map((match) => match[1]));
+	return new Set(
+		[...css.matchAll(/(--[a-z0-9-]+)\s*:/gi)].flatMap((match) =>
+			match[1] === undefined ? [] : [match[1]],
+		),
+	);
 }
 
 function extractCustomPropertyReferences(css: string): Set<string> {
-	return new Set([...css.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((match) => match[1]));
+	return new Set(
+		[...css.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].flatMap((match) =>
+			match[1] === undefined ? [] : [match[1]],
+		),
+	);
 }
 
 function getCssFontSizeValues(body: string): string[] {
-	return [...body.matchAll(/font-size\s*:\s*([^;]+)/gi)].map((match) => match[1].trim());
+	return [...body.matchAll(/font-size\s*:\s*([^;]+)/gi)].flatMap((match) => {
+		const value = match[1];
+		return value === undefined ? [] : [value.trim()];
+	});
 }
 
 function getPrototypeCssRules(page: ManifestPage): CssRule[] {
@@ -774,10 +795,10 @@ function getPrototypeAndSharedCssRules(page: ManifestPage): CssRule[] {
 
 function parseFontSizeMinimumPx(value: string): number | undefined {
 	const tokenMatch = /var\(\s*--font-size-(\d+)\s*\)/i.exec(value);
-	if (tokenMatch) return Number.parseInt(tokenMatch[1], 10);
+	if (tokenMatch?.[1] !== undefined) return Number.parseInt(tokenMatch[1], 10);
 
 	const pxMatch = /(\d+(?:\.\d+)?)px\b/i.exec(value);
-	if (pxMatch) return Number.parseFloat(pxMatch[1]);
+	if (pxMatch?.[1] !== undefined) return Number.parseFloat(pxMatch[1]);
 
 	return undefined;
 }
@@ -1127,9 +1148,10 @@ function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
 }
 
 function getCssContentMarkers(body: string): string[] {
-	return [...body.matchAll(/content\s*:\s*(["'])(.*?)\1/gi)].map((match) =>
-		match[2].replace(/\\[a-f0-9]{1,6}\s?/gi, " ").trim(),
-	);
+	return [...body.matchAll(/content\s*:\s*(["'])(.*?)\1/gi)].flatMap((match) => {
+		const content = match[2];
+		return content === undefined ? [] : [content.replace(/\\[a-f0-9]{1,6}\s?/gi, " ").trim()];
+	});
 }
 
 function elementHasPseudoSemanticMarker(
@@ -1330,15 +1352,18 @@ function usesNonCanonicalFocusColor(body: string): boolean {
 
 function getMotionDeclarations(css: string): Array<{ line: number; property: string; value: string }> {
 	return [...css.matchAll(/\b(transition|animation)\s*:\s*([^;{}]+);/gi)].flatMap((match) => {
-		const value = match[2].trim();
-		if (match[1].toLowerCase() === "animation" && /^none(?:\s*!important)?$/i.test(value)) {
+		const property = match[1];
+		const capturedValue = match[2];
+		if (property === undefined || capturedValue === undefined) return [];
+		const value = capturedValue.trim();
+		if (property.toLowerCase() === "animation" && /^none(?:\s*!important)?$/i.test(value)) {
 			return [];
 		}
 
 		return [
 			{
 				line: getLineNumber(css, match.index ?? 0),
-				property: match[1].toLowerCase(),
+				property: property.toLowerCase(),
 				value,
 			},
 		];
@@ -1419,11 +1444,16 @@ function getSelectorPseudoElement(selector: string): string | undefined {
 }
 
 function getNegatedSelectorClasses(selector: string): string[] {
-	return [...selector.matchAll(/:not\(([^)]*)\)/gi)].flatMap((match) => getSelectorClasses(match[1]));
+	return [...selector.matchAll(/:not\(([^)]*)\)/gi)].flatMap((match) => {
+		const contents = match[1];
+		return contents === undefined ? [] : getSelectorClasses(contents);
+	});
 }
 
 function getSelectorClasses(selector: string): string[] {
-	return [...stripFunctionalPseudos(selector).matchAll(/\.([a-z0-9_-]+)/gi)].map((match) => match[1]);
+	return [...stripFunctionalPseudos(selector).matchAll(/\.([a-z0-9_-]+)/gi)].flatMap((match) =>
+		match[1] === undefined ? [] : [match[1]],
+	);
 }
 
 function getSelectorAttributes(selector: string): SelectorAttribute[] {
@@ -1431,20 +1461,29 @@ function getSelectorAttributes(selector: string): SelectorAttribute[] {
 		...stripFunctionalPseudos(selector).matchAll(
 			/\[([a-z0-9_-]+)(?:\s*([*^$|~]?=)\s*["']?([a-z0-9_-]+)["']?)?\]/gi,
 		),
-	].map((match) => ({
-		name: match[1],
-		operator: match[2],
-		value: match[3],
-	}));
+	].flatMap((match) => {
+		const name = match[1];
+		if (name === undefined) return [];
+		const operator = match[2];
+		const value = match[3];
+		return [
+			{
+				name,
+				...(operator === undefined ? {} : { operator }),
+				...(value === undefined ? {} : { value }),
+			},
+		];
+	});
 }
 
 function parseSelectorCompound(selector: string): SelectorCompound {
+	const pseudoElement = getSelectorPseudoElement(selector);
 	return {
 		attributes: getSelectorAttributes(selector),
 		classes: getSelectorClasses(selector),
 		hasFunctionalPseudo: /:(?:not|has|is|where)\(/i.test(selector),
 		negatedClasses: getNegatedSelectorClasses(selector),
-		pseudoElement: getSelectorPseudoElement(selector),
+		...(pseudoElement === undefined ? {} : { pseudoElement }),
 		raw: selector,
 	};
 }
@@ -1584,7 +1623,7 @@ function normalizeStylesheetHref(href: string): string | undefined {
 	if (!normalizedHref || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(normalizedHref)) return undefined;
 
 	const resourcePath = normalizedHref.split(/[?#]/, 1)[0];
-	return resourcePath.endsWith(".css") ? resourcePath : undefined;
+	return resourcePath?.endsWith(".css") ? resourcePath : undefined;
 }
 
 function readActiveLinkedCssSources(): CssSource[] {
@@ -1663,20 +1702,22 @@ type ShadowTokenReference = {
 
 function extractShadowCustomPropertyValues(css: string): Map<string, string> {
 	return new Map(
-		[...css.matchAll(/(--shadow-[a-z0-9-]+)\s*:\s*([^;]+);/gi)].map((match) => [
-			match[1],
-			match[2].trim(),
-		]),
+		[...css.matchAll(/(--shadow-[a-z0-9-]+)\s*:\s*([^;]+);/gi)].flatMap((match) => {
+			const name = match[1];
+			const value = match[2];
+			return name === undefined || value === undefined ? [] : [[name, value.trim()] as const];
+		}),
 	);
 }
 
 function readShadowTokenReference(value: string): ShadowTokenReference | undefined {
 	const match = /^var\(\s*(--shadow-[a-z0-9-]+)\s*(?:,\s*([\s\S]+))?\)$/i.exec(value.trim());
-	if (!match) return undefined;
+	if (match?.[1] === undefined) return undefined;
+	const fallback = match[2]?.trim();
 
 	return {
 		name: match[1],
-		fallback: match[2]?.trim(),
+		...(fallback === undefined ? {} : { fallback }),
 	};
 }
 
@@ -1785,6 +1826,7 @@ function isInsetBorderShadowLayer(value: string): boolean {
 	if (!match) return false;
 
 	const [, offsetX, offsetY, blur, spread, color] = match;
+	if (offsetX === undefined || offsetY === undefined || blur === undefined || color === undefined) return false;
 	if (!isZeroShadowLength(blur) || !isStructuralInsetShadowColor(color)) return false;
 
 	if (isZeroShadowLength(offsetX) && isZeroShadowLength(offsetY) && spread) {
@@ -1865,6 +1907,7 @@ function isNeutralStructuralElevationShadowLayer(value: string): boolean {
 	if (!match) return false;
 
 	const color = match[1];
+	if (color === undefined) return false;
 	return !hasDecorativeSemanticShadowColor(color) && hasNeutralStructuralShadowColor(color);
 }
 
@@ -2040,7 +2083,8 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 	const shadowCustomProperties = extractShadowCustomPropertyValues(css);
 
 	for (const match of css.matchAll(/\btext-shadow\s*:\s*([^;}]+)/gi)) {
-		const value = match[1].trim();
+		const value = match[1]?.trim();
+		if (value === undefined) continue;
 		if (!/^none(?:\s*!important)?$/i.test(value)) {
 			violations.push(`${source.label}:${getLineNumber(css, match.index)}:text-shadow`);
 		}
@@ -2067,7 +2111,8 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 		}
 
 		for (const match of rule.body.matchAll(/box-shadow\s*:\s*([^;]+)/gi)) {
-			const value = match[1].trim();
+			const value = match[1]?.trim();
+			if (value === undefined) continue;
 			if (
 				!/^none(?:\s*!important)?$/i.test(value) &&
 				(/^@keyframes\b/i.test(rule.selector) ||
@@ -2078,7 +2123,8 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 		}
 
 		for (const match of rule.body.matchAll(/(?:^|[;\s])filter\s*:\s*([^;]+)/gi)) {
-			const value = match[1].trim();
+			const value = match[1]?.trim();
+			if (value === undefined) continue;
 			if (!/^none(?:\s*!important)?$/i.test(value) && isExcessiveDropShadowFilter(rule.selector, value)) {
 				violations.push(`${source.label}:${getLineNumber(css, rule.start)}:filter-drop-shadow:${selector}`);
 			}
@@ -2102,6 +2148,7 @@ function collectGlowBudgetHtmlViolations(source: HtmlSource): string[] {
 	for (const match of source.html.matchAll(/<filter\b([^>]*)>([\s\S]*?)<\/filter>/gi)) {
 		const attributes = match[1];
 		const body = match[2];
+		if (attributes === undefined || body === undefined) continue;
 		const filterId = /\bid\s*=\s*(["'])([^"']+)\1/i.exec(attributes)?.[2] ?? "anonymous-filter";
 		const line = getLineNumber(source.html, match.index);
 
@@ -2849,6 +2896,10 @@ describe("prototype design consistency", () => {
 			}
 
 			const [region] = primaryAnswerRegions;
+			if (region === undefined) {
+				violations.push(`${page.id}:primary-answer-missing-after-count-check`);
+				continue;
+			}
 			if (!hasPrimaryAnswerJudgment(region)) {
 				violations.push(`${page.id}:missing-judgment`);
 			}
@@ -3819,6 +3870,9 @@ describe("prototype design consistency", () => {
 		`).window.document;
 
 		const [donut, heatgrid, icon] = [...document.querySelectorAll("svg")];
+		if (donut === undefined || heatgrid === undefined || icon === undefined) {
+			throw new Error("Expected donut, heatgrid, and icon SVG fixtures");
+		}
 
 		expect(isSvgInMeaningfulVisualizationContext(donut)).toBe(true);
 		expect(isSvgInMeaningfulVisualizationContext(heatgrid)).toBe(true);
@@ -3840,6 +3894,9 @@ describe("prototype design consistency", () => {
 		const [labelledbyDialog, labelledDialog, visualTitleDialog] = [
 			...document.querySelectorAll(".overlay-surface"),
 		];
+		if (labelledbyDialog === undefined || labelledDialog === undefined || visualTitleDialog === undefined) {
+			throw new Error("Expected three overlay surface fixtures");
+		}
 
 		expect(isApprovedOverlaySurfaceRole(labelledbyDialog)).toBe(true);
 		expect(isApprovedOverlaySurfaceRole(labelledDialog)).toBe(true);
@@ -4911,7 +4968,9 @@ describe("prototype design consistency", () => {
 		for (const pageId of marketsPages) {
 			const html = readPrototypeHtml(activePageById(pageId));
 			for (const classMatch of html.matchAll(/class="([^"]*\bskeleton\b[^"]*)"/g)) {
-				const classes = classMatch[1].split(/\s+/);
+				const classNames = classMatch[1];
+				if (classNames === undefined) continue;
+				const classes = classNames.split(/\s+/);
 				if (classes.includes("skeleton-bar") && !classes.includes("skeleton-bar-md")) {
 					violations.push(`${pageId}:bare-skeleton-bar`);
 				}
@@ -4957,7 +5016,11 @@ describe("prototype design consistency", () => {
 				...html.matchAll(
 					/href="([^"]*(?:tokens-[^"]+\.css|layout-[^"]+\.css|theme-switcher\.css|prototype-toggles\.css))"/g,
 				),
-			].map((match) => match[1].split("/").at(-1));
+			].flatMap((match) => {
+				const href = match[1];
+				const filename = href?.split("/").at(-1);
+				return filename === undefined ? [] : [filename];
+			});
 
 			if (imports.join(">") !== expectedOrder.join(">")) {
 				violations.push(`${page.id}:${imports.join(">")}`);
@@ -5056,10 +5119,11 @@ describe("prototype design consistency", () => {
 	it("documents and uses approved prototype structural dimension tokens", () => {
 		const tokenCss = readFileSync(prototypeTokensStyleCss, "utf8");
 		const tokenDeclarations = new Map(
-			[...tokenCss.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)].map((match) => [
-				match[1],
-				match[2].trim(),
-			]),
+			[...tokenCss.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)].flatMap((match) => {
+				const name = match[1];
+				const value = match[2];
+				return name === undefined || value === undefined ? [] : [[name, value.trim()] as const];
+			}),
 		);
 		const tokenSpecs = [
 			readFileSync(tokenNamingLayeringSpec, "utf8"),
@@ -5225,6 +5289,7 @@ describe("prototype design consistency", () => {
 
 			for (const match of css.matchAll(/transition\s*:\s*([^;}]+)/gi)) {
 				const transitionValue = match[1];
+				if (transitionValue === undefined) continue;
 				const animatedProperties = transitionValue
 					.split(",")
 					.map((item) => item.trim().split(/\s+/)[0]?.toLowerCase() ?? "");
@@ -5238,7 +5303,8 @@ describe("prototype design consistency", () => {
 			}
 
 			for (const match of css.matchAll(/animation\s*:\s*([^;}]+)/gi)) {
-				if (/(?:bounce|elastic)/i.test(match[1])) {
+				const animationValue = match[1];
+				if (animationValue !== undefined && /(?:bounce|elastic)/i.test(animationValue)) {
 					violations.push(`${source.label}:${getLineNumber(css, match.index)}:bounce-animation`);
 				}
 			}
@@ -5437,14 +5503,15 @@ describe("prototype design consistency", () => {
 			const css = stripCssComments(rawCss);
 
 			for (const match of css.matchAll(/(^|[^a-z0-9-])100vh\b/gi)) {
-				const index = match.index + match[1].length;
+				const index = match.index + (match[1]?.length ?? 0);
 				if (!hasFixedCanvasException(rawCss, index)) {
 					violations.push(`${source.label}:${getLineNumber(css, index)}:100vh`);
 				}
 			}
 
-				for (const match of css.matchAll(/transition\s*:\s*([^;}]+)/gi)) {
+			for (const match of css.matchAll(/transition\s*:\s*([^;}]+)/gi)) {
 					const transitionValue = match[1];
+					if (transitionValue === undefined) continue;
 					if (transitionValue.split(",").some((item) => /^all(?:\s|$)/i.test(item.trim()))) {
 						violations.push(`${source.label}:${getLineNumber(css, match.index)}:transition-all`);
 					}
@@ -5464,8 +5531,10 @@ describe("prototype design consistency", () => {
 			}
 
 			for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-				const selector = rule[1].replace(/\s+/g, " ").trim();
+				const rawSelector = rule[1];
 				const body = rule[2];
+				if (rawSelector === undefined || body === undefined) continue;
+				const selector = rawSelector.replace(/\s+/g, " ").trim();
 				if (!/outline\s*:\s*none\b/i.test(body)) continue;
 
 				const bodyWithoutOutlineNone = body.replace(/outline\s*:\s*none(?:\s*!important)?\s*;?/gi, "");

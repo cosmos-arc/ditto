@@ -248,7 +248,7 @@
       padding: 0 var(--density-gutter);
       overflow: hidden;
       white-space: nowrap;
-      box-shadow: var(--shadow-context-bar, 0 1px 6px color-mix(in oklch, var(--neutral-0) 8%, transparent));
+      box-shadow: var(--shadow-sm);
     }
 
     .context-bar-item {
@@ -594,7 +594,7 @@
     .map-legend-group {
       display: flex;
       align-items: center;
-      gap: var(--space-5);
+      gap: var(--space-6);
     }
 
     .map-legend-label {
@@ -707,7 +707,7 @@
       align-items: flex-start;
       justify-content: flex-end;
       gap: var(--space-2);
-      padding: var(--space-7);
+      padding: var(--space-8);
       cursor: pointer;
       border: 1px solid color-mix(in oklch, var(--heat-line) 12%, var(--map-cell-border));
       background: var(--heat-bg);
@@ -819,7 +819,7 @@
 
     .treemap-cell-iv[data-label-budget="name-only"] {
       justify-content: center;
-      padding: var(--space-5);
+      padding: var(--space-6);
     }
 
     .heatmap-cell > span {
@@ -928,6 +928,9 @@
     }
 
     .rail-section-expand {
+      display: inline-flex;
+      min-height: var(--density-action-height);
+      align-items: center;
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       cursor: pointer;

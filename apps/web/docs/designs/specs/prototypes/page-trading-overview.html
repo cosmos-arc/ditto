@@ -217,7 +217,7 @@
      * Trading Variant: compact context + banner + main
      * ══════════════════════════════════════════════ */
     .shell-analytical.trading-variant {
-      --shell-analysis-band-height: var(--shell-trading-analysis-band-height);
+      --shell-analysis-band-height: var(--shell-portfolio-analysis-band-height);
       height: calc(100dvh - 1.5rem);
       min-height: calc(100dvh - 1.5rem);
       overflow: hidden;
@@ -396,7 +396,7 @@
     .pipeline-arrow { animation: flow-pulse 2s ease-in-out infinite; }
     @keyframes flow-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
     /* Pipeline overlay drawers */
-    .pipeline-drawer { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 360px; max-height: 400px; background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-8); box-shadow: var(--shadow-overlay); z-index: 100; overflow: hidden; }
+    .pipeline-drawer { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 360px; max-height: 400px; background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-8); box-shadow: var(--shadow-xl); z-index: 100; overflow: hidden; }
     #pipeline-signal-pool:checked ~ .pipeline-drawer:nth-of-type(1),
     #pipeline-pending:checked ~ .pipeline-drawer:nth-of-type(2),
     #pipeline-ordered:checked ~ .pipeline-drawer:nth-of-type(3),
@@ -1644,7 +1644,7 @@
       right: 2px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: var(--font-size-8);
+      font-size: var(--font-size-10);
       color: var(--text-tertiary);
       opacity: 0.5;
     }

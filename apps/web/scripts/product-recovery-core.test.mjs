@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	activePrototypePages,
 	buildPrototypeBaselineRecord,
+	buildPrototypeSourceEvidence,
 	summarizePageCompletion,
 } from "./product-recovery-core.mjs";
 
@@ -29,6 +30,29 @@ describe("product recovery evidence", () => {
 				artifacts: new Map(),
 			}),
 		).toThrow("home");
+	});
+
+	it("binds a frozen prototype to every local source input", () => {
+		const first = buildPrototypeSourceEvidence([
+			{ path: "shared/prototype.css", content: "body { color: red; }" },
+			{ path: "page-home.html", content: "<link href=\"shared/prototype.css\">" },
+		]);
+		const reordered = buildPrototypeSourceEvidence([
+			{ path: "page-home.html", content: "<link href=\"shared/prototype.css\">" },
+			{ path: "shared/prototype.css", content: "body { color: red; }" },
+		]);
+		const sharedCssChanged = buildPrototypeSourceEvidence([
+			{ path: "page-home.html", content: "<link href=\"shared/prototype.css\">" },
+			{ path: "shared/prototype.css", content: "body { color: blue; }" },
+		]);
+
+		expect(first).toEqual(reordered);
+		expect(first.sourceInputs.map((input) => input.path)).toEqual([
+			"page-home.html",
+			"shared/prototype.css",
+		]);
+		expect(first.sourceSha256).not.toBe(sharedCssChanged.sourceSha256);
+		expect(first.sourceInputs[1].sha256).not.toBe(sharedCssChanged.sourceInputs[1].sha256);
 	});
 
 	it("does not confuse a verified prototype with verified React parity", () => {

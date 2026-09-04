@@ -4,8 +4,8 @@
 // Scans var(--xxx) references and verifies :root definitions exist
 // ─────────────────────────────────────────────
 
-import { readFileSync, readdirSync } from "node:fs";
-import { resolve, dirname, join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { resolve, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -70,6 +70,56 @@ function extractVarRefs(cssText) {
     refs.push(`--${match[1]}`);
   }
   return refs;
+}
+
+function extractDeclarations(cssText) {
+  const declarations = new Set();
+  const re = /--([a-zA-Z0-9_-]+)\s*:/g;
+  let match;
+  while ((match = re.exec(cssText)) !== null) {
+    declarations.add(`--${match[1]}`);
+  }
+  return declarations;
+}
+
+function isInsideRoot(path) {
+  const pathFromRoot = relative(ROOT, path);
+  return pathFromRoot === "" || (!pathFromRoot.startsWith("..") && !pathFromRoot.startsWith("/"));
+}
+
+function localStylesheetPaths(html, htmlPath) {
+  const paths = [];
+  const linkTags = html.match(/<link\b[^>]*>/gi) || [];
+  for (const tag of linkTags) {
+    if (!/\brel\s*=\s*["']stylesheet["']/i.test(tag)) continue;
+    const href = tag.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1];
+    if (!href || /^(?:[a-z]+:|\/\/|data:)/i.test(href)) continue;
+    const path = resolve(dirname(htmlPath), href.split(/[?#]/u, 1)[0]);
+    if (isInsideRoot(path) && existsSync(path)) paths.push(path);
+  }
+  return paths;
+}
+
+function readStylesheetGraph(entryPaths) {
+  const visited = new Set();
+  const chunks = [];
+
+  function visit(path) {
+    if (visited.has(path) || !isInsideRoot(path) || !existsSync(path)) return;
+    visited.add(path);
+    const css = readFileSync(path, "utf-8");
+    chunks.push(css);
+
+    const imports = css.matchAll(/@import\s+(?:url\(\s*)?["']([^"']+)["']/gi);
+    for (const match of imports) {
+      const href = match[1];
+      if (!href || /^(?:[a-z]+:|\/\/|data:)/i.test(href)) continue;
+      visit(resolve(dirname(path), href.split(/[?#]/u, 1)[0]));
+    }
+  }
+
+  for (const path of entryPaths) visit(path);
+  return chunks.join("\n");
 }
 
 // ── Known safe var() patterns (Tailwind internals) ──
@@ -219,18 +269,22 @@ function main() {
       .sort();
 
     for (const file of protoFiles) {
-      const html = readFileSync(join(PROTOTYPES_DIR, file), "utf-8");
+      const htmlPath = join(PROTOTYPES_DIR, file);
+      const html = readFileSync(htmlPath, "utf-8");
       const styleBlocks = html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) || [];
       const inlineStyles = html.match(/style="[^"]*"/gi) || [];
-      const allCss = styleBlocks.join("\n") + "\n" + inlineStyles.join("\n");
+      const linkedCss = readStylesheetGraph(localStylesheetPaths(html, htmlPath));
+      const allCss = linkedCss + "\n" + styleBlocks.join("\n") + "\n" + inlineStyles.join("\n");
 
       if (!allCss.trim()) continue;
       protoFilesChecked++;
 
       const refs = extractVarRefs(allCss);
+      const localDeclarations = extractDeclarations(allCss);
       const fileDeadLinks = new Set();
       for (const ref of refs) {
         if (SAFE_REFS.has(ref)) continue;
+        if (localDeclarations.has(ref)) continue;
         if (!declarations.has(ref)) {
           fileDeadLinks.add(ref);
         }

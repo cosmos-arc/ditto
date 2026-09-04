@@ -20,6 +20,8 @@
   --tab-bar-height:         42px;
   --progress-bar-height:    6px;
   --surface-noise-opacity:  0.018;
+  --prototype-overlay-z-index: 1110;
+  --prototype-tooltip-max-width: 240px;
 
   /* ── Instrument Hub — Domain-specific structural tokens ── */
   --sparkline-width:        48px;    /* metric-card inline sparkline */

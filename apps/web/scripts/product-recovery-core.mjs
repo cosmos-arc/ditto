@@ -1,5 +1,32 @@
+import { createHash } from "node:crypto";
+
 const ARCHIVED_PROTOTYPE_IDS = new Set(["ai-overview", "ai-copilot"]);
 const UNIVERSAL_STATES = new Set(["loading", "empty", "error", "stale"]);
+
+function sha256(content) {
+	return createHash("sha256").update(content).digest("hex");
+}
+
+export function buildPrototypeSourceEvidence(inputs) {
+	const normalized = [...inputs]
+		.map((input) => ({ path: input.path.replaceAll("\\", "/"), content: input.content }))
+		.sort((left, right) => left.path.localeCompare(right.path));
+	const seen = new Set();
+	const aggregate = createHash("sha256");
+	const sourceInputs = normalized.map(({ path, content }) => {
+		if (path === "" || path.startsWith("/") || path.split("/").includes("..")) {
+			throw new Error(`Prototype source input must be workspace-relative: ${path}`);
+		}
+		if (seen.has(path)) throw new Error(`Duplicate prototype source input: ${path}`);
+		seen.add(path);
+		const inputSha256 = sha256(content);
+		aggregate.update(path).update("\0").update(inputSha256).update("\0");
+		return { path, sha256: inputSha256 };
+	});
+
+	if (sourceInputs.length === 0) throw new Error("Prototype source evidence cannot be empty");
+	return { sourceSha256: aggregate.digest("hex"), sourceInputs };
+}
 
 export function activePrototypePages(manifest) {
 	return (manifest.pages ?? [])
@@ -24,7 +51,12 @@ export function buildPrototypeBaselineRecord({
 }) {
 	const entries = pages.map((page) => {
 		const artifact = artifacts.get(page.id);
-		if (!artifact?.sourceSha256 || !artifact?.screenshotSha256) {
+		if (
+			!artifact?.sourceSha256 ||
+			!artifact?.screenshotSha256 ||
+			!Array.isArray(artifact.sourceInputs) ||
+			artifact.sourceInputs.length === 0
+		) {
 			throw new Error(`Missing frozen baseline evidence for ${page.id}`);
 		}
 		return {
@@ -32,13 +64,14 @@ export function buildPrototypeBaselineRecord({
 			file: page.file,
 			viewport: artifact.viewport,
 			sourceSha256: artifact.sourceSha256,
+			sourceInputs: artifact.sourceInputs,
 			screenshotSha256: artifact.screenshotSha256,
 			screenshotRef: artifact.screenshotRef,
 		};
 	});
 
 	return {
-		version: 1,
+		version: 2,
 		baselineId: `frontend-recovery-m0-${capturedAt}`,
 		baselineCommit,
 		capturedAt,
