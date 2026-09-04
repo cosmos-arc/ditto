@@ -10,6 +10,7 @@ payload or rewrites history.
 from __future__ import annotations
 
 import sqlite3
+from typing import cast
 
 from ditto_platform.foundation import SQLitePool, logger, traced
 
@@ -191,14 +192,19 @@ SELECT 1 FROM strategy_version WHERE strategy_id = ? LIMIT 1
 _MAX_GOVERNANCE_EVENTS_PAGE_SIZE = 100
 
 
+def _sqlite_int(value: object) -> int:
+    """Narrow a SQLite scalar to the inputs accepted by ``int``."""
+    return int(cast("int | str | bytes", value))
+
+
 def _row_to_version(row: sqlite3.Row) -> StrategyVersion:
     d: dict[str, object] = dict(row)
     parent = d["parent_version"]
     return StrategyVersion(
         strategy_id=str(d["strategy_id"]),
-        version=int(d["version"]),  # type: ignore[arg-type]
-        parent_version=None if parent is None else int(parent),  # type: ignore[arg-type]
-        schema_version=int(d["schema_version"]),  # type: ignore[arg-type]
+        version=_sqlite_int(d["version"]),
+        parent_version=None if parent is None else _sqlite_int(parent),
+        schema_version=_sqlite_int(d["schema_version"]),
         spec_hash=str(d["spec_hash"]),
         created_at=str(d["created_at"]),
     )
@@ -208,10 +214,10 @@ def _row_to_state(row: sqlite3.Row) -> StrategyVersionStateRecord:
     d: dict[str, object] = dict(row)
     return StrategyVersionStateRecord(
         strategy_id=str(d["strategy_id"]),
-        version=int(d["version"]),  # type: ignore[arg-type]
+        version=_sqlite_int(d["version"]),
         state=StrategyVersionState(str(d["state"])),
         review_outcome=ReviewOutcome(str(d["review_outcome"])),
-        state_revision=int(d["state_revision"]),  # type: ignore[arg-type]
+        state_revision=_sqlite_int(d["state_revision"]),
     )
 
 
@@ -219,8 +225,8 @@ def _row_to_pointer(row: sqlite3.Row) -> StrategyActivePointer:
     d: dict[str, object] = dict(row)
     return StrategyActivePointer(
         strategy_id=str(d["strategy_id"]),
-        active_version=int(d["active_version"]),  # type: ignore[arg-type]
-        pointer_revision=int(d["pointer_revision"]),  # type: ignore[arg-type]
+        active_version=_sqlite_int(d["active_version"]),
+        pointer_revision=_sqlite_int(d["pointer_revision"]),
         activation_event_id=str(d["activation_event_id"]),
     )
 
@@ -230,7 +236,7 @@ def _row_to_decision_event(row: sqlite3.Row) -> StrategyDecisionEvent:
     return StrategyDecisionEvent(
         event_id=str(d["event_id"]),
         strategy_id=str(d["strategy_id"]),
-        version=int(d["version"]),  # type: ignore[arg-type]
+        version=_sqlite_int(d["version"]),
         decision=StrategyDecision(str(d["decision"])),
         actor=str(d["actor"]),
         reason=str(d["reason"]),
@@ -243,7 +249,7 @@ def _row_to_activation_event(row: sqlite3.Row) -> StrategyActivationEvent:
     return StrategyActivationEvent(
         event_id=str(d["event_id"]),
         strategy_id=str(d["strategy_id"]),
-        target_version=int(d["target_version"]),  # type: ignore[arg-type]
+        target_version=_sqlite_int(d["target_version"]),
         activation_kind=StrategyDecision(str(d["activation_kind"])),
         actor=str(d["actor"]),
         reason=str(d["reason"]),

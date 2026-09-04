@@ -68,6 +68,7 @@ from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
+from pydantic import TypeAdapter
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.bundle import ResearchBundle
@@ -160,6 +161,9 @@ class LiveGoldenLaneResult:
     replay_dispatch_count: int
 
 
+_LIVE_GOLDEN_LANE_RESULT_ADAPTER = TypeAdapter(LiveGoldenLaneResult)
+
+
 @dataclass(frozen=True, slots=True)
 class LiveGovernanceLaneResult:
     """One approved publication, active read, and historical reactivation proof."""
@@ -222,7 +226,7 @@ def _read_lane_result(
     if sha256_file(path) != expected_hash:
         raise ValueError(f"live lane evidence hash drifted: {lane}")
     payload = cast("dict[str, object]", orjson.loads(path.read_bytes()))
-    return LiveGoldenLaneResult(**payload)  # type: ignore[arg-type]
+    return _LIVE_GOLDEN_LANE_RESULT_ADAPTER.validate_python(payload)
 
 
 def _ensure_seed_v1(lane: LiveLane) -> None:
@@ -776,7 +780,7 @@ def run_live_governance_lifecycle(
     actor: str,
 ) -> LiveGovernanceLifecycleResult:
     """Submit, approve, publish, read through R1, and reactivate both lanes."""
-    del data_root  # Composition is already bound by the exact DITTO_DATA_ROOT.
+    del data_root  # Composition is already bound by the exact DITTO_STATE_ROOT.
     root = evidence_root.expanduser().resolve(strict=True)
     results = tuple(
         _govern_lane(
