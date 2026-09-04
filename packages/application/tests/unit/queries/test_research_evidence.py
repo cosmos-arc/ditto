@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from typing import cast
 from unittest.mock import MagicMock
@@ -348,3 +349,251 @@ def test_strategy_provider_wires_research_evidence_facade() -> None:
     )
 
     assert isinstance(wired, ResearchEvidenceQueryFacade)
+
+
+def _expect_evidence_error(
+    code: str,
+    reason: str,
+    factory: Callable[[], object],
+) -> None:
+    with pytest.raises(AppQueryError) as exc_info:
+        factory()
+    assert exc_info.value.details["code"] == code
+    assert exc_info.value.details["reason"] == reason
+
+
+class TestResearchEvidenceFailureMatrix:
+    pytestmark = pytest.mark.pit
+
+    def test_rejects_noncanonical_identity_and_versions(self) -> None:
+        harness = _research_harness()
+        _expect_evidence_error(
+            "EVIDENCE_IDENTITY_REQUIRED",
+            "missing_or_noncanonical_identity",
+            lambda: harness.facade.get_experiment_evidence(
+                experiment_id=" experiment-1",
+                context=_context(),
+            ),
+        )
+        _expect_evidence_error(
+            "EVIDENCE_IDENTITY_REQUIRED",
+            "factor_version_invalid",
+            lambda: harness.facade.get_factor_evidence(
+                query=FactorEvidenceQuery(
+                    factor_id="momentum",
+                    factor_version=cast("int", True),
+                    dataset_id="etf-daily",
+                    catalog_snapshot_id="snapshot-1",
+                    universe="cn-etf",
+                ),
+                context=_context(),
+            ),
+        )
+        _expect_evidence_error(
+            "EVIDENCE_SNAPSHOT_MISMATCH",
+            "factor_snapshot_mismatch",
+            lambda: harness.facade.get_factor_evidence(
+                query=FactorEvidenceQuery(
+                    factor_id="momentum",
+                    factor_version=4,
+                    dataset_id="etf-daily",
+                    catalog_snapshot_id="snapshot-other",
+                    universe="cn-etf",
+                ),
+                context=_context(),
+            ),
+        )
+        _expect_evidence_error(
+            "EVIDENCE_IDENTITY_REQUIRED",
+            "strategy_version_invalid",
+            lambda: harness.facade.get_strategy_evidence(
+                strategy_id="strategy-1",
+                version=cast("int", True),
+                context=_context(),
+            ),
+        )
+
+    def test_experiment_read_rejects_missing_identity_and_scope(self) -> None:
+        harness = _research_harness()
+        harness.experiments.get.return_value = None
+        _expect_evidence_error(
+            "EVIDENCE_NOT_FOUND",
+            "experiment_not_found",
+            lambda: harness.facade.get_experiment_evidence(
+                experiment_id="experiment-1",
+                context=_context(),
+            ),
+        )
+
+        harness = _research_harness()
+        harness.experiments.get.return_value = replace(
+            _experiment_detail(),
+            experiment_id="experiment-other",
+        )
+        _expect_evidence_error(
+            "EVIDENCE_IDENTITY_MISMATCH",
+            "experiment_identity_mismatch",
+            lambda: harness.facade.get_experiment_evidence(
+                experiment_id="experiment-1",
+                context=_context(),
+            ),
+        )
+
+        harness = _research_harness()
+        _expect_evidence_error(
+            "EVIDENCE_NOT_FOUND",
+            "candidate_not_found",
+            lambda: harness.facade.get_experiment_evidence(
+                experiment_id="experiment-1",
+                candidate_id="candidate-other",
+                context=_context(),
+            ),
+        )
+        _expect_evidence_error(
+            "EVIDENCE_NOT_FOUND",
+            "fold_not_found",
+            lambda: harness.facade.get_experiment_evidence(
+                experiment_id="experiment-1",
+                candidate_id="candidate-1",
+                fold_id="fold-other",
+                context=_context(),
+            ),
+        )
+
+    def test_experiment_scope_is_bounded_and_gate_lineage_is_complete(self) -> None:
+        harness = _research_harness()
+        gate = harness.experiments.list_gate_evaluations.return_value[0]
+        harness.experiments.list_gate_evaluations.return_value = (gate,) * 1_001
+        _expect_evidence_error(
+            "EVIDENCE_RESULT_TOO_LARGE",
+            "experiment_scope_exceeds_limit",
+            lambda: harness.facade.get_experiment_evidence(
+                experiment_id="experiment-1",
+                context=_context(),
+            ),
+        )
+
+        harness = _research_harness()
+        harness.experiments.list_artifacts.return_value = ()
+        _expect_evidence_error(
+            "EVIDENCE_PROVENANCE_INCOMPLETE",
+            "gate_artifact_reference_missing",
+            lambda: harness.facade.get_experiment_evidence(
+                experiment_id="experiment-1",
+                context=_context(),
+            ),
+        )
+
+    def test_experiment_unscoped_read_and_review_filter_are_explicit(self) -> None:
+        harness = _research_harness()
+        unscoped = harness.facade.get_experiment_evidence(
+            experiment_id="experiment-1",
+            context=_context(),
+        )
+        assert unscoped.lineage == ("experiment:experiment-1",)
+
+        harness = _research_harness()
+        harness.experiments.get_review_packet.return_value = MagicMock(
+            candidate_id="candidate-other"
+        )
+        selected = harness.facade.get_experiment_evidence(
+            experiment_id="experiment-1",
+            candidate_id="candidate-1",
+            context=_context(),
+        )
+        assert selected.payload.value["review"] is None
+
+    def test_strategy_read_requires_an_existing_exact_version(self) -> None:
+        harness = _research_harness()
+        harness.strategy.get_version_detail.return_value = None
+        _expect_evidence_error(
+            "EVIDENCE_NOT_FOUND",
+            "strategy_version_not_found",
+            lambda: harness.facade.get_strategy_evidence(
+                strategy_id="strategy-1",
+                version=3,
+                context=_context(),
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        ("mutation", "reason"),
+        [
+            ("missing_run", "backtest_run_not_found"),
+            ("identity", "backtest_identity_mismatch"),
+            ("running", "backtest_run_not_completed"),
+            ("invalid_json", "backtest_config_invalid"),
+            ("non_mapping_json", "backtest_config_invalid"),
+            ("missing_report", "backtest_report_missing"),
+            ("missing_proof", "replay_proof_missing"),
+        ],
+    )
+    def test_backtest_read_fails_closed_on_each_durable_gap(
+        self,
+        mutation: str,
+        reason: str,
+    ) -> None:
+        harness = _research_harness()
+        include_replay_proof = mutation == "missing_proof"
+        if mutation == "missing_run":
+            harness.backtest.get_run.return_value = None
+        elif mutation == "identity":
+            harness.backtest.get_run.return_value = replace(
+                harness.backtest.get_run.return_value,
+                strategy_id="strategy-other",
+            )
+        elif mutation == "running":
+            harness.backtest.get_run.return_value = replace(
+                harness.backtest.get_run.return_value,
+                status="running",
+            )
+        elif mutation == "invalid_json":
+            harness.backtest.get_run.return_value = replace(
+                harness.backtest.get_run.return_value,
+                config_json="{",
+            )
+        elif mutation == "non_mapping_json":
+            harness.backtest.get_run.return_value = replace(
+                harness.backtest.get_run.return_value,
+                config_json="[]",
+            )
+        elif mutation == "missing_report":
+            harness.backtest.get_report.return_value = None
+        else:
+            harness.backtest.get_replay_proof.return_value = None
+
+        _expect_evidence_error(
+            (
+                "EVIDENCE_NOT_FINAL"
+                if mutation == "running"
+                else "EVIDENCE_IDENTITY_MISMATCH"
+                if mutation == "identity"
+                else "EVIDENCE_NOT_FOUND"
+                if mutation == "missing_run"
+                else "EVIDENCE_PROVENANCE_INCOMPLETE"
+            ),
+            reason,
+            lambda: harness.facade.get_backtest_evidence(
+                run_id="run-1",
+                strategy_id="strategy-1",
+                strategy_version="3",
+                dataset_id="etf-daily",
+                include_replay_proof=include_replay_proof,
+                context=_context(),
+            ),
+        )
+
+    def test_backtest_without_replay_proof_is_explicit_success(self) -> None:
+        result = _research_harness().facade.get_backtest_evidence(
+            run_id="run-1",
+            strategy_id="strategy-1",
+            strategy_version="3",
+            dataset_id="etf-daily",
+            include_replay_proof=False,
+            context=_context(),
+        )
+
+        assert {ref.artifact_kind for ref in result.artifact_refs} == {
+            "backtest_report",
+            "research_snapshot_manifest",
+        }
