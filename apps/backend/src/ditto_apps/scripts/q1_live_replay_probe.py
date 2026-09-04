@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import sqlite3
 import sys
 from collections.abc import Callable, Sequence
@@ -15,6 +14,7 @@ from typing import cast
 
 import orjson
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
 
 __all__ = [
@@ -223,11 +223,8 @@ def main(argv: list[str] | None = None) -> int:
     """Write one redacted, content-addressable Q1 replay artifact."""
     args = _parser().parse_args(argv)
     data_root = args.data_root.expanduser().resolve(strict=True)
-    configured = (
-        Path(os.environ.get("DITTO_DATA_ROOT", "")).expanduser().resolve(strict=False)
-    )
-    if configured != data_root:
-        raise ValueError("DITTO_DATA_ROOT must equal the isolated Q1 data root")
+    if not state_root_matches(data_root):
+        raise ValueError("DITTO_STATE_ROOT must equal the isolated Q1 data root")
     partitions = (
         *(
             ReplayPartition(dataset, cast("str", args.trade_date))

@@ -256,7 +256,7 @@ class TestDerivedPublicationIntegration:
         """Materialize -> compare -> certify -> promote should flip serving primary."""
         sqlite_path = tmp_path / "metadata" / "metadata.sqlite"
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         monkeypatch.setenv("SQLITE_PATH", sqlite_path.as_posix())
         _write_market_truth_layers(tmp_path, close_values=[10.0, 11.0])
 

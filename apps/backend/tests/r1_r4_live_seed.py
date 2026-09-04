@@ -32,12 +32,12 @@ from e2e import test_r1_daily_manual_trading as r1
 
 
 def _temporary_root() -> Path:
-    raw = os.environ.get("DITTO_DATA_ROOT", "")
+    raw = os.environ.get("DITTO_STATE_ROOT", "")
     if os.environ.get("DITTO_ENVIRONMENT") != "testing":
         raise RuntimeError("DITTO_ENVIRONMENT=testing is required")
     root = Path(raw).expanduser().resolve()
     if not raw or not root.is_relative_to(Path("/private/tmp")):
-        raise RuntimeError("DITTO_DATA_ROOT must resolve below /private/tmp")
+        raise RuntimeError("DITTO_STATE_ROOT must resolve below /private/tmp")
     return root
 
 

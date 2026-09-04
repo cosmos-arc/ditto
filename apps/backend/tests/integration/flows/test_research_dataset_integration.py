@@ -249,7 +249,7 @@ class TestResearchDatasetBuildFlowIntegration:
     ) -> None:
         """Flow should build a dataset snapshot and persist a build report."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
 
         seed_container = _make_test_container()
         try:

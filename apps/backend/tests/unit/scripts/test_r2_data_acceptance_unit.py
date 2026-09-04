@@ -94,7 +94,7 @@ def test_resolve_live_args_syncs_sqlite_path_and_data_root_to_env(
     assert resolved.env_overrides["SQLITE_PATH"] == str(
         (tmp_path / "live-data" / "metadata" / "metadata.sqlite").resolve()
     )
-    assert resolved.env_overrides["DITTO_DATA_ROOT"] == str(
+    assert resolved.env_overrides["DITTO_STATE_ROOT"] == str(
         (tmp_path / "live-data").resolve()
     )
 

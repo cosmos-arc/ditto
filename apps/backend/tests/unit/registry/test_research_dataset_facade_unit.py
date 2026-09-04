@@ -83,7 +83,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
     from ditto_features.di import FeaturesStorageProvider
 
     monkeypatch.setenv("ENVIRONMENT", "testing")
-    monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+    monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
     monkeypatch.setenv(
         "SQLITE_PATH",
         (tmp_path / "metadata" / "metadata.sqlite").as_posix(),

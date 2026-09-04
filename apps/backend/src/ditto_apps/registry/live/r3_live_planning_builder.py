@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import re
 import sys
 from dataclasses import asdict, dataclass
@@ -92,6 +91,7 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.strategy import create_strategy_bundle
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
@@ -639,12 +639,8 @@ def main(argv: list[str] | None = None) -> int:
     """Compose production ports and publish one addressed live planning document."""
     args = _parser().parse_args(argv)
     data_root = args.data_root.expanduser().resolve(strict=True)
-    configured_root = os.environ.get("DITTO_DATA_ROOT")
-    if (
-        configured_root is None
-        or Path(configured_root).expanduser().resolve() != data_root
-    ):
-        raise SystemExit("DITTO_DATA_ROOT must exactly match --data-root")
+    if not state_root_matches(data_root):
+        raise SystemExit("DITTO_STATE_ROOT must exactly match --data-root")
     lane = cast("LiveLane", args.lane)
     if (args.strategy_id is None) != (args.strategy_version is None):
         raise SystemExit(

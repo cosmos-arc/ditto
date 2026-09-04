@@ -36,7 +36,7 @@ def test_stock_live_golden_lane() -> None:
     """Run the stock primary lane through one real-data immutable review packet."""
     result = run_live_golden_lane(
         lane="stock",
-        data_root=_required_path("DITTO_DATA_ROOT", must_exist=True),
+        data_root=_required_path("DITTO_STATE_ROOT", must_exist=True),
         evidence_root=_required_path(
             "DITTO_R3_LIVE_EVIDENCE_ROOT",
             must_exist=False,
@@ -56,7 +56,7 @@ def test_etf_live_golden_lane() -> None:
     """Run the ETF proving lane through one real-data immutable review packet."""
     result = run_live_golden_lane(
         lane="etf",
-        data_root=_required_path("DITTO_DATA_ROOT", must_exist=True),
+        data_root=_required_path("DITTO_STATE_ROOT", must_exist=True),
         evidence_root=_required_path(
             "DITTO_R3_LIVE_EVIDENCE_ROOT",
             must_exist=False,
@@ -73,7 +73,7 @@ def test_etf_live_golden_lane() -> None:
 def test_live_publish_r1_and_reactivate() -> None:
     """Publish both reviewed candidates, prove R1 active truth, then return to v1."""
     result = run_live_governance_lifecycle(
-        data_root=_required_path("DITTO_DATA_ROOT", must_exist=True),
+        data_root=_required_path("DITTO_STATE_ROOT", must_exist=True),
         evidence_root=_required_path(
             "DITTO_R3_LIVE_EVIDENCE_ROOT",
             must_exist=True,
@@ -92,7 +92,7 @@ def test_live_publish_r1_and_reactivate() -> None:
 def test_isolated_live_backup_restore() -> None:
     """Verify metadata, research DB, pinned artifacts, and domain restore parity."""
     result = run_live_backup_restore(
-        data_root=_required_path("DITTO_DATA_ROOT", must_exist=True),
+        data_root=_required_path("DITTO_STATE_ROOT", must_exist=True),
         evidence_root=_required_path(
             "DITTO_R3_LIVE_EVIDENCE_ROOT",
             must_exist=True,

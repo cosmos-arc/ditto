@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import sqlite3
 import sys
 from collections.abc import Callable, Sequence
@@ -22,6 +21,7 @@ from ditto_application.queries.data_products import (
     DataProductView,
 )
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.ingestion import create_ingestion_bundle
 from ditto_apps.scripts.r2_data_acceptance import (
@@ -168,11 +168,8 @@ def main(argv: list[str] | None = None) -> int:
     """Write the exact live evidence input consumed by R2 acceptance."""
     args = _parser().parse_args(argv)
     data_root = args.data_root.expanduser().resolve(strict=True)
-    configured = (
-        Path(os.environ.get("DITTO_DATA_ROOT", "")).expanduser().resolve(strict=False)
-    )
-    if configured != data_root:
-        raise ValueError("DITTO_DATA_ROOT must equal the isolated live data root")
+    if not state_root_matches(data_root):
+        raise ValueError("DITTO_STATE_ROOT must equal the isolated live data root")
     database = data_root / "metadata" / "metadata.sqlite"
     evidence = collect_live_runtime_evidence(
         provider_evidence=_read_provider_evidence(args.provider_evidence),

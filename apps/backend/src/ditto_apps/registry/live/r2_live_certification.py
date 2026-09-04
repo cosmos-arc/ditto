@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import sqlite3
 import sys
 from collections.abc import Callable
@@ -41,6 +40,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotReader,
 )
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.query import create_query_context
 
@@ -557,11 +557,8 @@ def certify_live_products(
 ) -> R2LiveCertificationBundle:
     """Build, freeze, review, and promote every hard-scope R2 product."""
     root = data_root.expanduser().resolve(strict=True)
-    configured_root = (
-        Path(os.environ.get("DITTO_DATA_ROOT", "")).expanduser().resolve(strict=False)
-    )
-    if configured_root != root:
-        raise ValueError("DITTO_DATA_ROOT must equal the isolated live data root")
+    if not state_root_matches(root):
+        raise ValueError("DITTO_STATE_ROOT must equal the isolated live data root")
     if not actor or actor.strip() != actor:
         raise ValueError("certification actor is invalid")
     if not recovery_evidence_uri.strip():

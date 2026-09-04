@@ -77,14 +77,18 @@ def test_fresh_runtime_can_enter_and_exit_the_real_app_lifespan(
 ) -> None:
     data_root = tmp_path / "fresh-runtime"
     create_fresh_runtime(data_root)
-    monkeypatch.setenv("DITTO_DATA_ROOT", str(data_root))
+    monkeypatch.setenv("DITTO_STATE_ROOT", str(data_root))
     monkeypatch.setenv("TUSHARE_TOKEN", "fresh-bootstrap-test-token")
 
     from ditto_apps.main import lifespan
     from ditto_apps.registry.container import make_async_app_container
+    from ditto_platform.foundation import reset_for_testing
     from fastapi import FastAPI
 
     async def probe() -> None:
+        # Model a fresh server process instead of reusing the session fixture's
+        # process-global test provider with a different temporary log root.
+        reset_for_testing()
         runtime_app = FastAPI()
         runtime_app.state.dishka_container = make_async_app_container()
         async with lifespan(runtime_app):

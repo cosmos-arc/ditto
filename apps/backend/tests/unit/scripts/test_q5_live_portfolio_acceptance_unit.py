@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
+from typing import Never, cast
 
 import orjson
 import polars as pl
@@ -104,6 +104,19 @@ def _inputs(tmp_path: Path) -> tuple[Path, Path, tuple[dict[str, object], ...]]:
     return q3, account, rows
 
 
+def _factor_values(
+    rows: tuple[dict[str, object], ...],
+) -> dict[int, dict[str, float]]:
+    values: dict[int, dict[str, float]] = {}
+    for row in rows:
+        instrument_id = row["instrument_id"]
+        pct_change = row["pct_change"]
+        assert isinstance(instrument_id, int)
+        assert isinstance(pct_change, float)
+        values[instrument_id] = {"signal_value": pct_change / 100}
+    return values
+
+
 def _proposal(tmp_path: Path) -> dict[str, object]:
     q3, account, rows = _inputs(tmp_path)
     return build_live_portfolio_acceptance_proposal(
@@ -125,14 +138,7 @@ def _proposal(tmp_path: Path) -> dict[str, object]:
                 2_001_004: 0.2,
                 2_001_724: 0.2,
             },
-            factor_values={
-                row["instrument_id"]: {
-                    "signal_value": cast(float, row["pct_change"]) / 100
-                }
-                for row in rows
-                if row["instrument_id"] != 2_001_724
-            }
-            | {2_001_724: {"signal_value": cast(float, rows[0]["pct_change"]) / 100}},
+            factor_values=_factor_values(rows),
             cash_target=0.0,
         )
     )
@@ -223,7 +229,7 @@ def test_runtime_rejects_provider_drift_before_any_approved_write(
             assert kwargs == {"trade_date": "2026-09-02"}
             return pl.DataFrame(rows)
 
-    def no_container() -> object:
+    def no_container() -> Never:
         raise AssertionError("container must not open before provider preflight")
 
     with pytest.raises(ValueError, match="provider row count drifted"):
@@ -257,12 +263,12 @@ def test_runtime_accepts_exact_frozen_rows_before_persistence_preflight(
             assert kwargs == {"trade_date": "2026-09-02"}
             return pl.DataFrame((*frozen_rows, *filler_rows))
 
-    monkeypatch.setenv("DITTO_DATA_ROOT", str(tmp_path / "wrong-data-root"))
+    monkeypatch.setenv("DITTO_STATE_ROOT", str(tmp_path / "wrong-data-root"))
 
-    def no_container() -> object:
+    def no_container() -> Never:
         raise AssertionError("persistence must not open before path preflight")
 
-    with pytest.raises(ValueError, match="DITTO_DATA_ROOT"):
+    with pytest.raises(ValueError, match="DITTO_STATE_ROOT"):
         run_live_portfolio_acceptance(
             proposal,
             approved_request_hash=_approval_hash(proposal),
@@ -320,7 +326,7 @@ def test_completed_acceptance_replay_returns_immutable_receipt_without_new_io(
             del kwargs
             raise AssertionError("completed acceptance must not call the provider")
 
-    def no_second_container() -> object:
+    def no_second_container() -> Never:
         raise AssertionError("completed acceptance must not reopen persistence")
 
     replay = run_live_portfolio_acceptance(
@@ -359,7 +365,7 @@ def test_incomplete_completed_receipt_fails_closed_before_new_io(
             del kwargs
             raise AssertionError("invalid receipt must fail before provider I/O")
 
-    def no_second_container() -> object:
+    def no_second_container() -> Never:
         raise AssertionError("invalid receipt must fail before persistence I/O")
 
     with pytest.raises(ValueError, match="receipt is invalid"):

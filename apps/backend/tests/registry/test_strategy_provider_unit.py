@@ -132,7 +132,7 @@ class TestAppBuilderFactory:
     ) -> None:
         """AppBuilderFactory 应支持从 published catalog 直接构造 StrategyRunService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_test_container()
         spec = self._make_strategy_spec()
         record = StrategySpecRecord(
@@ -180,7 +180,7 @@ class TestAppBuilderFactory:
     ) -> None:
         """AppBuilderFactory 应返回预接好控制面服务的 StrategyServiceFactory。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_test_container()
 
         factory = container.get(StrategyServiceFactory)
@@ -245,7 +245,7 @@ class TestAppBuilderFactory:
     ) -> None:
         """AppBuilderFactory 应暴露统一的 StrategyFacade。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_test_container()
 
         facade = container.get(StrategyFacade)
@@ -260,7 +260,7 @@ class TestAppBuilderFactory:
     ) -> None:
         """AppBuilderFactory 应暴露 StrategySliceBuilder。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_test_container()
 
         slice_builder = container.get(StrategySliceBuilder)
@@ -275,7 +275,7 @@ class TestAppBuilderFactory:
     ) -> None:
         """AppBuilderFactory 应支持从 published catalog 直接构造 BacktestService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_test_container()
         spec = self._make_strategy_spec()
         record = StrategySpecRecord(

@@ -156,7 +156,7 @@ class TestStorageProviderWiring:
     ) -> None:
         """FeaturesStorageProvider should wire the DerivedQueryService."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = make_container(
             ConfigProvider(),
             _sources_provider(),
@@ -247,7 +247,7 @@ class TestAppProviderDerivedWiring:
     ) -> None:
         """AppMarketQueryProvider 应提供 DerivedQueryFacade。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_full_container()
 
         facade = container.get(DerivedQueryFacade)
@@ -261,7 +261,7 @@ class TestAppProviderDerivedWiring:
     ) -> None:
         """AppProcessProvider 应提供 DerivedPublicationFacade。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_full_container()
 
         publication_facade = container.get(DerivedPublicationFacade)
@@ -275,7 +275,7 @@ class TestAppProviderDerivedWiring:
     ) -> None:
         """DerivedMaterializationOrchestrator should receive UniverseProvider via DI."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_full_container()
 
         orchestrator = container.get(DerivedMaterializationOrchestrator)
@@ -289,7 +289,7 @@ class TestAppProviderDerivedWiring:
     ) -> None:
         """DerivedMaterializationOrchestrator should persist lineage via DI."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_full_container()
 
         lineage_recorder = container.get(DataLineageRecorder)

@@ -737,8 +737,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         approved_request_hash=str(arguments.approved_request_hash),
     )
 
-    previous_data_root = os.environ.get("DITTO_DATA_ROOT")
-    os.environ["DITTO_DATA_ROOT"] = str(data_root)
+    previous_state_root = os.environ.get("DITTO_STATE_ROOT")
+    os.environ["DITTO_STATE_ROOT"] = str(data_root)
     container = make_app_container()
     try:
 
@@ -762,10 +762,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     finally:
         container.close()
-        if previous_data_root is None:
-            del os.environ["DITTO_DATA_ROOT"]
+        if previous_state_root is None:
+            del os.environ["DITTO_STATE_ROOT"]
         else:
-            os.environ["DITTO_DATA_ROOT"] = previous_data_root
+            os.environ["DITTO_STATE_ROOT"] = previous_state_root
     output_path.write_bytes(canonical_bytes(result))
     return 0
 

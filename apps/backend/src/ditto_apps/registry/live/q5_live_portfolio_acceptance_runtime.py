@@ -61,6 +61,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.operations.q4_live_account_acceptance import (
     SHANGHAI,
     atomic_write_json,
@@ -645,8 +646,8 @@ def run_live_portfolio_acceptance(
         if owned_source_container is not None:
             owned_source_container.close()
 
-    if _configured_path("DITTO_DATA_ROOT") != approved.data_root:
-        raise ValueError("DITTO_DATA_ROOT does not match the approved data root")
+    if not state_root_matches(approved.data_root):
+        raise ValueError("DITTO_STATE_ROOT does not match the approved data root")
     if _configured_path("DITTO_TRADING_SQLITE_PATH") != approved.trading_database:
         raise ValueError("DITTO_TRADING_SQLITE_PATH does not match the approved store")
 

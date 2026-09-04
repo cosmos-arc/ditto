@@ -6,7 +6,7 @@
 
 CI 默认在网络访问前跳过（未显式启用）；本地真实演练：
     DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev pytest \
-        packages/apps/tests/e2e/test_real_data_stock_selection_pipeline.py \
+        apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py \
         -m e2e --no-cov -q
 """
 
@@ -166,7 +166,7 @@ def _cli_env(data_root: Path, token: str) -> dict[str, str]:
     env = os.environ.copy()
     env.update(
         {
-            "DITTO_DATA_ROOT": data_root.as_posix(),
+            "DITTO_STATE_ROOT": data_root.as_posix(),
             "SQLITE_PATH": (data_root / "metadata" / "metadata.sqlite").as_posix(),
             "DUCKDB_PATH": (data_root / "db" / "ditto.duckdb").as_posix(),
             "ENVIRONMENT": "testing",
@@ -233,7 +233,7 @@ def test_real_acceptance_designates_the_builtin_published_seed() -> None:
 @contextmanager
 def _app_env(data_root: Path, token: str) -> Iterator[None]:
     keys = (
-        "DITTO_DATA_ROOT",
+        "DITTO_STATE_ROOT",
         "SQLITE_PATH",
         "DUCKDB_PATH",
         "ENVIRONMENT",

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -11,6 +10,7 @@ from typing import Literal, cast
 
 import orjson
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.live.r3_live_snapshot_builder import (
     LiveDatasetSnapshotBinding,
     LiveResearchSnapshotBuild,
@@ -46,10 +46,9 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     root = args.data_root.expanduser().resolve(strict=True)
     output = args.output.expanduser().resolve(strict=False)
-    configured_root = os.environ.get("DITTO_DATA_ROOT")
-    if configured_root is None or Path(configured_root).expanduser().resolve() != root:
+    if not state_root_matches(root):
         raise SystemExit(
-            "DITTO_DATA_ROOT must exactly match --data-root before composition"
+            "DITTO_STATE_ROOT must exactly match --data-root before composition"
         )
     result = build_composed_live_research_snapshot(
         lane=cast("LiveLane", args.lane),

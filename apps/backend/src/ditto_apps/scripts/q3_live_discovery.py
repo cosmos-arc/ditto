@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import sys
 from collections.abc import Mapping
 from dataclasses import asdict
@@ -54,6 +53,7 @@ from ditto_data.catalog.provider_payload import (
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.scripts.q3_live_discovery_support import (
     _ETF_CODE,
@@ -96,9 +96,8 @@ def run_q3_live_discovery_acceptance(  # noqa: PLR0915 - vertical acceptance flo
 ) -> dict[str, object]:
     """Create and replay real Q3 discovery artifacts under exact PIT identities."""
     root = data_root.expanduser().resolve(strict=True)
-    configured = os.environ.get("DITTO_DATA_ROOT")
-    if configured is None or Path(configured).expanduser().resolve() != root:
-        raise ValueError("DITTO_DATA_ROOT must equal the isolated Q3 data root")
+    if not state_root_matches(root):
+        raise ValueError("DITTO_STATE_ROOT must equal the isolated Q3 data root")
     decoded_market: object = orjson.loads(
         market_context_evidence.expanduser().resolve(strict=True).read_bytes()
     )

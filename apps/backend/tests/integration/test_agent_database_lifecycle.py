@@ -64,7 +64,7 @@ def test_production_container_enables_persisted_r5_surfaces(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("DITTO_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DITTO_STATE_ROOT", str(tmp_path))
     for name in (
         "DITTO_AGENT_ENABLED",
         "DITTO_AGENT_AUTHOR_ENABLED",
@@ -94,7 +94,7 @@ def test_persisted_runtime_reports_model_execution_degraded_when_unconfigured(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("DITTO_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DITTO_STATE_ROOT", str(tmp_path))
     monkeypatch.setenv("DITTO_AGENT_ENABLED", "true")
     monkeypatch.setenv("DITTO_AGENT_MODEL_CALLS_ENABLED", "false")
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -52,6 +51,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotReader,
 )
 
+from ditto_apps.config.runtime import state_root_matches
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.query import create_query_context
 from ditto_apps.scripts.r2_live_certification import (
@@ -354,9 +354,8 @@ def run_q2_live_market_context_acceptance(  # noqa: PLR0915 - vertical acceptanc
 ) -> dict[str, object]:
     """Freeze bounded certifications and prove exact PIT/Agent replay behavior."""
     root = data_root.expanduser().resolve(strict=True)
-    configured = os.environ.get("DITTO_DATA_ROOT")
-    if configured is None or Path(configured).expanduser().resolve() != root:
-        raise ValueError("DITTO_DATA_ROOT must equal the isolated Q2 data root")
+    if not state_root_matches(root):
+        raise ValueError("DITTO_STATE_ROOT must equal the isolated Q2 data root")
     if not actor or actor.strip() != actor:
         raise ValueError("Q2 certification actor is invalid")
     evidence_dir = evidence_root.expanduser().resolve(strict=False)

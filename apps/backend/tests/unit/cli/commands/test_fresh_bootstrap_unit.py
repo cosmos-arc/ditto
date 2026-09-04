@@ -16,8 +16,8 @@ from typer.testing import CliRunner
     [
         "/",
         "~",
-        "$DITTO_DATA_ROOT",
-        "${DITTO_DATA_ROOT}",
+        "$DITTO_STATE_ROOT",
+        "${DITTO_STATE_ROOT}",
         "/tmp/ditto-*",
     ],
 )

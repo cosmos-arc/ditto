@@ -75,7 +75,7 @@ class TestCapabilityStorageProviderDerivedWiring:
         tmp_path,
     ) -> None:
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         database = container.get(ResearchExperimentDatabase)
@@ -100,7 +100,7 @@ class TestCapabilityStorageProviderDerivedWiring:
     ) -> None:
         """FeaturesStorageProvider should build DerivedCatalogService."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         service = container.get(DerivedCatalogService)
@@ -115,7 +115,7 @@ class TestCapabilityStorageProviderDerivedWiring:
     ) -> None:
         """DerivedCatalogService should be an app-scoped singleton."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         service_1 = container.get(DerivedCatalogService)
@@ -136,7 +136,7 @@ class TestCapabilityStorageProviderDerivedWiring:
         )
 
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         reader = container.get(SQLiteDerivedShadowSlotReader)
@@ -155,7 +155,7 @@ class TestCapabilityStorageProviderDerivedWiring:
     ) -> None:
         """RuntimeProvider 应提供可持久化的 StrategyRunService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         service = container.get(StrategyRunLifecycleStore)
@@ -182,7 +182,7 @@ class TestCapabilityStorageProviderDerivedWiring:
     ) -> None:
         """RuntimeProvider 应提供可持久化的 StrategyCatalogService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         service = container.get(StrategyCatalogService)
@@ -222,7 +222,7 @@ class TestCapabilityStorageProviderDerivedWiring:
     ) -> None:
         """RuntimeProvider 应提供可持久化的 StrategyArtifactService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         service = container.get(StrategyArtifactService)
@@ -253,7 +253,7 @@ class TestCapabilityStorageProviderDerivedWiring:
     ) -> None:
         """RuntimeProvider 应提供已初始化 schema 的 ExecutionAuditService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
         container = _make_container()
 
         service = container.get(ExecutionAuditService)

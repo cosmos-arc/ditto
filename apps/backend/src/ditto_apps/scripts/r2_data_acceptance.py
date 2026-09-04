@@ -598,7 +598,7 @@ def _resolve_live_args(
     - relative ``--output`` crashing ``write_live_evidence_bundle``'s
       ``path.relative_to(root)`` (one relative, one absolute);
     - ``--sqlite-path`` being disconnected from the runtime pool, which reads
-      ``SQLITE_PATH``/``DITTO_DATA_ROOT`` env via ``load_data_store_settings``;
+      ``SQLITE_PATH``/``DITTO_STATE_ROOT`` env via ``load_data_store_settings``;
     - replay colliding with the non-overwrite backup/restore contract by
       stamping a unique subdir per run (the contract itself stays intact).
     """
@@ -606,7 +606,7 @@ def _resolve_live_args(
     sqlite_path = _resolve_path(args.sqlite_path)
     env_overrides: dict[str, str] = {}
     if data_root is not None:
-        env_overrides["DITTO_DATA_ROOT"] = str(data_root)
+        env_overrides["DITTO_STATE_ROOT"] = str(data_root)
     if sqlite_path is not None:
         env_overrides["SQLITE_PATH"] = str(sqlite_path)
     backup_root = _resolve_path(args.backup_root)
