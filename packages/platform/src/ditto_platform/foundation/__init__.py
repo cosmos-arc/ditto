@@ -20,7 +20,6 @@ from ditto_platform.foundation.config import (
     Settings,
     SystemSettings,
     XDGPaths,
-    find_project_root,
     get_environment,
 )
 from ditto_platform.foundation.config.providers import (
@@ -126,7 +125,6 @@ __all__ = [
     "atomic_write",
     "compute_checksum",
     "file_md5",
-    "find_project_root",
     "get_environment",
     "get_recorded_metrics",
     "get_recorded_spans",

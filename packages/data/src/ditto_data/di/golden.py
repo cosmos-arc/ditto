@@ -7,6 +7,7 @@ from dishka import Provider, Scope, provide
 from ditto_platform.foundation import logger
 from pydantic import ValidationError
 
+from ditto_data.quality.config import DQSettings
 from ditto_data.quality.config_paths import get_default_golden_dataset_path
 from ditto_data.quality.golden import GoldenDatasetSpec
 
@@ -60,7 +61,11 @@ class GoldenDatasetProvider(Provider):
             return None
 
     @provide
-    def golden_dataset_spec(self, data_root: Path) -> GoldenDatasetSpec | None:
+    def golden_dataset_spec(
+        self,
+        dq_settings: DQSettings,
+        data_root: Path,
+    ) -> GoldenDatasetSpec | None:
         """
         加载黄金数据集配置。
 
@@ -69,6 +74,7 @@ class GoldenDatasetProvider(Provider):
         2. 用户配置: {data_root}/config/golden_dataset.yml (覆盖)
 
         Args:
+            dq_settings: 显式配置根目录和 DQ 环境配置
             data_root: 数据根目录
 
         Returns:
@@ -76,7 +82,7 @@ class GoldenDatasetProvider(Provider):
 
         """
         # 1. 加载默认配置
-        default_path = get_default_golden_dataset_path()
+        default_path = get_default_golden_dataset_path(dq_settings.config_root)
         default_spec = self._load_from_file(default_path)
 
         # 2. 加载用户配置（覆盖）

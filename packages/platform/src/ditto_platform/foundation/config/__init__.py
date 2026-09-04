@@ -10,7 +10,6 @@ from ditto_platform.foundation.config.initializer import (
 )
 from ditto_platform.foundation.config.loader import ConfigLoader
 from ditto_platform.foundation.config.paths import PathResolver, XDGPaths
-from ditto_platform.foundation.config.project_root import find_project_root
 from ditto_platform.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
@@ -30,6 +29,5 @@ __all__ = [
     "Settings",
     "SystemSettings",
     "XDGPaths",
-    "find_project_root",
     "get_environment",
 ]

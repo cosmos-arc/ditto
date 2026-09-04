@@ -116,6 +116,7 @@ from ditto_data.di import (
     RuntimeProvider,
 )
 from ditto_data.lineage import InMemoryDataLineage
+from ditto_data.quality.config import DQSettings
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
@@ -162,6 +163,11 @@ class _TestConfigProvider(Provider):
     def data_source_settings(self) -> DataSourceSettings:
         """提供无外部凭据的测试数据源配置。"""
         return DataSourceSettings()
+
+    @provide
+    def dq_settings(self) -> DQSettings:
+        """Provide the explicit quality configuration required by QualityProvider."""
+        return DQSettings(environment="testing", config_root=self._data_root)
 
     @provide
     def data_root(self) -> Path:

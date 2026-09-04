@@ -4,12 +4,13 @@ from pathlib import Path
 
 import pytest
 from ditto_data.quality.config import DQSettings
+from pydantic import ValidationError
 
 
-def test_default_config_root_is_project_root() -> None:
-    """默认 config_root 应为项目根目录（非 CWD）。"""
-    settings = DQSettings()
-    assert (settings.config_root / "pixi.toml").exists()
+def test_config_root_is_required() -> None:
+    """Data 配置模型不得自行发现部署或 checkout 根目录。"""
+    with pytest.raises(ValidationError, match="config_root"):
+        DQSettings.model_validate({})
 
 
 def test_custom_config_root(tmp_path: Path) -> None:

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+_WORKSPACE_ROOT = Path(__file__).resolve().parents[6]
+
 
 class TestDQRulesPath:
     """DQ 规则路径测试。"""
@@ -10,14 +12,14 @@ class TestDQRulesPath:
         """默认 DQ 规则目录必须存在。"""
         from ditto_data.quality.config_paths import get_default_dq_rules_dir
 
-        dq_dir = get_default_dq_rules_dir()
+        dq_dir = get_default_dq_rules_dir(_WORKSPACE_ROOT)
         assert dq_dir.exists(), f"DQ rules directory not found: {dq_dir}"
 
     def test_default_dq_rules_dir_has_yaml_files(self) -> None:
         """默认 DQ 规则目录必须包含 yml 文件。"""
         from ditto_data.quality.config_paths import get_default_dq_rules_dir
 
-        dq_dir = get_default_dq_rules_dir()
+        dq_dir = get_default_dq_rules_dir(_WORKSPACE_ROOT)
         yaml_files = list(dq_dir.glob("*.yml"))
         assert yaml_files, f"No DQ rule files in: {dq_dir}"
         # 验证至少包含 stock_daily.yml

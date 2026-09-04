@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 from ditto_platform.foundation.config.environment import Environment
@@ -50,10 +51,12 @@ class TestConfigLoader:
             (tmp_path / "config" / "production" / "data_store.env").as_posix()
         )
 
-    def test_default_config_root_uses_project_root(self) -> None:
-        """不传 config_root 时应自动检测项目根目录."""
-        loader = ConfigLoader(Environment.DEVELOPMENT)
-        assert (loader.config_root / "pixi.toml").exists()
+    def test_config_root_is_required(self) -> None:
+        """配置工具不得替调用方发现部署或 checkout 根目录。"""
+        parameter = inspect.signature(ConfigLoader).parameters["config_root"]
+
+        assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
+        assert parameter.default is inspect.Parameter.empty
 
     def test_config_dir_is_path(self, tmp_path: Path) -> None:
         """config_dir 应该是 Path 类型."""

@@ -9,6 +9,7 @@ from ditto_platform.foundation import logger
 from pydantic import ValidationError
 
 from ditto_data.quality import QualityEngine
+from ditto_data.quality.config import DQSettings
 from ditto_data.quality.config_paths import get_default_dq_rules_dir
 from ditto_data.quality.spec import DatasetRules, DQSpec
 
@@ -69,7 +70,7 @@ class QualityProvider(Provider):
         return DQSpec(datasets=datasets)
 
     @provide
-    def dq_spec(self, data_root: Path) -> DQSpec:
+    def dq_spec(self, dq_settings: DQSettings, data_root: Path) -> DQSpec:
         """
         加载 DQ 配置规范.
 
@@ -78,14 +79,15 @@ class QualityProvider(Provider):
         2. 用户配置: {data_root}/config/dq/*.yml (覆盖)
 
         Args:
+            dq_settings: 显式配置根目录和 DQ 环境配置
             data_root: 数据根目录
 
         Returns:
             DQSpec: DQ 配置实例
 
         """
-        # 1. 加载默认配置（使用标准路径发现）
-        default_config_dir = get_default_dq_rules_dir()
+        # 1. 加载由 composition root 指定的默认配置
+        default_config_dir = get_default_dq_rules_dir(dq_settings.config_root)
         default_config = self._load_dq_spec(default_config_dir)
 
         # 2. 加载用户自定义配置（覆盖默认配置）
