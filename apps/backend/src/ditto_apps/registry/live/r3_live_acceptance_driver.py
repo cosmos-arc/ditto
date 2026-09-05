@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal, Protocol, cast
+from typing import Protocol, cast
 
 import orjson
 from ditto_analysis.research.artifact_service import ResearchArtifactService
@@ -24,20 +24,8 @@ from ditto_application.commands.experiments import (
     LaunchExperimentCommand,
 )
 from ditto_application.commands.strategy import UpdateStrategyHandler
-from ditto_application.commands.strategy_governance import (
-    ApproveReviewCommand,
-    ApproveReviewHandler,
-    PublishStrategyVersionCommand,
-    PublishStrategyVersionHandler,
-    ReactivateStrategyCommand,
-    ReactivateStrategyHandler,
-    SubmitReviewCommand,
-    SubmitReviewHandler,
-    reactivate_confirmation_phrase,
-)
 from ditto_application.exceptions import AppCommandError
 from ditto_application.mutation_idempotency import (
-    MutationIdempotency,
     build_mutation_idempotency,
     canonical_resource_id,
 )
@@ -74,6 +62,7 @@ from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.bundle import ResearchBundle
 from ditto_apps.registry.contexts.research import create_research_bundle
 from ditto_apps.registry.contexts.strategy import create_strategy_bundle
+from ditto_apps.registry.live import r3_live_governance_lane as _governance
 from ditto_apps.registry.live.r3_live_evidence_store import (
     canonical_bytes,
     sha256_file,
@@ -102,7 +91,16 @@ __all__ = [
     "select_and_claim_with_bundle",
 ]
 
-type LiveLane = Literal["stock", "etf"]
+LiveLane = _governance.LiveLane
+LiveGovernanceLaneResult = _governance.LiveGovernanceLaneResult
+LiveGovernanceLifecycleResult = _governance.LiveGovernanceLifecycleResult
+
+# Preserve the original module's test/composition lookup points while the command
+# choreography is owned by the governance lane module.
+ApproveReviewHandler = _governance.ApproveReviewHandler
+PublishStrategyVersionHandler = _governance.PublishStrategyVersionHandler
+ReactivateStrategyHandler = _governance.ReactivateStrategyHandler
+SubmitReviewHandler = _governance.SubmitReviewHandler
 
 
 class SchedulerTick(Protocol):
@@ -162,32 +160,6 @@ class LiveGoldenLaneResult:
 
 
 _LIVE_GOLDEN_LANE_RESULT_ADAPTER = TypeAdapter(LiveGoldenLaneResult)
-
-
-@dataclass(frozen=True, slots=True)
-class LiveGovernanceLaneResult:
-    """One approved publication, active read, and historical reactivation proof."""
-
-    lane: LiveLane
-    strategy_id: str
-    candidate_version: int
-    bundle_hash: str
-    published_active_version: int
-    published_pointer_revision: int
-    r1_active_spec_hash: str
-    reactivated_active_version: int
-    reactivated_pointer_revision: int
-
-
-@dataclass(frozen=True, slots=True)
-class LiveGovernanceLifecycleResult:
-    """Both golden lanes governed by the authorized actor."""
-
-    schema: str
-    generated_at: str
-    actor: str
-    lanes: tuple[LiveLane, ...]
-    results: tuple[LiveGovernanceLaneResult, ...]
 
 
 def _write_lane_index(
@@ -621,156 +593,18 @@ def run_live_golden_lane(
     return result
 
 
-def _governance_identity(
-    *,
-    operation_id: str,
-    strategy_id: str,
-    version: int,
-    raw_key: str,
-    request_payload: Mapping[str, object],
-) -> MutationIdempotency:
-    return build_mutation_idempotency(
-        operation_id=operation_id,
-        resource_id=canonical_resource_id(
-            "strategy_version",
-            {"strategy_id": strategy_id, "version": version},
-        ),
-        raw_key=raw_key,
-        request_payload=dict(request_payload),
-    )
-
-
 def _govern_lane(
     *,
     lane_result: LiveGoldenLaneResult,
     actor: str,
 ) -> LiveGovernanceLaneResult:
-    strategy_id = lane_result.strategy_id
-    version = lane_result.candidate_version
-    container = make_app_container()
-    try:
-        submit = container.get(SubmitReviewHandler)
-        approve = container.get(ApproveReviewHandler)
-        publish = container.get(PublishStrategyVersionHandler)
-        reactivate = container.get(ReactivateStrategyHandler)
-        catalog = container.get(StrategyCatalogService)
-        submit_reason = "submit verified live R3 evidence"
-        submit_payload = {
-            "actor": actor,
-            "bundle_hash": lane_result.review_bundle_hash,
-            "reason": submit_reason,
-        }
-        submit_command = SubmitReviewCommand(
-            strategy_id=strategy_id,
-            version=version,
-            bundle_hash=lane_result.review_bundle_hash,
-            actor=actor,
-            reason=submit_reason,
-            idempotency=_governance_identity(
-                operation_id="strategies_submit_strategy_review",
-                strategy_id=strategy_id,
-                version=version,
-                raw_key=f"r3-live-{lane_result.lane}-submit",
-                request_payload=submit_payload,
-            ),
-        )
-        submitted = submit.handle(submit_command)
-        if submit.handle(submit_command) != submitted:
-            raise ValueError("submit-review idempotency replay drifted")
-        approve_reason = "approve verified live R3 evidence"
-        approve_payload = {
-            "actor": actor,
-            "reason": approve_reason,
-        }
-        approve_command = ApproveReviewCommand(
-            strategy_id=strategy_id,
-            version=version,
-            actor=actor,
-            reason=approve_reason,
-            idempotency=_governance_identity(
-                operation_id="strategies_approve_strategy_review",
-                strategy_id=strategy_id,
-                version=version,
-                raw_key=f"r3-live-{lane_result.lane}-approve",
-                request_payload=approve_payload,
-            ),
-        )
-        approved = approve.handle(approve_command)
-        if approve.handle(approve_command) != approved:
-            raise ValueError("approve idempotency replay drifted")
-        publish_reason = "publish verified live R3 candidate"
-        publish_payload = {
-            "actor": actor,
-            "bundle_hash": lane_result.review_bundle_hash,
-            "reason": publish_reason,
-        }
-        publish_command = PublishStrategyVersionCommand(
-            strategy_id=strategy_id,
-            version=version,
-            bundle_hash=lane_result.review_bundle_hash,
-            actor=actor,
-            reason=publish_reason,
-            idempotency=_governance_identity(
-                operation_id="strategies_publish_strategy_version",
-                strategy_id=strategy_id,
-                version=version,
-                raw_key=f"r3-live-{lane_result.lane}-publish",
-                request_payload=publish_payload,
-            ),
-        )
-        pointer = publish.handle(publish_command)
-        if publish.handle(publish_command) != pointer:
-            raise ValueError("publish idempotency replay drifted")
-        active = catalog.get_active_published(strategy_id)
-        if active is None or active.version != version:
-            raise ValueError("R1 active strategy did not advance to live candidate")
-        confirmation = reactivate_confirmation_phrase(
-            strategy_id,
-            1,
-            pointer.pointer_revision,
-        )
-        reactivate_payload = {
-            "actor": actor,
-            "confirmation": confirmation,
-            "expected_pointer_revision": pointer.pointer_revision,
-            "impact_summary": "return R1 to the reviewed historical seed baseline",
-            "reason": "complete live rollback acceptance",
-        }
-        reactivate_command = ReactivateStrategyCommand(
-            strategy_id=strategy_id,
-            version=1,
-            actor=actor,
-            reason=cast("str", reactivate_payload["reason"]),
-            confirmation=confirmation,
-            impact_summary=cast("str", reactivate_payload["impact_summary"]),
-            expected_pointer_revision=pointer.pointer_revision,
-            idempotency=_governance_identity(
-                operation_id="strategies_reactivate_strategy_version",
-                strategy_id=strategy_id,
-                version=1,
-                raw_key=f"r3-live-{lane_result.lane}-reactivate-v1",
-                request_payload=reactivate_payload,
-            ),
-        )
-        restored = reactivate.handle(reactivate_command)
-        if reactivate.handle(reactivate_command) != restored:
-            raise ValueError("reactivation idempotency replay drifted")
-        restored_active = catalog.get_active_published(strategy_id)
-        if restored_active is None or restored_active.version != 1:
-            raise ValueError("historical v1 reactivation did not restore R1 truth")
-        return LiveGovernanceLaneResult(
-            lane=lane_result.lane,
-            strategy_id=strategy_id,
-            candidate_version=version,
-            bundle_hash=lane_result.review_bundle_hash,
-            published_active_version=pointer.active_version,
-            published_pointer_revision=pointer.pointer_revision,
-            r1_active_spec_hash=active.spec_hash,
-            reactivated_active_version=restored.active_version,
-            reactivated_pointer_revision=restored.pointer_revision,
-        )
-    finally:
-        container.close()
+    """Delegate command choreography while retaining the composition seam."""
+    return _governance.govern_live_lane(
+        lane_result=lane_result,
+        actor=actor,
+        container_factory=make_app_container,
+        strategy_catalog_type=StrategyCatalogService,
+    )
 
 
 def run_live_governance_lifecycle(
