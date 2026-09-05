@@ -2350,52 +2350,50 @@ describe("prototype interaction UX contracts", () => {
 		expect(violations).toEqual([]);
 	});
 
-	it("cycles bottom tray state through shared prototype interactions", () => {
-		for (const pageId of bottomTrayPageIds) {
-			const page = activePages().find((candidate) => candidate.id === pageId);
-			expect(page, `${pageId}: expected active prototype page`).toBeDefined();
-			if (!page) continue;
+	it.each(bottomTrayPageIds)("cycles bottom tray state for %s", (pageId) => {
+		const page = activePages().find((candidate) => candidate.id === pageId);
+		expect(page, `${pageId}: expected active prototype page`).toBeDefined();
+		if (!page) return;
 
-			const document = readInteractivePrototypeDocument(page, (preparedDocument) => {
-				preparedDocument.querySelector("[data-bottom-tray]")?.setAttribute("data-bottom-tray-state", "collapsed");
-			});
-			const tray = document.querySelector<HTMLElement>("[data-bottom-tray]");
-			expect(tray, `${pageId}: expected [data-bottom-tray]`).not.toBeNull();
-			if (!tray) continue;
+		const document = readInteractivePrototypeDocument(page, (preparedDocument) => {
+			preparedDocument.querySelector("[data-bottom-tray]")?.setAttribute("data-bottom-tray-state", "collapsed");
+		});
+		const tray = document.querySelector<HTMLElement>("[data-bottom-tray]");
+		expect(tray, `${pageId}: expected [data-bottom-tray]`).not.toBeNull();
+		if (!tray) return;
 
-			const toggle = tray.querySelector<HTMLButtonElement>("[data-bottom-tray-toggle]");
-			expect(toggle, `${pageId}: expected [data-bottom-tray-toggle]`).not.toBeNull();
-			if (!toggle) continue;
+		const toggle = tray.querySelector<HTMLButtonElement>("[data-bottom-tray-toggle]");
+		expect(toggle, `${pageId}: expected [data-bottom-tray-toggle]`).not.toBeNull();
+		if (!toggle) return;
 
-			const controls = toggle.getAttribute("aria-controls") ?? "";
-			const content = controls ? document.getElementById(controls) : null;
-			expect(content, `${pageId}: expected controlled bottom tray content`).not.toBeNull();
-			expect(content?.textContent?.replace(/\s+/g, " ").trim(), `${pageId}: expected controlled content text`).not.toBe("");
+		const controls = toggle.getAttribute("aria-controls") ?? "";
+		const content = controls ? document.getElementById(controls) : null;
+		expect(content, `${pageId}: expected controlled bottom tray content`).not.toBeNull();
+		expect(content?.textContent?.replace(/\s+/g, " ").trim(), `${pageId}: expected controlled content text`).not.toBe("");
 
-			const labels = new Set<string>();
-			const assertState = (state: BottomTrayState): void => {
-				const expected = bottomTrayUiByState[state];
-				const label = toggle.getAttribute("aria-label")?.trim() ?? "";
+		const labels = new Set<string>();
+		const assertState = (state: BottomTrayState): void => {
+			const expected = bottomTrayUiByState[state];
+			const label = toggle.getAttribute("aria-label")?.trim() ?? "";
 
-				expect(tray.getAttribute("data-bottom-tray-state"), `${pageId}: state`).toBe(state);
-				expect(toggle.getAttribute("aria-expanded"), `${pageId}: aria-expanded for ${state}`).toBe(expected.ariaExpanded);
-				expect(toggle.textContent?.trim(), `${pageId}: visible toggle symbol for ${state}`).toBe(expected.symbol);
-				expect(label, `${pageId}: aria-label for ${state}`).not.toBe("");
-				expect(content?.getAttribute("aria-hidden"), `${pageId}: content aria-hidden for ${state}`).toBe(
-					state === "collapsed" ? "true" : "false",
-				);
-				labels.add(label);
-			};
+			expect(tray.getAttribute("data-bottom-tray-state"), `${pageId}: state`).toBe(state);
+			expect(toggle.getAttribute("aria-expanded"), `${pageId}: aria-expanded for ${state}`).toBe(expected.ariaExpanded);
+			expect(toggle.textContent?.trim(), `${pageId}: visible toggle symbol for ${state}`).toBe(expected.symbol);
+			expect(label, `${pageId}: aria-label for ${state}`).not.toBe("");
+			expect(content?.getAttribute("aria-hidden"), `${pageId}: content aria-hidden for ${state}`).toBe(
+				state === "collapsed" ? "true" : "false",
+			);
+			labels.add(label);
+		};
 
-			assertState("collapsed");
-			toggle.click();
-			assertState("peek");
-			toggle.click();
-			assertState("expanded");
-			toggle.click();
-			assertState("collapsed");
-			expect(labels.size, `${pageId}: aria-label should communicate each state transition`).toBe(3);
-		}
+		assertState("collapsed");
+		toggle.click();
+		assertState("peek");
+		toggle.click();
+		assertState("expanded");
+		toggle.click();
+		assertState("collapsed");
+		expect(labels.size, `${pageId}: aria-label should communicate each state transition`).toBe(3);
 	});
 
 	it("keeps strategy log tab visibility isolated from bottom tray visibility", () => {

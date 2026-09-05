@@ -28,6 +28,81 @@ afterEach(() => {
 });
 
 describe("portfolio comparison API", () => {
+	it.each([
+		["strategy_id", "other", "strategy_id"],
+		["as_of", "2026-09-01", "as_of"],
+		["source_snapshot_ids", ["snapshot:other", "snapshot:fund"], "source snapshot"],
+		["source_snapshot_ids", [], "source snapshot"],
+		["valuation_snapshot_id", "valuation:other", "valuation snapshot"],
+	] as const)("rejects comparison identity drift in %s", async (key, value, message) => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(async () =>
+				Response.json({
+					data: {
+						strategy_id: identity.strategy_id,
+						as_of: identity.as_of,
+						source_snapshot_ids: identity.source_snapshot_ids,
+						valuation_snapshot_id: identity.valuation_snapshot_id,
+						[key]: value,
+					},
+				}),
+			),
+		);
+		await expect(fetchPortfolioComparison(identity)).rejects.toThrow(message);
+	});
+
+	it("accepts reordered source snapshots without an optional valuation constraint", async () => {
+		const { valuation_snapshot_id: _valuation, ...unconstrained } = identity;
+		const payload = {
+			strategy_id: identity.strategy_id,
+			as_of: identity.as_of,
+			source_snapshot_ids: [...identity.source_snapshot_ids].reverse(),
+			valuation_snapshot_id: "valuation:chosen",
+		};
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(async () => Response.json({ data: payload })),
+		);
+		await expect(fetchPortfolioComparison(unconstrained)).resolves.toEqual(payload);
+	});
+
+	it.each([
+		["baseline_kind", "model", "baseline"],
+		["as_of", "2026-09-01", "as_of"],
+		["source_snapshot_ids", ["snapshot:other"], "source snapshot"],
+	] as const)("rejects scenario identity drift in %s", async (key, value, message) => {
+		const payload = {
+			baseline_kind: key === "baseline_kind" ? value : "paper",
+			proposed_weights: {},
+			applied_constraints: [],
+			risk: {
+				before: { cash_weight: 0.1, gross_exposure: 0.9, industry_exposure: {}, stressed_return: -0.04 },
+				after: { cash_weight: 0.15, gross_exposure: 0.85, industry_exposure: {}, stressed_return: -0.03 },
+				as_of: identity.as_of,
+				source_snapshot_ids: identity.source_snapshot_ids,
+				valuation_snapshot_id: identity.valuation_snapshot_id,
+				constraint_findings: [],
+				turnover: 0.05,
+				...(key === "baseline_kind" ? {} : { [key]: value }),
+			},
+		};
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(async () => Response.json({ data: payload })),
+		);
+		await expect(
+			previewPortfolioScenario({
+				...identity,
+				baseline_kind: "paper",
+				excluded_instrument_ids: [],
+				max_position_weight: "0.30",
+				cash_reserve_weight: "0.10",
+				market_shock: -0.05,
+			}),
+		).rejects.toThrow(message);
+	});
+
 	it("sends every exact identity field and repeats source snapshot query parameters", async () => {
 		const payload = {
 			strategy_id: identity.strategy_id,

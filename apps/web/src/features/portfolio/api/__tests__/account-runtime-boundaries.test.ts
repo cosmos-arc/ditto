@@ -304,12 +304,12 @@ describe("paper account runtime boundary", () => {
 		await expect(fetchPaperAccountLedger("paper-a", "2026-09-04")).rejects.toThrow(/snapshot/u);
 	});
 
-	it("rejects a create-session response for another session", async () => {
+	it.each([true, false])("rejects another session for start_immediately=%s", async (startImmediately) => {
 		vi.stubGlobal(
 			"fetch",
 			respondWith(
 				{
-					action: "start",
+					action: startImmediately ? "start" : "create",
 					status: "created",
 					session: { session_id: "paper-s-other", status: "running" },
 				},
@@ -317,7 +317,9 @@ describe("paper account runtime boundary", () => {
 			),
 		);
 
-		await expect(createPaperSession(paperSessionBody)).rejects.toThrow(/session_id/u);
+		await expect(createPaperSession({ ...paperSessionBody, start_immediately: startImmediately })).rejects.toThrow(
+			/session_id/u,
+		);
 	});
 
 	it("rejects a session read containing a malformed execution", async () => {

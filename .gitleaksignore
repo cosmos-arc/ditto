@@ -4,6 +4,15 @@
 # 41cf5aac; never an issued credential. Current probes construct their value.
 41cf5aac1e9261174930791b63fe2cd141198e5f:tooling/security/supply_chain.py:github-pat:30
 41cf5aac1e9261174930791b63fe2cd141198e5f:tooling/release/tests/test_repository_policy.py:github-pat:205
+# Exact-current-tree forms: six authority SHA-256 identities (not credentials)
+# and the same synthetic detection assertion after test-file expansion.
+docs/evidence/personal-workstation/q5/agent-author-save-corrected-20260902.json:generic-api-key:1
+docs/evidence/personal-workstation/q5/agent-author-submit-review-receipt-20260902.json:generic-api-key:1
+docs/evidence/personal-workstation/q5/agent-author-save-research-closure-20260902.json:generic-api-key:1
+docs/evidence/personal-workstation/q5/ui08-selection-memo-20260902.json:generic-api-key:28
+docs/evidence/product-beta/20260830/glm-persisted-run.json:generic-api-key:1
+docs/evidence/personal-workstation/q5/agent-author-save-20260902.json:generic-api-key:1
+tooling/release/tests/test_repository_policy.py:github-pat:320
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/design/archive/05_observability.md:generic-api-key:278
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/evidence/personal-workstation/validation/frontend.json:generic-api-key:13
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/evidence/personal-workstation/validation/backend.json:generic-api-key:13

@@ -3,6 +3,7 @@ import {
 	assertFillAdjustment,
 	assertManualAccountReceipt,
 	assertPaperExecutionReceipt,
+	assertPortfolioScenarioPreview,
 	parseManualAccountReceipt,
 } from "./runtime-validation";
 
@@ -57,5 +58,35 @@ describe("portfolio runtime validation", () => {
 		};
 		expect(() => assertFillAdjustment(adjustment)).not.toThrow();
 		expect(() => assertFillAdjustment({ ...adjustment, adjustment_type: "overwrite" })).toThrow(/adjustment_type/u);
+		expect(() => assertFillAdjustment({ ...adjustment, adjustment_type: "replace" })).toThrow(/replacement_fill_id/u);
+		expect(() =>
+			assertFillAdjustment({
+				...adjustment,
+				adjustment_type: "replace",
+				replacement_fill_id: "replacement-1",
+			}),
+		).not.toThrow();
+	});
+
+	it.each([1, "NaN", "Infinity"])("rejects a non-decimal scenario weight %j", (weight) => {
+		expect(() =>
+			assertPortfolioScenarioPreview({
+				baseline_kind: "paper",
+				proposed_weights: { "510300": weight },
+				risk: {},
+				applied_constraints: [],
+			}),
+		).toThrow(/finite decimal/u);
+	});
+
+	it("requires scenario constraints to remain an array", () => {
+		expect(() =>
+			assertPortfolioScenarioPreview({
+				baseline_kind: "paper",
+				proposed_weights: { "510300": "0.5" },
+				risk: {},
+				applied_constraints: {},
+			}),
+		).toThrow(/applied_constraints/u);
 	});
 });
