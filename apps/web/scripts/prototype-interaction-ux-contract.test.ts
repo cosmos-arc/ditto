@@ -1421,8 +1421,18 @@ async function collectTargetSizeViolations(
 	viewportName: string,
 ): Promise<string[]> {
 	await page.goto(getPrototypeUrl(pageMeta), {
-		waitUntil: "domcontentloaded",
+		waitUntil: "load",
 		timeout: targetSizeNavigationTimeoutMs,
+	});
+	// Measure final hit targets, not a transient entrance transform or fallback
+	// font layout. Infinite decorative animations are not a readiness condition.
+	await page.evaluate(async () => {
+		await document.fonts.ready;
+		await Promise.all(document.getAnimations().filter((animation) => {
+			const endTime = animation.effect?.getComputedTiming().endTime;
+			return typeof endTime === "number" && Number.isFinite(endTime);
+		}).map((animation) => animation.finished.catch(() => undefined)));
+		await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 	});
 	const pageViolations = await page.$$eval(interactiveSelector, (elements) => {
 		function isInsideClosedDetails(element: Element): boolean {
