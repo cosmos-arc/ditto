@@ -156,6 +156,25 @@ def _docker_user_arguments() -> list[str]:
     return ["--user", f"{os.getuid()}:{os.getgid()}"]
 
 
+def _syft_sandbox_arguments() -> list[str]:
+    """Keep offline scans unprivileged with disposable extraction/cache space."""
+    return [
+        "--network",
+        "none",
+        *_docker_user_arguments(),
+        "--tmpfs",
+        "/scratch:rw,nosuid,nodev,mode=1777",
+        "--env",
+        "TMPDIR=/scratch",
+        "--env",
+        "HOME=/scratch",
+        "--env",
+        "XDG_CACHE_HOME=/scratch/.cache",
+        "--env",
+        "SYFT_CHECK_FOR_APP_UPDATE=false",
+    ]
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -791,15 +810,12 @@ def run_artifact_gate(root: Path) -> None:
     _normalized_web_tar(web_dist, web_tar, timestamp=commit_timestamp)
     _verify_web_artifact_metadata(web_tar, release=release)
 
-    user = _docker_user_arguments()
     _run_ephemeral_container(
         docker,
         workspace,
         purpose="syft-backend",
         arguments=[
-            "--network",
-            "none",
-            *user,
+            *_syft_sandbox_arguments(),
             "--volume",
             f"{output}:/work",
             _SYFT,
@@ -821,9 +837,7 @@ def run_artifact_gate(root: Path) -> None:
             workspace,
             purpose="syft-web",
             arguments=[
-                "--network",
-                "none",
-                *user,
+                *_syft_sandbox_arguments(),
                 "--volume",
                 f"{sbom_source}:/web-source:ro",
                 "--volume",

@@ -19,6 +19,30 @@ from tooling.release.cohort_verify import verify_cohort_manifest
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def test_syft_has_writable_ephemeral_storage_without_root_or_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        artifact_gate, "_docker_user_arguments", lambda: ["--user", "501:20"]
+    )
+    assert artifact_gate._syft_sandbox_arguments() == [
+        "--network",
+        "none",
+        "--user",
+        "501:20",
+        "--tmpfs",
+        "/scratch:rw,nosuid,nodev,mode=1777",
+        "--env",
+        "TMPDIR=/scratch",
+        "--env",
+        "HOME=/scratch",
+        "--env",
+        "XDG_CACHE_HOME=/scratch/.cache",
+        "--env",
+        "SYFT_CHECK_FOR_APP_UPDATE=false",
+    ]
+
+
 class _HealthyResponse:
     status = 200
 

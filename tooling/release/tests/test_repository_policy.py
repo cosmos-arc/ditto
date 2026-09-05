@@ -284,7 +284,7 @@ def test_gitleaks_false_positives_are_individually_fingerprinted() -> None:
         for line in ignore_path.read_text().splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
-    assert len(fingerprints) == 106
+    assert len(fingerprints) == 115
     assert len(set(fingerprints)) == len(fingerprints)
     assert all(
         re.fullmatch(r"(?:[0-9a-f]{40}:)?.+:[a-z0-9-]+:[1-9][0-9]*", fingerprint)
