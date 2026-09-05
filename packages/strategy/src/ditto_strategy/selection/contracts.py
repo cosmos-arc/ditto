@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
 import math
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 
-import orjson
 from ditto_kernel.identity import InstrumentId
 
 from ditto_strategy.selection._validation import (
@@ -47,6 +45,18 @@ from ditto_strategy.selection._validation import (
 from ditto_strategy.selection._validation import (
     validate_temporal_visibility as _validate_temporal_visibility,
 )
+from ditto_strategy.selection.canonical import (
+    canonical_input_hash as _canonical_input_hash_impl,
+)
+from ditto_strategy.selection.canonical import (
+    canonical_run_hash as _canonical_run_hash_impl,
+)
+from ditto_strategy.selection.canonical import (
+    canonical_run_payload as _canonical_run_payload_impl,
+)
+from ditto_strategy.selection.canonical import (
+    canonical_spec_hash as _canonical_spec_hash_impl,
+)
 
 __all__ = [
     "EtfSelectionSpec",
@@ -70,7 +80,6 @@ __all__ = [
     "canonical_spec_hash",
 ]
 
-_SCHEMA_VERSION = 1
 _SHA256_HEX_LENGTH = 64
 
 
@@ -669,132 +678,20 @@ class SelectionRun:
         return f"selection-run:sha256:{_canonical_run_hash(self)}"
 
 
-def _timestamp(value: datetime) -> str:
-    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
-
-
-def _factor_weight_payload(value: SelectionFactorWeight) -> dict[str, object]:
-    return {"name": value.name, "weight": value.weight}
-
-
-def _spec_payload(value: SelectionSpec) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "asset_kind": value.asset_kind.value,
-        "excluded_limit_states": [item.value for item in value.excluded_limit_states],
-        "factor_weights": [
-            _factor_weight_payload(item) for item in value.factor_weights
-        ],
-        "min_average_turnover": value.min_average_turnover,
-        "min_listing_days": value.min_listing_days,
-        "schema_version": _SCHEMA_VERSION,
-        "spec_id": value.spec_id,
-        "spec_version": value.spec_version,
-        "top_k": value.top_k,
-    }
-    if isinstance(value, EtfSelectionSpec):
-        payload["max_tracking_error"] = value.max_tracking_error
-    return payload
-
-
-def _canonical_hash(payload: object) -> str:
-    encoded = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
-    return hashlib.sha256(encoded).hexdigest()
-
-
 def _canonical_spec_hash(value: SelectionSpec) -> str:
-    return _canonical_hash(_spec_payload(value))
-
-
-def _instrument_payload(value: SelectionInstrumentInput) -> dict[str, object]:
-    return {
-        "average_turnover": value.average_turnover,
-        "declared_missing_inputs": list(value.declared_missing_inputs),
-        "factor_values": [
-            {"name": item.name, "value": item.value} for item in value.factor_values
-        ],
-        "industry_id": value.industry_id,
-        "instrument_id": value.instrument_id,
-        "instrument_name": value.instrument_name,
-        "is_st": value.is_st,
-        "is_suspended": value.is_suspended,
-        "limit_state": value.limit_state.value if value.limit_state else None,
-        "listing_days": value.listing_days,
-        "tracking_error": value.tracking_error,
-    }
-
-
-def _input_payload(value: SelectionInputBundle) -> dict[str, object]:
-    return {
-        "as_of": _timestamp(value.as_of),
-        "industry_rotation_snapshot_id": value.industry_rotation_snapshot_id,
-        "instruments": [_instrument_payload(item) for item in value.instruments],
-        "knowledge_cutoff": _timestamp(value.knowledge_cutoff),
-        "publication_cutoff": _timestamp(value.publication_cutoff),
-        "schema_version": _SCHEMA_VERSION,
-        "seed": value.seed,
-        "source_snapshot_ids": list(value.source_snapshot_ids),
-        "spec": _spec_payload(value.spec),
-        "universe_snapshot_id": value.universe_snapshot_id,
-    }
+    return _canonical_spec_hash_impl(value)
 
 
 def _canonical_input_hash(value: SelectionInputBundle) -> str:
-    return _canonical_hash(_input_payload(value))
-
-
-def _candidate_payload(value: SelectionCandidate) -> dict[str, object]:
-    return {
-        "factor_contributions": [
-            {
-                "contribution": item.contribution,
-                "factor_name": item.factor_name,
-                "value": item.value,
-                "weight": item.weight,
-            }
-            for item in value.factor_contributions
-        ],
-        "industry_id": value.industry_id,
-        "instrument_id": value.instrument_id,
-        "instrument_name": value.instrument_name,
-        "rank": value.rank,
-        "score": value.score,
-    }
-
-
-def _exclusion_payload(value: SelectionExclusion) -> dict[str, object]:
-    return {
-        "detail": value.detail,
-        "instrument_id": value.instrument_id,
-        "instrument_name": value.instrument_name,
-        "reason_code": value.reason_code.value,
-        "stage": value.stage,
-    }
+    return _canonical_input_hash_impl(value)
 
 
 def _run_payload(value: SelectionRun) -> dict[str, object]:
-    return {
-        "as_of": _timestamp(value.as_of),
-        "asset_kind": value.asset_kind.value,
-        "candidates": [_candidate_payload(item) for item in value.candidates],
-        "exclusions": [_exclusion_payload(item) for item in value.exclusions],
-        "industry_rotation_snapshot_id": value.industry_rotation_snapshot_id,
-        "input_hash": value.input_hash,
-        "knowledge_cutoff": _timestamp(value.knowledge_cutoff),
-        "missing_inputs": list(value.missing_inputs),
-        "schema_version": _SCHEMA_VERSION,
-        "seed": value.seed,
-        "publication_cutoff": _timestamp(value.publication_cutoff),
-        "source_snapshot_ids": list(value.source_snapshot_ids),
-        "spec_hash": value.spec_hash,
-        "spec_id": value.spec_id,
-        "spec_version": value.spec_version,
-        "status": value.status.value,
-        "universe_snapshot_id": value.universe_snapshot_id,
-    }
+    return _canonical_run_payload_impl(value)
 
 
 def _canonical_run_hash(value: SelectionRun) -> str:
-    return _canonical_hash(_run_payload(value))
+    return _canonical_run_hash_impl(value)
 
 
 canonical_spec_hash = _canonical_spec_hash

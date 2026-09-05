@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -72,6 +73,20 @@ def test_codec_round_trips_exact_run_and_rejects_detached_identity() -> None:
     run = _run()
     encoded = encode_selection_run(run)
 
+    assert run.spec_hash == (
+        "d316edad4efbb28470bdc64989d48f4ea73988e4ab2dd7038eb753ccfd921a4c"
+    )
+    assert run.input_hash == (
+        "19f7277101230cc22ed58857e4923ade486f0e71cb9fac5fda196ff07a738daa"
+    )
+    assert len(encoded) == 777
+    assert hashlib.sha256(encoded).hexdigest() == (
+        "f597c3dc4a4de15403ea0c8520e8dae5f617190a371b8e6fe988f04b8dff1695"
+    )
+    assert run.run_id == (
+        "selection-run:sha256:"
+        "f597c3dc4a4de15403ea0c8520e8dae5f617190a371b8e6fe988f04b8dff1695"
+    )
     assert decode_selection_run(encoded, expected_run_id=run.run_id) == run
     with pytest.raises(StrategySpecError, match="identity"):
         decode_selection_run(
