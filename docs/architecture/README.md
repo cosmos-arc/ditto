@@ -133,7 +133,7 @@
 | backtest | [packages/backtest/AGENTS.md](../../packages/backtest/AGENTS.md) | 回测引擎 |
 | analysis | [packages/analysis/AGENTS.md](../../packages/analysis/AGENTS.md) | 研究分析 |
 | application | [packages/application/AGENTS.md](../../packages/application/AGENTS.md) | 应用编排（CQRS） |
-| apps | [packages/apps/AGENTS.md](../../packages/apps/AGENTS.md) | 应用入口 |
+| apps | [apps/backend/AGENTS.md](../../apps/backend/AGENTS.md) | 应用入口 |
 
 ## 使用方式
 

@@ -20,7 +20,7 @@ Task 17 runner 只在 pytest 提供的任务专用 `tmp_path` 内执行联合 ba
 
 ```bash
 pixi run -e dev pytest \
-  packages/apps/tests/e2e/test_r3_governance_recovery.py::\
+  apps/backend/tests/e2e/test_r3_governance_recovery.py::\
 test_fixture_backup_restore_preserves_domain_identity \
   -q --no-cov
 ```

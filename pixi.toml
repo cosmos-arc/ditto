@@ -9,6 +9,7 @@
 [workspace]
 channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
+requires-pixi = ">=0.73,<0.74"
 name = "ditto"
 version = "0.1.0"
 authors = ["Chevy <chevy_777@126.com>"]
@@ -63,7 +64,7 @@ ditto-portfolio = { path = "packages/portfolio", editable = true }
 ditto-risk = { path = "packages/risk", editable = true }
 ditto-execution = { path = "packages/execution", editable = true }
 ditto-backtest = { path = "packages/backtest", editable = true }
-ditto-apps = { path = "packages/apps", editable = true }
+ditto-apps = { path = "apps/backend", editable = true }
 
 # 性能优化库
 cachebox = ">=5.0,<6"
@@ -128,6 +129,10 @@ jupyter = ">=1.1,<2"
 basedpyright = ">=1.29,<2"
 # coverage — conda-forge 包损坏（无 .py 文件），使用 PyPI 版本
 coverage = ">=7.6,<8"
+# API schema property testing; exact pin keeps generated cases reproducible.
+schemathesis = "==4.25.2"
+# Weekly mutation testing for critical deterministic domain functions.
+mutmut = "==3.7.0"
 
 # ==========================================================
 # 环境定义
@@ -188,45 +193,131 @@ test = "python scripts/test.py"
 
 # Test with coverage XML（供 CI 使用）
 test-cov-xml = "python scripts/test.py --cov-xml"
+backend-coverage = "python scripts/test.py --cov-xml && python tooling/quality/coverage_gate.py --report coverage.json"
 
 # Test fast（快速测试，用于 check 命令）
 test-fast = "python scripts/test.py --fast"
 
+# PIT correctness suite must remain explicit and cannot skip for local fixtures.
+pit = "pytest -m pit -q -n0 --no-cov"
+
 # Agent Harness：标准库验证与 fixture 驱动测试
-sync-agent-skills = "python scripts/agent_harness/sync_skills.py"
-harness-validate = "python scripts/agent_harness/validate.py"
-harness-test = "python -m unittest discover -s scripts/agent_harness/tests -v"
-harness-check = { depends-on = ["harness-validate", "harness-test"] }
-check-changed = "python scripts/agent_harness/hook.py --event check-changed"
+sync-agent-skills = "python tooling/agent_harness/sync_skills.py"
+harness-validate = "python tooling/agent_harness/validate.py"
+agent-eval = "python -m tooling.agent_harness.agent_eval"
+integrator-lease = "python -m tooling.agent_harness.lease"
+harness-test = "python -m unittest discover -s tooling/agent_harness/tests -v"
+harness-type = "basedpyright tooling/agent_harness"
+stack-inventory-check = "python tooling/quality/stack_inventory.py"
+large-file-check = "python -m tooling.quality.large_files"
+harness-check = { depends-on = [
+    "harness-validate",
+    "agent-eval",
+    "harness-test",
+    "harness-type",
+    "stack-inventory-check",
+    "large-file-check",
+] }
+check-changed = "python tooling/agent_harness/hook.py --event check-changed"
+package-contract-check = "python tooling/quality/package_contracts.py"
+
+# 根工具链与 Bun workspace
+toolchain-check = "python tooling/dev/toolchain.py"
+bun-install = "bun ci --frozen-lockfile"
+contract-toolchain-bootstrap = "python -m tooling.contracts.bootstrap_oasdiff"
+bootstrap = { depends-on = [
+    "toolchain-check",
+    "bun-install",
+    "contract-toolchain-bootstrap",
+] }
+
+# Web 叶子任务；Bun 不定义跨栈 DAG
+web-lint = { cmd = "bun run lint", cwd = "apps/web" }
+web-type = { cmd = "bun run type", cwd = "apps/web" }
+web-test = { cmd = "bun run test:unit", cwd = "apps/web" }
+web-build = { cmd = "bun run build", cwd = "apps/web" }
+web-product-check = { cmd = "bun run audit:product-recovery", cwd = "apps/web" }
+web-token-check = { cmd = "bun run audit:tokens:dead-links --ci", cwd = "apps/web" }
+web-architecture = { cmd = "bun run arch:check", cwd = "apps/web" }
+web-coverage = { cmd = "bun run test:coverage", cwd = "apps/web" }
+web-prototype = { cmd = "bun run test:prototype", cwd = "apps/web" }
+web-manifest-check = "python tooling/quality/web_manifest_freshness.py"
+check-web = { depends-on = ["web-lint", "web-type", "web-test", "web-product-check", "web-token-check", "web-architecture", "web-manifest-check"] }
+web-ci = { depends-on = ["check-web", "web-coverage", "web-prototype", "web-build", "web-manifest-check"] }
+
+# OpenAPI 与真实双栈验收
+contract-static = "python -m tooling.contracts.check_contract"
+contract-conformance = "pytest apps/backend/tests/contract/test_openapi_conformance.py -q -n0 --no-cov"
+cohort-compatibility-check = "python -m tooling.release.compatibility_policy validate"
+check-contract = { depends-on = [
+    "contract-static",
+    "contract-conformance",
+    "cohort-compatibility-check",
+] }
+test-system = "python -m tooling.dev.system_tests"
+
+# 每周关键纯函数 mutation 门；在临时统一 src 森林内运行，避免多包假阴性。
+mutation-critical = "python -m tooling.quality.mutation_gate --threshold 80"
+
+# Reproducible local counterparts of the hosted supply-chain and artifact jobs.
+# Both fail closed when Docker is unavailable; the full ``ci`` contract therefore
+# never reports success without scanning the exact source tree and built image.
+security-supply-chain = "python -m tooling.security.supply_chain"
+artifact-gate = { cmd = "python -m tooling.release.artifact_gate", depends-on = ["web-ci"] }
+
+# Cross-platform behavior slices used by the Windows support gate.  The API
+# smoke starts the real composition root with disposable config/state/cache.
+platform-backend-unit = "pytest packages/kernel/tests/unit/test_identity.py apps/backend/tests/unit/test_main_unit.py apps/backend/tests/unit/test_loopback_binding_unit.py apps/backend/tests/unit/cli/commands/test_init_unit.py -q -n0 --no-cov"
+platform-web-unit = { cmd = "bun run vitest run src/api/compatibility.test.ts src/api/runtime-config.test.ts", cwd = "apps/web" }
+platform-api-smoke = "python -m tooling.dev.platform_smoke"
 
 # ──────────────────────────────────────────────────────────
 # 组合命令
 # ──────────────────────────────────────────────────────────
-# Check：快速验证（开发时用，包含快速测试）
-check = { depends-on = [
+# 后端快速门
+check-backend = { depends-on = [
+    "package-contract-check",
     "lint",
     "fmt-check",
     "type",
     "test-fast",
     "arch-check",
+] }
+
+# Check：唯一跨栈快速门
+check = { depends-on = [
+    "check-backend",
+    "check-web",
+    "check-contract",
     "harness-check",
 ] }
 
-# CI：完整检查（CI 用）
-ci = { depends-on = [
+# 后端完整门
+backend-ci = { depends-on = [
+    "package-contract-check",
     "lint",
     "fmt-check",
     "type-all",
-    "test-cov-xml",
+    "backend-coverage",
+    "pit",
     "arch-check",
+] }
+
+# CI：唯一跨栈完整门
+ci = { depends-on = [
+    "backend-ci",
+    "check-contract",
+    "test-system",
     "harness-check",
+    "security-supply-chain",
+    "artifact-gate",
 ] }
 
 # ──────────────────────────────────────────────────────────
 # 辅助命令
 # ──────────────────────────────────────────────────────────
-# Dev：开发服务（热重载）
-dev = "python -m ditto_apps.server ditto_apps.main:app --interface asgi --reload --host 127.0.0.1 --port 8000"
+# Dev：隔离、受监督的 API + Web 服务
+dev = "python -m tooling.dev.supervisor"
 
 # Server：生产服务
 server = "python -m ditto_apps.server ditto_apps.main:app --interface asgi --host 127.0.0.1 --port 8000 --workers 4"

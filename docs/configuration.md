@@ -1,8 +1,8 @@
 # Ditto 配置系统操作手册
 
-**版本：v2.0**
+**版本：v3.0**
 
-**最后更新：2026-03-04**
+**最后更新：2026-09-04**
 
 ---
 
@@ -30,6 +30,13 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 | **Config File** | 环境特定的配置文件 | `config/development/data_store.env` |
 | **Settings** | 配置模型类 | `DataStoreSettings`, `SystemSettings` |
 | **ConfigProvider** | DI 配置提供者 | 组装所有配置的单一入口 |
+| **config_root** | 只读部署配置根；其中包含 `config/` | `DITTO_CONFIG_ROOT` |
+| **state_root** | SQLite、账本、市场数据和 durable state | `DITTO_STATE_ROOT` |
+| **cache_root** | 可删除缓存 | `DITTO_CACHE_ROOT` |
+
+生产运行时不发现 Git checkout，也不读取 `.git`、`pixi.toml` 或当前工作目录来推断
+路径。三个根必须是显式绝对路径；开发默认使用 XDG 用户目录，测试默认使用隔离临时
+目录。`workspace_root` 和 `contract_root` 只属于开发工具、生成器与测试。
 
 ### 配置流程图
 
@@ -148,10 +155,8 @@ vim config/development/data_store.env
 
 ### Pixi 主机平台
 
-`pixi.toml` 当前只声明 `linux-64` 和 `win-64`。`osx-arm64` 主机可以编辑与运行
-不依赖项目环境的标准库工具，但不能直接执行 `pixi run -e dev ...`；应在 Linux
-开发容器、远程环境或 CI 中运行完整质量门。不要为了本地临时验证绕过 lockfile
-或用 pip/poetry/conda 重建环境。
+`pixi.toml` 当前声明 `linux-64`、`win-64` 和 `osx-arm64`。三个平台都必须使用
+同一 `pixi.lock`，不得为了本地验证绕过 lockfile 或用 pip/poetry/conda 重建环境。
 
 ### 配置文件目录结构
 
@@ -180,7 +185,7 @@ config/
 
 | 配置项 | development | testing | production |
 |--------|-------------|---------|------------|
-| `DATA_ROOT` | `data` | `.tmp/ditto` | `/data/ditto` |
+| runtime roots | XDG 用户目录或根 `dev` 临时目录 | 每次运行的临时目录 | 三个显式 `DITTO_*_ROOT` |
 | `DEBUG` | `true` | `true` | `false` |
 | `LOG_LEVEL` | `DEBUG` | `INFO` | `WARNING` |
 | `LOG_FORMAT` | `console` | `console` | `json` |
@@ -192,7 +197,7 @@ config/
 
 ```bash
 # 简单值
-DATA_ROOT=data
+DEBUG=true
 
 # 布尔值
 DEBUG=true
@@ -201,8 +206,7 @@ DEBUG=true
 SQL_ENGINE__ENABLE_PLAN_CACHE=true
 SQL_ENGINE__PLAN_CACHE_SIZE=1000
 
-# 注释
-# SQLITE_PATH=data/metadata/metadata.sqlite
+# 路径不写入配置文件，由 composition root 显式注入
 ```
 
 ---
@@ -221,53 +225,53 @@ SQL_ENGINE__PLAN_CACHE_SIZE=1000
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `DATA_ROOT` | path | `data` | 数据根目录（所有路径从此派生） |
-| `SQLITE_PATH` | path | 自动计算 | SQLite 路径覆盖 |
-| `DUCKDB_PATH` | path | 自动计算 | DuckDB 路径覆盖 |
-| `LOGS_PATH_OVERRIDE` | path | - | 日志路径覆盖（Docker 部署用） |
+| `SQLITE_PATH` | path | 自动计算 | 迁移期 SQLite 路径覆盖；目标从 state root 派生 |
+| `DUCKDB_PATH` | path | 自动计算 | 迁移期 DuckDB 路径覆盖；目标从 state root 派生 |
+| `LOGS_PATH_OVERRIDE` | path | - | 迁移期日志路径覆盖；目标由 state root/可观测配置派生 |
 | `SQL_ENGINE__ENABLE_PLAN_CACHE` | bool | `true` | 启用查询计划缓存 |
 | `SQL_ENGINE__PLAN_CACHE_SIZE` | int | `1000` | 缓存大小 |
 | `SQL_ENGINE__SLOW_QUERY_THRESHOLD` | float | `1.0` | 慢查询阈值（秒） |
 
-**路径派生规则**：
+`data_root` 不再来自该文件，而由 `DITTO_STATE_ROOT` 注入。以下路径均从已验证的
+state root 派生：
 
 | 派生路径 | 计算规则 | 说明 |
 |----------|----------|------|
-| `resolved_sqlite_path` | `{DATA_ROOT}/metadata/metadata.sqlite` | SQLite 数据库 |
-| `resolved_duckdb_path` | `{DATA_ROOT}/db/ditto.duckdb` | DuckDB 数据库 |
-| `market_stock_bars_path` | `{DATA_ROOT}/market/stock/bars/daily` | 股票日线 |
-| `market_etf_bars_path` | `{DATA_ROOT}/market/etf/bars/daily` | ETF 日线 |
-| `market_index_bars_path` | `{DATA_ROOT}/market/index/bars/daily` | 指数日线 |
-| `market_stock_adj_path` | `{DATA_ROOT}/market/stock/adj` | 股票复权因子 |
-| `market_etf_adj_path` | `{DATA_ROOT}/market/etf/adj` | ETF 复权因子 |
-| `market_etf_nav_path` | `{DATA_ROOT}/market/etf/nav` | ETF 净值 |
-| `market_stock_status_path` | `{DATA_ROOT}/market/stock/status` | 股票状态 |
-| `market_etf_status_path` | `{DATA_ROOT}/market/etf/status` | ETF 状态 |
-| `capital_flow_path` | `{DATA_ROOT}/capital/flow` | 资金流 |
-| `capital_margin_path` | `{DATA_ROOT}/capital/margin` | 融资融券 |
-| `capital_top_board_path` | `{DATA_ROOT}/capital/top_board` | 龙虎榜 |
-| `capital_limit_board_path` | `{DATA_ROOT}/capital/limit_board` | 涨跌停 |
-| `capital_chip_path` | `{DATA_ROOT}/capital/chip` | 筹码分布 |
-| `fundamental_financial_path` | `{DATA_ROOT}/fundamental/financial` | 财务数据 |
-| `fundamental_indicator_path` | `{DATA_ROOT}/fundamental/indicator` | 财务指标 |
-| `fundamental_forecast_path` | `{DATA_ROOT}/fundamental/forecast` | 业绩预告 |
-| `fundamental_holding_path` | `{DATA_ROOT}/fundamental/holding` | 持股数据 |
-| `macro_indicators_path` | `{DATA_ROOT}/macro/indicators` | 宏观指标 |
-| `logs_path` | `{DATA_ROOT}/logs` | 日志存储 |
-| `backups_path` | `{DATA_ROOT}/backups` | 备份存储 |
-| `temp_path` | `{DATA_ROOT}/temp` | 临时文件 |
+| `resolved_sqlite_path` | `{DITTO_STATE_ROOT}/metadata/metadata.sqlite` | SQLite 数据库 |
+| `resolved_duckdb_path` | `{DITTO_STATE_ROOT}/db/ditto.duckdb` | DuckDB 数据库 |
+| `market_stock_bars_path` | `{DITTO_STATE_ROOT}/market/stock/bars/daily` | 股票日线 |
+| `market_etf_bars_path` | `{DITTO_STATE_ROOT}/market/etf/bars/daily` | ETF 日线 |
+| `market_index_bars_path` | `{DITTO_STATE_ROOT}/market/index/bars/daily` | 指数日线 |
+| `market_stock_adj_path` | `{DITTO_STATE_ROOT}/market/stock/adj` | 股票复权因子 |
+| `market_etf_adj_path` | `{DITTO_STATE_ROOT}/market/etf/adj` | ETF 复权因子 |
+| `market_etf_nav_path` | `{DITTO_STATE_ROOT}/market/etf/nav` | ETF 净值 |
+| `market_stock_status_path` | `{DITTO_STATE_ROOT}/market/stock/status` | 股票状态 |
+| `market_etf_status_path` | `{DITTO_STATE_ROOT}/market/etf/status` | ETF 状态 |
+| `capital_flow_path` | `{DITTO_STATE_ROOT}/capital/flow` | 资金流 |
+| `capital_margin_path` | `{DITTO_STATE_ROOT}/capital/margin` | 融资融券 |
+| `capital_top_board_path` | `{DITTO_STATE_ROOT}/capital/top_board` | 龙虎榜 |
+| `capital_limit_board_path` | `{DITTO_STATE_ROOT}/capital/limit_board` | 涨跌停 |
+| `capital_chip_path` | `{DITTO_STATE_ROOT}/capital/chip` | 筹码分布 |
+| `fundamental_financial_path` | `{DITTO_STATE_ROOT}/fundamental/financial` | 财务数据 |
+| `fundamental_indicator_path` | `{DITTO_STATE_ROOT}/fundamental/indicator` | 财务指标 |
+| `fundamental_forecast_path` | `{DITTO_STATE_ROOT}/fundamental/forecast` | 业绩预告 |
+| `fundamental_holding_path` | `{DITTO_STATE_ROOT}/fundamental/holding` | 持股数据 |
+| `macro_indicators_path` | `{DITTO_STATE_ROOT}/macro/indicators` | 宏观指标 |
+| `logs_path` | `{DITTO_STATE_ROOT}/logs` | 日志存储 |
+| `backups_path` | `{DITTO_STATE_ROOT}/backups` | 备份存储 |
+| `temp_path` | `{DITTO_STATE_ROOT}/temp` | 临时文件 |
 
 Feature/Factor 产物路径由 Features 层 `FeatureArtifactStoreSettings` 管理，保持相同的磁盘布局：
 
 | 派生路径 | 计算规则 | 说明 |
 |----------|----------|------|
-| `features_technical_price_path` | `{DATA_ROOT}/features/technical/price` | 技术特征（价格） |
-| `features_technical_indicators_narrow_path` | `{DATA_ROOT}/features/technical/indicators_narrow` | 技术指标窄表 |
-| `features_technical_indicators_wide_path` | `{DATA_ROOT}/features/technical/indicators_wide` | 技术指标宽表 |
-| `factors_narrow_style_path` | `{DATA_ROOT}/factors/narrow/style` | 窄风格因子 |
-| `factors_wide_style_path` | `{DATA_ROOT}/factors/wide/style` | 宽风格因子 |
-| `factors_narrow_path` | `{DATA_ROOT}/factors/factors_narrow` | 因子窄表 |
-| `factors_wide_path` | `{DATA_ROOT}/factors/factors_wide` | 因子宽表 |
+| `features_technical_price_path` | `{DITTO_STATE_ROOT}/features/technical/price` | 技术特征（价格） |
+| `features_technical_indicators_narrow_path` | `{DITTO_STATE_ROOT}/features/technical/indicators_narrow` | 技术指标窄表 |
+| `features_technical_indicators_wide_path` | `{DITTO_STATE_ROOT}/features/technical/indicators_wide` | 技术指标宽表 |
+| `factors_narrow_style_path` | `{DITTO_STATE_ROOT}/factors/narrow/style` | 窄风格因子 |
+| `factors_wide_style_path` | `{DITTO_STATE_ROOT}/factors/wide/style` | 宽风格因子 |
+| `factors_narrow_path` | `{DITTO_STATE_ROOT}/factors/factors_narrow` | 因子窄表 |
+| `factors_wide_path` | `{DITTO_STATE_ROOT}/factors/factors_wide` | 因子宽表 |
 
 ### 3. data_source.env - 数据源配置
 
@@ -362,7 +366,7 @@ NEW_OPTION=my_value
 3. **在 ConfigProvider 中加载**（如果需要新配置文件）
 
 ```python
-# packages/apps/src/ditto_apps/registry/infra/config.py
+# apps/backend/src/ditto_apps/registry/infra/config.py
 @provide
 def new_settings(self, config_loader: ConfigLoader) -> NewSettings:
     values = load_env_file(config_loader, "new_config")
@@ -392,8 +396,8 @@ vim config/production/data_store.env
 ### 临时覆盖配置（环境变量）
 
 ```bash
-# CLI 临时指定数据目录
-DITTO_DATA_ROOT=/tmp/test_data pixi run -e dev test
+# CLI 临时指定隔离 state 目录
+DITTO_STATE_ROOT=/tmp/test_state pixi run -e dev test
 
 # 覆盖 SQLite 路径
 SQLITE_PATH=/tmp/test.db pixi run -e dev python -c "..."
@@ -401,7 +405,7 @@ SQLITE_PATH=/tmp/test.db pixi run -e dev python -c "..."
 # 仅覆盖 execution-owned Paper/Manual 交易 SQLite（验收/恢复场景）
 DITTO_TRADING_SQLITE_PATH=/tmp/trading-acceptance.sqlite pixi run -e dev python -m ditto_apps.server
 
-# Docker 部署时覆盖日志目录
+# 迁移期覆盖日志目录
 LOG_DIR=/app/logs pixi run server
 ```
 
@@ -433,7 +437,7 @@ import os
 os.environ['ENVIRONMENT'] = 'development'
 c = make_container(ConfigProvider())
 s = c.get(DataStoreSettings)
-print(f'DATA_ROOT: {s.data_root}')
+print(f'STATE_ROOT: {s.data_root}')
 print(f'SQLite: {s.resolved_sqlite_path}')
 c.close()
 "
@@ -583,11 +587,14 @@ c.close()
 | 环境变量 | 作用 | 示例 |
 |---------|------|------|
 | `ENVIRONMENT` | 运行时环境 | `development`, `testing`, `production` |
-| `DITTO_DATA_ROOT` | 覆盖数据目录 | `/data/ditto` |
-| `SQLITE_PATH` | 覆盖 SQLite 路径 | `/tmp/test.db` |
-| `DITTO_TRADING_SQLITE_PATH` | 仅覆盖 execution-owned Paper/Manual 交易 SQLite；未设置时使用 `{DITTO_DATA_ROOT}/trading/trading.sqlite` | `/tmp/trading-acceptance.sqlite` |
-| `DUCKDB_PATH` | 覆盖 DuckDB 路径 | `/tmp/test.duckdb` |
-| `LOG_DIR` | 覆盖日志目录（Docker 部署用） | `/app/logs` |
+| `DITTO_CONFIG_ROOT` | 包含 `config/` 的只读配置根；生产必填绝对路径 | `/opt/ditto` |
+| `DITTO_STATE_ROOT` | durable state 根；生产必填绝对路径 | `/var/lib/ditto/state` |
+| `DITTO_CACHE_ROOT` | 可删除缓存根；生产必填绝对路径 | `/var/cache/ditto` |
+| `DATA_ROOT` / `DITTO_DATA_ROOT` | `DITTO_STATE_ROOT` 的过渡别名，优先级更低 | `/data/ditto` |
+| `SQLITE_PATH` | 迁移期 SQLite 路径覆盖 | `/tmp/test.db` |
+| `DITTO_TRADING_SQLITE_PATH` | 迁移期 execution-owned Paper/Manual SQLite 覆盖 | `/tmp/trading-acceptance.sqlite` |
+| `DUCKDB_PATH` | 迁移期 DuckDB 路径覆盖 | `/tmp/test.duckdb` |
+| `LOG_DIR` | 迁移期日志目录覆盖 | `/app/logs` |
 | `TUSHARE_TOKEN` | Tushare Token（优先级最高） | `your_token` |
 | `FRED_API_KEY` | FRED API Key（优先级最高） | `your_api_key` |
 
@@ -599,7 +606,7 @@ c.close()
 | `ObservabilitySettings` | `ditto_platform/foundation/config/settings.py` | `observability.env` |
 | `DataStoreSettings` | `ditto_data/config/data_store.py` | `data_store.env` |
 | `DataSourceSettings` | `ditto_data/config/data_source.py` | `data_source.env` |
-| `FeatureArtifactStoreSettings` | `ditto_features/config/artifact_store.py` | 派生自 `DATA_ROOT` |
+| `FeatureArtifactStoreSettings` | `ditto_features/config/artifact_store.py` | 派生自注入的 state root |
 | `FileStorageSettings` | `ditto_data/config/` | 派生自 `DataStoreSettings` |
 | `DQSettings` | `ditto_data/quality/config/` | `dq.env` |
 | `NotificationSettings` | `ditto_platform/services/notification/config.py` | `notification.env` |

@@ -162,12 +162,8 @@ Runner 会验证 manifest、SQLite 逻辑行数和 payload tree hash，并在独
 ## 8. API 与工作台
 
 ```bash
-# backend, loopback only
+# API + production Web build, loopback only
 pixi run -e dev dev
-
-# frontend
-cd /home/chevy/projects/ditto-app
-VITE_USE_MOCK=false bun run dev
 ```
 
 工作台路径为 `/platform/data-products`，只调用 `/api/v1/data-products/*`。Overview、
@@ -190,17 +186,11 @@ Loading、empty、error 或缺认证报告时不得回退到硬编码数据。
 ## 10. 发布门禁
 
 ```bash
-pixi run -e dev pytest packages/data/tests packages/application/tests packages/apps/tests -q
 pixi run -e dev check
-pixi run -e dev arch-check
-python scripts/architecture/check_architecture_smells.py
-pixi run -e dev pre-commit-run
-git diff --check
-
-cd /home/chevy/projects/ditto-app
-bun run gen:api
-bun run check
-bun run build
+pixi run -e dev pit
+pixi run -e dev check-contract
+pixi run -e dev test-system
+pixi run -e dev ci
 ```
 
 完整 DoD 和本次证据映射见

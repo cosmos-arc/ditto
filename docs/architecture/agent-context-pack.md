@@ -38,7 +38,7 @@ namespaces, not current runtime APIs.
 | Exposure, stress, and constraint findings | `risk` / deterministic scenario service | `application` | `PortfolioScenarioInput`, `ScenarioPreview` |
 | Signal Package + Paper/Manual ledger + Paper execution + retained PIT price join | `application.queries` / `LivePortfolioComparisonSource` | application queries | `PortfolioComparisonSourcePort` |
 | Three-column aggregation and no-write preview | `application.queries` | `apps`, `agent` | `PortfolioComparisonView`, `PortfolioScenarioPreviewView` |
-| HTTP projection and physical dependency injection | `apps` / FastAPI and `apps.registry` | `ditto-app` | OpenAPI `/api/v1/portfolio/*` |
+| HTTP projection and physical dependency injection | `apps/backend` / FastAPI and `apps.registry` | Web (`apps/web`) | OpenAPI `/api/v1/portfolio/*` |
 | Grounded explanation only | `agent` tools over application leaf contracts | Agent runtime | sealed comparison/scenario evidence, `PortfolioDiagnostic` |
 
 The comparison fails closed unless all three portfolios share `as_of`, valuation
@@ -54,7 +54,7 @@ boundary.
 
 Unit tests live beside the owning package under `tests/unit`.
 Cross-package behavior goes to the highest package that owns the user-facing workflow.
-E2E belongs in `packages/apps/tests/e2e`.
+E2E belongs in `apps/backend/tests/e2e`.
 
 ## Naming Rules
 

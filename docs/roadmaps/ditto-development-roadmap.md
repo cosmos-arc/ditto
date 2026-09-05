@@ -20,7 +20,7 @@
 > 真实券商、真实订单、策略自动发布/激活或自然时钟 soak。
 
 > **2026-08-30 产品边界裁决**：D1—D10 已全部确认，权威事实见
-> [系统产品定位与 `ditto-app` 蓝图基线报告](../reviews/2026-08-30-system-product-positioning-and-app-blueprint-baseline.md)。
+> [系统产品定位与 Web 蓝图基线报告](../reviews/2026-08-30-system-product-positioning-and-app-blueprint-baseline.md)。
 > Ditto 不连接 A 股券商，不提交真实订单；全球市场只作为参照数据，不进入交易、外币现金和跨市场结算。
 > 本文中遗留的“全球全品类”“机构化”“真实券商”“实盘执行”表述只代表历史能力假设，不再构成产品目标或 backlog 授权。
 
@@ -80,7 +80,7 @@
 2. 完整 signal package、零调仓与失败状态已持久化并可校验。
 3. EOD same-input no-op、changed-input conflict 与中断恢复已验收。
 4. 账户基线、D+1 数量、多笔部分成交与追加式更正已闭环。
-5. Daily Decision V2 与 `ditto-app` live 复核、成交和复盘已验收。
+5. Daily Decision V2 与 `apps/web` live 复核、成交和复盘已验收。
 
 ### 3.3 明确不重复建设的能力
 
@@ -161,7 +161,7 @@
 5. deterministic EOD batch、同日重跑幂等和冲突处理。
 6. 多笔部分成交、append-only 更正和 effective-fill read model。
 7. Daily Decision V2 readiness 真值表与 API。
-8. `ditto-app` Trading live 工作台。
+8. `apps/web` Trading live 工作台。
 9. runbook、备份恢复、真实数据 evidence 和 loopback-only 验收。
 
 逐 task 文件、测试和命令以 `docs/plans/2026-07-10-r1-implementation-plan.md` 为准。
@@ -171,7 +171,7 @@
 - 有交易与零调仓两个交易日都可完整解释。
 - 相同输入重跑不重复，输入变化和已有成交时 fail closed。
 - 一个 intent 支持同日多笔成交和可追溯更正。
-- `VITE_USE_MOCK=false` 下完成 ready/review/blocked、成交和复盘。
+- `ditto-runtime-config.json` 的 `runtime=live` 下完成 ready/review/blocked、成交和复盘。
 - 默认测试确定性通过，另有一次显式真实数据验收。
 - 无认证时只监听 loopback，数据库可备份和恢复。
 
@@ -322,7 +322,7 @@ R3 保持日频、人工审批和本机边界。
   run 输入。
 - review approval、publish 和历史版本重新激活均为显式、append-only、可审计动作；
   R1 每批锁定 active version。
-- `VITE_USE_MOCK=false` 下完成 Strategy Studio → Experiment → Review → Publish →
+- `ditto-runtime-config.json` 的 `runtime=live` 下完成 Strategy Studio → Experiment → Review → Publish →
   R1 → Reactivate 全闭环。
 - metadata/research DB 与 artifact 通过备份恢复；后端、前端和双黄金真实数据
   evidence 通过。
@@ -607,7 +607,7 @@ R1 已按以下顺序完成：
   → EOD outcome / 运营入口
   → 成交账本
   → Daily Decision V2
-  → ditto-app live
+  → apps/web live
   → G1 evidence
 ```
 

@@ -118,7 +118,7 @@ Ditto 是一个**工程质量已收敛到 4.4–4.9★ 的强骨架平台**,在�
      # workflow_run: ...        # 注释掉 "Disabled to save CI minutes"
    ```
 
-3. golden lane 本身**真实存在且 committed**:[test_golden_e2e.py](packages/apps/tests/integration/test_golden_e2e.py)(5 tests,验证合成数据→策略→组合→风控→执行→报告全链路),已通过实测。`capability-maturity.md:71` "needs one committed synthetic golden lane" 的描述**已过时**。
+3. golden lane 本身**真实存在且 committed**:[test_golden_e2e.py](apps/backend/tests/integration/test_golden_e2e.py)(5 tests,验证合成数据→策略→组合→风控→执行→报告全链路),已通过实测。`capability-maturity.md:71` "needs one committed synthetic golden lane" 的描述**已过时**。
 
 #### 影响
 

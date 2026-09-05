@@ -19,10 +19,10 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
-        # R2 live evidence is copied byte-for-byte from its signed source bundle;
-        # changing EOF bytes would invalidate the recorded SHA-256 identities.
+        # Evidence JSON is immutable/content-addressed; EOF changes invalidate
+        # its recorded SHA-256 identity. Keep JSON validation and secret scans.
         exclude: >-
-          ^(?:artifacts/acceptance/(?:r2-report(?:\.manifest)?|r2-live-evidence/[^/]+)\.json|docs/evidence/r2/[^/]+-live/(?:r2-report|source-manifest|r2-live-evidence/[^/]+)\.json)$
+          ^(?:artifacts/acceptance/(?:r2-report(?:\.manifest)?|r2-live-evidence/[^/]+)\.json|docs/evidence/.*\.json)$
       - id: check-yaml
         args: [--unsafe]
       - id: check-toml

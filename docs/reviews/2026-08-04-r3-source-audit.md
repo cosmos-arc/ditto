@@ -155,13 +155,13 @@ r3-report.json 的 `r2_evidence`（`report_hash=446ef1d5` / `status=ready` / 拆
 
 - R2 gate 矛盾：`artifacts/acceptance/r2-report.json`（`3084bc7c…`）、`artifacts/acceptance/r3-report.json`（`r2_evidence.report_hash=446ef1d5…`）、`artifacts/acceptance/r2-report.manifest.json`、`docs/evidence/r3/README.md:109,131`
 - fail-closed reader：`packages/application/src/ditto_application/processes/experiments/r2_live_gate_evidence.py`
-- runner：`packages/apps/src/ditto_apps/scripts/r3_research_acceptance.py:551-561`
+- runner：`apps/backend/src/ditto_apps/scripts/r3_research_acceptance.py:551-561`
 - hard gate / 三层 binding：`packages/application/src/ditto_application/processes/strategy/promotion.py:88-190`
 - 因子贡献真实路径：`packages/strategy/src/ditto_strategy/alpha/builtins/scoring.py:141-192`
 - durable 幂等：`packages/application/src/ditto_application/mutation_idempotency.py`
 - 128 调度器：`packages/application/tests/integration/test_r3_scheduler_capacity.py`
-- API 契约：`docs/contracts/r3-v1-api-surface.json`、`packages/apps/tests/unit/api/test_r3_api_surface_contract_unit.py`
-- 架构 allowance：`scripts/architecture/check_architecture_smells.py`、`packages/apps/tests/unit/architecture/test_capability_semantic_ownership_unit.py`
+- API 契约：`docs/contracts/r3-v1-api-surface.json`、`apps/backend/tests/unit/api/test_r3_api_surface_contract_unit.py`
+- 架构 allowance：`scripts/architecture/check_architecture_smells.py`、`apps/backend/tests/unit/architecture/test_capability_semantic_ownership_unit.py`
 - 前端：`ditto-app/src/routes/research.tsx`、`ditto-app/src/features/{strategy,research}/`、`ditto-app/docs/review/r3-research-acceptance/live/`
 
 ---

@@ -3,7 +3,7 @@
 > 版本：1.0
 > 日期：2026-08-31
 > 状态：READY FOR ARCHITECTURE REVIEW
-> 适用仓库：ditto 后端与 ditto-app 前端
+> 适用范围：Ditto monorepo 的后端与 `apps/web` 前端
 > 前置基线：[系统产品定位与 App 蓝图基线](../reviews/2026-08-30-system-product-positioning-and-app-blueprint-baseline.md)
 > 本文性质：目标系统设计，不代表所述能力已经交付
 
@@ -42,7 +42,7 @@ Ditto 的目标不再是“A 股 ETF 自动交易平台”，而是：
 - 目标逻辑架构与依赖方向；
 - 宏观、指数、行业、选股、技术分析、研究、策略、组合、Paper、Manual 和 Agent 的领域设计；
 - 前后端读模型、命令、API 和关键数据流；
-- ditto-app 五域信息架构与主要工作台；
+- `apps/web` 五域信息架构与主要工作台；
 - Agent 的权限、工具、审计、评测和人机审批边界；
 - 绿地初始化、真实验证矩阵、非功能目标和完成标准；
 - 需要保留的业界最佳实践与应拒绝的过度设计。
@@ -113,7 +113,7 @@ Ditto 的目标不再是“A 股 ETF 自动交易平台”，而是：
 | D13 | Agent 能力范围 | 覆盖投研、选股、行业轮动、技术分析、仓位诊断、策略编写和复盘 |
 | D14 | Agent 计算边界 | 金融数值和模式识别由确定性领域能力计算，模型只组织、解释和提出受约束草案 |
 | D15 | Agent 权限边界 | 默认只读与预演；仅策略草案保存和提交评审允许逐动作审批写入；禁止策略发布、账本写入、Paper 启动和真实交易 |
-| D16 | 前端兼容 | ditto-app 可直接重构信息架构、路由和读模型，不保留旧产品心智或技术兼容层 |
+| D16 | 前端兼容 | `apps/web` 可直接重构信息架构、路由和读模型，不保留旧产品心智或技术兼容层 |
 
 ### 2.3 对旧基线的明确覆盖
 
@@ -204,8 +204,8 @@ Agent 不是纯 Mock：
 - [研究证据工具](../../packages/agent/src/ditto_agent/tools/research.py) 要求精确版本、dataset、universe 和 host 注入的 source snapshot；
 - [Author 写工具](../../packages/agent/src/ditto_agent/tools/author_write.py) 仅允许保存策略草案和提交评审，并要求逐动作审批；
 - [DecisionOpinion](../../packages/agent/src/ditto_agent/decision_opinion.py) 是绑定 V3 证据的 shadow-only 意见，明确禁止权重、风险状态、动作、订单和发布；
-- [Agent API](../../packages/apps/src/ditto_apps/api/routes/agent_routes.py) 已有 capability、session、run、event stream、approval 和 campaign 端点；
-- ditto-app 的 [Agent API client](../../../ditto-app/src/features/agent/api/agent-api.ts) 已调用 /v1/agent 真实接口，并通过 [恢复型事件流](../../../ditto-app/src/features/agent/api/agent-event-stream.ts)、[Agent Console](../../../ditto-app/src/features/agent/components/agent-console-page.tsx) 和 [上下文入口](../../../ditto-app/src/features/agent/components/agent-context-actions.tsx) 承接 Run、Campaign 与 Approval。
+- [Agent API](../../apps/backend/src/ditto_apps/api/routes/agent_routes.py) 已有 capability、session、run、event stream、approval 和 campaign 端点；
+- Web 的 [Agent API client](../../apps/web/src/features/agent/api/agent-api.ts) 已调用 /v1/agent 真实接口，并通过 [恢复型事件流](../../apps/web/src/features/agent/api/agent-event-stream.ts)、[Agent Console](../../apps/web/src/features/agent/components/agent-console-page.tsx) 和 [上下文入口](../../apps/web/src/features/agent/components/agent-context-actions.tsx) 承接 Run、Campaign 与 Approval。
 
 因此当前 Agent 治理底座可评为 L2，部分内部合同接近 L3；但投研产品工作流仍只有 L1—L2。已有工具主要围绕研究证据和运行治理，缺少宏观环境、行业/选股、技术快照、三组合对比和仓位情景预演。
 
@@ -227,7 +227,7 @@ Agent 不是纯 Mock：
 | Manual | AccountView 等可复用基础 | L0—L1 | 无独立外部成交/现金事件/更正的完整合同 |
 | Agent 治理 | authority、PIT、budget、audit、HITL、SSE | L2 | 真实模型、故障恢复和业务 eval 尚需证明 |
 | Agent 业务工具 | 研究证据、V3、Author | L1—L2 | 缺市场、选股、技术、三组合和仓位预演 |
-| ditto-app 视觉与页面 | Graphite Studio、页面合同、大量组件 | L2 | UI 丰富但真实读模型、业务动作和闭环不均衡 |
+| `apps/web` 视觉与页面 | Graphite Studio、页面合同、大量组件 | L2 | UI 丰富但真实读模型、业务动作和闭环不均衡 |
 
 ### 4.4 结论：为什么完善多个版本仍“不理想”
 
@@ -256,7 +256,7 @@ Agent 不是纯 Mock：
 
 ### 5.2 目标组件图
 
-    ditto-app
+    apps/web
       ├─ Today / Markets / Research / Portfolio / System
       ├─ Contextual Agent Sidecar
       └─ Agent Lab / Approval Inbox / Agent Ops
@@ -298,7 +298,7 @@ Agent 不是纯 Mock：
 | 研究与回测 | analysis/backtest | experiment and replay runtime | application | ExperimentRun、BacktestArtifact |
 | 跨域工作流 | application | queries/commands/processes | apps、agent | Workspace read models、receipts |
 | Agent 编排 | agent | host/tools/provider/eval | apps | AgentRun、EvidenceEnvelope、Approval |
-| UI/API 装配 | apps | API/jobs/registry | ditto-app | OpenAPI、SSE events |
+| UI/API 装配 | `apps/backend` | API/jobs/registry | `apps/web` | OpenAPI、SSE events |
 
 新增能力不需要新增顶层 Python 包。TechnicalAnalysisSnapshot 属于 features，SelectionRun 属于 strategy，账户账本属于 portfolio，Paper 成交属于 execution，跨域视图属于 application，Agent 只适配 application 合同。
 
@@ -842,7 +842,7 @@ Agent 不直接调用 capability service 或 storage，只通过这些 applicati
 
 禁止返回空成功来掩盖数据缺失。响应必须携带 reason_code、retryable、missing_dependencies 和 correlation_id。
 
-## 14. ditto-app 产品蓝图
+## 14. `apps/web` 产品蓝图
 
 ### 14.1 五域导航
 
@@ -1064,7 +1064,7 @@ System 页面能从一个用户结论下钻到所有来源和版本。
 | Paper | 是正式账户 | 连续 20 个交易日、崩溃恢复、事件重放、日终对账 |
 | Manual | 可维护实际账户 | 期初+事件重建、冲正、更正、现金与公司行动样例 |
 | Agent | 是可信副驾驶 | 真实模型 eval、引用忠实、PIT、越权、恢复和成本 |
-| ditto-app | 完整产品可用 | 从 Today 到 Selection、Paper、Manual、Review 的用户任务测试 |
+| `apps/web` | 完整产品可用 | 从 Today 到 Selection、Paper、Manual、Review 的用户任务测试 |
 
 ### 17.2 Agent Eval Suite
 
@@ -1226,7 +1226,7 @@ Ditto 对应措施：
 3. Paper 未形成持续运行、恢复和对账的正式账户；
 4. Manual 缺独立事件、现金、期初和冲正合同；
 5. Model/Paper/Manual 无统一同一时点对比；
-6. ditto-app 仍未把五域和证据链完整落到真实 API；
+6. `apps/web` 仍未把五域和证据链完整落到真实 API；
 7. Agent 缺市场、选股、技术和仓位工具。
 
 ### P1：决定系统是否可信
@@ -1262,7 +1262,7 @@ Ditto 对应措施：
 - [ ] Agent 覆盖投研、选股、技术、仓位、策略编写和复盘；
 - [ ] Agent 不发布策略、不修改账本、不启动 Paper；
 - [ ] 所有历史查询传播 knowledge cutoff、publication cutoff 和 source snapshot；
-- [ ] ditto-app 只有 Today、Markets、Research、Portfolio、System 五个顶级域；
+- [ ] `apps/web` 只有 Today、Markets、Research、Portfolio、System 五个顶级域；
 - [ ] 绿地初始化不实现旧数据迁移和兼容层；
 - [ ] 完成以真实数据、恢复、对账、eval 和用户闭环证明；
 - [ ] 实施前的任何真实删除均再次列出精确目标并核对。
