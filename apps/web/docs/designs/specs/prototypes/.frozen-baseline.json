@@ -1,0 +1,2762 @@
+{
+  "version": 2,
+  "baselineId": "frontend-recovery-m0-2026-09-04",
+  "baselineCommit": "cea86f8c3c4bc4e7705f7b4a0c6198637399da07",
+  "capturedAt": "2026-09-04",
+  "browserVersion": "151.0.7922.34",
+  "prototypeCount": 28,
+  "entries": [
+    {
+      "id": "a-shares",
+      "file": "page-a-shares.html",
+      "viewport": "1536x900",
+      "sourceSha256": "4d7f4751fc1436ddb5ba6673862fac55b489c753fbb9ca07a16e35b33ec356ce",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-a-shares.html",
+          "sha256": "e61a5ef8b4ccc38f0c3865fcce388aa2d34ba6245457b1a05b23af148ba796ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "94f9f9b612c0c5a4ba708d3c0a1a6c4fef34f19e928a5882cf2e36727e59f854",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/a-shares.png"
+    },
+    {
+      "id": "agent-console-v2",
+      "file": "page-agent-console-v2.html",
+      "viewport": "1536x900",
+      "sourceSha256": "aff2db075ae9801a8f9aaf34fa4eceac77171a6f748948cce972220fc2ff18e8",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-agent-console-v2.html",
+          "sha256": "85efc9ba13b988912a49cb99a7d5ff7c48d0baa35278dda0cae0c6da99b2e0ac"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "162f8ca39d5058bb50bcb2b5b1d05e8482d4f5a7f275d08d9510e0b76a790f02",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/agent-console-v2.png"
+    },
+    {
+      "id": "alpha-explorer",
+      "file": "page-alpha-explorer.html",
+      "viewport": "1536x900",
+      "sourceSha256": "a6e09b2bddcf3b8e97feba81fb890836beb9ab56d5a2d5757d7156779ecb24df",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-alpha-explorer.html",
+          "sha256": "076d724cf5090d68ff879a0fa51366feee4eea41575440c88fab30a5b13c0edd"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "d3ce688ca76a9952d802013a4bbb123db9c3f55bea80c3298cfae2a0deb297e9",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/alpha-explorer.png"
+    },
+    {
+      "id": "backtest-list",
+      "file": "page-backtest-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "2b0527b38647e05d5b6667a9a43ee84e0cb761608fb514f18b65cd0a4f44d3b4",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-backtest-list.html",
+          "sha256": "ead818ed892cabbc7288551b60d7ad27b128c90c440dab3661af4751435698f3"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "cc30393e85c38466a4a4b328d029d66f5ae803480f4e8ea95d5cdb84d9d6742f",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/backtest-list.png"
+    },
+    {
+      "id": "backtest-result",
+      "file": "page-backtest-result.html",
+      "viewport": "1536x900",
+      "sourceSha256": "050da39a3299fa43553b5df1c9d85786e4aa49bb77a19349f394f3e83959cd5d",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-backtest-result.html",
+          "sha256": "80ff4e792ae38865719813ef262b9de89d245eab36cd36a0104df9a78f2de25f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "31f323373482b44656b2708a8b6712c7e5e7c8f0764ced3ec3070899c3c17af9",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/backtest-result.png"
+    },
+    {
+      "id": "cross-market",
+      "file": "page-cross-market.html",
+      "viewport": "1536x900",
+      "sourceSha256": "66da0cd96fe3cbb82b1e56d748a9d3aa903f2776ab5a81d6874cffbcf4bca1c9",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-cross-market.html",
+          "sha256": "a76d2048f8bb284f38e99ec42127111d95baab035edcea9ce10a8f981f661f25"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "eb16b63119eaa95c31d4d89d0a6c1891b217e7264b7eb5b51092afc0800c93e0",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/cross-market.png"
+    },
+    {
+      "id": "experiment-list",
+      "file": "page-experiment-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "aa31b92851d9b74b3eb97e2e7cfb2109d9bf94f584e5130dfd649f95a6fd0881",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-experiment-list.html",
+          "sha256": "6fe7f687082897f26824b51e0b031a6a71ebf8c8253cefaebfd7be26195783cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "d82265bc67e92f6241ac29544d3e5745c79d0a11a8ccadc204429a944dca6f76",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/experiment-list.png"
+    },
+    {
+      "id": "factor-analysis",
+      "file": "page-factor-analysis.html",
+      "viewport": "1536x900",
+      "sourceSha256": "ddd13fcf5ba113bfaff2a33365df1a024f5681f2b1e32d14be1d5929ecb0e4bf",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-factor-analysis.html",
+          "sha256": "c6be1cd0c7f5a81eaf455e79a37343535852fdf8e1cb29e76e96f72b0ae664e8"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "1bef41036b2b8245aac2dc3e63a4fb013026a2f7533b2aa7894e57a4717323d8",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/factor-analysis.png"
+    },
+    {
+      "id": "factor-list",
+      "file": "page-factor-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "545d6e30f5e58b8dc02fbc5f1a44c2102d384ebe8a157ae0531fb99c05616f6c",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-factor-list.html",
+          "sha256": "3668ac661c56b241aec8c1b99a2c49ae29a2648540e0ab0eeb885f57464a9b80"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "502c161ed54732cf15bece2c7c74ea92f712a7bec13f5a30c93dc496d4ac90ca",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/factor-list.png"
+    },
+    {
+      "id": "home",
+      "file": "page-home.html",
+      "viewport": "1536x900",
+      "sourceSha256": "1e28334f6777a8929a5054243f363e008fc44c72852866046b6f928c16c06bf6",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-home.html",
+          "sha256": "ed1f582154d02045af5a9414e08b0012140d7dfeffe1b5ff1511f42deb8b8525"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/mock-data.js",
+          "sha256": "ea245478e4a856fe98d2c5bbfbdb26bd4b075b98081d5d01f8d1acc1d167443b"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "8453e1051162c835b33e7e5025582da8f4da2a0b6731f81a14c8eae0816aa564",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/home.png"
+    },
+    {
+      "id": "instrument-hub",
+      "file": "page-instrument-hub.html",
+      "viewport": "1536x900",
+      "sourceSha256": "9be28338852ed521640e0f0522007e705c28432482d967538ce6c7494d5b7cec",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-instrument-hub.html",
+          "sha256": "79d333ec1371e5cfe7eac7b188d81d51b0f2710644f042c752199b6a560c3fc5"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "b9939d6c6bc9724769db332b5a5513994dc3b73a54a783e3b2d20a75eaffbf91",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/instrument-hub.png"
+    },
+    {
+      "id": "markets-calendar",
+      "file": "page-markets-calendar.html",
+      "viewport": "1536x900",
+      "sourceSha256": "b6fb549c4bc80b4fb2b9cf6c29d8c512a33f680e2e1a147c74def4367630678e",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-markets-calendar.html",
+          "sha256": "621f2b75c45158516f855f22976fe2d96723b236dd6997bc38ec027891de157a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "1735c9fc31c7d4f2bcf93cfed51da3f58705e22cb8e2d77a891e456d210fd942",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/markets-calendar.png"
+    },
+    {
+      "id": "markets-intelligence",
+      "file": "page-markets-intelligence.html",
+      "viewport": "1536x900",
+      "sourceSha256": "cd98ba7499737c709ac62224a981b8232dffba797f17709184b7d11617cc803a",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-markets-intelligence.html",
+          "sha256": "d1d8b5ff02400547bb92d7da03b8541701b56b7ff5401aa7c3ec70d537effbc4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "dd0a19011bf05527b896039556c7529a2364820ea19997a62d063f2d4b8779fa",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/markets-intelligence.png"
+    },
+    {
+      "id": "markets-screener",
+      "file": "page-markets-screener.html",
+      "viewport": "1536x900",
+      "sourceSha256": "4bac5da8f95a4aad66384bea3364f2b5d7b327271a0f49967b056f38bd0f5500",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-markets-screener.html",
+          "sha256": "af8c3bffe9a406151b4d4030bb636ad0722428c39c590c93327c4f6f9ec26d44"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/screener-workflow.js",
+          "sha256": "94db527220dc9987bc3b634ce6a43662f363d89f0c1d7276fe5133f206dd5e6f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "33fe6445405c58ea310b79a7365ce5c8408e84f7d66a7e70dfd27c5341ce187c",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/markets-screener.png"
+    },
+    {
+      "id": "orders-ledger",
+      "file": "page-orders-ledger.html",
+      "viewport": "1536x900",
+      "sourceSha256": "654c817c7e807ad0ced1dc6005bda7fee0742cdf909dac823a2eeeac98aa10d6",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-orders-ledger.html",
+          "sha256": "857dabc95807bdfa8e0e2d161a0e2544481857f4279c781fff2c214fbe5717bf"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "1ff1478148b9646d8bbb65cc4e76f2a24e361016e4f82971a8b2e29d683c0790",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/orders-ledger.png"
+    },
+    {
+      "id": "platform",
+      "file": "page-platform.html",
+      "viewport": "1536x900",
+      "sourceSha256": "5e20553bda29b4cef1467affd07e73952fc361207425e4414c077565d6625ad4",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-platform.html",
+          "sha256": "edd321c58d26290a5d3069e646c8140ed6c004abc409f252f4d9f49c300ad92f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "108d3e2924db9d65c4b56af10872fc13965e98fd98e3fb6d36db7dda803665b6",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/platform.png"
+    },
+    {
+      "id": "platform-settings",
+      "file": "page-platform-settings.html",
+      "viewport": "1536x900",
+      "sourceSha256": "592d63f2826fbcca02f93d31da8161979de0b6355515e40b6c603c1ba15b7c6b",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-platform-settings.html",
+          "sha256": "6a6ef5834c1ce7a14029b179ab77c02fbb9fb7a55f4af8990f11e310b54758c0"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "3558ed4ef3f48a63a2c7f19776e16cd786343cffebfca94ab5465fe4a061a823",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/platform-settings.png"
+    },
+    {
+      "id": "portfolio",
+      "file": "page-portfolio.html",
+      "viewport": "1536x900",
+      "sourceSha256": "213a9e81d9d82d6a72d7dcea3134f8397480d8c4abeed5f632857a30bb54fc76",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-portfolio.html",
+          "sha256": "5f44e21b5ec71715cf47cab40f9815b79a2eb0955aee8ff6b5362a9e5c4c91f8"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "69b3268a112a3b05603b92e532714ae2626c5cf63d2db7000406d387b2f921d5",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/portfolio.png"
+    },
+    {
+      "id": "regime-monitor",
+      "file": "page-regime-monitor.html",
+      "viewport": "1536x900",
+      "sourceSha256": "03195135a8493e011b6b9a17294da54b1fbc6cab2d2c0803104fd8805ec2841b",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-regime-monitor.html",
+          "sha256": "f8d5d2252ba39e9f0258e541dccbe3a6232f9ad053fc473a3ed206e6765e8521"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "45d3e1ff0dc103549e321ee876d2c7c833f3c1513f419190b0de006295a471f9",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/regime-monitor.png"
+    },
+    {
+      "id": "research",
+      "file": "page-research.html",
+      "viewport": "1536x900",
+      "sourceSha256": "63661bdbe67f41c182b3b9a9a7dd6b27b59184b4a634236dc346ba5112f1c3a1",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-research.html",
+          "sha256": "02bc482f577e7c35aad2185c10ea588330f6f463669762fa004b649b9e18c487"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "96f2aa884dd08d51edef93bb27d16aef2bc5126b066220d4f08eac5d5cc05a14",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/research.png"
+    },
+    {
+      "id": "risk-center",
+      "file": "page-risk-center.html",
+      "viewport": "1536x900",
+      "sourceSha256": "fed85d4611d6417836aa71e8ddf6f23c9c5ada5bb6476f4a09e1bb317b0b41e8",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-risk-center.html",
+          "sha256": "619a44745d926aba71490461041d3ccf8ae25efada77560b936b8b9795462957"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "e38c4869dde327ea74e2e1a0bfafbc02395bda9edc6035662590a8bda6e63944",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/risk-center.png"
+    },
+    {
+      "id": "signals-inbox",
+      "file": "page-signals-inbox.html",
+      "viewport": "1536x900",
+      "sourceSha256": "0a66ade94f3ec8e35ef25573ea853cc279abfe27b664cb696b7f1761e59d0140",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-signals-inbox.html",
+          "sha256": "1e9d30176f56452efed02854bccadf5f82abb7edd76204b3d74f51436c401ee3"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "4f1632dcb336e7ae483cc97dd1d306b6a2716cab88c9380605557d2e067cc809",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/signals-inbox.png"
+    },
+    {
+      "id": "strategies-detail",
+      "file": "page-strategies-detail.html",
+      "viewport": "1536x900",
+      "sourceSha256": "4271d2ea18937e9507bf1088b7898c6159022a9ddf530fb72b7c9209d3ad3c1d",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-strategies-detail.html",
+          "sha256": "0abe3fa540cde344393569d20a0c3bc3ae494746fdd6c77b890ed95f792e3463"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "432836bd5dc689f1b3d371c09887a16df0c02364099cb866a3ef5afe98865613",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/strategies-detail.png"
+    },
+    {
+      "id": "strategy-list",
+      "file": "page-strategy-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "7dbc01ed2aca3aec5e19334efbcb16642422de08f1741a4c29f9f6673091595d",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-strategy-list.html",
+          "sha256": "e220aeaf090c1c1f0cd851a106db369af0f8f2d4bd7928260c5721248d39cf62"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "45d6b58d9b02520c9b2af53b998cf53ae1046f30c8a1bfd4541e3fa87b7f5356",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/strategy-list.png"
+    },
+    {
+      "id": "strategy-studio",
+      "file": "page-strategy-studio.html",
+      "viewport": "1536x900",
+      "sourceSha256": "7099f0429177318e2a9885d401dc63135d68709dea20e78180da3ef4aa406c6f",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-strategy-studio.html",
+          "sha256": "4d1d776507a6626292e6085dc304a7b0aaef1df74df3863b67b1d8888d6b0755"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "274ab10358c5d17fdc7b78b38b0e5bf0c611e4ae0b979633c031a248956a56c5",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/strategy-studio.png"
+    },
+    {
+      "id": "trading-overview",
+      "file": "page-trading-overview.html",
+      "viewport": "1536x900",
+      "sourceSha256": "38c728c1642e8ca479e41138c0e2b667f2dc13caa7cc253504ee23b58dd5ea42",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-trading-overview.html",
+          "sha256": "5a5eb1cc44762905184b95a5f54eaa74aac97104eb91be493a5583ee65337ed9"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "2a7c6697c1c01dff740913fe1c46065577bcbc5e64171b3eaf2ad407c02d1f8a",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/trading-overview.png"
+    },
+    {
+      "id": "universe-list",
+      "file": "page-universe-list.html",
+      "viewport": "1536x900",
+      "sourceSha256": "cba6a7f50e680ff476554349028ac26d98358ce1a483bdbfeca1d65206c26871",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-universe-list.html",
+          "sha256": "a9d0cd7c26935624975f7b82e32cd74927a037cebca3e70bc45232fe77c84fde"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "27a9e5657a38ac3b0154e1f04a1f2ccadc4ad1b22a62887d7dcc2184f2caff19",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/universe-list.png"
+    },
+    {
+      "id": "watchlist",
+      "file": "page-watchlist.html",
+      "viewport": "1536x900",
+      "sourceSha256": "ea3d76f61a802cdfd5731e210b2c56796d6e1bd007c6c11705f7f87a4f73a8e4",
+      "sourceInputs": [
+        {
+          "path": "docs/designs/specs/prototypes/page-watchlist.html",
+          "sha256": "78752ea446a7324bf6a543e9a4dfa75b295dee2672d49512ff3965b4d5000435"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/fonts.css",
+          "sha256": "45fdb9d98e3c08f0710c41aba7a23a7300ce166b0c73cf66477a33af6cdd59c4"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-components.css",
+          "sha256": "3a04276cda0463aaba21305cbda1cc55a464969eb212f54bd98f999a45801181"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-gallery.css",
+          "sha256": "52734bf2d79c020c270b06b39997aa4f7f378011dc5fa7bac05099f5d15e27ae"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-overlay.css",
+          "sha256": "2ba935501b48237f1439494943063c6af9eb126157b81d3f745285795cabbb6a"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-shell.css",
+          "sha256": "7e26de6310327bb9771b921e7ecc6d5171e1dc96da1c6b82983042809d0b601d"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/layout-state.css",
+          "sha256": "c50f4d69e54f27763fb8411dfedfc93872bce17364a8242b43262b45153e7b77"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.css",
+          "sha256": "f65112b0e238645b50d30c28867c03e7b31be6fb480b9cd952ab145dd492b4cc"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-interactions.js",
+          "sha256": "ef356a6eb9111d99f699a35ae09ca41abfede9e6390247696b2afcfb2a0ad8bb"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/prototype-toggles.css",
+          "sha256": "5ed02d4a479492aef6ab754f8c96f06f8356968b79695058fd6fc491a9953833"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.css",
+          "sha256": "2da7dc55b440f7ae206aa88e95669eed4bee6aad613440f5ead710e5102c864f"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/shared/theme-switcher.js",
+          "sha256": "04185a0a1ffc54219cf2703dbf4856921633bc86203c77cdb9fdb672e864de14"
+        },
+        {
+          "path": "docs/designs/specs/prototypes/tokens-style.css",
+          "sha256": "2be543510763d1efed68c7cdc3e358f6ac416baf6497893f77753c91bca6afe8"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-atmosphere.css",
+          "sha256": "0dcc324a42b2e2cd50da3f9d1fe3b89972e04732245a3155b9ec718459771c88"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-base.css",
+          "sha256": "27014251d7b873a1dfe6cf1dcaee31180290641d1c6bb5cf48edef8ca4938356"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-component.css",
+          "sha256": "9df5aa0e658083a8ff437db98e9adc551ae2cfef0ad0b3032ae8b17f5f529643"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-data-viz.css",
+          "sha256": "de4e53854a3fe0f52e6a7f4e87561f411d2a49e8be566181c50a64acf4352a4a"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-density.css",
+          "sha256": "acccf5d455f2b464ea8a7635be73251f772d3a3f0fcafb92c86ffc0f82eeb067"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-domain.css",
+          "sha256": "56e5a1724cdaeed905bb5563608a25e91c0168b094e54cb35b53f681a2a8aa1b"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-interaction.css",
+          "sha256": "20a4fba6f1ce45200d9f4f3d77a126ae9ed075fe308ffaa462c31bce4d826ae9"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-semantic.css",
+          "sha256": "893ad5be74224b0c6a8654fa71fbe08ee01dab8634a706fc355f782bb82d1647"
+        },
+        {
+          "path": "src/styles/design-tokens/tokens-shell.css",
+          "sha256": "11357da3886b77e3f8177294e09fb9e127694881a61eb3f6efafdb3b133172c0"
+        }
+      ],
+      "screenshotSha256": "af26c0afb0efcad93e27da8085014eb5b6e81a7ac63119cc91b3c88e009614e1",
+      "screenshotRef": "test-results/prototype-baseline/2026-09-04/watchlist.png"
+    }
+  ]
+}

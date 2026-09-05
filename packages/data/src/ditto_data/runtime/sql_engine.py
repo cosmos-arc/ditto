@@ -6,7 +6,7 @@ import re
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import duckdb
 import polars as pl
@@ -213,7 +213,11 @@ class SqlEngine:
         Fallback attach mode for offline environments.
 
         When DuckDB cannot install/load sqlite_scanner extension (e.g. no network),
-        load SQLite tables into DuckDB `meta` schema using sqlite3 + polars.
+        load SQLite tables into DuckDB ``meta`` using DB-API rows only.
+
+        This path deliberately avoids DuckDB's optional PyArrow bridge. Table names
+        come from the fixed metadata whitelist, column identifiers are quoted, and
+        declared SQLite types are mapped through a closed set before interpolation.
         """
         self.con.execute("CREATE SCHEMA IF NOT EXISTS meta")
         with sqlite3.connect(sqlite_path) as sqlite_conn:
@@ -223,19 +227,62 @@ class SqlEngine:
             table_names = {row[0] for row in table_rows}
 
             for table in sorted(self.SQLITE_TABLES.intersection(table_names)):
-                table_df: pl.DataFrame = pl.read_database(
-                    f"SELECT * FROM {table}",  # noqa: S608 - table 来自白名单交集
-                    sqlite_conn,
+                quoted_table = self._quote_identifier(table)
+                schema_rows = sqlite_conn.execute(
+                    f"PRAGMA table_info({quoted_table})"
+                ).fetchall()
+                columns = [
+                    (
+                        self._quote_identifier(str(row[1])),
+                        self._sqlite_type_to_duckdb(str(row[2])),
+                    )
+                    for row in schema_rows
+                ]
+                if not columns:
+                    continue
+                column_sql = ", ".join(
+                    f"{column_name} {column_type}"
+                    for column_name, column_type in columns
                 )
-                relation_name = f"_sqlite_{table}"
-                arrow_table = cast(Any, table_df.to_arrow())
-                self.con.register(relation_name, arrow_table)
-                create_table_sql = (
-                    f"CREATE OR REPLACE TABLE meta.{table} AS "  # noqa: S608 - table 来自白名单交集
-                    f"SELECT * FROM {relation_name}"
+                self.con.execute(
+                    f"CREATE OR REPLACE TABLE meta.{quoted_table} ({column_sql})"
                 )
-                self.con.execute(create_table_sql)
-                self.con.unregister(relation_name)
+                rows = sqlite_conn.execute(
+                    f"SELECT * FROM {quoted_table}"  # noqa: S608 - 白名单表
+                ).fetchall()
+                if rows:
+                    placeholders = ", ".join("?" for _ in columns)
+                    self.con.executemany(
+                        f"INSERT INTO meta.{quoted_table} VALUES ({placeholders})",  # noqa: S608 - 白名单表
+                        rows,
+                    )
+
+    @staticmethod
+    def _quote_identifier(value: str) -> str:
+        """Return one SQL identifier using standard doubled-quote escaping."""
+        return f'"{value.replace(chr(34), chr(34) * 2)}"'
+
+    @staticmethod
+    def _sqlite_type_to_duckdb(declared_type: str) -> str:
+        """Map SQLite type affinity to a closed DuckDB type set."""
+        normalized = declared_type.upper()
+        if "INT" in normalized:
+            duckdb_type = "BIGINT"
+        elif any(token in normalized for token in ("CHAR", "CLOB", "TEXT")):
+            duckdb_type = "VARCHAR"
+        elif "BLOB" in normalized or not normalized:
+            duckdb_type = "BLOB"
+        elif any(token in normalized for token in ("REAL", "FLOA", "DOUB")):
+            duckdb_type = "DOUBLE"
+        elif "BOOL" in normalized:
+            duckdb_type = "BOOLEAN"
+        elif "DATE" in normalized and "TIME" not in normalized:
+            duckdb_type = "DATE"
+        elif "TIME" in normalized:
+            duckdb_type = "TIMESTAMP"
+        else:
+            duckdb_type = "DOUBLE"
+        return duckdb_type
 
     def _normalize_query(self, query: str) -> str:
         """
@@ -399,11 +446,13 @@ class SqlEngine:
             # 合并参数
             params = [asof] if params is None else [*params, asof]
 
-        # Execute query and convert to polars DataFrame
+        # Execute query and convert without DuckDB's optional PyArrow bridge.
         if params:
-            result = self.con.execute(prepared_query, params).pl()
+            cursor = self.con.execute(prepared_query, params)
         else:
-            result = self.con.execute(prepared_query).pl()
+            cursor = self.con.execute(prepared_query)
+        columns = [str(column[0]) for column in cursor.description]
+        result = pl.DataFrame(cursor.fetchall(), schema=columns, orient="row")
 
         # 记录执行时间
         duration = time.monotonic() - start_time

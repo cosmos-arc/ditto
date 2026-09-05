@@ -41,6 +41,17 @@ class TestValidTransitions:
             == OrderStatus.FILLED
         )
 
+    def test_single_share_fill_is_a_valid_boundary(self) -> None:
+        assert (
+            transition(
+                OrderStatus.SUBMITTED,
+                OrderTrigger.FILL,
+                fill_qty=1,
+                leaves_qty=1,
+            )
+            == OrderStatus.FILLED
+        )
+
     def test_fill_from_partially_filled(self) -> None:
         assert (
             transition(
@@ -148,6 +159,32 @@ class TestInvalidTransitions:
             with pytest.raises(OrderStateError):
                 transition(status, trigger)
 
+    def test_terminal_error_identifies_the_current_state(self) -> None:
+        with pytest.raises(
+            OrderStateError,
+            match="Cannot transition from terminal state: filled",
+        ):
+            transition(OrderStatus.FILLED, OrderTrigger.CANCEL)
+
+    def test_invalid_error_identifies_the_attempted_transition(self) -> None:
+        with pytest.raises(
+            OrderStateError,
+            match=r"Invalid transition: submitted \+ submit",
+        ):
+            transition(OrderStatus.SUBMITTED, OrderTrigger.SUBMIT)
+
+    def test_fill_error_identifies_the_invalid_source_state(self) -> None:
+        with pytest.raises(
+            OrderStateError,
+            match="FILL trigger not allowed from state: new",
+        ):
+            transition(
+                OrderStatus.NEW,
+                OrderTrigger.FILL,
+                fill_qty=1,
+                leaves_qty=1,
+            )
+
 
 class TestFillQtyValidation:
     """fill_qty <= 0 → OrderStateError。"""
@@ -180,4 +217,28 @@ class TestFillQtyValidation:
                 OrderTrigger.FILL,
                 fill_qty=101,
                 leaves_qty=100,
+            )
+
+    def test_non_positive_error_preserves_the_invalid_quantity(self) -> None:
+        with pytest.raises(
+            OrderStateError,
+            match="FILL requires positive fill_qty, got 0",
+        ):
+            transition(
+                OrderStatus.SUBMITTED,
+                OrderTrigger.FILL,
+                fill_qty=0,
+                leaves_qty=1,
+            )
+
+    def test_zero_leaves_error_preserves_the_invalid_quantity(self) -> None:
+        with pytest.raises(
+            OrderStateError,
+            match=r"FILL with no remaining leaves_qty \(0\)",
+        ):
+            transition(
+                OrderStatus.SUBMITTED,
+                OrderTrigger.FILL,
+                fill_qty=1,
+                leaves_qty=0,
             )

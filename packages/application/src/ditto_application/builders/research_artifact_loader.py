@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import NoReturn
+from typing import NoReturn, Protocol
 
 import polars as pl
 from ditto_analysis.errors import ExperimentIntegrityError, ResearchDatasetError
@@ -45,6 +45,12 @@ __all__ = [
 ]
 
 
+class _FrozenResearchInputReader(Protocol):
+    def read_frozen_research_input_bytes(self, artifact_id: str) -> bytes:
+        """Return verified bytes for one immutable research input."""
+        ...
+
+
 class IndexedResearchArtifactLoader:
     """
     Production ``ExactResearchArtifactLoader`` backed by indexed artifacts.
@@ -54,7 +60,7 @@ class IndexedResearchArtifactLoader:
     performs catalog lookup, provider fallback, or unverified path reads.
     """
 
-    def __init__(self, *, artifact_service: ResearchArtifactService) -> None:
+    def __init__(self, *, artifact_service: _FrozenResearchInputReader) -> None:
         self._artifacts = artifact_service
 
     def load_frame(

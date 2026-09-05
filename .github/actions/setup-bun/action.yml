@@ -1,0 +1,28 @@
+name: Setup repository Bun
+description: Resolve and install the Bun version declared by the root packageManager
+
+outputs:
+  version:
+    description: Exact Bun version resolved from package.json
+    value: ${{ steps.resolve.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the canonical Bun version
+      id: resolve
+      shell: bash
+      run: |
+        version="$(node -e '
+          const manifest = require("./package.json");
+          const manager = manifest.packageManager;
+          if (typeof manager !== "string" || !/^bun@[0-9]+\.[0-9]+\.[0-9]+$/.test(manager)) {
+            throw new Error("package.json must pin packageManager to bun@<semver>");
+          }
+          process.stdout.write(manager.slice(4));
+        ')"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+    - name: Install the canonical Bun version
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        bun-version: ${{ steps.resolve.outputs.version }}

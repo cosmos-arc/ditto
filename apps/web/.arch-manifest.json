@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "architecture-inventory",
+  "facts": {
+    "routeModuleCount": 50,
+    "pageContractCount": 35,
+    "featurePublicApiCount": 13,
+    "workflowPublicApiCount": 10
+  },
+  "freshness": {
+    "schemaVersion": 1,
+    "algorithm": "sha256",
+    "inputs": [
+      "PRODUCT.md",
+      "DESIGN.md",
+      "package.json",
+      "dependency-cruiser.config.mjs",
+      "docs/contracts/pages/**/*.json",
+      "docs/designs/specs/*.md",
+      "src/routes/**/*.tsx",
+      "src/features/*/index.ts",
+      "src/workflows/*/index.ts"
+    ],
+    "inputCount": 136,
+    "digest": "610b8e769657cdede65e8863cefc832c6f20ae354bdd5fb34764ad7175c2b975"
+  }
+}

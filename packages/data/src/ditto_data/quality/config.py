@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-from ditto_platform.foundation import find_project_root
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -31,7 +30,7 @@ class DQSettings(BaseModel):
     report_enabled: bool = True
     report_path: str = "data/reports/dq"
 
-    config_root: Path = Field(default_factory=find_project_root)
+    config_root: Path
 
     @property
     def rules_path(self) -> Path:
@@ -53,11 +52,6 @@ class DQSettings(BaseModel):
         default_rules = self.rules_path / f"{dataset}.yml"
         if default_rules.exists():
             paths.append(default_rules)
-
-        package_dir = Path(__file__).parent.parent.parent / "config" / "dq_rules"
-        package_rules = package_dir / f"{dataset}.yml"
-        if package_rules.exists():
-            paths.append(package_rules)
 
         return paths
 

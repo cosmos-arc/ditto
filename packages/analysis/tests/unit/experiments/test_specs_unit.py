@@ -1,8 +1,8 @@
 """Unit tests for immutable experiment launch specifications."""
 
 from collections import UserList
-from collections.abc import Callable
-from dataclasses import FrozenInstanceError
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, datetime
 from typing import cast
 
@@ -28,6 +28,7 @@ from ditto_analysis.experiments import (
     SnapshotId,
     StrategyVersion,
 )
+from ditto_analysis.experiments.specs import FrozenValue
 from ditto_analysis.experiments.trial_family import (
     LogicalTrialIdentity,
     TrialFamilyDeclaration,
@@ -84,7 +85,10 @@ def _candidate(
         is_baseline=baseline,
         # Launch candidates must have unique canonical parameter payloads,
         # including the explicit baseline.
-        parameters={"candidate": ordinal} if parameters is None else parameters,
+        parameters=cast(
+            "Mapping[str, FrozenValue]",
+            {"candidate": ordinal} if parameters is None else parameters,
+        ),
     )
 
 
@@ -180,8 +184,10 @@ def _launch(
         strategy_version=StrategyVersion("stock-selection@3"),
         strategy_spec_hash=ContentHash("a" * 64),
         snapshot_id=SnapshotId("snapshot-certified-1"),
-        candidates=resolved_candidates,
-        execution_bindings=resolved_bindings,
+        candidates=cast("Sequence[CandidateSpec]", resolved_candidates),
+        execution_bindings=cast(
+            "Sequence[CandidateExecutionBinding]", resolved_bindings
+        ),
         promotion_objective=(
             _objective() if promotion_objective is None else promotion_objective
         ),
@@ -320,7 +326,8 @@ def test_launch_spec_defensively_freezes_nested_candidate_parameters() -> None:
     source["nested"]["window"] = 30
 
     assert candidate.parameters["weights"] == (1.0, 2.0)
-    assert candidate.parameters["nested"]["window"] == 20
+    nested = cast("Mapping[str, FrozenValue]", candidate.parameters["nested"])
+    assert nested["window"] == 20
     with pytest.raises(TypeError):
         cast("dict[str, object]", candidate.parameters)["new"] = 1
 
@@ -439,13 +446,241 @@ def test_candidate_parameters_preserve_boolean_as_an_exact_scalar_type() -> None
     )
 
     assert candidate.parameters["enabled"] is True
-    assert candidate.parameters["nested"]["disabled"] is False
+    nested = cast("Mapping[str, FrozenValue]", candidate.parameters["nested"])
+    assert nested["disabled"] is False
+
+
+def test_candidate_parameters_preserve_string_and_null_scalars() -> None:
+    candidate = _candidate(
+        1,
+        baseline=True,
+        parameters={"label": "baseline", "optional": None},
+    )
+
+    assert candidate.parameters == {"label": "baseline", "optional": None}
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf")])
 def test_deterministic_numeric_inputs_reject_non_finite(value: object) -> None:
     with pytest.raises(ExperimentSpecError):
         _launch(candidates=(_candidate(1, baseline=True, parameters={"x": value}),))
+
+
+@pytest.mark.parametrize("key", [cast("object", 1), cast("object", "")])
+def test_candidate_parameters_require_non_empty_string_keys(key: object) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _candidate(1, baseline=True, parameters={key: 1})
+
+    assert exc_info.value.details["reason_code"] == "invalid_parameter_key"
+
+
+@pytest.mark.parametrize("value", [{1, 2}, object()])
+def test_candidate_parameters_reject_unordered_or_unsupported_values(
+    value: object,
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _candidate(1, baseline=True, parameters={"value": value})
+
+    assert exc_info.value.details["reason_code"] == "invalid_experiment_value"
+
+
+def test_candidate_parameters_require_a_mapping() -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _candidate(1, baseline=True, parameters=[("window", 20)])
+
+    assert exc_info.value.details["reason_code"] == "invalid_parameter_mapping"
+
+
+def test_candidate_spec_rejects_nominally_invalid_fields() -> None:
+    with pytest.raises(ExperimentSpecError) as identity_exc:
+        CandidateSpec(cast("CandidateId", "candidate-1"), 1, True, {})
+    with pytest.raises(ExperimentSpecError) as baseline_exc:
+        CandidateSpec(CandidateId("candidate-1"), 1, cast("bool", 1), {})
+
+    assert identity_exc.value.details["reason_code"] == "invalid_candidate_identity"
+    assert baseline_exc.value.details["reason_code"] == "invalid_baseline_marker"
+
+
+@pytest.mark.parametrize(
+    "binding",
+    [
+        lambda: CandidateExecutionBinding(
+            cast("CandidateId", "candidate-1"),
+            1,
+            ContentHash("a" * 64),
+            ContentHash("b" * 64),
+        ),
+        lambda: CandidateExecutionBinding(
+            CandidateId("candidate-1"),
+            1,
+            cast("ContentHash", "a" * 64),
+            ContentHash("b" * 64),
+        ),
+        lambda: CandidateExecutionBinding(
+            CandidateId("candidate-1"),
+            1,
+            ContentHash("a" * 64),
+            cast("ContentHash", "b" * 64),
+        ),
+    ],
+)
+def test_execution_binding_requires_exact_nominal_identity_and_hashes(
+    binding: Callable[[], CandidateExecutionBinding],
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        binding()
+
+    assert exc_info.value.details["reason_code"] == (
+        "invalid_candidate_execution_binding"
+    )
+
+
+@pytest.mark.parametrize(
+    "protocol",
+    [
+        lambda: FoldProtocolSpec(cast("str", 1), 1, ContentHash("b" * 64)),
+        lambda: FoldProtocolSpec("", 1, ContentHash("b" * 64)),
+        lambda: FoldProtocolSpec(" padded ", 1, ContentHash("b" * 64)),
+        lambda: FoldProtocolSpec("r3-walk-forward", 1, cast("ContentHash", "b" * 64)),
+    ],
+)
+def test_fold_protocol_requires_exact_canonical_fields(
+    protocol: Callable[[], FoldProtocolSpec],
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        protocol()
+
+    assert exc_info.value.details["reason_code"] == "invalid_fold_protocol"
+
+
+def test_experiment_budget_rejects_more_than_128_candidates() -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        ExperimentBudget(candidate_limit=129, fold_run_limit=1024)
+
+    assert exc_info.value.details["reason_code"] == "candidate_limit_exceeded"
+
+
+@pytest.mark.parametrize("candidates", [[], [cast("object", "candidate-1")]])
+def test_launch_spec_rejects_empty_or_untyped_candidate_sequences(
+    candidates: object,
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(candidates=candidates)
+
+    assert exc_info.value.details["reason_code"] == "invalid_candidate_sequence"
+
+
+@pytest.mark.parametrize(
+    "bindings",
+    [
+        "binding-1",
+        {1},
+        [],
+        [cast("object", "binding-1")],
+    ],
+)
+def test_launch_spec_rejects_unordered_empty_or_untyped_execution_bindings(
+    bindings: object,
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(execution_bindings=bindings)
+
+    assert exc_info.value.details["reason_code"] == (
+        "invalid_candidate_execution_bindings"
+    )
+
+
+def test_parameter_hash_canonicalizes_nested_mapping_and_sequence_order() -> None:
+    left = _candidate(
+        1,
+        baseline=True,
+        parameters={"nested": {"b": [2, 3], "a": 1}},
+    )
+    right = _candidate(
+        1,
+        baseline=True,
+        parameters={"nested": {"a": 1, "b": [2, 3]}},
+    )
+
+    assert left.parameter_hash == right.parameter_hash
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [
+        ("experiment_id", "exp-1"),
+        ("strategy_version", "stock-selection@3"),
+        ("strategy_spec_hash", "a" * 64),
+        ("snapshot_id", "snapshot-certified-1"),
+        ("fold_protocol", "r3-walk-forward"),
+        ("failure_policy", "continue_candidate_failures"),
+        ("budget", {"candidate_limit": 128}),
+        ("desired_state", "run"),
+    ],
+)
+def test_launch_spec_rejects_structurally_similar_untyped_fields(
+    field_name: str,
+    value: object,
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        replace(_launch(), **{field_name: value})
+
+    assert exc_info.value.details == {
+        "reason_code": "invalid_launch_spec_field",
+        "field": field_name,
+    }
+
+
+@pytest.mark.parametrize("seed", [True, -1, 1.5])
+def test_launch_spec_rejects_invalid_seed(seed: object) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        replace(_launch(), seed=seed)
+
+    assert exc_info.value.details["reason_code"] == "invalid_seed"
+
+
+@pytest.mark.parametrize("worker_count", [True, 1, 5, 2.5])
+def test_launch_spec_rejects_worker_count_outside_exact_bounds(
+    worker_count: object,
+) -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        replace(_launch(), worker_count=worker_count)
+
+    assert exc_info.value.details["reason_code"] == "invalid_worker_count"
+
+
+def test_launch_spec_rejects_duplicate_candidate_identity() -> None:
+    candidates = (
+        _candidate(1, baseline=True),
+        CandidateSpec(CandidateId("candidate-1"), 2, False, {"candidate": 2}),
+    )
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(candidates=candidates)
+
+    assert exc_info.value.details["reason_code"] == "duplicate_candidate_identity"
+
+
+def test_launch_spec_rejects_semantically_duplicate_parameter_sets() -> None:
+    candidates = (
+        _candidate(1, baseline=True, parameters={"nested": {"a": 1, "b": [2]}}),
+        _candidate(2, parameters={"nested": {"b": [2], "a": 1}}),
+    )
+
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        _launch(candidates=candidates)
+
+    assert exc_info.value.details["reason_code"] == "duplicate_candidate_parameters"
+
+
+def test_launch_spec_rejects_candidate_count_above_registered_budget() -> None:
+    with pytest.raises(ExperimentSpecError) as exc_info:
+        replace(
+            _launch(),
+            budget=ExperimentBudget(candidate_limit=1, fold_run_limit=1024),
+        )
+
+    assert exc_info.value.details["reason_code"] == "candidate_limit_exceeded"
 
 
 def _set_attribute(target: object, name: str, value: object) -> None:

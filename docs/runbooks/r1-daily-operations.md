@@ -47,7 +47,7 @@ Prefect 调度与该 CLI 必须调用同一个 EOD coordinator。结果会返回
 > 在 schema 获批、实现并通过验收前，错误成交不得覆盖、删除或用另一笔记录抵消；应停止
 > 后续执行，保留原始证据并登记为待处理异常。
 
-在 `VITE_USE_MOCK=false` 的工作台或 loopback API 中核对：
+在 `runtime=live` 的工作台或 loopback API 中核对：
 
 - `blocked`：只显示 reason code 与恢复入口，不允许成交动作；
 - `review`：明确零调仓、风险、日期或重跑冲突，并展示 package/evidence；
@@ -83,7 +83,7 @@ effective fills；在此之前不得以手工覆盖模拟该能力。
 
 ```bash
 pixi run -e dev pytest --no-cov \
-  packages/apps/tests/e2e/test_r1_daily_manual_trading.py -q
+  apps/backend/tests/e2e/test_r1_daily_manual_trading.py -q
 ```
 
 ## 5. Blocked/failed 处置
@@ -177,7 +177,7 @@ ditto ops verify-sqlite \
 ```bash
 DITTO_RUN_REAL_DATA_ACCEPTANCE=1 \
   pixi run -e dev pytest --no-cov \
-  packages/apps/tests/e2e/test_real_data_stock_selection_pipeline.py \
+  apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py \
   -m e2e -q
 ```
 

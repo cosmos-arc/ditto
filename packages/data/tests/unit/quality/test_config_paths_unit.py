@@ -1,5 +1,9 @@
 """数据质量默认配置路径测试。"""
 
+from pathlib import Path
+
+_WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
+
 
 class TestDefaultConfigPaths:
     """数据质量默认配置路径测试。"""
@@ -8,7 +12,7 @@ class TestDefaultConfigPaths:
         """默认 DQ 规则目录必须存在并包含规则文件。"""
         from ditto_data.quality.config_paths import get_default_dq_rules_dir
 
-        dq_dir = get_default_dq_rules_dir()
+        dq_dir = get_default_dq_rules_dir(_WORKSPACE_ROOT)
 
         assert dq_dir.exists(), f"DQ rules directory not found: {dq_dir}"
         yaml_files = list(dq_dir.glob("*.yml"))
@@ -21,7 +25,7 @@ class TestDefaultConfigPaths:
             get_default_golden_dataset_path,
         )
 
-        golden_path = get_default_golden_dataset_path()
+        golden_path = get_default_golden_dataset_path(_WORKSPACE_ROOT)
 
         assert golden_path.exists(), f"Golden dataset config not found: {golden_path}"
         assert golden_path.name == "golden_dataset.yml"
@@ -31,7 +35,7 @@ class TestDefaultConfigPaths:
         import yaml
         from ditto_data.quality.config_paths import get_default_dq_rules_dir
 
-        dq_dir = get_default_dq_rules_dir()
+        dq_dir = get_default_dq_rules_dir(_WORKSPACE_ROOT)
         expected_not_null = {
             "balance_sheet": {"instrument_id", "report_date"},
             "income_statement": {"instrument_id", "report_date"},
@@ -54,7 +58,7 @@ class TestDefaultConfigPaths:
         import yaml
         from ditto_data.quality.config_paths import get_default_dq_rules_dir
 
-        path = get_default_dq_rules_dir() / "dividend.yml"
+        path = get_default_dq_rules_dir(_WORKSPACE_ROOT) / "dividend.yml"
         with path.open(encoding="utf-8") as file:
             config = yaml.safe_load(file)
 

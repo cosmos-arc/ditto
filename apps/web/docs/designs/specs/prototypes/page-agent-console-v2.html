@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<!--
+  状态覆盖索引: page-agent-console-v2
+  版本: v2
+  生成日期: 2026-05-02
+
+  路由:
+  - /platform/agents
+
+  标签页:
+  - plans [covered]
+  - runs [covered]
+  - findings [covered]
+  - approvals [covered]
+  - autoresearch [covered]
+  - artifacts [covered]
+  - quality [covered]
+  - policies [covered]
+
+  浮层:
+  - overlay-run-create (抽屉: 新建 Run) [由主按钮覆盖]
+  - overlay-run-cancel (弹窗: 取消 Run) [由运行操作覆盖]
+  - overlay-approval-exact-action (弹窗: 精确动作审批) [由审批面板覆盖]
+  - overlay-evidence-detail (抽屉: 证据详情) [由 Evidence Spine 覆盖]
+  - overlay-artifact-preview (抽屉: 产物预览) [由产物网格覆盖]
+  - overlay-guardrail-detail (抽屉: 护栏详情) [由阻断项覆盖]
+  - overlay-campaign-draft (抽屉: Campaign 草案) [由 Campaign 标签覆盖]
+  - overlay-campaign-approval (弹窗: Campaign 审批) [由 Campaign 标签覆盖]
+  - overlay-campaign-cancel (弹窗: Campaign 取消) [由 Campaign 标签覆盖]
+
+  状态变体:
+  - run-list: default/loading/empty/failed/stale/selected
+  - timeline: default/loading/empty/failed/running/partial/blocked
+  - finding-table: default/loading/empty/failed/stale/selected/bulk
+  - inspector: default/loading/empty/failed/running/waiting-approval/blocked
+  - artifact-viewer: default/loading/empty/failed/stale/selected
+  - quality-dashboard: default/loading/empty/failed/stale/selected
+
+  覆盖分数: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="platform">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Governed Research Agent Console</title>
+
+  <link rel="stylesheet" href="shared/fonts.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    body {
+      overflow: hidden;
+      background: var(--surface-app);
+    }
+
+    :root:has(#overlay-approval-exact-action:checked) [data-overlay="overlay-approval-exact-action"] {
+      display: flex;
+    }
+
+    .agent-shell {
+      --agent-console-source-width: 288px;
+      --agent-console-inspector-width: 372px;
+      display: grid;
+      grid-template-columns:
+        var(--shell-rail-width)
+        minmax(240px, var(--agent-console-source-width))
+        1px
+        minmax(0, 1fr)
+        1px
+        minmax(320px, var(--agent-console-inspector-width));
+      grid-template-rows: var(--shell-header-height) var(--tab-bar-height) minmax(0, 1fr);
+      grid-template-areas:
+        "rail header header header header header"
+        "rail tabs tabs tabs tabs tabs"
+        "rail list source-separator main inspector-separator inspector";
+      width: 100vw;
+      height: calc(100dvh - var(--status-bar-height));
+      background: var(--surface-app);
+      color: var(--text-primary);
+    }
+
+    .main-panel {
+      display: grid;
+      grid-template-rows: minmax(220px, 0.95fr) minmax(220px, 1.05fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .agent-shell .resize-separator[data-resize-var="--agent-console-source-width"] {
+      grid-area: source-separator;
+    }
+
+    .agent-shell .resize-separator[data-resize-var="--agent-console-inspector-width"] {
+      grid-area: inspector-separator;
+    }
+
+    .agent-shell::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: var(--surface-noise-opacity);
+      pointer-events: none;
+    }
+
+    .noise-svg-source {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    }
+
+    .shell-rail,
+    .agent-header,
+    .agent-tabs,
+    .list-panel,
+    .main-panel,
+    .inspector {
+      position: relative;
+      z-index: 1;
+    }
+
+    .shell-rail {
+      grid-area: rail;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-10);
+      padding: var(--space-12) 0;
+      border-right: 1px solid var(--border-subtle);
+      background: var(--surface-elevated);
+    }
+
+    .rail-logo {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-6);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 14%, var(--surface-panel-base));
+      font-family: var(--font-family-heading);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .rail-nav,
+    .rail-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      align-items: center;
+    }
+
+    .rail-bottom {
+      margin-top: auto;
+    }
+
+    .rail-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-6);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    .rail-icon.active,
+    .rail-icon:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .agent-header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      gap: var(--space-10);
+      padding: 0 var(--space-16);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .title-stack {
+      flex: 0 0 252px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .page-title {
+      margin: 0;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.2;
+      letter-spacing: 0;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
+      padding-bottom: 2px;
+    }
+
+    .page-subtitle {
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .summary-grid {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      overflow: hidden;
+    }
+
+    .summary-card {
+      flex: 0 0 auto;
+      height: var(--badge-md-height);
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-2) var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+    }
+
+    .summary-label {
+      display: block;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .summary-value {
+      display: block;
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      flex: 0 0 auto;
+    }
+
+    .btn-cta,
+    .btn-ghost {
+      height: var(--density-action-height);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      padding: var(--btn-sm-padding-y) var(--btn-padding-x);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      white-space: nowrap;
+      transition:
+        background var(--motion-duration-fast) var(--motion-easing-standard),
+        border-color var(--motion-duration-fast) var(--motion-easing-standard),
+        color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .btn-cta svg,
+    .btn-ghost svg {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+    }
+
+    .btn-cta {
+      border-color: var(--brand-accent);
+      background: var(--brand-accent);
+      color: var(--text-primary);
+      font-family: var(--font-family-ui);
+      padding-left: var(--btn-cta-padding-x);
+      padding-right: var(--btn-cta-padding-x);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-family-ui);
+    }
+
+    .btn-cta:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .btn-ghost:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-default);
+      color: var(--text-primary);
+    }
+
+    .agent-tabs {
+      grid-area: tabs;
+      display: flex;
+      align-items: stretch;
+      gap: var(--space-2);
+      padding: 0 var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-base) 92%, transparent);
+    }
+
+    .tab {
+      min-width: 88px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-6);
+      border-bottom: 2px solid transparent;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+
+    .tab-overflow {
+      min-width: 32px;
+      width: 32px;
+      padding: 0;
+      color: var(--text-secondary);
+    }
+
+    .badge {
+      min-width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-full);
+      background: var(--surface-panel-elevated);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .panel-header {
+      height: var(--panel-header-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 84%, transparent);
+    }
+
+    .panel-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .panel-kicker {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .list-panel {
+      grid-area: list;
+      border-right: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-base) 92%, transparent);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: var(--space-6);
+      padding: var(--space-10);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .filter-chip {
+      min-height: 24px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+    }
+
+    .filter-chip.active {
+      color: var(--brand-accent);
+      border-color: color-mix(in oklch, var(--brand-accent) 36%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 10%, transparent);
+    }
+
+    .run-list {
+      overflow-y: auto;
+      padding: var(--space-10);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    .run-card {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      padding: var(--space-10);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    .run-card.selected {
+      border-color: color-mix(in oklch, var(--brand-accent) 52%, transparent);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
+    }
+
+    .run-head {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-8);
+    }
+
+    .run-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      line-height: 1.35;
+    }
+
+    .status-pill {
+      min-height: 20px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .status-pill.running {
+      color: var(--system-healthy-fg);
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 32%, transparent);
+      background: var(--system-healthy-bg);
+    }
+
+    .status-pill.warn {
+      color: var(--risk-warning-fg);
+      border-color: color-mix(in oklch, var(--risk-warning-fg) 34%, transparent);
+      background: color-mix(in oklch, var(--risk-warning-fg) 10%, transparent);
+    }
+
+    .status-pill.blocked {
+      color: var(--risk-critical-fg);
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 34%, transparent);
+      background: color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);
+    }
+
+    .progress {
+      height: var(--progress-bar-height);
+      border-radius: var(--radius-full);
+      background: var(--surface-panel-elevated);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 52%, var(--system-healthy-fg)));
+    }
+
+    .w-28 { width: 28%; }
+    .w-46 { width: 46%; }
+    .w-68 { width: 68%; }
+    .w-82 { width: 82%; }
+
+    .main-panel {
+      grid-area: main;
+      background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
+    }
+
+    .top-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      min-height: 0;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .timeline,
+    .findings,
+    .autoresearch,
+    .quality {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    .timeline-body,
+    .findings-body,
+    .dashboard-body {
+      min-height: 0;
+      height: auto;
+      padding: var(--space-12);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      gap: var(--space-10);
+      align-items: start;
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+    }
+
+    .event-time {
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+    }
+
+    .event-title {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .event-note {
+      margin-top: var(--space-2);
+      color: var(--text-tertiary);
+      line-height: 1.45;
+    }
+
+    .finding-row {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr) 44px 54px 34px 58px;
+      gap: var(--space-6);
+      align-items: center;
+      min-height: 44px;
+      padding: 0 var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .finding-row > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .finding-row.header {
+      min-height: 30px;
+      color: var(--text-tertiary);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+    }
+
+    .bottom-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(90px, 1fr));
+      gap: var(--space-8);
+      margin-bottom: var(--space-12);
+    }
+
+    .road-node,
+    .score-card,
+    .artifact-card {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      padding: var(--space-10);
+    }
+
+    .node-kind,
+    .card-label {
+      display: block;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-ui);
+      letter-spacing: 0;
+    }
+
+    .node-title,
+    .card-value {
+      display: block;
+      margin-top: var(--space-4);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      line-height: 1.35;
+    }
+
+    .score-grid,
+    .artifact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-8);
+    }
+
+    .inspector {
+      grid-area: inspector;
+      overflow-y: auto;
+      border-left: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-base) 94%, transparent);
+    }
+
+    .inspector-section {
+      padding: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10);
+    }
+
+    .section-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-8);
+    }
+
+    .kv {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-8);
+      background: var(--surface-panel-base);
+    }
+
+    .trace-item {
+      display: grid;
+      grid-template-columns: 8px 1fr auto;
+      gap: var(--space-8);
+      align-items: start;
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      margin-top: 5px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      box-sizing: border-box;
+      border: 1px solid transparent;
+    }
+
+    .approval-box {
+      padding: var(--space-10);
+      border-radius: var(--radius-6);
+      border: 1px solid color-mix(in oklch, var(--risk-warning-fg) 36%, var(--border-subtle));
+      background: color-mix(in oklch, var(--risk-warning-fg) 8%, var(--surface-panel-base));
+    }
+
+    .state-strip {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: var(--space-6);
+    }
+
+    .state-chip {
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-bar {
+      position: relative;
+      z-index: 3;
+      height: var(--status-bar-height);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: 0 var(--space-12);
+      margin-left: var(--shell-rail-width);
+      width: calc(100vw - var(--shell-rail-width));
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-panel-base);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      white-space: nowrap;
+    }
+
+    #default-view > .status-bar {
+      position: relative;
+      bottom: auto;
+      flex: 0 0 var(--status-bar-height) !important;
+      height: var(--status-bar-height) !important;
+      overflow: hidden !important;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--system-healthy-fg);
+      box-sizing: border-box;
+      border: 1px solid var(--system-healthy-fg);
+    }
+
+    .status-sep {
+      color: var(--text-disabled);
+    }
+
+    .status-spacer {
+      flex: 1;
+    }
+
+    .status-kbd {
+      min-height: 16px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--space-4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-3);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 1280px) {
+      .agent-shell {
+        --agent-console-source-width: 260px;
+        --agent-console-inspector-width: 340px;
+        grid-template-columns:
+          var(--shell-rail-width)
+          minmax(240px, var(--agent-console-source-width))
+          1px
+          minmax(520px, 1fr)
+          1px
+          minmax(320px, var(--agent-console-inspector-width));
+      }
+
+      .main-panel {
+        grid-template-rows: none;
+        grid-auto-rows: max-content;
+        align-content: start;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+
+      .top-main,
+      .bottom-main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-auto-rows: minmax(180px, auto);
+      }
+
+      .timeline,
+      .findings,
+      .autoresearch,
+      .quality {
+        min-height: 180px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+
+      .timeline-body,
+      .findings-body,
+      .dashboard-body {
+        height: auto;
+        min-height: 0;
+      }
+    }
+
+    /* ── P0: Font family fixes ── */
+    .card-value,
+    .node-title {
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── P0: Three-state micro-interactions ── */
+    .run-card {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+
+    .run-card:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: color-mix(in oklch, var(--brand-accent) 18%, var(--border-subtle));
+    }
+
+    .run-card:active {
+      background: var(--interaction-active-bg);
+    }
+
+    .tab {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+
+    .tab:not(.active):hover {
+      color: var(--text-secondary);
+      border-bottom-color: color-mix(in oklch, var(--brand-accent) 20%, transparent);
+    }
+
+    .filter-chip {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+
+    .filter-chip:not(.active):hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      color: var(--text-secondary);
+    }
+
+    .finding-row:not(.header) {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+
+    .finding-row:not(.header):hover {
+      background: var(--interaction-hover-subtle-bg);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
+    }
+
+    .trace-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-4);
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
+
+    .trace-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .trace-item:hover .dot {
+      border-color: var(--brand-accent);
+      opacity: 0.86;
+    }
+
+    .btn-ghost:active { background: var(--interaction-active-bg); }
+    .btn-cta:active { background: color-mix(in oklch, var(--brand-accent) 80%, black); }
+
+    /* ── P0: Focus-visible ring ── */
+    .btn-cta:focus-visible,
+    .btn-ghost:focus-visible,
+    .tab:focus-visible,
+    .filter-chip:focus-visible,
+    .run-card:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 1px;
+    }
+
+    .resize-separator:focus-visible {
+      box-shadow: 0 0 0 2px var(--interaction-focus-ring);
+    }
+
+    /* ── P0: Confidence color coding ── */
+    .finding-conf {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .finding-conf::after {
+      content: "";
+      width: 24px;
+      height: 3px;
+      border-radius: var(--radius-full);
+      background: currentColor;
+      opacity: 0.3;
+    }
+
+    .conf-high .finding-conf { color: var(--system-healthy-fg); font-weight: var(--font-weight-semibold); }
+    .conf-med .finding-conf { color: var(--risk-warning-fg); font-weight: var(--font-weight-medium); }
+    .conf-low .finding-conf { color: var(--risk-critical-fg); font-weight: var(--font-weight-semibold); }
+
+    /* Finding source tags */
+    .finding-source {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-4);
+      white-space: nowrap;
+    }
+    .finding-source.wind { background: color-mix(in oklch, var(--brand-accent) 12%, transparent); color: var(--brand-accent); }
+    .finding-source.tushare { background: color-mix(in oklch, var(--cyan-500) 12%, transparent); color: var(--cyan-500); }
+    .finding-source.internal { background: color-mix(in oklch, var(--purple-500) 12%, transparent); color: var(--purple-500); }
+
+    /* Finding checkbox + batch action bar */
+    .finding-row .finding-checkbox { width: 16px; height: 16px; accent-color: var(--brand-accent); cursor: pointer; flex-shrink: 0; }
+    .batch-actions { display: none; }
+    .finding-row:has(.finding-checkbox:checked) ~ .batch-actions { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-8); background: var(--surface-strip); border-top: 1px solid var(--border-subtle); font-size: var(--font-size-12); color: var(--text-secondary); }
+    .batch-btn { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); padding: var(--space-2) var(--space-8); border: 1px solid var(--border-default); border-radius: var(--radius-4); cursor: pointer; color: var(--text-secondary); }
+    .batch-btn:hover { background: var(--interaction-hover-subtle-bg); }
+    .batch-btn.primary { border-color: var(--brand-accent); color: var(--brand-accent); }
+    .batch-btn.primary:hover { background: var(--brand-accent-subtle); }
+    .batch-btn.danger { border-color: var(--risk-critical-fg); color: var(--risk-critical-fg); }
+    .exposure-impact { font-size: var(--font-size-10); color: var(--text-tertiary); margin-left: auto; }
+
+    /* bar width utility classes for micro-bar */
+    .bar-w-69 .micro-bar-fill { width: 69%; }
+    .bar-w-78 .micro-bar-fill { width: 78%; }
+    .bar-w-86 .micro-bar-fill { width: 86%; }
+    .bar-w-91 .micro-bar-fill { width: 91%; }
+
+    /* ── P0: Score direction indicators ── */
+    .card-value[data-delta="up"] { color: var(--system-healthy-fg); }
+    .card-value[data-delta="down"] { color: var(--risk-critical-fg); }
+    .card-value[data-delta="up"]::before { content: "▲ "; font-size: var(--font-size-12); }
+    .card-value[data-delta="down"]::before { content: "▼ "; font-size: var(--font-size-12); }
+
+    /* ── Non-color status encoding (CVD-safe) ── */
+    .status-pill.running::before { content: "● "; font-size: var(--font-size-12); }
+    .status-pill.warn::before { content: "▲ "; font-size: var(--font-size-12); }
+    .status-pill.blocked::before { content: "✕ "; font-size: var(--font-size-12); }
+
+    /* ── Breathing animations ── */
+    @keyframes status-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+
+    @keyframes indicator-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.78; transform: scale(1.08); }
+    }
+
+    @keyframes progress-shift {
+      0% { background-position: 0 0; }
+      100% { background-position: 40px 0; }
+    }
+
+    .status-pill.running {
+      animation: status-breathe 3s var(--motion-easing-standard) infinite;
+    }
+
+    .status-indicator {
+      animation: indicator-pulse 2.5s var(--motion-easing-standard) infinite;
+    }
+
+    .progress-fill {
+      background-size: 200% 100%;
+      animation: progress-shift 2s linear infinite;
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .status-pill.running,
+      .status-indicator,
+      .progress-fill {
+        animation-duration: 0.001ms;
+        animation-iteration-count: 1;
+      }
+    }
+
+    /* ── Timeline vertical connector ── */
+    .event { position: relative; }
+
+    .event::before {
+      content: "";
+      position: absolute;
+      left: 32px;
+      top: 0;
+      bottom: calc(-1 * var(--space-8));
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    .event:first-child::before { top: 50%; }
+    .event:last-child::before { bottom: 50%; }
+
+    /* ── Artifact card accent ── */
+    .artifact-card {
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
+    }
+
+    /* ── Status bar separator fix ── */
+    .status-sep {
+      display: inline-block;
+      width: 1px;
+      height: 10px;
+      background: var(--border-subtle);
+      vertical-align: middle;
+      color: transparent;
+      font-size: 0;
+    }
+
+    /* ── Console log syntax highlighting ── */
+    .log-line .kw,
+    .trace-item .kw { color: var(--brand-accent); }
+    .log-line .fn,
+    .trace-item .fn { color: var(--system-healthy-fg); }
+    .log-line .str,
+    .trace-item .str { color: var(--market-up-fg); }
+    .log-line .num,
+    .trace-item .num { color: var(--market-down-fg); font-family: var(--font-family-numeric, monospace); }
+    .log-line .cmt,
+    .trace-item .cmt { color: var(--text-tertiary); font-style: italic; }
+
+    @media (max-width: 1440px) {
+      .summary-card:nth-child(5) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .title-stack {
+        flex-basis: 232px;
+      }
+
+      .agent-header .header-command-trigger {
+        width: var(--header-btn-size) !important;
+        min-width: var(--header-btn-size) !important;
+        justify-content: center !important;
+        padding: 0 !important;
+      }
+
+      .agent-header .header-command-trigger .command-query,
+      .agent-header .header-command-trigger .command-shortcut {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+  <a class="skip-link" href="#main">跳转到智能体控制台主区域</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — 智能体控制台 · Compact · Platform</div>
+  <section class="agent-shell studio-shell shell-studio" aria-label="智能体控制台" data-resizable-panel-group="agent-console-workspace">
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon active" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+    </nav>
+
+    <header class="agent-header shell-header" data-contract-slot="header" data-primary-answer-equivalent data-primary-weight="dominant" aria-label="影响范围：智能体治理运行状态">
+      <div class="title-stack">
+        <h1 class="page-title">Governed Research</h1>
+        <div class="page-subtitle" data-answer-judgment>GLM · balanced · enabled · degraded: none</div>
+      </div>
+      <div class="summary-grid">
+        <div class="summary-card"><span class="summary-label">运行中</span><span class="summary-value" data-answer-metric>7 个任务</span></div>
+        <div class="summary-card"><span class="summary-label">待审批</span><span class="summary-value" data-answer-evidence>12 项审批</span></div>
+        <div class="summary-card"><span class="summary-label">已阻断</span><span class="summary-value" data-answer-evidence>3 条规则</span></div>
+        <div class="summary-card"><span class="summary-label">产物</span><span class="summary-value">48 项</span></div>
+        <div class="summary-card"><span class="summary-label">质量</span><span class="summary-value">回归 +4.2</span></div>
+      </div>
+      <div class="header-actions">
+        <label class="btn-ghost" for="overlay-campaign-draft" role="button" tabindex="0" aria-label="新建研究 Campaign">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 2l6 2.2v4.6c0 3.8-2.4 7.1-6 8.7-3.6-1.6-6-4.9-6-8.7V4.2L10 2z"/><path d="M7.2 10.2l1.8 1.8 3.8-4.2"/></svg>
+          新建 Campaign
+        </label>
+        <label class="btn-cta" for="overlay-run-create" role="button" tabindex="0" aria-label="新建治理运行" data-answer-action>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 4v12M4 10h12"/><path d="M5 5h10v10H5z"/></svg>
+          新建 Run
+        </label>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" aria-haspopup="dialog" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="agent-tabs" aria-label="智能体控制台标签" data-contract-slot="tabs" data-decision-cluster>
+      <button class="tab active" type="button" data-decision-option aria-label="查看 Runs">Runs <span class="badge">21</span></button>
+      <button class="tab" type="button" data-decision-option aria-label="查看 Campaigns">Campaigns <span class="badge">8</span></button>
+      <button class="tab" type="button" data-decision-option aria-label="查看 Approvals">Approvals <span class="badge">12</span></button>
+    </nav>
+
+    <aside class="list-panel" id="agent-source-panel" data-contract-slot="source" aria-label="Session、Run 和 Campaign 恢复列表" data-secondary-context>
+      <div class="panel-header">
+        <div class="panel-title">恢复队列</div>
+        <div class="panel-kicker">cursor 184</div>
+      </div>
+      <div class="filter-bar" role="radiogroup" aria-label="筛选运行列表">
+        <button type="button" class="filter-chip active" role="radio" aria-checked="true">全部</button>
+        <button type="button" class="filter-chip" role="radio" aria-checked="false">运行中</button>
+        <button type="button" class="filter-chip" role="radio" aria-checked="false">已阻断</button>
+      </div>
+      <div class="run-list" role="listbox" aria-label="运行列表">
+        <article class="run-card selected" tabindex="0" role="option" aria-selected="true">
+          <div class="run-head">
+            <div>
+               <div class="run-title">低相关反转 Alpha 探索</div>
+               <div class="panel-kicker">alpha-discovery · run-8842</div>
+             </div>
+             <span class="status-pill running">运行中</span>
+           </div>
+           <div class="progress"><div class="progress-fill w-68"></div></div>
+          <div class="panel-kicker">17 个候选 · 4 个产物 · 2 项审批</div>
+        </article>
+        <article class="run-card" tabindex="0" role="option" aria-selected="false">
+          <div class="run-head">
+            <div>
+               <div class="run-title">晨间信号复核批次</div>
+               <div class="panel-kicker">risk-review · run-8838</div>
+             </div>
+             <span class="status-pill warn">待审批</span>
+           </div>
+           <div class="progress"><div class="progress-fill w-82"></div></div>
+          <div class="panel-kicker">5 条警告 · 1 条阻断 · 等待交易员</div>
+        </article>
+        <article class="run-card" tabindex="0" role="option" aria-selected="false">
+          <div class="run-head">
+            <div>
+               <div class="run-title">价值组合策略维护</div>
+               <div class="panel-kicker">strategy-maintenance · run-8829</div>
+             </div>
+             <span class="status-pill blocked">已阻断</span>
+           </div>
+           <div class="progress"><div class="progress-fill w-46"></div></div>
+          <div class="panel-kicker">需要工具权限 · 优化器写入</div>
+        </article>
+        <article class="run-card" tabindex="0" role="option" aria-selected="false">
+          <div class="run-head">
+            <div>
+               <div class="run-title">每日量化简报</div>
+               <div class="panel-kicker">daily-brief · run-8814</div>
+             </div>
+             <span class="status-pill">完成</span>
+           </div>
+           <div class="progress"><div class="progress-fill w-28"></div></div>
+          <div class="panel-kicker">已发送到首页 · 数据新鲜度正常</div>
+        </article>
+      </div>
+    </aside>
+
+    <div class="resize-separator" data-resize-separator data-resize-var="--agent-console-source-width" data-resize-default="288" data-resize-min="240" data-resize-max="380" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整计划列表宽度" aria-orientation="vertical" aria-controls="main agent-source-panel" aria-valuemin="240" aria-valuemax="380" aria-valuenow="288" aria-valuetext="调整计划列表宽度 288 像素"></div>
+
+    <main id="main" class="main-panel" data-contract-slot="main" data-selected-object-region aria-label="智能体控制台工作区">
+      <section class="top-main">
+        <div class="timeline">
+          <div class="panel-header">
+            <div class="panel-title">Evidence Spine</div>
+            <div class="panel-kicker">run-8842 · projection v3</div>
+          </div>
+          <div class="timeline-body" role="log" aria-label="Evidence Spine 证据脊柱">
+            <div class="event">
+              <span class="event-time">09:12:04</span>
+              <div><div class="event-title">Objective</div><div class="event-note">验证低相关反转信号 · hash 7b18…e04a</div></div>
+              <span class="status-pill">有效 · 已固定</span>
+            </div>
+            <div class="event">
+              <span class="event-time">09:13:21</span>
+              <div><div class="event-title">Tool · <span class="fn">factor_evidence</span></div><div class="event-note">4 cited refs · cutoff 2026-08-18T09:10+08:00 · snapshot ds-119</div></div>
+              <span class="status-pill running">已脱敏</span>
+            </div>
+            <div class="event">
+              <span class="event-time">09:14:09</span>
+              <div><div class="event-title">Guardrail</div><div class="event-note">evidence completeness pass · policy governed-research.v2</div></div>
+              <span class="status-pill">通过</span>
+            </div>
+            <div class="event">
+              <span class="event-time">09:16:42</span>
+              <div><div class="event-title">Approval · exact action</div><div class="event-note">创建 research artifact · payload hash 1a92…8f3c · 09:31 到期</div></div>
+              <span class="status-pill warn">待审批</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="findings">
+          <div class="panel-header">
+            <div class="panel-title">发现</div>
+            <div class="panel-kicker">已选 · 候选因子</div>
+          </div>
+          <div class="findings-body">
+            <div class="finding-row header"><span></span><span>发现</span><span>置信</span><span>来源</span><span>级别</span><span>状态</span></div>
+            <div class="finding-row conf-high" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>流动性调整反转 12D</span><span class="finding-conf">86<span class="micro-bar bar-w-86"><span class="micro-bar-fill up"></span></span></span><span><span class="finding-source internal">内部模型</span></span><span>信息</span><span class="status-pill warn">待处理</span></div>
+            <div class="finding-row conf-high" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>公告漂移残差</span><span class="finding-conf">91<span class="micro-bar bar-w-91"><span class="micro-bar-fill up"></span></span></span><span><span class="finding-source wind">Wind</span></span><span>警告</span><span class="status-pill blocked">已阻断</span></div>
+            <div class="finding-row conf-med" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>晨间信号批次风控复核</span><span class="finding-conf">78<span class="micro-bar bar-w-78"><span class="micro-bar-fill accent"></span></span></span><span><span class="finding-source tushare">Tushare</span></span><span>警告</span><span class="status-pill warn">待审批</span></div>
+            <div class="finding-row conf-low" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>北向资金数据新鲜度缺口</span><span class="finding-conf">69<span class="micro-bar bar-w-69"><span class="micro-bar-fill risk"></span></span></span><span><span class="finding-source wind">Wind</span></span><span>严重</span><span class="status-pill blocked">已阻断</span></div>
+            <div class="batch-actions" aria-label="批量操作"><span>已选 N 项</span><button class="batch-btn primary">批量审批</button><button class="batch-btn danger">批量拒绝</button><button class="batch-btn">添加标签</button><span class="exposure-impact">预计敞口影响: ±0.8%</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bottom-main">
+        <div class="autoresearch">
+          <div class="panel-header">
+            <div class="panel-title">自动研究</div>
+            <div class="panel-kicker">路径 /research/alpha?run=8842</div>
+          </div>
+          <div class="dashboard-body">
+            <div class="roadmap">
+              <div class="road-node"><span class="node-kind">范围</span><span class="node-title">CSI 800 高流动性</span></div>
+              <div class="road-node"><span class="node-kind">主轴</span><span class="node-title">成交量调整反转</span></div>
+              <div class="road-node"><span class="node-kind">最佳</span><span class="node-title">IC 0.047 · 相关 0.29</span></div>
+              <div class="road-node"><span class="node-kind">下一步</span><span class="node-title">样本外与容量复核</span></div>
+            </div>
+            <div class="artifact-grid">
+              <div class="artifact-card"><span class="card-label">实验</span><span class="card-value">128</span></div>
+              <div class="artifact-card"><span class="card-label">有效发现</span><span class="card-value">17</span></div>
+              <div class="artifact-card"><span class="card-label">已采纳</span><span class="card-value">3</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="quality">
+          <div class="panel-header">
+            <div class="panel-title">质量评测</div>
+            <div class="panel-kicker">评测集 aq-v5</div>
+          </div>
+          <div class="dashboard-body">
+            <div class="score-grid">
+              <div class="score-card"><span class="card-label">正确性</span><span class="card-value" data-delta="up">88.4</span></div>
+              <div class="score-card"><span class="card-label">证据</span><span class="card-value" data-delta="up">91.2</span></div>
+              <div class="score-card"><span class="card-label">成本</span><span class="card-value" data-delta="down">-12%</span></div>
+              <div class="score-card"><span class="card-label">回归</span><span class="card-value" data-delta="up">+4.2</span></div>
+              <div class="score-card"><span class="card-label">延迟</span><span class="card-value">18.6s</span></div>
+              <div class="score-card"><span class="card-label">失败样本</span><span class="card-value">7 例</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="resize-separator" data-resize-separator data-resize-var="--agent-console-inspector-width" data-resize-default="372" data-resize-min="320" data-resize-max="520" role="separator" tabindex="0" aria-label="调整运行检查器宽度" aria-orientation="vertical" aria-controls="main agent-inspector-panel" aria-valuemin="320" aria-valuemax="520" aria-valuenow="372" aria-valuetext="调整运行检查器宽度 372 像素"></div>
+
+    <aside class="inspector" id="agent-inspector-panel" data-contract-slot="inspector" data-selected-object-region aria-label="运行检查器">
+      <div class="panel-header">
+        <div class="panel-title">运行检查器</div>
+        <div class="panel-kicker">run-8842</div>
+      </div>
+      <section class="inspector-section" data-decision-evidence data-default-open="true" aria-label="运行检查摘要">
+        <div class="section-title">运行摘要</div>
+        <div class="kv-grid">
+          <div class="kv"><span class="card-label">目标</span><span class="card-value">低相关 Alpha</span></div>
+          <div class="kv"><span class="card-label">状态</span><span class="card-value">运行中</span></div>
+          <div class="kv"><span class="card-label">预算</span><span class="card-value">已用 62%</span></div>
+          <div class="kv"><span class="card-label">更新</span><span class="card-value">09:42:18</span></div>
+        </div>
+      </section>
+
+      <section class="inspector-section">
+        <div class="section-title">智能体流水线</div>
+        <div class="trace-item"><span class="dot"></span><span>分析员 · 搜索空间已准备</span><span class="status-pill">已完成</span></div>
+        <div class="trace-item"><span class="dot"></span><span>研究员 · 候选持续生成</span><span class="status-pill running">运行中</span></div>
+        <div class="trace-item"><span class="dot"></span><span>风控 · 采纳检查待处理</span><span class="status-pill warn">待审批</span></div>
+      </section>
+
+      <section class="inspector-section" data-background-evidence aria-label="Evidence Spine 详情">
+        <div class="section-title">Evidence Spine</div>
+        <div class="trace-item"><span class="dot"></span><span>候选因子已创建 · fc-1042</span><span class="event-time">09:42</span></div>
+        <div class="trace-item"><span class="dot"></span><span>工具完成 · IC 0.047</span><span class="event-time">09:41</span></div>
+        <div class="trace-item"><span class="dot"></span><span>审批请求已发送</span><span class="event-time">09:39</span></div>
+      </section>
+
+      <section class="inspector-section" data-background-evidence aria-label="工具追踪">
+        <div class="section-title">工具追踪</div>
+        <div class="trace-item"><span class="dot"></span><span><span class="fn">calc_factor_ic</span> · 输入 schema v2 · 输出产物 <span class="str">af-4421</span></span><span><span class="num">2.4</span>s</span></div>
+        <div class="trace-item"><span class="dot"></span><span><span class="fn">scan_correlation</span> · 最高相关 <span class="num">0.29</span> · 数据快照 <span class="str">ds-119</span></span><span><span class="num">1.8</span>s</span></div>
+        <div class="trace-item"><span class="dot"></span><span><span class="fn">guardrail_check</span> · 公告时间戳权限被阻断</span><span class="status-pill blocked">已阻断</span></div>
+      </section>
+
+      <section class="inspector-section">
+        <div class="section-title">证据链</div>
+        <div class="kv-grid">
+          <div class="kv"><span class="card-label">数据集</span><span class="card-value">cn_daily_v21</span></div>
+          <div class="kv"><span class="card-label">快照</span><span class="card-value">ds-119</span></div>
+          <div class="kv"><span class="card-label">因子</span><span class="card-value">fc-1042</span></div>
+          <div class="kv"><span class="card-label">IC</span><span class="card-value">0.047</span></div>
+        </div>
+      </section>
+
+      <section class="inspector-section">
+        <div class="section-title">产物</div>
+        <div class="artifact-grid">
+          <div class="artifact-card"><span class="card-label">因子</span><span class="card-value">fc-1042</span></div>
+          <div class="artifact-card"><span class="card-label">图表</span><span class="card-value">帕累托</span></div>
+          <div class="artifact-card"><span class="card-label">追踪</span><span class="card-value">tr-8842</span></div>
+        </div>
+      </section>
+
+      <section class="inspector-section">
+        <div class="approval-box">
+          <div class="section-title">审批面板</div>
+          <p class="event-note">因子采纳需要显式审批。通过后会创建 FactorArtifact 并自动生成信号至待复核队列。</p>
+          <div class="header-actions">
+            <button class="btn-ghost" type="button" aria-label="驳回审批">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+              驳回
+            </button>
+            <label for="overlay-approval-exact-action" class="btn-cta" role="button" tabindex="0" aria-label="检查精确动作并审批">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 10l3.2 3.2L15 6"/></svg>
+              通过
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="inspector-section">
+        <div class="section-title">状态覆盖</div>
+        <div class="state-strip">
+          <span class="state-chip">默认</span>
+          <span class="state-chip">加载</span>
+          <span class="state-chip">空态</span>
+          <span class="state-chip">失败</span>
+          <span class="state-chip">部分</span>
+          <span class="state-chip">阻断</span>
+          <span class="state-chip">审批</span>
+        </div>
+      </section>
+    </aside>
+  </section>
+
+  <footer class="status-bar" role="status" aria-label="智能体控制台状态" data-contract-slot="status">
+    <span class="status-indicator"></span>
+    <span>智能体控制台</span>
+    <span>provider GLM · balanced</span>
+    <span class="status-sep">|</span>
+    <span>运行</span>
+    <span>cursor 184 · projection v3</span>
+    <span class="status-sep">|</span>
+    <span>审批</span>
+    <span>62 / 120 tools · 18m budget</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl K</span>
+    <span>命令</span>
+    <span class="status-sep">|</span>
+    <span>Platform · Agents</span>
+  </footer>
+
+  </section>
+
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>Governed Research 状态画廊</h2>
+      <p class="gallery-summary">覆盖恢复、降级、审批、Guardrail、SSE 重连与全部终态；任何接口失败都不回退 mock。</p>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="run-list">
+        <div class="gallery-group__label">运行列表</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">运行列表 · 默认</div><div class="gallery-card__preview"><article class="run-card"><div class="run-head"><div><div class="run-title">Alpha 探索</div><div class="panel-kicker">run-8842 · 17 个候选</div></div><span class="status-pill running">运行中</span></div></article></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">运行列表 · 加载</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">运行列表 · 空态</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-title">暂无计划</div><div class="state-empty-desc">创建新的研究流水线开始治理智能体任务。</div><button class="state-empty-cta">创建流水线</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">运行列表 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">运行列表加载失败</div><div class="state-error-desc">智能体引擎暂不可用。</div><button class="state-error-retry" type="button">重试</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">运行列表 · 过期</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">列表可能过期</div><p class="event-note">最后同步 15 分钟前，建议刷新后再审批。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">运行列表 · 选中</div><div class="gallery-card__preview"><article class="run-card selected"><div class="run-head"><div><div class="run-title">信号复核</div><div class="panel-kicker">已选中 · 联动检查器</div></div><span class="status-pill warn">审批</span></div></article></div></div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="timeline">
+        <div class="gallery-group__label">时间线</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 默认</div><div class="gallery-card__preview"><div class="event"><span class="event-time">09:42</span><div><div class="event-title">工具已完成</div><div class="event-note"><span class="fn">calc_factor_ic</span> · IC <span class="num">0.047</span></div></div><span class="status-pill">追踪</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 加载</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 空态</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-title">暂无事件</div><div class="state-empty-desc">运行启动后会流式显示智能体活动。</div><button class="state-empty-cta">启动运行</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">事件流断开</div><button class="state-error-retry" type="button">重新连接</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 运行中</div><div class="gallery-card__preview"><div class="event"><span class="event-time">实时</span><div><div class="event-title">研究员持续生成</div><div class="event-note">候选因子持续生成。</div></div><span class="status-pill running">流式</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 部分</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">部分结果可用</div><p class="event-note">4 个产物已完成，2 个工具仍在等待。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 阻断</div><div class="gallery-card__preview"><div class="event"><span class="event-time">阻断</span><div><div class="event-title">规则阻断</div><div class="event-note">数据权限不足。</div></div><span class="status-pill blocked">已阻断</span></div></div></div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="finding-table">
+        <div class="gallery-group__label">发现表格</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 默认</div><div class="gallery-card__preview"><div class="finding-row"><span>流动性反转</span><span>86</span><span>信息</span><span class="status-pill warn">待处理</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 加载</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 空态</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-title">暂无发现</div><div class="state-empty-desc">候选结论出现后会进入审批队列。</div><button class="state-empty-cta">查看运行列表</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">发现数据异常</div><button class="state-error-retry" type="button">重试</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 过期</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">证据已过期</div><p class="event-note">数据快照需要重新确认。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 选中</div><div class="gallery-card__preview"><div class="finding-row"><span>公告漂移</span><span>91</span><span>警告</span><span class="status-pill blocked">已选中</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 批量</div><div class="gallery-card__preview"><div class="header-actions"><button class="btn-ghost" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 10h9"/><path d="M10 6l4 4-4 4"/><path d="M5 4h10v12H5z"/></svg>提交审批</button><button class="btn-ghost" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>忽略 3 项</button></div></div></div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="inspector">
+        <div class="gallery-group__label">检查器</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 默认</div><div class="gallery-card__preview"><div class="kv-grid"><div class="kv"><span class="card-label">状态</span><span class="card-value">运行中</span></div><div class="kv"><span class="card-label">预算</span><span class="card-value">62%</span></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 加载</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-heading"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 空态</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-title">选择一个运行</div><div class="state-empty-desc">右侧会显示追踪、产物和审批动作。</div><button class="state-empty-cta">浏览运行</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">详情加载失败</div><button class="state-error-retry" type="button">重试</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 运行中</div><div class="gallery-card__preview"><div class="trace-item"><span class="dot"></span><span>研究员 · 候选持续生成</span><span class="status-pill running">运行</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 待审批</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">等待审批</div><p class="event-note">通过后将自动生成信号。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 阻断</div><div class="gallery-card__preview"><div class="trace-item"><span class="dot"></span><span><span class="fn">guardrail_check</span> · 权限被阻断</span><span class="status-pill blocked">已阻断</span></div></div></div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="artifact-viewer">
+        <div class="gallery-group__label">产物查看器</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">产物查看器 · 默认</div><div class="gallery-card__preview"><div class="artifact-grid"><div class="artifact-card"><span class="card-label">因子</span><span class="card-value">fc-1042</span></div><div class="artifact-card"><span class="card-label">图表</span><span class="card-value">帕累托</span></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">产物查看器 · 加载</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">产物查看器 · 空态</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-title">暂无产物</div><div class="state-empty-desc">智能体输出后可预览、复制引用或发送工作区。</div><button class="state-empty-cta">刷新产物</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">产物查看器 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">产物加载失败</div><button class="state-error-retry" type="button">重试</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">产物查看器 · 过期</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">schemaVersion 过期</div><p class="event-note">需要重新生成结构化预览。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">产物查看器 · 选中</div><div class="gallery-card__preview"><div class="artifact-card"><span class="card-label">已选产物</span><span class="card-value">af-4421</span></div></div></div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="quality-dashboard">
+        <div class="gallery-group__label">质量看板</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">质量看板 · 默认</div><div class="gallery-card__preview"><div class="score-grid"><div class="score-card"><span class="card-label">正确性</span><span class="card-value">88.4</span></div><div class="score-card"><span class="card-label">证据</span><span class="card-value">91.2</span></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">质量看板 · 加载</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">质量看板 · 空态</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-title">暂无评测记录</div><div class="state-empty-desc">启动质量评测后显示回归趋势。</div><button class="state-empty-cta">启动评测</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">质量看板 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">评测加载失败</div><button class="state-error-retry" type="button">重试</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">质量看板 · 过期</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">基准集版本过期</div><p class="event-note">建议使用 aq-v6 重新评测。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">质量看板 · 选中</div><div class="gallery-card__preview"><div class="score-card"><span class="card-label">已选评测</span><span class="card-value">eval-904</span></div></div></div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="agent-operational-state">
+        <div class="gallery-group__label">Run / Campaign 运行态</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">加载</div><div class="gallery-card__preview state-variant-content" data-state="loading"><div class="state-loading"><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">空态</div><div class="gallery-card__preview state-variant-content" data-state="empty"><div class="state-empty"><div class="state-empty-title">暂无 Run</div><div class="state-empty-desc">创建 Run 后从服务端恢复列表。</div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">禁用</div><div class="gallery-card__preview state-variant-content" data-state="disabled"><div class="state-error-title">Agent runtime disabled</div><p class="event-note">provider 仅可在服务端配置。</p></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">降级</div><div class="gallery-card__preview state-variant-content" data-state="degraded"><div class="approval-box"><div class="section-title">Profile degraded</div><p class="event-note">balanced 不可用，未自动切换到 mock。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">运行中</div><div class="gallery-card__preview state-variant-content" data-state="running"><span class="status-pill running">Run 正在执行 · cursor 184</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">部分投影</div><div class="gallery-card__preview state-variant-content" data-state="partial"><div class="approval-box"><div class="section-title">部分结果可读</div><p class="event-note">artifact projection 尚未完成，现有证据保留。</p></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">阻断</div><div class="gallery-card__preview state-variant-content" data-state="blocked"><span class="status-pill blocked">后端策略阻断</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">等待审批</div><div class="gallery-card__preview state-variant-content" data-state="waiting-approval"><span class="status-pill warn">等待精确动作审批</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">审批过期</div><div class="gallery-card__preview state-variant-content" data-state="approval-expired"><div class="state-error-title">approval 已过期</div><p class="event-note">重新加载 payload 与 hash 后再决定。</p></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Guardrail 阻断</div><div class="gallery-card__preview state-variant-content" data-state="guardrail-blocked"><span class="status-pill blocked">guardrail_blocked</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">已取消</div><div class="gallery-card__preview state-variant-content" data-state="cancelled"><span class="status-pill">完成取消 · 产物保留</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">失败</div><div class="gallery-card__preview state-variant-content" data-state="failed"><div class="state-error-title">Run failed</div><p class="event-note">reason: provider_timeout</p></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">完成</div><div class="gallery-card__preview state-variant-content" data-state="completed"><span class="status-pill">完成 · Artifact 与 evidence 已固定</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">重连</div><div class="gallery-card__preview state-variant-content" data-state="reconnecting"><span class="status-pill warn">SSE 重连中 · GET projection 仍可用</span></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">陈旧</div><div class="gallery-card__preview state-variant-content" data-state="stale"><div class="approval-box"><div class="section-title">Projection stale</div><p class="event-note">最后 cursor 179；审批暂不可用。</p></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>Governed Research 弹层画廊</h2>
+      <p class="gallery-summary">9 个弹层覆盖 Run 创建/取消、精确审批、证据、产物、Guardrail 与 Campaign 生命周期。</p>
+    </div>
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层</div>
+        <div class="gallery-cards">
+          <div class="gallery-card" data-overlay-ref="overlay-run-create"><div class="gallery-card__label">创建 Run · 侧滑面板</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="创建 Run"><div class="overlay-header"><span class="overlay-title">创建治理运行</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">Objective</span><span class="overlay-field-value">验证低相关反转信号</span></div><div class="overlay-field"><span class="overlay-field-label">Profile / budget</span><span class="overlay-field-value">balanced · 18 分钟 · 120 tools</span></div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-run-cancel"><div class="gallery-card__label">取消 Run · 确认</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface" role="dialog" aria-modal="true" aria-label="取消 Run"><div class="overlay-header"><span class="overlay-title">取消 run-8842？</span></div><div class="overlay-body"><p class="event-note">停止后端执行；已固定的 evidence 与 artifact 保留。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-approval-exact-action">
+            <div class="gallery-card__label">审批确认 · 弹窗</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation data-high-risk-kind="agent-approval batch-approval">
+                <div class="overlay-header">
+                  <span class="overlay-title">确认采纳此发现？</span>
+                </div>
+                <div class="overlay-body">
+                  <div class="risk-confirmation-grid">
+                    <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+                      <div class="risk-confirmation-title">影响范围</div>
+                      <p class="risk-confirmation-copy">通过后自动生成信号至待复核队列，不直接下单。信号会绑定候选因子、证据快照和审批人。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-before-after>
+                      <div class="risk-confirmation-title">审批前后</div>
+                      <p class="risk-confirmation-copy">候选发现 → 待复核信号；交易员仍需在 Signals Inbox 二次确认。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+                      <div class="risk-confirmation-title">对象清单</div>
+                      <p class="risk-confirmation-copy">IC 0.047、证据 91.2、内部模型来源、工具输出 af-4421。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-audit-record>
+                      <div class="risk-confirmation-title">审计记录</div>
+                      <p class="risk-confirmation-copy">记录审批人、run id、工具调用、模型版本、信号草案和审批时间。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-recovery-path>
+                      <div class="risk-confirmation-title">恢复路径</div>
+                      <p class="risk-confirmation-copy">可在 Signals Inbox 驳回信号，或在 Agent Console 撤回本次产物。</p>
+                    </div>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</button>
+                    <button class="overlay-btn overlay-btn-primary" data-confirm-control>确认采纳</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card" data-overlay-ref="overlay-evidence-detail"><div class="gallery-card__label">证据详情 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="证据详情"><div class="overlay-header"><span class="overlay-title">Evidence ev-4421</span></div><div class="overlay-body"><div class="trace-item"><span class="dot"></span><span><span class="fn">factor_evidence</span> · cutoff 09:10 · snapshot ds-119</span><span>hash 5d21…</span></div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-artifact-preview"><div class="gallery-card__label">产物预览 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="产物预览"><div class="overlay-header"><span class="overlay-title">产物 af-4421</span></div><div class="overlay-body"><div class="artifact-grid"><div class="artifact-card"><span class="card-label">schema</span><span class="card-value">factor.v2</span></div><div class="artifact-card"><span class="card-label">快照</span><span class="card-value">ds-119</span></div></div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-guardrail-detail"><div class="gallery-card__label">规则详情 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="规则详情"><div class="overlay-header"><span class="overlay-title">规则阻断</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">策略</span><span class="overlay-field-value">公告时间戳权限</span></div><p class="event-note">申请更高数据权限后可恢复。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-campaign-draft"><div class="gallery-card__label">Campaign 草案 · 侧滑面板</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="Campaign 草案"><div class="overlay-header"><span class="overlay-title">新建 Campaign 草案</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">Objective</span><span class="overlay-field-value">12 个策略候选的证据复核</span></div><div class="overlay-field"><span class="overlay-field-label">硬预算</span><span class="overlay-field-value">45 分钟 · 600 tools</span></div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-campaign-approval"><div class="gallery-card__label">Campaign 审批 · 弹窗</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface" role="dialog" aria-modal="true" aria-label="Campaign 审批"><div class="overlay-header"><span class="overlay-title">批准 Campaign 执行？</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">范围 / hash</span><span class="overlay-field-value">12 strategies · 2f9c…a831</span></div><p class="event-note">批准后才可运行；不连接自动交易。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-campaign-cancel"><div class="gallery-card__label">Campaign 取消 · 弹窗</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface" role="dialog" aria-modal="true" aria-label="Campaign 取消"><div class="overlay-header"><span class="overlay-title">取消 Campaign？</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">精确授权</span><span class="overlay-field-value">authorization 92ac…18f4 · revision 7</span></div><p class="event-note">输入精确确认短语后停止后端执行；既有 trial、evidence 与 artifact 保留。</p></div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="overlay-backdrop" data-overlay="overlay-approval-exact-action">
+    <label class="overlay-dismiss" for="overlay-approval-exact-action" aria-label="关闭审批确认"></label>
+    <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation data-high-risk-kind="agent-approval batch-approval">
+      <div class="overlay-header">
+        <span class="overlay-title">确认采纳此发现？</span>
+        <label for="overlay-approval-exact-action" class="overlay-close" aria-label="关闭">✕</label>
+      </div>
+      <div class="overlay-body">
+        <div class="risk-confirmation-grid">
+          <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+            <div class="risk-confirmation-title">影响范围</div>
+            <p class="risk-confirmation-copy">通过后自动生成信号至待复核队列，不直接下单。信号会绑定候选因子、证据快照和审批人。</p>
+          </div>
+          <div class="risk-confirmation-block" data-before-after>
+            <div class="risk-confirmation-title">审批前后</div>
+            <p class="risk-confirmation-copy">候选发现 → 待复核信号；交易员仍需在 Signals Inbox 二次确认。</p>
+          </div>
+          <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+            <div class="risk-confirmation-title">对象清单</div>
+            <p class="risk-confirmation-copy">IC 0.047、证据 91.2、内部模型来源、工具输出 af-4421。</p>
+          </div>
+          <div class="risk-confirmation-block" data-audit-record>
+            <div class="risk-confirmation-title">审计记录</div>
+            <p class="risk-confirmation-copy">记录审批人、run id、工具调用、模型版本、信号草案和审批时间。</p>
+          </div>
+          <div class="risk-confirmation-block" data-recovery-path>
+            <div class="risk-confirmation-title">恢复路径</div>
+            <p class="risk-confirmation-copy">可在 Signals Inbox 驳回信号，或在 Agent Console 撤回本次产物。</p>
+          </div>
+        </div>
+        <div class="overlay-actions">
+          <label for="overlay-approval-exact-action" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
+          <label for="overlay-approval-exact-action" class="overlay-btn overlay-btn-primary" data-confirm-control>确认采纳</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="checkbox" id="overlay-run-create" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-run-cancel" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-approval-exact-action" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-evidence-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-artifact-preview" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-guardrail-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-campaign-draft" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-campaign-approval" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-campaign-cancel" class="overlay-radio sr-only">
+
+  <svg class="noise-svg-source" aria-hidden="true" width="0" height="0">
+    <filter id="noise-filter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="2" stitchTiles="stitch"></feTurbulence>
+    </filter>
+  </svg>
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+</body>
+</html>

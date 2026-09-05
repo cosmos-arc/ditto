@@ -6,6 +6,7 @@ import functools
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum
 from types import TracebackType
 from typing import Any, ParamSpec, Protocol, TypeVar, cast
 
@@ -19,6 +20,7 @@ from opentelemetry.sdk.trace.export import (
 )
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
+from opentelemetry.trace.status import StatusCode
 from opentelemetry.util.types import AttributeValue
 
 from .config import ObservabilityConfig
@@ -27,10 +29,57 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
+class SpanKind(Enum):
+    """Transport-neutral span kinds mapped to the OpenTelemetry runtime enum."""
+
+    INTERNAL = "internal"
+    SERVER = "server"
+    CLIENT = "client"
+    PRODUCER = "producer"
+    CONSUMER = "consumer"
+
+
 class _SamplerCarrier(Protocol):
     """承载 sampler 属性的最小协议。"""
 
     sampler: Sampler
+
+
+class _RenamableSpan(Protocol):
+    """OpenTelemetry SDK span surface missing from the API package type stub."""
+
+    def update_name(self, name: str) -> None:
+        """Replace the operation name of a live span."""
+        ...
+
+
+class _StatusMutableSpan(Protocol):
+    """OpenTelemetry status surface omitted by the repository's narrow stub."""
+
+    def set_status(self, status: StatusCode) -> None:
+        """Set the semantic terminal status."""
+        ...
+
+
+class _OTelSpanKinds(Protocol):
+    """Runtime OTel span-kind values omitted by the repository's narrow stub."""
+
+    INTERNAL: object
+    SERVER: object
+    CLIENT: object
+    PRODUCER: object
+    CONSUMER: object
+
+
+def _otel_span_kind(kind: SpanKind) -> object:
+    runtime_kinds = cast(_OTelSpanKinds, vars(trace)["SpanKind"])
+    return {
+        SpanKind.INTERNAL: runtime_kinds.INTERNAL,
+        SpanKind.SERVER: runtime_kinds.SERVER,
+        SpanKind.CLIENT: runtime_kinds.CLIENT,
+        SpanKind.PRODUCER: runtime_kinds.PRODUCER,
+        SpanKind.CONSUMER: runtime_kinds.CONSUMER,
+    }[kind]
 
 
 def _attach_sampler(provider: TracerProvider, sampler: Sampler) -> TracerProvider:
@@ -59,8 +108,15 @@ _state = TracingState()
 class SpanContext:
     """Span 上下文管理器。"""
 
-    def __init__(self, name: str, **attributes: AttributeValue) -> None:
+    def __init__(
+        self,
+        name: str,
+        *,
+        kind: SpanKind = SpanKind.INTERNAL,
+        **attributes: AttributeValue,
+    ) -> None:
         self.name = name
+        self.kind = kind
         self.attributes = attributes
         self._span: Any = None
 
@@ -68,10 +124,13 @@ class SpanContext:
         if _state.tracer is None:
             return self
 
-        self._span = _state.tracer.start_as_current_span(self.name)
+        self._span = _state.tracer.start_as_current_span(
+            self.name,
+            kind=_otel_span_kind(self.kind),
+        )
         actual_span = self._span.__enter__()
         for key, value in self.attributes.items():
-            actual_span.set_attribute(key, str(value))
+            actual_span.set_attribute(key, value)
         return self
 
     def __exit__(
@@ -92,12 +151,24 @@ class SpanContext:
     def set_attribute(self, key: str, value: AttributeValue) -> None:
         current = trace.get_current_span()
         if current.is_recording():
-            current.set_attribute(key, str(value))
+            current.set_attribute(key, value)
 
-    def set_status(self, status: str) -> None:
+    def set_status(self, status: StatusCode) -> None:
         current = trace.get_current_span()
         if current.is_recording():
-            current.set_attribute("status", status)
+            cast(_StatusMutableSpan, current).set_status(status)
+
+    def record_exception(self, error: BaseException) -> None:
+        """Record a handled exception on the live span."""
+        current = trace.get_current_span()
+        if current.is_recording():
+            current.record_exception(error)
+
+    def update_name(self, name: str) -> None:
+        """Update a live span name once a late-bound operation name is known."""
+        current = trace.get_current_span()
+        if current.is_recording():
+            cast(_RenamableSpan, current).update_name(name)
 
 
 def configure_tracing(config: ObservabilityConfig) -> trace.Tracer:
@@ -144,9 +215,14 @@ def configure_tracing(config: ObservabilityConfig) -> trace.Tracer:
     return _state.tracer
 
 
-def span(name: str, **attributes: AttributeValue) -> SpanContext:
+def span(
+    name: str,
+    *,
+    kind: SpanKind = SpanKind.INTERNAL,
+    **attributes: AttributeValue,
+) -> SpanContext:
     """创建 Span 上下文管理器。"""
-    return SpanContext(name, **attributes)
+    return SpanContext(name, kind=kind, **attributes)
 
 
 def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
@@ -198,6 +274,8 @@ def get_in_memory_exporter() -> InMemorySpanExporter | None:
 
 
 __all__ = [
+    "SpanKind",
+    "StatusCode",
     "configure_tracing",
     "get_in_memory_exporter",
     "get_span_id",

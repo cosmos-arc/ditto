@@ -58,6 +58,30 @@ def _evidence() -> EvidenceEnvelope:
     )
 
 
+def _sealed_evidence(
+    *,
+    evidence_id: str = "evidence-market-1",
+    tool_name: str = "market_context_evidence",
+    payload: object = None,
+    artifact_refs: tuple[str, ...] = ("market-context:sha256:" + "a" * 64,),
+    temporal_context: TemporalToolContext | None = None,
+) -> EvidenceEnvelope:
+    return EvidenceEnvelope.seal(
+        evidence_id=evidence_id,
+        tool_name=tool_name,
+        result={
+            "schema_version": 1,
+            "kind": "market_context",
+            "payload": (
+                {"breadth": {"advance_ratio": "0.56"}} if payload is None else payload
+            ),
+        },
+        artifact_refs=artifact_refs,
+        temporal_context=temporal_context or _context(),
+        lineage=(f"market-context:{evidence_id}",),
+    )
+
+
 _DETAILS: dict[BusinessOutputKind, dict[str, object]] = {
     BusinessOutputKind.EVIDENCE_BRIEF: {
         "market_changes": ("Breadth improved to 56%.",),
@@ -287,6 +311,380 @@ def test_disclaimer_and_guardrail_status_are_not_model_overridable() -> None:
             expected_context=_context(),
             allowed_tool_names=("market_context_evidence",),
         )
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "message"),
+    [
+        ("breadth..advance_ratio", "0.56", "empty segment"),
+        ("breadth.advance_ratio", "not-a-number", "not numeric"),
+        ("breadth.advance_ratio", "NaN", "finite"),
+    ],
+)
+def test_numeric_claim_constructor_rejects_ambiguous_or_nonfinite_values(
+    path: str,
+    value: str,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        NumericEvidenceClaim(
+            evidence_ref="evidence-market-1",
+            path=path,
+            value=value,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("output_kind", "evidence_brief", "output_kind"),
+        ("schema_version", True, "schema_version"),
+        ("schema_version", 2, "schema_version"),
+        ("freshness", "current", "freshness"),
+        ("completeness", "partial", "completeness"),
+    ],
+)
+def test_header_rejects_untyped_or_unsupported_host_fields(
+    field_name: str,
+    value: object,
+    message: str,
+) -> None:
+    draft = replace(_draft(), **{field_name: value})
+
+    with pytest.raises(ValueError, match=message):
+        validate_business_output(
+            draft,
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("facts", ["A list is not accepted."], "must be a tuple"),
+        ("facts", (), "must be non-empty"),
+        ("facts", ("Repeated.", "Repeated."), "must not contain duplicates"),
+        ("action_intents", [BusinessAction.OPEN_CONTEXT], "action_intents"),
+        (
+            "action_intents",
+            (BusinessAction.OPEN_CONTEXT, BusinessAction.OPEN_CONTEXT),
+            "must not contain duplicates",
+        ),
+    ],
+)
+def test_sections_and_actions_require_closed_immutable_collections(
+    field_name: str,
+    value: object,
+    message: str,
+) -> None:
+    draft = replace(_draft(), **{field_name: value})
+
+    with pytest.raises(ValueError, match=message):
+        validate_business_output(
+            draft,
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+@pytest.mark.parametrize(
+    ("details", "message"),
+    [
+        (("not", "a", "mapping"), "details must be an object"),
+        ({"market_changes": ()}, "details fields"),
+    ],
+)
+def test_details_reject_wrong_container_or_shape(
+    details: object,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        validate_business_output(
+            replace(_draft(), details=cast(dict[str, object], details)),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+def test_strategy_details_reject_non_mapping_and_nested_executable_content() -> None:
+    draft = _draft(kind=BusinessOutputKind.STRATEGY_DRAFT_PROPOSAL)
+    non_mapping = dict(draft.details)
+    non_mapping["spec_json"] = ("not", "an", "object")
+    with pytest.raises(ValueError, match="spec_json must be an object"):
+        validate_business_output(
+            replace(draft, details=non_mapping),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+    non_string_key = dict(draft.details)
+    non_string_key["spec_json"] = {1: "invalid"}
+    with pytest.raises(ValueError, match="keys must be strings"):
+        validate_business_output(
+            replace(draft, details=non_string_key),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+    nested_executable = dict(draft.details)
+    nested_executable["spec_json"] = {"nodes": [{"SCRIPT": "unsafe()"}]}
+    with pytest.raises(ValueError, match="remain declarative"):
+        validate_business_output(
+            replace(draft, details=nested_executable),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+@pytest.mark.parametrize(
+    ("tool_versions", "message"),
+    [
+        (("market_context_evidence", "1"), "must be an object"),
+        ({}, "exact evidence tool set"),
+        ({"market_context_evidence": 1}, "values must be strings"),
+    ],
+)
+def test_tool_versions_must_exactly_describe_the_sealed_tools(
+    tool_versions: object,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        validate_business_output(
+            replace(
+                _draft(),
+                tool_versions=cast(dict[str, str], tool_versions),
+            ),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+def test_evidence_set_rejects_empty_non_tuple_and_duplicate_allowlist() -> None:
+    for evidence in ((), cast(tuple[EvidenceEnvelope, ...], [])):
+        with pytest.raises(ValueError, match="requires sealed evidence"):
+            validate_business_output(
+                _draft(),
+                evidence=evidence,
+                expected_context=_context(),
+                allowed_tool_names=("market_context_evidence",),
+            )
+
+    with pytest.raises(ValueError, match="allowed_tool_names must be unique"):
+        validate_business_output(
+            _draft(),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=(
+                "market_context_evidence",
+                "market_context_evidence",
+            ),
+        )
+
+
+def test_evidence_integrity_temporal_context_and_ids_fail_closed() -> None:
+    evidence = _evidence()
+    object.__setattr__(evidence, "integrity_hash", "0" * 64)
+    with pytest.raises(ValueError, match="integrity failed"):
+        validate_business_output(
+            _draft(),
+            evidence=(evidence,),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+    other_context = TemporalToolContext.from_host(
+        TemporalContextInput(
+            decision_time=datetime(2026, 9, 1, 7, tzinfo=UTC),
+            knowledge_cutoff=datetime(2026, 9, 1, 6, 30, tzinfo=UTC),
+            publication_cutoff=datetime(2026, 9, 1, 6, tzinfo=UTC),
+            source_snapshot_id="snapshot-set-20260901",
+            execution_eligible_at="not_applicable",
+            allowed_universe=("510300.SH",),
+            license_class="approved-research",
+            egress_class=EgressClass.CLOUD_ALLOWED,
+        )
+    )
+    with pytest.raises(ValueError, match="evidence temporal context mismatch"):
+        validate_business_output(
+            _draft(),
+            evidence=(_sealed_evidence(temporal_context=other_context),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+    with pytest.raises(ValueError, match="evidence IDs must be unique"):
+        validate_business_output(
+            _draft(),
+            evidence=(_evidence(), _evidence()),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+def test_repeated_tool_and_artifact_are_deduplicated_in_input_order() -> None:
+    second = _sealed_evidence(evidence_id="evidence-market-2")
+    draft = replace(
+        _draft(),
+        evidence_refs=("evidence-market-1", "evidence-market-2"),
+    )
+
+    output = validate_business_output(
+        draft,
+        evidence=(_evidence(), second),
+        expected_context=_context(),
+        allowed_tool_names=("market_context_evidence",),
+    )
+
+    assert output.evidence_refs == ("evidence-market-1", "evidence-market-2")
+    assert output.artifact_refs == ("market-context:sha256:" + "a" * 64,)
+    assert output.tool_versions == {"market_context_evidence": "1"}
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("evidence_refs", ("evidence-other",), "evidence reference mismatch"),
+        ("source_snapshot_ids", ("snapshot-other",), "source snapshot mismatch"),
+    ],
+)
+def test_provenance_references_must_equal_the_host_derived_values(
+    field_name: str,
+    value: tuple[str, ...],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        validate_business_output(
+            replace(_draft(), **{field_name: value}),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+@pytest.mark.parametrize(
+    ("payload", "path", "claim_value", "message"),
+    [
+        (("not", "a", "mapping"), "0", "0.56", "payload is invalid"),
+        ({"breadth": {}}, "breadth.advance_ratio", "0.56", "path is absent"),
+        ({"rows": ["0.56"]}, "rows.not-an-index", "0.56", "path is absent"),
+        ({"rows": ["0.56"]}, "rows.2", "0.56", "path is absent"),
+        ({"breadth": "0.56"}, "breadth.value", "0.56", "path is absent"),
+        (
+            {"breadth": {"advance_ratio": True}},
+            "breadth.advance_ratio",
+            "1",
+            "not numeric",
+        ),
+        (
+            {"breadth": {"advance_ratio": "not-a-number"}},
+            "breadth.advance_ratio",
+            "0.56",
+            "not numeric",
+        ),
+        (
+            {"breadth": {"advance_ratio": "Infinity"}},
+            "breadth.advance_ratio",
+            "0.56",
+            "finite",
+        ),
+        (
+            {"breadth": {"advance_ratio": "0.57"}},
+            "breadth.advance_ratio",
+            "0.56",
+            "does not match",
+        ),
+    ],
+)
+def test_numeric_claims_fail_closed_on_invalid_payload_paths_or_values(
+    payload: object,
+    path: str,
+    claim_value: str,
+    message: str,
+) -> None:
+    claim = NumericEvidenceClaim(
+        evidence_ref="evidence-market-1",
+        path=path,
+        value=claim_value,
+    )
+    with pytest.raises(ValueError, match=message):
+        validate_business_output(
+            replace(_draft(), numeric_claims=(claim,)),
+            evidence=(_sealed_evidence(payload=payload),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+def test_numeric_claims_accept_sequence_paths_and_reject_container_forgery() -> None:
+    sequence_claim = NumericEvidenceClaim(
+        evidence_ref="evidence-market-1",
+        path="rows.0.value",
+        value="0.56",
+    )
+    output = validate_business_output(
+        replace(
+            _draft(),
+            numeric_claims=(sequence_claim,),
+            facts=("The first row is 56%.",),
+        ),
+        evidence=(_sealed_evidence(payload={"rows": [{"value": "0.56"}]}),),
+        expected_context=_context(),
+        allowed_tool_names=("market_context_evidence",),
+    )
+    assert output.numeric_claims == (sequence_claim,)
+
+    with pytest.raises(ValueError, match="NumericEvidenceClaim values"):
+        validate_business_output(
+            replace(
+                _draft(), numeric_claims=cast(tuple[NumericEvidenceClaim, ...], [])
+            ),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+    with pytest.raises(ValueError, match="NumericEvidenceClaim values"):
+        validate_business_output(
+            replace(
+                _draft(),
+                numeric_claims=cast(tuple[NumericEvidenceClaim, ...], ("forged",)),
+            ),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+
+def test_duplicate_numeric_paths_are_rejected_and_hash_drift_is_detected() -> None:
+    claim = _draft().numeric_claims[0]
+    with pytest.raises(ValueError, match="must not duplicate"):
+        validate_business_output(
+            replace(_draft(), numeric_claims=(claim, claim)),
+            evidence=(_evidence(),),
+            expected_context=_context(),
+            allowed_tool_names=("market_context_evidence",),
+        )
+
+    output = validate_business_output(
+        _draft(),
+        evidence=(_evidence(),),
+        expected_context=_context(),
+        allowed_tool_names=("market_context_evidence",),
+    )
+    object.__setattr__(output, "run_id", "tampered-run")
+    assert not output.verify_content_hash()
+
+
+def test_schema_rejects_untyped_kind() -> None:
+    with pytest.raises(ValueError, match="kind must be a BusinessOutputKind"):
+        business_output_schema(cast(BusinessOutputKind, "evidence_brief"))
     with pytest.raises(ValueError, match="guardrail"):
         validate_business_output(
             replace(_draft(), guardrail_status=GuardrailStatus.BLOCKED),

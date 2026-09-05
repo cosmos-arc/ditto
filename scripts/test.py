@@ -55,8 +55,8 @@ def build_pytest_command() -> list[str]:
             [
                 "--cov",
                 "--cov-report=xml",
+                "--cov-report=json:coverage.json",
                 "--cov-report=term-missing",
-                "--cov-fail-under=80",
             ]
         )
     elif has_cov:

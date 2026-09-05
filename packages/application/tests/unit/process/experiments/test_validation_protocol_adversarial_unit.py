@@ -9,6 +9,18 @@ from typing import cast
 
 import pytest
 from ditto_application.exceptions import AppProcessError
+from ditto_application.research_validation_eligibility import (
+    project_month_membership,
+    require_coverage_decisions,
+    seal_coverage_decisions,
+    seal_coverage_policy,
+    seal_instrument_eligibility,
+    seal_isolation,
+    validate_coverage_decisions,
+    validate_coverage_policy,
+    validate_instrument_eligibility,
+    validate_isolation,
+)
 from ditto_application.research_validation_protocol import (
     CalendarMonth,
     CoverageEligibility,
@@ -802,3 +814,428 @@ def test_decomposed_unicode_identity_is_rejected_but_nfc_is_accepted() -> None:
         UniverseCoveragePolicy("Cafe\u0301", 1)
 
     assert UniverseCoveragePolicy("Caf\u00e9", 1).policy_id == "Caf\u00e9"
+
+
+def _expect_eligibility_invalid(
+    reason: str,
+    factory: Callable[[], object],
+) -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        factory()
+    assert exc_info.value.details["code"] == "SPEC_INVALID"
+    assert exc_info.value.details["reason"] == reason
+
+
+class TestEligibilityContractEdges:
+    pytestmark = pytest.mark.pit
+
+    def test_instrument_id_sets_require_exact_unique_canonical_tuples(self) -> None:
+        for ids in (
+            cast("tuple[str, ...]", ["510300.SH"]),
+            ("",),
+            ("510300.SH", "510300.SH"),
+        ):
+            _expect_eligibility_invalid(
+                "invalid_coverage_universe_instrument_ids",
+                lambda ids=ids: MonthCoverageDecision.create(
+                    month=CalendarMonth(2026, 1),
+                    eligibility=CoverageEligibility.ELIGIBLE,
+                    universe_instrument_ids=ids,
+                    eligible_instrument_ids=(),
+                ),
+            )
+
+    def test_membership_intervals_reject_reversal_forgery_and_overlap(self) -> None:
+        _expect_eligibility_invalid(
+            "pit_membership_interval_reversed",
+            lambda: PitUniverseMembershipInterval(
+                CalendarMonth(2026, 2), CalendarMonth(2026, 1)
+            ),
+        )
+        item = _request().instrument_eligibility[0]
+        for intervals, reason in (
+            (
+                cast("tuple[PitUniverseMembershipInterval, ...]", []),
+                "pit_membership_intervals_must_be_non_empty_tuple",
+            ),
+            ((), "pit_membership_intervals_must_be_non_empty_tuple"),
+            (
+                cast("tuple[PitUniverseMembershipInterval, ...]", (object(),)),
+                "invalid_pit_membership_interval",
+            ),
+        ):
+            _expect_eligibility_invalid(
+                reason,
+                lambda intervals=intervals: replace(
+                    item, membership_intervals=intervals
+                ),
+            )
+
+        reversed_interval = PitUniverseMembershipInterval(
+            CalendarMonth(2026, 1), CalendarMonth(2026, 2)
+        )
+        object.__setattr__(reversed_interval, "end_month", CalendarMonth(2025, 12))
+        _expect_eligibility_invalid(
+            "pit_membership_interval_reversed",
+            lambda: replace(item, membership_intervals=(reversed_interval,)),
+        )
+
+        before_listing = PitUniverseMembershipInterval(
+            CalendarMonth(2019, 12), CalendarMonth(2019, 12)
+        )
+        _expect_eligibility_invalid(
+            "pit_membership_precedes_listing_month",
+            lambda: replace(item, membership_intervals=(before_listing,)),
+        )
+
+        overlapping = (
+            PitUniverseMembershipInterval(
+                CalendarMonth(2020, 1), CalendarMonth(2020, 3)
+            ),
+            PitUniverseMembershipInterval(
+                CalendarMonth(2020, 3), CalendarMonth(2020, 5)
+            ),
+        )
+        _expect_eligibility_invalid(
+            "pit_membership_intervals_overlap",
+            lambda: replace(item, membership_intervals=overlapping),
+        )
+
+    def test_instrument_and_membership_source_scalars_are_exact(self) -> None:
+        item = _request().instrument_eligibility[0]
+        _expect_eligibility_invalid(
+            "invalid_instrument_eligibility_id",
+            lambda: replace(item, instrument_id=""),
+        )
+        _expect_eligibility_invalid(
+            "invalid_instrument_listing_date",
+            lambda: replace(item, listing_date=cast("date", "2020-01-01")),
+        )
+        source = _request().membership_source
+        _expect_eligibility_invalid(
+            "invalid_membership_source_identity",
+            lambda: replace(source, snapshot_id=""),
+        )
+        _expect_eligibility_invalid(
+            "invalid_membership_source_identity",
+            lambda: replace(source, manifest_hash="not-a-hash"),
+        )
+
+    def test_coverage_policy_bounds_and_evaluator_hash_are_authenticated(self) -> None:
+        _expect_eligibility_invalid(
+            "invalid_min_coverage_ratio_bps",
+            lambda: UniverseCoveragePolicy(
+                "a-share-core", 1, min_coverage_ratio_bps=10_001
+            ),
+        )
+        _expect_eligibility_invalid(
+            "coverage_evaluator_hash_mismatch",
+            lambda: UniverseCoveragePolicy("a-share-core", 1, evaluator_hash="0" * 64),
+        )
+
+    def test_month_decision_rejects_hash_count_and_membership_forgery(self) -> None:
+        decision = _request().coverage_decisions[0]
+        _expect_eligibility_invalid(
+            "invalid_universe_instrument_hash",
+            lambda: replace(decision, universe_instrument_hash="not-a-hash"),
+        )
+        _expect_eligibility_invalid(
+            "eligible_instrument_count_exceeds_universe",
+            lambda: replace(
+                decision,
+                eligible_instrument_count=decision.universe_instrument_count + 1,
+            ),
+        )
+        _expect_eligibility_invalid(
+            "eligible_instruments_outside_pit_universe",
+            lambda: MonthCoverageDecision.create(
+                month=CalendarMonth(2026, 1),
+                eligibility=CoverageEligibility.ELIGIBLE,
+                universe_instrument_ids=("510300.SH",),
+                eligible_instrument_ids=("159915.SZ",),
+            ),
+        )
+        assert IsolationSemantics(2, 5, 1).width_sessions == 5
+
+    def test_instrument_validation_rejects_forged_shapes_and_dates(self) -> None:
+        request = _request()
+        sessions = request.trading_sessions
+        item = request.instrument_eligibility[0]
+        for evidence in (cast("tuple[object, ...]", []), (), (object(),)):
+            reason = (
+                "instrument_eligibility_must_be_non_empty_tuple"
+                if not evidence or type(evidence) is not tuple
+                else "invalid_instrument_eligibility_evidence"
+            )
+            _expect_eligibility_invalid(
+                reason,
+                lambda evidence=evidence: validate_instrument_eligibility(
+                    evidence,
+                    sessions=sessions,
+                ),
+            )
+
+        forged = replace(item)
+        object.__setattr__(forged, "instrument_id", "")
+        _expect_eligibility_invalid(
+            "invalid_instrument_eligibility_id",
+            lambda: validate_instrument_eligibility((forged,), sessions=sessions),
+        )
+
+        forged = replace(item)
+        object.__setattr__(forged, "base_data_eligible_start", "2020-01-01")
+        _expect_eligibility_invalid(
+            "invalid_instrument_base_data_eligible_start",
+            lambda: validate_instrument_eligibility((forged,), sessions=sessions),
+        )
+
+        forged = replace(item)
+        listing = next(
+            day
+            for day in (sessions[0] + timedelta(days=offset) for offset in range(1, 8))
+            if day.weekday() >= 5
+        )
+        object.__setattr__(forged, "listing_date", listing)
+        object.__setattr__(
+            forged,
+            "membership_intervals",
+            (
+                PitUniverseMembershipInterval(
+                    CalendarMonth.from_date(listing),
+                    item.membership_intervals[-1].end_month,
+                ),
+            ),
+        )
+        _expect_eligibility_invalid(
+            "listing_date_is_not_an_open_session",
+            lambda: validate_instrument_eligibility((forged,), sessions=sessions),
+        )
+
+        forged = replace(item)
+        object.__setattr__(forged, "warmup_sessions", len(sessions))
+        _expect_eligibility_invalid(
+            "instrument_warmup_not_covered_by_calendar",
+            lambda: validate_instrument_eligibility((forged,), sessions=sessions),
+        )
+
+        forged = replace(item)
+        object.__setattr__(forged, "eligible_from", sessions[-1])
+        _expect_eligibility_invalid(
+            "instrument_eligible_from_mismatch",
+            lambda: validate_instrument_eligibility((forged,), sessions=sessions),
+        )
+
+        _expect_eligibility_invalid(
+            "duplicate_instrument_eligibility_evidence",
+            lambda: validate_instrument_eligibility(
+                (item, item),
+                sessions=sessions,
+            ),
+        )
+
+    def test_total_membership_interval_limit_is_enforced_during_validation(
+        self,
+    ) -> None:
+        request = _request()
+        item = replace(
+            request.instrument_eligibility[0],
+            membership_intervals=_spaced_membership_intervals(16),
+        )
+        _expect_eligibility_invalid(
+            "MEMBERSHIP_EVIDENCE_TOO_LARGE",
+            lambda: validate_instrument_eligibility(
+                (item,) * 513,
+                sessions=request.trading_sessions,
+            ),
+        )
+
+    def test_policy_isolation_and_decision_validators_reject_foreign_graphs(
+        self,
+    ) -> None:
+        _expect_eligibility_invalid(
+            "invalid_coverage_policy",
+            lambda: validate_coverage_policy(object()),
+        )
+        policy = UniverseCoveragePolicy("a-share-core", 1)
+        object.__setattr__(policy, "policy_id", "")
+        _expect_eligibility_invalid(
+            "invalid_coverage_policy_id",
+            lambda: validate_coverage_policy(policy),
+        )
+        _expect_eligibility_invalid(
+            "invalid_isolation_semantics",
+            lambda: validate_isolation(object()),
+        )
+        _expect_eligibility_invalid(
+            "coverage_decisions_must_be_tuple",
+            lambda: validate_coverage_decisions([]),
+        )
+        _expect_eligibility_invalid(
+            "invalid_coverage_decision",
+            lambda: validate_coverage_decisions((object(),)),
+        )
+
+        decision = _request().coverage_decisions[0]
+        forged = replace(decision)
+        object.__setattr__(forged, "eligibility", "eligible")
+        _expect_eligibility_invalid(
+            "invalid_coverage_decision_eligibility",
+            lambda: validate_coverage_decisions((forged,)),
+        )
+        forged = replace(decision)
+        object.__setattr__(forged, "eligible_instrument_hash", "not-a-hash")
+        _expect_eligibility_invalid(
+            "invalid_coverage_instrument_hash",
+            lambda: validate_coverage_decisions((forged,)),
+        )
+        forged = replace(decision)
+        object.__setattr__(
+            forged,
+            "eligible_instrument_count",
+            decision.universe_instrument_count + 1,
+        )
+        _expect_eligibility_invalid(
+            "eligible_instrument_count_exceeds_universe",
+            lambda: validate_coverage_decisions((forged,)),
+        )
+        _expect_eligibility_invalid(
+            "coverage_decisions_not_strictly_increasing",
+            lambda: validate_coverage_decisions((decision, decision)),
+        )
+
+    def test_coverage_domain_binds_all_instruments_and_intervals(self) -> None:
+        request = _request()
+        item = request.instrument_eligibility[0]
+        policy = request.coverage_policy
+        _expect_eligibility_invalid(
+            "instrument_evidence_not_bound_to_pit_universe",
+            lambda: require_coverage_decisions(
+                (),
+                {},
+                instruments=(item,),
+                session_months={},
+                policy=policy,
+            ),
+        )
+
+        first_interval = item.membership_intervals[0]
+        extra_interval = PitUniverseMembershipInterval(
+            first_interval.end_month.next().next(),
+            first_interval.end_month.next().next(),
+        )
+        item = replace(
+            item,
+            membership_intervals=(first_interval, extra_interval),
+        )
+        month = first_interval.start_month
+        first_session = next(
+            session
+            for session in request.trading_sessions
+            if CalendarMonth.from_date(session) == month
+        )
+        universe, eligible, _consumed = project_month_membership(
+            month=month,
+            first_session=first_session,
+            instruments=(item,),
+        )
+        decision = MonthCoverageDecision.create(
+            month=month,
+            eligibility=(
+                CoverageEligibility.ELIGIBLE
+                if eligible
+                else CoverageEligibility.INELIGIBLE
+            ),
+            universe_instrument_ids=universe,
+            eligible_instrument_ids=eligible,
+        )
+        _expect_eligibility_invalid(
+            "pit_membership_interval_not_consumed",
+            lambda: require_coverage_decisions(
+                (month,),
+                {month: decision},
+                instruments=(item,),
+                session_months={month: (first_session,)},
+                policy=policy,
+            ),
+        )
+
+    def test_seal_helpers_reject_non_exact_nested_graphs(self) -> None:
+        request = _request()
+        item = request.instrument_eligibility[0]
+        _expect_eligibility_invalid(
+            "instrument_eligibility_must_be_tuple",
+            lambda: seal_instrument_eligibility(
+                [item],
+                sessions=request.trading_sessions,
+            ),
+        )
+        _expect_eligibility_invalid(
+            "invalid_instrument_eligibility_evidence",
+            lambda: seal_instrument_eligibility(
+                (object(),),
+                sessions=request.trading_sessions,
+            ),
+        )
+
+        forged = replace(item)
+        object.__setattr__(forged, "membership_intervals", [*item.membership_intervals])
+        _expect_eligibility_invalid(
+            "invalid_pit_membership_intervals",
+            lambda: seal_instrument_eligibility(
+                (forged,),
+                sessions=request.trading_sessions,
+            ),
+        )
+
+        forged = replace(item)
+        object.__setattr__(
+            forged,
+            "membership_intervals",
+            _spaced_membership_intervals(17),
+        )
+        _expect_eligibility_invalid(
+            "MEMBERSHIP_EVIDENCE_TOO_LARGE",
+            lambda: seal_instrument_eligibility(
+                (forged,),
+                sessions=request.trading_sessions,
+            ),
+        )
+
+        forged = replace(item)
+        object.__setattr__(forged, "membership_intervals", (object(),))
+        _expect_eligibility_invalid(
+            "invalid_pit_membership_interval",
+            lambda: seal_instrument_eligibility(
+                (forged,),
+                sessions=request.trading_sessions,
+            ),
+        )
+
+        forged = replace(item)
+        interval = item.membership_intervals[0]
+        object.__setattr__(interval, "start_month", object())
+        object.__setattr__(forged, "membership_intervals", (interval,))
+        _expect_eligibility_invalid(
+            "invalid_pit_membership_interval",
+            lambda: seal_instrument_eligibility(
+                (forged,),
+                sessions=request.trading_sessions,
+            ),
+        )
+
+        _expect_eligibility_invalid(
+            "invalid_coverage_policy",
+            lambda: seal_coverage_policy(object()),
+        )
+        _expect_eligibility_invalid(
+            "invalid_isolation_semantics",
+            lambda: seal_isolation(object()),
+        )
+
+        decision = request.coverage_decisions[0]
+        forged_decision = replace(decision)
+        object.__setattr__(forged_decision, "month", object())
+        _expect_eligibility_invalid(
+            "invalid_coverage_decision_month",
+            lambda: seal_coverage_decisions((forged_decision,)),
+        )

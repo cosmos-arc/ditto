@@ -66,14 +66,17 @@ class TestNoShortSellCheck:
         """BUY 始终通过。"""
         result = self.check.check_order(_order(OrderSide.BUY), _ctx())
         assert result.decision == Decision.ACCEPT
+        assert result.order_id == "o1"
+        assert result.reason is None
+        assert result.triggered_checks == ()
 
     def test_sell_no_position_rejected(self) -> None:
         """无持仓时卖出被拒。"""
         result = self.check.check_order(_order(OrderSide.SELL), _ctx())
         assert result.decision == Decision.REJECT
-        assert result.reason is not None
-        assert "no_short_sell" in result.reason
-        assert "available=0" in result.reason
+        assert result.order_id == "o1"
+        assert result.reason == (f"no_short_sell: {IID} available=0, requested=100")
+        assert result.triggered_checks == ("no_short_sell",)
 
     def test_sell_insufficient_rejected(self) -> None:
         """持仓不足时卖出被拒。"""
@@ -82,13 +85,17 @@ class TestNoShortSellCheck:
             _ctx(positions={IID: _pos(300, 300)}),
         )
         assert result.decision == Decision.REJECT
-        assert result.reason is not None
-        assert "available=300" in result.reason
+        assert result.order_id == "o1"
+        assert result.reason == (f"no_short_sell: {IID} available=300, requested=500")
+        assert result.triggered_checks == ("no_short_sell",)
 
     def test_sell_sufficient_accepted(self) -> None:
         """持仓充足时卖出通过。"""
         result = self.check.check_order(
             _order(OrderSide.SELL, quantity=100),
-            _ctx(positions={IID: _pos(1000, 1000)}),
+            _ctx(positions={IID: _pos(100, 100)}),
         )
         assert result.decision == Decision.ACCEPT
+        assert result.order_id == "o1"
+        assert result.reason is None
+        assert result.triggered_checks == ()

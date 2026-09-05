@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError, replace
+from math import inf
+from typing import cast
 
 import pytest
 from ditto_analysis.experiments import ContentHash
@@ -308,6 +310,13 @@ def test_v2_rejects_incomplete_or_noncanonical_positive_trace_refs(
         _v2_packet(selection_trace_artifact_refs=trace_refs)
 
 
+def test_v2_rejects_duplicate_artifact_ids_after_kind_order_is_validated() -> None:
+    refs = list(_trace_refs(kinds=REVIEW_PACKET_SELECTION_TRACE_KINDS_V2))
+    refs[1] = replace(refs[1], artifact_id=refs[0].artifact_id)
+    with pytest.raises(ValueError, match="duplicate artifact ids"):
+        _v2_packet(selection_trace_artifact_refs=tuple(refs))
+
+
 def test_v2_rejects_fold_attempt_lineage_count_drift() -> None:
     with pytest.raises(ValueError):
         _v2_packet(
@@ -417,3 +426,323 @@ def test_trace_ref_rejects_untyped_or_blank_identity(
 
     with pytest.raises(ValueError):
         SelectionTraceArtifactRef(**base)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("experiment_id", None),
+        ("experiment_id", ""),
+        ("candidate_id", 7),
+        ("candidate_id", ""),
+        ("fold_ids", []),
+        ("fold_ids", ()),
+        ("attempt_ids", []),
+        ("attempt_ids", ()),
+    ],
+)
+def test_lineage_rejects_untyped_or_empty_identity(field: str, value: object) -> None:
+    values: dict[str, object] = {
+        "experiment_id": "experiment-1",
+        "candidate_id": "candidate-1",
+        "fold_ids": ("fold-1",),
+        "attempt_ids": ("attempt-1",),
+    }
+    values[field] = value
+    with pytest.raises(ValueError):
+        ReviewPacketLineage(
+            experiment_id=cast("str", values["experiment_id"]),
+            candidate_id=cast("str | None", values["candidate_id"]),
+            fold_ids=cast("tuple[str, ...]", values["fold_ids"]),
+            attempt_ids=cast("tuple[str, ...]", values["attempt_ids"]),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("artifact_kind", 1),
+        ("artifact_id", None),
+        ("artifact_id", " padded "),
+    ],
+)
+def test_trace_ref_rejects_non_string_and_padded_identity(
+    field: str,
+    value: object,
+) -> None:
+    values: dict[str, object] = {
+        "artifact_kind": REVIEW_PACKET_SELECTION_TRACE_KINDS[0],
+        "artifact_id": "trace-1",
+        "content_hash": ContentHash("a" * 64),
+    }
+    values[field] = value
+    with pytest.raises(ValueError):
+        SelectionTraceArtifactRef(
+            artifact_kind=cast("str", values["artifact_kind"]),
+            artifact_id=cast("str", values["artifact_id"]),
+            content_hash=cast("ContentHash", values["content_hash"]),
+        )
+
+
+@pytest.mark.parametrize(
+    ("key", "weight"),
+    [
+        (cast("str", None), 0.5),
+        ("", 0.5),
+        (" padded ", 0.5),
+        ("bank", cast("float", True)),
+        ("bank", cast("float", "0.5")),
+        ("bank", inf),
+        ("bank", -0.01),
+    ],
+)
+def test_exposure_weight_rejects_ambiguous_keys_and_values(
+    key: str,
+    weight: float,
+) -> None:
+    with pytest.raises(ValueError):
+        ReviewExposureWeight(key, weight)
+
+
+def test_exposure_weight_payload_normalizes_integer_weight() -> None:
+    assert ReviewExposureWeight("bank", 1).canonical_payload() == {
+        "key": "bank",
+        "weight": 1.0,
+    }
+
+
+def test_selection_exposure_rejects_invalid_lane_and_weight_collections() -> None:
+    ref = _selection_exposure().artifact_refs
+    invalid = [
+        {
+            "applicability": "APPLICABLE",
+            "lane": "ETF_LANE",
+            "industry_weights": (),
+            "size_bucket_weights": (),
+            "artifact_refs": ref,
+        },
+        {
+            "industry_weights": [],
+            "size_bucket_weights": (),
+            "artifact_refs": ref,
+        },
+        {
+            "industry_weights": (cast("ReviewExposureWeight", "bank"),),
+            "size_bucket_weights": (),
+            "artifact_refs": ref,
+        },
+        {
+            "industry_weights": (
+                ReviewExposureWeight("bank", 0.5),
+                ReviewExposureWeight("bank", 0.5),
+            ),
+            "size_bucket_weights": (),
+            "artifact_refs": ref,
+        },
+        {
+            "industry_weights": (),
+            "size_bucket_weights": (
+                ReviewExposureWeight("LARGE", 0.5),
+                ReviewExposureWeight("LARGE", 0.5),
+            ),
+            "artifact_refs": ref,
+        },
+        {
+            "industry_weights": (),
+            "size_bucket_weights": (),
+            "artifact_refs": list(ref),
+        },
+        {
+            "industry_weights": (),
+            "size_bucket_weights": (),
+            "artifact_refs": (cast("SelectionTraceArtifactRef", "trace"),),
+        },
+        {
+            "industry_weights": (),
+            "size_bucket_weights": (),
+            "artifact_refs": (
+                SelectionTraceArtifactRef(
+                    REVIEW_PACKET_SELECTION_TRACE_KINDS[0],
+                    "trace-1",
+                    ContentHash("a" * 64),
+                ),
+            ),
+        },
+        {
+            "industry_weights": (),
+            "size_bucket_weights": (),
+            "artifact_refs": (),
+        },
+    ]
+    for overrides in invalid:
+        values: dict[str, object] = {
+            "applicability": "NOT_APPLICABLE",
+            "lane": "ETF_LANE",
+            **overrides,
+        }
+        with pytest.raises(ValueError):
+            ReviewSelectionExposure(
+                applicability=cast("str", values["applicability"]),
+                lane=cast("str", values["lane"]),
+                industry_weights=cast(
+                    "tuple[ReviewExposureWeight, ...]",
+                    values["industry_weights"],
+                ),
+                size_bucket_weights=cast(
+                    "tuple[ReviewExposureWeight, ...]",
+                    values["size_bucket_weights"],
+                ),
+                artifact_refs=cast(
+                    "tuple[SelectionTraceArtifactRef, ...]",
+                    values["artifact_refs"],
+                ),
+            )
+
+
+def test_selection_exposure_rejects_missing_applicable_and_weighted_etf_data() -> None:
+    refs = _selection_exposure().artifact_refs
+    weight = (ReviewExposureWeight("bank", 1.0),)
+    for industry, size in (((), weight), (weight, ())):
+        with pytest.raises(ValueError):
+            ReviewSelectionExposure(
+                "APPLICABLE",
+                "STOCK_LANE",
+                industry,
+                size,
+                refs,
+            )
+    with pytest.raises(ValueError):
+        ReviewSelectionExposure(
+            "NOT_APPLICABLE",
+            "ETF_LANE",
+            weight,
+            (),
+            refs,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("schema_version", True),
+        ("spec_hash", "hash"),
+        ("comparison_payload_hash", "hash"),
+        ("r1_impact_payload_hash", "hash"),
+        ("gate_evaluations", []),
+        ("candidate_rationale", None),
+        ("candidate_rationale", ""),
+        ("selection_trace_artifact_refs", []),
+        (
+            "selection_trace_artifact_refs",
+            (cast("SelectionTraceArtifactRef", "trace"),),
+        ),
+    ],
+)
+def test_review_packet_rejects_untyped_core_fields(field: str, value: object) -> None:
+    with pytest.raises(ValueError):
+        _packet(**{field: value})
+
+
+def test_schema_versions_reject_fields_owned_by_later_versions() -> None:
+    with pytest.raises(ValueError):
+        _packet(selection_exposure=_selection_exposure())
+    with pytest.raises(ValueError):
+        _v2_packet(selection_exposure=_selection_exposure())
+    with pytest.raises(ValueError):
+        _v3_packet(selection_exposure=cast("ReviewSelectionExposure", "exposure"))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("fold_ids", (cast("str", 1),)),
+        ("fold_ids", ("",)),
+        ("fold_ids", (" padded ",)),
+        ("attempt_ids", (cast("str", 1),)),
+        ("attempt_ids", ("",)),
+        ("attempt_ids", (" padded ",)),
+    ],
+)
+def test_v2_rejects_invalid_fold_and_attempt_members(field: str, value: object) -> None:
+    lineage = ReviewPacketLineage(
+        experiment_id="experiment-1",
+        candidate_id="candidate-1",
+        fold_ids=cast("tuple[str, ...]", value if field == "fold_ids" else ("fold-1",)),
+        attempt_ids=cast(
+            "tuple[str, ...]",
+            value if field == "attempt_ids" else ("attempt-1",),
+        ),
+    )
+    with pytest.raises(ValueError):
+        _v2_packet(lineage=lineage)
+
+
+def test_payload_decoder_rejects_version_owned_field_leaks() -> None:
+    v1 = _packet().canonical_payload()
+    v1["selection_trace_artifact_refs"] = []
+    with pytest.raises(ValueError):
+        review_packet_from_payload(v1)
+
+    v2 = _v2_packet().canonical_payload()
+    v2["selection_exposure"] = None
+    with pytest.raises(ValueError):
+        review_packet_from_payload(v2)
+
+
+def test_payload_decoder_preserves_fail_closed_unknown_version_handling() -> None:
+    payload = _packet().canonical_payload()
+    payload["schema_version"] = REVIEW_PACKET_SCHEMA_VERSION + 1
+    with pytest.raises(ValueError, match="unsupported review packet schema_version"):
+        review_packet_from_payload(payload)
+
+
+def test_payload_decoder_rejects_invalid_trace_ref_shapes() -> None:
+    invalid_values: list[object] = [None, {}, ["trace"], [{}]]
+    for value in invalid_values:
+        payload = _v2_packet().canonical_payload()
+        payload["selection_trace_artifact_refs"] = value
+        with pytest.raises(ValueError):
+            review_packet_from_payload(payload)
+
+
+def test_payload_decoder_rejects_invalid_exposure_shapes() -> None:
+    invalid_values: list[object] = ["exposure", {}, {"applicability": "APPLICABLE"}]
+    for value in invalid_values:
+        payload = _v3_packet().canonical_payload()
+        payload["selection_exposure"] = value
+        with pytest.raises(ValueError):
+            review_packet_from_payload(payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("industry_weights", None),
+        ("industry_weights", ["weight"]),
+        ("industry_weights", [{}]),
+        ("artifact_refs", None),
+        ("artifact_refs", ["ref"]),
+        ("artifact_refs", [{}]),
+    ],
+)
+def test_payload_decoder_rejects_invalid_nested_exposure_shapes(
+    field: str,
+    value: object,
+) -> None:
+    payload = _v3_packet().canonical_payload()
+    exposure = cast("dict[str, object]", payload["selection_exposure"])
+    exposure[field] = value
+    with pytest.raises(ValueError):
+        review_packet_from_payload(payload)
+
+
+def test_payload_decoder_fails_closed_for_non_mapping_lineage_and_gate() -> None:
+    payload = _packet().canonical_payload()
+    payload["lineage"] = None
+    with pytest.raises(KeyError):
+        review_packet_from_payload(payload)
+
+    payload = _packet().canonical_payload()
+    payload["gate_evaluations"] = [None]
+    with pytest.raises(KeyError):
+        review_packet_from_payload(payload)

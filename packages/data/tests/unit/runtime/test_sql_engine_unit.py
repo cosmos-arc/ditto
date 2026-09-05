@@ -146,7 +146,8 @@ class TestSqlEngine:
 
         # Mock DuckDB connection
         mock_con = mocker.patch.object(engine, "con")
-        mock_con.execute.return_value.pl.return_value = pl.DataFrame()
+        mock_con.execute.return_value.description = []
+        mock_con.execute.return_value.fetchall.return_value = []
 
         # Mock query normalization
         engine._plan_cache = {}

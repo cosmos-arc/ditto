@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ditto Page Contract"
+  short_description: "Create and validate page implementation contracts"
+  default_prompt: "Use $ditto-page-contract to create, validate, or update the page contract for this work."

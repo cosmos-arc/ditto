@@ -1,0 +1,9 @@
+extends:
+  - recommended-strict
+
+plugins:
+  - ./tooling/contracts/redocly-sse.cjs
+
+apis:
+  ditto@v1:
+    root: ./contracts/openapi/v1.json

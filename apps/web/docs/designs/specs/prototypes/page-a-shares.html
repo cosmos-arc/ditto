@@ -1,0 +1,3157 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-a-shares
+  Edition: v1
+  Generated: 2026-04-12
+
+  Tabs: 4 (radio tab system — Bottom Tab Band)
+  - tab-capital-flow (资金轮动) [covered]
+  - tab-dragon-tiger (龙虎榜) [covered]
+  - tab-margin-trading (两融数据) [covered]
+  - tab-event-calendar (事件日历) [covered]
+
+  Overlays: 4
+  - overlay-northbound-detail (Drawer: 北向资金详情) [covered]
+  - overlay-sector-detail (Sheet: 行业详情) [covered]
+  - overlay-filter-panel (Drawer: 筛选器面板) [covered]
+  - overlay-ai-analysis (Drawer: AI 解读) [covered]
+
+  State Variants: 7 components × multi-state
+  - context-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - scope-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - market-structure-map: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - index-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - etf-matrix: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - movers: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - right-rail-northbound: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="markets">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — 中国 A 股总览</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens -->
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    h1.header-title { margin: 0; }
+
+    .style-label {
+      position: fixed;
+      top: var(--space-8);
+      right: var(--space-8);
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* Gate 0: Hide prototype tooling when default-view is active */
+    :root:has(#view-default:checked) .proto-nav,
+    :root:has(#view-default:checked) #default-view > .style-label {
+      display: none !important;
+    }
+    :root:has(#view-default:checked) #default-view {
+      height: 100dvh;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Radar Layout — A-Shares Overview
+     * ══════════════════════════════════════════════ */
+    body { overflow: hidden; }
+
+    /* ── Typography batch normalization (R7: 5-level scale) ── */
+    .context-bar-value, .context-bar-label, .header-timestamp, .status-bar,
+    .rotation-summary-label, .rail-section-title, .scope-ai-text,
+    .dragon-header-label, .margin-header-label, .event-header-label,
+    .capital-summary-label, .flow-bar-label, .north-flow-label,
+    .iv-text-tertiary, .iv-text-10 { letter-spacing: var(--letter-spacing-tight, 0); }
+
+    .tab-band-tab, .map-view-toggle, .map-title, .panel-title,
+    .index-card-name, .mover-change, .capital-summary-value,
+    .rail-toggle-label { letter-spacing: var(--letter-spacing-normal, 0.02em); }
+
+    .header-title { letter-spacing: var(--letter-spacing-heading, 0); }
+
+    :root {
+      --shell-rail-radar-width: 18.75rem;
+    }
+
+    .shell-radar {
+      height: 100%;
+      overflow: hidden;
+      background: var(--surface-app);
+    }
+
+    [data-theme="light"] .shell-radar {
+      --prototype-light-readable-text: var(--neutral-600);
+      --prototype-light-muted-text: var(--neutral-500);
+    }
+
+    @media (max-width: 768px) {
+      .shell-radar {
+        overflow-x: auto;
+      }
+    }
+
+    .shell-body {
+      height: 100dvh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-gutter: stable;
+      contain: paint;
+    }
+
+    /* Header: workbench chrome */
+    .shell-radar .shell-header {
+      background: var(--surface-app);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-gutter);
+      gap: var(--space-8);
+      flex-shrink: 0;
+    }
+
+    /* Context Bar */
+    .shell-radar .context-bar {
+      background: var(--surface-panel-base);
+      flex-shrink: 0;
+    }
+
+    /* Scope Strip */
+    .shell-radar .scope-strip {
+      background: var(--surface-panel-base);
+      border-bottom: 1px solid var(--border-subtle);
+      height: var(--shell-scope-strip-height);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * A-Share Header Controls
+     * ══════════════════════════════════════════════ */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+
+    .header-spacer { flex: 1; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-action-btn {
+      width: var(--header-btn-size);
+      height: var(--header-btn-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .header-action-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+
+    .header-avatar {
+      width: var(--header-avatar-size);
+      height: var(--header-avatar-size);
+      border-radius: 50%;
+      background: var(--surface-panel-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .header-timeframe {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .header-timestamp {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Context Bar
+     * ══════════════════════════════════════════════ */
+    .context-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: 0 var(--density-gutter);
+      overflow: hidden;
+      white-space: nowrap;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .context-bar-item {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      flex-shrink: 0;
+    }
+
+    .context-bar-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .context-bar-value {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+      font-family: var(--font-family-numeric);
+      letter-spacing: 0;
+    }
+
+    .context-bar-value.regime-on { color: color-mix(in oklch, var(--market-up-fg) 85%, var(--text-secondary)); }
+    .context-bar-value.regime-off { color: color-mix(in oklch, var(--market-down-fg) 85%, var(--text-secondary)); }
+    .context-bar-value.regime-mixed { color: color-mix(in oklch, var(--amber-500) 85%, var(--text-secondary)); }
+
+    .context-bar-sep {
+      width: 1px;
+      height: 12px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .context-bar-spacer { flex: 1; }
+
+    .context-bar-item--secondary .context-bar-value { color: var(--text-tertiary); }
+
+    .context-bar-indicator {
+      display: inline-flex;
+      gap: var(--space-2);
+    }
+    .context-bar-indicator .badge-dot {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      background: var(--risk-high-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .context-bar-indicator .badge-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--market-up-fg);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Scope Strip
+     * ══════════════════════════════════════════════ */
+    .scope-strip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: 0 var(--density-gutter);
+      overflow-x: auto;
+    }
+    .scope-strip::-webkit-scrollbar { display: none; }
+
+    .scope-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-1) var(--space-6);
+      border-radius: var(--radius-3);
+      white-space: nowrap;
+    }
+    .scope-tag.lead {
+      color: var(--market-up-fg);
+      background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);
+    }
+    .scope-tag.lag {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);
+    }
+    .scope-tag.neutral {
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .scope-ai-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+    .scope-ai-text strong {
+      color: var(--text-primary);
+    }
+
+    .scope-sep {
+      color: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Workspace: 2-Column Layout
+     * ══════════════════════════════════════════════ */
+    .main-content {
+      padding: var(--space-16) var(--density-gutter);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-16);
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) var(--shell-rail-radar-width);
+      gap: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Market Structure Map (Treemap)
+     * ══════════════════════════════════════════════ */
+    .map-container {
+      --map-cell-surface: color-mix(in oklch, var(--surface-panel-base) 88%, var(--neutral-950) 12%);
+      --map-cell-surface-deep: color-mix(in oklch, var(--surface-panel-base) 76%, var(--neutral-950) 24%);
+      --map-cell-border: color-mix(in oklch, var(--neutral-500) 32%, transparent);
+      --market-map-cell-title: var(--text-primary);
+      --market-map-cell-value: var(--text-primary);
+      --market-map-cell-meta: var(--text-tertiary);
+      --map-text-on-cell: var(--market-map-cell-title);
+      --map-muted-on-cell: var(--market-map-cell-meta);
+      --map-neutral-fill: color-mix(in oklch, var(--surface-panel-base) 82%, var(--neutral-950) 18%);
+      --map-market-up-1: oklch(0.305 0.062 22);
+      --map-market-up-2: oklch(0.358 0.088 22);
+      --map-market-up-3: oklch(0.414 0.116 22);
+      --map-market-up-4: oklch(0.475 0.144 22);
+      --map-market-down-1: oklch(0.300 0.050 155);
+      --map-market-down-2: oklch(0.352 0.070 155);
+      --map-market-down-3: oklch(0.406 0.092 155);
+      --map-market-down-4: oklch(0.462 0.112 155);
+      --map-market-up-edge-1: oklch(0.560 0.150 22 / 0.44);
+      --map-market-up-edge-2: oklch(0.600 0.164 22 / 0.56);
+      --map-market-up-edge-3: oklch(0.635 0.174 22 / 0.68);
+      --map-market-up-edge-4: oklch(0.670 0.184 22 / 0.78);
+      --map-market-down-edge-1: oklch(0.560 0.112 155 / 0.44);
+      --map-market-down-edge-2: oklch(0.600 0.124 155 / 0.56);
+      --map-market-down-edge-3: oklch(0.640 0.136 155 / 0.68);
+      --map-market-down-edge-4: oklch(0.680 0.148 155 / 0.78);
+      --map-light-up-1: oklch(0.925 0.024 22);
+      --map-light-up-2: oklch(0.890 0.040 22);
+      --map-light-up-3: oklch(0.850 0.058 22);
+      --map-light-up-4: oklch(0.805 0.078 22);
+      --map-light-down-1: oklch(0.920 0.022 155);
+      --map-light-down-2: oklch(0.882 0.036 155);
+      --map-light-down-3: oklch(0.840 0.052 155);
+      --map-light-down-4: oklch(0.795 0.070 155);
+      --map-light-up-edge-1: oklch(0.620 0.138 22 / 0.36);
+      --map-light-up-edge-2: oklch(0.600 0.152 22 / 0.46);
+      --map-light-up-edge-3: oklch(0.580 0.164 22 / 0.56);
+      --map-light-up-edge-4: oklch(0.560 0.176 22 / 0.66);
+      --map-light-down-edge-1: oklch(0.590 0.100 155 / 0.36);
+      --map-light-down-edge-2: oklch(0.570 0.112 155 / 0.46);
+      --map-light-down-edge-3: oklch(0.550 0.124 155 / 0.56);
+      --map-light-down-edge-4: oklch(0.530 0.136 155 / 0.66);
+      --heat-flat: var(--map-neutral-fill);
+      --heat-up-1: var(--map-market-up-1);
+      --heat-up-2: var(--map-market-up-2);
+      --heat-up-3: var(--map-market-up-3);
+      --heat-up-4: var(--map-market-up-4);
+      --heat-down-1: var(--map-market-down-1);
+      --heat-down-2: var(--map-market-down-2);
+      --heat-down-3: var(--map-market-down-3);
+      --heat-down-4: var(--map-market-down-4);
+      --heat-up-line-1: var(--map-market-up-edge-1);
+      --heat-up-line-2: var(--map-market-up-edge-2);
+      --heat-up-line-3: var(--map-market-up-edge-3);
+      --heat-up-line-4: var(--map-market-up-edge-4);
+      --heat-down-line-1: var(--map-market-down-edge-1);
+      --heat-down-line-2: var(--map-market-down-edge-2);
+      --heat-down-line-3: var(--map-market-down-edge-3);
+      --heat-down-line-4: var(--map-market-down-edge-4);
+      --heat-neutral-line: color-mix(in oklch, var(--neutral-600) 44%, transparent);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    [data-theme="light"] .map-container {
+      --map-cell-surface: color-mix(in oklch, var(--surface-panel-base) 94%, var(--neutral-950) 6%);
+      --map-cell-surface-deep: color-mix(in oklch, var(--surface-panel-base) 88%, var(--neutral-950) 12%);
+      --map-cell-border: color-mix(in oklch, var(--border-default) 72%, transparent);
+      --map-neutral-fill: color-mix(in oklch, var(--surface-panel-elevated) 92%, var(--neutral-200) 8%);
+      --heat-flat: var(--map-neutral-fill);
+      --heat-up-1: var(--map-light-up-1);
+      --heat-up-2: var(--map-light-up-2);
+      --heat-up-3: var(--map-light-up-3);
+      --heat-up-4: var(--map-light-up-4);
+      --heat-down-1: var(--map-light-down-1);
+      --heat-down-2: var(--map-light-down-2);
+      --heat-down-3: var(--map-light-down-3);
+      --heat-down-4: var(--map-light-down-4);
+      --heat-up-line-1: var(--map-light-up-edge-1);
+      --heat-up-line-2: var(--map-light-up-edge-2);
+      --heat-up-line-3: var(--map-light-up-edge-3);
+      --heat-up-line-4: var(--map-light-up-edge-4);
+      --heat-down-line-1: var(--map-light-down-edge-1);
+      --heat-down-line-2: var(--map-light-down-edge-2);
+      --heat-down-line-3: var(--map-light-down-edge-3);
+      --heat-down-line-4: var(--map-light-down-edge-4);
+      --heat-neutral-line: color-mix(in oklch, var(--border-default) 78%, transparent);
+    }
+
+    .map-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-8);
+      flex-wrap: wrap;
+    }
+
+    .map-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .map-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-base) 86%, transparent);
+    }
+
+    .map-view-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      padding: var(--space-3) var(--space-6);
+      border-radius: var(--radius-3);
+      border: 1px solid transparent;
+      cursor: pointer;
+      background: transparent;
+      min-height: 24px;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard), border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .map-view-toggle:hover {
+      color: var(--text-secondary);
+      border-color: var(--border-default);
+    }
+    .map-view-toggle.active,
+    :root:has(#map-treemap:checked) [for="map-treemap"],
+    :root:has(#map-heatmap:checked) [for="map-heatmap"] {
+      color: var(--text-secondary);
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .map-metadata {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "readout legend"
+        "insight legend";
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-6) var(--space-10);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+    }
+
+    .map-readout {
+      grid-area: readout;
+      display: flex;
+      align-items: center;
+      gap: var(--space-10);
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .map-readout-item,
+    .map-interaction-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .map-readout-item strong,
+    .map-interaction-hint strong {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .map-insight-strip {
+      grid-area: insight;
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      min-width: 0;
+      flex-wrap: wrap;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    .map-insight-strip strong {
+      color: var(--text-secondary);
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+      letter-spacing: 0;
+    }
+
+    .map-insight-sep {
+      width: 1px;
+      height: 0.75rem;
+      background: var(--border-subtle);
+    }
+
+    .map-legend {
+      grid-area: legend;
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .map-legend-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .map-legend-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .map-legend-scale {
+      display: grid;
+      grid-template-columns: repeat(5, 1.25rem);
+      height: 0.375rem;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-3);
+      background: var(--surface-panel-elevated);
+    }
+
+    .map-size-legend {
+      display: grid;
+      grid-template-columns: 0.6rem 0.9rem 1.2rem;
+      align-items: end;
+      gap: 2px;
+      height: 0.875rem;
+    }
+
+    .map-size-legend span {
+      display: block;
+      border: 1px solid color-mix(in oklch, var(--border-default) 72%, transparent);
+      background: var(--surface-panel-elevated);
+    }
+
+    .map-size-legend span:nth-child(1) { height: 0.4rem; }
+    .map-size-legend span:nth-child(2) { height: 0.625rem; }
+    .map-size-legend span:nth-child(3) { height: 0.875rem; }
+
+    .map-legend-stop { min-width: 0; }
+    .map-legend-stop.down-strong {
+      background: var(--heat-down-4);
+      box-shadow: inset 0 0 0 1px var(--heat-down-line-4);
+    }
+    .map-legend-stop.down {
+      background: var(--heat-down-2);
+      box-shadow: inset 0 0 0 1px var(--heat-down-line-2);
+    }
+    .map-legend-stop.flat {
+      background: var(--heat-flat);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 70%, transparent);
+    }
+    .map-legend-stop.up {
+      background: var(--heat-up-2);
+      box-shadow: inset 0 0 0 1px var(--heat-up-line-2);
+    }
+    .map-legend-stop.up-strong {
+      background: var(--heat-up-4);
+      box-shadow: inset 0 0 0 1px var(--heat-up-line-4);
+    }
+
+    .treemap {
+      width: 100%;
+      aspect-ratio: 2 / 1;
+      border-radius: var(--radius-2);
+      overflow: hidden;
+      position: relative;
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      box-shadow: inset 0 1px 0 color-mix(in oklch, var(--neutral-950) 8%, transparent);
+    }
+
+    .map-sector-boundary {
+      position: absolute;
+      z-index: 3;
+      pointer-events: none;
+      border: 1px solid color-mix(in oklch, var(--map-cell-border) 92%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--surface-app) 45%, transparent);
+    }
+    .map-sector-boundary.growth { left: 0; top: 0; width: 60%; height: 55%; }
+    .map-sector-boundary.financial { left: 60%; top: 0; width: 20%; height: 55%; }
+    .map-sector-boundary.defensive { left: 80%; top: 0; width: 20%; height: 55%; }
+    .map-sector-boundary.cyclical { left: 0; top: 55%; width: 100%; height: 45%; }
+
+    /* ── Map View Switching ── */
+    .map-view-treemap { display: block; }
+    .map-view-heatmap { display: none; }
+    :root:has(#map-treemap:checked) .map-view-treemap { display: block; }
+    :root:has(#map-treemap:checked) .map-view-heatmap { display: none; }
+    :root:has(#map-heatmap:checked) .map-view-treemap { display: none; }
+    :root:has(#map-heatmap:checked) .map-view-heatmap { display: grid; }
+
+    /* ── Heatmap Grid ── */
+    .map-view-heatmap {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: repeat(6, minmax(0, 1fr));
+      grid-auto-flow: dense;
+      grid-auto-rows: minmax(0, 1fr);
+      gap: 2px;
+      padding: var(--space-1);
+      border-radius: var(--radius-2);
+      overflow: hidden;
+      background: var(--surface-panel-base);
+      border: 1px solid var(--map-cell-border);
+      aspect-ratio: 2 / 1;
+      box-shadow: inset 0 1px 0 color-mix(in oklch, var(--neutral-950) 8%, transparent);
+    }
+    .heatmap-cell {
+      --heat-bg: var(--heat-flat);
+      --heat-line: var(--heat-neutral-line);
+      --heat-text: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-end;
+      gap: var(--space-2);
+      padding: var(--space-8);
+      cursor: pointer;
+      border: 1px solid color-mix(in oklch, var(--heat-line) 12%, var(--map-cell-border));
+      background: var(--heat-bg);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard);
+      position: relative;
+      min-width: 0;
+      text-align: left;
+      isolation: isolate;
+    }
+
+    .heatmap-cell[data-size-bucket="xl"] {
+      grid-column: span 3;
+      grid-row: span 2;
+    }
+
+    .heatmap-cell[data-size-bucket="lg"] {
+      grid-column: span 2;
+      grid-row: span 2;
+    }
+
+    .heatmap-cell[data-size-bucket="md"] {
+      grid-column: span 2;
+      grid-row: span 1;
+    }
+
+    .heatmap-cell[data-size-bucket="sm"] {
+      grid-column: span 1;
+      grid-row: span 1;
+      justify-content: center;
+      padding: var(--space-4);
+    }
+
+    .map-view-heatmap .heatmap-cell:nth-child(1) { grid-column: 1 / 4; grid-row: 1 / 3; }
+    .map-view-heatmap .heatmap-cell:nth-child(2) { grid-column: 4 / 6; grid-row: 1 / 2; }
+    .map-view-heatmap .heatmap-cell:nth-child(3) { grid-column: 6 / 8; grid-row: 1 / 2; }
+    .map-view-heatmap .heatmap-cell:nth-child(4) { grid-column: 8 / 10; grid-row: 1 / 2; }
+    .map-view-heatmap .heatmap-cell:nth-child(5) { grid-column: 10 / 12; grid-row: 1 / 2; }
+    .map-view-heatmap .heatmap-cell:nth-child(6) { grid-column: 12 / 13; grid-row: 1 / 2; }
+    .map-view-heatmap .heatmap-cell:nth-child(7) { grid-column: 4 / 6; grid-row: 2 / 3; }
+    .map-view-heatmap .heatmap-cell:nth-child(8) { grid-column: 6 / 7; grid-row: 2 / 3; }
+    .map-view-heatmap .heatmap-cell:nth-child(9) { grid-column: 7 / 10; grid-row: 2 / 4; }
+    .map-view-heatmap .heatmap-cell:nth-child(10) { grid-column: 10 / 13; grid-row: 2 / 3; }
+    .map-view-heatmap .heatmap-cell:nth-child(11) { grid-column: 1 / 3; grid-row: 3 / 4; }
+    .map-view-heatmap .heatmap-cell:nth-child(12) { grid-column: 3 / 5; grid-row: 3 / 4; }
+    .map-view-heatmap .heatmap-cell:nth-child(13) { grid-column: 5 / 6; grid-row: 3 / 4; }
+    .map-view-heatmap .heatmap-cell:nth-child(14) { grid-column: 6 / 7; grid-row: 3 / 4; }
+    .map-view-heatmap .heatmap-cell:nth-child(15) { grid-column: 1 / 4; grid-row: 4 / 6; }
+    .map-view-heatmap .heatmap-cell:nth-child(16) { grid-column: 4 / 6; grid-row: 4 / 5; }
+    .map-view-heatmap .heatmap-cell:nth-child(17) { grid-column: 6 / 8; grid-row: 4 / 5; }
+    .map-view-heatmap .heatmap-cell:nth-child(18) { grid-column: 8 / 9; grid-row: 4 / 5; }
+    .map-view-heatmap .heatmap-cell:nth-child(19) { grid-column: 9 / 10; grid-row: 4 / 5; }
+    .map-view-heatmap .heatmap-cell:nth-child(20) { grid-column: 10 / 11; grid-row: 3 / 4; }
+    .map-view-heatmap .heatmap-cell:nth-child(21) { grid-column: 10 / 13; grid-row: 3 / 5; }
+    .map-view-heatmap .heatmap-cell:nth-child(22) { grid-column: 4 / 6; grid-row: 5 / 6; }
+    .map-view-heatmap .heatmap-cell:nth-child(23) { grid-column: 6 / 8; grid-row: 5 / 6; }
+    .map-view-heatmap .heatmap-cell:nth-child(24) { grid-column: 8 / 10; grid-row: 5 / 6; }
+    .map-view-heatmap .heatmap-cell:nth-child(25) { grid-column: 1 / 2; grid-row: 6 / 7; }
+    .map-view-heatmap .heatmap-cell:nth-child(26) { grid-column: 2 / 3; grid-row: 6 / 7; }
+    .map-view-heatmap .heatmap-cell:nth-child(27) { grid-column: 3 / 5; grid-row: 6 / 7; }
+    .map-view-heatmap .heatmap-cell:nth-child(28) { grid-column: 5 / 7; grid-row: 6 / 7; }
+    .map-view-heatmap .heatmap-cell:nth-child(29) { grid-column: 10 / 13; grid-row: 5 / 7; }
+    .map-view-heatmap .heatmap-cell:nth-child(30) { grid-column: 7 / 8; grid-row: 6 / 7; }
+    .map-view-heatmap .heatmap-cell:nth-child(31) { grid-column: 8 / 9; grid-row: 6 / 7; }
+    .map-view-heatmap .heatmap-cell:nth-child(32) { grid-column: 9 / 10; grid-row: 6 / 7; }
+
+    .heatmap-cell:hover {
+      border-color: color-mix(in oklch, var(--heat-line) 34%, var(--border-default));
+      z-index: 1;
+    }
+    .treemap-cell-name,
+    .hm-name {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--market-map-cell-title);
+      line-height: 1.12;
+      letter-spacing: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .treemap-cell-iv .treemap-cell-name,
+    .heatmap-cell[data-size-bucket="xl"] .hm-name { font-size: var(--font-size-12); }
+    .heatmap-cell[data-size-bucket="sm"] .hm-name { font-size: var(--font-size-10); }
+
+    .treemap-cell-sign {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: var(--radius-3);
+      color: var(--market-map-cell-value);
+      background: color-mix(in oklch, var(--surface-panel-base) 34%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--heat-line) 42%, transparent);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1;
+    }
+
+    .treemap-cell-iv[data-label-budget="compact"] .treemap-cell-vol,
+    .treemap-cell-iv[data-label-budget="name-only"] .treemap-cell-change,
+    .treemap-cell-iv[data-label-budget="name-only"] .treemap-cell-vol {
+      display: none;
+    }
+
+    .treemap-cell-iv[data-label-budget="name-only"] {
+      justify-content: center;
+      padding: var(--space-6);
+    }
+
+    .heatmap-cell > span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hm-sign {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: var(--radius-3);
+      color: var(--market-map-cell-value);
+      background: color-mix(in oklch, var(--surface-panel-base) 34%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--heat-line) 42%, transparent);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1;
+    }
+
+    .heatmap-cell[data-size-bucket="sm"] .hm-sign {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      width: 0.7rem;
+      height: 0.7rem;
+      font-size: var(--font-size-10);
+    }
+
+    .treemap-cell-change,
+    .hm-change {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-map-cell-value);
+      line-height: 1;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    .heatmap-cell[data-size-bucket="sm"] .hm-change { display: none; }
+
+    .treemap-cell-vol,
+    .hm-vol {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--market-map-cell-meta);
+      line-height: 1;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+    .heatmap-cell[data-heat="up-1"] { --heat-bg: var(--heat-up-1); --heat-line: var(--heat-up-line-1); --heat-text: var(--heat-up-line-2); }
+    .heatmap-cell[data-heat="up-2"] { --heat-bg: var(--heat-up-2); --heat-line: var(--heat-up-line-2); --heat-text: var(--heat-up-line-3); }
+    .heatmap-cell[data-heat="up-3"] { --heat-bg: var(--heat-up-3); --heat-line: var(--heat-up-line-3); --heat-text: var(--heat-up-line-4); }
+    .heatmap-cell[data-heat="up-4"] { --heat-bg: var(--heat-up-4); --heat-line: var(--heat-up-line-4); --heat-text: var(--heat-up-line-4); }
+    .heatmap-cell[data-heat="down-1"] { --heat-bg: var(--heat-down-1); --heat-line: var(--heat-down-line-1); --heat-text: var(--heat-down-line-2); }
+    .heatmap-cell[data-heat="down-2"] { --heat-bg: var(--heat-down-2); --heat-line: var(--heat-down-line-2); --heat-text: var(--heat-down-line-3); }
+    .heatmap-cell[data-heat="down-3"] { --heat-bg: var(--heat-down-3); --heat-line: var(--heat-down-line-3); --heat-text: var(--heat-down-line-4); }
+    .heatmap-cell[data-heat="down-4"] { --heat-bg: var(--heat-down-4); --heat-line: var(--heat-down-line-4); --heat-text: var(--heat-down-line-4); }
+    .heatmap-cell[data-heat="flat"] { --heat-bg: var(--heat-flat); --heat-line: var(--heat-neutral-line); --heat-text: var(--text-tertiary); }
+
+    .treemap-cell-change.up,
+    .treemap-cell-change.down,
+    .hm-change.up,
+    .hm-change.down {
+      color: var(--market-map-cell-value);
+    }
+    /* ══════════════════════════════════════════════
+     * Right Rail — 北向资金深度面板
+     * ══════════════════════════════════════════════ */
+    .right-rail {
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: calc(var(--shell-header-height) + var(--shell-context-bar-height));
+      align-self: start;
+      flex: 1;
+    }
+
+    .rail-section {
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      padding: var(--space-6) 0;
+    }
+    .rail-section:last-child { border-bottom: none; }
+
+    .rail-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-8) var(--space-12);
+      gap: var(--space-4);
+    }
+
+    .rail-section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .rail-section-expand {
+      display: inline-flex;
+      min-height: var(--density-action-height);
+      align-items: center;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      cursor: pointer;
+    }
+    .rail-section-expand:hover {
+      color: var(--text-tertiary);
+    }
+
+    .rail-section-body {
+      padding: 0 var(--space-12) var(--space-10);
+    }
+
+    /* Northbound Flow Mini Chart */
+    .northbound-summary {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+
+    .northbound-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+    }
+    .northbound-value.inflow { color: var(--market-up-fg); }
+    .northbound-value.outflow { color: var(--market-down-fg); }
+
+    .northbound-unit {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .northbound-sub {
+      display: flex;
+      gap: var(--space-12);
+      font-size: var(--font-size-12);
+    }
+    .northbound-sub-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .northbound-sub-label { color: var(--text-tertiary); }
+    .northbound-sub-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+    }
+    .northbound-sub-value.inflow { color: var(--market-up-fg); }
+    .northbound-sub-value.outflow { color: var(--market-down-fg); }
+
+    /* Mini flow chart */
+    .flow-mini-chart {
+      width: 100%;
+      height: 48px;
+      opacity: 0.8;
+      margin-bottom: var(--space-8);
+    }
+
+    /* Holdings list */
+    .holdings-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .holding-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--font-size-12);
+    }
+
+    .holding-name {
+      color: var(--text-secondary);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .holding-change {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+    }
+    .holding-change.inflow { color: var(--market-up-fg); }
+    .holding-change.outflow { color: var(--market-down-fg); }
+
+    /* Sector preference */
+    .sector-pref-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      margin-bottom: var(--space-4);
+    }
+    .sector-pref-name { color: var(--text-secondary); flex: 1; }
+    .sector-pref-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+    }
+    .sector-pref-value.inflow { color: var(--market-up-fg); }
+    .sector-pref-value.outflow { color: var(--market-down-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Auxiliary Panels: Index Summary / ETF / Movers
+     * ══════════════════════════════════════════════ */
+    .aux-panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-12);
+    }
+    .panel:hover {
+      border-color: var(--border-default);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-10) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .panel-link {
+      font-size: var(--font-size-12);
+      color: var(--brand-accent);
+      cursor: pointer;
+    }
+    .panel-link:hover { text-decoration: underline; }
+
+    .panel-body {
+      padding: var(--space-8) var(--space-12);
+      flex: 1;
+    }
+
+    /* Index Summary */
+    .index-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+    }
+
+    .index-card {
+      padding: var(--space-8);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-elevated);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .index-card.up { background: color-mix(in oklch, var(--market-up-fg) 2%, var(--surface-panel-elevated)); }
+    .index-card.down { background: color-mix(in oklch, var(--market-down-fg) 2%, var(--surface-panel-elevated)); }
+    .index-card:hover {
+      background: var(--interaction-hover-subtle-bg);
+      box-shadow: inset 0 0 0 1px var(--border-default);
+    }
+
+    .index-card-name {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-4);
+    }
+
+    .index-card-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: 0;
+    }
+
+    .index-card-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+    .index-card-change.up { color: var(--market-up-fg); }
+    .index-card-change.down { color: var(--market-down-fg); }
+
+    /* ETF Matrix */
+    .etf-table {
+      width: 100%;
+      font-size: var(--font-size-12);
+    }
+    .etf-table th {
+      text-align: left;
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .etf-table th.numeric { text-align: right; }
+    .etf-table td {
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--overlay-4);
+      color: var(--text-secondary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .etf-table td.numeric {
+      text-align: right;
+      font-family: var(--font-family-numeric);
+      letter-spacing: 0;
+    }
+    .etf-table td.name { color: var(--text-primary); }
+    .etf-table tr:hover td {
+      color: var(--text-primary);
+      background: var(--overlay-2);
+    }
+
+    /* Movers */
+    .movers-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .mover-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-4) var(--space-6);
+      border-radius: var(--radius-3);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .mover-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      box-shadow: inset 0 0 0 1px var(--border-subtle);
+    }
+
+    .mover-rank {
+      width: 18px;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .mover-name {
+      flex: 1;
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mover-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      flex-shrink: 0;
+    }
+    .mover-change.up { color: var(--market-up-fg); }
+    .mover-change.down { color: var(--market-down-fg); }
+
+    .movers-divider {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-6) var(--space-6) var(--space-2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Bottom Tab Band
+     * ══════════════════════════════════════════════ */
+    .tab-band {
+      background: transparent;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      padding-bottom: var(--space-8);
+    }
+
+    .tab-band-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-3) var(--space-12);
+      gap: var(--space-4);
+      flex-shrink: 0;
+    }
+
+    .tab-band-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-2) var(--space-4);
+      cursor: pointer;
+      border-radius: var(--radius-3);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
+      letter-spacing: 0.02em;
+      min-height: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+    }
+    .tab-band-tab:hover { color: var(--text-tertiary); }
+
+    .tab-group:has(#tab-capital-flow:checked) [for="tab-capital-flow"],
+    .tab-group:has(#tab-dragon-tiger:checked) [for="tab-dragon-tiger"],
+    .tab-group:has(#tab-margin-trading:checked) [for="tab-margin-trading"],
+    .tab-group:has(#tab-event-calendar:checked) [for="tab-event-calendar"] {
+      color: var(--text-secondary);
+      background: var(--overlay-4);
+      box-shadow: inset 0 0 0 1px var(--border-subtle);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-group:has(#tab-capital-flow:checked) [data-panel="tab-capital-flow"],
+    .tab-group:has(#tab-dragon-tiger:checked) [data-panel="tab-dragon-tiger"],
+    .tab-group:has(#tab-margin-trading:checked) [data-panel="tab-margin-trading"],
+    .tab-group:has(#tab-event-calendar:checked) [data-panel="tab-event-calendar"] {
+      display: block;
+      animation: tab-reveal 180ms var(--motion-easing-emphasis) both;
+    }
+
+    @keyframes tab-reveal {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tab-band-body {
+      padding: var(--space-10);
+    }
+
+    /* Tab content: rotation summary */
+    .rotation-summary-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      margin-bottom: var(--space-8);
+    }
+    .rotation-summary-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-13);
+    }
+    .rotation-summary-label { color: var(--text-secondary); }
+    .rotation-summary-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: 0;
+    }
+    .rotation-summary-value.up { color: var(--market-up-fg); }
+
+    .flow-bar-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .flow-bar-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+    }
+    .flow-bar-label { color: var(--text-secondary); width: 5rem; flex-shrink: 0; }
+    .flow-bar-track {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--overlay-4);
+    }
+    .flow-bar-fill { height: 100%; border-radius: 2px; }
+    .flow-bar-fill.inflow { background: var(--market-up-fg); }
+    .flow-bar-fill.outflow { background: var(--market-down-fg); }
+    .flow-bar-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+      width: 5rem;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .flow-bar-value.inflow { color: var(--market-up-fg); }
+    .flow-bar-value.outflow { color: var(--market-down-fg); }
+
+    /* Tab content: dragon tiger list */
+    .dragon-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .dragon-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-3);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .dragon-item:hover { background: var(--interaction-hover-subtle-bg); }
+    .dragon-stock { color: var(--text-primary); flex: 1; }
+    .dragon-reason {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      padding: var(--space-1) var(--space-6);
+      background: var(--interaction-hover-subtle-bg);
+      border-radius: var(--radius-3);
+      flex-shrink: 0;
+    }
+    .dragon-net-buy {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+      flex-shrink: 0;
+    }
+    .dragon-net-buy.inflow { color: var(--market-up-fg); }
+    .dragon-net-buy.outflow { color: var(--market-down-fg); }
+
+    /* Tab content: margin trading */
+    .margin-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--space-8);
+      margin-bottom: var(--space-12);
+    }
+    .margin-stat {
+      padding: var(--space-8);
+      background: var(--surface-panel-elevated);
+      border-radius: var(--radius-4);
+    }
+    .margin-stat-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-4);
+    }
+    .margin-stat-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .margin-stat-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      margin-top: var(--space-2);
+    }
+    .margin-stat-change.up { color: var(--market-up-fg); }
+    .margin-stat-change.down { color: var(--market-down-fg); }
+
+    /* Tab content: event calendar */
+    .event-calendar-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .event-cal-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+    }
+    .event-cal-date {
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+      width: 5rem;
+      flex-shrink: 0;
+    }
+    .event-cal-type {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-1) var(--space-6);
+      border-radius: var(--radius-3);
+      flex-shrink: 0;
+    }
+    .event-cal-type.ipo { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); }
+    .event-cal-type.unlock { color: var(--amber-500); background: color-mix(in oklch, var(--amber-500) 10%, transparent); }
+    .event-cal-type.dividend { color: var(--text-tertiary); background: var(--interaction-hover-subtle-bg); }
+    .event-cal-type.report { color: var(--brand-accent); background: var(--brand-accent-subtle); }
+    .event-cal-name { color: var(--text-primary); flex: 1; }
+    .event-cal-impact {
+      color: var(--text-secondary);
+      font-size: var(--font-size-10);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Focus-visible ring system
+     * ══════════════════════════════════════════════ */
+    .rail-icon:focus-visible,
+    .tab-band-tab:focus-visible,
+    .header-action-btn:focus-visible,
+    .map-view-toggle:focus-visible,
+    .treemap-cell-iv:focus-visible,
+    .heatmap-cell:focus-visible,
+    .index-card:focus-visible,
+    .mover-item:focus-visible,
+    .etf-table tbody tr:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-northbound-detail:checked)
+      [data-overlay="overlay-northbound-detail"] { display: flex; }
+    :root:has(#overlay-sector-detail:checked)
+      [data-overlay="overlay-sector-detail"] { display: flex; }
+    :root:has(#overlay-filter-panel:checked)
+      [data-overlay="overlay-filter-panel"] { display: flex; }
+    :root:has(#overlay-ai-analysis:checked)
+      [data-overlay="overlay-ai-analysis"] { display: flex; }
+
+    /* ══════════════════════════════════════════════
+     * Status Bar
+     * ══════════════════════════════════════════════ */
+    .status-bar {
+      position: static;
+      flex-shrink: 0;
+      background: color-mix(in oklch, var(--surface-app) 90%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--overlay-4);
+      padding: var(--space-2) var(--space-12);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      letter-spacing: 0.02em;
+      color: var(--text-tertiary);
+      user-select: none;
+    }
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .status-live {
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.06em;
+      animation: status-breathe 2s ease-in-out infinite;
+    }
+    .status-sep { color: var(--overlay-6); }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      padding: 1px 6px;
+      border-radius: var(--radius-3);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-overlay);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+    }
+    @keyframes status-breathe {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    /* ── Inline style cleanup classes ── */
+    .iv-text-tertiary {
+  color:var(--text-tertiary);
+    }
+
+    .iv-pad-12 {
+  padding:var(--space-12);
+    }
+
+    .iv-pad-8 {
+  padding:var(--space-8);
+    }
+
+    .iv-text-up {
+  color:var(--market-up-fg);
+    }
+
+    .iv-accent-brand {
+  accent-color:var(--brand-accent);
+    }
+
+    .iv-text-down {
+  color:var(--market-down-fg);
+    }
+
+    .iv-section-heading {
+  font-weight:var(--font-weight-semibold);
+  margin-bottom:var(--space-8);
+  color:var(--text-primary);
+    }
+
+    .iv-text-tertiary-mt8 {
+  color:var(--text-tertiary);
+  margin-top:var(--space-8);
+    }
+
+    .iv-caption-label {
+  font-size:var(--font-size-10);
+  color:var(--text-tertiary);
+  margin-bottom:var(--space-4);
+    }
+
+    .iv-body-block {
+  font-size:var(--font-size-13);
+  color:var(--text-primary);
+  line-height:1.6;
+  margin-bottom:var(--space-12);
+    }
+
+    .iv-pt-4 {
+  padding-top:var(--space-4);
+    }
+
+    .iv-text-10 {
+  font-size:var(--font-size-10);
+    }
+
+    .iv-flex-center-gap4 {
+  display:flex;
+  align-items:center;
+  gap:var(--space-4);
+    }
+
+    .iv-h-28 {
+  height:28px;
+    }
+
+    .iv-h-24 {
+  height:24px;
+    }
+
+    .iv-flex-gap4-mb12 {
+  display:flex;
+  gap:var(--space-4);
+  margin-bottom:var(--space-12);
+    }
+
+    .iv-pad-8-text12 {
+  padding:var(--space-8);
+  font-size:var(--font-size-12);
+    }
+
+    .iv-divider-bar {
+  flex:1;
+  height:4px;
+  background:var(--overlay-4);
+  border-radius:2px;
+  margin:0 var(--space-8);
+    }
+
+    .iv-thumb-60 {
+  height:60px;
+  border-radius:var(--radius-4);
+    }
+
+    .iv-elevated-card {
+  background:var(--surface-elevated);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-6);
+  padding:var(--space-12);
+  font-size:var(--font-size-12);
+    }
+
+    .iv-inline-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-4);
+  font-size:var(--font-size-12);
+  color:var(--text-secondary);
+    }
+
+    .iv-panel-card {
+  padding:var(--space-8);
+  background:var(--surface-panel-elevated);
+  border-radius:var(--radius-4);
+    }
+
+    .iv-numeric-lg {
+  font-family:var(--font-family-numeric);
+  font-size:var(--font-size-16);
+  font-weight:var(--font-weight-semibold);
+    }
+
+    .iv-btn-primary-sm {
+  padding:var(--space-4) var(--space-8);
+  font-size:var(--font-size-12);
+  border-radius:var(--radius-3);
+  background:var(--brand-accent);
+  color:var(--text-inverse);
+  border:none;
+  cursor:pointer;
+    }
+
+    .iv-btn-ghost-sm {
+  padding:var(--space-4) var(--space-8);
+  font-size:var(--font-size-12);
+  border-radius:var(--radius-3);
+  background:var(--surface-panel-elevated);
+  color:var(--text-secondary);
+  border:1px solid var(--border-default);
+  cursor:pointer;
+    }
+
+      /* ── Inline style cleanup round 2 ── */
+    .iv-inline-chip-interactive {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-4);
+  font-size:var(--font-size-12);
+  color:var(--text-secondary);
+  cursor:pointer;
+    }
+
+    .iv-risk-dot-medium {
+  width:var(--status-dot-size);
+  height:var(--status-dot-size);
+  border-radius:50%;
+  background:var(--risk-medium-fg);
+  flex-shrink:0;
+    }
+
+    .iv-risk-dot-high {
+  width:var(--status-dot-size);
+  height:var(--status-dot-size);
+  border-radius:50%;
+  background:var(--risk-high-fg);
+  flex-shrink:0;
+    }
+
+    /* ── Inline style cleanup round 3 — non-data-driven classes ── */
+    .iv-pt-0 { padding-top: 0; }
+    .iv-text-secondary { color: var(--text-secondary); }
+    .iv-text-amber { color: var(--amber-500); }
+    .iv-bg-amber-subtle { background: color-mix(in oklch, var(--amber-500) 4%, transparent); }
+    .iv-label-uppercase-mb4 { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-4); text-transform: uppercase; letter-spacing: 0.06em; }
+    .iv-label-uppercase-mb8 { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-8); text-transform: uppercase; letter-spacing: 0.06em; }
+    .iv-text12-secondary-mb8 { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8); }
+    .iv-text13-secondary-block { font-size: var(--font-size-13); color: var(--text-secondary); line-height: 1.6; margin-bottom: var(--space-12); }
+    .iv-numeric-lg-up { font-family: var(--font-family-numeric); font-size: var(--font-size-16); font-weight: var(--font-weight-semibold); color: var(--market-up-fg); }
+    .iv-flex-center-gap6-mb4 { display: flex; align-items: center; gap: var(--space-6); font-size: var(--font-size-12); margin-bottom: var(--space-4); }
+    .iv-flex-center-gap6-text12 { display: flex; align-items: center; gap: var(--space-6); font-size: var(--font-size-12); }
+    .iv-flex-gap12-caption { display: flex; gap: var(--space-12); font-size: var(--font-size-10); margin-bottom: var(--space-8); color: var(--text-tertiary); }
+    .iv-flex-wrap-gap4-mb12 { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-12); }
+    .iv-grid-3col-gap8 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-8); margin-bottom: var(--space-12); }
+    .iv-grid-2col-gap8-pad8 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); padding: var(--space-8); }
+    .iv-chart-area { width: 100%; margin: var(--space-8) 0; opacity: 0.8; }
+    .iv-drawer-w { width: 420px; }
+    .iv-dot-up { width: 12px; height: 2px; background: var(--market-up-fg); flex-shrink: 0; }
+    .iv-dot-brand { width: 12px; height: 2px; background: var(--brand-accent); flex-shrink: 0; }
+    .iv-dot-amber { width: 12px; height: 2px; background: var(--amber-500); flex-shrink: 0; }
+    .iv-state-risk { height: 100px; background: var(--surface-panel-elevated); border-radius: var(--radius-6); border: 1px solid; color: var(--risk-near-limit-fg); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-12); color: var(--text-tertiary); }
+    .iv-state-brand { height: 100px; background: var(--surface-panel-elevated); border-radius: var(--radius-6); border: 1px solid var(--brand-accent); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-12); color: var(--brand-accent); }
+    .iv-badge-brand { padding: var(--space-8); border-radius: var(--radius-4); border: 1px solid var(--brand-accent); font-size: var(--font-size-12); color: var(--brand-accent); text-align: center; }
+    .iv-badge-brand-subtle { padding: var(--space-4) var(--space-8); background: var(--brand-accent-subtle); border: 1px solid var(--brand-accent); border-radius: var(--radius-3); color: var(--brand-accent); text-align: center; }
+    .iv-badge-brand-subtle-noborder { padding: var(--space-4) var(--space-8); background: var(--brand-accent-subtle); border-radius: var(--radius-3); color: var(--brand-accent); text-align: center; }
+
+    /* ── Index card sparklines ── */
+    .index-sparkline {
+      width: 100%;
+      height: 20px;
+      display: block;
+    }
+
+    /* ── Inline style cleanup round 3 — data-driven CSS variables ── */
+
+    /* Treemap cells */
+    .treemap-cell-iv {
+      --heat-bg: var(--heat-flat);
+      --heat-line: var(--heat-neutral-line);
+      --heat-text: var(--text-primary);
+      position: absolute;
+      left: var(--tm-l);
+      top: var(--tm-t);
+      width: var(--tm-w);
+      height: var(--tm-h);
+      background: var(--heat-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-end;
+      gap: var(--space-1);
+      padding: var(--space-8);
+      cursor: pointer;
+      overflow: hidden;
+      border: 1px solid color-mix(in oklch, var(--heat-line) 12%, var(--map-cell-border));
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard);
+      z-index: 1;
+    }
+    .treemap-cell-iv[data-heat="up-1"] { --heat-bg: var(--heat-up-1); --heat-line: var(--heat-up-line-1); --heat-text: var(--heat-up-line-2); }
+    .treemap-cell-iv[data-heat="up-2"] { --heat-bg: var(--heat-up-2); --heat-line: var(--heat-up-line-2); --heat-text: var(--heat-up-line-3); }
+    .treemap-cell-iv[data-heat="up-3"] { --heat-bg: var(--heat-up-3); --heat-line: var(--heat-up-line-3); --heat-text: var(--heat-up-line-4); }
+    .treemap-cell-iv[data-heat="up-4"] { --heat-bg: var(--heat-up-4); --heat-line: var(--heat-up-line-4); --heat-text: var(--heat-up-line-4); }
+    .treemap-cell-iv[data-heat="down-1"] { --heat-bg: var(--heat-down-1); --heat-line: var(--heat-down-line-1); --heat-text: var(--heat-down-line-2); }
+    .treemap-cell-iv[data-heat="down-2"] { --heat-bg: var(--heat-down-2); --heat-line: var(--heat-down-line-2); --heat-text: var(--heat-down-line-3); }
+    .treemap-cell-iv[data-heat="down-3"] { --heat-bg: var(--heat-down-3); --heat-line: var(--heat-down-line-3); --heat-text: var(--heat-down-line-4); }
+    .treemap-cell-iv[data-heat="down-4"] { --heat-bg: var(--heat-down-4); --heat-line: var(--heat-down-line-4); --heat-text: var(--heat-down-line-4); }
+    .treemap-cell-iv[data-heat="flat"] { --heat-bg: var(--heat-flat); --heat-line: var(--heat-neutral-line); --heat-text: var(--text-tertiary); }
+    .treemap-cell-iv::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, color-mix(in oklch, var(--heat-line) 18%, transparent), transparent 26%),
+        linear-gradient(135deg, color-mix(in oklch, var(--neutral-950) 5%, transparent), transparent 42%);
+      opacity: 0.18;
+    }
+    .treemap-cell-iv:hover {
+      border-color: color-mix(in oklch, var(--heat-line) 34%, var(--border-default));
+    }
+    .treemap-cell-iv:has(.treemap-cell-change.up):hover {
+      border-color: color-mix(in oklch, var(--heat-line) 34%, var(--border-default));
+    }
+    .treemap-cell-iv:has(.treemap-cell-change.down):hover {
+      border-color: color-mix(in oklch, var(--heat-line) 34%, var(--border-default));
+    }
+
+    /* Flow bar fills */
+    .iv-flow-fill {
+      width: var(--fill-w);
+    }
+
+    /* Mini bar fills */
+    .iv-mini-bar-fill {
+      height: 100%;
+      width: var(--mb-w);
+      background: var(--mb-bg);
+      border-radius: 2px;
+    }
+
+    /* Inline style cleanup */
+
+    /* Treemap cell positions — area ∝ market cap approximation */
+    /* Row 1 (top 55%): 电子(15%) + 计算机(10%) + 通信(4.3%) | 医药(8%) + 银行(12%) + 新能源(6.7%) */
+	    .tm-cell-1 { --tm-l: 0; --tm-t: 0; --tm-w: 32%; --tm-h: 55%; }
+	    .tm-cell-2 { --tm-l: 32%; --tm-t: 0; --tm-w: 18%; --tm-h: 55%; }
+	    .tm-cell-3 { --tm-l: 50%; --tm-t: 0; --tm-w: 10%; --tm-h: 28%; }
+	    .tm-cell-4 { --tm-l: 80%; --tm-t: 0; --tm-w: 10%; --tm-h: 28%; }
+	    .tm-cell-5 { --tm-l: 60%; --tm-t: 0; --tm-w: 20%; --tm-h: 36%; }
+	    .tm-cell-6 { --tm-l: 0; --tm-t: 55%; --tm-w: 17%; --tm-h: 45%; }
+    /* Row 2 (bottom 45%): 房地产(3.2%) + 消费(5.6%) + 有色(2.8%) | 军工(3.9%) + 汽车(2.9%) + 传媒(2.1%) | 建材(1.4%) + 交运(1.1%) + 煤炭(1.6%) | 电力(2.3%) */
+	    .tm-cell-7 { --tm-l: 60%; --tm-t: 36%; --tm-w: 20%; --tm-h: 19%; }
+	    .tm-cell-8 { --tm-l: 90%; --tm-t: 0; --tm-w: 10%; --tm-h: 28%; }
+	    .tm-cell-9 { --tm-l: 17%; --tm-t: 55%; --tm-w: 16%; --tm-h: 45%; }
+	    .tm-cell-10 { --tm-l: 33%; --tm-t: 55%; --tm-w: 17%; --tm-h: 45%; }
+	    .tm-cell-11 { --tm-l: 50%; --tm-t: 55%; --tm-w: 16%; --tm-h: 45%; }
+	    .tm-cell-12 { --tm-l: 50%; --tm-t: 28%; --tm-w: 10%; --tm-h: 27%; }
+	    .tm-cell-13 { --tm-l: 66%; --tm-t: 55%; --tm-w: 12%; --tm-h: 45%; }
+	    .tm-cell-14 { --tm-l: 78%; --tm-t: 55%; --tm-w: 11%; --tm-h: 45%; }
+	    .tm-cell-15 { --tm-l: 89%; --tm-t: 55%; --tm-w: 11%; --tm-h: 45%; }
+	    .tm-cell-16 { --tm-l: 80%; --tm-t: 28%; --tm-w: 20%; --tm-h: 27%; }
+
+    /* Index sparkline styling */
+    .index-sparkline { margin-top: 4px; opacity: 0.6; }
+
+    /* Mini bar fills — sector preference */
+    .mb-fill-up-65 { --mb-w: 65%; --mb-bg: var(--market-up-fg); border-radius: 2px; }
+    .mb-fill-up-45 { --mb-w: 45%; --mb-bg: var(--market-up-fg); border-radius: 2px; }
+    .mb-fill-up-30 { --mb-w: 30%; --mb-bg: var(--market-up-fg); border-radius: 2px; }
+    .mb-fill-down-35 { --mb-w: 35%; --mb-bg: var(--market-down-fg); border-radius: 2px; }
+    .mb-fill-down-25 { --mb-w: 25%; --mb-bg: var(--market-down-fg); border-radius: 2px; }
+
+    /* Flow bar fill widths */
+    .flow-w-78 { --fill-w: 78%; }
+    .flow-w-52 { --fill-w: 52%; }
+    .flow-w-35 { --fill-w: 35%; }
+    .flow-w-45 { --fill-w: 45%; }
+    .flow-w-32 { --fill-w: 32%; }
+    .flow-w-60 { --fill-w: 60%; }
+    .flow-w-42 { --fill-w: 42%; }
+    .flow-w-28 { --fill-w: 28%; }
+
+    /* ── Right Rail Toggle (D2) ── */
+    .right-rail .rail-toggle {
+      margin-top: auto;
+      padding: var(--space-8) var(--space-12);
+      border-top: 1px solid var(--border-subtle);
+    }
+    .right-rail .rail-toggle button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      padding: var(--space-6) 0;
+      border-radius: var(--radius-4);
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-12);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .right-rail .rail-toggle button:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+    .right-rail.collapsed .rail-section,
+    .right-rail.collapsed .state-variant {
+      display: none;
+    }
+    .right-rail.collapsed {
+      width: var(--shell-sidebar-collapsed-width);
+      min-width: var(--shell-sidebar-collapsed-width);
+      align-items: center;
+      padding: var(--space-8) 0;
+      overflow: hidden;
+    }
+    .right-rail.collapsed .rail-toggle {
+      margin-top: 0;
+      padding: 0;
+      border-top: none;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter -->
+  <svg class="noise-svg-source" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — A 股总览 · Compact · Radar</div>
+
+  <div class="shell-radar">
+
+    <!-- ===== Rail (sticky left) ===== -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon active" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+
+    </nav>
+
+    <!-- ===== Shell Body ===== -->
+    <div class="shell-body">
+
+      <!-- Header (sticky top) -->
+      <header class="shell-header">
+        <h1 class="header-title">中国 A 股</h1>
+        <span class="header-subtitle">总览</span>
+        <div class="header-spacer"></div>
+        <div class="header-actions">
+          <div class="header-action-btn" title="时间框架" data-action-tier="command">
+            <span class="header-timeframe">1D</span>
+          </div>
+          <div class="header-timestamp">09:46 CST</div>
+          <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器" aria-label="打开筛选器" data-action-tier="context">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
+          </label>
+          <label for="overlay-ai-analysis" class="header-action-btn cursor-pointer" title="AI 解读" aria-label="打开 AI 解读" data-action-tier="context">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+          </label>
+
+        </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" data-action-tier="overflow" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" data-action-tier="overflow" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" data-action-tier="overflow" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" data-action-tier="overflow" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" data-action-tier="overflow" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-action-tier="overflow" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+      </header>
+
+      <!-- Context Bar -->
+      <div class="context-bar" data-contract-slot="context-bar" role="status" aria-label="A股市场环境">
+        <div class="context-bar-item">
+          <span class="context-bar-label">Regime</span>
+          <span class="context-bar-value regime-on" data-tooltip="市场风险偏好偏强，建议适度进攻">Risk-On</span>
+        </div>
+        <div class="context-bar-sep"></div>
+        <div class="context-bar-item">
+          <span class="context-bar-label">Breadth</span>
+          <span class="context-bar-value regime-on" data-tooltip="上涨家数 > 60%，市场广度偏强">偏强</span>
+        </div>
+        <div class="context-bar-sep"></div>
+        <label for="overlay-northbound-detail" class="context-bar-item cursor-pointer" title="查看北向资金详情" role="button" tabindex="0" aria-label="查看北向资金详情，当前净流入 12 亿" data-action-tier="context">
+          <span class="context-bar-label">北向</span>
+          <span class="context-bar-value inflow iv-text-up dir-up" data-tooltip="点击查看北向资金分时详情">+12 亿</span>
+        </label>
+        <div class="context-bar-sep"></div>
+        <div class="context-bar-item">
+          <span class="context-bar-label">Alerts</span>
+          <span class="context-bar-indicator" aria-label="1 条预警">
+            <span class="badge-dot"></span>
+            <span class="badge-count">1</span>
+          </span>
+        </div>
+        <div class="context-bar-spacer"></div>
+        <div class="context-bar-item context-bar-item--secondary">
+          <span class="context-bar-value iv-text-10">涨 <span class="iv-text-up dir-up">2,847</span> / 跌 <span class="iv-text-down dir-down">1,523</span></span>
+        </div>
+      </div>
+
+      <!-- Scope Strip -->
+      <div class="scope-strip" data-contract-slot="scope-strip" role="status" aria-label="影响范围：A股市场主线与资金轮动" data-primary-answer-equivalent data-primary-weight="dominant">
+        <div class="scope-tag lead" data-tooltip="今日领涨板块，AI 算力 + 半导体设备" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="main-content" aria-label="查看 AI / 半导体主线" data-action-tier="primary">查看 AI / 半导体主线</div>
+        <span class="scope-sep">|</span>
+        <div class="scope-tag lag" data-tooltip="今日领跌板块，地产风险 + 银行跟跌" data-answer-evidence>对比地产 / 银行拖累</div>
+        <span class="scope-sep">|</span>
+        <div class="scope-tag neutral" data-tooltip="科技行情从龙头向二线扩散" data-answer-evidence>科技扩散</div>
+        <span class="scope-sep">|</span>
+        <div class="scope-ai-text" data-answer-judgment data-answer-metric>
+          <strong>主线</strong>：科技扩散，AI 算力 + 半导体领涨，成交占比升至 18%
+        </div>
+        <span class="scope-sep">|</span>
+        <div class="scope-tag lag iv-text-10">FOMC-1D</div>
+      </div>
+
+      <!-- ===== Workspace: Main + Right Rail ===== -->
+      <div class="shell-workspace">
+
+        <main id="main-content" class="main-content">
+
+          <!-- Market Structure Map (Treemap / Heatmap) -->
+          <input type="radio" id="map-treemap" name="map-view" checked class="sr-only">
+          <input type="radio" id="map-heatmap" name="map-view" class="sr-only">
+	          <div class="map-container" role="group" aria-label="A股行业市场结构图" data-map-quality="t0-market-map" data-reveal="fade-up">
+	            <div class="map-header">
+	              <span class="map-title">市场结构图</span>
+	              <div class="map-controls">
+	                <label for="map-treemap" class="map-view-toggle" data-map-mode-option>行业矩阵</label>
+	                <label for="map-heatmap" class="map-view-toggle" data-map-mode-option>个股热区</label>
+	              </div>
+	            </div>
+	            <div class="map-metadata" aria-label="市场结构图读图规则">
+	              <div class="map-readout">
+	                <span class="map-readout-item" data-map-size>Size <strong>成交额占比</strong></span>
+	                <span class="map-readout-item" data-map-color>Color <strong>涨跌幅（A股：红涨绿跌）</strong></span>
+	                <span class="map-readout-item" data-map-grouping>Grouping <strong>申万一级</strong></span>
+	              </div>
+	              <div class="map-insight-strip">
+	                <span data-map-breadcrumb>A股 / 申万一级 / 今日</span>
+	                <span class="map-insight-sep" aria-hidden="true"></span>
+	                <span data-map-selected-summary>选中 <strong>电子 +2.34%</strong> · 成交额 15.2%</span>
+	                <span class="map-insight-sep" aria-hidden="true"></span>
+	                <span data-map-metric-switcher>行业 Size 成交额占比 · 个股 Size 成交额 · Color 涨跌幅（A股：红涨绿跌）</span>
+	                <span class="map-insight-sep" aria-hidden="true"></span>
+	                <span class="map-interaction-hint"><strong>悬停</strong>看明细 · <strong>点击</strong>下钻</span>
+	              </div>
+	              <div class="map-legend" data-viz-legend aria-label="涨跌幅与成交额图例">
+	                <span class="viz-sign-marker" data-viz-sign="positive">▲ 上涨</span>
+	                <span class="viz-sign-marker" data-viz-sign="negative">▼ 下跌</span>
+	                <span class="viz-threshold-label" data-viz-threshold-label>±2% 信号</span>
+	                <span class="map-legend-group" data-color-legend>
+	                  <span class="map-legend-label" data-map-threshold="negative-extreme">≤ -5%</span>
+	                  <div class="map-legend-scale" aria-hidden="true">
+	                    <span class="map-legend-stop down-strong"></span>
+	                    <span class="map-legend-stop down"></span>
+	                    <span class="map-legend-stop flat"></span>
+	                    <span class="map-legend-stop up"></span>
+	                    <span class="map-legend-stop up-strong"></span>
+	                  </div>
+	                  <span class="map-legend-label" data-map-threshold="neutral">0</span>
+	                  <span class="map-legend-label" data-map-threshold="positive-extreme">≥ +5%</span>
+	                </span>
+	                <span class="map-legend-group" data-size-legend aria-label="成交额占比大小">
+	                  <span class="map-legend-label">Size</span>
+	                  <span class="map-size-legend" aria-hidden="true"><span></span><span></span><span></span></span>
+	                </span>
+	              </div>
+	            </div>
+	            <div class="map-view-treemap" data-map-mode="sector-treemap" aria-label="行业矩阵，面积表示成交额占比，颜色表示涨跌幅">
+	            <div class="treemap">
+	              <span class="map-sector-boundary growth" aria-hidden="true"></span>
+	              <span class="map-sector-boundary financial" aria-hidden="true"></span>
+	              <span class="map-sector-boundary defensive" aria-hidden="true"></span>
+	              <span class="map-sector-boundary cyclical" aria-hidden="true"></span>
+              <div class="treemap-cell-iv tm-cell-1" role="button" data-direction="up" data-heat="up-4" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="full" aria-label="电子 — 涨幅 +2.34%，成交额占比 15.2%" data-tooltip="电子 — 涨幅 +2.34%，成交额占比 15.2%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">电子</span>
+	                <span class="treemap-cell-change up">+2.34%</span>
+	                <span class="treemap-cell-vol">占比 15.2%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-2" role="button" data-direction="up" data-heat="up-3" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="full" aria-label="计算机 — 涨幅 +1.87%，成交额占比 9.8%" data-tooltip="计算机 — 涨幅 +1.87%，成交额占比 9.8%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">计算机</span>
+	                <span class="treemap-cell-change up">+1.87%</span>
+	                <span class="treemap-cell-vol">占比 9.8%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-3" role="button" data-direction="up" data-heat="up-3" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="通信 — 涨幅 +1.52%，成交额占比 4.3%" data-tooltip="通信 — 涨幅 +1.52%，成交额占比 4.3%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">通信</span>
+	                <span class="treemap-cell-change up">+1.52%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-4" role="button" data-direction="down" data-heat="down-1" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="医药 — 跌幅 -0.23%，成交额占比 5.1%" data-tooltip="医药 — 跌幅 -0.23%，成交额占比 5.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
+	                <span class="treemap-cell-name">医药</span>
+	                <span class="treemap-cell-change down">-0.23%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-5" role="button" data-direction="down" data-heat="down-2" data-sector-family="financial" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="full" aria-label="银行 — 跌幅 -0.67%，成交额占比 12.0%" data-tooltip="银行 — 跌幅 -0.67%，成交额占比 12.0%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
+	                <span class="treemap-cell-name">银行</span>
+	                <span class="treemap-cell-change down">-0.67%</span>
+	                <span class="treemap-cell-vol">占比 12.0%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-6" role="button" data-direction="up" data-heat="up-2" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="新能源 — 涨幅 +0.86%，成交额占比 6.7%" data-tooltip="新能源 — 涨幅 +0.86%，成交额占比 6.7%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">新能源</span>
+	                <span class="treemap-cell-change up">+0.86%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-7" role="button" data-direction="down" data-heat="down-3" data-sector-family="financial" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="房地产 — 跌幅 -1.45%，成交额占比 3.2%" data-tooltip="房地产 — 跌幅 -1.45%，成交额占比 3.2%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
+	                <span class="treemap-cell-name">房地产</span>
+	                <span class="treemap-cell-change down">-1.45%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-8" role="button" data-direction="up" data-heat="up-1" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="消费 — 涨幅 +0.45%，成交额占比 5.6%" data-tooltip="消费 — 涨幅 +0.45%，成交额占比 5.6%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">消费</span>
+	                <span class="treemap-cell-change up">+0.45%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-9" role="button" data-direction="up" data-heat="up-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="有色 — 涨幅 +0.56%，成交额占比 2.8%" data-tooltip="有色 — 涨幅 +0.56%，成交额占比 2.8%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">有色</span>
+	                <span class="treemap-cell-change up">+0.56%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-10" role="button" data-direction="up" data-heat="up-2" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="军工 — 涨幅 +1.12%，成交额占比 3.9%" data-tooltip="军工 — 涨幅 +1.12%，成交额占比 3.9%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">军工</span>
+	                <span class="treemap-cell-change up">+1.12%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-11" role="button" data-direction="up" data-heat="up-2" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="汽车 — 涨幅 +0.67%，成交额占比 2.9%" data-tooltip="汽车 — 涨幅 +0.67%，成交额占比 2.9%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">汽车</span>
+	                <span class="treemap-cell-change up">+0.67%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-12" role="button" data-direction="down" data-heat="down-1" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="传媒 — 跌幅 -0.34%，成交额占比 2.1%" data-tooltip="传媒 — 跌幅 -0.34%，成交额占比 2.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
+	                <span class="treemap-cell-name">传媒</span>
+	                <span class="treemap-cell-change down">-0.34%</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-13" role="button" data-direction="up" data-heat="up-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="name-only" aria-label="建材 — 涨幅 +0.18%，成交额占比 1.4%" data-tooltip="建材 — 涨幅 +0.18%，成交额占比 1.4%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">建材</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-14" role="button" data-direction="down" data-heat="down-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="name-only" aria-label="交运 — 跌幅 -0.12%，成交额占比 1.1%" data-tooltip="交运 — 跌幅 -0.12%，成交额占比 1.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
+	                <span class="treemap-cell-name">交运</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-15" role="button" data-direction="down" data-heat="down-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="name-only" aria-label="煤炭 — 跌幅 -0.08%，成交额占比 1.6%" data-tooltip="煤炭 — 跌幅 -0.08%，成交额占比 1.6%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
+	                <span class="treemap-cell-name">煤炭</span>
+	              </div>
+	              <div class="treemap-cell-iv tm-cell-16" role="button" data-direction="up" data-heat="up-2" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="电力 — 涨幅 +0.91%，成交额占比 2.3%" data-tooltip="电力 — 涨幅 +0.91%，成交额占比 2.3%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
+	                <span class="treemap-cell-name">电力</span>
+	                <span class="treemap-cell-change up">+0.91%</span>
+	              </div>
+            </div>
+            </div><!-- /map-view-treemap -->
+	            <div class="map-view-heatmap" data-map-mode="stock-heatmap" aria-label="个股热区，面积表示成交额，颜色表示涨跌幅强弱">
+	              <div class="heatmap-cell viz-cell-strong" role="button" data-viz-sign="positive" data-viz-cell-strength="strong" data-viz-cell-selected data-direction="up" data-heat="up-4" data-size-bucket="xl" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="立讯精密，行业 电子，涨幅 +3.24%，成交额 42.8亿" data-tooltip="立讯精密 — 电子，+3.24% · 成交额 42.8亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">立讯精密</span><span class="hm-change up">+3.24%</span><span class="hm-vol">42.8亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-4" data-size-bucket="lg" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="中芯国际，行业 半导体，涨幅 +2.91%，成交额 39.6亿" data-tooltip="中芯国际 — 半导体，+2.91% · 成交额 39.6亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">中芯国际</span><span class="hm-change up">+2.91%</span><span class="hm-vol">39.6亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-4" data-size-bucket="lg" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="韦尔股份，行业 电子，涨幅 +2.64%，成交额 31.4亿" data-tooltip="韦尔股份 — 电子，+2.64% · 成交额 31.4亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">韦尔股份</span><span class="hm-change up">+2.64%</span><span class="hm-vol">31.4亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-3" data-size-bucket="md" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="北方华创，行业 半导体设备，涨幅 +1.98%，成交额 30.2亿" data-tooltip="北方华创 — 半导体设备，+1.98% · 成交额 30.2亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">北方华创</span><span class="hm-change up">+1.98%</span><span class="hm-vol">30.2亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-3" data-size-bucket="md" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="浪潮信息，行业 服务器，涨幅 +1.76%，成交额 29.0亿" data-tooltip="浪潮信息 — 服务器，+1.76% · 成交额 29.0亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">浪潮信息</span><span class="hm-change up">+1.76%</span><span class="hm-vol">29.0亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-3" data-size-bucket="md" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="科大讯飞，行业 AI 应用，涨幅 +1.44%，成交额 21.9亿" data-tooltip="科大讯飞 — AI 应用，+1.44% · 成交额 21.9亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">科大讯飞</span><span class="hm-change up">+1.44%</span><span class="hm-vol">21.9亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-3" data-size-bucket="md" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="中兴通讯，行业 通信设备，涨幅 +1.32%，成交额 20.7亿" data-tooltip="中兴通讯 — 通信设备，+1.32% · 成交额 20.7亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">中兴通讯</span><span class="hm-change up">+1.32%</span><span class="hm-vol">20.7亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="sm" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="分众传媒，行业 传媒，跌幅 -0.34%，成交额 12.6亿" data-tooltip="分众传媒 — 传媒，-0.34% · 成交额 12.6亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">分众传媒</span><span class="hm-change down">-0.34%</span><span class="hm-vol">12.6亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-4" data-size-bucket="xl" data-sector-family="financial" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="万科A，行业 房地产，跌幅 -5.23%，成交额 36.9亿" data-tooltip="万科A — 房地产，-5.23% · 成交额 36.9亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">万科A</span><span class="hm-change down">-5.23%</span><span class="hm-vol">36.9亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-4" data-size-bucket="lg" data-sector-family="financial" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="保利发展，行业 房地产，跌幅 -4.18%，成交额 28.1亿" data-tooltip="保利发展 — 房地产，-4.18% · 成交额 28.1亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">保利发展</span><span class="hm-change down">-4.18%</span><span class="hm-vol">28.1亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-2" data-size-bucket="lg" data-sector-family="financial" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="招商银行，行业 银行，跌幅 -0.60%，成交额 27.3亿" data-tooltip="招商银行 — 银行，-0.60% · 成交额 27.3亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">招商银行</span><span class="hm-change down">-0.60%</span><span class="hm-vol">27.3亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="lg" data-sector-family="financial" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="中国平安，行业 保险，跌幅 -0.42%，成交额 26.5亿" data-tooltip="中国平安 — 保险，-0.42% · 成交额 26.5亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">中国平安</span><span class="hm-change down">-0.42%</span><span class="hm-vol">26.5亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-1" data-size-bucket="lg" data-sector-family="financial" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="工商银行，行业 银行，涨幅 +0.18%，成交额 25.8亿" data-tooltip="工商银行 — 银行，+0.18% · 成交额 25.8亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">工商银行</span><span class="hm-change up">+0.18%</span><span class="hm-vol">25.8亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-1" data-size-bucket="md" data-sector-family="financial" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="中信证券，行业 券商，涨幅 +0.22%，成交额 18.4亿" data-tooltip="中信证券 — 券商，+0.22% · 成交额 18.4亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">中信证券</span><span class="hm-change up">+0.22%</span><span class="hm-vol">18.4亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="xl" data-sector-family="defensive" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="贵州茅台，行业 白酒，涨幅 +1.20%，成交额 33.2亿" data-tooltip="贵州茅台 — 白酒，+1.20% · 成交额 33.2亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">贵州茅台</span><span class="hm-change up">+1.20%</span><span class="hm-vol">33.2亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="lg" data-sector-family="defensive" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="美的集团，行业 家电，涨幅 +0.92%，成交额 24.7亿" data-tooltip="美的集团 — 家电，+0.92% · 成交额 24.7亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">美的集团</span><span class="hm-change up">+0.92%</span><span class="hm-vol">24.7亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="lg" data-sector-family="defensive" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="恒瑞医药，行业 医药，跌幅 -0.23%，成交额 23.8亿" data-tooltip="恒瑞医药 — 医药，-0.23% · 成交额 23.8亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">恒瑞医药</span><span class="hm-change down">-0.23%</span><span class="hm-vol">23.8亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="md" data-sector-family="defensive" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="迈瑞医疗，行业 医疗器械，涨幅 +0.68%，成交额 17.6亿" data-tooltip="迈瑞医疗 — 医疗器械，+0.68% · 成交额 17.6亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">迈瑞医疗</span><span class="hm-change up">+0.68%</span><span class="hm-vol">17.6亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="md" data-sector-family="defensive" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="长江电力，行业 电力，涨幅 +0.91%，成交额 16.9亿" data-tooltip="长江电力 — 电力，+0.91% · 成交额 16.9亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">长江电力</span><span class="hm-change up">+0.91%</span><span class="hm-vol">16.9亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="sm" data-sector-family="defensive" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="伊利股份，行业 食品饮料，跌幅 -0.18%，成交额 11.8亿" data-tooltip="伊利股份 — 食品饮料，-0.18% · 成交额 11.8亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">伊利股份</span><span class="hm-change down">-0.18%</span><span class="hm-vol">11.8亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="xl" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="宁德时代，行业 新能源，涨幅 +0.86%，成交额 44.2亿" data-tooltip="宁德时代 — 新能源，+0.86% · 成交额 44.2亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">宁德时代</span><span class="hm-change up">+0.86%</span><span class="hm-vol">44.2亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="lg" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="阳光电源，行业 光储，涨幅 +1.10%，成交额 22.5亿" data-tooltip="阳光电源 — 光储，+1.10% · 成交额 22.5亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">阳光电源</span><span class="hm-change up">+1.10%</span><span class="hm-vol">22.5亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="md" data-sector-family="growth" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="隆基绿能，行业 光伏，跌幅 -0.12%，成交额 16.2亿" data-tooltip="隆基绿能 — 光伏，-0.12% · 成交额 16.2亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">隆基绿能</span><span class="hm-change down">-0.12%</span><span class="hm-vol">16.2亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-1" data-size-bucket="md" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="紫金矿业，行业 有色，涨幅 +0.56%，成交额 18.1亿" data-tooltip="紫金矿业 — 有色，+0.56% · 成交额 18.1亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">紫金矿业</span><span class="hm-change up">+0.56%</span><span class="hm-vol">18.1亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-1" data-size-bucket="sm" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="赣锋锂业，行业 有色，涨幅 +0.42%，成交额 10.8亿" data-tooltip="赣锋锂业 — 有色，+0.42% · 成交额 10.8亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">赣锋锂业</span><span class="hm-change up">+0.42%</span><span class="hm-vol">10.8亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="sm" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="天齐锂业，行业 有色，跌幅 -0.16%，成交额 10.1亿" data-tooltip="天齐锂业 — 有色，-0.16% · 成交额 10.1亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">天齐锂业</span><span class="hm-change down">-0.16%</span><span class="hm-vol">10.1亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="md" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="中航沈飞，行业 军工，涨幅 +1.12%，成交额 17.2亿" data-tooltip="中航沈飞 — 军工，+1.12% · 成交额 17.2亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">中航沈飞</span><span class="hm-change up">+1.12%</span><span class="hm-vol">17.2亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="md" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="中国船舶，行业 军工，涨幅 +0.88%，成交额 15.6亿" data-tooltip="中国船舶 — 军工，+0.88% · 成交额 15.6亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">中国船舶</span><span class="hm-change up">+0.88%</span><span class="hm-vol">15.6亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-2" data-size-bucket="xl" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="比亚迪，行业 汽车，涨幅 +0.67%，成交额 41.7亿" data-tooltip="比亚迪 — 汽车，+0.67% · 成交额 41.7亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">比亚迪</span><span class="hm-change up">+0.67%</span><span class="hm-vol">41.7亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="up" data-heat="up-1" data-size-bucket="sm" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="长城汽车，行业 汽车，涨幅 +0.51%，成交额 11.2亿" data-tooltip="长城汽车 — 汽车，+0.51% · 成交额 11.2亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▲</span><span class="hm-name">长城汽车</span><span class="hm-change up">+0.51%</span><span class="hm-vol">11.2亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="sm" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="顺丰控股，行业 交运，跌幅 -0.12%，成交额 10.6亿" data-tooltip="顺丰控股 — 交运，-0.12% · 成交额 10.6亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">顺丰控股</span><span class="hm-change down">-0.12%</span><span class="hm-vol">10.6亿</span></div>
+	              <div class="heatmap-cell" role="button" data-direction="down" data-heat="down-1" data-size-bucket="sm" data-sector-family="cyclical" tabindex="0" data-size-metric="turnover-value" data-color-metric="change-pct" aria-label="中国神华，行业 煤炭，跌幅 -0.08%，成交额 10.4亿" data-tooltip="中国神华 — 煤炭，-0.08% · 成交额 10.4亿" onclick="document.getElementById('overlay-sector-detail').checked=true"><span class="hm-sign" aria-hidden="true">▼</span><span class="hm-name">中国神华</span><span class="hm-change down">-0.08%</span><span class="hm-vol">10.4亿</span></div>
+            </div><!-- /map-view-heatmap -->
+          </div>
+
+          <!-- Auxiliary Panels -->
+      <div class="aux-panels" data-contract-slot="aux-panels" data-reveal="fade-up" data-secondary-context>
+
+            <!-- Index Summary -->
+            <div class="panel" data-reveal="fade-up">
+              <div class="panel-header">
+                <span class="panel-title">指数概览</span>
+              </div>
+              <div class="panel-body">
+                <div class="index-grid">
+                  <div class="index-card up" tabindex="0" data-reveal="fade-up">
+                    <div class="index-card-name">沪深300</div>
+                    <div class="index-card-value" data-ticker="3912.45">3,912.45</div>
+                    <div class="index-card-change up">+0.67%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[3880,3890,3895,3900,3892,3898,3905,3912],"color":"var(--market-up-fg)","fill":false,"strokeWidth":1}' aria-hidden="true"></svg>
+                  </div>
+                  <div class="index-card up" tabindex="0" data-reveal="fade-up">
+                    <div class="index-card-name">中证500</div>
+                    <div class="index-card-value" data-ticker="5634.18">5,634.18</div>
+                    <div class="index-card-change up">+0.92%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[5580,5590,5600,5605,5610,5618,5625,5634],"color":"var(--market-up-fg)","fill":false,"strokeWidth":1}' aria-hidden="true"></svg>
+                  </div>
+                  <div class="index-card up" tabindex="0" data-reveal="fade-up">
+                    <div class="index-card-name">中证1000</div>
+                    <div class="index-card-value" data-ticker="6128.73">6,128.73</div>
+                    <div class="index-card-change up">+1.34%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[6050,6070,6080,6090,6095,6100,6115,6128],"color":"var(--market-up-fg)","fill":false,"strokeWidth":1}' aria-hidden="true"></svg>
+                  </div>
+                  <div class="index-card down" tabindex="0" data-reveal="fade-up">
+                    <div class="index-card-name">创业板指</div>
+                    <div class="index-card-value" data-ticker="2056.91">2,056.91</div>
+                    <div class="index-card-change down">-0.18%</div>
+                    <svg class="index-sparkline" viewBox="0 0 60 20" fill="none" data-sparkline='{"data":[2065,2062,2060,2058,2055,2058,2054,2056],"color":"var(--market-down-fg)","fill":false,"strokeWidth":1}' aria-hidden="true"></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ETF Matrix -->
+            <div class="panel" data-reveal="fade-up">
+              <div class="panel-header">
+                <span class="panel-title">核心 ETF</span>
+                <span class="panel-link" data-tooltip="查看全部 ETF 列表">查看全部 →</span>
+              </div>
+              <div class="panel-body iv-pt-0">
+                <table class="etf-table">
+                  <thead>
+                    <tr>
+                      <th>名称</th>
+                      <th class="numeric">最新价</th>
+                      <th class="numeric">涨跌幅</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-tooltip="510050 沪深300ETF · 最新价 4.236"><td class="name">510050 沪深300ETF</td><td class="numeric">4.236</td><td class="numeric iv-text-up dir-up">+0.68%</td></tr>
+                    <tr data-tooltip="510500 中证500ETF · 最新价 6.891"><td class="name">510500 中证500ETF</td><td class="numeric">6.891</td><td class="numeric iv-text-up dir-up">+0.94%</td></tr>
+                    <tr data-tooltip="159915 创业板ETF · 最新价 2.187"><td class="name">159915 创业板ETF</td><td class="numeric">2.187</td><td class="numeric iv-text-down dir-down">-0.15%</td></tr>
+                    <tr data-tooltip="512100 中证1000ETF · 最新价 2.456"><td class="name">512100 中证1000ETF</td><td class="numeric">2.456</td><td class="numeric iv-text-up dir-up">+1.32%</td></tr>
+                    <tr data-tooltip="512880 证券ETF · 最新价 0.987"><td class="name">512880 证券ETF</td><td class="numeric">0.987</td><td class="numeric iv-text-up dir-up">+1.56%</td></tr>
+                    <tr data-tooltip="159949 创新药ETF · 最新价 0.723"><td class="name">159949 创新药ETF</td><td class="numeric">0.723</td><td class="numeric iv-text-down dir-down">-0.42%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Movers: 涨幅榜 -->
+            <div class="panel" data-reveal="fade-up">
+              <div class="panel-header">
+                <span class="panel-title">涨幅榜</span>
+              </div>
+              <div class="panel-body iv-pt-4">
+                <div class="movers-list">
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="寒武纪-U · 涨停 · AI芯片"><span class="mover-rank">1</span><span class="mover-name">寒武纪-U</span><span class="mover-change up">+12.34%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="中芯国际 · 涨幅偏离 · 半导体"><span class="mover-rank">2</span><span class="mover-name">中芯国际</span><span class="mover-change up">+8.76%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="海光信息 · GPU算力 · 半导体设备"><span class="mover-rank">3</span><span class="mover-name">海光信息</span><span class="mover-change up">+7.23%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="中际旭创 · 光模块龙头"><span class="mover-rank">4</span><span class="mover-name">中际旭创</span><span class="mover-change up">+6.89%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="北方华创 · 半导体设备 · 国产替代"><span class="mover-rank">5</span><span class="mover-name">北方华创</span><span class="mover-change up">+5.67%</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Movers: 跌幅榜 -->
+            <div class="panel" data-reveal="fade-up">
+              <div class="panel-header">
+                <span class="panel-title">跌幅榜</span>
+              </div>
+              <div class="panel-body iv-pt-4">
+                <div class="movers-list">
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="万科A · 跌幅偏离 · 地产风险"><span class="mover-rank">1</span><span class="mover-name">万科A</span><span class="mover-change down">-5.23%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="保利发展 · 跌幅偏离 · 地产链"><span class="mover-rank">2</span><span class="mover-name">保利发展</span><span class="mover-change down">-4.18%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="招商蛇口 · 跌幅偏离 · 地产开发"><span class="mover-rank">3</span><span class="mover-name">招商蛇口</span><span class="mover-change down">-3.56%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="兴业银行 · 地产风险传导"><span class="mover-rank">4</span><span class="mover-name">兴业银行</span><span class="mover-change down">-2.34%</span></div>
+                  <div class="mover-item" tabindex="0" data-reveal="fade-up" data-tooltip="工商银行 · 大行跟跌"><span class="mover-rank">5</span><span class="mover-name">工商银行</span><span class="mover-change down">-1.89%</span></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <!-- /aux-panels -->
+
+        </main>
+
+        <!-- Right Rail: 北向资金深度面板 -->
+        <div class="right-rail" data-contract-slot="right-rail" data-reveal="fade-up">
+
+          <div class="rail-section" data-reveal="fade-up">
+            <div class="rail-section-header">
+              <span class="rail-section-title">北向资金</span>
+              <label for="overlay-northbound-detail" class="rail-section-expand cursor-pointer" role="button" tabindex="0" aria-label="展开北向资金分时曲线与持仓明细" data-tooltip="查看北向资金分时曲线与持仓明细">展开 →</label>
+            </div>
+            <div class="rail-section-body">
+              <!-- Summary -->
+              <div class="northbound-summary">
+                <span class="northbound-value inflow" data-ticker="12.3" data-ticker-prefix="+" data-ticker-suffix="">+12.3</span>
+                <span class="northbound-unit">亿元（净流入）</span>
+              </div>
+              <div class="northbound-sub">
+                <div class="northbound-sub-item">
+                  <span class="northbound-sub-label">沪股通</span>
+                  <span class="northbound-sub-value inflow">+8.1 亿</span>
+                </div>
+                <div class="northbound-sub-item">
+                  <span class="northbound-sub-label">深股通</span>
+                  <span class="northbound-sub-value inflow">+4.2 亿</span>
+                </div>
+              </div>
+              <!-- Mini flow chart -->
+              <svg class="flow-mini-chart" viewBox="0 0 200 48" fill="none" aria-hidden="true" data-sparkline='{"data":[36,32,28,30,24,20,22,16,12,14,10],"color":"var(--market-up-fg)","fill":true,"fillOpacity":0.15,"strokeWidth":1.5}'></svg>
+              <!-- Top holdings -->
+              <div class="iv-label-uppercase-mb4">持仓变动 Top 5</div>
+              <div class="holdings-list">
+                <div class="holding-item">
+                  <span class="holding-name" data-tooltip="北向持仓变动">贵州茅台</span>
+                  <span class="holding-change inflow">+1.2 亿</span>
+                </div>
+                <div class="holding-item">
+                  <span class="holding-name" data-tooltip="北向持仓变动">宁德时代</span>
+                  <span class="holding-change inflow">+0.8 亿</span>
+                </div>
+                <div class="holding-item">
+                  <span class="holding-name" data-tooltip="北向持仓变动">招商银行</span>
+                  <span class="holding-change outflow">-0.6 亿</span>
+                </div>
+                <div class="holding-item">
+                  <span class="holding-name" data-tooltip="北向持仓变动">中芯国际</span>
+                  <span class="holding-change inflow">+0.5 亿</span>
+                </div>
+                <div class="holding-item">
+                  <span class="holding-name" data-tooltip="北向持仓变动">美的集团</span>
+                  <span class="holding-change inflow">+0.4 亿</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sector Preference -->
+          <div class="rail-section" data-reveal="fade-up">
+            <div class="rail-section-header">
+              <span class="rail-section-title">北向行业偏好</span>
+            </div>
+            <div class="rail-section-body">
+              <div class="sector-pref-item">
+                <span class="sector-pref-name" data-tooltip="电子板块北向资金流向">电子</span>
+                <div class="iv-divider-bar"><div class="iv-mini-bar-fill mb-fill-up-65"></div></div>
+                <span class="sector-pref-value inflow">+3.2 亿</span>
+              </div>
+              <div class="sector-pref-item">
+                <span class="sector-pref-name" data-tooltip="计算机板块北向资金流向">计算机</span>
+                <div class="iv-divider-bar"><div class="iv-mini-bar-fill mb-fill-up-45"></div></div>
+                <span class="sector-pref-value inflow">+2.1 亿</span>
+              </div>
+              <div class="sector-pref-item">
+                <span class="sector-pref-name" data-tooltip="新能源板块北向资金流向">新能源</span>
+                <div class="iv-divider-bar"><div class="iv-mini-bar-fill mb-fill-up-30"></div></div>
+                <span class="sector-pref-value inflow">+1.5 亿</span>
+              </div>
+              <div class="sector-pref-item">
+                <span class="sector-pref-name" data-tooltip="银行板块北向资金流向">银行</span>
+                <div class="iv-divider-bar"><div class="iv-mini-bar-fill mb-fill-down-35"></div></div>
+                <span class="sector-pref-value outflow">-1.8 亿</span>
+              </div>
+              <div class="sector-pref-item">
+                <span class="sector-pref-name" data-tooltip="房地产板块北向资金流向">房地产</span>
+                <div class="iv-divider-bar"><div class="iv-mini-bar-fill mb-fill-down-25"></div></div>
+                <span class="sector-pref-value outflow">-1.2 亿</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk -->
+          <div class="rail-section iv-bg-amber-subtle">
+            <div class="rail-section-header">
+              <span class="rail-section-title iv-text-secondary">风险与预警</span>
+            </div>
+            <div class="rail-section-body">
+              <div class="iv-flex-center-gap6-mb4">
+                <span class="iv-risk-dot-high"></span>
+                <span class="iv-text-down dir-down">FOMC 前夜，波动可能抬升</span>
+              </div>
+              <div class="iv-flex-center-gap6-text12">
+                <span class="iv-risk-dot-medium"></span>
+                <span class="iv-text-amber">科技成交占比 18%，拥挤度偏高</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rail Toggle (D2) -->
+          <div class="rail-toggle">
+            <button aria-label="收窄侧边栏" title="收窄侧边栏" onclick="this.closest('.right-rail').classList.toggle('collapsed'); this.setAttribute('aria-label', this.closest('.right-rail').classList.contains('collapsed') ? '展开侧边栏' : '收窄侧边栏'); this.title = this.closest('.right-rail').classList.contains('collapsed') ? '展开侧边栏' : '收窄侧边栏'; this.textContent = this.closest('.right-rail').classList.contains('collapsed') ? '\u00BB' : '\u00AB';">&#x00AB;</button>
+          </div>
+
+        </div>
+        <!-- /right-rail -->
+
+      </div>
+      <!-- /shell-workspace -->
+
+      <!-- Bottom Tab Band -->
+      <div class="tab-band tab-group" data-contract-slot="bottom-tab-band" data-tab-group="a-shares">
+        <input type="radio" name="a-shares" id="tab-capital-flow" checked class="tab-radio sr-only">
+        <input type="radio" name="a-shares" id="tab-dragon-tiger" class="tab-radio sr-only">
+        <input type="radio" name="a-shares" id="tab-margin-trading" class="tab-radio sr-only">
+        <input type="radio" name="a-shares" id="tab-event-calendar" class="tab-radio sr-only">
+
+        <div class="tab-band-header" role="tablist" aria-label="辅助数据切换">
+          <label for="tab-capital-flow" class="tab-band-tab" role="tab" tabindex="0" aria-selected="true" aria-controls="panel-capital-flow" id="tab-control-capital-flow" data-action-tier="context">资金轮动</label>
+          <label for="tab-dragon-tiger" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-dragon-tiger" id="tab-control-dragon-tiger" data-action-tier="context">龙虎榜</label>
+          <label for="tab-margin-trading" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-margin-trading" id="tab-control-margin-trading" data-action-tier="context">两融数据</label>
+          <label for="tab-event-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-event-calendar" id="tab-control-event-calendar" data-action-tier="context">事件日历</label>
+        </div>
+
+        <!-- Tab 1: 资金轮动 -->
+        <div class="tab-panel tab-band-body" id="panel-capital-flow" data-panel="tab-capital-flow" role="tabpanel" aria-labelledby="tab-control-capital-flow" aria-hidden="false">
+          <div class="rotation-summary-row">
+            <div class="rotation-summary-item" data-reveal="fade-up">
+              <span class="rotation-summary-label">北向净买入</span>
+              <span class="rotation-summary-value up" data-counter="12.3" data-counter-prefix="+" data-counter-suffix=" 亿" data-counter-decimals="1">+12.3 亿</span>
+            </div>
+            <div class="rotation-summary-item" data-reveal="fade-up">
+              <span class="rotation-summary-label">主力净流入</span>
+              <span class="rotation-summary-value up" data-counter="86.4" data-counter-prefix="+" data-counter-suffix=" 亿" data-counter-decimals="1">+86.4 亿</span>
+            </div>
+            <div class="rotation-summary-item" data-reveal="fade-up">
+              <span class="rotation-summary-label">散户净流入</span>
+              <span class="rotation-summary-value" data-counter="12.1" data-counter-prefix="-" data-counter-suffix=" 亿" data-counter-decimals="1">-12.1 亿</span>
+            </div>
+          </div>
+          <div class="flow-bar-group">
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="电子板块资金流向">电子</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill flow-w-78"></div></div>
+              <span class="flow-bar-value inflow">+28.3 亿</span>
+            </div>
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="计算机板块资金流向">计算机</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill flow-w-52"></div></div>
+              <span class="flow-bar-value inflow">+18.6 亿</span>
+            </div>
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="军工板块资金流向">军工</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill flow-w-35"></div></div>
+              <span class="flow-bar-value inflow">+8.7 亿</span>
+            </div>
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="房地产板块资金流向">房地产</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill outflow iv-flow-fill flow-w-45"></div></div>
+              <span class="flow-bar-value outflow">-15.8 亿</span>
+            </div>
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="银行板块资金流向">银行</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill outflow iv-flow-fill flow-w-32"></div></div>
+              <span class="flow-bar-value outflow">-8.7 亿</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: 龙虎榜 -->
+        <div class="tab-panel tab-band-body" id="panel-dragon-tiger" data-panel="tab-dragon-tiger" role="tabpanel" aria-labelledby="tab-control-dragon-tiger" aria-hidden="true">
+          <div class="dragon-list">
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-tooltip="寒武纪-U · 涨停 · 机构净买入 3.2 亿">
+              <span class="dragon-stock">寒武纪-U</span>
+              <span class="dragon-reason">涨停</span>
+              <span class="dragon-net-buy inflow">+3.2 亿</span>
+            </div>
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-tooltip="中芯国际 · 涨幅偏离 · 北向+游资合力">
+              <span class="dragon-stock">中芯国际</span>
+              <span class="dragon-reason">涨幅偏离</span>
+              <span class="dragon-net-buy inflow">+2.8 亿</span>
+            </div>
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-tooltip="中际旭创 · 换手率异常 · 交投活跃">
+              <span class="dragon-stock">中际旭创</span>
+              <span class="dragon-reason">换手率异常</span>
+              <span class="dragon-net-buy inflow">+1.5 亿</span>
+            </div>
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-tooltip="万科A · 跌幅偏离 · 机构净卖出 2.1 亿">
+              <span class="dragon-stock">万科A</span>
+              <span class="dragon-reason">跌幅偏离</span>
+              <span class="dragon-net-buy outflow">-2.1 亿</span>
+            </div>
+            <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-tooltip="保利发展 · 跌幅偏离 · 地产链承压">
+              <span class="dragon-stock">保利发展</span>
+              <span class="dragon-reason">跌幅偏离</span>
+              <span class="dragon-net-buy outflow">-1.8 亿</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: 两融数据 -->
+        <div class="tab-panel tab-band-body" id="panel-margin-trading" data-panel="tab-margin-trading" role="tabpanel" aria-labelledby="tab-control-margin-trading" aria-hidden="true">
+          <div class="margin-stats">
+            <div class="margin-stat" data-reveal="fade-up">
+              <div class="margin-stat-label">两融余额</div>
+              <div class="margin-stat-value" data-counter="18523" data-counter-suffix=" 亿" data-counter-decimals="0">18,523 亿</div>
+              <div class="margin-stat-change up" data-ticker="86" data-ticker-prefix="+" data-ticker-suffix=" 亿">+86 亿</div>
+            </div>
+            <div class="margin-stat" data-reveal="fade-up">
+              <div class="margin-stat-label">融资余额</div>
+              <div class="margin-stat-value" data-counter="18102" data-counter-suffix=" 亿" data-counter-decimals="0">18,102 亿</div>
+              <div class="margin-stat-change up" data-ticker="92" data-ticker-prefix="+" data-ticker-suffix=" 亿">+92 亿</div>
+            </div>
+            <div class="margin-stat" data-reveal="fade-up">
+              <div class="margin-stat-label">融券余额</div>
+              <div class="margin-stat-value" data-counter="421" data-counter-suffix=" 亿" data-counter-decimals="0">421 亿</div>
+              <div class="margin-stat-change down" data-ticker="6" data-ticker-prefix="-" data-ticker-suffix=" 亿">-6 亿</div>
+            </div>
+          </div>
+          <div class="iv-text12-secondary-mb8">融资净买入 Top 行业</div>
+          <div class="flow-bar-group">
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="电子板块资金流向">电子</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill flow-w-60"></div></div>
+              <span class="flow-bar-value inflow">+12.3 亿</span>
+            </div>
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="计算机板块资金流向">计算机</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill flow-w-42"></div></div>
+              <span class="flow-bar-value inflow">+8.6 亿</span>
+            </div>
+            <div class="flow-bar-item" data-reveal="fade-up">
+              <span class="flow-bar-label" data-tooltip="电力板块资金流向">电力</span>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow iv-flow-fill flow-w-28"></div></div>
+              <span class="flow-bar-value inflow">+5.2 亿</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: 事件日历 -->
+        <div class="tab-panel tab-band-body" id="panel-event-calendar" data-panel="tab-event-calendar" role="tabpanel" aria-labelledby="tab-control-event-calendar" aria-hidden="true">
+          <div class="event-calendar-list">
+            <div class="event-cal-item" data-reveal="fade-up">
+              <span class="event-cal-date">04-14 周一</span>
+              <span class="event-cal-type ipo" data-tooltip="事件类型：新股申购">新股申购</span>
+              <span class="event-cal-name">金迪克 (生物制药)</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：低">低</span>
+            </div>
+            <div class="event-cal-item" data-reveal="fade-up">
+              <span class="event-cal-date">04-15 周二</span>
+              <span class="event-cal-type unlock" data-tooltip="事件类型：限售解禁">限售解禁</span>
+              <span class="event-cal-name">宁德时代 · 12.6 亿股</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：高">高</span>
+            </div>
+            <div class="event-cal-item" data-reveal="fade-up">
+              <span class="event-cal-date">04-17 周四</span>
+              <span class="event-cal-type report" data-tooltip="事件类型：财报披露">财报披露</span>
+              <span class="event-cal-name">贵州茅台 Q1 业绩</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：高">高</span>
+            </div>
+            <div class="event-cal-item" data-reveal="fade-up">
+              <span class="event-cal-date">04-18 周五</span>
+              <span class="event-cal-type dividend" data-tooltip="事件类型：除权除息">除权除息</span>
+              <span class="event-cal-name">中国平安 · 每 10 股 4.8 元</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：中">中</span>
+            </div>
+            <div class="event-cal-item" data-reveal="fade-up">
+              <span class="event-cal-date">04-20 周日</span>
+              <span class="event-cal-type ipo" data-tooltip="事件类型：新股上市">新股上市</span>
+              <span class="event-cal-name">芯联集成 (半导体)</span>
+              <span class="event-cal-impact" data-tooltip="市场影响程度：中">中</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- /tab-band -->
+
+      <!-- Status Bar -->
+      <div class="status-bar" role="status" aria-label="系统状态">
+        <span class="status-indicator" aria-hidden="true"></span>
+        <span class="status-live">LIVE</span>
+        <span class="status-sep">│</span>
+        <span>09:46:32 CST</span>
+        <span class="status-sep">│</span>
+        <span class="status-spacer"></span>
+        <span class="status-kbd">⌘K</span> 搜索
+      </div>
+
+    </div>
+    <!-- /shell-body -->
+
+  </div>
+  <!-- /shell-radar -->
+
+  <script>
+	    document.querySelectorAll('.treemap-cell-iv, .heatmap-cell, .mover-item, .dragon-item, .index-card').forEach(el => {
+	      el.addEventListener('keydown', (e) => {
+	        if (e.key === 'Enter' || e.key === ' ') {
+	          e.preventDefault();
+	          el.click();
+	        }
+	      });
+	    });
+  </script>
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay 1: 北向资金详情 (Drawer) -->
+    <div class="overlay-backdrop" data-overlay="overlay-northbound-detail">
+      <label class="overlay-dismiss" for="overlay-northbound-detail" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="北向资金详情">
+        <div class="overlay-header">
+          <span class="overlay-title">北向资金详情</span>
+          <label for="overlay-northbound-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body" data-reveal="fade-up">
+          <h2>分时净流入曲线</h2>
+          <svg viewBox="0 0 300 80" class="iv-chart-area" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="nb-flow-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="40" x2="300" y2="40" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+            <path d="M0 50 L30 48 L60 42 L90 38 L120 32 L150 28 L180 30 L210 22 L240 18 L270 20 L300 15 L300 80 L0 80 Z" fill="url(#nb-flow-grad)"/>
+            <path d="M0 50 L30 48 L60 42 L90 38 L120 32 L150 28 L180 30 L210 22 L240 18 L270 20 L300 15" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5"/>
+            <!-- 沪股通 -->
+            <path d="M0 52 L30 50 L60 46 L90 42 L120 36 L150 32 L180 34 L210 28 L240 24 L270 26 L300 22" fill="none" stroke="var(--brand-accent)" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
+            <!-- 深股通 -->
+            <path d="M0 48 L30 46 L60 44 L90 40 L120 38 L150 36 L180 34 L210 30 L240 28 L270 30 L300 26" fill="none" stroke="var(--amber-500)" stroke-width="1" stroke-dasharray="3" opacity="0.6"/>
+          </svg>
+          <div class="iv-flex-gap12-caption">
+            <span class="iv-flex-center-gap4"><span class="iv-dot-up"></span> 合计</span>
+            <span class="iv-flex-center-gap4"><span class="iv-dot-brand"></span> 沪股通</span>
+            <span class="iv-flex-center-gap4"><span class="iv-dot-amber"></span> 深股通</span>
+          </div>
+          <h2>北向持仓 Top10 变动</h2>
+          <div class="overlay-field"><span class="overlay-field-label">贵州茅台</span><span class="overlay-field-value val-up">+1.2 亿</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">宁德时代</span><span class="overlay-field-value val-up">+0.8 亿</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">中芯国际</span><span class="overlay-field-value val-up">+0.5 亿</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">美的集团</span><span class="overlay-field-value val-up">+0.4 亿</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">招商银行</span><span class="overlay-field-value val-down">-0.6 亿</span></div>
+          <h2>行业偏好</h2>
+          <div class="overlay-field"><span class="overlay-field-label">电子</span><span class="overlay-field-value val-up">+3.2 亿</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">计算机</span><span class="overlay-field-value val-up">+2.1 亿</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">银行</span><span class="overlay-field-value val-down">-1.8 亿</span></div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">查看完整报告</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 2: 行业详情 (Sheet) -->
+    <div class="overlay-backdrop" data-overlay="overlay-sector-detail">
+      <label class="overlay-dismiss" for="overlay-sector-detail" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="行业详情">
+        <div class="overlay-header">
+          <span class="overlay-title">行业详情 · 电子</span>
+          <label for="overlay-sector-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body" data-reveal="fade-up">
+          <div class="iv-grid-3col-gap8">
+            <div class="iv-panel-card">
+              <div class="iv-caption-label">涨跌幅</div>
+              <div class="iv-numeric-lg-up">+2.34%</div>
+            </div>
+            <div class="iv-panel-card">
+              <div class="iv-caption-label">成交额</div>
+              <div class="iv-numeric-lg">1,234 亿</div>
+            </div>
+            <div class="iv-panel-card">
+              <div class="iv-caption-label">换手率</div>
+              <div class="iv-numeric-lg">3.82%</div>
+            </div>
+          </div>
+          <h2>领涨个股</h2>
+          <div class="overlay-field"><span class="overlay-field-label">寒武纪-U</span><span class="overlay-field-value val-up">+12.34%</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">中芯国际</span><span class="overlay-field-value val-up">+8.76%</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">海光信息</span><span class="overlay-field-value val-up">+7.23%</span></div>
+          <h2>领跌个股</h2>
+          <div class="overlay-field"><span class="overlay-field-label">立讯精密</span><span class="overlay-field-value val-down">-2.18%</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">歌尔股份</span><span class="overlay-field-value val-down">-1.45%</span></div>
+          <h2>资金流向</h2>
+          <div class="overlay-field"><span class="overlay-field-label">主力净流入</span><span class="overlay-field-value val-up">+28.3 亿</span></div>
+          <div class="overlay-field"><span class="overlay-field-label">北向净买入</span><span class="overlay-field-value val-up">+3.2 亿</span></div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-primary">加入观察</button>
+            <button class="overlay-btn overlay-btn-secondary">查看成分股</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 3: 筛选器面板 (Drawer) -->
+    <div class="overlay-backdrop" data-overlay="overlay-filter-panel">
+      <label class="overlay-dismiss" for="overlay-filter-panel" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="筛选器">
+        <div class="overlay-header">
+          <span class="overlay-title">筛选器</span>
+          <label for="overlay-filter-panel" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body" data-reveal="fade-up">
+          <h2>板块范围</h2>
+          <div class="iv-flex-wrap-gap4-mb12">
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 全部</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 沪市主板</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 深市主板</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 创业板</label>
+            <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 科创板</label>
+          </div>
+          <h2>时间框架</h2>
+          <div class="iv-flex-gap4-mb12">
+            <button class="iv-btn-primary-sm">当日</button>
+            <button class="iv-btn-ghost-sm">5日</button>
+            <button class="iv-btn-ghost-sm">20日</button>
+          </div>
+          <h2>Map 视图模式</h2>
+          <div class="iv-flex-gap4-mb12">
+            <button class="iv-btn-primary-sm">Treemap</button>
+            <button class="iv-btn-ghost-sm">Heatmap</button>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-filter-panel" class="overlay-btn overlay-btn-primary cursor-pointer">应用</label>
+            <label for="overlay-filter-panel" class="overlay-btn overlay-btn-secondary cursor-pointer">重置</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 4: AI 解读 (Drawer) -->
+    <div class="overlay-backdrop" data-overlay="overlay-ai-analysis">
+      <label class="overlay-dismiss" for="overlay-ai-analysis" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer iv-drawer-w" role="dialog" aria-modal="true" aria-label="AI 解读">
+        <div class="overlay-header">
+          <span class="overlay-title">AI 结构分析</span>
+          <label for="overlay-ai-analysis" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body" data-reveal="fade-up">
+          <div class="iv-label-uppercase-mb8">生成时间 09:42 CST</div>
+          <div class="iv-body-block">
+            <strong>主线归因</strong>：今日 A 股科技板块延续强势，AI 算力与半导体设备领涨。驱动因素为：
+          </div>
+          <div class="iv-text13-secondary-block">
+            1. <strong>政策面</strong>：国家大基金三期传闻加持半导体板块<br>
+            2. <strong>资金面</strong>：北向资金连续 3 日净买入电子板块<br>
+            3. <strong>基本面</strong>：寒武纪 Q1 营收超预期，AI 芯片出货量环比 +40%
+          </div>
+          <div class="iv-body-block">
+            <strong>异动解读</strong>：房地产板块承压，万科 -5.23% 创近 3 个月新低。万科 A 的下跌主要受销售数据不及预期影响。银行板块跟跌，兴业银行 -2.34%，与地产风险传导预期有关。
+          </div>
+          <div class="iv-body-block">
+            <strong>趋势预判</strong>：短期科技主线延续概率较高，但需关注明日 FOMC 对全球风险偏好的影响。若 FOMC 偏鹰，建议降低仓位至 6 成以下。
+          </div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-primary">发送到 Copilot</button>
+            <button class="overlay-btn overlay-btn-secondary">重新生成</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  </section>
+
+  <!-- ═══ States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>状态画廊</h2>
+      <p class="gallery-summary">7 组件 × 5 状态（default/loading/empty/failed/stale）+ selected</p>
+    </div>
+    <div class="gallery-grid">
+
+      <!-- Context Bar States -->
+      <div class="gallery-group" data-component="Context Bar">
+        <div class="gallery-group__label">Context Bar</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Context Bar — Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+                <div class="skeleton skeleton-text iv-sk sk-14-60"></div>
+                <div class="skeleton skeleton-text-sm iv-sk sk-10-30"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Context Bar — Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+                <div class="state-empty-icon">📡</div>
+                <div class="state-empty-title">暂无 A 股数据</div>
+                <div class="state-empty-desc">连接数据源后展示市态、广度、北向等环境指标</div>
+                <button class="state-empty-cta">连接数据源</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Context Bar — Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">加载失败</div>
+                <div class="state-error-desc">无法获取 A 股环境数据</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Context Bar — Stale</div>
+            <div class="gallery-card__preview">
+              <div class="state-stale">
+                <div class="state-stale-icon">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+                </div>
+                <div class="state-stale-title">环境指标可能过期</div>
+                <div class="state-stale-desc">数据最后更新于 15 分钟前</div>
+                <button class="state-stale-retry">立即刷新</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scope Strip States -->
+      <div class="gallery-group" data-component="Scope Strip">
+        <div class="gallery-group__label">Scope Strip</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Scope Strip — Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading iv-pad-8">
+                <div class="skeleton skeleton-text iv-sk sk-12-40"></div>
+                <div class="skeleton skeleton-text-sm iv-sk sk-10-70"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Scope Strip — Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty iv-pad-12">
+                <div class="state-empty-title">AI 分析中...</div>
+                <div class="state-empty-desc">等待 AI 解读生成</div>
+                <button class="state-empty-cta">刷新分析</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Scope Strip — Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-error iv-pad-12">
+                <div class="state-error-title">AI 分析失败</div>
+                <div class="state-error-desc">无法生成市场解读</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Scope Strip — Stale</div>
+            <div class="gallery-card__preview">
+              <div class="state-stale iv-pad-12">
+                <div class="state-stale-title">解读可能过期</div>
+                <div class="state-stale-desc">生成于 30 分钟前 · 09:16 CST</div>
+                <button class="state-stale-retry">重新生成</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Market Structure Map States -->
+      <div class="gallery-group" data-component="Market Structure Map">
+        <div class="gallery-group__label">Market Structure Map</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Treemap — Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading iv-pad-12">
+                <div class="skeleton skeleton-chart iv-skeleton-chart-100"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Treemap — Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty iv-pad-12">
+                <div class="state-empty-title">暂无结构数据</div>
+                <div class="state-empty-desc">非交易时段无法展示行业结构图</div>
+                <button class="state-empty-cta">刷新数据</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Treemap — Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-error iv-pad-12">
+                <div class="state-error-title">加载失败</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Treemap — Stale</div>
+            <div class="gallery-card__preview">
+              <div class="iv-pad-8">
+                <div class="iv-state-risk">数据可能过期 · 最后更新 15 分钟前</div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Treemap — Selected</div>
+            <div class="gallery-card__preview">
+              <div class="iv-pad-8">
+                <div class="iv-state-brand">电子 · 选中 · 触发行业详情 Sheet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Index Summary States -->
+      <div class="gallery-group" data-component="Index Summary">
+        <div class="gallery-group__label">Index Summary</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Index — Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading iv-grid-2col-gap8-pad8">
+                <div class="skeleton skeleton-row iv-thumb-60"></div>
+                <div class="skeleton skeleton-row iv-thumb-60"></div>
+                <div class="skeleton skeleton-row iv-thumb-60"></div>
+                <div class="skeleton skeleton-row iv-thumb-60"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Index — Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty iv-pad-12">
+                <div class="state-empty-title">暂无指数数据</div>
+                <button class="state-empty-cta">连接数据源</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Index — Selected</div>
+            <div class="gallery-card__preview">
+              <div class="iv-pad-8">
+                <div class="iv-badge-brand">沪深300 · 选中高亮</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ETF Matrix States -->
+      <div class="gallery-group" data-component="ETF Matrix">
+        <div class="gallery-group__label">ETF Matrix</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">ETF — Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading iv-pad-8">
+                <div class="skeleton skeleton-row iv-h-28"></div>
+                <div class="skeleton skeleton-row iv-h-28"></div>
+                <div class="skeleton skeleton-row iv-h-28"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">ETF — Selected</div>
+            <div class="gallery-card__preview">
+              <div class="iv-pad-8-text12">
+                <div class="iv-badge-brand-subtle">510050 沪深300ETF · 选中 · 跳转 Instrument Hub</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movers States -->
+      <div class="gallery-group" data-component="Movers">
+        <div class="gallery-group__label">Movers</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Movers — Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading iv-pad-8">
+                <div class="skeleton skeleton-row iv-h-24"></div>
+                <div class="skeleton skeleton-row iv-h-24"></div>
+                <div class="skeleton skeleton-row iv-h-24"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Movers — Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty iv-pad-12">
+                <div class="state-empty-title">暂无涨跌数据</div>
+                <button class="state-empty-cta">刷新数据</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Movers — Selected</div>
+            <div class="gallery-card__preview">
+              <div class="iv-pad-8-text12">
+                <div class="iv-badge-brand-subtle-noborder">寒武纪-U · 选中 · 跳转 Intelligence</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Rail 北向深度面板 States -->
+      <div class="gallery-group" data-component="Right Rail 北向深度面板">
+        <div class="gallery-group__label">Right Rail 北向深度面板</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">北向面板 — Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading iv-pad-8">
+                <div class="skeleton skeleton-heading iv-sk sk-16-40"></div>
+                <div class="skeleton skeleton-chart iv-sk iv-sk-mt sk-48-4"></div>
+                <div class="skeleton skeleton-text iv-sk iv-sk-mt sk-12-mt4"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">北向面板 — Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty iv-pad-12">
+                <div class="state-empty-title">盘前暂无北向数据</div>
+                <div class="state-empty-desc">北向资金数据 09:30 后更新</div>
+                <button class="state-empty-cta">查看历史北向</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">北向面板 — Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-error iv-pad-12">
+                <div class="state-error-title">加载失败</div>
+                <button class="state-error-retry">重试</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">北向面板 — Stale</div>
+            <div class="gallery-card__preview">
+              <div class="state-stale iv-pad-12">
+                <div class="state-stale-title">数据可能过期</div>
+                <div class="state-stale-desc">北向数据最后更新 15 分钟前（延迟约 15 分钟）</div>
+                <button class="state-stale-retry">立即刷新</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>弹层画廊</h2>
+      <p class="gallery-summary">4 Overlays: 2 Drawer + 1 Sheet + 1 Drawer</p>
+    </div>
+    <div class="gallery-grid gallery-grid--overlays">
+
+      <div class="gallery-group" data-component="北向资金详情">
+        <div class="gallery-group__label">北向资金详情 — Drawer</div>
+        <div class="gallery-cards">
+          <div class="gallery-card" data-overlay-ref="overlay-northbound-detail">
+            <div class="gallery-card__trigger">触发: 点击 Context Bar 北向指标 / Right Rail 展开按钮</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">北向资金详情</div>
+                <div class="iv-text-tertiary">分时净流入曲线 + 沪股通/深股通分别展示</div>
+                <div class="iv-text-tertiary">持仓 Top10 变动</div>
+                <div class="iv-text-tertiary">行业偏好分析</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="行业详情">
+        <div class="gallery-group__label">行业详情 — Sheet</div>
+        <div class="gallery-cards">
+          <div class="gallery-card" data-overlay-ref="overlay-sector-detail">
+            <div class="gallery-card__trigger">触发: 点击 Market Structure Map 行业节点</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">行业详情 · 电子</div>
+                <div class="iv-text-tertiary">行业概况 (涨跌幅/成交额/换手率)</div>
+                <div class="iv-text-tertiary">领涨/领跌个股</div>
+                <div class="iv-text-tertiary">资金流向 + 加入观察 CTA</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC / 点击标的跳转并关闭</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="筛选器面板">
+        <div class="gallery-group__label">筛选器面板 — Drawer</div>
+        <div class="gallery-cards">
+          <div class="gallery-card" data-overlay-ref="overlay-filter-panel">
+            <div class="gallery-card__trigger">触发: 点击工具栏筛选按钮</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">筛选器</div>
+                <div class="iv-text-tertiary">板块范围筛选</div>
+                <div class="iv-text-tertiary">时间框架选择</div>
+                <div class="iv-text-tertiary">Map 视图模式切换 (treemap/heatmap)</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC / 应用后自动关闭</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="AI 解读">
+        <div class="gallery-group__label">AI 解读 — Drawer</div>
+        <div class="gallery-cards">
+          <div class="gallery-card" data-overlay-ref="overlay-ai-analysis">
+            <div class="gallery-card__trigger">触发: 点击 "AI 解读" 按钮</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="iv-elevated-card">
+                <div class="iv-section-heading">AI 结构分析</div>
+                <div class="iv-text-tertiary">A 股结构分析 + 主线归因</div>
+                <div class="iv-text-tertiary">异动解读 + 趋势预判</div>
+                <div class="iv-text-tertiary">发送到 Copilot CTA</div>
+                <div class="iv-text-tertiary-mt8">关闭: 遮罩 / ESC</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ Hidden Overlay Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-northbound-detail" class="sr-only">
+  <input type="checkbox" id="overlay-sector-detail" class="sr-only">
+  <input type="checkbox" id="overlay-filter-panel" class="sr-only">
+  <input type="checkbox" id="overlay-ai-analysis" class="sr-only">
+
+  <!-- Clear reveal inline transitions after animation completes, restoring CSS hover transitions -->
+  <script>
+    (function() {
+      var revealed = document.querySelectorAll('[data-reveal]');
+      if (!revealed.length) return;
+      var maxDelay = 0;
+      revealed.forEach(function(el) {
+        var d = parseInt(el.getAttribute('data-reveal-delay') || '0', 10);
+        if (d > maxDelay) maxDelay = d;
+      });
+      setTimeout(function() {
+        revealed.forEach(function(el) {
+          el.style.removeProperty('transition');
+          el.style.removeProperty('opacity');
+          el.style.removeProperty('transform');
+        });
+      }, maxDelay + 600);
+    })();
+  </script>
+
+</body>
+</html>

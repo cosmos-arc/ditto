@@ -1,0 +1,406 @@
+/* ═══════════════════════════════════════════════
+ * Page: Markets Screener — Dense data table + filters
+ * ═══════════════════════════════════════════════ */
+
+.shell-screener {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr;
+  grid-template-rows: var(--shell-header-height) auto 1fr auto;
+  grid-template-areas:
+    "rail header"
+    "rail toolbar"
+    "rail table"
+    "rail footer";
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.shell-screener .shell-rail,
+.shell-screener .shell-header {
+  /* reuse existing styles */
+}
+
+/* ═══════════════════════════════════════════════
+ * Page: Trading Signals Inbox — Queue + batch actions
+ * ═══════════════════════════════════════════════ */
+
+.shell-signals {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-detail-width);
+  grid-template-rows: var(--shell-header-height) auto 1fr;
+  grid-template-areas:
+    "rail header header"
+    "rail toolbar toolbar"
+    "rail queue detail";
+  min-height: 100dvh;
+  width: 100vw;
+  overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════════════
+ * Page: Research Workspace — Factor table + backtest + code
+ * ═══════════════════════════════════════════════ */
+
+.shell-research {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr;
+  grid-template-rows: var(--shell-header-height) auto 1fr 1fr;
+  grid-template-areas:
+    "rail header"
+    "rail tabs"
+    "rail main"
+    "rail secondary";
+  min-height: 100dvh;
+  width: 100vw;
+  overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════════════
+ * Page: Risk Center — Metrics + exposure + limits
+ * ═══════════════════════════════════════════════ */
+
+.shell-risk {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr;
+  grid-template-rows: var(--shell-header-height) auto 1fr 1fr;
+  grid-template-areas:
+    "rail header"
+    "rail metrics"
+    "rail main"
+    "rail secondary";
+  min-height: 100dvh;
+  width: 100vw;
+  overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Analytical Workspace Shell
+ * Grid: Rail (56px) | Main (1fr) | Activity Stack (300px)
+ * Rows: Header (64px) | Strip (auto) | Main (1fr) | Analysis Band (220px)
+ * ─────────────────────────────────────────────────────────────────────── */
+.shell-analytical {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-activity-width);
+  grid-template-rows: var(--shell-header-height) auto 1fr var(--shell-analysis-band-height);
+  grid-template-areas:
+    "rail header   header"
+    "rail strip    strip"
+    "rail main     activity"
+    "rail analysis activity";
+  min-height: 100dvh;
+  width: 100vw;
+  overflow-y: auto;
+}
+
+.shell-analytical .shell-rail {
+  grid-area: rail;
+}
+
+.shell-analytical .shell-header {
+  grid-area: header;
+  height: var(--shell-header-height);
+}
+
+/* ── Scope / Context Strip (Analytical) ── */
+.shell-analytical .scope-strip {
+  grid-area: strip;
+  background: var(--surface-strip);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--density-gutter);
+  gap: var(--space-12);
+  height: var(--density-strip-height);
+  overflow-x: auto;
+}
+
+/* ── Main Content (Analytical) ── */
+.shell-analytical .main-content {
+  grid-area: main;
+  overflow-y: auto;
+  padding: var(--density-gutter);
+  min-height: 0;
+}
+
+/* ── Activity Stack (right side) ── */
+.shell-analytical .activity-stack {
+  grid-area: activity;
+  background: var(--surface-panel-base);
+  border-left: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Analysis Band (bottom) ── */
+.shell-analytical .analysis-band {
+  grid-area: analysis;
+  background: var(--surface-panel-elevated);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.analysis-band-header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-8) var(--space-12);
+  gap: var(--space-12);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.analysis-band-tab {
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  padding: var(--space-4) var(--space-8);
+  cursor: pointer;
+  border-radius: var(--radius-4);
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.analysis-band-tab:hover {
+  color: var(--text-secondary);
+}
+
+.analysis-band-tab.active {
+  color: var(--brand-accent);
+  background: var(--brand-accent-subtle);
+}
+
+.analysis-band-body {
+  flex: 1;
+  padding: var(--space-8) var(--space-12);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Catalog Workspace Shell
+ * Grid: Rail (56px) | Table (1fr) | Detail Panel (320px)
+ * Rows: Header (60px) | Toolbar (auto) | Table (1fr)
+ * ─────────────────────────────────────────────────────────────────────── */
+.shell-catalog {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-catalog-detail-width);
+  grid-template-rows: var(--shell-header-height) auto 1fr;
+  grid-template-areas:
+    "rail header  header"
+    "rail toolbar toolbar"
+    "rail table   detail";
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.shell-catalog[data-resizable-panel-group="catalog-main-detail"] {
+  grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 1px minmax(220px, var(--prototype-detail-width));
+  grid-template-areas:
+    "rail header  header    header"
+    "rail toolbar toolbar   toolbar"
+    "rail table   separator detail";
+}
+
+.shell-catalog .shell-rail {
+  grid-area: rail;
+}
+
+.shell-catalog .shell-header {
+  grid-area: header;
+  height: var(--shell-header-height);
+}
+
+.shell-catalog .catalog-table {
+  grid-area: table;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.shell-catalog .catalog-detail {
+  grid-area: detail;
+  min-width: 0;
+  background: var(--surface-panel-base);
+  border-left: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-catalog[data-resizable-panel-group="catalog-main-detail"] .resize-separator {
+  grid-area: separator;
+}
+
+/* ── Responsive Shell Degradation ── */
+@media (max-width: 1200px) {
+  .shell-catalog {
+    --prototype-detail-width: min(300px, 28vw);
+  }
+
+  .shell-catalog[data-resizable-panel-group="catalog-main-detail"] {
+    grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 1px minmax(220px, min(300px, 28vw));
+  }
+}
+
+/* Tablet: clamp utility bar width */
+@media (max-width: 1024px) {
+  .shell-header [data-header-utility-bar] {
+    max-width: 44vw;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Operations Console Shell
+ * Grid: Rail (56px) | Main (1fr) | Detail Panel (340px)
+ * Rows: Header (60px) | Health Strip (auto) | Main (1fr)
+ * ─────────────────────────────────────────────────────────────────────── */
+.shell-ops {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-ops-detail-width);
+  grid-template-rows: var(--shell-header-height) auto 1fr;
+  grid-template-areas:
+    "rail header header"
+    "rail health health"
+    "rail main   detail";
+  min-height: 100dvh;
+  width: 100vw;
+  overflow-y: auto;
+}
+
+.shell-ops .shell-rail {
+  grid-area: rail;
+}
+
+.shell-ops .shell-header {
+  grid-area: header;
+  height: var(--shell-header-height);
+}
+
+.shell-ops .ops-health {
+  grid-area: health;
+  background: var(--surface-strip);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: var(--space-6) var(--density-gutter);
+  gap: var(--space-16);
+  height: var(--density-strip-height);
+  overflow-x: auto;
+}
+
+.shell-ops .ops-main {
+  grid-area: main;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.shell-ops .ops-detail {
+  grid-area: detail;
+  background: var(--surface-panel-base);
+  border-left: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Page: Cross-Market Overview — Shell Radar Layout (core structure only)
+ * Grid: Rail (sticky) | Body (scroll)
+ * Body: Header (sticky) | Context Bar (sticky) | Scope Strip (sticky) | Workspace (main + right-rail) | Tab Band
+ * ─────────────────────────────────────────────────────────────────────── */
+.shell-radar {
+  display: flex;
+  align-items: flex-start;
+  width: 100vw;
+}
+
+.shell-radar .shell-rail {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  flex-shrink: 0;
+  width: var(--shell-rail-width);
+  z-index: 30;
+}
+
+.shell-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shell-radar .shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  height: var(--shell-header-height);
+}
+
+.shell-radar .context-bar {
+  position: sticky;
+  top: var(--shell-header-height);
+  z-index: 15;
+  height: var(--shell-context-bar-height);
+}
+
+.shell-radar .scope-strip {
+  position: sticky;
+  top: calc(var(--shell-header-height) + var(--shell-context-bar-height));
+  z-index: 14;
+}
+
+.shell-workspace {
+  display: grid;
+  grid-template-columns: 1fr var(--shell-rail-radar-width);
+}
+
+.main-content {
+  padding: 2rem var(--density-gutter);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Page: Markets Intelligence Shell
+ * Grid: Rail (sticky) | Body (scroll)
+ * Body: Header (sticky) | Tab Strip (sticky) | Workspace (main + right-rail) | Analysis Band
+ * ─────────────────────────────────────────────────────────────────────── */
+.shell-intel {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr;
+  width: 100vw;
+  min-height: 100dvh;
+}
+
+.shell-intel .shell-rail {
+  grid-column: 1;
+  grid-row: 1;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--surface-app);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) 0;
+  gap: var(--space-4);
+}
+
+.shell-intel .shell-body {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}

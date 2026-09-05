@@ -1,7 +1,7 @@
 # Apps Review Report
 
 > Date: 2026-05-08
-> Scope: `packages/apps`
+> Scope: `apps/backend`
 > Source plan: `docs/reviews/audit/2026-05-08-global-and-module-review-plan.md`
 > Update 2026-06-09: Apps review scope is backend only. Product UI belongs to the separate `ditto-app` frontend repository; this package owns FastAPI contracts, CLI/jobs as backend operational support and composition wiring. OpenAPI now exposes maturity metadata and tag-scoped stable `operationId` values for generated frontend clients.
 
@@ -57,4 +57,4 @@ No P0 finding was confirmed. The boundary is guarded; E2E evidence and maturity-
 
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-apps-review.md`
 
-Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/apps/tests && pixi run -e dev arch-check && pixi run -e dev check`.
+Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov apps/backend/tests && pixi run -e dev arch-check && pixi run -e dev check`.

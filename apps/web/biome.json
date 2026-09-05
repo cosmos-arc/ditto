@@ -1,0 +1,109 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+	"files": {
+		"maxSize": 2097152,
+		"includes": [
+			"src/**",
+			"scripts/agent_harness/**",
+			"scripts/check-leaf-dependencies.test.ts",
+			"scripts/check-leaf-dependencies.ts",
+			"scripts/generate-route-tree.mjs",
+			"scripts/dependency-cruiser-typescript-loader.mjs",
+			"index.html",
+			"*.config.*",
+			"tsconfig*.json",
+			"biome.json"
+		]
+	},
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"complexity": {
+				"useLiteralKeys": "off",
+				"useMaxParams": "warn"
+			},
+			"correctness": {
+				"noUnusedVariables": "error",
+				"useExhaustiveDependencies": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {
+				"noConsole": "warn",
+				"noDuplicateDependencies": "warn",
+				"noEmptySource": "warn",
+				"noExplicitAny": "error",
+				"noImportCycles": "warn",
+				"noReactForwardRef": "warn"
+			}
+		}
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 120
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"semicolons": "always"
+		}
+	},
+	"css": {
+		"parser": {
+			"cssModules": false,
+			"tailwindDirectives": true
+		},
+		"linter": {
+			"enabled": true
+		},
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": [
+				"src/routeTree.gen.ts",
+				"src/types/api.d.ts",
+				"src/api/generated/schema.d.ts",
+				"src/api/generated/operation-contracts.ts"
+			],
+			"linter": { "enabled": false },
+			"formatter": { "enabled": false }
+		},
+		{
+			"includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/__tests__/**"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noExcessiveCognitiveComplexity": "off",
+						"useMaxParams": "off"
+					},
+					"suspicious": {
+						"noConsole": "off",
+						"noExplicitAny": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["**/*.config.ts", "**/*.config.mts"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUndeclaredDependencies": "off"
+					}
+				}
+			}
+		}
+	],
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	}
+}

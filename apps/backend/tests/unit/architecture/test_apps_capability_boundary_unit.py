@@ -1,0 +1,405 @@
+"""Apps non-registry capability import boundary tests."""
+
+from __future__ import annotations
+
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+
+_SCRIPT = (
+    Path(__file__).resolve().parents[5]
+    / "scripts"
+    / "architecture"
+    / "check_architecture_smells.py"
+)
+
+
+def _load_module() -> object:
+    spec = spec_from_file_location("check_architecture_smells", _SCRIPT)
+    if spec is None or spec.loader is None:
+        msg = f"Cannot load {_SCRIPT}"
+        raise ImportError(msg)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_MODULE = _load_module()
+
+
+def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
+    allowances = _MODULE.APPS_HOST_COMPOSITION_ALLOWANCES  # type: ignore[attr-defined]
+
+    assert allowances
+    assert all(allowance.owner for allowance in allowances)
+    assert all(allowance.reason for allowance in allowances)
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances} == {
+        "apps/backend/src/ditto_apps/jobs/context.py": frozenset(
+            {
+                "ditto_data.quality",
+                "ditto_data.quality.protocols",
+            }
+        ),
+        "apps/backend/src/ditto_apps/jobs/tasks/monitoring.py": frozenset(
+            {"ditto_data.quality.quality_types"}
+        ),
+        "apps/backend/src/ditto_apps/registry/infra/protocol_adapters.py": frozenset(
+            {
+                "ditto_data.quality.protocols",
+                "ditto_data.services.source_accessor",
+                "ditto_data.sources.tdx.source",
+                "ditto_data.storage.metadata.instrument",
+                "ditto_data.storage.runtime.quality",
+                "ditto_features.compile_cache",
+            }
+        ),
+        "apps/backend/src/ditto_apps/scripts/q2_live_market_context.py": frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.metadata",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        "apps/backend/src/ditto_apps/scripts/q3_live_discovery.py": frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        "apps/backend/src/ditto_apps/scripts/q3_live_discovery_support.py": frozenset(
+            {
+                "ditto_data.catalog.certification",
+                "ditto_data.catalog.provider_payload",
+                "ditto_data.catalog.source_snapshot",
+            }
+        ),
+        "apps/backend/src/ditto_apps/scripts/q5_live_agent_author_support.py": (
+            frozenset({"ditto_strategy.models"})
+        ),
+        "apps/backend/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py": (
+            frozenset(
+                {
+                    "ditto_analysis.experiments.generated_code",
+                    "ditto_analysis.experiments.models",
+                }
+            )
+        ),
+    }
+
+
+def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
+    allowances = _MODULE.APPS_REGISTRY_COMPOSITION_ALLOWANCES  # type: ignore[attr-defined]
+
+    assert allowances
+    assert all(allowance.owner for allowance in allowances)
+    assert all(allowance.reason for allowance in allowances)
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/fresh_runtime.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.storage.sqlite.experiments",
+            "ditto_data.config.data_store",
+            "ditto_execution.di",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/agent/provider.py"
+    ] == frozenset({"ditto_analysis.experiments.campaign_persistence"})
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/agent/campaign_runtime.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.errors",
+            "ditto_analysis.experiments.campaign_persistence",
+            "ditto_analysis.experiments.models",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/agent/oci_sandbox.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.experiments.generated_code",
+            "ditto_analysis.experiments.models",
+            "ditto_analysis.experiments.persistence",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/agent/oci_sandbox_runner.py"
+    ] == frozenset({"ditto_analysis.experiments.models"})
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/agent/r5_sandbox_live_report.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.experiments.generated_code",
+            "ditto_analysis.experiments.models",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/contexts/query.py"
+    ] == frozenset(
+        {
+            "ditto_data.services.capital_store",
+            "ditto_data.services.fundamental_store",
+            "ditto_data.services.macro_service",
+            "ditto_data.services.market_service",
+            "ditto_data.services.metadata_service",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/contexts/ingestion.py"
+    ] == frozenset(
+        {
+            "ditto_data.catalog",
+            "ditto_data.catalog.fallback_policy",
+            "ditto_data.catalog.provider_payload",
+            "ditto_data.ingestion.freeze_store",
+            "ditto_data.ingestion.ingestion_cursor_store",
+            "ditto_data.ingestion.ingestion_log_store",
+            "ditto_data.lineage",
+            "ditto_data.services.capital_store",
+            "ditto_data.services.fundamental_store",
+            "ditto_data.services.macro_service",
+            "ditto_data.services.market_service",
+            "ditto_data.services.market_write_service",
+            "ditto_data.services.metadata_service",
+            "ditto_data.services.source_accessor",
+            "ditto_data.sources.exchange_transformers",
+            "ditto_data.sources.registry",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/contexts/r3_recovery.py"
+    ] == frozenset(
+        {
+            "ditto_analysis.storage.sqlite.experiments",
+            "ditto_analysis.storage.sqlite.experiments.schema",
+            "ditto_data.config.data_store",
+            "ditto_strategy.governance.service",
+            "ditto_strategy.storage.sqlite.strategy_governance_schema",
+            "ditto_strategy.storage.sqlite.strategy_governance_store",
+        }
+    )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/infra/risk_persistence.py"
+    ] == frozenset({"ditto_risk.continuous_gate"})
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "apps/backend/src/ditto_apps/registry/live/q4_live_account_acceptance_store.py"
+    ] == frozenset({"ditto_execution.storage.sqlite.account_journal"})
+
+
+def test_apps_capability_import_guard_reports_non_registry_routes() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.sources.protocols import MarketFetcher",
+        "apps/backend/src/ditto_apps/api/routes/source.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/api/routes/source.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.sources.protocols'; use application facades or "
+        "registry composition",
+    ]
+
+
+def test_apps_capability_import_guard_reports_alias_imported_capability() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data import services",
+        "apps/backend/src/ditto_apps/api/routes/source.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/api/routes/source.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.services'; use application facades or registry composition",
+    ]
+
+
+def test_apps_capability_import_guard_allows_registry_composition() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.services.market_service import MarketService",
+        "apps/backend/src/ditto_apps/registry/contexts/query.py",
+    )
+
+    assert errors == []
+
+
+def test_apps_capability_import_guard_rejects_unowned_registry_future_file() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.services.market_service import MarketService",
+        "apps/backend/src/ditto_apps/registry/contexts/future.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/registry/contexts/future.py: "
+        "apps registry module imports unowned capability package "
+        "'ditto_data.services.market_service'; add an owned exact registry "
+        "composition allowance or use application facades",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_unowned_registry_module() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_features.di import get_features_providers",
+        "apps/backend/src/ditto_apps/registry/contexts/query.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/registry/contexts/query.py: "
+        "apps registry module imports unowned capability package "
+        "'ditto_features.di'; add an owned exact registry composition "
+        "allowance or use application facades",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_registry_wildcard_import() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.services.market_service import *",
+        "apps/backend/src/ditto_apps/registry/contexts/query.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/registry/contexts/query.py: "
+        "apps registry composition allowance cannot use wildcard import "
+        "from 'ditto_data.services.market_service'; import explicit owned "
+        "symbols or protocols",
+    ]
+
+
+def test_apps_capability_import_guard_allows_prefect_host_quality_exception() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data import quality",
+        "apps/backend/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == []
+
+
+def test_apps_capability_import_guard_allows_prefect_host_quality_protocols() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality.protocols import QualityEngineProtocol",
+        "apps/backend/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == []
+
+
+def test_apps_capability_import_guard_rejects_prefect_host_quality_submodule() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality import golden",
+        "apps/backend/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/jobs/context.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.quality.golden'; use application facades or "
+        "registry composition",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_prefect_host_wildcard_import() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality import *",
+        "apps/backend/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/jobs/context.py: "
+        "apps host composition allowance cannot use wildcard import from "
+        "'ditto_data.quality'; import explicit owned symbols or protocols",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_only_real_mixed_submodule() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality import QualityEngine, golden",
+        "apps/backend/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/jobs/context.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.quality.golden'; use application facades or "
+        "registry composition",
+    ]
+
+
+def test_apps_capability_import_guard_limits_prefect_host_exception() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.services.market_service import MarketService",
+        "apps/backend/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/jobs/context.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.services.market_service'; use application facades or "
+        "registry composition",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_dq_batch_quality_types() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality.quality_types import DQIssue",
+        "apps/backend/src/ditto_apps/jobs/tasks/dq_batch.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/jobs/tasks/dq_batch.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.quality.quality_types'; use application facades or "
+        "registry composition"
+    ]
+
+
+def test_apps_capability_import_guard_allows_monitoring_quality_types() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality.quality_types import DQResult",
+        "apps/backend/src/ditto_apps/jobs/tasks/monitoring.py",
+    )
+
+    assert errors == []
+
+
+def test_apps_capability_import_guard_rejects_unowned_host_alias_import() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data import services",
+        "apps/backend/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "apps/backend/src/ditto_apps/jobs/context.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.services'; use application facades or registry composition",
+    ]

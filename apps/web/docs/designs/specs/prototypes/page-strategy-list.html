@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-strategy-list
+  Edition: v1
+  Generated: 2026-04-21
+
+  Tabs: 0 (Strategy List 无 tab 系统)
+
+  Overlays: 2
+  - overlay-strategy-clone (Modal: 策略克隆) [covered]
+  - overlay-strategy-delete (Modal: 策略删除) [covered]
+
+  State Variants: 3 components x 3-6 states
+  - filter-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[covered] bulk[n/a]
+  - perf-summary: default[covered] loading[covered] empty[n/a] failed[n/a] stale[covered] selected[n/a] bulk[n/a]
+  - strategy-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Research / Strategies</title>
+
+  <link rel="stylesheet" href="shared/fonts.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    .style-label {
+      position: fixed; top: var(--space-8); right: var(--space-8); z-index: 999;
+      font-family: var(--font-family-ui); font-size: var(--font-size-10);
+      color: var(--brand-signature-fg); background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle); padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4); pointer-events: none; letter-spacing: 0.02em;
+    }
+    .skip-link {
+      position: absolute; left: -9999px; top: 0; z-index: 999;
+      padding: var(--space-4) var(--space-8); border-radius: var(--radius-4);
+      background: var(--surface-overlay); color: var(--text-primary);
+      font-size: var(--font-size-12);
+    }
+    .skip-link:focus { left: var(--space-16); }
+    .header-subtitle { font-size: var(--font-size-12); font-weight: var(--font-weight-regular); color: var(--text-tertiary); margin-left: var(--space-8); letter-spacing: 0.01em; }
+    .header-title-group { display: flex; align-items: baseline; }
+    .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
+
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header    header"
+        "rail toolbar toolbar   toolbar"
+        "rail summary separator detail"
+        "rail table   separator detail";
+      contain: paint;
+    }
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-catalog .catalog-detail {
+      box-shadow: none;
+    }
+
+    .catalog-table-inner { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+    .catalog-table-inner .table-container { flex: 1; overflow-y: auto; background: var(--surface-app); }
+    .catalog-table-inner .table-footer { flex-shrink: 0; }
+
+    /* ── Strategy status pill ── */
+    .status-pill {
+      display: inline-flex; align-items: center; font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium); padding: 1px var(--space-8);
+      border-radius: var(--radius-12); white-space: nowrap;
+    }
+    .status-pill.active { background: var(--system-healthy-bg); color: var(--system-healthy-fg); }
+    .status-pill.paused { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
+    .status-pill.draft { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .status-pill.archived { background: transparent; color: var(--text-tertiary); }
+
+    /* ── Performance summary strip ── */
+    .perf-summary {
+      grid-area: summary; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: center; gap: var(--space-12);
+      padding: var(--space-6) var(--density-gutter);
+      background: var(--surface-strip); border-bottom: 1px solid var(--border-subtle);
+      min-height: var(--density-strip-height);
+    }
+    .perf-item { min-width: 0; display: flex; align-items: center; gap: var(--space-6); font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .perf-item .perf-label { white-space: nowrap; }
+    .perf-item .perf-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary); }
+    .perf-item .perf-value.strategy-name { font-family: var(--font-family-ui); font-weight: var(--font-weight-medium); color: var(--text-primary); }
+    .perf-item .perf-value.positive { color: var(--market-up-fg); }
+    .perf-item .perf-value.negative { color: var(--market-down-fg); }
+    .perf-item .perf-sub { color: var(--text-tertiary); font-size: var(--font-size-10); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .perf-separator { display: none; }
+
+    .strategy-name-stack { display: flex; flex-direction: column; gap: 1px; }
+    .strategy-name-stack .cell-ticker { line-height: 1.2; }
+    .strategy-meta { font-size: var(--font-size-10); color: var(--text-tertiary); line-height: 1.2; }
+    .metric-delta { margin-right: var(--space-4); color: currentColor; font-size: var(--font-size-10); }
+    .metric-risk { color: var(--risk-medium-fg); }
+    /* bar width utility classes for micro-bar */
+    .bar-w-20 .micro-bar-fill { width: 20%; }
+    .bar-w-22 .micro-bar-fill { width: 22%; }
+    .bar-w-23 .micro-bar-fill { width: 23%; }
+    .bar-w-27 .micro-bar-fill { width: 27%; }
+    .bar-w-33 .micro-bar-fill { width: 33%; }
+    .bar-w-38 .micro-bar-fill { width: 38%; }
+    .bar-w-39 .micro-bar-fill { width: 39%; }
+    .bar-w-40 .micro-bar-fill { width: 40%; }
+    .bar-w-46 .micro-bar-fill { width: 46%; }
+    .bar-w-49 .micro-bar-fill { width: 49%; }
+    .bar-w-53 .micro-bar-fill { width: 53%; }
+    .bar-w-59 .micro-bar-fill { width: 59%; }
+    /* sparkline + date layout */
+    .last-run-cell { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-6); }
+    .data-table tr.row { cursor: pointer; }
+    .col-strategy-name { width: 22%; }
+    .col-strategy-type, .col-strategy-status, .col-strategy-sharpe, .col-strategy-mdd { width: 10%; }
+    .col-strategy-return, .col-strategy-action { width: 12%; }
+    .col-strategy-run { width: 14%; }
+    .data-table tr.row:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+    .row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-6); }
+    .row-action {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 24px; padding: 0 var(--space-6); border-radius: var(--radius-4);
+      color: var(--text-tertiary); cursor: pointer; font-size: var(--font-size-12);
+    }
+    .row-action:hover { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .row-action.danger:hover { color: var(--risk-high-fg); }
+
+    .catalog-detail .context-section { flex: 0 0 auto; }
+    .catalog-detail .context-section:nth-child(3) { flex: 1 1 auto; min-height: 0; }
+    .catalog-detail .context-section-body { flex: 0 0 auto; overflow: visible; }
+    .catalog-detail .context-section:nth-child(3) .context-section-body { overflow-y: auto; }
+    .detail-ticker {
+      font-size: var(--font-size-20); line-height: 1.15; letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .detail-hero {
+      display: grid; gap: var(--space-10);
+      padding: var(--space-2) 0 var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .detail-title-line { display: grid; gap: var(--space-6); }
+    .detail-live-chip {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      min-height: 24px; padding: 0 var(--space-8); border-radius: var(--radius-12);
+      background: var(--system-healthy-bg); color: var(--system-healthy-fg);
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      justify-self: start;
+    }
+    .detail-live-chip::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; opacity: var(--data-freshness-live);
+    }
+    .detail-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); }
+    .detail-kpi {
+      padding: var(--space-8); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4); background: var(--surface-muted);
+    }
+    .detail-kpi-label { display: block; color: var(--text-tertiary); font-size: var(--font-size-10); }
+    .detail-kpi-value { display: block; margin-top: var(--space-2); color: var(--text-primary); font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); }
+    .equity-sparkline {
+      width: 100%; height: 56px; color: var(--brand-accent);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .equity-sparkline .spark-area { fill: color-mix(in oklch, var(--brand-accent) 12%, transparent); }
+    .equity-sparkline .spark-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .detail-actions { display: grid; gap: var(--space-8); }
+    .detail-actions .btn, .detail-actions .row-action { width: 100%; }
+    .detail-actions .btn { justify-content: center; }
+    .detail-actions .row-action {
+      border: 1px solid var(--border-default); color: var(--text-secondary);
+    }
+    .detail-actions .row-action:hover {
+      border-color: var(--brand-accent); color: var(--brand-accent);
+    }
+
+    /* ── Overlay activation ── */
+    :root:has(#overlay-strategy-clone:checked) [data-overlay="overlay-strategy-clone"] { display: flex; }
+    :root:has(#overlay-strategy-delete:checked) [data-overlay="overlay-strategy-delete"] { display: flex; }
+    .overlay-close { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: var(--font-size-16); padding: var(--space-2); line-height: 1; }
+    .overlay-close:hover { color: var(--text-secondary); }
+    .ov-label-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; }
+    .ov-input { width: 100%; padding: var(--space-4) var(--space-8); border-radius: var(--radius-4); border: 1px solid var(--border-default); background: var(--surface-muted); color: var(--text-primary); font-size: var(--font-size-12); }
+
+    .state-variant .state-variant-content { background: var(--surface-app); }
+    .data-table tr.row.selected { background: color-mix(in oklch, var(--brand-accent) 5%, transparent); }
+    .data-table tr.row.selected td:first-child { box-shadow: inset 0 0 0 1px var(--interaction-selected-border); }
+
+    .batch-bar { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-12); background: var(--brand-accent-subtle); border-bottom: 1px solid var(--brand-accent); }
+    .batch-bar .batch-count { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--brand-accent); }
+    .batch-bar .batch-spacer { flex: 1; }
+
+    .stale-banner { padding: var(--space-12); display: flex; align-items: center; gap: var(--space-6); }
+    .stale-dot-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--system-degraded-fg); display: inline-block; flex-shrink: 0; }
+    .stale-banner-text { font-size: var(--font-size-12); color: var(--system-degraded-fg); }
+
+    .checkbox { width: var(--checkbox-size); height: var(--checkbox-size); border: 1px solid var(--border-default); border-radius: var(--radius-2); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .checkbox.checked { background: var(--brand-accent); border-color: var(--brand-accent); }
+    @media (prefers-reduced-motion: reduce) { .btn { transition: none !important; } }
+    .data-table th:nth-child(2),
+    .data-table td:nth-child(2) { min-width: 9rem; }
+    .data-table th:nth-child(6),
+    .data-table td:nth-child(6) { min-width: 5.5rem; }
+  </style>
+</head>
+<body>
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+    <a class="skip-link" href="#main-content">跳至主要内容</a>
+    <div class="style-label" aria-hidden="true">Graphite Studio — 策略列表 · Compact · A股</div>
+
+    <div class="shell-catalog catalog-shell" data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
+      <!-- ═══ Rail ═══ -->
+      <nav class="shell-rail" aria-label="主导航">
+        <div class="rail-logo">D</div>
+        <div class="rail-nav">
+          <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+          <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+          <a class="rail-icon active" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+          <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+          <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+        </div>
+
+      </nav>
+
+      <!-- ═══ Header ═══ -->
+      <header class="shell-header" role="toolbar" aria-label="策略列表工具栏">
+        <div class="header-title-group">
+          <h1 class="header-title">策略列表</h1>
+          <span class="header-subtitle">Research · Strategies</span>
+        </div>
+        <div class="header-spacer"></div>
+        <div class="header-btn-group">
+          <button class="btn btn-primary" data-action-tier="primary">新建策略</button>
+        </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <div class="command-context-actions" data-command-context-route="/research/strategies" data-command-context-object="strategy-momentum-v3.2" data-command-context-actions="run-backtest, clone-strategy, view-recent-runs, pause-strategy" hidden></div>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" data-action-tier="overflow" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" data-action-tier="overflow" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" data-action-tier="overflow" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" data-action-tier="overflow" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" data-action-tier="overflow" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-action-tier="overflow" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+      <!-- ═══ Filter Toolbar ═══ -->
+      <div class="filter-toolbar" data-contract-slot="header">
+        <div class="filter-group">
+          <span class="filter-label">搜索:</span>
+          <input type="text" class="filter-search" placeholder="搜索策略名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索策略名称...">
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">类型:</span>
+          <button class="filter-chip active" data-action-tier="context">全部</button>
+          <button class="filter-chip" data-action-tier="context">Alpha</button>
+          <button class="filter-chip" data-action-tier="context">择时</button>
+          <button class="filter-chip" data-action-tier="context">行业轮动</button>
+          <button class="filter-chip" data-action-tier="context">多因子</button>
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">状态:</span>
+          <button class="filter-chip active" data-action-tier="context">全部</button>
+          <button class="filter-chip" data-action-tier="context">运行中</button>
+          <button class="filter-chip" data-action-tier="context">已暂停</button>
+          <button class="filter-chip" data-action-tier="context">草稿</button>
+        </div>
+        <div class="filter-spacer"></div>
+        <span class="filter-count" data-active-filters-summary>共 <span>12 个策略</span></span>
+      </div>
+
+      <!-- ═══ Performance Summary ═══ -->
+      <div class="perf-summary" data-primary-answer-equivalent data-primary-weight="dominant" data-catalog-task="strategy-health" aria-label="影响范围：当前策略库筛选结果">
+        <div class="perf-item" data-answer-evidence>
+          <span class="perf-label" data-answer-judgment>可运行</span>
+          <span class="perf-value positive">5</span>
+        </div>
+        <div class="perf-item">
+          <span class="perf-label">需处理</span>
+          <span class="perf-value">2</span>
+        </div>
+        <div class="perf-item" data-answer-evidence>
+          <span class="perf-label">Sharpe / 最近运行</span>
+          <span class="perf-value positive" data-answer-metric>1.51 · 09:32 成功</span>
+        </div>
+        <div class="perf-item" data-answer-evidence>
+          <span class="perf-label">风险约束</span>
+          <span class="perf-value negative">2 暂停</span>
+          <span class="perf-sub">暂停原因: 回撤 / 数据延迟</span>
+        </div>
+        <div class="perf-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看最佳策略" data-action-tier="context">
+          <span class="perf-label">最佳健康策略</span>
+          <span class="perf-value strategy-name">Alpha-Momentum-v3</span>
+        </div>
+      </div>
+
+      <!-- ═══ Main Table Area ═══ -->
+      <div class="catalog-table" data-contract-slot="main" data-selected-object-region data-secondary-context>
+        <div class="catalog-table-inner" id="main-content">
+          <div class="table-container">
+            <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="策略列表">
+              <caption class="sr-only">策略列表：共 12 个策略</caption>
+              <colgroup>
+                <col class="col-strategy-name">
+                <col class="col-strategy-type">
+                <col class="col-strategy-status">
+                <col class="col-strategy-sharpe">
+                <col class="col-strategy-return">
+                <col class="col-strategy-mdd">
+                <col class="col-strategy-run">
+                <col class="col-strategy-action">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" class="sorted">名称 <span class="sort-icon">▲</span></th>
+                  <th scope="col">类型</th>
+                  <th scope="col">状态</th>
+                  <th scope="col" class="right">Sharpe <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">年化收益 <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">MDD <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">最近运行</th>
+                  <th scope="col" class="right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="row selected" data-row-selection-marker tabindex="0" data-row-context-route="/research/strategies" data-row-context-object="strategy-momentum-v3.2" data-row-context-actions="run-backtest, clone-strategy, view-recent-runs, pause-strategy">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Alpha-Momentum-v3</span>
+                      <span class="strategy-meta">v3.8 · 6 因子 · A股动量</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">Alpha</span></td>
+                  <td><span class="status-pill active">运行中</span></td>
+                  <td class="right numeric cell-change-up heat-bg-5">1.85</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>24.3%</td>
+                  <td class="right numeric metric-risk heat-bg-4 bar-w-33">-8.2%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 16 L6 14 L12 15 L18 11 L24 12 L30 9 L36 10 L42 6 L48 7 L54 3 L60 2 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 16 L6 14 L12 15 L18 11 L24 12 L30 9 L36 10 L42 6 L48 7 L54 3 L60 2"></path></svg></span><span>2026-04-21</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Multi-Factor-Enhanced</span>
+                      <span class="strategy-meta">v2.4 · 质量/价值/动量</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">多因子</span></td>
+                  <td><span class="status-pill active">运行中</span></td>
+                  <td class="right numeric cell-change-up heat-bg-4">1.62</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>21.8%</td>
+                  <td class="right numeric metric-risk heat-bg-4 bar-w-39">-9.7%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 18 L6 16 L12 14 L18 15 L24 12 L30 10 L36 11 L42 8 L48 6 L54 4 L60 3 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 18 L6 16 L12 14 L18 15 L24 12 L30 10 L36 11 L42 8 L48 6 L54 4 L60 3"></path></svg></span><span>2026-04-21</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">ETF-Rotation-Plus</span>
+                      <span class="strategy-meta">v1.9 · ETF 轮动 · 周频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">行业轮动</span></td>
+                  <td><span class="status-pill active">运行中</span></td>
+                  <td class="right numeric cell-change-up heat-bg-3">1.47</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>19.4%</td>
+                  <td class="right numeric metric-risk heat-bg-3 bar-w-40">-10.1%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 14 L6 12 L12 13 L18 10 L24 11 L30 8 L36 9 L42 7 L48 5 L54 6 L60 4 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 14 L6 12 L12 13 L18 10 L24 11 L30 8 L36 9 L42 7 L48 5 L54 6 L60 4"></path></svg></span><span>2026-04-21</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Sector-Rotation</span>
+                      <span class="strategy-meta">v2.1 · 申万一级 · 月频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">行业轮动</span></td>
+                  <td><span class="status-pill active">运行中</span></td>
+                  <td class="right numeric heat-bg-3">1.35</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>16.2%</td>
+                  <td class="right numeric metric-risk heat-bg-3 bar-w-46">-11.4%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 15 L6 13 L12 14 L18 11 L24 12 L30 10 L36 8 L42 9 L48 7 L54 5 L60 6 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 15 L6 13 L12 14 L18 11 L24 12 L30 10 L36 8 L42 9 L48 7 L54 5 L60 6"></path></svg></span><span>2026-04-20</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Intraday-Reversion</span>
+                      <span class="strategy-meta">v1.3 · 日内反转 · T+1 校验</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">择时</span></td>
+                  <td><span class="status-pill active">运行中</span></td>
+                  <td class="right numeric heat-bg-3">1.28</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>13.4%</td>
+                  <td class="right numeric metric-risk heat-bg-4 bar-w-27">-6.8%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 12 L6 14 L12 11 L18 13 L24 9 L30 10 L36 8 L42 6 L48 7 L54 5 L60 4 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 12 L6 14 L12 11 L18 13 L24 9 L30 10 L36 8 L42 6 L48 7 L54 5 L60 4"></path></svg></span><span>2026-04-21</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">CSI500-Quality</span>
+                      <span class="strategy-meta">v1.7 · 质量增强 · 中证500</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">多因子</span></td>
+                  <td><span class="status-pill paused">已暂停</span></td>
+                  <td class="right numeric heat-bg-3">1.14</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>11.9%</td>
+                  <td class="right numeric metric-risk heat-bg-4 bar-w-38">-9.6%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 4 L6 5 L12 3 L18 6 L24 8 L30 7 L36 10 L42 9 L48 12 L54 14 L60 13 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 4 L6 5 L12 3 L18 6 L24 8 L30 7 L36 10 L42 9 L48 12 L54 14 L60 13"></path></svg></span><span>2026-04-18</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Timing-Macro</span>
+                      <span class="strategy-meta">v4.0 · 宏观择时 · 风控中</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">择时</span></td>
+                  <td><span class="status-pill paused">已暂停</span></td>
+                  <td class="right numeric heat-bg-2">0.92</td>
+                  <td class="right numeric">12.1%</td>
+                  <td class="right numeric metric-risk heat-bg-3 bar-w-49">-12.3%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 3 L6 4 L12 6 L18 5 L24 8 L30 10 L36 9 L42 12 L48 14 L54 13 L60 16 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 3 L6 4 L12 6 L18 5 L24 8 L30 10 L36 9 L42 12 L48 14 L54 13 L60 16"></path></svg></span><span>2026-04-15</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Risk-Parity-CN</span>
+                      <span class="strategy-meta">v2.0 · 风险平价 · 月调仓</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">多因子</span></td>
+                  <td><span class="status-pill paused">已暂停</span></td>
+                  <td class="right numeric heat-bg-2">0.88</td>
+                  <td class="right numeric">9.2%</td>
+                  <td class="right numeric metric-risk heat-bg-5 bar-w-20">-4.9%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 10 L6 8 L12 9 L18 7 L24 8 L30 6 L36 7 L42 5 L48 6 L54 4 L60 5 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 10 L6 8 L12 9 L18 7 L24 8 L30 6 L36 7 L42 5 L48 6 L54 4 L60 5"></path></svg></span><span>2026-04-13</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Low-Vol-Alpha</span>
+                      <span class="strategy-meta">v0.9 · 低波 Alpha · 草稿</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">Alpha</span></td>
+                  <td><span class="status-pill draft">草稿</span></td>
+                  <td class="right numeric cell-change-down heat-bg-2">0.68</td>
+                  <td class="right numeric">8.5%</td>
+                  <td class="right numeric metric-risk heat-bg-4 bar-w-22">-5.4%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 6 L6 5 L12 7 L18 8 L24 6 L30 9 L36 11 L42 10 L48 13 L54 15 L60 14 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 6 L6 5 L12 7 L18 8 L24 6 L30 9 L36 11 L42 10 L48 13 L54 15 L60 14"></path></svg></span><span>2026-04-10</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Event-Driven-AI</span>
+                      <span class="strategy-meta">v0.4 · 事件驱动 · 待验证</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">Alpha</span></td>
+                  <td><span class="status-pill draft">草稿</span></td>
+                  <td class="right numeric heat-bg-3">1.05</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>15.1%</td>
+                  <td class="right numeric metric-risk heat-bg-3 bar-w-59">-14.7%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 8 L6 10 L12 7 L18 9 L24 6 L30 8 L36 5 L42 7 L48 4 L54 6 L60 3 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 8 L6 10 L12 7 L18 9 L24 6 L30 8 L36 5 L42 7 L48 4 L54 6 L60 3"></path></svg></span><span>2026-04-09</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">ML-Ensemble-v2</span>
+                      <span class="strategy-meta">v2.0 · 集成学习 · 版本封存</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">多因子</span></td>
+                  <td><span class="status-pill draft">草稿</span></td>
+                  <td class="right numeric heat-bg-3">1.10</td>
+                  <td class="right numeric">14.6%</td>
+                  <td class="right numeric metric-risk heat-bg-3 bar-w-53">-13.2%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 5 L6 6 L12 4 L18 7 L24 5 L30 8 L36 6 L42 9 L48 7 L54 10 L60 8 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 5 L6 6 L12 4 L18 7 L24 5 L30 8 L36 6 L42 9 L48 7 L54 10 L60 8"></path></svg></span><span>2026-04-08</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Dividend-LowVol</span>
+                      <span class="strategy-meta">v1.1 · 红利低波 · 归档</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">Alpha</span></td>
+                  <td><span class="status-pill archived">归档</span></td>
+                  <td class="right numeric heat-bg-2">0.74</td>
+                  <td class="right numeric">7.8%</td>
+                  <td class="right numeric metric-risk heat-bg-4 bar-w-23">-5.8%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
+                  <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 4 L6 3 L12 5 L18 6 L24 4 L30 7 L36 9 L42 8 L48 11 L54 12 L60 14 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 4 L6 3 L12 5 L18 6 L24 4 L30 7 L36 9 L42 8 L48 11 L54 12 L60 14"></path></svg></span><span>2026-03-28</span></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
+          </div>
+          <div class="table-footer">
+            <div class="table-footer-info">
+              <span>共 12 个策略</span>
+            </div>
+            <div class="table-footer-actions">
+              <span class="pagination-ellipsis">...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Detail Panel ═══ -->
+      <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320" aria-valuetext="调整详情面板宽度 320 像素"></div>
+
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
+        <div class="context-section" data-collapse-priority="l1">
+          <div class="context-section-header">
+            <span class="context-section-title">策略健康</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-hero">
+              <div class="detail-title-line">
+                <div class="detail-ticker">Alpha-Momentum-v3</div>
+                <span class="detail-live-chip">运行中</span>
+              </div>
+              <div class="detail-meta">
+                <span><span class="meta-label">类型</span><span class="meta-value">Alpha</span></span>
+                <span><span class="meta-label">版本</span><span class="meta-value">v3.8</span></span>
+              </div>
+              <svg class="equity-sparkline" viewBox="0 0 240 56" role="img" aria-label="策略净值曲线">
+                <path class="spark-area" d="M0 44 L18 38 L36 41 L54 31 L72 34 L90 25 L108 28 L126 19 L144 21 L162 14 L180 18 L198 10 L216 13 L240 6 L240 56 L0 56 Z"></path>
+                <path class="spark-line" d="M0 44 L18 38 L36 41 L54 31 L72 34 L90 25 L108 28 L126 19 L144 21 L162 14 L180 18 L198 10 L216 13 L240 6"></path>
+              </svg>
+              <div class="strategy-meta">最近运行 2026-04-21 14:35 · 风险约束通过 · 可立即运行</div>
+            </div>
+          </div>
+        </div>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">关键指标</span>
+            <span class="collapse-count">4 指标</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="detail-kpi-grid">
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">Sharpe</span>
+                <span class="detail-kpi-value">1.85</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">年化收益</span>
+                <span class="detail-kpi-value">24.3%</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">最大回撤</span>
+                <span class="detail-kpi-value">-8.2%</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">Calmar</span>
+                <span class="detail-kpi-value">2.96</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">风险约束</span>
+            <span class="collapse-count">4 项</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="detail-section">
+              <div class="overlay-field">
+                <span class="overlay-field-label">Universe</span>
+                <span class="overlay-field-value">沪深300</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">调仓频率</span>
+                <span class="overlay-field-value">周频</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">风险约束</span>
+                <span class="overlay-field-value">T+1 / 涨跌停</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">暂停原因</span>
+                <span class="overlay-field-value">无 · 2 个同类策略因回撤/数据延迟暂停</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">下游信号</span>
+                <span class="overlay-field-value">43 条 / 今日</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
+          <div class="context-section-header">
+            <span class="context-section-title">运行入口</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-actions">
+              <button class="btn btn-primary w-full" data-action-tier="primary">运行回测</button>
+              <label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆策略</label>
+              <label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除策略</label>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ═══ Overlay Containers ═══ -->
+    <div class="overlays">
+      <div class="overlay-backdrop" data-overlay="overlay-strategy-clone">
+        <label class="overlay-dismiss" for="overlay-strategy-clone" aria-label="关闭"></label>
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="策略克隆">
+          <div class="overlay-header">
+            <span class="overlay-title">克隆策略</span>
+            <label for="overlay-strategy-clone" class="overlay-close" aria-label="关闭">&#10005;</label>
+          </div>
+          <div class="overlay-body">
+            <p>将基于当前策略创建一份可编辑副本，原策略和历史回测保持不变。</p>
+            <div class="sv-pad-section">
+              <div class="overlay-field">
+                <span class="overlay-field-label">原策略</span>
+                <span class="overlay-field-value">Alpha-Momentum-v3</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">版本</span>
+                <span class="overlay-field-value">v3.8</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">最近 Sharpe</span>
+                <span class="overlay-field-value">1.85</span>
+              </div>
+            </div>
+            <h2>新策略名称</h2>
+            <div class="sv-pad-6-0">
+              <input type="text" value="Alpha-Momentum-v3-copy" class="ov-input">
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-strategy-clone" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+              <label for="overlay-strategy-clone" class="overlay-btn overlay-btn-primary ov-label-btn">创建副本</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay-backdrop" data-overlay="overlay-strategy-delete">
+        <label class="overlay-dismiss" for="overlay-strategy-delete" aria-label="关闭"></label>
+        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="策略删除确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete">
+          <div class="overlay-header">
+            <span class="overlay-title"><span data-danger-marker>!</span> 确认删除策略</span>
+            <label for="overlay-strategy-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
+          </div>
+          <div class="overlay-body">
+            <p data-risk-object>对象：Alpha-Momentum-v3 策略 / 已选择策略草稿</p>
+            <div class="risk-confirmation-grid">
+              <div data-impact-summary data-impact-preview class="risk-confirmation-block">
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">删除会移除策略草稿和本地配置，不删除历史回测、订单、审计记录。</p>
+              </div>
+              <div data-before-after class="risk-confirmation-block">
+                <div class="risk-confirmation-title">操作前后</div>
+                <p class="risk-confirmation-copy">单个或批量选中的策略会从当前列表移至归档，后续信号和新回测不再自动生成。</p>
+              </div>
+              <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+                <div class="risk-confirmation-title">对象清单</div>
+                <p class="risk-confirmation-copy">保留策略版本、参数快照、关联回测和删除前依赖清单。</p>
+              </div>
+              <div data-audit-record class="risk-confirmation-block">
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录操作人、策略 id、版本号、删除原因和时间。</p>
+              </div>
+              <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">可从策略归档恢复最近一次版本；恢复操作会创建新的策略版本。</p>
+              </div>
+            </div>
+            <div class="sv-pad-section">
+              <div class="overlay-field">
+                <span class="overlay-field-label">关联回测</span>
+                <span class="overlay-field-value">12 次</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">关联信号</span>
+                <span class="overlay-field-value">86 条</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">当前状态</span>
+                <span class="overlay-field-value">已暂停</span>
+              </div>
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control data-action-tier="context">取消，保留策略状态</label>
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action data-action-tier="primary">确认变更策略状态</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="filter-bar">
+        <div class="gallery-group__label">筛选工具栏</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar skeleton--w86"></div>
+                  <div class="skeleton skeleton-bar skeleton--w72"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty Filter State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-title">未设置筛选条件</div>
+                  <div class="state-empty-desc">默认展示全部策略，可按类型、状态或创建时间缩小范围</div>
+                  <button class="state-empty-cta">设置筛选</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">筛选条件同步失败</div>
+                  <div class="state-error-desc">已保留本地筛选，可稍后重试同步</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="selected">
+                <div class="batch-bar" data-batch-action-bar>
+                  <span class="batch-count">类型: Alpha · 状态: 运行中</span>
+                  <span class="batch-spacer"></span>
+                  <button class="btn btn-sm">清除筛选</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="perf-summary">
+        <div class="gallery-group__label">绩效摘要</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar skeleton--w86"></div>
+                  <div class="skeleton skeleton-bar skeleton--w72"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Stale State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="stale">
+                <div class="stale-banner">
+                  <span class="stale-dot-indicator"></span>
+                  <span class="stale-banner-text">绩效摘要已过期 · 最后同步 45 分钟前</span>
+                  <button class="btn btn-sm">刷新</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="strategy-table">
+        <div class="gallery-group__label">策略表格</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar skeleton--w86"></div>
+                  <div class="skeleton skeleton-bar skeleton--w72"></div>
+                  <div class="skeleton skeleton-bar skeleton--w94"></div>
+                  <div class="skeleton skeleton-bar skeleton--w64"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📐</div>
+                  <div class="state-empty-title">暂无策略</div>
+                  <div class="state-empty-desc">还没有创建任何策略，点击下方按钮开始构建你的第一个量化策略</div>
+                  <button class="state-empty-cta">新建策略</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">策略列表加载失败</div>
+                  <div class="state-error-desc">无法获取策略数据，请稍后重试</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Stale State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="stale">
+                <div class="stale-banner">
+                  <span class="stale-dot-indicator"></span>
+                  <span class="stale-banner-text">策略绩效数据已过期 · 最后同步 45 分钟前</span>
+                  <button class="btn btn-sm">刷新</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="selected">
+                <div class="sv-bulk-card">
+                  <div class="sv-bulk-title">Alpha-Momentum-v3 · Sharpe 1.85</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Bulk Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="bulk">
+                <div class="batch-bar">
+                  <span class="batch-count">已选择 2 个</span>
+                  <span class="batch-spacer"></span>
+                  <label for="overlay-strategy-delete" class="btn btn-sm btn-danger ov-label-btn" tabindex="0" role="button">批量删除</label>
+                  <button class="btn btn-sm">取消选择</button>
+                </div>
+                <div class="sv-bulk-card">
+                  <div class="sv-bulk-title">Alpha-Momentum-v3</div>
+                </div>
+                <div class="sv-bulk-card">
+                  <div class="sv-bulk-title">Multi-Factor-Enhanced</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层设计</div>
+        <div class="gallery-cards">
+
+          <div class="gallery-card" data-overlay-ref="overlay-strategy-clone">
+            <div class="gallery-card__label">策略克隆 (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="策略克隆">
+                <div class="overlay-header">
+                  <span class="overlay-title">克隆策略</span>
+                  <button class="overlay-close" aria-label="关闭">x</button>
+                </div>
+                <div class="overlay-body">
+                  <p>将基于以下策略创建一份副本：</p>
+                  <div class="sv-pad-section">
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">原策略</span>
+                      <span class="overlay-field-value">Alpha-Momentum-v3</span>
+                    </div>
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">类型</span>
+                      <span class="overlay-field-value">Alpha</span>
+                    </div>
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">Sharpe</span>
+                      <span class="overlay-field-value">1.85</span>
+                    </div>
+                  </div>
+                  <h2>新策略名称</h2>
+                  <div class="sv-pad-6-0">
+                    <input type="text" value="Alpha-Momentum-v3-副本" class="ov-input">
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">创建副本</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card" data-overlay-ref="overlay-strategy-delete">
+            <div class="gallery-card__label">策略删除 (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="策略删除确认">
+                <div class="overlay-header">
+                  <span class="overlay-title">确认删除策略</span>
+                  <button class="overlay-close" aria-label="关闭">x</button>
+                </div>
+                <div class="overlay-body">
+                  <p>确定要删除以下策略吗？关联的回测记录和信号历史将被保留，但策略配置无法恢复。</p>
+                  <div class="sv-pad-section">
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">策略名称</span>
+                      <span class="overlay-field-value">Timing-Macro</span>
+                    </div>
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">关联回测</span>
+                      <span class="overlay-field-value">12 次</span>
+                    </div>
+                    <div class="overlay-field">
+                      <span class="overlay-field-label">关联信号</span>
+                      <span class="overlay-field-value">86 条</span>
+                    </div>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-danger">确认删除</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <input type="checkbox" id="overlay-strategy-clone" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-strategy-delete" class="overlay-radio sr-only">
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

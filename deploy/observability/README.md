@@ -21,19 +21,10 @@ This directory contains the Docker Compose configuration for deploying Ditto obs
 
 ## CI/CD Integration
 
-This configuration is also used in GitHub Actions for integration tests.
-
-- **CI Workflow**: `.github/workflows/ci-integration.yml`
-- **Command**: `docker compose -f docker-compose.yml up -d`
-- **Note**: CI uses Docker Compose V2 plugin (`docker compose`)
-
-### CI vs Local Differences
-
-| Aspect | Local | CI |
-|--------|-------|-----|
-| Command | `docker-compose` | `docker compose` |
-| Volumes | Persistent | None (ephemeral) |
-| Coverage Check | N/A | `--cov-fail-under=0` (disabled) |
+The required CI jobs use isolated test providers and do not implicitly start this
+operator-facing stack. Run this Compose file explicitly when validating an
+observability deployment; do not treat a skipped or unavailable local stack as a
+passing CI result.
 
 ## Prerequisites
 

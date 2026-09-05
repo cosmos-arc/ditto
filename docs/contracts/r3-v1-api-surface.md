@@ -5,7 +5,7 @@
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `d9796c4f34d9d93e714f047c1e142a573139234f8ed4964cb609469871f8885e`
+> JSON canonical SHA-256: `13d0f234c2b240be0a1bd103525b19b54967b67425d234d9b23807545e9c89f7`
 
 Task 4 classification 已由用户批准；批准 reference 为
 `user-message:2026-07-31:final-task4-classification-approved`。Task 9 candidate
@@ -267,7 +267,8 @@ cursor 还必须绑定 resource kind，不能跨三类 evidence page 复用。
   response status/schema、全部 path/query/header parameter 的
   name/in/required/schema，以及 `x-ditto-maturity`。Task 9 的 candidate-selection
   与 holdout-evaluations 已观测到 required `Idempotency-Key` string header；其余
-  operation 同样只记录当前 OpenAPI 真实值，不伪造未来状态。
+  operation 同样记录 optional `X-Ditto-API-Contract-Version: v1` fail-closed
+  assertion header，只保存当前 OpenAPI 真实值，不伪造未来状态。
 - runtime 的 40 个 R3 operation 必须全部被 exact entry 或
   `equivalence.runtime_operations` 覆盖；多一个或少一个都会失败。
 - Closure mode 要求全部非 `DEFER` entry 为 `IMPLEMENTED`，且 primary runtime

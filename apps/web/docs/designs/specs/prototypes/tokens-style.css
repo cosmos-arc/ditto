@@ -1,0 +1,144 @@
+/* ─────────────────────────────────────────────
+ * Style B — Graphite Studio
+ * Modern developer tool (Linear / Vercel / Raycast)
+ * Sans-dominant, compact, clean hue-253 elevation steps
+ * ───────────────────────────────────────────── */
+
+/* All semantic tokens (surface, text, border, brand, domain, interaction)
+ * are defined in src/styles/design-tokens/ — the Single Source of Truth.
+ * This file only contains prototype-specific tokens not in the SSOT. */
+
+:root {
+  /* ── Typography — 4-role system ── */
+  --font-family-ui:      'Inter', 'Noto Sans SC Variable', 'Source Han Sans SC', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  --font-family-heading: 'Geist Sans', 'Inter', 'Noto Sans SC Variable', 'Source Han Sans SC', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  --font-family-numeric: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-family-code:    'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  /* ── Prototype structural dimensions — approved Edition v1 surface ── */
+  --panel-header-height:    38px;
+  --tab-bar-height:         42px;
+  --progress-bar-height:    6px;
+  --surface-noise-opacity:  0.018;
+  --prototype-overlay-z-index: 1110;
+  --prototype-tooltip-max-width: 240px;
+
+  /* ── Instrument Hub — Domain-specific structural tokens ── */
+  --sparkline-width:        48px;    /* metric-card inline sparkline */
+  --sparkline-height:       20px;
+  --flow-bar-height:        6px;     /* capital flow indicator bar */
+  --context-count-height:   18px;    /* sidebar section count badge */
+  --timeline-bottom-max-h:  160px;   /* bottom timeline max scrollable height */
+  --note-input-min-h:       60px;    /* note textarea minimum height */
+  --btn-icon-size:          14px;    /* icon size inside buttons */
+  --meta-sep-height:        12px;    /* meta strip separator height */
+  --status-bar-height:      1.5rem;  /* fixed status bar height */
+
+  /* ── Rhythm Tokens — differentiated section gaps ── */
+  --rhythm-merge-gap:        0px;
+  --rhythm-section-gap:      var(--space-12);
+  --rhythm-breath-gap:       var(--space-16);
+
+  /* ── Signal / Status Dot ── */
+  --signal-dot-size:         6px;
+  --timeline-marker-size:    11px;
+  --timeline-marker-offset-top: 3px;
+  --timeline-line-left:      5px;
+  --timeline-line-top:       18px;
+
+  /* ── Shadow Tokens ── */
+  --shadow-sm:  0 2px 4px oklch(0 0 0 / 0.12);
+  --shadow-md:  0 4px 12px oklch(0 0 0 / 0.18);
+  --shadow-lg:  0 8px 24px oklch(0 0 0 / 0.24);
+  --shadow-xl:  0 12px 32px oklch(0 0 0 / 0.28);
+  --shadow-focus: 0 0 0 2px var(--interaction-focus-ring);
+}
+
+/* ─────────────────────────────────────────────
+ * Light Mode Prototype Adjustments
+ * Shared adjustments for all prototype pages when
+ * theme-switcher toggles to [data-theme="light"].
+ * Page-specific overrides (e.g. .map-container
+ * tokens in page-a-shares) remain in-page.
+ * ───────────────────────────────────────────── */
+
+[data-theme="light"] .noise-layer {
+  opacity: 0.005;
+}
+
+[data-atmosphere-intensity="elevated"] .noise-layer {
+  opacity: calc(var(--surface-noise-opacity, 0.018) * 2);
+}
+
+[data-atmosphere-intensity="intense"] .noise-layer {
+  opacity: calc(var(--surface-noise-opacity, 0.018) * 4);
+}
+
+[data-theme="light"] .shell-header {
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+}
+
+[data-theme="light"] .shell-header::after {
+  opacity: 0.4;
+}
+
+[data-theme="light"] .rail-logo {
+  text-shadow: none;
+}
+
+/* ── Prototype Density Semantics
+ * Product tokens still provide the raw density scale. Prototypes expose the
+ * reviewed semantic scale: compact / default / comfortable.
+ */
+:root,
+[data-density="default"] {
+  --density-panel-padding:     var(--space-12);
+  --density-section-gap:       var(--space-12);
+  --density-gutter:            var(--space-16);
+  --density-strip-height:      2.25rem;
+  --density-toolbar-height:    2.25rem;
+  --density-row-height:        2.25rem;
+  --density-cell-padding-x:    var(--space-12);
+  --density-cell-padding-y:    var(--space-6);
+  --density-header-height:     2rem;
+  --density-input-height:      2rem;
+  --density-action-height:     2rem;
+  --density-chart-header:      2rem;
+  --density-chart-padding:     var(--space-12);
+  --density-font-delta:        0;
+}
+
+[data-density="compact"] {
+  --density-panel-padding:     var(--space-8);
+  --density-section-gap:       var(--space-8);
+  --density-gutter:            var(--space-12);
+  --density-strip-height:      2rem;
+  --density-toolbar-height:    2rem;
+  --density-row-height:        2.125rem;
+  --density-cell-padding-x:    var(--space-8);
+  --density-cell-padding-y:    var(--space-4);
+  --density-header-height:     1.75rem;
+  --density-input-height:      1.75rem;
+  --density-action-height:     1.75rem;
+  --density-chart-header:      1.75rem;
+  --density-chart-padding:     var(--space-8);
+  --density-font-delta:        0;
+}
+
+[data-density="comfortable"] {
+  --density-panel-padding:     var(--space-16);
+  --density-section-gap:       var(--space-16);
+  --density-gutter:            var(--space-20);
+  --density-strip-height:      2.5rem;
+  --density-toolbar-height:    2.5rem;
+  --density-row-height:        2.625rem;
+  --density-cell-padding-x:    var(--space-16);
+  --density-cell-padding-y:    var(--space-8);
+  --density-header-height:     2.25rem;
+  --density-input-height:      2.25rem;
+  --density-action-height:     2.25rem;
+  --density-chart-header:      2.25rem;
+  --density-chart-padding:     var(--space-16);
+  --density-font-delta:        0;
+}

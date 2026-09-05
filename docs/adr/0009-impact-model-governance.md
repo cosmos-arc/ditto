@@ -61,7 +61,7 @@ def _normalize_impact_model(raw: str | None) -> ImpactModel:
 `ImpactModel` 类型定义收窄为 `Literal["none", "volume_share"]`，同时在 Interfaces 层 `CostConfigRequest` 的 Pydantic 模型中通过 `Literal` 类型约束确保 API 层即拒绝非法值：
 
 ```python
-# packages/apps/src/ditto_apps/models/backtest.py
+# apps/backend/src/ditto_apps/models/backtest.py
 
 class CostConfigRequest(BaseModel):
     impact_model: ImpactModel = Field(

@@ -861,8 +861,8 @@ pixi run -e dev pytest tests/e2e/ -v
 
 | 功能 | 路径 |
 |------|------|
-| 服务器主入口 | `packages/apps/src/ditto_apps/main.py` |
-| CLI 入口 | `packages/apps/src/ditto_apps/cli/main.py` |
+| 服务器主入口 | `apps/backend/src/ditto_apps/main.py` |
+| CLI 入口 | `apps/backend/src/ditto_apps/cli/main.py` |
 | Pixi 配置 | `pixi.toml` |
 | 生产配置 | `config/production/` |
 | 开发配置 | `config/development/` |

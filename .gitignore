@@ -53,6 +53,9 @@ ENV/
 .grimp_cache/
 .import_linter_cache/
 .benchmarks/
+.cache/ditto-dev/
+.cache/ditto-system/
+/node_modules/
 
 # ===================================================================
 #                    测试报告 (Test Reports)
@@ -63,6 +66,7 @@ htmlcov/
 *.lcov
 report.xml
 coverage.xml
+coverage.json
 
 # ===================================================================
 #                    数据文件（混合策略）
@@ -152,3 +156,5 @@ desktop.ini
 .cache/ditto-agent-harness/
 .worktrees/
 .merge-backups/
+# Mutmut creates an importable shadow source tree per Python capability package.
+mutants/

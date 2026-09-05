@@ -169,14 +169,10 @@ def _freeze_mapping(value: object, field_name: str) -> Mapping[str, FrozenValue]
             "invalid_parameter_mapping",
             field=field_name,
         )
-    frozen = _freeze_value(cast("Mapping[object, object]", value), field_name)
-    if not isinstance(frozen, Mapping):
-        raise _spec_error(
-            f"{field_name} must be a mapping",
-            "invalid_parameter_mapping",
-            field=field_name,
-        )
-    return frozen
+    return cast(
+        "Mapping[str, FrozenValue]",
+        _freeze_value(cast("Mapping[object, object]", value), field_name),
+    )
 
 
 class ExperimentFailurePolicy(StrEnum):

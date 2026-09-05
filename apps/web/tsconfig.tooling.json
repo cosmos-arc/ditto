@@ -1,0 +1,17 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tooling.tsbuildinfo",
+		"lib": ["ES2023", "DOM"],
+		"types": ["node", "vitest/globals"]
+	},
+	"include": ["*.config.ts", "scripts/**/*.ts", "scripts/**/*.mts"],
+	"exclude": [
+		"scripts/page-*.test.ts",
+		"scripts/prototype-*.test.ts",
+		"scripts/prototype-visual-matrix.ts",
+		"scripts/q*-live-ui-acceptance.ts",
+		"scripts/r*-*-acceptance.ts",
+		"scripts/r*-*-acceptance.test.ts"
+	]
+}

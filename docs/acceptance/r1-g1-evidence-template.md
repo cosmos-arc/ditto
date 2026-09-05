@@ -23,7 +23,7 @@
 Command:
 
 ```bash
-pixi run -e dev pytest --no-cov packages/apps/tests/e2e/test_r1_daily_manual_trading.py -q
+pixi run -e dev pytest --no-cov apps/backend/tests/e2e/test_r1_daily_manual_trading.py -q
 ```
 
 | Scenario | Expected evidence | Artifact / checksum | Result |
@@ -64,7 +64,7 @@ Designated exercise: `signal_date=2024-03-29`, `seed_stock_selection_rotation`ï¼
 ```bash
 DITTO_RUN_REAL_DATA_ACCEPTANCE=1 \
   pixi run -e dev pytest --no-cov \
-  packages/apps/tests/e2e/test_real_data_stock_selection_pipeline.py \
+  apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py \
   -m e2e -q
 ```
 
@@ -83,7 +83,7 @@ If externally blocked, record provider response, observation time and retry owne
 
 ## 5. Frontend live acceptance
 
-Runtime: `VITE_USE_MOCK=false`; backend and frontend bind only to loopback.
+Runtime: `ditto-runtime-config.json` declares `runtime=live`; API and Web bind only to loopback.
 
 | Viewport / state | Required proof | Screenshot | Result |
 |---|---|---|---|
@@ -97,10 +97,9 @@ Runtime: `VITE_USE_MOCK=false`; backend and frontend bind only to loopback.
 Commands:
 
 ```bash
-cd /home/chevy/projects/ditto-app
-bun run gen:api
-bun run check
-bun run visual:audit
+pixi run -e dev check-web
+pixi run -e dev check-contract
+pixi run -e dev test-system
 ```
 
 ## 6. Quality and security gates

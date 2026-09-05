@@ -26,8 +26,8 @@ root_packages =
 # 不包含外部包
 include_external_packages = false
 
-# 排除 TYPE_CHECKING 导入
-exclude_type_checking_imports = true
+# TYPE_CHECKING 导入也是架构依赖，不得用于隐藏边界违规或循环
+exclude_type_checking_imports = false
 
 # ═══════════════════════════════════════════════════════════════════
 # 分层架构检查

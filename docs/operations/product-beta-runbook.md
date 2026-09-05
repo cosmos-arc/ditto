@@ -24,18 +24,12 @@ directory, or a production/real-data root.
 
 ```bash
 cd /Users/chevy/Desktop/code/ditto
-DITTO_DATA_ROOT=/absolute/path/ditto-beta-data pixi run -e dev dev
+DITTO_STATE_ROOT=/absolute/path/ditto-beta-state pixi run -e dev dev
 ```
 
-In a second terminal:
-
-```bash
-cd /Users/chevy/Desktop/code/ditto-app
-VITE_USE_MOCK=false VITE_API_BASE_URL=/api bun run dev
-```
-
-Both processes bind to loopback in the development configuration. Stop the frontend
-and backend with `Ctrl-C`; do not delete the data root as a substitute for shutdown
+The root supervisor starts both processes on loopback, writes a validated
+`ditto-runtime-config.json`, and waits for readiness. Stop both with `Ctrl-C`; do not
+delete the state root as a substitute for shutdown
 or rollback. Feature rollback is to disable the five Agent flags listed in
 [the R5 runbook](r5-agent-runbook.md#feature-flags-and-rollback) and restart the
 backend. Core research and paper trading remain usable without Agent model calls.
@@ -72,7 +66,7 @@ dates. It creates no real order and contacts no broker:
 
 ```bash
 pixi run -e dev pytest \
-  packages/apps/tests/e2e/test_r1_daily_manual_trading.py::test_certified_etf_paper_flow_completes_five_consecutive_trading_days \
+  apps/backend/tests/e2e/test_r1_daily_manual_trading.py::test_certified_etf_paper_flow_completes_five_consecutive_trading_days \
   -q --no-cov -n 0
 ```
 
@@ -86,17 +80,17 @@ Deterministic operator exercises:
 
 ```bash
 pixi run -e dev pytest \
-  packages/apps/tests/e2e/test_r1_daily_manual_trading.py::test_online_backup_restore_preserves_the_queryable_r1_decision \
-  packages/apps/tests/integration/test_agent_database_lifecycle.py::test_agent_bundle_backup_and_restore_preserve_readable_projection \
-  packages/apps/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet \
+  apps/backend/tests/e2e/test_r1_daily_manual_trading.py::test_online_backup_restore_preserves_the_queryable_r1_decision \
+  apps/backend/tests/integration/test_agent_database_lifecycle.py::test_agent_bundle_backup_and_restore_preserve_readable_projection \
+  apps/backend/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet \
   -q --no-cov -n 0
 
 pixi run -e dev pytest \
-  packages/apps/tests/e2e/test_r1_daily_manual_trading.py::test_rerun_recovers_a_durable_package_after_finalize_interruption \
-  packages/apps/tests/integration/test_agent_run_execution.py::test_process_interruption_before_commit_leaves_run_queued_and_retryable \
-  packages/apps/tests/integration/test_agent_run_execution.py::test_episode_write_failure_rolls_back_terminal_run_and_events \
-  packages/apps/tests/integration/test_agent_run_execution.py::test_projection_write_failure_leaves_run_queued_and_retryable \
-  packages/apps/tests/integration/test_agent_run_execution.py::test_concurrent_execute_requests_invoke_model_once_per_run \
+  apps/backend/tests/e2e/test_r1_daily_manual_trading.py::test_rerun_recovers_a_durable_package_after_finalize_interruption \
+  apps/backend/tests/integration/test_agent_run_execution.py::test_process_interruption_before_commit_leaves_run_queued_and_retryable \
+  apps/backend/tests/integration/test_agent_run_execution.py::test_episode_write_failure_rolls_back_terminal_run_and_events \
+  apps/backend/tests/integration/test_agent_run_execution.py::test_projection_write_failure_leaves_run_queued_and_retryable \
+  apps/backend/tests/integration/test_agent_run_execution.py::test_concurrent_execute_requests_invoke_model_once_per_run \
   -q --no-cov -n 0
 ```
 
@@ -130,13 +124,9 @@ pixi run -e dev ci
 git diff --check
 ```
 
-From `ditto-app`:
-
-```bash
-bun run generate-contracts
-bun run ci
-git diff --check
-```
+The root `ci` task owns the Web, contract, system, Harness, security, and artifact
+gates. Do not run a second repository-level Bun DAG; Bun scripts under `apps/web`
+are leaf tasks invoked by Pixi.
 
 Close the release only when the current P0–P5 ledger links the exact evidence files,
 isolated roots/modes, visual viewport results, recovery drills, and artifact hashes.

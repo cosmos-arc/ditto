@@ -5,33 +5,32 @@ from __future__ import annotations
 from pathlib import Path
 
 from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.config.project_root import find_project_root
 
 
 class ConfigLoader:
     """
     配置加载器.
 
-    根据运行环境自动定位配置文件路径，支持 config/{environment}/ 目录结构.
-    路径解析基于 config_root，默认通过 find_project_root() 确定项目根目录，
-    不再依赖进程 CWD.
+    根据运行环境定位配置文件路径，支持 config/{environment}/ 目录结构。
+    ``config_root`` 由调用方显式注入；本工具不发现部署或仓库布局。
     """
 
     def __init__(
         self,
         environment: Environment,
-        config_root: Path | None = None,
+        *,
+        config_root: Path,
     ) -> None:
         """
         初始化配置加载器.
 
         Args:
             environment: 系统运行环境
-            config_root: 项目根目录，默认通过 find_project_root() 自动检测
+            config_root: 包含 ``config/`` 的显式配置根目录
 
         """
         self.environment = environment
-        self.config_root = config_root or find_project_root()
+        self.config_root = config_root
         self.config_dir = self.config_root / "config" / environment.value
 
     def get_env_file(self, name: str) -> str:

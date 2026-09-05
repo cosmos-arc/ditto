@@ -301,7 +301,7 @@ pixi run -e dev test packages/platform/tests
 
 **专项扫描**：
 ```bash
-rg -n "Dataset\\.|Dataset\\(|dataset=|dataset_name|DataCatalog|CatalogEntry|Lineage|knowledge_date|as_of|effective_from|effective_to" packages/data packages/application packages/apps packages/features packages/backtest
+rg -n "Dataset\\.|Dataset\\(|dataset=|dataset_name|DataCatalog|CatalogEntry|Lineage|knowledge_date|as_of|effective_from|effective_to" packages/data packages/application apps/backend packages/features packages/backtest
 rg -n "collect\\(|to_pandas|pandas|LazyFrame|scan_parquet|read_parquet|filter\\(" packages/data/src packages/features/src packages/application/src
 rg -n "Fetcher|Source|Registry|Reader|Writer|get_checksum|schema|freshness|partition" packages/data/src packages/data/tests
 pixi run -e dev test packages/data/tests
@@ -580,7 +580,7 @@ pixi run -e dev test packages/backtest/tests
 
 **专项扫描**：
 ```bash
-rg -n "Research|Artifact|Catalog|Snapshot|Spec|reports|diagnostics|experiments|screeners|reserved|future|DataCatalog|Dataset" packages/analysis packages/application packages/apps
+rg -n "Research|Artifact|Catalog|Snapshot|Spec|reports|diagnostics|experiments|screeners|reserved|future|DataCatalog|Dataset" packages/analysis packages/application apps/backend
 rg -n "from ditto_analysis|import ditto_analysis" packages/{data,features,strategy,portfolio,risk,execution,backtest,application,apps}/src packages/*/tests
 pixi run -e dev test packages/analysis/tests
 ```
@@ -653,7 +653,7 @@ pixi run -e dev test packages/application/tests
 - 审查错误映射是否基于明确异常类型，不用字符串匹配。
 
 **执行步骤**：
-1. 先读 `packages/apps/CLAUDE.md`、`api/**`、`cli/**`、`jobs/**`、`registry/**`、`config/**`、`testing.py`。
+1. 先读 `apps/backend/CLAUDE.md`、`api/**`、`cli/**`、`jobs/**`、`registry/**`、`config/**`、`testing.py`。
 2. 分开审查 registry 与非 registry：registry 可以 composition root 装配具体实现；route/CLI/job 只能调用 application facade/command/process。
 3. 追踪环境配置入口：所有 env/config loader 应集中在 apps/config 或 composition root，领域包和 application 不散读环境。
 4. 对 API/CLI/job 做薄度审查：参数解析、调用 application、错误映射、响应格式化之外的业务逻辑都列 finding。
@@ -661,10 +661,10 @@ pixi run -e dev test packages/application/tests
 
 **专项扫描**：
 ```bash
-rg -n "from ditto_(data|features|strategy|portfolio|risk|execution|backtest|analysis)|Dataset|Service|Reader|Writer|Store|Source|Gateway|type\\(exc\\).__name__|str\\(exc\\)|skip|pytest\\.mark\\.skip" packages/apps/src packages/apps/tests
-rg -n "os\\.environ|getenv|BaseSettings|Config|registry|provide|container|facade|Command|Query|Process" packages/apps/src packages/apps/tests
-find packages/apps/src -type f -name '*.py' -print0 | xargs -0 wc -l | sort -n | tail -20
-pixi run -e dev test packages/apps/tests
+rg -n "from ditto_(data|features|strategy|portfolio|risk|execution|backtest|analysis)|Dataset|Service|Reader|Writer|Store|Source|Gateway|type\\(exc\\).__name__|str\\(exc\\)|skip|pytest\\.mark\\.skip" apps/backend/src apps/backend/tests
+rg -n "os\\.environ|getenv|BaseSettings|Config|registry|provide|container|facade|Command|Query|Process" apps/backend/src apps/backend/tests
+find apps/backend/src -type f -name '*.py' -print0 | xargs -0 wc -l | sort -n | tail -20
+pixi run -e dev test apps/backend/tests
 ```
 
 **必须产出**：

@@ -1,8 +1,0 @@
-# .github/CODEOWNERS
-# 策略和风控代码需要额外审批
-packages/engine/src/ditto_engine/alpha/  @chevy
-packages/engine/src/ditto_engine/portfolio/ @chevy
-
-# 基础设施变更需要审批
-.github/                                @chevy
-deploy/                                 @chevy

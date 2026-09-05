@@ -146,7 +146,25 @@
           "$ref": "#/components/schemas/APIResponse_CandidateExclusionPageResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -195,6 +213,17 @@
             "minimum": 1,
             "default": 20,
             "title": "Limit"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -210,7 +239,25 @@
           "$ref": "#/components/schemas/APIResponse_CandidateFactorContributionPageResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -259,6 +306,17 @@
             "minimum": 1,
             "default": 20,
             "title": "Limit"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -274,7 +332,25 @@
           "$ref": "#/components/schemas/APIResponse_CandidateSelectionPageResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -324,6 +400,17 @@
             "default": 20,
             "title": "Limit"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "experimental"
@@ -336,9 +423,42 @@
       "responses": {
         "200": {
           "$ref": "#/components/schemas/APIResponse_list_ExperimentSummaryResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
       "maturity": "experimental"
     },
     {
@@ -353,7 +473,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentLaunchResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -364,6 +502,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -379,7 +528,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentDetailResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -390,6 +557,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -405,7 +583,25 @@
           "$ref": "#/components/schemas/APIResponse_list_ExperimentArtifactResponse__"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -416,6 +612,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -433,7 +640,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -453,6 +678,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -470,7 +706,25 @@
           "$ref": "#/components/schemas/APIResponse_CandidateSelectionReceiptResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -491,6 +745,17 @@
             "type": "string",
             "title": "Idempotency-Key"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "experimental"
@@ -505,7 +770,25 @@
           "$ref": "#/components/schemas/APIResponse_list_ExperimentCandidateResponse__"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -516,6 +799,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -531,7 +825,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentComparisonResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -542,6 +854,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -557,7 +880,25 @@
           "$ref": "#/components/schemas/APIResponse_list_ExperimentGateResponse__"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -568,6 +909,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -585,7 +937,25 @@
           "$ref": "#/components/schemas/APIResponse_HoldoutEvaluationReceiptResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -605,6 +975,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -622,7 +1003,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -642,6 +1041,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -659,7 +1069,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentPreflightResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -670,6 +1098,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -687,7 +1126,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -707,6 +1164,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -724,7 +1192,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentControlReceiptResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -745,6 +1231,17 @@
             "type": "string",
             "title": "Idempotency-Key"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "experimental"
@@ -759,7 +1256,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentReviewPacketResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -770,6 +1285,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -785,7 +1311,25 @@
           "$ref": "#/components/schemas/APIResponse_ExperimentSelectionEvidenceResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -796,6 +1340,17 @@
           "schema": {
             "type": "string",
             "title": "Experiment Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -809,9 +1364,42 @@
       "responses": {
         "200": {
           "$ref": "#/components/schemas/APIResponse_list_FactorDescriptorResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
       "maturity": "experimental"
     },
     {
@@ -824,7 +1412,25 @@
           "$ref": "#/components/schemas/APIResponse_FactorDiagnosticsResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -877,6 +1483,17 @@
             "maxLength": 64,
             "title": "Registry Hash"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "experimental"
@@ -889,9 +1506,42 @@
       "responses": {
         "200": {
           "$ref": "#/components/schemas/APIResponse_list_NodeDescriptorResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
       "maturity": "experimental"
     },
     {
@@ -902,9 +1552,42 @@
       "responses": {
         "200": {
           "$ref": "#/components/schemas/APIResponse_list_StrategyVersionResponse__"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
       "maturity": "experimental"
     },
     {
@@ -917,7 +1600,25 @@
           "$ref": "#/components/schemas/APIResponse_list_StrategyResponse__"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -945,6 +1646,17 @@
             "default": 0,
             "title": "Offset"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "initial-focus"
@@ -961,7 +1673,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -972,6 +1702,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -987,7 +1728,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -998,6 +1757,17 @@
           "schema": {
             "type": "string",
             "title": "Strategy Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1015,7 +1785,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1036,6 +1824,17 @@
             "type": "string",
             "title": "Idempotency-Key"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "initial-focus"
@@ -1050,7 +1849,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyActiveResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1061,6 +1878,17 @@
           "schema": {
             "type": "string",
             "title": "Strategy Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1076,7 +1904,25 @@
           "$ref": "#/components/schemas/APIResponse_list_StrategyGovernanceEventResponse__"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1116,6 +1962,17 @@
             "default": 20,
             "title": "Limit"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "initial-focus"
@@ -1130,7 +1987,25 @@
           "$ref": "#/components/schemas/APIResponse_list_StrategyVersionResponse__"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1141,6 +2016,17 @@
           "schema": {
             "type": "string",
             "title": "Strategy Id"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1156,7 +2042,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyVersionDetailResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1177,6 +2081,17 @@
             "type": "integer",
             "minimum": 1,
             "title": "Version"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1194,7 +2109,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1224,6 +2157,17 @@
             "type": "string",
             "title": "Idempotency-Key"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "initial-focus"
@@ -1240,7 +2184,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyAuthorPreviewResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1262,6 +2224,17 @@
             "minimum": 1,
             "title": "Version"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "initial-focus"
@@ -1278,7 +2251,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1308,6 +2299,17 @@
             "type": "string",
             "title": "Idempotency-Key"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "initial-focus"
@@ -1322,7 +2324,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyVersionDiffResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1342,6 +2362,17 @@
           "schema": {
             "type": "integer",
             "title": "Version"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1359,7 +2390,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyActivePointerResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1388,6 +2437,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1405,7 +2465,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyActivePointerResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1434,6 +2512,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1451,7 +2540,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1480,6 +2587,17 @@
           "schema": {
             "type": "string",
             "title": "Idempotency-Key"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],
@@ -1497,7 +2615,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategyVersionStateResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1527,6 +2663,17 @@
             "type": "string",
             "title": "Idempotency-Key"
           }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
         }
       ],
       "maturity": "initial-focus"
@@ -1543,7 +2690,25 @@
           "$ref": "#/components/schemas/APIResponse_StrategySpecValidationResponse_"
         },
         "422": {
-          "$ref": "#/components/schemas/HTTPValidationError"
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
         }
       },
       "parameters": [
@@ -1563,6 +2728,17 @@
           "schema": {
             "type": "integer",
             "title": "Version"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
           }
         }
       ],

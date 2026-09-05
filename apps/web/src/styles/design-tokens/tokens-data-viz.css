@@ -1,0 +1,106 @@
+/* ─────────────────────────────────────────────
+ * Ditto Design Tokens — Data Visualization Layer
+ * Layer 4: Charts, sparklines, heatmaps, grids
+ * Quantitative platform specific tokens.
+ * ───────────────────────────────────────────── */
+
+:root {
+	/* ── Data Freshness (visual decay for real-time data) ── */
+	/* Older data visually recedes — opacity-based time-fade */
+	--data-freshness-live: 1;
+	--data-freshness-recent: 0.85; /* < 30s */
+	--data-freshness-aging: 0.65; /* 30s - 5min */
+	--data-freshness-stale: 0.4; /* 5min - 30min */
+	--data-freshness-expired: 0.25; /* > 30min */
+	--data-freshness-transition: var(--motion-duration-slow) var(--motion-easing-standard);
+
+	/* ── Data State (connection/feed status) ── */
+	--data-state-live-fg: var(--text-primary);
+	--data-state-updating-fg: var(--brand-accent);
+	--data-state-stale-fg: var(--text-data-stale);
+	--data-state-disconnected-fg: var(--text-secondary);
+	--data-fresh-color: oklch(0.92 0.004 253);
+	--data-recent-color: oklch(0.92 0.004 253 / 0.8);
+	--data-stale-color: oklch(0.92 0.004 253 / 0.5);
+
+	/* ── Chart Pane ── */
+	--chart-bg: var(--surface-app);
+	--chart-grid: oklch(1 0 0 / 0.06);
+	--chart-grid-major: oklch(1 0 0 / 0.1);
+	--chart-crosshair: oklch(1 0 0 / 0.25);
+	--chart-crosshair-label: var(--text-secondary);
+	--chart-axis-text: var(--text-tertiary);
+	--chart-axis-line: var(--border-subtle);
+	--chart-zero-line: oklch(1 0 0 / 0.2);
+	--chart-palette-1: var(--asset-equity);
+	--chart-palette-2: var(--asset-fixed-income);
+	--chart-palette-3: var(--asset-commodity);
+	--chart-palette-4: var(--asset-crypto);
+	--chart-palette-5: var(--asset-fx);
+	--chart-palette-6: var(--asset-volatility);
+
+	/* ── Chart Series (derived from market tokens, with alpha) ── */
+	--chart-series-up: var(--market-up-fg);
+	--chart-series-up-area: oklch(from var(--market-up-fg) l c h / 0.08);
+	--chart-series-down: var(--market-down-fg);
+	--chart-series-down-area: oklch(from var(--market-down-fg) l c h / 0.08);
+	--chart-series-neutral: var(--market-flat-fg);
+	--chart-series-neutral-area: oklch(from var(--market-flat-fg) l c h / 0.04);
+
+	/* ── Sparkline ── */
+	--sparkline-width: 48px;
+	--sparkline-height: 20px;
+	--sparkline-stroke-width: 1.5px;
+	--sparkline-color: oklch(0.6 0.18 235);
+	--sparkline-negative-color: oklch(0.65 0.2 25);
+
+	/* ── Heatmap ── */
+	/* Sequential scale: single-direction magnitude (5 steps) */
+	--heatmap-1-bg: oklch(from var(--market-down-fg) l c h / 0.12);
+	--heatmap-2-bg: oklch(from var(--market-down-fg) l c h / 0.24);
+	--heatmap-3-bg: oklch(1 0 0 / 0); /* neutral midpoint */
+	--heatmap-4-bg: oklch(from var(--market-up-fg) l c h / 0.24);
+	--heatmap-5-bg: oklch(from var(--market-up-fg) l c h / 0.42);
+	--heatmap-scale-0: oklch(0.3 0.04 253);
+	--heatmap-scale-1: oklch(0.45 0.08 235);
+	--heatmap-scale-2: oklch(0.55 0.12 235);
+	--heatmap-scale-3: oklch(0.65 0.16 235);
+	--heatmap-scale-4: oklch(0.72 0.18 235);
+
+	/* ── Asset Class Colors (7 qualitative colors, Paul Tol bright, colorblind-safe) ── */
+	--asset-equity: oklch(0.623 0.127 252); /* blue */
+	--asset-fixed-income: oklch(0.753 0.157 75); /* amber */
+	--asset-crypto: oklch(0.634 0.197 327); /* magenta */
+	--asset-commodity: oklch(0.591 0.142 153); /* green */
+	--asset-fx: oklch(0.702 0.137 199); /* cyan */
+	--asset-volatility: oklch(0.746 0.165 50); /* orange */
+	--asset-alternative: oklch(0.604 0.109 305); /* purple */
+
+	/* ── Status LED / Pulse ── */
+	--status-connected-color: var(--brand-accent);
+	--status-degraded-color: var(--amber-500);
+	--status-error-color: var(--red-500);
+	--status-pulse-duration: 2s;
+	--status-pulse-easing: ease-in-out;
+	--status-led-healthy: oklch(0.72 0.17 155);
+	--status-led-degraded: oklch(0.78 0.14 65);
+	--status-led-warning: oklch(0.8 0.16 90);
+	--status-led-critical: oklch(0.6 0.22 25);
+	--status-led-live: oklch(0.75 0.15 195);
+	--status-led-idle: oklch(0.55 0.03 253);
+	--status-led-error: oklch(0.65 0.2 25);
+	--status-led-info: oklch(0.68 0.12 253);
+	--risk-gauge-track: oklch(1 0 0 / 0.06);
+	--risk-gauge-fg: oklch(0.64 0.12 235);
+}
+
+/* ── Light Mode Data Viz Adjustments ──
+ * Chart grid lines, crosshairs, and zero lines use white in dark mode.
+ * In light mode, switch to black-at-opacity for visibility on white surfaces.
+ */
+[data-theme="light"] {
+	--chart-grid: oklch(0 0 0 / 0.06);
+	--chart-grid-major: oklch(0 0 0 / 0.1);
+	--chart-crosshair: oklch(0 0 0 / 0.2);
+	--chart-zero-line: oklch(0 0 0 / 0.15);
+}

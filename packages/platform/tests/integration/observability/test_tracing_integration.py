@@ -21,6 +21,7 @@ from ditto_platform.foundation.observability.tracing import (
     get_span_id,
     get_trace_id,
 )
+from opentelemetry.trace import SpanKind, StatusCode
 
 
 @pytest.mark.integration
@@ -36,12 +37,35 @@ class TestSpanContextWithTracer:
         configure_tracing(config)
 
         with span("test_operation") as ctx:
-            ctx.set_status("success")
-            # [REVIEW]
+            ctx.set_status(StatusCode.ERROR)
 
         spans = get_recorded_spans()
         assert len(spans) == 1
         assert spans[0].name == "test_operation"
+        assert spans[0].status.status_code is StatusCode.ERROR
+
+    def test_span_defaults_to_internal_and_preserves_attribute_types(self) -> None:
+        """Generic spans stay INTERNAL and retain native OTel scalar types."""
+        reset_for_testing()
+        config = ObservabilityConfig(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+        )
+        configure_tracing(config)
+
+        with span("typed_operation", enabled=True, attempts=2) as ctx:
+            ctx.set_attribute("ratio", 0.25)
+
+        spans = get_recorded_spans()
+        assert len(spans) == 1
+        assert spans[0].kind is SpanKind.INTERNAL
+        assert spans[0].status.status_code is StatusCode.UNSET
+        assert spans[0].attributes["enabled"] is True
+        assert type(spans[0].attributes["attempts"]) is int
+        assert spans[0].attributes["attempts"] == 2
+        assert type(spans[0].attributes["ratio"]) is float
+        assert spans[0].attributes["ratio"] == 0.25
 
     def test_span_context_set_multiple_attributes(self) -> None:
         """测试设置多个属性."""
@@ -58,6 +82,22 @@ class TestSpanContextWithTracer:
         spans = get_recorded_spans()
         assert len(spans) == 1
         # Verify属性被设置
+
+    def test_span_context_updates_late_bound_operation_name(self) -> None:
+        """A consumer may replace a provisional name while the span is active."""
+        reset_for_testing()
+        config = ObservabilityConfig(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+        )
+        configure_tracing(config)
+
+        with span("HTTP GET") as ctx:
+            ctx.update_name("GET /items/{item_id}")
+
+        spans = get_recorded_spans()
+        assert [record.name for record in spans] == ["GET /items/{item_id}"]
 
     def test_span_context_exception_handling(self) -> None:
         """测试异常处理和记录."""

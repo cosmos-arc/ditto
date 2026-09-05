@@ -3,6 +3,10 @@
 > Date: 2026-07-02
 > Scope: ditto-app Trading domain frontend wiring for Wave 1a/1b.
 > Frontend branch: `feat/wave1-backend-wiring`
+>
+> Historical evidence: commands and `VITE_*` flags below describe the original
+> two-repository run. Current reruns use root `pixi run -e dev dev` plus
+> `ditto-runtime-config.json`; the Web tree now lives at `apps/web`.
 
 ## Summary
 
@@ -12,7 +16,7 @@ ditto-app Trading 域接线已完成：`VITE_USE_MOCK=false` 时 `/trading`、`/
 
 ## Frontend Evidence
 
-在 `/home/chevy/projects/ditto-app` 执行：
+该次运行在旧前端仓库执行；当前等价叶子目录为 `apps/web`：
 
 ```
 bun run check
@@ -82,6 +86,6 @@ pixi run server                    # granian :8000
 1. `source scripts/acceptance/wave1_env.sh`
 2. 启动 Ditto API server。
 3. 跑 EOD 或 publish-signals，产出 `seed_etf_industry_rotation` intents。
-4. 在 ditto-app 以 `VITE_USE_MOCK=false` 打开 `/trading`、`/trading/signals`、`/trading/portfolio`、`/trading/orders`。
+4. 以根 `pixi run -e dev dev` 启动 `runtime=live`，打开 `/trading`、`/trading/signals`、`/trading/portfolio`、`/trading/orders`。
 5. 记录 readiness、latest signal date、signal count、positions、deviation/pnl、Pipeline Strip、Portfolio 归因/交易流水。
 6. 将截图或真实 response 摘要追加到本文件。

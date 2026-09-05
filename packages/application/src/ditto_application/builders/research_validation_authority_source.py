@@ -440,9 +440,7 @@ class IndexedSnapshotValidationAuthoritySource:
         ):
             raise _error("snapshot_authority_source_binding_missing")
         inputs = {kind: _select_input(manifest, kind) for kind in _REQUIRED_INPUT_KINDS}
-        loader = IndexedResearchArtifactLoader(
-            artifact_service=cast("object", self._artifacts)  # type: ignore[arg-type]
-        )
+        loader = IndexedResearchArtifactLoader(artifact_service=self._artifacts)
         calendar = loader.load_frame(inputs["calendar"])
         membership = loader.load_frame(inputs["membership"])
         bars = loader.load_frame(inputs["bars"])

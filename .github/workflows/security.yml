@@ -1,0 +1,182 @@
+name: Security
+
+on:
+  workflow_call:
+  schedule:
+    - cron: "23 2 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - name: Analyze
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+
+  gitleaks:
+    name: Secret history scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Current Gitleaks full-history scan
+        run: |
+          docker run --rm \
+            --network none \
+            --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/repo:ro" \
+            --workdir /repo \
+            docker.io/zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --redact --no-banner --exit-code 1 --log-opts=--all .
+      - name: Known-good Gitleaks compatibility scan
+        run: |
+          docker run --rm \
+            --network none \
+            --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/repo:ro" \
+            --workdir /repo \
+            ghcr.io/gitleaks/gitleaks:v8.18.4@sha256:75bdb2b2f4db213cde0b8295f13a88d6b333091bbfbf3012a4e083d00d31caba \
+            detect --source . --redact --no-banner --exit-code 1 --log-opts=--all
+      - name: Prove the detector catches a canonical token
+        run: |
+          mkdir -p "$RUNNER_TEMP/gitleaks-sentinel"
+          printf '%s\n' 'token = "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"' > "$RUNNER_TEMP/gitleaks-sentinel/leak.txt" # gitleaks:allow
+          set +e
+          docker run --rm \
+            --network none \
+            --user "$(id -u):$(id -g)" \
+            --volume "$RUNNER_TEMP/gitleaks-sentinel:/probe:ro" \
+            ghcr.io/gitleaks/gitleaks:v8.18.4@sha256:75bdb2b2f4db213cde0b8295f13a88d6b333091bbfbf3012a4e083d00d31caba \
+            detect --no-git --source /probe/leak.txt --redact --no-banner --exit-code 23
+          sentinel_status=$?
+          set -e
+          test "$sentinel_status" -eq 23
+
+  osv:
+    name: OSV lockfile scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: OSV fail-closed recursive scan
+        run: |
+          docker run --rm \
+            --env HOME=/tmp \
+            --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/src:ro" \
+            --workdir /src \
+            ghcr.io/google/osv-scanner:v2.5.1@sha256:8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734 \
+            scan source --recursive ./
+
+  container-security:
+    name: Container Trivy and SPDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build security subject
+        env:
+          IMAGE: ditto-security:${{ github.sha }}
+        run: |
+          mkdir -p dist
+          docker build --pull --file deploy/docker/Dockerfile --tag "$IMAGE" .
+          docker save --output dist/ditto-image.tar "$IMAGE"
+      - name: Generate SPDX SBOM
+        run: |
+          docker run --rm \
+            --network none \
+            --volume "$PWD/dist:/work" \
+            ghcr.io/anchore/syft:v1.51.1@sha256:95fe0835e5bebc6f8b1f8acef68d47d63d594ef4c0f25c097ff853b23cbac74c \
+            docker-archive:/work/ditto-image.tar \
+            --output spdx-json=/work/ditto.spdx.json
+          test -s dist/ditto.spdx.json
+          jq --exit-status '.spdxVersion | startswith("SPDX-")' dist/ditto.spdx.json
+      - name: Trivy fail-closed image scan
+        run: |
+          docker run --rm \
+            --volume "$PWD/dist:/work:ro" \
+            ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+            image --input /work/ditto-image.tar --exit-code 1 --severity HIGH,CRITICAL
+      - name: Upload SPDX evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-sbom-${{ github.run_id }}
+          path: dist/ditto.spdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+  mutation-critical:
+    name: Weekly critical mutation gate
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.73.0
+          cache: true
+          frozen: true
+          environments: dev
+      - name: Run critical pure-function mutation gate
+        run: pixi run -e dev mutation-critical
+      - name: Upload mutation evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-critical-${{ github.run_id }}
+          path: build/mutation/mutmut-cicd-stats.json
+          if-no-files-found: error
+          retention-days: 30
+
+  security-gate:
+    name: Security gate
+    if: ${{ always() }}
+    needs: [codeql, gitleaks, osv, container-security]
+    permissions: {}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every security job to succeed
+        env:
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          OSV_RESULT: ${{ needs.osv.result }}
+          CONTAINER_RESULT: ${{ needs.container-security.result }}
+        run: |
+          for result in "$CODEQL_RESULT" "$GITLEAKS_RESULT" "$OSV_RESULT" "$CONTAINER_RESULT"; do
+            test "$result" = success
+          done

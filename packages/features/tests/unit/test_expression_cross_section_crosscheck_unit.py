@@ -1,9 +1,8 @@
 """D7 cross-check: cross-section operators vs independent polars reference.
 
-References use the *correct* cross-section semantics — per trade_date grouping
-via ``.over("trade_date")``. ``cs_rank`` in the engine historically omitted the
-``.over`` (a real bug this suite was designed to catch); the multi-date
-``sample_frame`` makes that divergence visible.
+References use per-trade-date grouping via ``.over("trade_date")``. The
+multi-date ``cs_rank`` regression guards against the historical defect where
+the engine ranked across the entire frame.
 """
 
 from __future__ import annotations
@@ -13,6 +12,7 @@ from types import SimpleNamespace
 import polars as pl
 import pytest
 
+_ENTITY = "instrument_id"
 _TIME = "trade_date"
 
 
@@ -52,8 +52,7 @@ def _cs_winsorize_quantile(x: pl.Expr, lo: float, hi: float) -> pl.Expr:
 def test_cs_rank_single_date_matches_reference(cx: SimpleNamespace) -> None:
     """cs_rank basic mapping: ordinal rank / count within a single date group.
 
-    Single-date so the engine's whole-frame rank coincides with per-date rank;
-    isolates the rank/len mapping from the multi-date cross-section defect.
+    A single date isolates the rank/len mapping from partition-boundary behavior.
     """
     df = pl.DataFrame(
         {
@@ -67,24 +66,95 @@ def test_cs_rank_single_date_matches_reference(cx: SimpleNamespace) -> None:
     cx.assert_expr_matches_reference(df, engine=engine, reference=reference)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "D7 known issue: cs_rank omits .over(time_keys), so on multi-date frames "
-        "it ranks across all dates instead of per date. The correct fix is blocked "
-        "by a polars limit — nested .over() with different group keys (cs over "
-        "trade_date wrapping a ts over entity) returns all-null without intermediate "
-        "materialization, and codegen emits one inlined expression, so every "
-        "cs(ts(...)) factor (e.g. alpha.py cs_rank(ts_mean(...))) would silently go "
-        "null. Real fix: codegen materializes ts results before cs ops."
-    ),
-    strict=False,
-)
-def test_cs_rank_multi_date_cross_section_known_issue(
+@pytest.mark.pit
+def test_cs_rank_multi_date_matches_reference(
     sample_frame: pl.DataFrame, cx: SimpleNamespace
 ) -> None:
+    """Later trade dates must not participate in an earlier date's rank."""
     engine = cx.compile_call("cs_rank", cx.col("close"))
     reference = _cs_rank(pl.col("close"))
     cx.assert_expr_matches_reference(sample_frame, engine=engine, reference=reference)
+
+
+@pytest.mark.pit
+def test_cs_rank_excludes_future_date_and_includes_same_date_peer(
+    cx: SimpleNamespace,
+) -> None:
+    """A future sentinel is inert, while a same-date peer changes the rank."""
+    decision_rows = pl.DataFrame(
+        {
+            "instrument_id": ["A", "B", "C"],
+            "trade_date": [1, 1, 1],
+            "close": [10.0, 20.0, 30.0],
+        }
+    )
+    future_sentinel = pl.DataFrame(
+        {
+            "instrument_id": ["D", "E"],
+            "trade_date": [2, 2],
+            "close": [-1.0e12, 1.0e12],
+        }
+    )
+    same_date_peer = pl.DataFrame(
+        {"instrument_id": ["D"], "trade_date": [1], "close": [15.0]}
+    )
+    engine = cx.compile_call("cs_rank", cx.col("close"))
+
+    baseline = decision_rows.select(engine.alias("rank"))["rank"].to_list()
+    with_future = (
+        pl.concat([decision_rows, future_sentinel])
+        .select(engine.alias("rank"))["rank"]
+        .to_list()
+    )
+    with_same_date_peer = (
+        pl.concat([decision_rows, same_date_peer])
+        .select(engine.alias("rank"))["rank"]
+        .to_list()
+    )
+
+    assert with_future[: decision_rows.height] == baseline
+    assert with_same_date_peer[: decision_rows.height] != baseline
+
+
+def test_cs_rank_with_nulls_matches_reference(
+    sample_frame: pl.DataFrame, cx: SimpleNamespace
+) -> None:
+    """Null inputs stay null and do not consume an ordinal rank within a date."""
+    engine = cx.compile_call("cs_rank", cx.col("nullable"))
+    reference = _cs_rank(pl.col("nullable"))
+    cx.assert_expr_matches_reference(sample_frame, engine=engine, reference=reference)
+
+
+def test_cs_rank_preserves_ordinal_tie_order(cx: SimpleNamespace) -> None:
+    """Tied values retain their input order when the rank sort exceeds 20 rows."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": [str(index) for index in range(21)],
+            "trade_date": [1] * 21,
+            "close": [float(index % 2) for index in range(21)],
+        }
+    )
+    engine = cx.compile_call("cs_rank", cx.col("close"))
+    reference = _cs_rank(pl.col("close"))
+    cx.assert_expr_matches_reference(df, engine=engine, reference=reference)
+
+
+@pytest.mark.pit
+def test_cs_rank_of_ts_mean_matches_materialized_reference(
+    sample_frame: pl.DataFrame, cx: SimpleNamespace
+) -> None:
+    """A PIT-safe history expression remains rankable within each trade date."""
+    node = cx.call_node("cs_rank", cx.call_node("ts_mean", cx.col("close"), cx.num(2)))
+    engine = cx.compile(node)
+    history = (
+        pl.col("close")
+        .shift(1)
+        .rolling_mean(window_size=2, min_samples=2)
+        .over(_ENTITY)
+    )
+    materialized = sample_frame.with_columns(history.alias("_history"))
+    reference = _cs_rank(pl.col("_history"))
+    cx.assert_expr_matches_reference(materialized, engine=engine, reference=reference)
 
 
 def test_cs_scale_matches_reference(

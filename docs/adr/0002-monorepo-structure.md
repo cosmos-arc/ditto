@@ -1,6 +1,6 @@
 # 0002 - Monorepo Structure
 
-Status: Accepted
+Status: Superseded by [ADR 0010](0010-polyglot-monorepo.md)
 
 Date: 2024-01-01
 

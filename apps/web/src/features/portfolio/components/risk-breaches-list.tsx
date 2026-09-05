@@ -1,0 +1,71 @@
+import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ContextSection } from "@/components/domain/context-section";
+import { StatusBadge } from "@/components/status/status-badge/status-badge";
+import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { cn } from "@/lib/utils";
+import { useRiskBreaches } from "../hooks";
+
+const BREACH_STATUS_VARIANT: Record<string, "healthy" | "warning" | "default" | "degraded"> = {
+	active: "degraded",
+	acknowledged: "warning",
+	resolved: "healthy",
+};
+
+interface RiskBreachesListProps {
+	readonly onSelectBreach?: (breachId: string) => void;
+}
+
+export function RiskBreachesList({ onSelectBreach }: RiskBreachesListProps) {
+	const { data, isLoading, refetch } = useRiskBreaches();
+
+	return (
+		<ContextSection title="风控告警" count={data?.total} data-info-level="l1" data-info-unit="risk-breaches-list">
+			{isLoading && <LoadingSkeleton variant="table" rows={3} />}
+			<DittoErrorBoundary fallbackProps={{ onRetry: () => void refetch() }}>
+				{data && (
+					<div className="space-y-1">
+						{data.items.map((breach) => {
+							const content = (
+								<>
+									<div className="flex items-center gap-3">
+										<span className="font-medium">{breach.ruleName}</span>
+										<span className="text-xs text-(--color-foreground-tertiary)">阈值 {String(breach.threshold)}</span>
+									</div>
+									<div className="flex items-center gap-3">
+										<span className="tabular-nums text-(--color-foreground-tertiary)">
+											偏差 {breach.deviation.toFixed(1)}%
+										</span>
+										<StatusBadge
+											variant={BREACH_STATUS_VARIANT[breach.status] ?? "default"}
+											label={breach.status}
+											size="sm"
+										/>
+									</div>
+								</>
+							);
+							const rowClassName = cn(
+								"flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-(--color-interaction-hover-subtle-bg)",
+								onSelectBreach && "cursor-pointer",
+							);
+
+							return onSelectBreach ? (
+								<button
+									key={breach.id}
+									type="button"
+									className={rowClassName}
+									onClick={() => onSelectBreach(breach.id)}
+								>
+									{content}
+								</button>
+							) : (
+								<div key={breach.id} className={rowClassName}>
+									{content}
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</DittoErrorBoundary>
+		</ContextSection>
+	);
+}

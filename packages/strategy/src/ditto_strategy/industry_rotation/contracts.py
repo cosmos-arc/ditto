@@ -339,7 +339,7 @@ class IndustryRotationRank:
             "industry_name",
             _normalized_text(self.industry_name, field_name="industry_name"),
         )
-        if isinstance(self.rank, bool) or self.rank < 1:
+        if type(self.rank) is not int or self.rank < 1:
             raise _error(
                 "industry rotation rank must be a positive integer",
                 reason="invalid_industry_rotation_rank",
@@ -397,8 +397,11 @@ class IndustryRotationSnapshot:
 
     def __post_init__(self) -> None:
         """Reject malformed output ordering and detached replay identity."""
-        if len(self.input_hash) != _SHA256_HEX_LENGTH or any(
-            char not in "0123456789abcdef" for char in self.input_hash
+        input_hash: object = object.__getattribute__(self, "input_hash")
+        if (
+            not isinstance(input_hash, str)
+            or len(input_hash) != _SHA256_HEX_LENGTH
+            or any(char not in "0123456789abcdef" for char in input_hash)
         ):
             raise _error(
                 "industry rotation input_hash must be lowercase SHA-256",
@@ -437,6 +440,12 @@ class IndustryRotationSnapshot:
                 self,
                 field_name,
                 _normalized_text(getattr(self, field_name), field_name=field_name),
+            )
+        status: object = object.__getattribute__(self, "status")
+        if not isinstance(status, IndustryRotationStatus):
+            raise _error(
+                "industry rotation status must be IndustryRotationStatus",
+                reason="invalid_industry_rotation_status",
             )
         rankings = _ordered_sequence(
             self.rankings,

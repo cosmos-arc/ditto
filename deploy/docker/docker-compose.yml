@@ -11,27 +11,33 @@ services:
   # API 服务
   # ───────────────────────────────────────────────────────────────────
   ditto-api:
-    image: ditto:${DITTO_VERSION:-latest}
-    container_name: ditto-api
+    image: ${DITTO_IMAGE:?Set DITTO_IMAGE to an immutable image reference}
     restart: unless-stopped
-    build:
-      context: ../..
-      dockerfile: deploy/docker/Dockerfile
     ports:
       - "127.0.0.1:8000:8000"
     environment:
-      - DITTO_DATA_ROOT=/app/data
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - LOG_DIR=/app/logs
-      - TUSHARE_TOKEN=${TUSHARE_TOKEN}
-      - PREFECT_API_URL=http://ditto-job:4200/api
+      DITTO_CONFIG_ROOT: /opt/ditto
+      DITTO_STATE_ROOT: /var/lib/ditto/state
+      DITTO_CACHE_ROOT: /var/cache/ditto
+      DITTO_CORS_ORIGINS: ${DITTO_CORS_ORIGINS:-http://127.0.0.1:5173,http://localhost:5173}
+      ENVIRONMENT: production
+      LOG_DIR: /var/log/ditto
+      TUSHARE_TOKEN: "${TUSHARE_TOKEN:?Set a non-placeholder TUSHARE_TOKEN}"
+      PREFECT_API_URL: http://ditto-job:4200/api
     volumes:
-      - ${DITTO_DATA_PATH:-/opt/ditto/data}:/app/data
-      - ${DITTO_LOGS_PATH:-/opt/ditto/logs}/api:/app/logs
+      - ${DITTO_STATE_PATH:-/opt/ditto/state}:/var/lib/ditto/state
+      - ${DITTO_CACHE_PATH:-/opt/ditto/cache}:/var/cache/ditto
+      - ${DITTO_LOGS_PATH:-/opt/ditto/logs}/api:/var/log/ditto
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    init: true
     networks:
       - ditto-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -41,33 +47,37 @@ services:
         limits:
           memory: 1G
     # 容器内需监听 bridge interface；host publication 仍只绑定 loopback。
-    command: >
-      pixi run granian ditto_apps.main:app --interface asgi
-      --host 0.0.0.0 --port 8000 --workers 4
+    command: ["ditto_apps.main:app", "--interface", "asgi", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
 
   # ───────────────────────────────────────────────────────────────────
   # Job 服务 (Prefect Server + Worker)
   # ───────────────────────────────────────────────────────────────────
   ditto-job:
-    image: ditto:${DITTO_VERSION:-latest}
-    container_name: ditto-job
+    image: ${DITTO_IMAGE:?Set DITTO_IMAGE to an immutable image reference}
     restart: unless-stopped
-    build:
-      context: ../..
-      dockerfile: deploy/docker/Dockerfile
+    entrypoint: ["/bin/sh", "-c"]
     ports:
       - "127.0.0.1:4200:4200"
     environment:
-      - DITTO_DATA_ROOT=/app/data
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - LOG_DIR=/app/logs
-      - TUSHARE_TOKEN=${TUSHARE_TOKEN}
-      - PREFECT_HOME=/app/prefect
-      - PREFECT_API_DATABASE_CONNECTION_URL=sqlite+aiosqlite:////app/prefect/prefect.db
+      DITTO_CONFIG_ROOT: /opt/ditto
+      DITTO_STATE_ROOT: /var/lib/ditto/state
+      DITTO_CACHE_ROOT: /var/cache/ditto
+      ENVIRONMENT: production
+      LOG_DIR: /var/log/ditto
+      TUSHARE_TOKEN: "${TUSHARE_TOKEN:?Set a non-placeholder TUSHARE_TOKEN}"
+      PREFECT_HOME: /var/lib/ditto/prefect
+      PREFECT_API_DATABASE_CONNECTION_URL: sqlite+aiosqlite:////var/lib/ditto/prefect/prefect.db
     volumes:
-      - ${DITTO_DATA_PATH:-/opt/ditto/data}:/app/data
-      - ${DITTO_LOGS_PATH:-/opt/ditto/logs}/job:/app/logs
-      - ${PREFECT_DATA_PATH:-/opt/ditto/prefect}:/app/prefect
+      - ${DITTO_STATE_PATH:-/opt/ditto/state}:/var/lib/ditto/state
+      - ${DITTO_CACHE_PATH:-/opt/ditto/cache}:/var/cache/ditto
+      - ${DITTO_LOGS_PATH:-/opt/ditto/logs}/job:/var/log/ditto
+      - ${PREFECT_DATA_PATH:-/opt/ditto/prefect}:/var/lib/ditto/prefect
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    init: true
     networks:
       - ditto-network
     healthcheck:
@@ -80,13 +90,23 @@ services:
       resources:
         limits:
           memory: 2G
-    command: >
-      sh -c "pixi run prefect server start --host 0.0.0.0 &
-             for i in $(seq 1 30); do
-               python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')\" 2>/dev/null && break
-               sleep 1
-             done &&
-             pixi run prefect worker start --pool default"
+    command:
+      - |
+        prefect server start --host 0.0.0.0 &
+        server_pid=$$!;
+        ready=false;
+        for i in $$(seq 1 30); do
+          if python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4200/api/health', timeout=3)" 2>/dev/null; then
+            ready=true;
+            break;
+          fi;
+          sleep 1;
+        done;
+        if [ "$$ready" != true ]; then
+          kill "$$server_pid";
+          exit 1;
+        fi;
+        exec prefect worker start --pool default
 
 networks:
   ditto-network:

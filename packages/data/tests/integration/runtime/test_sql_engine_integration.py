@@ -4,18 +4,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
-import pytest
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.runtime.sql_engine import SqlEngine
 from ditto_platform.foundation import SQLitePool
-
-pytestmark = pytest.mark.xfail(
-    strict=False,
-    reason=(
-        "pyarrow missing: duckdb .pl() needs pyarrow to bridge to polars; "
-        "declare pyarrow dep or use duckdb-native conversion (T10 task 4.2)."
-    ),
-)
 
 
 class TestSqlEngine:
@@ -27,7 +18,7 @@ class TestSqlEngine:
         self.data_root = Path(self.temp_dir.name)
 
         # Initialize test database
-        db_path = self.data_root / "meta" / "hub.sqlite"
+        db_path = self.data_root / "metadata" / "metadata.sqlite"
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Get schema path (from tests/integration/runtime/ to data/src)
@@ -127,7 +118,7 @@ class TestSqlEngine:
         self.pool.execute(
             (
                 "INSERT INTO instrument "
-                "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+                "(instrument_id, ticker, name, exchange, asset_class, list_date) "
                 "VALUES (?, ?, ?, ?, ?, ?)"
             ),
             [1_000_001, "TEST", "Test Security", "SH", "stock", "2024-01-01"],
@@ -136,11 +127,11 @@ class TestSqlEngine:
 
         # Query that needs SQLite
         result = self.engine.execute(
-            "SELECT s.symbol FROM instrument s WHERE s.instrument_id = 1000001"
+            "SELECT s.ticker FROM instrument s WHERE s.instrument_id = 1000001"
         )
 
         assert len(result) == 1
-        assert result["symbol"][0] == "TEST"
+        assert result["ticker"][0] == "TEST"
 
     def test_refresh_views_reregisters_views(self) -> None:
         """Test refresh_views re-registers Parquet views."""

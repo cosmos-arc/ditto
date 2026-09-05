@@ -1,0 +1,8 @@
+[install]
+linker = "isolated"
+registry = "https://registry.npmjs.org"
+hoistPattern = []
+publicHoistPattern = []
+
+[install.lockfile]
+save = true

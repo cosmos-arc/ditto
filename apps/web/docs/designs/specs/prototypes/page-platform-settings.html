@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-platform-settings
+  Edition: v1
+  Generated: 2026-04-21
+
+  Tabs: 3 (radio tab system)
+  - settings-datasource (数据源配置) [covered]
+  - settings-broker (券商连接) [covered]
+  - settings-general (通用设置) [covered]
+
+  Overlays: 4
+  - overlay-datasource-test (Dialog: 数据源连接测试) [covered]
+  - overlay-broker-test (Dialog: 券商连接测试) [covered]
+  - overlay-save-config (Modal: 保存配置确认) [covered]
+  - overlay-reset-config (Modal: 重置配置) [covered]
+
+  State Variants: 4 components × multi-state
+  - settings-nav: default[covered]
+  - datasource-list: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - broker-list: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
+  - settings-form: default[covered] loading[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="platform">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Platform Settings</title>
+
+  <link rel="stylesheet" href="shared/fonts.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    body {
+      background: var(--surface-app);
+      color: var(--text-primary);
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+
+    .skip-link:focus { left: var(--space-16); }
+
+    .style-label {
+      position: fixed;
+      top: var(--space-8);
+      right: var(--space-8);
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+      letter-spacing: 0.02em;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .shell-ops .btn-sm {
+      min-height: 26px;
+    }
+
+    .shell-ops {
+      position: relative;
+      background:
+        linear-gradient(180deg, color-mix(in oklch, var(--brand-accent) 4%, transparent), transparent 160px),
+        var(--surface-app);
+    }
+
+    [data-theme="light"] .shell-ops {
+      --prototype-light-readable-text: var(--neutral-600);
+      --prototype-light-muted-text: var(--neutral-500);
+    }
+
+    .shell-ops::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .shell-ops > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .shell-ops .shell-rail {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-10);
+      padding: var(--space-12) 0;
+      background: var(--surface-elevated);
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    .rail-logo {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-6);
+      background: color-mix(in oklch, var(--brand-accent) 14%, var(--surface-panel-base));
+      color: var(--text-primary);
+      font-family: var(--font-family-heading);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 24%, transparent);
+    }
+
+    .rail-nav,
+    .rail-bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-8);
+      width: 100%;
+    }
+
+    .rail-bottom { margin-top: auto; }
+
+    .rail-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      color: var(--text-tertiary);
+      border-radius: var(--radius-6);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .rail-icon:hover,
+    .rail-icon.active {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .rail-icon.active::before {
+      content: "";
+      position: absolute;
+      left: -12px;
+      width: 3px;
+      height: 20px;
+      border-radius: 0 var(--radius-2) var(--radius-2) 0;
+      background: var(--brand-accent);
+    }
+
+    .shell-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      padding: 0 var(--space-16);
+      background: var(--surface-frosted);
+      border-bottom: 1px solid var(--border-subtle);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .header-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .header-title {
+      font-family: var(--font-family-heading);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+    }
+
+    .env-badge,
+    .config-version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      height: 24px;
+      padding: 0 var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-secondary);
+      background: var(--surface-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    .env-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+    }
+
+    .header-spacer { flex: 1; }
+
+    .ops-health {
+      min-height: var(--density-strip-height);
+    }
+
+    .health-metric {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      min-height: 24px;
+      padding: 0 var(--space-8);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-secondary) 72%, transparent);
+      border: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    .health-metric-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .health-metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .status-dot::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--text-tertiary);
+    }
+
+    .status-dot.connected::before { background: var(--system-healthy-fg); }
+    .status-dot.stale::before,
+    .status-dot.connecting::before { background: var(--system-degraded-fg); }
+    .status-dot.disconnected::before { background: var(--risk-high-fg); }
+
+    .status-dot.connecting::before {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.42; }
+    }
+
+    .ops-main {
+      padding: var(--space-12);
+      min-width: 0;
+    }
+
+    .settings-console {
+      display: grid;
+      grid-template-columns: 196px minmax(0, 1fr);
+      gap: var(--space-12);
+      min-height: 100%;
+    }
+
+    .settings-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-10);
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      min-height: 0;
+    }
+
+    .settings-nav-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: var(--space-4) var(--space-6) var(--space-8);
+    }
+
+    .settings-nav-item {
+      display: grid;
+      grid-template-columns: 18px 1fr auto;
+      align-items: center;
+      gap: var(--space-8);
+      min-height: 36px;
+      padding: 0 var(--space-8);
+      color: var(--text-secondary);
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-radius: var(--radius-6);
+      font-size: var(--font-size-12);
+    }
+
+    .settings-nav-item:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .settings-nav-icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.68;
+    }
+
+    .nav-count {
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+
+    .settings-nav:has(#settings-datasource:checked) label[for="settings-datasource"],
+    .settings-nav:has(#settings-broker:checked) label[for="settings-broker"],
+    .settings-nav:has(#settings-general:checked) label[for="settings-general"] {
+      color: var(--text-primary);
+      border-color: color-mix(in oklch, var(--brand-accent) 28%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 8%, var(--surface-secondary));
+    }
+
+    .settings-nav-footer {
+      margin-top: auto;
+      padding: var(--space-8);
+      border-top: 1px solid var(--border-subtle);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      line-height: 1.45;
+    }
+
+    .settings-content {
+      min-width: 0;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .tab-panels { display: contents; }
+
+    .tab-panel { display: none; }
+
+    .settings-console:has(#settings-datasource:checked) [data-panel="settings-datasource"],
+    .settings-console:has(#settings-broker:checked) [data-panel="settings-broker"],
+    .settings-console:has(#settings-general:checked) [data-panel="settings-general"] {
+      display: block;
+      animation: tab-reveal 0.16s ease-out;
+    }
+
+    @keyframes tab-reveal {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .config-workspace {
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) minmax(320px, 0.78fr);
+      gap: var(--space-12);
+      align-items: start;
+    }
+
+    .config-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12);
+      min-width: 0;
+    }
+
+    .config-panel,
+    .validation-panel,
+    .inspector-section {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      background: var(--surface-panel-base);
+      overflow: hidden;
+    }
+
+    .panel-header,
+    .inspector-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-10);
+      min-height: 40px;
+      padding: 0 var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-secondary) 64%, transparent);
+    }
+
+    .panel-title,
+    .inspector-title,
+    .settings-section-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .panel-subtitle,
+    .settings-section-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .panel-body,
+    .inspector-body {
+      padding: var(--space-10) var(--space-12);
+    }
+
+    .config-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .config-item {
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) auto auto;
+      align-items: center;
+      gap: var(--space-10);
+      min-height: 48px;
+      padding: var(--space-8) var(--space-10);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-secondary);
+    }
+
+    .config-item:hover {
+      border-color: var(--border-default);
+      background: color-mix(in oklch, var(--surface-secondary) 86%, var(--brand-accent));
+    }
+
+    .config-item-info {
+      min-width: 0;
+    }
+
+    .config-item-name {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .config-item-type,
+    .config-item-meta,
+    .field-hint,
+    .form-hint {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    .config-item-meta,
+    .metric-value,
+    .log-time,
+    .diff-value {
+      font-family: var(--font-family-numeric);
+    }
+
+    .latency-strip {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      align-items: end;
+      gap: 2px;
+      width: 76px;
+      height: 20px;
+    }
+
+    .latency-bar {
+      border-radius: var(--radius-2) var(--radius-2) 0 0;
+      background: color-mix(in oklch, var(--brand-accent) 58%, var(--surface-secondary));
+    }
+
+    .latency-bar.warn {
+      background: color-mix(in oklch, var(--system-degraded-fg) 74%, var(--surface-secondary));
+    }
+
+    .bar-h-4 { height: 4px; }
+    .bar-h-6 { height: 6px; }
+    .bar-h-7 { height: 7px; }
+    .bar-h-8 { height: 8px; }
+    .bar-h-10 { height: 10px; }
+    .bar-h-11 { height: 11px; }
+    .bar-h-12 { height: 12px; }
+    .bar-h-14 { height: 14px; }
+    .bar-h-16 { height: 16px; }
+    .bar-h-18 { height: 18px; }
+
+    .config-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-10);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    .form-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .form-input {
+      width: 100%;
+      min-height: 32px;
+      padding: var(--space-6) var(--space-8);
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-ui);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--brand-accent);
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand-accent) 12%, transparent);
+    }
+
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237E8794' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: var(--space-20);
+    }
+
+    .toggle-row,
+    .validation-row,
+    .metric-row,
+    .log-row,
+    .diff-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--space-10);
+      min-height: 30px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+    }
+
+    .validation-row:last-child,
+    .metric-row:last-child,
+    .log-row:last-child,
+    .diff-row:last-child {
+      border-bottom: 0;
+    }
+
+    .validation-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-8);
+      margin-bottom: var(--space-10);
+    }
+
+    .metric-tile {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-8);
+      background: var(--surface-secondary);
+    }
+
+    .metric-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .metric-value {
+      margin-top: var(--space-3);
+      font-size: var(--font-size-16);
+      color: var(--text-primary);
+    }
+
+    .metric-value.ok { color: var(--system-healthy-fg); }
+    .metric-value.warn { color: var(--system-degraded-fg); }
+    .metric-value.bad { color: var(--risk-high-fg); }
+
+    .toggle-switch {
+      width: 34px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--brand-accent) 28%, var(--surface-secondary));
+      position: relative;
+    }
+
+    .toggle-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-primary);
+    }
+
+    .editor-evidence {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-8);
+      margin-top: var(--space-12);
+    }
+
+    .coverage-cell,
+    .route-step {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-secondary);
+      padding: var(--space-8);
+    }
+
+    .coverage-cell {
+      min-height: 58px;
+    }
+
+    .coverage-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .coverage-value {
+      margin-top: var(--space-4);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      color: var(--text-primary);
+    }
+
+    .coverage-value.ok { color: var(--system-healthy-fg); }
+    .coverage-value.warn { color: var(--system-degraded-fg); }
+
+    .route-stack {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: var(--space-6);
+    }
+
+    .route-step {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--space-8);
+      min-height: 34px;
+    }
+
+    .route-index {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      color: var(--brand-accent);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+    }
+
+    .route-name {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    .ops-detail {
+      min-width: 0;
+    }
+
+    .ops-detail .context-rail {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10);
+      padding: var(--space-12);
+    }
+
+    .test-result {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      min-height: 34px;
+      padding: var(--space-8);
+      border-radius: var(--radius-6);
+      font-size: var(--font-size-12);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .test-result.success {
+      background: color-mix(in oklch, var(--system-healthy-fg) 9%, transparent);
+      color: var(--system-healthy-fg);
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 18%, transparent);
+    }
+
+    .test-result.failed {
+      background: color-mix(in oklch, var(--risk-high-fg) 9%, transparent);
+      color: var(--risk-high-fg);
+      border-color: color-mix(in oklch, var(--risk-high-fg) 18%, transparent);
+    }
+
+    .test-progress {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-10);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+
+    .test-spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-default);
+      border-top-color: var(--brand-accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .log-row {
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      color: var(--text-secondary);
+    }
+
+    .log-time,
+    .diff-value {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+    }
+
+    .log-level {
+      justify-self: end;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 20px;
+      padding: 0 var(--space-6);
+      border-radius: 999px;
+      font-size: var(--font-size-10);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      background: var(--surface-secondary);
+      white-space: nowrap;
+    }
+
+    .status-pill.ok::before { content: "✓ "; }
+    .status-pill.warn::before,
+    .status-pill.bad::before { content: "! "; }
+
+    .status-pill.ok {
+      color: var(--system-healthy-fg);
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 20%, transparent);
+    }
+
+    .status-pill.warn {
+      color: var(--system-degraded-fg);
+      border-color: color-mix(in oklch, var(--system-degraded-fg) 20%, transparent);
+    }
+
+    .status-pill.bad {
+      color: var(--risk-high-fg);
+      border-color: color-mix(in oklch, var(--risk-high-fg) 20%, transparent);
+    }
+
+    .overlay-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--surface-overlay);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    :root:has(#overlay-datasource-test:checked) [data-overlay="overlay-datasource-test"],
+    :root:has(#overlay-broker-test:checked) [data-overlay="overlay-broker-test"],
+    :root:has(#overlay-save-config:checked) [data-overlay="overlay-save-config"],
+    :root:has(#overlay-reset-config:checked) [data-overlay="overlay-reset-config"] {
+      display: flex;
+    }
+
+    .overlay-backdrop .overlay-dismiss {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+    }
+
+    .overlay-surface {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      box-shadow: 0 8px 32px color-mix(in oklch, var(--neutral-0) 42%, transparent);
+      padding: var(--space-16);
+      width: 100%;
+      max-width: 460px;
+      position: relative;
+    }
+
+    .overlay-close {
+      cursor: pointer;
+      font-size: var(--font-size-14);
+      color: var(--text-tertiary);
+      background: none;
+      border: none;
+    }
+
+    .config-add-btn { margin-top: var(--space-10); }
+
+    @media (max-width: 1400px) {
+      .config-workspace {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .validation-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+
+  <input type="checkbox" id="overlay-datasource-test" class="sr-only">
+  <input type="checkbox" id="overlay-broker-test" class="sr-only">
+  <input type="checkbox" id="overlay-save-config" class="sr-only">
+  <input type="checkbox" id="overlay-reset-config" class="sr-only">
+
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+    <a class="skip-link" href="#main-content">跳至主要内容</a>
+    <div class="style-label" aria-hidden="true">Graphite Studio — Platform Settings · Compact</div>
+
+    <div class="shell-ops">
+      <nav class="shell-rail" aria-label="主导航">
+        <div class="rail-logo" aria-label="Ditto 首页">D</div>
+        <div class="rail-nav">
+          <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+          <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+          <a class="rail-icon" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+          <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+          <a class="rail-icon active" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+        </div>
+
+      </nav>
+
+      <header class="shell-header" data-contract-slot="header">
+        <div class="header-title-group">
+          <h1 class="header-title">平台设置</h1>
+          <span class="header-subtitle">Config / Integration Console · /platform/settings</span>
+        </div>
+        <div class="env-badge"><span class="env-badge-dot"></span>生产环境</div>
+        <div class="config-version-badge">CFG-2026.04.27-r18</div>
+        <div class="header-spacer"></div>
+        <div class="header-actions" role="toolbar" aria-label="配置操作">
+          <button class="btn btn-sm">验证配置</button>
+          <label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存草稿</label>
+        </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+      </header>
+
+      <div class="ops-health" role="status" aria-label="影响范围：平台配置连接健康" data-contract-slot="health" data-primary-answer-equivalent data-primary-weight="dominant">
+        <div class="health-metric" data-answer-evidence><span class="health-metric-label" data-answer-judgment>Bloomberg 未连接 required</span><span class="health-metric-value" data-answer-metric>4 / 5</span></div>
+        <div class="health-metric" data-answer-evidence><span class="health-metric-label">华泰证券 Token 过期</span><span class="health-metric-value">需重新授权</span></div>
+        <div class="health-metric"><span class="health-metric-label">最近验证</span><span class="health-metric-value">09:42:18</span></div>
+        <div class="health-metric" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="panel-settings-datasource" aria-label="重新授权并查看配置 Diff"><span class="health-metric-label">配置漂移</span><span class="health-metric-value">2 pending · 查看配置 Diff</span></div>
+        <div class="health-metric"><span class="health-metric-label">回滚点</span><span class="health-metric-value">r17 stable</span></div>
+      </div>
+
+      <main class="ops-main" id="main-content" data-contract-slot="main" data-secondary-context>
+        <div class="settings-console">
+          <div class="settings-nav">
+            <div class="settings-nav-title">配置域</div>
+            <input type="radio" name="settings" id="settings-datasource" checked class="tab-radio sr-only">
+            <label for="settings-datasource" class="settings-nav-item" role="tab" id="tab-settings-datasource" aria-selected="true" aria-controls="panel-settings-datasource">
+              <svg class="settings-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7V4h12v3"/><path d="M9 20v-7h2v7"/><path d="M12 10l4-3H4l4 3z"/></svg>
+              <span>数据源配置</span>
+              <span class="nav-count">4</span>
+            </label>
+            <input type="radio" name="settings" id="settings-broker" class="tab-radio sr-only">
+            <label for="settings-broker" class="settings-nav-item" role="tab" id="tab-settings-broker" aria-selected="false" aria-controls="panel-settings-broker">
+              <svg class="settings-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+              <span>券商连接</span>
+              <span class="nav-count">3</span>
+            </label>
+            <input type="radio" name="settings" id="settings-general" class="tab-radio sr-only">
+            <label for="settings-general" class="settings-nav-item" role="tab" id="tab-settings-general" aria-selected="false" aria-controls="panel-settings-general">
+              <svg class="settings-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2"/></svg>
+              <span>通用设置</span>
+              <span class="nav-count">8</span>
+            </label>
+            <div class="settings-nav-footer">
+              活跃 Profile: prod-cn-a<br>
+              保存前会执行 schema、认证、连通性三段验证。
+            </div>
+          </div>
+
+          <div class="settings-content">
+            <div class="tab-panels">
+              <div class="tab-panel" data-panel="settings-datasource" id="panel-settings-datasource" role="tabpanel" aria-labelledby="tab-settings-datasource" aria-hidden="false">
+                <div class="config-workspace">
+                  <div class="config-stack">
+                    <section class="config-panel" data-config-list>
+                      <div class="panel-header">
+                        <div>
+                          <div class="panel-title">数据源配置</div>
+                          <div class="panel-subtitle">行情、基本面、宏观与另类数据接入</div>
+                        </div>
+                        <button class="btn btn-sm">新增数据源</button>
+                      </div>
+                      <div class="panel-body">
+                        <div class="config-list">
+                          <div class="config-item">
+                            <div class="config-item-info"><div class="config-item-name">Wind 金融终端</div><div class="config-item-type">行情 + 基本面 + 宏观</div></div>
+                            <span class="status-dot connected">已连接</span>
+                            <span class="config-item-meta">120ms · 2m</span>
+                            <div class="config-item-actions"><label for="overlay-datasource-test" class="btn btn-sm ov-label-btn">测试</label></div>
+                          </div>
+                          <div class="config-item">
+                            <div class="config-item-info"><div class="config-item-name">Tushare Pro</div><div class="config-item-type">A股行情 + 财务数据</div></div>
+                            <span class="status-dot connected">已连接</span>
+                            <span class="config-item-meta">86ms · 5m</span>
+                            <div class="config-item-actions"><label for="overlay-datasource-test" class="btn btn-sm ov-label-btn">测试</label></div>
+                          </div>
+                          <div class="config-item">
+                            <div class="config-item-info"><div class="config-item-name">Bloomberg</div><div class="config-item-type">全球宏观 + 另类数据</div></div>
+                            <span class="status-dot disconnected">未连接</span>
+                            <span class="config-item-meta">auth required</span>
+                            <div class="config-item-actions"><label for="overlay-save-config" class="btn btn-sm ov-label-btn">配置</label></div>
+                          </div>
+                          <div class="config-item">
+                            <div class="config-item-info"><div class="config-item-name">通达信期权</div><div class="config-item-type">期权链数据</div></div>
+                            <span class="status-dot stale">延迟</span>
+                            <span class="config-item-meta">15m stale</span>
+                            <div class="config-item-actions"><label for="overlay-datasource-test" class="btn btn-sm ov-label-btn">测试</label></div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="validation-panel" data-validation-evidence>
+                      <div class="panel-header">
+                        <div class="panel-title">连接验证</div>
+                        <span class="status-pill warn">1 stale</span>
+                      </div>
+                      <div class="panel-body">
+                        <div class="validation-grid">
+                          <div class="metric-tile"><div class="metric-label">DQ 完整度</div><div class="metric-value ok">99.4%</div></div>
+                          <div class="metric-tile"><div class="metric-label">P95 延迟</div><div class="metric-value">148ms</div></div>
+                          <div class="metric-tile"><div class="metric-label">失败率</div><div class="metric-value warn">0.7%</div></div>
+                        </div>
+                        <div class="validation-row"><span>Schema checksum</span><span class="status-pill ok">match</span></div>
+                        <div class="validation-row"><span>Token scope</span><span class="status-pill ok">read:market</span></div>
+                        <div class="validation-row"><span>Freshness SLA</span><span class="status-pill warn">1 breach</span></div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <section class="config-panel" data-config-editor>
+                    <div class="panel-header">
+                      <div>
+                        <div class="panel-title">Wind 编辑器</div>
+                        <div class="panel-subtitle">选中数据源的认证、频率与容灾策略</div>
+                      </div>
+                      <span class="status-pill ok">valid</span>
+                    </div>
+                    <div class="panel-body">
+                      <div class="config-form-grid">
+                        <div class="form-group"><label class="form-label" for="datasource-api-host">API Host</label><input id="datasource-api-host" class="form-input" type="text" value="https://api.wind.local"></div>
+                        <div class="form-group"><label class="form-label" for="datasource-sync-frequency">同步频率</label><select id="datasource-sync-frequency" class="form-input form-select"><option selected>60s polling</option><option>30s polling</option></select></div>
+                        <div class="form-group"><label class="form-label" for="datasource-timeout-threshold">超时阈值</label><input id="datasource-timeout-threshold" class="form-input" type="text" value="850ms"></div>
+                        <div class="form-group"><label class="form-label" for="datasource-retry-count">失败重试</label><input id="datasource-retry-count" class="form-input" type="text" value="3 attempts"></div>
+                        <div class="form-group full"><div class="form-label" id="datasource-latency-trend-label">延迟趋势</div><div class="latency-strip" role="img" aria-labelledby="datasource-latency-trend-label" aria-label="Wind 最近 12 次延迟趋势"><span class="latency-bar bar-h-8"></span><span class="latency-bar bar-h-10"></span><span class="latency-bar bar-h-7"></span><span class="latency-bar bar-h-12"></span><span class="latency-bar bar-h-9"></span><span class="latency-bar bar-h-6"></span><span class="latency-bar bar-h-10"></span><span class="latency-bar bar-h-12"></span><span class="latency-bar bar-h-14"></span><span class="latency-bar warn bar-h-18"></span><span class="latency-bar bar-h-11"></span><span class="latency-bar bar-h-9"></span></div><div class="form-hint">最近 12 次验证，1 次接近 SLA 阈值。</div></div>
+                      </div>
+                      <div class="editor-evidence" aria-label="数据源覆盖率和容灾路由">
+                        <div class="coverage-cell"><div class="coverage-label">Quotes</div><div class="coverage-value ok">99.8%</div><div class="field-hint">Level 1 + snapshot</div></div>
+                        <div class="coverage-cell"><div class="coverage-label">Fundamental</div><div class="coverage-value ok">98.7%</div><div class="field-hint">财报字段 186 / 190</div></div>
+                        <div class="coverage-cell"><div class="coverage-label">Macro</div><div class="coverage-value ok">99.1%</div><div class="field-hint">日频 + 月频</div></div>
+                        <div class="coverage-cell"><div class="coverage-label">Alt Data</div><div class="coverage-value warn">91.4%</div><div class="field-hint">缺失 2 个供给源</div></div>
+                        <div class="route-stack">
+                          <div class="route-step"><span class="route-index">1</span><span class="route-name">Wind primary · CN market open</span><span class="status-pill ok">active</span></div>
+                          <div class="route-step"><span class="route-index">2</span><span class="route-name">Tushare fallback · A-share snapshot</span><span class="status-pill ok">ready</span></div>
+                          <div class="route-step"><span class="route-index">3</span><span class="route-name">CSV sandbox · manual recovery</span><span class="status-pill warn">manual</span></div>
+                        </div>
+                      </div>
+                      <div class="settings-actions-row"><label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存数据源</label><label for="overlay-datasource-test" class="btn btn-sm ov-label-btn">测试连接</label></div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <div class="tab-panel" data-panel="settings-broker" id="panel-settings-broker" role="tabpanel" aria-labelledby="tab-settings-broker" aria-hidden="true">
+                <div class="config-workspace">
+                  <div class="config-stack">
+                    <section class="config-panel" data-config-list>
+                      <div class="panel-header">
+                        <div>
+                          <div class="panel-title">券商连接</div>
+                          <div class="panel-subtitle">模拟盘、实盘柜台与账户验证</div>
+                        </div>
+                        <button class="btn btn-sm">新增连接</button>
+                      </div>
+                      <div class="panel-body">
+                        <div class="config-list">
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">中信证券（模拟盘）</div><div class="config-item-type">XTP 接口 · 模拟环境</div></div><span class="status-dot connected">已连接</span><span class="config-item-meta">****8823</span><div class="config-item-actions"><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试</label></div></div>
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">华泰证券（模拟盘）</div><div class="config-item-type">柜台接口 · 模拟环境</div></div><span class="status-dot disconnected">未连接</span><span class="config-item-meta">Token 过期</span><div class="config-item-actions"><label for="overlay-save-config" class="btn btn-sm ov-label-btn">配置</label></div></div>
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">国泰君安（实盘只读）</div><div class="config-item-type">账户同步 · 交易关闭</div></div><span class="status-dot stale">待复核</span><span class="config-item-meta">T+1 verify</span><div class="config-item-actions"><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试</label></div></div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="validation-panel" data-validation-evidence>
+                      <div class="panel-header"><div class="panel-title">券商验证</div><span class="status-pill bad">1 expired</span></div>
+                      <div class="panel-body">
+                        <div class="validation-grid">
+                          <div class="metric-tile"><div class="metric-label">账户通过</div><div class="metric-value ok">2 / 3</div></div>
+                          <div class="metric-tile"><div class="metric-label">路由延迟</div><div class="metric-value">42ms</div></div>
+                          <div class="metric-tile"><div class="metric-label">风控锁</div><div class="metric-value ok">on</div></div>
+                        </div>
+                        <div class="validation-row"><span>Order permission</span><span class="status-pill ok">paper only</span></div>
+                        <div class="validation-row"><span>Account signature</span><span class="status-pill bad">expired</span></div>
+                        <div class="validation-row"><span>Polling interval</span><span class="status-pill ok">60s</span></div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <section class="config-panel" data-config-editor>
+                    <div class="panel-header"><div><div class="panel-title">中信证券编辑器</div><div class="panel-subtitle">交易权限、账户掩码与风控前置检查</div></div><span class="status-pill ok">paper</span></div>
+                    <div class="panel-body">
+                      <div class="config-form-grid">
+                        <div class="form-group"><label class="form-label" for="broker-account-alias">账户别名</label><input id="broker-account-alias" class="form-input" type="text" value="CITIC Paper A"></div>
+                        <div class="form-group"><label class="form-label" for="broker-trading-mode">交易模式</label><select id="broker-trading-mode" class="form-input form-select"><option selected>模拟盘</option><option>实盘只读</option></select></div>
+                        <div class="form-group"><label class="form-label" for="broker-counter-url">柜台地址</label><input id="broker-counter-url" class="form-input" type="text" value="xtp.paper.local:18888"></div>
+                        <div class="form-group"><label class="form-label" for="broker-order-limit">下单限额</label><input id="broker-order-limit" class="form-input" type="text" value="500,000 CNY"></div>
+                        <div class="form-group full"><div class="form-label" id="broker-trade-protection-label">交易保护</div><div role="group" aria-labelledby="broker-trade-protection-label"><div class="toggle-row"><span>强制订单复核</span><span class="toggle-switch" aria-hidden="true"></span></div><div class="toggle-row"><span>开盘前禁止自动下单</span><span class="toggle-switch" aria-hidden="true"></span></div></div></div>
+                      </div>
+                      <div class="settings-actions-row"><label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存连接</label><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试券商</label></div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <div class="tab-panel" data-panel="settings-general" id="panel-settings-general" role="tabpanel" aria-labelledby="tab-settings-general" aria-hidden="true">
+                <div class="config-workspace">
+                  <div class="config-stack">
+                    <section class="config-panel" data-config-list>
+                      <div class="panel-header"><div><div class="panel-title">通用设置</div><div class="panel-subtitle">市场、语言、通知、回测和风险默认参数</div></div><span class="status-pill warn">2 changed</span></div>
+                      <div class="panel-body">
+                        <div class="config-list">
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">基础偏好</div><div class="config-item-type">默认市场 · 时区 · 语言</div></div><span class="status-dot connected">已同步</span><span class="config-item-meta">global</span><div></div></div>
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">通知策略</div><div class="config-item-type">重要预警、交易事件、任务失败</div></div><span class="status-dot connected">已启用</span><span class="config-item-meta">critical only</span><div></div></div>
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">回测默认参数</div><div class="config-item-type">佣金、滑点、成交模型</div></div><span class="status-dot stale">已修改</span><span class="config-item-meta">unsaved</span><div></div></div>
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">风控阈值</div><div class="config-item-type">最大回撤、单票权重、日损上限</div></div><span class="status-dot stale">待验证</span><span class="config-item-meta">risk policy</span><div></div></div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="validation-panel" data-validation-evidence>
+                      <div class="panel-header"><div class="panel-title">变更验证</div><span class="status-pill warn">draft</span></div>
+                      <div class="panel-body">
+                        <div class="validation-grid">
+                          <div class="metric-tile"><div class="metric-label">受影响策略</div><div class="metric-value">12</div></div>
+                          <div class="metric-tile"><div class="metric-label">需复算回测</div><div class="metric-value warn">3</div></div>
+                          <div class="metric-tile"><div class="metric-label">风险策略</div><div class="metric-value ok">pass</div></div>
+                        </div>
+                        <div class="validation-row"><span>Commission schema</span><span class="status-pill ok">valid</span></div>
+                        <div class="validation-row"><span>Risk threshold</span><span class="status-pill warn">review</span></div>
+                        <div class="validation-row"><span>Notification route</span><span class="status-pill ok">enabled</span></div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <section class="config-panel" data-config-editor>
+                    <div class="panel-header"><div><div class="panel-title">设置表单</div><div class="panel-subtitle">保存前会生成配置 diff 和回滚点</div></div><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置默认</label></div>
+                    <div class="panel-body">
+                      <div class="config-form-grid">
+                        <div class="form-group"><label class="form-label" for="general-default-market">默认市场</label><select id="general-default-market" class="form-input form-select"><option selected>A股（沪深）</option><option>港股</option><option>美股</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-timezone">时区</label><select id="general-timezone" class="form-input form-select"><option selected>Asia/Shanghai (UTC+8)</option><option>America/New_York (UTC-5)</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-language">界面语言</label><select id="general-language" class="form-input form-select"><option selected>简体中文</option><option>English</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-notifications">通知偏好</label><select id="general-notifications" class="form-input form-select"><option>全部通知</option><option selected>仅重要通知</option><option>静默</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-fee-rate">默认手续费率</label><input id="general-fee-rate" class="form-input" type="text" value="0.025%"></div>
+                        <div class="form-group"><label class="form-label" for="general-slippage">默认滑点</label><input id="general-slippage" class="form-input" type="text" value="0.01%"></div>
+                      </div>
+                      <div class="settings-actions-row"><label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存配置</label><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置为默认值</label></div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside class="ops-detail" data-contract-slot="inspector" aria-label="配置验证详情">
+        <div class="context-rail">
+          <section class="inspector-section">
+            <div class="inspector-header"><div class="inspector-title">当前 Profile</div><span class="status-pill ok">stable</span></div>
+            <div class="inspector-body">
+              <div class="metric-row"><span>Profile</span><span class="metric-value">prod-cn-a</span></div>
+              <div class="metric-row"><span>Owner</span><span class="metric-value">Platform Ops</span></div>
+              <div class="metric-row"><span>Rollback</span><span class="metric-value">r17</span></div>
+            </div>
+          </section>
+          <section class="inspector-section">
+            <div class="inspector-header"><div class="inspector-title">最近测试</div><span class="status-pill warn">1 warn</span></div>
+            <div class="inspector-body">
+              <div class="test-result success" data-inspector-test-result>✓ Wind 连接正常 · 延迟 120ms · 完整性 99.8%</div>
+              <div class="test-result failed">! 华泰证券 Token 已过期 · 需要重新授权</div>
+            </div>
+          </section>
+          <section class="inspector-section">
+            <div class="inspector-header"><div class="inspector-title">Audit Log</div><span class="status-pill">live</span></div>
+            <div class="inspector-body">
+              <div class="log-row" data-log-row><span class="log-time">09:42</span><span>Wind schema validation passed</span><span class="log-level">ok</span></div>
+              <div class="log-row" data-log-row><span class="log-time">09:41</span><span>Broker token refresh failed</span><span class="log-level">warn</span></div>
+              <div class="log-row" data-log-row><span class="log-time">09:39</span><span>Config draft r18 created</span><span class="log-level">info</span></div>
+              <div class="log-row" data-log-row><span class="log-time">09:32</span><span>Tushare heartbeat recovered</span><span class="log-level">ok</span></div>
+              <div class="log-row" data-log-row><span class="log-time">09:28</span><span>Risk policy checksum changed</span><span class="log-level">diff</span></div>
+            </div>
+          </section>
+          <section class="inspector-section">
+            <div class="inspector-header"><div class="inspector-title">Config Diff</div><span class="status-pill warn">4 rows</span></div>
+            <div class="inspector-body">
+              <div class="diff-row" data-config-diff-row><span>commission.default</span><span class="diff-value">0.025%</span></div>
+              <div class="diff-row" data-config-diff-row><span>slippage.default</span><span class="diff-value">0.01%</span></div>
+              <div class="diff-row" data-config-diff-row><span>risk.maxDrawdown</span><span class="diff-value">8%</span></div>
+              <div class="diff-row" data-config-diff-row><span>notify.level</span><span class="diff-value">critical</span></div>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div><!-- /shell-ops -->
+
+    <!-- ═══ Overlays ═══ -->
+    <div class="overlay-backdrop" data-overlay="overlay-datasource-test">
+      <label class="overlay-dismiss" for="overlay-datasource-test" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="连接测试">
+        <div class="overlay-header"><span class="overlay-title">数据源连接测试</span><label for="overlay-datasource-test" class="overlay-close" aria-label="关闭">✕</label></div>
+        <div class="overlay-body">
+          <div class="test-result success">✓ Wind 连接正常 — 延迟 120ms，数据完整性 99.8%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay-backdrop" data-overlay="overlay-broker-test">
+      <label class="overlay-dismiss" for="overlay-broker-test" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="券商连接测试">
+        <div class="overlay-header"><span class="overlay-title">券商连接测试</span><label for="overlay-broker-test" class="overlay-close" aria-label="关闭">✕</label></div>
+        <div class="overlay-body">
+          <div class="test-progress"><div class="test-spinner"></div> 正在测试连接…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay-backdrop" data-overlay="overlay-save-config">
+      <label class="overlay-dismiss" for="overlay-save-config" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存配置确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="data-source-switch">
+        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 保存配置确认</span><label for="overlay-save-config" class="overlay-close" aria-label="关闭">✕</label></div>
+        <div class="overlay-body">
+          <p data-risk-object>对象：prod-cn-a 配置草稿 r18</p>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">保存后会影响数据源、交易通道或 Agent 运行环境；正在运行任务不会自动重启，需由 Platform Ops 确认是否滚动刷新。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">保存草稿会更新配置草稿版本；保存数据源、连接或通用配置会生成待生效 diff，验证通过后成为新的配置版本。</p>
+            </div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">保留配置 diff、schema 校验、连接测试结果、密钥指纹和变更备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、配置域、版本号、字段摘要、验证结果和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从设置变更历史回滚上一版配置；密钥类字段只显示指纹，不回显明文，需重新授权后恢复。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-save-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，继续编辑</label>
+            <label for="overlay-save-config" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认保存配置</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay-backdrop" data-overlay="overlay-reset-config">
+      <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重置配置确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="config-reset">
+        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 重置配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
+        <div class="overlay-body">
+          <p data-risk-object>对象：prod-cn-a 当前表单草稿 r18 默认值重置</p>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">重置会覆盖当前未保存表单草稿，恢复平台默认参数；不会保存数据源、券商连接或密钥配置，也不会重启正在运行任务。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">重置前保留 r18 草稿字段摘要；重置后表单值回到默认配置，并生成一条默认值重置 diff 供复核。</p>
+            </div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">保留重置前快照、默认值模板版本、字段级 diff、密钥指纹和重置原因。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、配置域、草稿版本、默认值模板版本、字段摘要和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从设置变更历史恢复重置前草稿快照；密钥类字段只显示指纹，不回显明文，恢复后需重新验证连接。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留草稿</label>
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认重置为默认值</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="datasource-list">
+        <div class="gallery-group__label">Datasource List</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="config-list"><div class="config-item"><div class="config-item-info"><div class="config-item-name">Wind 金融终端</div><div class="config-item-type">行情 + 基本面</div></div><span class="status-dot connected">已连接</span><span class="config-item-meta">120ms</span><div></div></div><div class="config-item"><div class="config-item-info"><div class="config-item-name">Tushare Pro</div><div class="config-item-type">A股行情</div></div><span class="status-dot connected">已连接</span><span class="config-item-meta">86ms</span><div></div></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Empty State</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-icon">🔌</div><div class="state-empty-title">暂无数据源</div><div class="state-empty-desc">添加数据源以开始获取行情和基本面数据</div><button class="state-empty-cta">新增数据源</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">加载失败</div><div class="state-error-desc">无法获取数据源配置</div><button class="state-error-retry">重试</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Stale State</div><div class="gallery-card__preview"><div class="stale-banner"><span class="stale-dot-indicator"></span><span>Wind 数据源同步异常，延迟 15 分钟</span></div></div></div>
+        </div>
+      </div>
+      <div class="gallery-group" data-component="broker-list">
+        <div class="gallery-group__label">Broker List</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="config-list"><div class="config-item"><div class="config-item-info"><div class="config-item-name">中信证券（模拟盘）</div><div class="config-item-type">XTP 接口</div></div><span class="status-dot connected">已连接</span><span class="config-item-meta">****8823</span><div></div></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Empty State</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-icon">🔗</div><div class="state-empty-title">暂无券商连接</div><div class="state-empty-desc">配置券商接口以支持模拟交易和实盘下单</div><button class="state-empty-cta">新增连接</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">加载失败</div><div class="state-error-desc">无法获取券商连接配置</div><button class="state-error-retry">重试</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Stale State</div><div class="gallery-card__preview"><div class="stale-banner"><span class="stale-dot-indicator"></span><span>华泰证券 Token 已过期，需要重新授权</span></div></div></div>
+        </div>
+      </div>
+      <div class="gallery-group" data-component="settings-form">
+        <div class="gallery-group__label">Settings Form</div>
+        <div class="gallery-cards">
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="config-form-grid"><div class="form-group"><label class="form-label" for="gallery-default-market">默认市场</label><select id="gallery-default-market" class="form-input form-select"><option selected>A股（沪深）</option></select></div><div class="form-group"><label class="form-label" for="gallery-notifications">通知偏好</label><select id="gallery-notifications" class="form-input form-select"><option selected>仅重要通知</option></select></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group">
+        <div class="gallery-group__label">Overlays</div>
+        <div class="gallery-cards">
+          <div class="gallery-card" data-overlay-ref="overlay-datasource-test"><div class="gallery-card__label">数据源测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="连接测试"><div class="overlay-header"><span class="overlay-title">连接测试</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><div class="test-result success">✓ 连接正常 — 延迟 120ms</div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-broker-test"><div class="gallery-card__label">券商测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="券商连接测试"><div class="overlay-header"><span class="overlay-title">券商连接测试</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><div class="test-progress"><div class="test-spinner"></div> 正在测试…</div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-save-config"><div class="gallery-card__label">保存配置 (Modal)</div><div class="gallery-card__trigger">触发：点击「保存配置」或「配置」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="保存配置确认"><div class="overlay-header"><span class="overlay-title">保存配置确认</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><p>确认保存 prod-cn-a 配置草稿？保存后会生成配置 diff、验证证据和回滚点。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-reset-config"><div class="gallery-card__label">重置配置 (Modal)</div><div class="gallery-card__trigger">触发：点击「重置为默认值」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="重置配置"><div class="overlay-header"><span class="overlay-title">重置配置</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><p>确认将当前草稿重置为默认值？重置前快照会保留在配置历史中。</p></div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

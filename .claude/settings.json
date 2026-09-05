@@ -35,11 +35,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.py\" --host claude --event pre-tool",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py\" --host claude --event pre-tool",
             "timeout": 10
           }
         ]
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.py\" --host claude --event post-tool",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py\" --host claude --event post-tool",
             "timeout": 120
           }
         ]
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/agent_harness/hook.py\" --host claude --event stop",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py\" --host claude --event stop",
             "timeout": 900
           }
         ]

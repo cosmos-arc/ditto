@@ -5,7 +5,7 @@
 services:
   # VictoriaMetrics - Metrics 存储与 OTLP 接收
   victoriametrics:
-    image: victoriametrics/victoria-metrics:v1.104.0
+    image: victoriametrics/victoria-metrics:v1.104.0@sha256:4a03f2881108571949f83764069f5ecc325de5cbbae676c2742f0a2e7523a682
     container_name: ditto-vm
     ports:
       - "127.0.0.1:8428:8428"
@@ -22,7 +22,7 @@ services:
 
   # VictoriaLogs - Logs 存储与查询
   victorialogs:
-    image: victoriametrics/victoria-logs:v1.37.0
+    image: victoriametrics/victoria-logs:v1.37.0@sha256:f315b6153ab8749393e6b6c4844f0bf60707703d4e006d89f78eed9abdfaf843
     container_name: ditto-vl
     ports:
       - "127.0.0.1:9428:9428"
@@ -39,7 +39,7 @@ services:
 
   # Vector - 日志采集
   vector:
-    image: timberio/vector:0.52.0-debian
+    image: timberio/vector:0.52.0-debian@sha256:ee3b99e52896fde12d1b07774826c8e58b07b4a995c3a5a624cc268a69ad7572
     container_name: ditto-vector
     ports:
       - "127.0.0.1:8686:8686"
@@ -59,7 +59,7 @@ services:
 
   # Grafana - 可视化仪表盘
   grafana:
-    image: grafana/grafana:11.1.0
+    image: grafana/grafana:11.1.0@sha256:079600c9517b678c10cda6006b4487d3174512fd4c6cface37df7822756ed7a5
     container_name: ditto-grafana
     ports:
       - "127.0.0.1:3000:3000"

@@ -1,0 +1,3803 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-strategy-studio
+  Edition: v1.3 (Information Visualization + Premium Pass)
+  Generated: 2026-04-05
+  Audit Score: 9.0+ (up from 8.0 — visualization + premium pass)
+
+  Tabs: 2
+  - studio-mode (Form Builder / Code Editor) [covered]
+
+  Overlays: 5
+  - overlay-save-strategy (Modal: 策略保存) [covered]
+  - overlay-backtest-config (Sheet: 回测参数配置) [covered]
+  - overlay-factor-preview (Drawer: 因子预处理预览) [covered]
+  - overlay-validation-toast (Toast: 校验结果) [covered]
+  - overlay-delete-strategy (Modal: 确认策略删除) [covered]
+
+  State Variants: 6 components × 3 states (empty/loading/error)
+  - studio-header: default[covered] loading[covered] empty[covered] failed[covered] stale[n/a] selected[n/a]
+  - mode-switch: default[covered] loading[covered] empty[n/a] failed[covered] stale[n/a] selected[n/a]
+  - snippets-sources: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - main-studio: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - inspector: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - logs: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[n/a]
+
+  Coverage Score: 100%
+
+  Review Pass 1 fixes:
+  - Zero hardcoded colors (rgba/hex → tokens)
+  - Inline styles reduced ~68% (130 → 42, remaining are chart bars/skeleton widths/gallery)
+  - tokens-data-viz.css confirmed imported
+  - var(--shell-header-height) confirmed used
+  - Overlay components extracted to CSS classes
+  - Delete dialog uses --risk-critical-* tokens
+  - Toast uses direct OKLCH for icon background
+
+  Review Pass 2 fixes:
+  - color-mix(in oklch, white N%, transparent) → var(--overlay-N) tokens (4 instances)
+  - Deprecated --font-size-18 → --font-size-16 on .overlay-close
+  - Badge sizing: hardcoded values → --badge-sm-*, --badge-md-* tokens
+  - Status dot: hardcoded 6px → var(--status-dot-size)
+  - Hardcoded direct OKLCH for system-* backgrounds → var(--system-healthy-bg), var(--system-degraded-bg)
+  - Toast icon background: relative token color → var(--system-healthy-bg)
+  - font-family: monospace audit — already using var(--font-family-code/numeric)
+
+  Visualization + Premium Pass (v1.3):
+  - Inline styles: 42 → 1 (SVG noise filter only)
+  - Distribution bars: 22 inline styles → CSS class pairs (distribution-bar--aN + --hN)
+  - Skeleton widths: 10 inline styles → CSS utility classes (skeleton--wN)
+  - Gallery items: remaining inline styles → gallery-source-selected, etc.
+  - Noise texture overlay (feTurbulence) — matches instrument-hub benchmark
+  - Equity curve SVG chart in inspector with gradient fill
+  - 6 performance metric cards with sparklines (Sharpe, MaxDD, IR, Calmar, etc.)
+  - Parameter comparison matrix table in main panel
+  - Terminal status bar (fixed bottom)
+  - Strategy status tags (validated/running/draft)
+  - Enhanced panel hover effects
+  - Factor weight slider track fill visual
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Strategy Studio</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Style label ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .studio-action:focus-visible,
+    .mode-tab:focus-visible,
+    .source-item:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .form-input:focus-visible,
+    .form-select:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Studio Shell — Three-column layout
+     * Rail | Sources (240px) + Main (auto) + Inspector (300px)
+     * ══════════════════════════════════════════════ */
+    .shell-studio {
+      display: grid;
+      grid-template-columns:
+        var(--shell-rail-width)
+        minmax(180px, var(--prototype-studio-source-width))
+        1px
+        minmax(0, 1fr)
+        1px
+        minmax(220px, var(--prototype-studio-inspector-width));
+      grid-template-rows: var(--shell-header-height) auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "rail    header    header           header    header              header"
+        "rail    header2   header2          header2   header2             header2"
+        "rail    sources   source-separator main      inspector-separator inspector"
+        "rail    logs      logs             logs      logs                logs";
+      height: calc(100dvh - var(--status-bar-height, 22px));
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    [data-theme="light"] .shell-studio {
+      --prototype-light-readable-text: var(--neutral-600);
+      --prototype-light-muted-text: var(--neutral-500);
+    }
+
+    .shell-studio .resize-separator[data-resize-var="--prototype-studio-source-width"] {
+      grid-area: source-separator;
+    }
+
+    .shell-studio .resize-separator[data-resize-var="--prototype-studio-inspector-width"] {
+      grid-area: inspector-separator;
+    }
+
+    @media (max-width: 768px) {
+      .shell-studio {
+        overflow-x: auto;
+      }
+    }
+
+    /* ── Noise texture overlay ── */
+    .shell-studio::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* ── Top-edge domain rule ── */
+    .shell-studio::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--space-1);
+      background: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-studio > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Rail domain edge ── */
+    .shell-studio .shell-rail {
+      position: relative;
+    }
+    .shell-studio .shell-rail::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: color-mix(in oklch, var(--brand-signature-line) 18%, var(--border-subtle));
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Rail logo domain tint */
+    .rail-logo {
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* Rail active indicator */
+    .rail-icon.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+    }
+
+    /* ── Header ── */
+    .studio-header {
+      grid-area: header;
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
+      align-items: center;
+      padding: 0 var(--space-16);
+      gap: var(--space-12);
+      z-index: 5;
+      position: relative;
+    }
+    .header-title {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: 0;
+      white-space: nowrap;
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 1px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: var(--space-2);
+    }
+
+    .strategy-name {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      display: grid;
+      grid-template-columns: auto minmax(120px, 1fr) repeat(6, max-content);
+      align-items: center;
+      gap: var(--space-8);
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .strategy-name-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--badge-md-padding-y) var(--space-8);
+      border-radius: var(--badge-md-radius);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+    }
+    .status-badge-dot {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+    }
+
+    .strategy-run-chip {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      height: var(--badge-md-height);
+      padding: var(--space-2) var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-ui);
+      white-space: nowrap;
+    }
+
+    .strategy-run-chip[data-answer-evidence] {
+      max-width: 8.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-spacer { display: none; }
+
+    /* ── Studio Actions (CTA buttons) ── */
+    .studio-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+
+    .studio-header [data-header-utility-bar] {
+      min-width: 0;
+    }
+
+    .studio-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      min-width: 0;
+      height: var(--density-action-height);
+      padding: 0 var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1360px) {
+      .studio-header {
+        grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
+        gap: var(--space-8);
+      }
+
+      .strategy-run-chip[data-answer-evidence],
+      .strategy-run-chip--optional {
+        display: none;
+      }
+
+      .studio-action {
+        padding: 0 var(--space-6);
+      }
+    }
+
+    .studio-action:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-strong-bg);
+      border-color: var(--border-default);
+    }
+    .studio-action svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .studio-action.primary {
+      color: var(--text-primary);
+      background: var(--brand-accent);
+      border-color: var(--brand-accent);
+    }
+    .studio-action.primary:hover {
+      background: var(--brand-accent-hover);
+      border-color: var(--brand-accent-hover);
+    }
+
+    /* ── Mode Switch Bar ── */
+    .studio-mode-bar {
+      grid-area: header2;
+      background: var(--surface-panel-base);
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-signature-line) 30%, var(--border-subtle));
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-panel-padding);
+      gap: var(--space-16);
+      height: var(--density-strip-height);
+    }
+
+    .mode-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .mode-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-12);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      border-radius: var(--radius-4) var(--radius-4) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .mode-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .mode-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+    .mode-tab svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .mode-bar-sep {
+      width: 1px;
+      height: 14px;
+      background: var(--border-subtle);
+    }
+
+    .mode-bar-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .mode-bar-breadcrumb .crumb-current {
+      color: var(--text-secondary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Left Panel — Sources
+     * ══════════════════════════════════════════════ */
+    .studio-sources {
+      grid-area: sources;
+      background: var(--surface-panel-base);
+      border-right: 1px solid var(--border-subtle);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .source-section {
+      padding: var(--density-panel-padding);
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .source-section + .source-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--overlay-2);
+      pointer-events: none;
+    }
+
+    .source-section-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-8);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .source-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      gap: var(--space-6);
+    }
+    .source-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .source-item.active {
+      background: var(--brand-accent-subtle);
+    }
+
+    .source-item-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+
+    .source-item-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .source-item-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .source-item-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .source-item-meta {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      flex-shrink: 0;
+    }
+
+    .source-item-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+      flex-shrink: 0;
+    }
+    .source-item-badge.ok {
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+    }
+    .source-item-badge.warn {
+      background: var(--system-degraded-bg);
+      color: var(--system-degraded-fg);
+    }
+    .source-item-badge.idle {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Factor Pipeline Visual ── */
+    .pipeline-visual {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
+      padding: var(--space-8) 0;
+    }
+
+    .pipeline-node {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-6);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      white-space: nowrap;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .pipeline-node.active {
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+    .pipeline-node.optional {
+      border-style: dashed;
+      color: var(--text-tertiary);
+    }
+
+    .pipeline-arrow {
+      display: none;
+    }
+    .pipeline-arrow svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Main Studio Canvas
+     * ══════════════════════════════════════════════ */
+    .studio-main {
+      grid-area: main;
+      background: var(--surface-app);
+      min-height: 0;
+      overflow: hidden;
+      padding: var(--density-panel-padding);
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-section-gap);
+    }
+
+    .studio-main > .tab-panel[aria-hidden="false"] {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* ── Studio Panel Card ── */
+    .studio-panel {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+    }
+
+    .studio-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--panel-header-padding);
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .studio-panel-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--overlay-2);
+      pointer-events: none;
+    }
+
+    .studio-panel-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .studio-panel-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .studio-panel-body {
+      padding: var(--density-panel-padding);
+    }
+
+    /* ── Form Elements ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--density-section-gap);
+    }
+    .form-grid .form-field--full {
+      grid-column: 1 / -1;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .form-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      height: var(--density-input-height);
+      padding: 0 var(--input-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      background: var(--surface-app);
+      border: 1px solid var(--border-default);
+      border-radius: var(--input-radius);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: var(--brand-accent);
+      box-shadow: 0 0 0 3px var(--interaction-focus-ring);
+    }
+    .form-input::placeholder {
+      color: var(--text-disabled);
+    }
+
+    .form-textarea {
+      height: auto;
+      padding: var(--space-6) var(--input-padding-x);
+      resize: vertical;
+      min-height: 60px;
+      line-height: 1.5;
+    }
+
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 8L10 13L15 8' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right var(--space-8) center;
+      padding-right: var(--space-24);
+      cursor: pointer;
+    }
+
+    /* ── Factor Weight Slider ── */
+    .factor-weight-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12);
+    }
+
+    .factor-weight-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 56px;
+      align-items: center;
+      gap: var(--space-12);
+    }
+
+    .factor-weight-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .factor-weight-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border-default);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .factor-weight-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--brand-accent);
+      border-radius: 50%;
+      border: 2px solid var(--surface-panel-elevated);
+      cursor: pointer;
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .factor-weight-slider::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 0 4px var(--interaction-focus-ring);
+    }
+    .factor-weight-slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: var(--brand-accent);
+      border-radius: 50%;
+      border: 2px solid var(--surface-panel-elevated);
+      cursor: pointer;
+    }
+
+    .factor-weight-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      text-align: right;
+    }
+
+    /* ── Optimization Config ── */
+    .opt-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--density-section-gap);
+    }
+
+    .opt-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .opt-field-label {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+    .opt-field-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      height: var(--density-input-height);
+      padding: 0 var(--input-padding-x);
+      background: var(--surface-app);
+      border: 1px solid var(--border-default);
+      border-radius: var(--input-radius);
+      display: flex;
+      align-items: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Backtest Params ── */
+    .backtest-params {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--density-section-gap);
+    }
+
+    @media (max-height: 800px) {
+      .studio-main {
+        padding: var(--space-8) var(--density-panel-padding);
+      }
+
+      .studio-main > .tab-panel[aria-hidden="false"] {
+        gap: var(--space-8);
+      }
+
+      .studio-panel-header {
+        padding: var(--space-8) var(--density-panel-padding);
+      }
+
+      .studio-panel-body {
+        padding: var(--space-8) var(--density-panel-padding);
+      }
+
+      .studio-panel-body--flush {
+        padding: 0;
+      }
+
+      .form-grid,
+      .opt-grid {
+        gap: var(--space-8);
+      }
+
+      .backtest-params {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: var(--space-8);
+      }
+
+      .factor-weight-list {
+        gap: var(--space-8);
+      }
+
+      .param-matrix th {
+        padding: var(--space-4) var(--space-8);
+      }
+
+      .param-matrix td {
+        padding: var(--space-2) var(--space-8);
+      }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Right Panel — Inspector
+     * ══════════════════════════════════════════════ */
+    .studio-inspector {
+      grid-area: inspector;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Top structural line */
+    .studio-inspector::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--border-subtle);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .inspector-section {
+      padding: var(--density-panel-padding);
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+    .inspector-section + .inspector-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--overlay-2);
+      pointer-events: none;
+    }
+
+    .inspector-section-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── AI Assistant Area ── */
+    .ai-assistant {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-12);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    .ai-message {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .ai-message strong {
+      color: var(--text-primary);
+    }
+
+    .ai-action {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-8);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      border: none;
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      width: fit-content;
+    }
+    .ai-action:hover {
+      background: var(--interaction-selected-bg);
+    }
+
+    /* ── Suggestion / Warning List ── */
+    .inspector-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .inspector-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid transparent;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .inspector-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .inspector-item.warn {
+      border-color: color-mix(in oklch, var(--system-degraded-fg) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--system-degraded-fg) 2%, transparent);
+    }
+    .inspector-item.warn:hover {
+      background: color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);
+    }
+    .inspector-item.info {
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 2%, transparent);
+    }
+
+    .inspector-item-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: var(--space-1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .inspector-item.warn .inspector-item-icon { color: var(--system-degraded-fg); }
+    .inspector-item.info .inspector-item-icon { color: var(--brand-accent); }
+
+    .inspector-item-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .inspector-item-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+    .inspector-item-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+    }
+
+    /* ── Strategy Summary ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-6);
+      background: var(--surface-panel-elevated);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+    }
+    .summary-item-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .summary-item-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Bottom Logs Panel
+     * ══════════════════════════════════════════════ */
+    .studio-logs {
+      grid-area: logs;
+      --bottom-tray-expanded-content-max-height: min(24vh, 16rem);
+      background: var(--surface-panel-base);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .studio-logs::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--overlay-3);
+      pointer-events: none;
+    }
+
+    .logs-header {
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-panel-padding);
+      height: var(--density-strip-height);
+      border-bottom: 1px solid var(--border-subtle);
+      gap: var(--space-8);
+      flex-shrink: 0;
+    }
+
+    .logs-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .logs-tab {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-8);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .logs-tab:hover {
+      color: var(--text-secondary);
+    }
+    .logs-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .logs-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-8) var(--density-panel-padding);
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      line-height: 1.7;
+    }
+    .logs-body[aria-hidden="true"] {
+      display: none;
+    }
+
+    .studio-logs[data-bottom-tray-state="collapsed"] [data-bottom-tray-content] [role="tabpanel"] {
+      height: 0;
+      max-height: 0;
+      overflow: hidden;
+      padding-block: 0;
+    }
+
+    .log-line {
+      display: flex;
+      gap: var(--space-8);
+      white-space: nowrap;
+    }
+
+    .log-time {
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .log-level {
+      flex-shrink: 0;
+      font-weight: var(--font-weight-medium);
+      min-width: 40px;
+    }
+    .log-level.info { color: var(--brand-accent); }
+    .log-level.warn { color: var(--system-degraded-fg); }
+    .log-level.error { color: var(--system-down-fg); }
+    .log-level.success { color: var(--system-healthy-fg); }
+
+    .log-msg {
+      color: var(--text-secondary);
+    }
+
+    .log-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-1) var(--space-6);
+      border-radius: var(--radius-3);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+    .log-status-badge.success {
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+    }
+
+    /* ── Status Bar ── */
+    .studio-status-bar {
+      grid-area: logs;
+      display: none; /* hidden — logs panel covers the status bar row */
+    }
+
+    /* ══════════════════════════════════════════════
+     * Utility: Tabular nums
+     * ══════════════════════════════════════════════ */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Panel Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Form Builder tab active */
+    .shell-studio:has(#studio-mode-form:checked)
+      [data-panel="studio-mode-form"] { display: flex; flex-direction: column; gap: var(--density-section-gap); }
+
+    /* Code Editor tab active */
+    .shell-studio:has(#studio-mode-code:checked)
+      [data-panel="studio-mode-code"] { display: flex; flex-direction: column; gap: var(--density-section-gap); }
+
+    /* Radio-tab label styling when checked */
+    .shell-studio:has(#studio-mode-form:checked)
+      label[for="studio-mode-form"] {
+        color: var(--text-primary);
+        border-bottom-color: var(--brand-accent);
+      }
+    .shell-studio:has(#studio-mode-code:checked)
+      label[for="studio-mode-code"] {
+        color: var(--text-primary);
+        border-bottom-color: var(--brand-accent);
+      }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Overlay 1: 策略保存 Modal */
+    :root:has(#overlay-save-strategy:checked)
+      [data-overlay="overlay-save-strategy"] { display: flex; }
+
+    /* Overlay 2: 回测参数配置 Sheet */
+    :root:has(#overlay-backtest-config:checked)
+      [data-overlay="overlay-backtest-config"] { display: flex; }
+
+    /* Overlay 3: 因子预处理预览 Drawer */
+    :root:has(#overlay-factor-preview:checked)
+      [data-overlay="overlay-factor-preview"] { display: flex; }
+
+    /* Overlay 4: 校验结果 Toast */
+    :root:has(#overlay-validation-toast:checked)
+      [data-overlay="overlay-validation-toast"] { display: flex; }
+
+    /* Overlay 5: 确认策略删除 Modal */
+    :root:has(#overlay-delete-strategy:checked)
+      [data-overlay="overlay-delete-strategy"] { display: flex; }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-16);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    /* Toast variant — narrow, top-right positioned */
+    .overlay-backdrop .overlay-toast {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-6);
+      padding: var(--space-12) var(--space-16);
+      width: 360px;
+      position: absolute;
+      top: var(--space-24);
+      right: var(--space-24);
+      z-index: 1;
+    }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Code Editor panel styling
+     * ══════════════════════════════════════════════ */
+    .code-editor-mock {
+      background: var(--surface-app);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-12);
+      line-height: 1.7;
+      padding: var(--space-12);
+      color: var(--text-secondary);
+      min-height: 400px;
+      position: relative;
+      overflow: hidden;
+    }
+    .code-editor-mock::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 32px;
+      background: var(--surface-panel-base);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .code-line {
+      display: flex;
+      gap: var(--space-12);
+      white-space: pre;
+    }
+    .code-line-num {
+      color: var(--text-disabled);
+      min-width: 28px;
+      text-align: right;
+      user-select: none;
+    }
+    .code-keyword { color: var(--brand-accent); }
+    .code-string { color: var(--system-healthy-fg); }
+    .code-comment { color: var(--text-disabled); font-style: italic; }
+    .code-func { color: var(--system-degraded-fg); }
+    .code-param { color: var(--text-primary); }
+
+    /* ══════════════════════════════════════════════
+     * State: Stale — data may be outdated
+     * ══════════════════════════════════════════════ */
+    .state-stale {
+      border: 1px solid var(--system-degraded-fg);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .state-stale--dashed {
+      border-style: dashed;
+    }
+    .state-stale-icon {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .state-stale-message {
+      font-size: var(--font-size-12);
+      color: var(--system-degraded-fg);
+    }
+    .state-stale-message-sub {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .state-stale-title {
+      font-size: var(--font-size-12);
+      color: var(--system-degraded-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Reduced motion
+     * ══════════════════════════════════════════════ */
+    @media (prefers-reduced-motion: reduce) {
+      .studio-action, .mode-tab, .source-item, .factor-weight-slider::-webkit-slider-thumb,
+      .inspector-item, .ai-action, .logs-tab {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Extracted Component Classes (inline → CSS)
+     * ══════════════════════════════════════════════ */
+
+    /* ── Source icon color semantics ── */
+    .source-icon--brand    { color: var(--brand-accent); }
+    .source-icon--healthy  { color: var(--system-healthy-fg); }
+    .source-icon--degraded { color: var(--system-degraded-fg); }
+    .source-icon--muted    { color: var(--text-tertiary); }
+    .source-icon--disabled { color: var(--text-disabled); }
+
+    /* ── Strategy header delete button ── */
+    .header-delete-btn {
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: var(--radius-4);
+      flex: 0 0 28px;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .header-delete-btn:hover {
+      color: var(--risk-critical-fg);
+      background: var(--risk-critical-bg);
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 28%, var(--border-subtle));
+    }
+
+    .header-delete-btn:focus-visible {
+      color: var(--risk-critical-fg);
+      background: var(--risk-critical-bg);
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 28%, var(--border-subtle));
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 1440px) {
+      .studio-header {
+        gap: var(--space-8);
+      }
+
+      .strategy-run-chip[data-answer-evidence],
+      .strategy-run-chip--optional {
+        display: none;
+      }
+
+      .studio-header [data-header-utility-bar] {
+        gap: var(--space-4);
+      }
+    }
+
+    /* ── Breadcrumb separator ── */
+    .breadcrumb-sep {
+      color: var(--text-disabled);
+    }
+
+    /* ── Pipeline description area ── */
+    .pipeline-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-top: var(--space-4);
+    }
+
+    /* ── Inspector section flex helpers ── */
+    .inspector-section--fixed  { flex: 0 0 auto; }
+    .inspector-section--scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+    /* ── Summary value muted ── */
+    .summary-value--muted { color: var(--text-tertiary); }
+
+    /* ── Logs header spacer ── */
+    .logs-spacer { flex: 1; }
+    .logs-meta {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .status-dot--sm .status-badge-dot {
+      width: 5px;
+      height: 5px;
+    }
+
+    /* ── Factor weight disabled ── */
+    .factor-weight-value--disabled { color: var(--text-disabled); }
+
+    /* ── Code editor toolbar ── */
+    .code-editor-toolbar {
+      height: 32px;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-12);
+      position: relative;
+      z-index: 1;
+    }
+    .code-editor-filename {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      margin-right: var(--space-12);
+    }
+    .code-editor-meta {
+      color: var(--text-disabled);
+      font-size: var(--font-size-12);
+    }
+    .code-editor-body {
+      padding-top: var(--space-12);
+    }
+
+    /* ── Distribution chart mock ── */
+    .distribution-chart {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-16);
+      background: var(--surface-panel-base);
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+    }
+    .distribution-bars {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: var(--space-3);
+      height: 80px;
+      margin-bottom: var(--space-8);
+    }
+    .distribution-bar {
+      width: 8px;
+      border-radius: 2px 2px 0 0;
+    }
+    .distribution-legend {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-12);
+      font-size: var(--font-size-12);
+      margin-top: var(--space-4);
+    }
+    .distribution-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .distribution-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    /* ── Delete confirmation layout ── */
+    .delete-confirm-body {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-10);
+      padding: var(--space-8) 0;
+    }
+    .delete-confirm-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--risk-critical-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .delete-confirm-title {
+      font-size: var(--font-size-13);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-4);
+    }
+    .delete-confirm-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+    }
+
+    /* ── Toast result layout ── */
+    .toast-result-body {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+    }
+    .toast-result-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--system-healthy-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .toast-result-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+    .toast-result-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .toast-close {
+      cursor: pointer;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-14);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Overlay radio group ── */
+    .overlay-radio-group {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-4) 0;
+    }
+    .overlay-radio-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .overlay-radio-label--primary { color: var(--text-primary); }
+    .overlay-radio-label--secondary { color: var(--text-secondary); }
+    .overlay-radio-label input[type="radio"] {
+      accent-color: var(--brand-accent);
+    }
+
+    /* ── Overlay textarea full width ── */
+    .overlay-textarea-full {
+      padding: var(--space-6) 0;
+    }
+    .overlay-textarea-full .form-textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* ── Studio actions compact gap ── */
+    .studio-actions--compact { gap: var(--space-4); }
+
+    /* ── Panel body no padding ── */
+    .studio-panel-body--flush { padding: 0; }
+
+    /* ── Gallery: state stale compact ── */
+    .state-stale--compact {
+      border-radius: var(--radius-6);
+      padding: var(--space-12);
+      gap: var(--space-8);
+    }
+
+    /* ── Gallery: selected source list ── */
+    .gallery-source-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Extracted Inline Styles: Distribution Bars
+     * 11 bars × 2 locations = 22 inline → CSS classes
+     * ══════════════════════════════════════════════ */
+    .distribution-bar--a30 { background: color-mix(in oklch, var(--brand-accent) 30%, transparent); }
+    .distribution-bar--a40 { background: color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+    .distribution-bar--a55 { background: color-mix(in oklch, var(--brand-accent) 55%, transparent); }
+    .distribution-bar--a70 { background: color-mix(in oklch, var(--brand-accent) 70%, transparent); }
+    .distribution-bar--a85 { background: color-mix(in oklch, var(--brand-accent) 85%, transparent); }
+    .distribution-bar--a100 { background: var(--brand-accent); }
+    .distribution-bar--h15 { height: 15%; }
+    .distribution-bar--h20 { height: 20%; }
+    .distribution-bar--h25 { height: 25%; }
+    .distribution-bar--h35 { height: 35%; }
+    .distribution-bar--h45 { height: 45%; }
+    .distribution-bar--h55 { height: 55%; }
+    .distribution-bar--h70 { height: 70%; }
+    .distribution-bar--h75 { height: 75%; }
+    .distribution-bar--h90 { height: 90%; }
+    .distribution-bar--h95 { height: 95%; }
+    .distribution-bar--h100 { height: 100%; }
+
+    /* Distribution legend dots */
+    .distribution-legend-dot--before { background: color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+    .distribution-legend-dot--after  { background: var(--brand-accent); }
+
+    /* ── Gallery inline extraction ── */
+    .gallery-source-selected {
+      background: var(--brand-accent-subtle);
+    }
+    .gallery-source-selected-label {
+      color: var(--brand-accent);
+      font-size: var(--font-size-12);
+    }
+    .state-stale--mb0 { margin-bottom: var(--space-8); }
+    .state-error-retry--mt0 { margin-top: 0; }
+
+    /* ── Inspector tabs (inline → class) ── */
+    .inspector-tabs-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .inspector-tabs-bar {
+      display: flex;
+      align-items: center;
+      padding: 0 var(--density-panel-padding);
+      border-bottom: 1px solid var(--border-subtle);
+      gap: 0;
+      flex-shrink: 0;
+    }
+    .inspector-tab {
+      font-size: var(--font-size-12);
+      padding: var(--space-4) var(--space-8);
+    }
+    .inspector-tab-icon {
+      width: 12px;
+      height: 12px;
+    }
+    .inspector-tab-panel {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .inspector-tab-panel[aria-hidden="true"] {
+      display: none;
+    }
+
+    /* ── Equity curve label row (inline → class) ── */
+    .equity-curve-value-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    /* ── Stability section (inline → class) ── */
+    .stability-section {
+      margin-top: var(--space-10);
+    }
+    .stability-section-title {
+      margin-bottom: var(--space-6);
+      display: block;
+    }
+
+    /* ── Summary value semantic colors (inline → class) ── */
+    .summary-value--brand { color: var(--brand-accent); }
+    .summary-value--healthy { color: var(--system-healthy-fg); }
+    .summary-value--degraded { color: var(--system-degraded-fg); }
+
+    /* ── AI action inline extraction ── */
+    .ai-action--inline { margin-top: var(--space-4); display: inline-flex; }
+
+    /* ── Header icon brand inline extraction ── */
+    .header-strategy-icon { color: var(--brand-accent); flex-shrink: 0; }
+
+    /* ══════════════════════════════════════════════
+     * Equity Curve SVG Chart — Inspector Panel
+     * ══════════════════════════════════════════════ */
+    .equity-curve-container {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-12);
+      position: relative;
+      overflow: hidden;
+    }
+    .equity-curve-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+    .equity-curve-svg {
+      width: 100%;
+      height: 80px;
+      display: block;
+    }
+    .equity-curve-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+    .equity-curve-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+    .equity-curve-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--market-up-fg);
+    }
+    .equity-curve-legend {
+      display: flex;
+      gap: var(--space-12);
+      margin-top: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .equity-curve-legend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: var(--space-2);
+    }
+    .equity-curve-legend-dot--strategy { background: var(--brand-accent); }
+    .equity-curve-legend-dot--benchmark { background: var(--text-disabled); }
+
+    /* ══════════════════════════════════════════════
+     * Performance Metrics Grid — Inspector
+     * ══════════════════════════════════════════════ */
+    .perf-metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+    }
+    .perf-metric-card {
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      padding: var(--space-8);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .perf-metric-card:hover {
+      border-color: var(--border-default);
+    }
+    .perf-metric-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .perf-metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      letter-spacing: 0;
+    }
+    .perf-metric-value.positive { color: var(--market-up-fg); }
+    .perf-metric-value.negative { color: var(--market-down-fg); }
+    .perf-metric-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Mini sparkline for perf cards ── */
+    .perf-metric-sparkline {
+      position: absolute;
+      bottom: var(--space-4);
+      right: var(--space-6);
+      width: var(--sparkline-width);
+      height: var(--sparkline-height);
+      opacity: 0.4;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Strategy Status Tag — progress indicator
+     * ══════════════════════════════════════════════ */
+    .strategy-status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-3);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .strategy-status-tag.draft {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+    .strategy-status-tag.validated {
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+    }
+    .strategy-status-tag.running {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+    .strategy-status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .strategy-status-tag.validated .strategy-status-dot {
+      background: var(--system-healthy-fg);
+    }
+    .strategy-status-tag.running .strategy-status-dot {
+      background: var(--brand-accent);
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+    .strategy-status-tag.draft .strategy-status-dot {
+      background: var(--text-tertiary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Terminal Status Bar
+     * ══════════════════════════════════════════════ */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: var(--status-bar-height, 22px);
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+    .status-indicator {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Enhanced Panel Hover Effects
+     * ══════════════════════════════════════════════ */
+    .studio-panel {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .studio-panel:hover {
+      border-color: var(--border-default);
+    }
+
+    /* ── Factor weight slider track fill (visual enhancement) ── */
+    .factor-weight-slider {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 45%,
+        var(--border-default) 45%,
+        var(--border-default) 100%
+      );
+    }
+
+    /* ══════════════════════════════════════════════
+     * Parameter Comparison Matrix
+     * ══════════════════════════════════════════════ */
+    .param-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-12);
+    }
+    .param-matrix th {
+      text-align: left;
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-6) var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-10);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .param-matrix td {
+      padding: var(--space-4) var(--space-8);
+      border-bottom: 1px solid var(--overlay-2);
+      color: var(--text-secondary);
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums;
+    }
+    .param-matrix tr:last-child td { border-bottom: none; }
+    .param-matrix .param-label {
+      font-family: var(--font-family-ui);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .param-matrix .param-current {
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
+    }
+    .param-matrix .param-delta {
+      font-size: var(--font-size-10);
+      padding: var(--space-1) var(--space-4);
+      border-radius: var(--radius-3);
+    }
+    .param-delta.positive {
+      color: var(--market-up-fg);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .param-delta.negative {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+    }
+    .param-delta.neutral {
+      color: var(--text-tertiary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Progress ring for pipeline steps ── */
+    .pipeline-progress-ring {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+    .pipeline-progress-ring circle {
+      fill: none;
+      stroke-width: 2;
+    }
+    .pipeline-progress-ring .ring-bg {
+      stroke: var(--border-subtle);
+    }
+    .pipeline-progress-ring .ring-fg {
+      stroke: var(--brand-accent);
+      stroke-dasharray: 28;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.3s ease;
+    }
+    .pipeline-node.optional .pipeline-progress-ring .ring-fg {
+      stroke: var(--text-disabled);
+      stroke-dashoffset: 28;
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg class="noise-svg-source" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Strategy Studio · Compact · A股</div>
+
+  <div class="shell-studio" data-resizable-panel-group="studio-workspace">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon active" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+
+    </nav>
+
+    <!-- ═══ Studio Header ═══ -->
+    <header class="shell-header studio-header" data-contract-slot="header" data-primary-answer-equivalent data-primary-weight="dominant" aria-label="影响范围：多因子动量策略 v2.3 校验运行状态">
+      <h1 class="header-title">策略工作台</h1>
+      <div class="strategy-name">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon" data-icon="strategy-blueprint">
+          <rect x="4" y="3" width="12" height="14" rx="2"/>
+          <path d="M7 7h6M7 10h3"/>
+          <path d="M7 14l2 2 4-5"/>
+        </svg>
+        <span class="strategy-name-text">多因子动量策略 v2.3</span>
+        <span class="status-badge">
+          <span class="status-badge-dot"></span>
+          已保存
+        </span>
+        <span class="strategy-run-chip" data-answer-judgment>校验通过，Dry Run 可执行</span>
+        <span class="strategy-run-chip" data-answer-metric data-answer-evidence>11 / 12 通过</span>
+        <span class="strategy-run-chip" data-answer-evidence>1 项警告</span>
+        <span class="strategy-run-chip strategy-run-chip--optional" data-answer-evidence>目标 Backtest Result</span>
+
+        <label for="overlay-delete-strategy" class="header-delete-btn" title="删除策略" role="button" aria-label="删除策略" tabindex="0">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V3h6v2M6 5v12a1 1 0 001 1h6a1 1 0 001-1V5"/></svg>
+        </label>
+      </div>
+      <div class="studio-actions header-actions" role="toolbar" aria-label="策略工作台首屏决策" data-decision-cluster>
+
+        <label for="overlay-save-strategy" class="studio-action" tabindex="0" data-decision-option aria-label="保存策略" data-action-tier="context">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h10l2 2v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4l2-1z"/><path d="M7 3v5h6V3"/><path d="M6 16h8"/></svg>
+          保存
+        </label>
+
+        <label for="overlay-validation-toast" class="studio-action" tabindex="0" data-decision-option aria-label="校验策略" data-action-icon="shield-check" data-action-tier="context">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l6 2.2v4.6c0 3.8-2.4 7.1-6 8.7-3.6-1.6-6-4.9-6-8.7V4.2L10 2z"/><path d="M7.2 10.2l1.8 1.8 3.8-4.2"/></svg>
+          校验
+        </label>
+        <button class="studio-action" tabindex="0" data-decision-option aria-label="执行 Dry Run 模拟" data-action-icon="test-tube" data-action-tier="overflow">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h6"/><path d="M8 3v5.5l-3.8 5.8A2.3 2.3 0 006.1 18h7.8a2.3 2.3 0 001.9-3.7L12 8.5V3"/><path d="M6.8 13h6.4"/></svg>
+          Dry Run
+        </button>
+
+        <label for="overlay-backtest-config" class="studio-action primary" role="button" tabindex="0" data-decision-option aria-label="提交回测" data-action-icon="rocket" data-answer-action data-action-tier="primary">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3c2.5.6 4.4 2.5 5 5l-5.5 5.5-4-4L12 3z"/><path d="M8 10l-3 1 4 4 1-3"/><path d="M5 15l-2 2"/><circle cx="13" cy="7" r="1.2"/></svg>
+          提交回测
+        </label>
+        <button class="studio-action" type="button" data-decision-overflow aria-label="更多策略操作" data-action-tier="overflow">...</button>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" data-action-tier="overflow" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" data-action-tier="overflow" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" data-action-tier="overflow" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" data-action-tier="overflow" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" data-action-tier="overflow" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-action-tier="overflow" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══ Mode Switch Bar (radio tab system) ═══ -->
+    <div class="studio-mode-bar tab-group" data-tab-group="studio-mode" role="tablist" aria-label="编辑模式">
+      <input type="radio" name="studio-mode" id="studio-mode-form" checked class="tab-radio sr-only">
+      <input type="radio" name="studio-mode" id="studio-mode-code" class="tab-radio sr-only">
+      <div class="mode-tabs">
+        <label for="studio-mode-form" class="mode-tab active" role="tab" tabindex="0" id="tab-studio-mode-form" aria-selected="true" aria-controls="panel-studio-mode-form">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="3" rx="1"/><rect x="3" y="8.5" width="14" height="3" rx="1"/><rect x="3" y="14" width="14" height="3" rx="1"/></svg>
+          Form Builder
+        </label>
+        <label for="studio-mode-code" class="mode-tab" role="tab" tabindex="0" id="tab-studio-mode-code" aria-selected="false" aria-controls="panel-studio-mode-code">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12M4 8h8M4 12h10M4 16h6"/></svg>
+          Code Editor
+        </label>
+      </div>
+      <div class="mode-bar-sep"></div>
+      <div class="mode-bar-breadcrumb">
+        <span>研究</span>
+        <span class="breadcrumb-sep">/</span>
+        <span>策略</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="crumb-current">多因子动量策略 v2.3</span>
+      </div>
+    </div>
+
+    <!-- ═══ Sources Panel (Left) ═══ -->
+    <aside class="studio-sources" id="studio-sources-panel" aria-label="策略资源" data-contract-slot="sidebar">
+      <!-- Factors -->
+      <div class="source-section">
+        <div class="source-section-title">因子</div>
+        <div class="source-item active" tabindex="0" role="button" aria-pressed="true">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--brand">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-momentum"><path d="M3 13h6"/><path d="M3 9h9"/><path d="M3 5h12"/><path d="M12 2l4 3-4 3"/></svg>
+            </div>
+            <span class="source-item-name">动量因子</span>
+          </div>
+          <span class="source-item-badge ok">已启用</span>
+        </div>
+        <div class="source-item" tabindex="0" role="button">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--healthy">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-volatility"><path d="M2.5 10c1.5-4 3-4 4.5 0s3 4 4.5 0 3-4 6 0"/><path d="M3 15h14"/></svg>
+            </div>
+            <span class="source-item-name">波动率因子</span>
+          </div>
+          <span class="source-item-badge ok">已启用</span>
+        </div>
+        <div class="source-item" tabindex="0" role="button">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--degraded">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-valuation"><path d="M10 3v14"/><path d="M5 6h10"/><path d="M5 6l-3 5h6L5 6z"/><path d="M15 6l-3 5h6l-3-5z"/></svg>
+            </div>
+            <span class="source-item-name">估值因子</span>
+          </div>
+          <span class="source-item-badge warn">待校验</span>
+        </div>
+        <div class="source-item" tabindex="0" role="button">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--muted">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-liquidity"><path d="M10 2c3.2 4.2 5 6.6 5 9a5 5 0 01-10 0c0-2.4 1.8-4.8 5-9z"/><path d="M6.5 13c1.2.8 2.4 1.2 3.5 1.2s2.3-.4 3.5-1.2"/></svg>
+            </div>
+            <span class="source-item-name">流动性因子</span>
+          </div>
+          <span class="source-item-badge idle">未启用</span>
+        </div>
+      </div>
+
+      <!-- Universe -->
+      <div class="source-section">
+        <div class="source-section-title">股票池</div>
+        <div class="source-item" tabindex="0" role="button">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--brand">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M3 9h14M9 3v14"/></svg>
+            </div>
+            <span class="source-item-name">沪深300成分股</span>
+          </div>
+          <span class="source-item-meta tabular-nums" data-tooltip="沪深300成分股，当前可交易 297 只">300 只</span>
+        </div>
+        <div class="source-item" tabindex="0" role="button">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--muted">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M3 9h14M9 3v14"/></svg>
+            </div>
+            <span class="source-item-name">中证500成分股</span>
+          </div>
+          <span class="source-item-meta tabular-nums" data-tooltip="中证500成分股，当前可交易 492 只">500 只</span>
+        </div>
+      </div>
+
+      <!-- Risk Rules -->
+      <div class="source-section">
+        <div class="source-section-title">风险规则</div>
+        <div class="source-item" tabindex="0" role="button">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--degraded">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+            </div>
+            <span class="source-item-name">行业偏离度</span>
+          </div>
+          <span class="source-item-meta tabular-nums" data-tooltip="行业偏离度上限 5%，当前 3.2%">≤ 5%</span>
+        </div>
+        <div class="source-item" tabindex="0" role="button">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--degraded">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+            </div>
+            <span class="source-item-name">单股权重上限</span>
+          </div>
+          <span class="source-item-meta tabular-nums" data-tooltip="单股权重上限 10%，当前最高 4.8%">≤ 10%</span>
+        </div>
+      </div>
+
+      <!-- Factor Preprocessing Pipeline -->
+      <div class="source-section">
+        <div class="source-section-title">因子预处理管道</div>
+        <div class="pipeline-visual" role="list" aria-label="预处理管道步骤">
+          <div class="pipeline-node" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>
+            去极值
+          </div>
+          <div class="pipeline-arrow"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 4l4 4-4 4"/></svg></div>
+          <div class="pipeline-node active" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10h12M10 4v12"/></svg>
+            标准化
+          </div>
+          <div class="pipeline-arrow"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 4l4 4-4 4"/></svg></div>
+          <div class="pipeline-node active" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/></svg>
+            中性化
+          </div>
+          <div class="pipeline-arrow"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 4l4 4-4 4"/></svg></div>
+          <div class="pipeline-node optional" role="listitem">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M8 10h4"/></svg>
+            正交化
+          </div>
+        </div>
+        <div class="pipeline-desc">
+          原始因子 → 处理后因子
+
+          <label for="overlay-factor-preview" class="ai-action ai-action--inline" tabindex="0">预览处理后分布</label>
+        </div>
+      </div>
+    </aside>
+
+    <div class="resize-separator" data-resize-separator data-resize-panel-id="studio-sources-panel" data-resize-var="--prototype-studio-source-width" data-resize-default="240" data-resize-min="180" data-resize-max="360" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整资源栏宽度" aria-orientation="vertical" aria-controls="studio-sources-panel main-content" aria-valuemin="180" aria-valuemax="360" aria-valuenow="240" aria-valuetext="调整资源栏宽度 240 像素"></div>
+
+    <!-- ═══ Main Studio Canvas (Tab Panels) ═══ -->
+    <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" data-selected-object-region role="main" data-secondary-context>
+
+      <!-- Tab Panel: Form Builder -->
+      <div class="tab-panel" data-panel="studio-mode-form" id="panel-studio-mode-form" role="tabpanel" aria-labelledby="tab-studio-mode-form" aria-hidden="false">
+
+      <!-- Panel 1: Strategy Basic Info -->
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="0">
+        <div class="studio-panel-header">
+          <div>
+            <div class="studio-panel-title">策略基本信息</div>
+          </div>
+        </div>
+        <div class="studio-panel-body">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label" for="strategy-name">策略名称</label>
+              <input class="form-input" id="strategy-name" type="text" value="多因子动量策略 v2.3" aria-required="true">
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="strategy-type">策略类型</label>
+              <select class="form-select" id="strategy-type" aria-label="策略类型">
+                <option value="multi-factor" selected>多因子选股</option>
+                <option value="single-factor">单因子增强</option>
+                <option value="timing">择时策略</option>
+                <option value="stat-arb">统计套利</option>
+              </select>
+            </div>
+            <div class="form-field form-field--full">
+              <label class="form-label" for="strategy-desc">策略描述</label>
+              <textarea class="form-textarea" id="strategy-desc" rows="2" aria-label="策略描述">基于动量、波动率、估值三个因子的沪深300增强策略，采用风险平价权重分配，控制行业偏离度和个股集中度。</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Factor Weights -->
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="80">
+        <div class="studio-panel-header">
+          <div>
+            <div class="studio-panel-title">因子权重配置</div>
+            <div class="studio-panel-subtitle">调整各因子在综合评分中的权重</div>
+          </div>
+          <button class="studio-action" tabindex="0" aria-label="自动均衡权重" data-action-tier="context">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10h12M10 4l4 6-4 6"/></svg>
+            自动均衡
+          </button>
+        </div>
+        <div class="studio-panel-body">
+          <div class="factor-weight-list">
+            <div class="factor-weight-row">
+              <div class="factor-weight-label">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--brand" data-icon="factor-momentum"><path d="M3 13h6"/><path d="M3 9h9"/><path d="M3 5h12"/><path d="M12 2l4 3-4 3"/></svg>
+                动量因子
+              </div>
+              <input class="factor-weight-slider" type="range" min="0" max="100" value="45" aria-label="动量因子权重">
+              <span class="factor-weight-value tabular-nums">45%</span>
+            </div>
+            <div class="factor-weight-row">
+              <div class="factor-weight-label">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--healthy" data-icon="factor-volatility"><path d="M2.5 10c1.5-4 3-4 4.5 0s3 4 4.5 0 3-4 6 0"/><path d="M3 15h14"/></svg>
+                波动率因子
+              </div>
+              <input class="factor-weight-slider" type="range" min="0" max="100" value="30" aria-label="波动率因子权重">
+              <span class="factor-weight-value tabular-nums">30%</span>
+            </div>
+            <div class="factor-weight-row">
+              <div class="factor-weight-label">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--degraded" data-icon="factor-valuation"><path d="M10 3v14"/><path d="M5 6h10"/><path d="M5 6l-3 5h6L5 6z"/><path d="M15 6l-3 5h6l-3-5z"/></svg>
+                估值因子
+              </div>
+              <input class="factor-weight-slider" type="range" min="0" max="100" value="25" aria-label="估值因子权重">
+              <span class="factor-weight-value tabular-nums">25%</span>
+            </div>
+            <div class="factor-weight-row">
+              <div class="factor-weight-label">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--disabled" data-icon="factor-liquidity"><path d="M10 2c3.2 4.2 5 6.6 5 9a5 5 0 01-10 0c0-2.4 1.8-4.8 5-9z"/><path d="M6.5 13c1.2.8 2.4 1.2 3.5 1.2s2.3-.4 3.5-1.2"/></svg>
+                流动性因子
+              </div>
+              <input class="factor-weight-slider" type="range" min="0" max="100" value="0" aria-label="流动性因子权重">
+              <span class="factor-weight-value factor-weight-value--disabled tabular-nums">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Portfolio Optimization -->
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="120">
+        <div class="studio-panel-header">
+          <div>
+            <div class="studio-panel-title">组合优化配置</div>
+          </div>
+        </div>
+        <div class="studio-panel-body">
+          <div class="opt-grid">
+            <div class="opt-field">
+              <div class="opt-field-label">优化方法</div>
+              <div class="opt-field-value">风险平价</div>
+            </div>
+            <div class="opt-field">
+              <div class="opt-field-label">再平衡频率</div>
+              <div class="opt-field-value">月度</div>
+            </div>
+            <div class="opt-field">
+              <div class="opt-field-label">最大换手率</div>
+              <div class="opt-field-value">30%</div>
+            </div>
+            <div class="opt-field">
+              <div class="opt-field-label">目标波动率</div>
+              <div class="opt-field-value">12.0%</div>
+            </div>
+            <div class="opt-field">
+              <div class="opt-field-label">跟踪误差上限</div>
+              <div class="opt-field-value">4.0%</div>
+            </div>
+            <div class="opt-field">
+              <div class="opt-field-label">最大回撤限制</div>
+              <div class="opt-field-value">-15.0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Parameter Comparison Matrix -->
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="160">
+        <div class="studio-panel-header">
+          <div>
+            <div class="studio-panel-title">参数对比矩阵</div>
+            <div class="studio-panel-subtitle">当前配置 vs 上次回测 vs 最优参数</div>
+          </div>
+        </div>
+        <div class="studio-panel-body studio-panel-body--flush">
+          <table class="param-matrix">
+            <thead>
+              <tr>
+                <th>参数</th>
+                <th>当前</th>
+                <th>上次回测</th>
+                <th>变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="param-label">动量权重</td>
+                <td class="param-current">45%</td>
+                <td>40%</td>
+                <td><span class="param-delta positive">+5%</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">波动率权重</td>
+                <td class="param-current">30%</td>
+                <td>35%</td>
+                <td><span class="param-delta negative">-5%</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">估值权重</td>
+                <td class="param-current">25%</td>
+                <td>25%</td>
+                <td><span class="param-delta neutral">--</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">目标波动率</td>
+                <td class="param-current">12.0%</td>
+                <td>10.0%</td>
+                <td><span class="param-delta positive">+2.0%</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">最大换手率</td>
+                <td class="param-current">30%</td>
+                <td>30%</td>
+                <td><span class="param-delta neutral">--</span></td>
+              </tr>
+              <tr>
+                <td class="param-label">跟踪误差上限</td>
+                <td class="param-current">4.0%</td>
+                <td>3.5%</td>
+                <td><span class="param-delta negative">+0.5%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel 4: Backtest Parameters -->
+      <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="240">
+        <div class="studio-panel-header">
+          <div>
+            <div class="studio-panel-title">回测参数</div>
+          </div>
+        </div>
+        <div class="studio-panel-body">
+          <div class="backtest-params">
+            <div class="form-field">
+              <label class="form-label" for="bt-start">起始日期</label>
+              <input class="form-input" id="bt-start" type="text" value="2020-01-02" aria-label="回测起始日期">
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="bt-end">结束日期</label>
+              <input class="form-input" id="bt-end" type="text" value="2025-12-31" aria-label="回测结束日期">
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="bt-freq">调仓频率</label>
+              <select class="form-select" id="bt-freq" aria-label="调仓频率">
+                <option value="daily">每日</option>
+                <option value="weekly">每周</option>
+                <option value="monthly" selected>每月</option>
+                <option value="quarterly">每季</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="bt-capital">初始资金</label>
+              <input class="form-input" id="bt-capital" type="text" value="10,000,000" aria-label="初始资金">
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="bt-benchmark">基准指数</label>
+              <select class="form-select" id="bt-benchmark" aria-label="基准指数">
+                <option value="csi300" selected>沪深300</option>
+                <option value="csi500">中证500</option>
+                <option value="sse50">上证50</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="bt-cost">交易成本</label>
+              <input class="form-input" id="bt-cost" type="text" value="0.15%" aria-label="交易成本">
+            </div>
+          </div>
+        </div>
+      </div>
+      </div><!-- /tab-panel: Form Builder -->
+
+      <!-- Tab Panel: Code Editor -->
+      <div class="tab-panel" data-panel="studio-mode-code" id="panel-studio-mode-code" role="tabpanel" aria-labelledby="tab-studio-mode-code" aria-hidden="true">
+        <div class="studio-panel">
+          <div class="studio-panel-header">
+            <div>
+              <div class="studio-panel-title">策略代码</div>
+              <div class="studio-panel-subtitle">Python · 多因子动量策略 v2.3</div>
+            </div>
+            <div class="studio-actions studio-actions--compact">
+              <button class="studio-action" tabindex="0" aria-label="格式化代码" data-action-tier="context">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h12M4 13h12M8 4v12"/></svg>
+                格式化
+              </button>
+              <button class="studio-action" tabindex="0" aria-label="版本对比" data-action-tier="context">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v14M12 3v14M3 10h14"/></svg>
+                版本对比
+              </button>
+            </div>
+          </div>
+          <div class="studio-panel-body studio-panel-body--flush">
+            <div class="code-editor-mock">
+              <!-- Editor toolbar area -->
+              <div class="code-editor-toolbar">
+                <span class="code-editor-filename">strategy.py</span>
+                <span class="code-editor-meta">UTF-8 · Python</span>
+              </div>
+              <div class="code-editor-body">
+                <div class="code-line"><span class="code-line-num"> 1</span><span class="code-comment"># 多因子动量策略 v2.3</span></div>
+                <div class="code-line"><span class="code-line-num"> 2</span><span class="code-keyword">from</span> <span class="code-param">ditto.strategy</span> <span class="code-keyword">import</span> <span class="code-param">Strategy, FactorWeight</span></div>
+                <div class="code-line"><span class="code-line-num"> 3</span><span class="code-keyword">from</span> <span class="code-param">ditto.risk</span> <span class="code-keyword">import</span> <span class="code-param">IndustryConstraint, ConcentrationLimit</span></div>
+                <div class="code-line"><span class="code-line-num"> 4</span></div>
+                <div class="code-line"><span class="code-line-num"> 5</span><span class="code-keyword">class</span> <span class="code-func">MomentumStrategy</span>(<span class="code-param">Strategy</span>):</div>
+                <div class="code-line"><span class="code-line-num"> 6</span>    <span class="code-param">name</span> = <span class="code-string">"多因子动量策略"</span></div>
+                <div class="code-line"><span class="code-line-num"> 7</span>    <span class="code-param">universe</span> = <span class="code-string">"CSI300"</span></div>
+                <div class="code-line"><span class="code-line-num"> 8</span></div>
+                <div class="code-line"><span class="code-line-num"> 9</span>    <span class="code-keyword">def</span> <span class="code-func">factors</span>(<span class="code-param">self</span>):</div>
+                <div class="code-line"><span class="code-line-num">10</span>        <span class="code-keyword">return</span> [</div>
+                <div class="code-line"><span class="code-line-num">11</span>            <span class="code-param">FactorWeight</span>(<span class="code-string">"动量因子"</span>, <span class="code-param">weight</span>=<span class="code-param">0.45</span>),</div>
+                <div class="code-line"><span class="code-line-num">12</span>            <span class="code-param">FactorWeight</span>(<span class="code-string">"波动率因子"</span>, <span class="code-param">weight</span>=<span class="code-param">0.30</span>),</div>
+                <div class="code-line"><span class="code-line-num">13</span>            <span class="code-param">FactorWeight</span>(<span class="code-string">"估值因子"</span>, <span class="code-param">weight</span>=<span class="code-param">0.25</span>),</div>
+                <div class="code-line"><span class="code-line-num">14</span>        ]</div>
+                <div class="code-line"><span class="code-line-num">15</span></div>
+                <div class="code-line"><span class="code-line-num">16</span>    <span class="code-keyword">def</span> <span class="code-func">preprocess</span>(<span class="code-param">self</span>, <span class="code-param">factor_data</span>):</div>
+                <div class="code-line"><span class="code-line-num">17</span>        <span class="code-param">factor_data</span>.<span class="code-func">winsorize</span>(<span class="code-param">method</span>=<span class="code-string">"mad"</span>)</div>
+                <div class="code-line"><span class="code-line-num">18</span>        <span class="code-param">factor_data</span>.<span class="code-func">standardize</span>(<span class="code-param">method</span>=<span class="code-string">"zscore"</span>)</div>
+                <div class="code-line"><span class="code-line-num">19</span>        <span class="code-param">factor_data</span>.<span class="code-func">neutralize</span>(<span class="code-param">industry</span>=<span class="code-keyword">True</span>)</div>
+                <div class="code-line"><span class="code-line-num">20</span></div>
+                <div class="code-line"><span class="code-line-num">21</span>    <span class="code-keyword">def</span> <span class="code-func">risk_rules</span>(<span class="code-param">self</span>):</div>
+                <div class="code-line"><span class="code-line-num">22</span>        <span class="code-keyword">return</span> [</div>
+                <div class="code-line"><span class="code-line-num">23</span>            <span class="code-param">IndustryConstraint</span>(<span class="code-param">max_deviation</span>=<span class="code-param">0.05</span>),</div>
+                <div class="code-line"><span class="code-line-num">24</span>            <span class="code-param">ConcentrationLimit</span>(<span class="code-param">max_weight</span>=<span class="code-param">0.10</span>),</div>
+                <div class="code-line"><span class="code-line-num">25</span>        ]</div>
+                <div class="code-line"><span class="code-line-num">26</span></div>
+                <div class="code-line"><span class="code-line-num">27</span>    <span class="code-keyword">def</span> <span class="code-func">rebalance</span>(<span class="code-param">self</span>, <span class="code-param">context</span>):</div>
+                <div class="code-line"><span class="code-line-num">28</span>        <span class="code-param">scores</span> = <span class="code-param">self</span>.<span class="code-func">score</span>(<span class="code-param">context</span>.<span class="code-param">universe</span>)</div>
+                <div class="code-line"><span class="code-line-num">29</span>        <span class="code-param">target</span> = <span class="code-param">self</span>.<span class="code-func">optimize</span>(<span class="code-param">scores</span>, <span class="code-param">method</span>=<span class="code-string">"risk_parity"</span>)</div>
+                <div class="code-line"><span class="code-line-num">30</span>        <span class="code-keyword">return</span> <span class="code-param">target</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /tab-panel: Code Editor -->
+
+    </main>
+
+    <!-- ═══ Inspector Panel (Right) ═══ -->
+    <div class="resize-separator" data-resize-separator data-resize-panel-id="studio-inspector-panel" data-resize-var="--prototype-studio-inspector-width" data-resize-default="300" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整检查器宽度" aria-orientation="vertical" aria-controls="main-content studio-inspector-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="300" aria-valuetext="调整检查器宽度 300 像素"></div>
+
+    <aside class="studio-inspector" id="studio-inspector-panel" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region data-secondary-context>
+      <!-- AI Assistant (always visible above tabs) -->
+      <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0" data-decision-evidence data-default-open="true" aria-label="AI 助手建议" data-secondary-context>
+        <div class="inspector-section-title">AI 助手</div>
+        <div class="strategy-status-tag validated" title="策略校验通过">
+          <span class="strategy-status-dot" data-icon="status-validated"></span>
+          已校验
+        </div>
+        <div class="ai-assistant">
+          <div class="ai-message">
+            <strong>建议：</strong>当前动量因子权重较高（45%），在震荡市中可能增加回撤。建议考虑加入低波动因子作为防御补充。
+          </div>
+          <button class="ai-action" tabindex="0" aria-label="采纳建议">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10h12M10 4l4 6-4 6"/></svg>
+            采纳建议
+          </button>
+        </div>
+      </div>
+
+      <!-- Inspector Tabs: 策略 / 参数 / 绩效 -->
+      <div data-tabs="strategy-tabs" class="inspector-tabs-container">
+        <div class="inspector-tabs-bar">
+          <span data-tab-target="strategy" class="mode-tab active inspector-tab" role="tab" aria-selected="true" tabindex="0" id="tab-strategy" aria-controls="panel-strategy">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="strategy-map"><rect x="4" y="4" width="5" height="5" rx="1"/><rect x="11" y="4" width="5" height="5" rx="1"/><rect x="4" y="11" width="12" height="5" rx="1"/></svg>
+            策略
+          </span>
+          <span data-tab-target="params" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0" id="tab-params" aria-controls="panel-params">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="parameter-brackets"><path d="M7 4H5a1 1 0 00-1 1v10a1 1 0 001 1h2"/><path d="M13 4h2a1 1 0 011 1v10a1 1 0 01-1 1h-2"/><path d="M8 8h4M8 12h4"/></svg>
+            参数
+          </span>
+          <span data-tab-target="performance" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0" id="tab-performance" aria-controls="panel-performance">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="performance-gauge"><path d="M4 14a6 6 0 1112 0"/><path d="M10 14l4-5"/><path d="M6 14h8"/></svg>
+            绩效
+          </span>
+        </div>
+
+        <!-- Tab Panel: 策略 -->
+        <div data-tab-panel="strategy" class="inspector-tab-panel" id="panel-strategy" role="tabpanel" aria-labelledby="tab-strategy" aria-hidden="false">
+          <!-- Warnings / Suggestions -->
+          <div class="inspector-section" data-decision-evidence data-default-open="true" aria-label="警告与建议">
+            <div class="inspector-section-title">警告与建议</div>
+            <div class="inspector-list">
+              <div class="inspector-item warn" role="alert">
+                <div class="inspector-item-icon">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+                </div>
+                <div class="inspector-item-body">
+                  <div class="inspector-item-title">估值因子待校验</div>
+                  <div class="inspector-item-desc">最近数据更新于 3 天前，可能影响因子有效性</div>
+                </div>
+              </div>
+              <div class="inspector-item warn" role="alert">
+                <div class="inspector-item-icon">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+                </div>
+                <div class="inspector-item-body">
+                  <div class="inspector-item-title">行业集中度偏高</div>
+                  <div class="inspector-item-desc">金融行业占比 28%，接近 30% 预警线</div>
+                </div>
+              </div>
+              <div class="inspector-item info">
+                <div class="inspector-item-icon">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 8v4M10 14h.01"/></svg>
+                </div>
+                <div class="inspector-item-body">
+                  <div class="inspector-item-title">正交化步骤可选</div>
+                  <div class="inspector-item-desc">启用正交化可降低因子间共线性，提升稳定性</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Strategy Summary -->
+          <div class="inspector-section" data-secondary-context>
+            <div class="inspector-section-title">策略摘要</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">启用因子</div>
+                <div class="summary-item-value">3 / 4</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">股票池</div>
+                <div class="summary-item-value">沪深300</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">风险规则</div>
+                <div class="summary-item-value">2 条</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">上次回测</div>
+                <div class="summary-item-value summary-value--muted">3 天前</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Panel: 参数 -->
+        <div data-tab-panel="params" class="inspector-tab-panel" aria-hidden="true" id="panel-params" role="tabpanel" aria-labelledby="tab-params">
+          <!-- Portfolio Optimization Config -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">组合优化</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">优化方法</div>
+                <div class="summary-item-value">风险平价</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">再平衡频率</div>
+                <div class="summary-item-value">月度</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">最大换手率</div>
+                <div class="summary-item-value">30%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">目标波动率</div>
+                <div class="summary-item-value">12.0%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">跟踪误差上限</div>
+                <div class="summary-item-value">4.0%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">最大回撤限制</div>
+                <div class="summary-item-value">-15.0%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Factor Weights Summary -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">因子权重</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">动量因子</div>
+                <div class="summary-item-value summary-value--brand">45%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">波动率因子</div>
+                <div class="summary-item-value summary-value--healthy">30%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">估值因子</div>
+                <div class="summary-item-value summary-value--degraded">25%</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">流动性因子</div>
+                <div class="summary-item-value summary-value--muted">未启用</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backtest Config Summary -->
+          <div class="inspector-section">
+            <div class="inspector-section-title">回测配置</div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-item-label">回测区间</div>
+                <div class="summary-item-value">2020–2025</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">调仓频率</div>
+                <div class="summary-item-value">每月</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">初始资金</div>
+                <div class="summary-item-value">1,000 万</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-item-label">基准指数</div>
+                <div class="summary-item-value">沪深300</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Panel: 绩效 -->
+        <div data-tab-panel="performance" class="inspector-tab-panel" aria-hidden="true" id="panel-performance" role="tabpanel" aria-labelledby="tab-performance">
+          <!-- Equity Curve (last backtest) -->
+          <div class="inspector-section" data-reveal="fade-up" data-reveal-delay="0">
+            <div class="inspector-section-title">权益曲线</div>
+            <div class="equity-curve-container">
+              <div class="equity-curve-label">
+                <span class="equity-curve-title">累计收益率</span>
+                <span class="equity-curve-value-row">
+                  <svg role="img" data-sparkline='{"data":[100,102,101,105,104,108,107,112,110,115,118,116,120,123,125],"series":"up","fill":true,"width":200,"height":60}' aria-label="权益曲线"></svg>
+                  <span class="equity-curve-value">+32.6%</span>
+                </span>
+              </div>
+              <svg class="equity-curve-svg" viewBox="0 0 260 80" preserveAspectRatio="none" aria-label="策略权益曲线">
+                <!-- Grid lines -->
+                <line x1="0" y1="20" x2="260" y2="20" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+                <line x1="0" y1="40" x2="260" y2="40" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+                <line x1="0" y1="60" x2="260" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="2,3"/>
+                <!-- Benchmark line (flat) -->
+                <polyline fill="none" stroke="var(--text-disabled)" stroke-width="1" stroke-dasharray="3,3"
+                  points="0,60 26,58 52,56 78,59 104,55 130,53 156,50 182,52 208,48 234,45 260,42"/>
+                <!-- Strategy equity curve -->
+                <defs>
+                  <linearGradient id="curve-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/>
+                    <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path fill="url(#curve-fill)"
+                  d="M0,60 L26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12 L260,80 0,80 Z"/>
+                <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="0,60 26,52 52,48 78,55 104,40 130,35 156,30 182,38 208,25 234,18 260,12"/>
+                <!-- End point marker -->
+                <circle cx="260" cy="12" r="2.5" fill="var(--brand-accent)"/>
+              </svg>
+              <div class="equity-curve-legend">
+                <span><span class="equity-curve-legend-dot equity-curve-legend-dot--strategy"></span>策略</span>
+                <span><span class="equity-curve-legend-dot equity-curve-legend-dot--benchmark"></span>基准</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Metrics -->
+          <div class="inspector-section" data-reveal="fade-up" data-reveal-delay="80">
+            <div class="inspector-section-title">绩效指标</div>
+            <div class="perf-metrics-grid">
+              <div class="perf-metric-card" data-tooltip="年化收益率 18.4%，策略历史最高 22.1%">
+                <span class="perf-metric-label">年化收益</span>
+                <span class="perf-metric-value positive tabular-nums"><span>+18.4%</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--market-up-fg)" stroke-width="1" points="0,14 5,12 10,10 15,11 20,8 25,7 30,5 35,6 40,3"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card" data-tooltip="夏普比率 1.42，优于基准 1.18">
+                <span class="perf-metric-label">夏普比率</span>
+                <span class="perf-metric-value tabular-nums"><span>1.42</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,12 5,10 10,11 15,8 20,9 25,6 30,7 35,5 40,4"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card" data-tooltip="最大回撤 -12.8%，发生于 2022-10">
+                <span class="perf-metric-label">最大回撤</span>
+                <span class="perf-metric-value negative tabular-nums"><span>-12.8%</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--market-down-fg)" stroke-width="1" points="0,4 5,5 10,8 15,12 20,10 25,7 30,9 35,6 40,5"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card" data-tooltip="信息比率 0.86，超额收益稳定">
+                <span class="perf-metric-label">信息比率</span>
+                <span class="perf-metric-value tabular-nums"><span>0.86</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,13 5,10 10,12 15,8 20,10 25,6 30,8 35,5 40,4"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card" data-tooltip="Calmar 比率 1.44，回撤修复快">
+                <span class="perf-metric-label">Calmar</span>
+                <span class="perf-metric-value tabular-nums"><span>1.44</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,14 5,11 10,9 15,10 20,7 25,8 30,5 35,6 40,3"/>
+                </svg>
+              </div>
+              <div class="perf-metric-card" data-tooltip="月度胜率 56.2%，共 60 个调仓周期">
+                <span class="perf-metric-label">胜率</span>
+                <span class="perf-metric-value tabular-nums"><span>56.2%</span></span>
+                <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,10 5,8 10,9 15,7 20,8 25,6 30,7 35,5 40,6"/>
+                </svg>
+              </div>
+            </div>
+            <div class="stability-section">
+              <span class="inspector-section-title stability-section-title">策略稳定性</span>
+              <svg role="img" data-sparkline='{"data":[0.82,0.79,0.85,0.83,0.88,0.86,0.91,0.89,0.87,0.92,0.90,0.94],"series":"accent","fill":true,"width":200,"height":50}' aria-label="策略稳定性趋势"></svg>
+            </div>
+          </div>
+        </div>
+      </div><!-- /data-tabs="strategy-tabs" -->
+    </aside>
+
+    <!-- ═══ Bottom Logs Panel ═══ -->
+    <div class="studio-logs bottom-tray" role="log" aria-label="策略日志" data-contract-slot="activity-log" data-tabs="strategy-logs" data-bottom-tray data-bottom-tray-state="collapsed" data-background-evidence data-secondary-context>
+      <div class="logs-header bottom-tray-header">
+        <div class="logs-tabs">
+          <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0" data-tab-target="validation" data-log-tab="validation" id="tab-validation" aria-controls="panel-validation">校验结果</span>
+          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="dry-run" data-log-tab="dry-run" id="tab-dry-run" aria-controls="panel-dry-run">Dry Run</span>
+          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="compile" data-log-tab="compile" id="tab-compile" aria-controls="panel-compile">编译日志</span>
+        </div>
+        <div class="logs-spacer"></div>
+        <div class="logs-meta">
+          上次校验：<span class="tabular-nums">2026-03-29 14:32:08</span>
+        </div>
+        <button class="bottom-tray-toggle" type="button" data-bottom-tray-toggle aria-controls="strategy-bottom-tray-content" aria-expanded="false" aria-label="预览策略日志">⌄</button>
+        <span class="log-status-badge success status-dot--sm">
+          <span class="status-badge-dot"></span>
+          通过
+        </span>
+      </div>
+      <div class="bottom-tray-content" id="strategy-bottom-tray-content" data-bottom-tray-content aria-hidden="true">
+        <div class="logs-body" data-tab-panel="validation" aria-hidden="false" id="panel-validation" role="tabpanel" aria-labelledby="tab-validation">
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:08</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">策略校验完成，共检查 12 项，通过 11 项，警告 1 项</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:07</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">因子权重归一化检查 — 动量: 45%, 波动率: 30%, 估值: 25% → 合计 100%</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:06</span>
+            <span class="log-level warn">WARN</span>
+            <span class="log-msg">估值因子数据新鲜度 — 最后更新: 2026-03-26，距今 3 天（建议 ≤ 1 天）</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:05</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">股票池验证 — 沪深300成分股: 300 只，ST 标记: 0 只，停牌: 3 只（已排除）</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:04</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">风险约束检查 — 行业偏离度: 3.2%（限制 5%），单股权重: 4.8%（限制 10%）</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:03</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">预处理管道校验 — 去极值: MAD, 标准化: Z-Score, 中性化: 行业中性</span>
+          </div>
+        </div>
+        <div class="logs-body" data-tab-panel="dry-run" aria-hidden="true" id="panel-dry-run" role="tabpanel" aria-labelledby="tab-dry-run">
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:34:12</span>
+            <span class="log-level info">DRY</span>
+            <span class="log-msg">Dry Run 启动 — 样本窗口 2026-03-01 至 2026-03-29，股票池沪深300</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:34:13</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">订单预演完成 — 目标持仓 86 只，预计换手 18.6%，现金留存 2.4%</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:34:14</span>
+            <span class="log-level warn">WARN</span>
+            <span class="log-msg">流动性检查 — 2 只股票成交额低于阈值，已降低目标权重</span>
+          </div>
+        </div>
+        <div class="logs-body" data-tab-panel="compile" aria-hidden="true" id="panel-compile" role="tabpanel" aria-labelledby="tab-compile">
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:35:01</span>
+            <span class="log-level info">BUILD</span>
+            <span class="log-msg">编译策略模块 strategy.py — Python 3.12 sandbox</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:35:02</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">类型签名检查通过 — factors(), preprocess(), risk_rules(), rebalance()</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:35:03</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">编译日志完成 — 无语法错误，无未绑定变量</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       State Variants: 6 components × 3 states = 18 blocks
+       Placed outside the shell-studio grid for clean layout.
+       ══════════════════════════════════════════════ -->
+
+  <!-- ── State Variants: studio-header ── -->
+
+
+
+
+  <!-- ── State Variants: mode-switch ── -->
+
+
+
+  <!-- ── State Variants: snippets-sources ── -->
+
+
+
+
+
+
+  <!-- ── State Variants: main-studio ── -->
+
+
+
+
+
+  <!-- ── State Variants: inspector ── -->
+
+
+
+
+
+  <!-- ── State Variants: logs ── -->
+
+
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay 1: 策略保存 — Modal -->
+    <div class="overlay-backdrop" data-overlay="overlay-save-strategy">
+      <label class="overlay-dismiss" for="overlay-save-strategy" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存策略" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="strategy-publish">
+        <div class="overlay-header">
+          <span class="overlay-title"><span data-danger-marker>!</span> 保存并发布策略版本</span>
+          <label for="overlay-save-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <p data-risk-object>对象：多因子动量策略 v2.3，新版本发布草稿。</p>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+              <div class="risk-confirmation-title">影响预览</div>
+              <p class="risk-confirmation-copy">发布后新版本可被回测、信号生成和策略列表引用；不会自动提交实盘订单。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">当前编辑草稿 → v2.4 候选版本；覆盖当前版本时会保留旧版本快照。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">策略配置、启用因子、股票池、回测参数、版本备注和校验结果。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录发布人、策略 id、版本号、配置 diff、校验摘要和发布时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从版本时间线回滚上一版；回滚会创建新的版本记录并重新触发校验。</p>
+            </div>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-secondary" data-cancel-control data-action-tier="context">取消，继续编辑</label>
+            <label for="overlay-save-strategy" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action data-action-tier="primary">确认发布版本</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 2: 回测参数配置 — Sheet (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-backtest-config">
+      <label class="overlay-dismiss" for="overlay-backtest-config" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
+        <div class="overlay-header">
+          <span class="overlay-title">回测参数配置</span>
+          <label for="overlay-backtest-config" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h2>回测区间</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">起始日期</span>
+            <span class="overlay-field-value">2020-01-02</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">结束日期</span>
+            <span class="overlay-field-value">2025-12-31</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">初始资金</span>
+            <span class="overlay-field-value">10,000,000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">基准指数</span>
+            <span class="overlay-field-value">沪深300</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">调仓频率</span>
+            <span class="overlay-field-value">每月</span>
+          </div>
+
+          <h2>交易成本</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">印花税</span>
+            <span class="overlay-field-value">卖出 0.05%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">佣金</span>
+            <span class="overlay-field-value">万 2.5（双向）</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">滑点</span>
+            <span class="overlay-field-value">0.01%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">冲击成本</span>
+            <span class="overlay-field-value">自动估算</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-backtest-config" class="overlay-btn overlay-btn-secondary">取消</label>
+            <label for="overlay-backtest-config" class="overlay-btn overlay-btn-primary">提交回测</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 3: 因子预处理预览 — Drawer (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-factor-preview">
+      <label class="overlay-dismiss" for="overlay-factor-preview" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
+        <div class="overlay-header">
+          <span class="overlay-title">因子预处理预览</span>
+          <label for="overlay-factor-preview" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h2>动量因子 — 处理前后分布对比</h2>
+          <div class="distribution-chart">
+            <!-- Distribution chart mock -->
+            <div class="distribution-bars">
+              <div class="distribution-bar distribution-bar--a30 distribution-bar--h20"></div>
+              <div class="distribution-bar distribution-bar--a40 distribution-bar--h35"></div>
+              <div class="distribution-bar distribution-bar--a55 distribution-bar--h55"></div>
+              <div class="distribution-bar distribution-bar--a70 distribution-bar--h75"></div>
+              <div class="distribution-bar distribution-bar--a85 distribution-bar--h95"></div>
+              <div class="distribution-bar distribution-bar--a100 distribution-bar--h100"></div>
+              <div class="distribution-bar distribution-bar--a85 distribution-bar--h90"></div>
+              <div class="distribution-bar distribution-bar--a70 distribution-bar--h70"></div>
+              <div class="distribution-bar distribution-bar--a55 distribution-bar--h45"></div>
+              <div class="distribution-bar distribution-bar--a40 distribution-bar--h25"></div>
+              <div class="distribution-bar distribution-bar--a30 distribution-bar--h15"></div>
+            </div>
+            <div class="distribution-legend">
+              <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--before"></span>处理前</span>
+              <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--after"></span>处理后（Z-Score 标准化）</span>
+            </div>
+          </div>
+
+          <h2>统计摘要</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">均值</span>
+            <span class="overlay-field-value">0.003 → 0.000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标准差</span>
+            <span class="overlay-field-value">0.042 → 1.000</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">偏度</span>
+            <span class="overlay-field-value">0.18 → 0.02</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">峰度</span>
+            <span class="overlay-field-value">3.42 → 2.98</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-factor-preview" class="overlay-btn overlay-btn-secondary">关闭</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 4: 校验结果 — Toast (右上角) -->
+    <div class="overlay-backdrop" data-overlay="overlay-validation-toast">
+      <label class="overlay-dismiss" for="overlay-validation-toast" aria-label="关闭"></label>
+      <div class="overlay-toast" role="alert" aria-label="校验结果">
+        <div class="toast-result-body">
+          <div class="toast-result-icon">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-healthy-fg)" stroke-width="2"><path d="M4 10l3 3 9-9"/></svg>
+          </div>
+          <div>
+            <div class="toast-result-title">策略校验通过</div>
+            <div class="toast-result-desc">共检查 12 项，通过 11 项，警告 1 项</div>
+          </div>
+          <label for="overlay-validation-toast" class="toast-close" aria-label="关闭">&#10005;</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay 5: 确认策略删除 — Modal (破坏性操作) -->
+    <div class="overlay-backdrop" data-overlay="overlay-delete-strategy">
+      <label class="overlay-dismiss" for="overlay-delete-strategy" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="alertdialog" aria-modal="true" aria-label="确认删除策略" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="delete">
+        <div class="overlay-header">
+          <span class="overlay-title"><span data-danger-marker>!</span> 确认删除策略</span>
+          <label for="overlay-delete-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <p data-risk-object>对象：多因子动量策略 v2.3，包含当前草稿和历史版本引用。</p>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary data-impact-preview>
+              <div class="risk-confirmation-title">影响预览</div>
+              <p class="risk-confirmation-copy">删除会停止新回测和信号生成，历史回测、订单和审计记录保留为只读。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">策略从 Studio 可编辑状态移入归档；列表和选择器不再显示该策略。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain data-risk-object-list>
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">策略配置、3 个历史版本、12 次回测、86 条关联信号和删除原因。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作者、策略 id、版本号、依赖清单、删除原因和确认时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从策略归档克隆最近版本恢复；恢复后需重新校验并发布。</p>
+            </div>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-secondary" data-cancel-control data-action-tier="context">取消，保留策略</label>
+            <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action data-action-tier="primary">确认删除</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Status Bar (terminal DNA) -->
+  <div class="status-bar" role="status" aria-label="系统状态" data-contract-slot="status">
+    <span class="status-indicator"></span>
+    <span>策略引擎</span>
+    <span>就绪</span>
+    <span class="status-sep">|</span>
+    <span>因子数据</span>
+    <span>Wind · 2026-04-05</span>
+    <span class="status-sep">|</span>
+    <span>Python</span>
+    <span>v3.12</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+S</span>
+    <span>保存</span>
+    <span class="status-sep">|</span>
+    <span class="status-kbd">Ctrl+Enter</span>
+    <span>校验</span>
+    <span class="status-sep">|</span>
+    <span>Strategy Studio</span>
+  </div>
+
+  <!-- Theme switcher script -->
+  <script src="shared/theme-switcher.js"></script>
+
+  <!-- Prototype interactions library -->
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+
+  <!-- Factor weight slider value sync -->
+  <script>
+    document.querySelectorAll('.factor-weight-slider').forEach(function (slider) {
+      var valueEl = slider.parentElement.querySelector('.factor-weight-value');
+      function updateValue() {
+        var val = slider.value;
+        valueEl.textContent = val + '%';
+        if (parseInt(val, 10) === 0) {
+          valueEl.style.color = 'var(--text-disabled)';
+        } else {
+          valueEl.style.color = '';
+        }
+      }
+      slider.addEventListener('input', updateValue);
+      updateValue();
+    });
+  </script>
+
+  </section>
+
+<section id="states-gallery" class="proto-section">
+      <div class="gallery-grid">
+        <div class="gallery-group" data-component="Studio Header">
+          <div class="gallery-group__label">Studio Header</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Studio Header — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-badge"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Studio Header — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#9998;</div>
+        <div class="state-empty-title">未选择策略</div>
+        <div class="state-empty-desc">从策略列表中选择一个策略开始编辑，或创建新策略</div>
+        <button class="state-empty-cta">新建策略</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Studio Header — Failed State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">策略加载失败</div>
+        <div class="state-error-desc">无法加载策略配置数据，请检查网络连接后重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Mode Switch">
+          <div class="gallery-group__label">Mode Switch</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Mode Switch — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-text skeleton--w120"></div>
+        <div class="skeleton skeleton-text skeleton--w100"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Mode Switch — Failed State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">编辑器加载失败</div>
+        <div class="state-error-desc">编辑模式切换服务暂时不可用，请刷新页面重试</div>
+        <button class="state-error-retry">刷新</button>
+      </div>
+    </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Snippets &amp; Sources">
+          <div class="gallery-group__label">Snippets &amp; Sources</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Snippets &amp; Sources — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-text skeleton--w60"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-text skeleton--w50"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Snippets &amp; Sources — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#128269;</div>
+        <div class="state-empty-title">暂无可用因子</div>
+        <div class="state-empty-desc">请先在 Factor Library 中创建因子，因子将自动出现在此列表中</div>
+        <button class="state-empty-cta">前往 Factor Library</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Snippets &amp; Sources — Failed State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">因子数据加载失败</div>
+        <div class="state-error-desc">无法获取因子列表和股票池数据，请检查数据源连接</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Snippets &amp; Sources — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+      <div class="state-stale state-stale--compact">
+        <svg class="state-stale-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        <div>
+          <div class="state-stale-title">因子数据可能已更新</div>
+          <div class="state-stale-message-sub">上次刷新: 3 小时前，建议刷新获取最新数据</div>
+        </div>
+        <button class="state-error-retry state-error-retry--mt0">刷新</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Snippets &amp; Sources — Selected State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="selected">
+      <div class="gallery-source-list">
+        <div class="source-item active gallery-source-selected">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--brand">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v16M2 10h16"/><circle cx="10" cy="10" r="3"/></svg>
+            </div>
+            <span class="source-item-name">动量因子</span>
+          </div>
+          <span class="gallery-source-selected-label">&#10003; 选中</span>
+        </div>
+        <div class="source-item">
+          <div class="source-item-info">
+            <div class="source-item-icon source-icon--muted">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/></svg>
+            </div>
+            <span class="source-item-name">波动率因子</span>
+          </div>
+          <span class="source-item-badge ok">已启用</span>
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Main Studio">
+          <div class="gallery-group__label">Main Studio</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Main Studio — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading skeleton--w30"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Main Studio — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#128221;</div>
+        <div class="state-empty-title">请配置 Universe</div>
+        <div class="state-empty-desc">选择股票池后开始配置策略参数，或从模板快速加载</div>
+        <button class="state-empty-cta">从模板加载</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Main Studio — Failed State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">策略配置加载失败</div>
+        <div class="state-error-desc">无法加载策略权重配置和优化参数，请重试</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Main Studio — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+      <div class="state-stale state-stale--dashed state-stale--mb0">
+        <svg class="state-stale-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        <span class="state-stale-message">因子权重配置可能已过时 — 最近一次因子数据更新于 2 小时前</span>
+      </div>
+      <div class="factor-weight-list">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Inspector">
+          <div class="gallery-group__label">Inspector</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Inspector — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-heading skeleton--w40"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Inspector — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#129302;</div>
+        <div class="state-empty-title">配置策略后获取 AI 建议</div>
+        <div class="state-empty-desc">完成因子选择和权重配置后，AI 将实时提供优化建议和校验反馈</div>
+        <button class="state-empty-cta">开始配置</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Inspector — Failed State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+      <div class="state-error">
+        <div class="state-error-icon">!</div>
+        <div class="state-error-title">AI 分析服务异常</div>
+        <div class="state-error-desc">无法获取 AI 优化建议，策略校验功能暂时不可用</div>
+        <button class="state-error-retry">重试</button>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Inspector — Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+      <div class="state-stale state-stale--dashed state-stale--mb0">
+        <svg class="state-stale-icon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-degraded-fg)" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+        <span class="state-stale-message">AI 分析结果可能已过时，点击刷新</span>
+      </div>
+      <div class="inspector-list">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+        <div class="gallery-group" data-component="Logs">
+          <div class="gallery-group__label">Logs</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Logs — Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+      <div class="state-loading">
+        <div class="skeleton skeleton-text skeleton--w80"></div>
+        <div class="skeleton skeleton-text skeleton--w65"></div>
+        <div class="skeleton skeleton-text skeleton--w90"></div>
+      </div>
+    </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Logs — Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+      <div class="state-empty">
+        <div class="state-empty-icon">&#128220;</div>
+        <div class="state-empty-title">暂无日志输出</div>
+        <div class="state-empty-desc">执行校验或 Dry Run 后，日志结果将在此处展示</div>
+        <button class="state-empty-cta">运行 Dry Run</button>
+      </div>
+    </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<section id="overlays-gallery" class="proto-section">
+      <div class="gallery-grid gallery-grid--overlays">
+        <div class="gallery-group" data-component="overlays">
+          <div class="gallery-group__label">弹层设计</div>
+          <div class="gallery-cards">
+
+    <div class="gallery-card" data-overlay-ref="overlay-delete-strategy">
+      <div class="gallery-card__label">保存策略 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存策略">
+          <div class="overlay-header">
+            <span class="overlay-title">保存策略</span>
+          </div>
+          <div class="overlay-body">
+            <h2>策略信息</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">策略名称</span>
+              <span class="overlay-field-value">多因子动量策略 v2.3</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">策略类型</span>
+              <span class="overlay-field-value">多因子选股</span>
+            </div>
+            <h2>版本备注</h2>
+            <div class="overlay-textarea-full">
+              <textarea class="form-textarea" rows="2" placeholder="描述本次修改内容（可选）"></textarea>
+            </div>
+            <h2>保存类型</h2>
+            <div class="overlay-radio-group">
+              <label class="overlay-radio-label overlay-radio-label--primary">
+                <input type="radio" name="save-type" checked> 新版本
+              </label>
+              <label class="overlay-radio-label overlay-radio-label--secondary">
+                <input type="radio" name="save-type"> 覆盖当前版本
+              </label>
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-save-strategy" class="overlay-btn overlay-btn-secondary">取消</label>
+              <label for="overlay-save-strategy" class="overlay-btn overlay-btn-primary">确认保存</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-save-strategy">
+      <div class="gallery-card__label">回测参数配置 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
+          <div class="overlay-header">
+            <span class="overlay-title">回测参数配置</span>
+          </div>
+          <div class="overlay-body">
+            <h2>回测区间</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">起始日期</span>
+              <span class="overlay-field-value">2020-01-02</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">结束日期</span>
+              <span class="overlay-field-value">2025-12-31</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">初始资金</span>
+              <span class="overlay-field-value">10,000,000</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">基准指数</span>
+              <span class="overlay-field-value">沪深300</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">调仓频率</span>
+              <span class="overlay-field-value">每月</span>
+            </div>
+            <h2>交易成本</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">印花税</span>
+              <span class="overlay-field-value">卖出 0.05%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">佣金</span>
+              <span class="overlay-field-value">万 2.5（双向）</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">滑点</span>
+              <span class="overlay-field-value">0.01%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">冲击成本</span>
+              <span class="overlay-field-value">自动估算</span>
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-backtest-config" class="overlay-btn overlay-btn-secondary">取消</label>
+              <label for="overlay-backtest-config" class="overlay-btn overlay-btn-primary">提交回测</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-validation-toast">
+      <div class="gallery-card__label">因子预处理预览 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
+          <div class="overlay-header">
+            <span class="overlay-title">因子预处理预览</span>
+          </div>
+          <div class="overlay-body">
+            <h2>动量因子 — 处理前后分布对比</h2>
+            <div class="distribution-chart">
+              <!-- Distribution chart mock -->
+              <div class="distribution-bars">
+                <div class="distribution-bar distribution-bar--a30 distribution-bar--h20"></div>
+                <div class="distribution-bar distribution-bar--a40 distribution-bar--h35"></div>
+                <div class="distribution-bar distribution-bar--a55 distribution-bar--h55"></div>
+                <div class="distribution-bar distribution-bar--a70 distribution-bar--h75"></div>
+                <div class="distribution-bar distribution-bar--a85 distribution-bar--h95"></div>
+                <div class="distribution-bar distribution-bar--a100 distribution-bar--h100"></div>
+                <div class="distribution-bar distribution-bar--a85 distribution-bar--h90"></div>
+                <div class="distribution-bar distribution-bar--a70 distribution-bar--h70"></div>
+                <div class="distribution-bar distribution-bar--a55 distribution-bar--h45"></div>
+                <div class="distribution-bar distribution-bar--a40 distribution-bar--h25"></div>
+                <div class="distribution-bar distribution-bar--a30 distribution-bar--h15"></div>
+              </div>
+              <div class="distribution-legend">
+                <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--before"></span>处理前</span>
+                <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--after"></span>处理后（Z-Score 标准化）</span>
+              </div>
+            </div>
+            <h2>统计摘要</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">均值</span>
+              <span class="overlay-field-value">0.003 → 0.000</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标准差</span>
+              <span class="overlay-field-value">0.042 → 1.000</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">偏度</span>
+              <span class="overlay-field-value">0.18 → 0.02</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">峰度</span>
+              <span class="overlay-field-value">3.42 → 2.98</span>
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-factor-preview" class="overlay-btn overlay-btn-secondary">关闭</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-backtest-config">
+      <div class="gallery-card__label">策略校验结果 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="alert" aria-label="校验结果">
+          <div class="toast-result-body">
+            <div class="toast-result-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-healthy-fg)" stroke-width="2"><path d="M4 10l3 3 9-9"/></svg>
+            </div>
+            <div>
+              <div class="toast-result-title">策略校验通过</div>
+              <div class="toast-result-desc">共检查 12 项，通过 11 项，警告 1 项</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-factor-preview">
+      <div class="gallery-card__label">确认删除策略 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-modal="true" aria-label="确认删除策略">
+          <div class="overlay-header">
+            <span class="overlay-title">确认删除策略</span>
+          </div>
+          <div class="overlay-body">
+            <div class="delete-confirm-body">
+              <div class="delete-confirm-icon">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--risk-critical-fg)" stroke-width="1.5"><path d="M10 2L2 18h16L10 2z"/><path d="M10 8v4M10 15h.01"/></svg>
+              </div>
+              <div>
+                <div class="delete-confirm-title">
+                  确认删除策略「多因子动量策略 v2.3」及其所有版本？
+                </div>
+                <div class="delete-confirm-desc">
+                  此操作不可撤销。删除后策略的所有配置、回测结果和历史版本将被永久移除。
+                </div>
+              </div>
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-secondary">取消</label>
+              <label for="overlay-delete-strategy" class="overlay-btn overlay-btn-danger">确认删除</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-delete-strategy" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-save-strategy" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-validation-toast" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-backtest-config" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-factor-preview" class="overlay-radio sr-only">
+</body>
+</html>

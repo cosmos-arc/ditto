@@ -31,13 +31,14 @@ class OperatorSpec:
 def _operator(
     name: str,
     *,
+    version: str = "1.0.0",
     min_args: int,
     max_args: int,
     int_literal_positions: tuple[int, ...] = (),
 ) -> OperatorSpec:
     return OperatorSpec(
         name=name,
-        version="1.0.0",
+        version=version,
         min_args=min_args,
         max_args=max_args,
         int_literal_positions=int_literal_positions,
@@ -118,7 +119,7 @@ P0_OPERATOR_SPECS: dict[str, OperatorSpec] = {
         max_args=2,
         int_literal_positions=(1,),
     ),
-    "cs_rank": _operator("cs_rank", min_args=1, max_args=1),
+    "cs_rank": _operator("cs_rank", version="2.0.0", min_args=1, max_args=1),
     "cs_scale": _operator("cs_scale", min_args=1, max_args=1),
     "cs_zscore": _operator("cs_zscore", min_args=1, max_args=1),
     "cs_demean": _operator("cs_demean", min_args=1, max_args=1),

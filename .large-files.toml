@@ -1,0 +1,7 @@
+schema_version = 1
+max_bytes = 5242880
+
+[[allow]]
+path = "docs/design/2026-08-30-ditto-personal-quant-workstation-system-design.docx"
+sha256 = "ff4beb9971b9ee5db262f7223db7511869d0232fa43e6167eb61fea2b2d3563a"
+reason = "Canonical product-system design source document preserved as a long-lived asset."

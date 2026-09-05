@@ -144,8 +144,8 @@ Backup and restore (both Agent SQLite stores plus migrated Research v2 identity 
 
 ```bash
 pixi run -e dev pytest \
-  packages/apps/tests/integration/test_agent_database_lifecycle.py::test_agent_bundle_backup_and_restore_preserve_readable_projection \
-  packages/apps/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet \
+  apps/backend/tests/integration/test_agent_database_lifecycle.py::test_agent_bundle_backup_and_restore_preserve_readable_projection \
+  apps/backend/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet \
   -q --no-cov -n 0
 ```
 
@@ -153,8 +153,8 @@ Crash and restart resume (Campaign idempotency plus approval continuation):
 
 ```bash
 pixi run -e dev pytest \
-  packages/apps/tests/integration/test_agent_campaign_api.py::test_pending_create_recovers_after_completion_crash_without_duplicate_event \
-  packages/apps/tests/integration/test_agent_approval_resume.py::test_api_decision_resumes_persisted_interruption_after_restart \
+  apps/backend/tests/integration/test_agent_campaign_api.py::test_pending_create_recovers_after_completion_crash_without_duplicate_event \
+  apps/backend/tests/integration/test_agent_approval_resume.py::test_api_decision_resumes_persisted_interruption_after_restart \
   -q --no-cov -n 0
 ```
 
@@ -163,16 +163,16 @@ Retention dry-run (30-day boundary and CLI preview only):
 ```bash
 pixi run -e dev pytest \
   packages/agent/tests/unit/test_retention.py::test_dry_run_uses_closed_30_day_boundary_and_is_content_addressed \
-  packages/apps/tests/unit/test_agent_retention_cli.py::test_retention_cleanup_defaults_to_auditable_dry_run \
+  apps/backend/tests/unit/test_agent_retention_cli.py::test_retention_cleanup_defaults_to_auditable_dry_run \
   -q --no-cov -n 0
 ```
 
 Provider and sandbox outages plus feature rollback:
 
 ```bash
-pixi run -e dev pytest packages/apps/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k model_provider -q --no-cov -n 0
-pixi run -e dev pytest packages/apps/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k sandbox -q --no-cov -n 0
-pixi run -e dev pytest packages/apps/tests/unit/test_agent_settings.py packages/apps/tests/integration/test_agent_degradation.py::test_disabled_agent_does_not_probe_optional_dependencies -q --no-cov -n 0
+pixi run -e dev pytest apps/backend/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k model_provider -q --no-cov -n 0
+pixi run -e dev pytest apps/backend/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k sandbox -q --no-cov -n 0
+pixi run -e dev pytest apps/backend/tests/unit/test_agent_settings.py apps/backend/tests/integration/test_agent_degradation.py::test_disabled_agent_does_not_probe_optional_dependencies -q --no-cov -n 0
 ```
 
 Real cleanup always requires an exact current plan hash plus external approval ID and is outside this runbook's deterministic exercise. Never reuse a dry-run approval or execute against an unresolved/broad data root.

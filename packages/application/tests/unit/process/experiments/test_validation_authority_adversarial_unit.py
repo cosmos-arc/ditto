@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from typing import cast
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.experiments import _validation_authority
 from ditto_application.processes.experiments._validation_authority import (
     assess_validation_authority,
@@ -21,6 +22,8 @@ from ditto_application.research_validation_contracts import (
     ResearchValidationAuthorityRequest,
     ResearchValidationAuthorityResult,
     RuntimeValidationEvidence,
+    protocol_sources_match_authority_bindings,
+    validation_authority_facts_match,
 )
 from ditto_application.research_validation_protocol import (
     CalendarMonth,
@@ -816,3 +819,242 @@ def test_malformed_evidence_fields_fail_closed_as_authority_invalid(
     assert assessment.check.code == "VALIDATION_AUTHORITY_INVALID"
     assert assessment.evidence is None
     assert assessment.validation is None
+
+
+def _expect_contract_invalid(reason: str, factory: Callable[[], object]) -> None:
+    with pytest.raises(AppProcessError) as exc_info:
+        factory()
+    assert exc_info.value.details == {
+        "code": "VALIDATION_AUTHORITY_INVALID",
+        "reason": reason,
+    }
+
+
+@pytest.mark.pit
+def test_runtime_validation_contract_rejects_ambiguous_or_partial_facts() -> None:
+    _expect_contract_invalid(
+        "invalid_runtime_validation_identity",
+        lambda: replace(_runtime(), lane=""),
+    )
+    _expect_contract_invalid(
+        "invalid_runtime_required_datasets",
+        lambda: replace(
+            _runtime(),
+            required_datasets=cast("tuple[str, ...]", ["etf_daily"]),
+        ),
+    )
+    for datasets in ((), ("etf_daily", "etf_daily"), ("",)):
+        _expect_contract_invalid(
+            "invalid_runtime_required_datasets",
+            lambda datasets=datasets: replace(_runtime(), required_datasets=datasets),
+        )
+    for lookback in (True, -1):
+        _expect_contract_invalid(
+            "invalid_runtime_max_lookback",
+            lambda lookback=lookback: replace(
+                _runtime(),
+                max_lookback_sessions=cast("int", lookback),
+            ),
+        )
+    _expect_contract_invalid(
+        "invalid_runtime_pit_requirement",
+        lambda: replace(_runtime(), requires_pit_universe=cast("bool", 1)),
+    )
+    for semantics in ((None, 5, 1), (2, -1, 1), (2, True, 1)):
+        _expect_contract_invalid(
+            "partial_runtime_isolation_semantics",
+            lambda semantics=semantics: replace(
+                _runtime(),
+                forward_horizon_sessions=semantics[0],
+                holding_period_sessions=semantics[1],
+                execution_lag_sessions=semantics[2],
+            ),
+        )
+
+
+@pytest.mark.pit
+def test_runtime_and_request_revalidation_catch_post_construction_forgery() -> None:
+    runtime = _runtime()
+    object.__setattr__(runtime, "required_datasets", ["etf_daily"])
+    assert runtime.is_well_formed() is False
+    assert runtime.is_valid() is False
+
+    request = _request()
+    object.__setattr__(request, "declared_requirements", [*_requirements()])
+    assert request.is_valid() is False
+
+    with pytest.raises(AppProcessError) as exc_info:
+        request.fingerprint(declared_protocol_hash="not-a-hash")
+    assert (
+        exc_info.value.details["reason"]
+        == "invalid_validation_authority_request_fingerprint"
+    )
+
+
+@pytest.mark.pit
+def test_authority_request_requires_exact_unique_dataset_contracts() -> None:
+    _expect_contract_invalid(
+        "invalid_declared_dataset_requirements",
+        lambda: replace(
+            _request(),
+            declared_requirements=cast(
+                "tuple[ResearchDatasetRequirement, ...]", [*_requirements()]
+            ),
+        ),
+    )
+    _expect_contract_invalid(
+        "invalid_declared_dataset_requirements",
+        lambda: replace(_request(), declared_requirements=()),
+    )
+    _expect_contract_invalid(
+        "invalid_declared_dataset_requirements",
+        lambda: replace(
+            _request(),
+            declared_requirements=cast(
+                "tuple[ResearchDatasetRequirement, ...]", (object(),)
+            ),
+        ),
+    )
+    duplicate = _requirements()[0]
+    _expect_contract_invalid(
+        "invalid_declared_dataset_requirements",
+        lambda: replace(
+            _request(),
+            declared_requirements=(duplicate, duplicate),
+        ),
+    )
+
+
+@pytest.mark.pit
+def test_authority_dataset_bindings_reject_every_ambiguous_shape() -> None:
+    request = _request()
+
+    def create(bindings: tuple[ResearchDatasetRequirement, ...]) -> object:
+        return ResearchValidationAuthorityEvidence.create(
+            protocol=request.declared_protocol,
+            snapshot_identity=request.snapshot_identity,
+            runtime_evidence_hash=_runtime().payload_hash,
+            universe_membership_hash="e" * 64,
+            requires_pit_universe=True,
+            dataset_bindings=bindings,
+        )
+
+    _expect_contract_invalid(
+        "invalid_authority_dataset_bindings",
+        lambda: create(cast("tuple[ResearchDatasetRequirement, ...]", [])),
+    )
+    _expect_contract_invalid(
+        "invalid_authority_dataset_bindings",
+        lambda: create(()),
+    )
+    _expect_contract_invalid(
+        "invalid_authority_dataset_bindings",
+        lambda: create(cast("tuple[ResearchDatasetRequirement, ...]", (object(),))),
+    )
+
+    for field_name, forged in (
+        ("expected_snapshot_ids", ["etf-provider"]),
+        ("expected_snapshot_ids", ()),
+        ("expected_snapshot_ids", ("etf-provider", "etf-provider")),
+        ("dataset_id", ""),
+        ("requires_pit_universe", 1),
+        ("certified_from", "2026-01-01"),
+    ):
+        binding = _requirements()[0]
+        object.__setattr__(binding, field_name, forged)
+        _expect_contract_invalid(
+            "invalid_authority_dataset_bindings",
+            lambda binding=binding: create((binding,)),
+        )
+
+    duplicate = _requirements()[0]
+    _expect_contract_invalid(
+        "invalid_authority_dataset_bindings",
+        lambda: create((duplicate, duplicate)),
+    )
+
+
+@pytest.mark.pit
+def test_authority_evidence_constructor_authenticates_every_identity() -> None:
+    evidence = _evidence(_request())
+    _expect_contract_invalid(
+        "invalid_authority_snapshot_identity",
+        lambda: replace(
+            evidence,
+            snapshot_identity=cast("ExperimentSnapshotIdentity", object()),
+        ),
+    )
+    _expect_contract_invalid(
+        "invalid_authority_pit_requirement",
+        lambda: replace(evidence, requires_pit_universe=cast("bool", 1)),
+    )
+    _expect_contract_invalid(
+        "authority_pit_binding_mismatch",
+        lambda: replace(evidence, requires_pit_universe=False),
+    )
+    for field_name in ("runtime_evidence_hash", "universe_membership_hash"):
+        _expect_contract_invalid(
+            "invalid_authority_source_hash",
+            lambda field_name=field_name: replace(
+                evidence,
+                **{field_name: "not-a-hash"},
+            ),
+        )
+    _expect_contract_invalid(
+        "authority_membership_projection_hash_mismatch",
+        lambda: replace(evidence, membership_projection_hash="0" * 64),
+    )
+    _expect_contract_invalid(
+        "invalid_authority_payload_hash",
+        lambda: replace(evidence, payload_hash="not-a-hash"),
+    )
+    _expect_contract_invalid(
+        "authority_payload_hash_mismatch",
+        lambda: replace(evidence, payload_hash="0" * 64),
+    )
+
+
+@pytest.mark.pit
+def test_authority_cross_binding_helpers_fail_closed_on_forged_types() -> None:
+    request = _request()
+    runtime = _runtime()
+    evidence = _evidence(request)
+
+    assert (
+        protocol_sources_match_authority_bindings(
+            cast("ResearchValidationAuthorityEvidence", object()),
+            runtime,
+        )
+        is False
+    )
+    binding = evidence.dataset_bindings[0]
+    object.__setattr__(binding, "certified_from", "2026-01-01")
+    assert protocol_sources_match_authority_bindings(evidence, runtime) is False
+
+    evidence = _evidence(request)
+    object.__setattr__(evidence, "dataset_bindings", (object(),))
+    assert protocol_sources_match_authority_bindings(evidence, runtime) is False
+
+    evidence = _evidence(request)
+    assert (
+        validation_authority_facts_match(
+            evidence,
+            runtime,
+            snapshot_identity=request.snapshot_identity,
+            dataset_requirements=cast(
+                "tuple[ResearchDatasetRequirement, ...]", [*_requirements()]
+            ),
+        )
+        is False
+    )
+    assert (
+        validation_authority_facts_match(
+            evidence,
+            runtime,
+            snapshot_identity=request.snapshot_identity,
+            dataset_requirements=cast(
+                "tuple[ResearchDatasetRequirement, ...]", (object(),)
+            ),
+        )
+        is False
+    )

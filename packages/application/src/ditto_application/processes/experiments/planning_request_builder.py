@@ -246,13 +246,7 @@ def _decode_field[DecodedT](
 
 def _same_canonical_json(left: object, right: object) -> bool:
     try:
-        return orjson.dumps(
-            _detach_json(left),
-            option=orjson.OPT_SORT_KEYS,
-        ) == orjson.dumps(
-            _detach_json(right),
-            option=orjson.OPT_SORT_KEYS,
-        )
+        return _same_detached_json(_detach_json(left), _detach_json(right))
     except (TypeError, ValueError, OverflowError) as exc:
         raise AppProcessError(
             "experiment planning document is invalid",
@@ -261,6 +255,35 @@ def _same_canonical_json(left: object, right: object) -> bool:
                 "reason": "invalid_canonical_planning_document_value",
             },
         ) from exc
+
+
+def _same_detached_json(left: _JsonValue, right: _JsonValue) -> bool:
+    """
+    Compare JSON data-model values without depending on number spelling.
+
+    JSON has one number type, while Python and JavaScript serialize integral
+    finite numbers differently (``1.0`` versus ``1``). Booleans remain a
+    distinct JSON type even though Python considers ``True == 1``.
+    """
+    if type(left) in {int, float} and type(right) in {int, float}:
+        return cast("int | float", left) == cast("int | float", right)
+    if type(left) is not type(right):
+        return False
+    if type(left) is dict:
+        left_mapping = cast("dict[str, _JsonValue]", left)
+        right_mapping = cast("dict[str, _JsonValue]", right)
+        return left_mapping.keys() == right_mapping.keys() and all(
+            _same_detached_json(left_mapping[key], right_mapping[key])
+            for key in left_mapping
+        )
+    if type(left) is list:
+        left_items = cast("list[_JsonValue]", left)
+        right_items = cast("list[_JsonValue]", right)
+        return len(left_items) == len(right_items) and all(
+            _same_detached_json(left_item, right_item)
+            for left_item, right_item in zip(left_items, right_items, strict=True)
+        )
+    return left == right
 
 
 def _canonical_string(value: object, field_name: str) -> str:
@@ -342,9 +365,13 @@ def _strategy_record(
         _invalid("strategy_spec_hash_mismatch")
     typed_legacy = deserialize_persisted_legacy_strategy_spec(record)
     legacy_round_trip = orjson.loads(orjson.dumps(asdict(typed_legacy)))
-    if not _same_canonical_json(detached_spec_json, legacy_round_trip):
+    canonical_spec_json = cast(
+        "dict[str, _JsonValue]",
+        _detach_json(legacy_round_trip),
+    )
+    if not _same_detached_json(detached_spec_json, canonical_spec_json):
         _invalid("noncanonical_strategy_spec_payload")
-    frozen_spec_json = _freeze_json(detached_spec_json)
+    frozen_spec_json = _freeze_json(canonical_spec_json)
     if type(frozen_spec_json) is not MappingProxyType:
         _invalid("invalid_strategy_spec_payload")
     return replace(

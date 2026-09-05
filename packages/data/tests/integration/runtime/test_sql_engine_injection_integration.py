@@ -10,14 +10,6 @@ from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.runtime.sql_engine import SqlEngine
 from ditto_platform.foundation import SQLitePool
 
-pytestmark = pytest.mark.xfail(
-    strict=False,
-    reason=(
-        "pyarrow missing: duckdb .pl() needs pyarrow to bridge to polars; "
-        "declare pyarrow dep or use duckdb-native conversion (T10 task 4.2)."
-    ),
-)
-
 
 class TestSqlEngineInjection:
     """Test cases for SQL injection prevention in SqlEngine."""
