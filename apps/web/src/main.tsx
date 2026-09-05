@@ -1,26 +1,17 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { initializeRuntimeConfig, verifyBackendCompatibility } from "@/api";
 import { QueryProvider } from "@/providers";
+import {
+	type BootstrapStage,
+	BootstrapStageFailure,
+	diagnosticFromBootstrapFailure,
+	renderBootstrapFailure,
+} from "./bootstrap-failure";
 import { routeTree } from "./routeTree.gen";
 
-// Fonts — all via Fontsource (bundled woff2, no Google Fonts dependency)
-// Inter: body text (400/500/600)
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-// JetBrains Mono: data/code (400/500)
-import "@fontsource/jetbrains-mono/400.css";
-import "@fontsource/jetbrains-mono/500.css";
-// Geist Sans/Mono: heading/code accents (400/500/600)
-import "@fontsource/geist-sans/400.css";
-import "@fontsource/geist-sans/500.css";
-import "@fontsource/geist-sans/600.css";
-import "@fontsource/geist-mono/400.css";
-import "@fontsource/geist-mono/500.css";
-// Noto Sans SC: CJK fallback via custom @font-face (optional)
-import "@/styles/fonts.css";
-
+import "@/styles/core-fonts.css";
 import "@/styles/globals.css";
 
 const router = createRouter({ routeTree });
@@ -31,19 +22,50 @@ declare module "@tanstack/react-router" {
 	}
 }
 
-async function enableMocking(): Promise<void> {
-	if (import.meta.env.VITE_USE_MOCK === "true") {
-		const { worker } = await import("@/mocks/browser");
-		await worker.start({ onUnhandledRequest: "bypass" });
+async function bootstrap(): Promise<void> {
+	let stage: BootstrapStage = "runtime_config";
+	try {
+		const runtime = await initializeRuntimeConfig({ production: import.meta.env.PROD });
+		const compatibilityWarnings: string[] = [];
+		if (runtime.runtime === "mock") {
+			stage = "mock_runtime";
+			if (!import.meta.env.DEV) throw new Error("mock runtime is unavailable outside development builds");
+			const { worker } = await import("@/mocks/browser");
+			await worker.start({ onUnhandledRequest: "error" });
+		} else {
+			stage = "backend_compatibility";
+			await verifyBackendCompatibility({
+				release: import.meta.env.PROD,
+				onWarning: (message) => compatibilityWarnings.push(message),
+			});
+		}
+		stage = "application_render";
+		createRoot(document.getElementById("root")!).render(
+			<StrictMode>
+				{compatibilityWarnings.length > 0 && (
+					<aside
+						role="status"
+						aria-live="polite"
+						className="fixed right-4 bottom-4 z-50 max-w-md rounded-(--radius-sm) border border-(--color-risk-warning-fg) bg-(--color-risk-warning-bg) p-3 text-xs text-(--color-risk-warning-fg)"
+					>
+						<strong>Ditto compatibility warning</strong>
+						{compatibilityWarnings.map((message) => (
+							<p key={message}>{message}</p>
+						))}
+					</aside>
+				)}
+				<QueryProvider>
+					<RouterProvider router={router} />
+				</QueryProvider>
+			</StrictMode>,
+		);
+	} catch (error) {
+		throw new BootstrapStageFailure(stage, error);
 	}
 }
 
-enableMocking().then(() => {
-	createRoot(document.getElementById("root")!).render(
-		<StrictMode>
-			<QueryProvider>
-				<RouterProvider router={router} />
-			</QueryProvider>
-		</StrictMode>,
-	);
-});
+function failClosed(error: unknown): void {
+	renderBootstrapFailure(document.getElementById("root"), diagnosticFromBootstrapFailure(error));
+}
+
+void bootstrap().catch(failClosed);

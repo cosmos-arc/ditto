@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

@@ -11,7 +11,6 @@ import {
   parseTokenValue,
 } from "./reference-resolver";
 import { parseAllTokenFiles } from "./css-parser";
-import type { ParsedValue, DtcgToken } from "./types";
 
 const TOKENS_DIR = resolve(import.meta.dirname, "../../src/styles/design-tokens");
 

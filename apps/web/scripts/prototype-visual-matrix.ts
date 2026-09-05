@@ -56,9 +56,9 @@ async function main() {
 						timeout: 15_000,
 					});
 					await page.evaluate(({ theme, density }: MatrixPreference) => {
-						document.documentElement.dataset.theme = theme;
-						document.documentElement.dataset.themePreference = theme;
-						document.documentElement.dataset.density = density;
+						document.documentElement.dataset["theme"] = theme;
+						document.documentElement.dataset["themePreference"] = theme;
+						document.documentElement.dataset["density"] = density;
 					}, preference);
 
 					mkdirSync(join(outputDir, prototype.id), { recursive: true });

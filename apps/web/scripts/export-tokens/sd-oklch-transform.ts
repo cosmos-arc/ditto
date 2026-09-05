@@ -18,7 +18,7 @@ import type { DittoExtensionMeta } from "./types";
  * guaranteed by our pipeline output.
  */
 function getDittoExtension(token: TransformedToken): DittoExtensionMeta | undefined {
-  const extensions = token.$extensions as
+  const extensions = token["$extensions"] as
     | Record<string, DittoExtensionMeta>
     | undefined;
   return extensions?.["com.ditto-app"];

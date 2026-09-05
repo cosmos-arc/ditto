@@ -1,6 +1,6 @@
 # Ditto App Agent Guide
 
-Ditto App 是 Ditto 本地优先 A 股个股与 ETF 量化决策、Paper Trading 和手工账户管理工作站的 React SPA。它负责 Today、Markets、Research、Portfolio 和 System 五个产品域；宏观与全球核心市场数据用于解释 A 股环境，系统不连接券商下单。后端 API 与运行时领域规则属于相邻 `ditto` 仓库。
+Ditto App 是同一 monorepo 中的 React SPA，负责 Today、Markets、Research、Portfolio 和 System 五个产品域。后端 API 与领域规则位于 `../backend` 和 `../../packages`；Web 只能经根 OpenAPI 契约与类型化 transport 消费它们。
 
 ## 事实优先级
 
@@ -15,13 +15,15 @@ Ditto App 是 Ditto 本地优先 A 股个股与 ETF 量化决策、Paper Trading
 ## 架构地图
 
 - `src/routes/`：TanStack Router 文件路由；`src/routeTree.gen.ts` 自动生成且不提交。
-- `src/features/`：业务能力；页面、hooks、API adapter 和 feature 状态在各自能力内聚。
+- `src/workflows/`：跨 feature 用户流程与 app composition；只消费 feature public API。
+- `src/features/`：业务能力；页面、hooks、API adapter 和 feature 状态在各自能力内聚，feature 间默认禁止直接 import。
 - `src/features/shell/`、`src/features/navigation/`：跨页面 shell/navigation 提供者。
 - `src/components/ui/`：无业务语义的基础组件；不得依赖 feature。
 - `src/components/{data,domain,indicator,status,chart}/`：跨 feature 展示能力。
-- `src/lib/`：API client、错误边界和纯工具；不得依赖 feature。
+- `src/api/`：OpenAPI generated types、typed transport、runtime config 与错误归一化。
+- `src/lib/`：错误边界和纯工具；不得依赖 feature。
 - `src/styles/design-tokens/`：颜色、密度、交互、组件 token 的唯一值源。
-- `src/types/generated/api.d.ts`：后端 OpenAPI 生成类型，不手写复制 API schema。
+- `src/api/generated/schema.d.ts`：由根 `contracts/openapi/v1.json` 生成，禁止手工编辑。
 
 ## 项目 Skills
 
@@ -48,19 +50,20 @@ Ditto App 是 Ditto 本地优先 A 股个股与 ETF 量化决策、Paper Trading
 
 | 变更 | 最低验证 |
 |---|---|
-| Harness/agent 配置 | `bun run harness:check` |
+| Harness/agent 配置 | 从仓库根运行 `pixi run -e dev harness-check` |
 | 测试文件 | 目标 `vitest run <files>` + `bun run type` |
-| TS/TSX/路由/API | `bun run check` |
-| Design Token/主题/CSS | `bun run check && bun run audit:tokens && bun run build:tokens:check` |
+| TS/TSX/路由/API | 从根运行 `pixi run -e dev check-web` |
+| Design Token/主题/CSS | 根 `pixi run -e dev check-web` + Web `bun run audit:tokens && bun run build:tokens:check` |
 | 页面合同 | 合同 validator/generator + 消费方目标测试 |
-| 发布候选 | `bun run ci`；prototype 测试需要 Chromium |
+| 发布候选 | 从根运行 `pixi run -e dev ci`；prototype/system 测试需要 Chromium |
 
-`check` 是快速、可重复、无浏览器门；`ci` 才包含 coverage、prototype/Playwright 和构建。
+根 Pixi `check-web` 是快速、可重复、无浏览器门；`web-ci` 包含 coverage、prototype 和构建，根 `ci` 还包含跨栈 Playwright。Bun 不定义平行的 `check/ci` 编排。
 
 ## 不可妥协项
 
 - 只使用 Bun；不要引入 npm/yarn/pnpm lockfile。
 - 生产 TypeScript 保持 strict；禁止 `any`、`@ts-ignore` 和 `@ts-expect-error`。
+- API path/method/params/body/response 必须由 generated `paths` 推导；禁止任意 URL + 调用方自选 `<T>`。
 - 服务端状态使用 TanStack Query；跨页面客户端偏好使用 Zustand；局部 UI 状态保持局部。
 - 基础 UI 与 `src/lib` 不得导入 feature。跨 feature 依赖优先公共 barrel；深层依赖需有明确能力契约。
 - 静态视觉值使用 Tailwind/Design Token。仅数据驱动几何可使用 inline style，且不得嵌入静态品牌色。
@@ -75,9 +78,8 @@ Ditto App 是 Ditto 本地优先 A 股个股与 ETF 量化决策、Paper Trading
 ## 常用入口
 
 ```bash
-bun install --frozen-lockfile
-bun run check
-bun run ci
-bun run harness:check
-bun run check:changed
+pixi run -e dev bootstrap
+pixi run -e dev check-web
+pixi run -e dev check-contract
+pixi run -e dev test-system
 ```

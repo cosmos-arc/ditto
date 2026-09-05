@@ -49,7 +49,7 @@ describe("page-factor-list prototype", () => {
 		const document = loadPage();
 		const metricCells = Array.from(document.querySelectorAll("#default-view .data-table .metric-delta"))
 			.map((marker) => marker.closest("td"))
-			.filter((cell): cell is Element => cell !== null);
+				.filter((cell): cell is HTMLTableCellElement => cell !== null);
 
 		expect(metricCells.length).toBeGreaterThan(0);
 		for (const cell of metricCells) {

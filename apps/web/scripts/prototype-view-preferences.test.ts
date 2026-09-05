@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { chromium, type Browser, type Page } from "playwright";
+import { chromium, type Browser, type LaunchOptions, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
@@ -16,10 +16,10 @@ const visualMatrixPages = [
 	"page-instrument-hub.html",
 	"page-strategy-studio.html",
 ];
-const chromiumLaunchOptions = {
+const chromiumLaunchOptions: LaunchOptions = {
 	channel: "chromium",
 	args: ["--disable-gpu"],
-} as const;
+};
 
 type ManifestPage = {
 	id: string;

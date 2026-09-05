@@ -47,7 +47,7 @@ describe("page-strategy-list prototype", () => {
 		const document = loadPage();
 		const positiveReturns = Array.from(document.querySelectorAll("#default-view .data-table .metric-delta"))
 			.map((marker) => marker.closest("td"))
-			.filter((cell): cell is Element => cell !== null);
+				.filter((cell): cell is HTMLTableCellElement => cell !== null);
 
 		expect(positiveReturns.length).toBeGreaterThan(0);
 		for (const cell of positiveReturns) {

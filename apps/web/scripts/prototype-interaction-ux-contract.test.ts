@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type LaunchOptions } from "playwright";
 import { describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
@@ -103,10 +103,10 @@ const navigationTimeoutMs = 10_000;
 const targetSizeNavigationTimeoutMs = 30_000;
 const playwrightTestTimeoutMs = 15_000;
 const jsdomInteractionTestTimeoutMs = 15_000;
-const chromiumLaunchOptions = {
+const chromiumLaunchOptions: LaunchOptions = {
 	channel: "chromium",
 	args: ["--disable-gpu"],
-} as const;
+};
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
 	home: "home",
 	"cross-market": "markets",
@@ -249,8 +249,10 @@ function collectFocusRuleViolations(page: ManifestPage): string[] {
 	const focusRule = /([^{}]+:focus-visible[^{}]*)\{([^{}]*)\}/gi;
 
 	for (const match of css.matchAll(focusRule)) {
-		const selector = match[1].trim();
+		const selectorText = match[1];
 		const body = match[2];
+		if (selectorText === undefined || body === undefined) continue;
+		const selector = selectorText.trim();
 		if (/resize-separator|\[data-resize-separator\]/.test(selector)) continue;
 		if (!/--(?:brand-accent|interaction-selected-[a-z-]+)/.test(body)) continue;
 		if (/--interaction-focus-ring/.test(body)) continue;
@@ -325,6 +327,7 @@ function installInteractiveWindowStubs(window: JSDOM["window"]): void {
 	class MockIntersectionObserver implements IntersectionObserver {
 		readonly root: Element | Document | null = null;
 		readonly rootMargin = "0px";
+		readonly scrollMargin = "0px";
 		readonly thresholds: ReadonlyArray<number> = [0];
 
 		disconnect(): void {
@@ -642,7 +645,7 @@ describe("prototype chart interaction surfaces", () => {
 
 		chart.setAttribute("data-chart-linked-time-range", "instrument-hub-secondary");
 		chart.setAttribute("data-chart-selection-command", "instrument-secondary-selection");
-		await new Promise((resolve) => dom.window.queueMicrotask(resolve));
+		await new Promise<void>((resolve) => dom.window.queueMicrotask(() => resolve()));
 		chart.querySelector<HTMLButtonElement>('[data-chart-action="create-alert"]')?.click();
 
 		expect(payloads[0]).toMatchObject({
@@ -980,11 +983,11 @@ function getPrototypeDeclaredDomain(document: Document): (typeof railDomains)[nu
 		].join(", "),
 	);
 	const candidates = [
-		document.documentElement.dataset.domain,
-		document.body.dataset.domain,
-		shellDomain?.dataset.pageDomain,
-		shellDomain?.dataset.shellDomain,
-		shellDomain?.dataset.domain,
+		document.documentElement.dataset["domain"],
+		document.body.dataset["domain"],
+		shellDomain?.dataset["pageDomain"],
+		shellDomain?.dataset["shellDomain"],
+		shellDomain?.dataset["domain"],
 	];
 
 	for (const candidate of candidates) {
@@ -1516,7 +1519,7 @@ async function collectViewportGuardViolations(page: import("playwright").Page, p
 	if (guard.role !== "alert") {
 		violations.push(`${pageMeta.id}:guard-role:${guard.role || "missing"}`);
 	}
-	if (!guard.text.includes("当前原型面向桌面工作台")) {
+	if (guard.text === undefined || !guard.text.includes("当前原型面向桌面工作台")) {
 		violations.push(`${pageMeta.id}:guard-copy`);
 	}
 	if (guard.viewportWidth !== "390") {
@@ -2095,7 +2098,7 @@ describe("prototype interaction UX contracts", () => {
 		for (const page of activePages()) {
 			const document = readPrototypeDocument(page);
 			const railItems = Array.from(document.querySelectorAll<HTMLElement>(".shell-rail [data-rail-domain]"));
-			const domains = railItems.map((item) => item.dataset.railDomain ?? "");
+			const domains = railItems.map((item) => item.dataset["railDomain"] ?? "");
 			const uniqueSortedDomains = [...new Set(domains)].sort();
 
 			if (railItems.length !== railDomains.length) {
@@ -2106,7 +2109,7 @@ describe("prototype interaction UX contracts", () => {
 			}
 
 			for (const item of railItems) {
-				const domain = item.dataset.railDomain ?? "";
+				const domain = item.dataset["railDomain"] ?? "";
 				const expectedLabel = railDomainSet.has(domain) ? railLabels[domain as keyof typeof railLabels] : undefined;
 				const expectedHref = railDomainSet.has(domain) ? railHrefs[domain as keyof typeof railHrefs] : undefined;
 				const expectedIcon = railDomainSet.has(domain) ? railIcons[domain as keyof typeof railIcons] : undefined;
@@ -2146,7 +2149,7 @@ describe("prototype interaction UX contracts", () => {
 				violations.push(`${page.id}: expected exactly one current rail item, found ${currentItems.length}`);
 			} else {
 				const pageDomain = getPageDomain(page);
-				const currentDomain = currentItems[0].dataset.railDomain ?? "";
+				const currentDomain = currentItems[0]?.dataset["railDomain"] ?? "";
 				if (pageDomain && currentDomain !== pageDomain) {
 					violations.push(`${page.id}: current rail domain expected "${pageDomain}", found "${currentDomain}"`);
 				}
@@ -3179,7 +3182,7 @@ describe("prototype interaction UX contracts", () => {
 				const trigger = document.getElementById("cmd-trigger");
 				trigger?.click();
 
-				const palette = document.querySelector("[data-command-palette]");
+				const palette = document.querySelector<HTMLElement>("[data-command-palette]");
 				expect(palette).not.toBeNull();
 				expect(palette?.hidden).toBe(false);
 				if (!palette) return;
@@ -3227,7 +3230,7 @@ describe("prototype interaction UX contracts", () => {
 				trigger.focus();
 				trigger.click();
 
-				const palette = document.querySelector("[data-command-palette]");
+				const palette = document.querySelector<HTMLElement>("[data-command-palette]");
 				expect(palette?.hidden).toBe(false);
 
 				/* Close with Escape */
@@ -3872,26 +3875,30 @@ describe("prototype interaction UX contracts", () => {
 					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
 				}
 
-				const chips = Array.from(document.querySelectorAll(".filter-chip")) as HTMLElement[];
+				const chips = Array.from(document.querySelectorAll<HTMLElement>(".filter-chip"));
 				expect(chips.length).toBe(3);
+				const [firstChip, secondChip, thirdChip] = chips;
+				if (!firstChip || !secondChip || !thirdChip) {
+					throw new Error("expected three filter chips");
+				}
 
 				/* Initial state: first chip is active */
-				expect(chips[0].getAttribute("aria-pressed")).toBe("true");
-				expect(chips[1].getAttribute("aria-pressed")).toBe("false");
+				expect(firstChip.getAttribute("aria-pressed")).toBe("true");
+				expect(secondChip.getAttribute("aria-pressed")).toBe("false");
 
 				/* Activate second chip with Enter */
-				chips[1].dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-				expect(chips[1].getAttribute("aria-pressed")).toBe("true");
-				expect(chips[1].classList.contains("active")).toBe(true);
-				expect(chips[0].getAttribute("aria-pressed")).toBe("false");
-				expect(chips[0].classList.contains("active")).toBe(false);
+				secondChip.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+				expect(secondChip.getAttribute("aria-pressed")).toBe("true");
+				expect(secondChip.classList.contains("active")).toBe(true);
+				expect(firstChip.getAttribute("aria-pressed")).toBe("false");
+				expect(firstChip.classList.contains("active")).toBe(false);
 
 				/* Activate third chip with Space */
-				chips[2].dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
-				expect(chips[2].getAttribute("aria-pressed")).toBe("true");
-				expect(chips[2].classList.contains("active")).toBe(true);
-				expect(chips[1].getAttribute("aria-pressed")).toBe("false");
-				expect(chips[1].classList.contains("active")).toBe(false);
+				thirdChip.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+				expect(thirdChip.getAttribute("aria-pressed")).toBe("true");
+				expect(thirdChip.classList.contains("active")).toBe(true);
+				expect(secondChip.getAttribute("aria-pressed")).toBe("false");
+				expect(secondChip.classList.contains("active")).toBe(false);
 			});
 
 			it("generates a stable aria-labelledby ID for tab buttons without explicit IDs", () => {

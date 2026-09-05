@@ -288,10 +288,10 @@ export function parseAcceptanceArgs(args: readonly string[]): AcceptanceOptions 
 }
 
 export function validateLiveRuntime(environment: Readonly<Record<string, string | undefined>>): void {
-	invariant(environment.VITE_USE_MOCK === "false", "live acceptance requires VITE_USE_MOCK=false");
+	invariant(environment["VITE_USE_MOCK"] === "false", "live acceptance requires VITE_USE_MOCK=false");
 }
 
-export function buildLiveAcceptancePlan(): readonly LiveAcceptancePlanStep[] {
+export function buildLiveAcceptancePlan() {
 	return [
 		{
 			id: "studio-preflight-launch",
@@ -311,7 +311,7 @@ export function buildLiveAcceptancePlan(): readonly LiveAcceptancePlanStep[] {
 		{ id: "r1-active-version", description: "Browser observes the published R1 active pointer" },
 		{ id: "historical-reactivate", description: "Historical published version is reactivated with pointer CAS confirmation" },
 		{ id: "refresh-recovery", description: "Hard refresh recovers server state without mock fallback" },
-	] as const;
+	] as const satisfies readonly LiveAcceptancePlanStep[];
 }
 
 export function buildFixtureCommand(): readonly string[] {
@@ -319,7 +319,9 @@ export function buildFixtureCommand(): readonly string[] {
 }
 
 function runCommand(command: readonly string[]): CommandCapture {
-	const result = spawnSync(command[0], command.slice(1), {
+	const executable = command[0];
+	invariant(executable !== undefined, "Command cannot be empty");
+	const result = spawnSync(executable, command.slice(1), {
 		cwd: PROJECT_ROOT,
 		encoding: "utf8",
 	});
@@ -339,7 +341,7 @@ function sourceCommit(): string {
 	return result.stdout.trim();
 }
 
-function sha256(payload: string): string {
+function sha256(payload: string | Uint8Array): string {
 	return createHash("sha256").update(payload).digest("hex");
 }
 
@@ -432,12 +434,12 @@ export async function loadLivePlanningDocument(path: string): Promise<LivePlanni
 		throw new Error(`unable to read live planning document: ${browserError(error)}`);
 	}
 	const root = recordValue(parsed, "planning document");
-	const strategy = recordValue(root.strategy, "strategy");
-	const snapshot = recordValue(root.snapshot, "snapshot");
-	const matrix = recordValue(root.matrix, "matrix");
-	const baseline = recordValue(matrix.baseline, "matrix.baseline");
-	const costModel = recordValue(root.cost_model, "cost_model");
-	const budget = recordValue(root.budget, "budget");
+	const strategy = recordValue(root["strategy"], "strategy");
+	const snapshot = recordValue(root["snapshot"], "snapshot");
+	const matrix = recordValue(root["matrix"], "matrix");
+	const baseline = recordValue(matrix["baseline"], "matrix.baseline");
+	const costModel = recordValue(root["cost_model"], "cost_model");
+	const budget = recordValue(root["budget"], "budget");
 	const strategyId = stringValue(strategy, "strategy_id");
 	invariant(strategyId === "seed_stock_selection_rotation", "live browser planning must bind the stock strategy");
 	const strategyVersion = numberValue(strategy, "version");
@@ -453,10 +455,10 @@ export async function loadLivePlanningDocument(path: string): Promise<LivePlanni
 	);
 	const createdAt = stringValue(root, "created_at");
 	invariant(!Number.isNaN(Date.parse(createdAt)) && /(?:Z|[+-]\d{2}:\d{2})$/u.test(createdAt), "created_at must include timezone");
-	recordValue(strategy.spec_json, "strategy.spec_json");
-	recordValue(root.validation, "validation");
-	recordValue(baseline.payload, "matrix.baseline.payload");
-	recordValue(root.promotion_objective, "promotion_objective");
+	recordValue(strategy["spec_json"], "strategy.spec_json");
+	recordValue(root["validation"], "validation");
+	recordValue(baseline["payload"], "matrix.baseline.payload");
+	recordValue(root["promotion_objective"], "promotion_objective");
 	arrayValue(matrix, "axes");
 	arrayValue(root, "dataset_requirements");
 	stringValue(root, "experiment_id");
@@ -475,16 +477,16 @@ export async function loadLivePlanningDocument(path: string): Promise<LivePlanni
 	numberValue(root, "seed");
 	const document = parsed as LivePlanningDocument;
 	const losslessRoot = recordValue(losslessParsed, "lossless planning document");
-	const losslessStrategy = recordValue(losslessRoot.strategy, "lossless strategy");
-	const losslessMatrix = recordValue(losslessRoot.matrix, "lossless matrix");
-	const losslessBaseline = recordValue(losslessMatrix.baseline, "lossless matrix.baseline");
+	const losslessStrategy = recordValue(losslessRoot["strategy"], "lossless strategy");
+	const losslessMatrix = recordValue(losslessRoot["matrix"], "lossless matrix");
+	const losslessBaseline = recordValue(losslessMatrix["baseline"], "lossless matrix.baseline");
 	rawJsonFieldsByPlanning.set(document, {
-		strategySpec: stringifyLosslessJson(losslessStrategy.spec_json),
-		validation: stringifyLosslessJson(losslessRoot.validation),
-		promotionObjective: stringifyLosslessJson(losslessRoot.promotion_objective),
-		baselinePayload: stringifyLosslessJson(losslessBaseline.payload),
-		axes: stringifyLosslessJson(losslessMatrix.axes),
-		datasetRequirements: stringifyLosslessJson(losslessRoot.dataset_requirements),
+		strategySpec: stringifyLosslessJson(losslessStrategy["spec_json"]),
+		validation: stringifyLosslessJson(losslessRoot["validation"]),
+		promotionObjective: stringifyLosslessJson(losslessRoot["promotion_objective"]),
+		baselinePayload: stringifyLosslessJson(losslessBaseline["payload"]),
+		axes: stringifyLosslessJson(losslessMatrix["axes"]),
+		datasetRequirements: stringifyLosslessJson(losslessRoot["dataset_requirements"]),
 	});
 	return document;
 }
@@ -721,10 +723,10 @@ export function hasPersistedCandidateSelection(
 	experimentId: string,
 ): boolean {
 	invariant(Object.hasOwn(experiment, "selection_state"), "experiment detail omitted selection_state");
-	const selection = experiment.selection_state;
+	const selection = experiment["selection_state"];
 	if (selection === null) return false;
 	const state = recordValue(selection, "selection_state");
-	invariant(state.experiment_id === experimentId, "persisted selection experiment identity did not match");
+	invariant(state["experiment_id"] === experimentId, "persisted selection experiment identity did not match");
 	stringValue(state, "selection_id");
 	return true;
 }
@@ -734,9 +736,9 @@ export function persistedHoldoutClaimId(
 	experimentId: string,
 ): string | null {
 	if (!hasPersistedCandidateSelection(experiment, experimentId)) return null;
-	const state = recordValue(experiment.selection_state, "selection_state");
+	const state = recordValue(experiment["selection_state"], "selection_state");
 	invariant(Object.hasOwn(state, "holdout_claim_id"), "selection_state omitted holdout_claim_id");
-	const claimId = state.holdout_claim_id;
+	const claimId = state["holdout_claim_id"];
 	if (claimId === null) return null;
 	return stringValue(state, "holdout_claim_id");
 }
@@ -753,16 +755,16 @@ export function livePlanningGovernanceState(
 	identity: LivePlanningGovernanceIdentity,
 ): string {
 	invariant(
-		detail.strategy_id === identity.strategyId && detail.version === identity.version,
+		detail["strategy_id"] === identity.strategyId && detail["version"] === identity.version,
 		"published strategy identity did not match the live planning document",
 	);
-	invariant(detail.spec_hash === identity.specHash, "published strategy spec hash did not match the live planning document");
+	invariant(detail["spec_hash"] === identity.specHash, "published strategy spec hash did not match the live planning document");
 	return stringValue(detail, "state");
 }
 
 /** Count the exact eligible complete-month decisions frozen into the live planning document. */
 export function eligibleLivePlanningMonthCount(validation: Readonly<Record<string, unknown>>): number {
-	const rawDecisions = validation.coverage_decisions;
+	const rawDecisions = validation["coverage_decisions"];
 	invariant(Array.isArray(rawDecisions), "live planning validation omitted coverage_decisions");
 	const eligibleMonths = new Set<string>();
 	for (const [index, rawDecision] of rawDecisions.entries()) {
@@ -868,7 +870,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 							page,
 							`/api/v1/research/experiments/${encodeURIComponent(experimentId)}`,
 						);
-						invariant(serverExperiment.status === "completed", "published planning experiment was not completed");
+						invariant(serverExperiment["status"] === "completed", "published planning experiment was not completed");
 						const eligibleMonths = eligibleLivePlanningMonthCount(planning.validation);
 						invariant(eligibleMonths >= 96, `published planning covered only ${eligibleMonths} eligible months`);
 						resumedExistingExperiment = true;
@@ -912,7 +914,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				);
 				const pause = page.getByRole("button", { name: "暂停", exact: true });
 				let control: string;
-				if (resumedExistingExperiment && serverExperiment.status === "completed") {
+				if (resumedExistingExperiment && serverExperiment["status"] === "completed") {
 					await page
 						.locator('[data-contract-slot="experiment-meta"]')
 						.getByText(/completed/iu)
@@ -929,7 +931,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 				} else {
 					control = "resumed-existing-server-truth";
 				}
-				if (serverExperiment.status !== "completed") {
+				if (serverExperiment["status"] !== "completed") {
 					await page
 						.locator('[data-contract-slot="experiment-meta"]')
 						.getByText(/candidate_selection/iu)
@@ -1060,7 +1062,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 			await executeLiveStep(page, outDir, plan[6], async () => {
 				invariant(promotedVersion, "published version was not recorded");
 				let active = await browserApiGet(page, `/api/v1/strategies/${strategyId}/active`);
-				if (active.active_version !== promotedVersion) {
+				if (active["active_version"] !== promotedVersion) {
 					await page.goto(`${options.reactBase}/research/strategies/${strategyId}`, { waitUntil: "domcontentloaded" });
 					await page.getByRole("tab", { name: "版本" }).click();
 					const viewVersion = page.getByRole("button", { name: `查看 v${promotedVersion} canonical 版本` });
@@ -1078,9 +1080,9 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 					await page.getByRole("heading", { name: `重新激活 v${promotedVersion}` }).waitFor({ state: "hidden" });
 					active = await browserApiGet(page, `/api/v1/strategies/${strategyId}/active`);
 				}
-				invariant(active.active_version === promotedVersion, "R1 active pointer did not select the published version");
-				invariant(typeof active.pointer_revision === "number", "R1 active pointer revision was missing");
-				return `R1 active=${String(active.active_version)} pointer_revision=${String(active.pointer_revision)}`;
+				invariant(active["active_version"] === promotedVersion, "R1 active pointer did not select the published version");
+				invariant(typeof active["pointer_revision"] === "number", "R1 active pointer revision was missing");
+				return `R1 active=${String(active["active_version"])} pointer_revision=${String(active["pointer_revision"])}`;
 			}),
 		);
 

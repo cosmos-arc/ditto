@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { chromium, type Page } from "playwright";
 
@@ -15,7 +15,7 @@ type RouteResult = {
 	readonly visible_assertions: Record<string, boolean>;
 };
 
-const baseUrl = process.env.DITTO_APP_BASE_URL ?? "http://127.0.0.1:5174";
+const baseUrl = process.env["DITTO_APP_BASE_URL"] ?? "http://127.0.0.1:5174";
 const output = resolve(process.argv[2] ?? "/tmp/ditto-q3-ui-live-20260901.json");
 const screenshotRoot = resolve(process.argv[3] ?? "/tmp/ditto-q3-ui-live-20260901");
 const rotationId =
@@ -128,7 +128,7 @@ try {
 		const screenshot = resolve(screenshotRoot, "selection.png");
 		await page.screenshot({ fullPage: true, path: screenshot });
 		const visibleAssertions = Object.fromEntries([...expected, ...exclusionExpected].map((text) => [text, body.includes(text)]));
-		visibleAssertions.selection_run_identity = body.includes(selectionRunId.split(":").at(-1)?.slice(0, 12) ?? "");
+		visibleAssertions["selection_run_identity"] = body.includes(selectionRunId.split(":").at(-1)?.slice(0, 12) ?? "");
 		results.push({
 			...observed,
 			acceptance_errors: acceptanceErrors,
@@ -162,11 +162,11 @@ try {
 		const technicalCall = Object.entries(observed.api_evidence).find(([key]) =>
 			key.includes("/technical-analysis/snapshots/query"),
 		)?.[1];
-		const request = technicalCall?.request as JsonObject | undefined;
-		const sourceSnapshotIds = request?.source_snapshot_ids;
+		const request = technicalCall?.["request"] as JsonObject | undefined;
+		const sourceSnapshotIds = request?.["source_snapshot_ids"];
 		const visibleAssertions = Object.fromEntries(expected.map((text) => [text, body.includes(text)]));
-		visibleAssertions.exact_selection_run = request?.selection_run_id === selectionRunId;
-		visibleAssertions.exact_certified_history_snapshot =
+		visibleAssertions["exact_selection_run"] = request?.["selection_run_id"] === selectionRunId;
+		visibleAssertions["exact_certified_history_snapshot"] =
 			Array.isArray(sourceSnapshotIds) && sourceSnapshotIds.length === 1 && sourceSnapshotIds[0] === technicalSnapshotId;
 		results.push({
 			...observed,
@@ -198,6 +198,6 @@ const artifact = {
 	routes: results,
 	schema: "ditto.q3-live-ui.v1",
 };
-await Bun.write(output, `${JSON.stringify(artifact, null, 2)}\n`);
+await writeFile(output, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 process.stdout.write(`${JSON.stringify({ output, passed })}\n`);
 if (!passed) process.exitCode = 1;

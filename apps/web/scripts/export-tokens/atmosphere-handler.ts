@@ -62,16 +62,19 @@ export function extractCalcBaseValues(
   CALC_BASE_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = CALC_BASE_RE.exec(rawValue)) !== null) {
-    matches.push(match[1]);
+    const captured = match[1];
+    if (captured !== undefined) matches.push(captured);
   }
 
   if (matches.length !== 3) {
     return null;
   }
 
-  const l = parseFloat(matches[0]);
-  const c = parseFloat(matches[1]);
-  const h = parseFloat(matches[2]);
+  const [lRaw, cRaw, hRaw] = matches;
+  if (lRaw === undefined || cRaw === undefined || hRaw === undefined) return null;
+  const l = parseFloat(lRaw);
+  const c = parseFloat(cRaw);
+  const h = parseFloat(hRaw);
 
   if (Number.isNaN(l) || Number.isNaN(c) || Number.isNaN(h)) {
     return null;

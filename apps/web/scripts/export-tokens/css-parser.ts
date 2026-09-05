@@ -8,7 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { basename } from "node:path";
 
 import type { RawCssToken } from "./types";
-import { layerFromFilename, themeContextFromSelector, TOKEN_LAYERS } from "./types";
+import { layerFromFilename, themeContextFromSelector } from "./types";
 
 // ── Constants ────────────────────────────────
 
@@ -95,8 +95,10 @@ export function parseCssFile(filePath: string): RawCssToken[] {
   let blockMatch: RegExpExecArray | null;
 
   while ((blockMatch = SELECTOR_BLOCK_RE.exec(cleaned)) !== null) {
-    const selector = blockMatch[1].trim();
+    const rawSelector = blockMatch[1];
     const blockBody = blockMatch[2];
+    if (rawSelector === undefined || blockBody === undefined) continue;
+    const selector = rawSelector.trim();
 
     // Skip non-selector blocks (e.g. media queries, @layer, @theme).
     if (!isValidTokenSelector(selector)) {
@@ -111,6 +113,7 @@ export function parseCssFile(filePath: string): RawCssToken[] {
     while ((declMatch = DECLARATION_RE.exec(blockBody)) !== null) {
       const rawName = declMatch[1];
       const rawValue = declMatch[2];
+      if (rawName === undefined || rawValue === undefined) continue;
 
       // Strip the `--` prefix from the property name.
       const name = rawName.slice(2);

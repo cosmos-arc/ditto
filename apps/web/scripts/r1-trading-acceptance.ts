@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { type Browser, type BrowserContextOptions, chromium, type Locator, type Page, type Route } from "playwright";
-import type { components } from "../src/types/generated/api";
+import type { components } from "../src/api/generated/schema";
 
 type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
 type FillAdjustmentResponse = components["schemas"]["FillAdjustmentResponse"];
@@ -291,7 +291,7 @@ export function buildDecisionReport(state: ReadinessState): DailyDecisionV2Respo
 	};
 }
 
-function browserViewport(viewport: AcceptanceViewport): BrowserContextOptions["viewport"] {
+function browserViewport(viewport: AcceptanceViewport): NonNullable<BrowserContextOptions["viewport"]> {
 	return { width: viewport.width, height: viewport.height };
 }
 
@@ -333,7 +333,8 @@ async function fulfillJson(route: Route, data: unknown, status = 200): Promise<v
 
 function correctionFillId(pathname: string, action: "void" | "replace"): string | null {
 	const match = pathname.match(new RegExp(`/api/v1/trade/fills/([^/]+)/${action}$`, "u"));
-	return match ? decodeURIComponent(match[1]) : null;
+	const fillId = match?.[1];
+	return fillId === undefined ? null : decodeURIComponent(fillId);
 }
 
 function createAdjustment(params: {

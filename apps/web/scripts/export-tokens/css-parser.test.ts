@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { resolve } from "node:path";
 import { parseAllTokenFiles, parseCssFile } from "./css-parser";
+import type { TokenLayer } from "./types";
 
 const TOKENS_DIR = resolve(import.meta.dirname, "../../src/styles/design-tokens");
 
@@ -22,7 +23,7 @@ describe("css-parser", () => {
     it("finds tokens from every layer", () => {
       const tokens = parseAllTokenFiles(TOKENS_DIR);
       const layers = new Set(tokens.map((t) => t.layer));
-      const expectedLayers = [
+      const expectedLayers: readonly TokenLayer[] = [
         "base",
         "semantic",
         "atmosphere",

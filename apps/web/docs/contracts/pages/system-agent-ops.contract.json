@@ -1,9 +1,9 @@
 {
   "id": "system-agent-ops",
-  "version": 6,
+  "version": 7,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-08-31",
+  "updatedAt": "2026-09-05",
   "route": "/system/agent",
   "pagePattern": "studio-builder",
   "shellFamily": "studio",
@@ -21,7 +21,7 @@
     "reactTestRefs": [
       "src/features/agent/components/agent-console-page.test.tsx",
       "src/features/agent/components/agent-overlays.test.tsx",
-      "src/features/system/components/system-components.test.tsx"
+      "src/workflows/system-agent-ops/system-agent-ops-page.test.tsx"
     ],
     "reactComponentRefs": [
       "SystemAgentOpsPage"

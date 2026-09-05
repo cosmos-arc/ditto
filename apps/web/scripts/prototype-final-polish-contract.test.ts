@@ -159,7 +159,7 @@ function collectColoredSideBorderFindings(relativePath: string): StaticFinding[]
 	const declarationBlockPattern = /{(?<body>[^{}]*)}/g;
 
 	for (const blockMatch of source.matchAll(declarationBlockPattern)) {
-		const body = blockMatch.groups?.body;
+		const body = blockMatch.groups?.["body"];
 		if (!body) continue;
 
 		const bodyOffset = (blockMatch.index ?? 0) + 1;
@@ -169,7 +169,7 @@ function collectColoredSideBorderFindings(relativePath: string): StaticFinding[]
 	}
 
 	for (const styleMatch of source.matchAll(/\bstyle=(["'])(?<body>.*?)\1/gs)) {
-		const body = styleMatch.groups?.body;
+		const body = styleMatch.groups?.["body"];
 		if (!body) continue;
 
 		const styleAttributeStart = styleMatch.index ?? 0;

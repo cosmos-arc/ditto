@@ -1,18 +1,6 @@
 {
-  "version": 2,
-  "status": "completed",
-  "mode": "from-existing",
-  "topic": "Ditto — 多市场量化研究+实盘闭环内部量化平台（A 股核心 + 大宗/贵金属/外汇/指数，后续美股/加密）",
-  "startedAt": "2026-04-17T10:00:00Z",
-  "completedAt": "2026-04-17T23:30:00Z",
-  "phases": {
-    "0": { "name": "INIT", "status": "done", "completedAt": "2026-04-17T10:00:00Z" },
-    "1": { "name": "VISION", "status": "done", "completedAt": "2026-04-17T23:15:00Z" },
-    "2": { "name": "LANDSCAPE", "status": "done", "completedAt": "2026-04-17T23:20:00Z" },
-    "3": { "name": "SYSTEM", "status": "done", "completedAt": "2026-04-17T23:25:00Z" },
-    "4": { "name": "CONSTRAINTS", "status": "done", "completedAt": "2026-04-17T23:28:00Z" },
-    "5": { "name": "SYNTHESIS", "status": "done", "completedAt": "2026-04-17T23:30:00Z" }
-  },
+  "schemaVersion": 1,
+  "kind": "discovery-inventory",
   "artifacts": {
     "brief": "docs/brief/product-brief.md",
     "constitution": "docs/brief/constitution.md",
@@ -20,13 +8,6 @@
     "assumptions": "docs/brief/assumptions.md",
     "competitiveLandscape": "docs/research/competitive/landscape.md",
     "knowledgeGaps": "docs/research/domain/knowledge-gaps.md"
-  },
-  "validation": {
-    "zachman_coverage": "6/6",
-    "yaml_field_completeness": "pass",
-    "consistency_check": "0 failures",
-    "file_completeness": "7/7 files exist and non-empty",
-    "assumption_status": "3 high unvalidated, 3 medium unvalidated, 2 validated"
   },
   "sourceSpecs": [
     "docs/designs/specs/00_ditto_product_criteria.md",
@@ -40,5 +21,33 @@
     "docs/designs/specs/18_data_source_spec.md",
     "docs/designs/decisions/2026-03-28-key-design-decisions.md",
     "docs/designs/decisions/2026-04-15-v3-interaction-framework.md"
-  ]
+  ],
+  "facts": {
+    "artifactCount": 6,
+    "sourceSpecCount": 11
+  },
+  "freshness": {
+    "schemaVersion": 1,
+    "algorithm": "sha256",
+    "inputs": [
+      "PRODUCT.md",
+      "DESIGN.md",
+      "docs/brief/*.md",
+      "docs/research/competitive/landscape.md",
+      "docs/research/domain/knowledge-gaps.md",
+      "docs/designs/specs/00_ditto_product_criteria.md",
+      "docs/designs/specs/00_ditto_visual_constitution.md",
+      "docs/designs/specs/01_product_information_architecture.md",
+      "docs/designs/specs/02_core_page_blueprints.md",
+      "docs/designs/specs/06_core_user_flows.md",
+      "docs/designs/specs/10_ditto_shell_family_spec.md",
+      "docs/designs/specs/16_ditto_glossary.md",
+      "docs/designs/specs/17_backtest_engine_spec.md",
+      "docs/designs/specs/18_data_source_spec.md",
+      "docs/designs/decisions/2026-03-28-key-design-decisions.md",
+      "docs/designs/decisions/2026-04-15-v3-interaction-framework.md"
+    ],
+    "inputCount": 19,
+    "digest": "21916f625b32b14763fb6a031848ef9a086621e471b9703e311d973550746762"
+  }
 }

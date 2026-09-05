@@ -6,7 +6,7 @@
 	color-scheme: light;
 
 	/* 兼容别名覆盖（对齐暗色主题的别名映射） */
-	--color-surface-hover: oklch(0 0 0 / 0.05);
+	--color-surface-hover: var(--surface-hover);
 	--color-surface-base: var(--surface-panel-base);
 	--color-surface-elevated: var(--surface-panel-elevated);
 	--color-status-success: var(--system-healthy-fg);

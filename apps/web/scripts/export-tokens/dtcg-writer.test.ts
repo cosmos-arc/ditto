@@ -159,57 +159,57 @@ describe("dtcg-writer", () => {
       const obj: Record<string, unknown> = {};
       const token: DtcgToken = { $value: "#ff0000", $type: "color" };
       setNestedValue(obj, ["brand"], token);
-      expect(obj.brand).toEqual(token);
+      expect(obj["brand"]).toEqual(token);
     });
 
     it("sets a value at a two-level path", () => {
       const obj: Record<string, unknown> = {};
       const token: DtcgToken = { $value: "#2e97ca", $type: "color" };
       setNestedValue(obj, ["brand", "500"], token);
-      expect(obj.brand).toBeDefined();
-      expect((obj.brand as Record<string, unknown>)["500"]).toEqual(token);
+      expect(obj["brand"]).toBeDefined();
+      expect((obj["brand"] as Record<string, unknown>)["500"]).toEqual(token);
     });
 
     it("sets a value at a three-level path", () => {
       const obj: Record<string, unknown> = {};
       const token: DtcgToken = { $value: "0.75rem", $type: "dimension" };
       setNestedValue(obj, ["font", "size", "12"], token);
-      expect(obj.font).toBeDefined();
-      expect((obj.font as Record<string, unknown>).size).toBeDefined();
-      expect(((obj.font as Record<string, unknown>).size as Record<string, unknown>)["12"]).toEqual(token);
+      expect(obj["font"]).toBeDefined();
+      expect((obj["font"] as Record<string, unknown>)["size"]).toBeDefined();
+      expect(((obj["font"] as Record<string, unknown>)["size"] as Record<string, unknown>)["12"]).toEqual(token);
     });
 
     it("creates intermediate objects when they do not exist", () => {
       const obj: Record<string, unknown> = {};
       const token: DtcgToken = { $value: "#ff0000", $type: "color" };
       setNestedValue(obj, ["a", "b", "c", "d"], token);
-      expect((obj.a as Record<string, unknown>).b).toBeDefined();
-      expect(((obj.a as Record<string, unknown>).b as Record<string, unknown>).c).toBeDefined();
-      expect((((obj.a as Record<string, unknown>).b as Record<string, unknown>).c as Record<string, unknown>).d).toEqual(token);
+      expect((obj["a"] as Record<string, unknown>)["b"]).toBeDefined();
+      expect(((obj["a"] as Record<string, unknown>)["b"] as Record<string, unknown>)["c"]).toBeDefined();
+      expect((((obj["a"] as Record<string, unknown>)["b"] as Record<string, unknown>)["c"] as Record<string, unknown>)["d"]).toEqual(token);
     });
 
     it("overwrites non-object intermediate values with objects", () => {
       const obj: Record<string, unknown> = { brand: "old-value" };
       const token: DtcgToken = { $value: "#2e97ca", $type: "color" };
       setNestedValue(obj, ["brand", "500"], token);
-      expect(obj.brand).toBeDefined();
-      expect(typeof obj.brand).toBe("object");
-      expect((obj.brand as Record<string, unknown>)["500"]).toEqual(token);
+      expect(obj["brand"]).toBeDefined();
+      expect(typeof obj["brand"]).toBe("object");
+      expect((obj["brand"] as Record<string, unknown>)["500"]).toEqual(token);
     });
 
     it("overwrites null intermediate values with objects", () => {
       const obj: Record<string, unknown> = { brand: null };
       const token: DtcgToken = { $value: "#2e97ca", $type: "color" };
       setNestedValue(obj, ["brand", "500"], token);
-      expect(typeof obj.brand).toBe("object");
+      expect(typeof obj["brand"]).toBe("object");
     });
 
     it("overwrites array intermediate values with objects", () => {
       const obj: Record<string, unknown> = { brand: [1, 2, 3] };
       const token: DtcgToken = { $value: "#2e97ca", $type: "color" };
       setNestedValue(obj, ["brand", "500"], token);
-      expect(Array.isArray(obj.brand)).toBe(false);
-      expect((obj.brand as Record<string, unknown>)["500"]).toEqual(token);
+      expect(Array.isArray(obj["brand"])).toBe(false);
+      expect((obj["brand"] as Record<string, unknown>)["500"]).toEqual(token);
     });
 
     it("allows setting multiple values at different paths", () => {
@@ -218,8 +218,8 @@ describe("dtcg-writer", () => {
       const token2: DtcgToken = { $value: "#ff0000", $type: "color" };
       setNestedValue(obj, ["brand", "500"], token1);
       setNestedValue(obj, ["brand", "600"], token2);
-      expect((obj.brand as Record<string, unknown>)["500"]).toEqual(token1);
-      expect((obj.brand as Record<string, unknown>)["600"]).toEqual(token2);
+      expect((obj["brand"] as Record<string, unknown>)["500"]).toEqual(token1);
+      expect((obj["brand"] as Record<string, unknown>)["600"]).toEqual(token2);
     });
 
     it("allows overwriting existing values", () => {
@@ -228,7 +228,7 @@ describe("dtcg-writer", () => {
       const token2: DtcgToken = { $value: "#ff0000", $type: "color" };
       setNestedValue(obj, ["brand", "500"], token1);
       setNestedValue(obj, ["brand", "500"], token2);
-      expect((obj.brand as Record<string, unknown>)["500"]).toEqual(token2);
+      expect((obj["brand"] as Record<string, unknown>)["500"]).toEqual(token2);
     });
   });
 

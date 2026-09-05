@@ -11,7 +11,6 @@ import {
   isOklch,
   isRelativeOklch,
   resolveRelativeOklch,
-  type OklchComponents,
 } from "./oklch-converter";
 
 describe("oklch-converter", () => {
@@ -328,9 +327,11 @@ describe("oklch-converter", () => {
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex);
   if (!match) return null;
+  const [, red, green, blue] = match;
+  if (red === undefined || green === undefined || blue === undefined) return null;
   return {
-    r: Number.parseInt(match[1], 16),
-    g: Number.parseInt(match[2], 16),
-    b: Number.parseInt(match[3], 16),
+    r: Number.parseInt(red, 16),
+    g: Number.parseInt(green, 16),
+    b: Number.parseInt(blue, 16),
   };
 }

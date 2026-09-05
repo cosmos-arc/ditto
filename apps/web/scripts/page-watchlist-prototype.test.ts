@@ -184,7 +184,13 @@ describe("page-watchlist prototype", () => {
 				});
 
 				expect(geometry).toMatchObject({ hasRequiredRegions: true });
-				if (!("actionBottom" in geometry)) {
+					if (
+						!("actionBottom" in geometry) ||
+						geometry.actionBottom === undefined ||
+						geometry.viewportBottom === undefined ||
+						geometry.detailScrollHeight === undefined ||
+						geometry.detailClientHeight === undefined
+					) {
 					throw new Error("right rail geometry did not include action data");
 				}
 				expect(geometry.actionBottom).toBeLessThanOrEqual(geometry.viewportBottom - 8);

@@ -18,9 +18,9 @@ describe("R1 trading visual acceptance contract", () => {
 		};
 
 		expect(packageJson.scripts?.["visual:audit"]).toBe(
-			"bun .agents/skills/ditto-app-dev/scripts/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
+			"bun ../../.agents/skills/ditto-app-dev/scripts/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
 		);
-		expect(packageJson.scripts?.["visual:audit:cli"]).toBe("bun .agents/skills/ditto-app-dev/scripts/visual-audit.mjs");
+		expect(packageJson.scripts?.["visual:audit:cli"]).toBe("bun ../../.agents/skills/ditto-app-dev/scripts/visual-audit.mjs");
 		expect(packageJson.scripts?.["acceptance:r1-trading"]).toBe("bun scripts/r1-trading-acceptance.ts");
 	});
 
@@ -59,7 +59,7 @@ describe("R1 trading visual acceptance contract", () => {
 			reason_codes: ["ACCOUNT_BASELINE_MISSING"],
 		});
 		expect(review.readiness).toMatchObject({ status: "review", reason_codes: ["RISK_WARNING"] });
-		expect(review.execution_review.effective_fills.map((fill) => fill.fill_id)).toEqual([
+		expect(review.execution_review.effective_fills.map((fill: { readonly fill_id: string }) => fill.fill_id)).toEqual([
 			"fill-intent-510300-001",
 			"fill-intent-510300-002",
 		]);

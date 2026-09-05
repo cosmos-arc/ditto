@@ -202,7 +202,7 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 					}
 					const classes = [...current.classList].slice(0, 3);
 					if (classes.length > 0) part += `.${classes.join(".")}`;
-					const parent = current.parentElement;
+						const parent: Element | null = current.parentElement;
 					if (parent) {
 						const sameTagSiblings = [...parent.children].filter(
 							(child) => child.localName === current?.localName,

@@ -1,9 +1,9 @@
+import type { MarketContextContract, MarketContextQuery } from "@/api/market-contract";
 import type { FilterCondition, PaginatedRequest, PaginatedResponse, SparklinePoint } from "./common";
-import type { components, operations } from "./generated/api";
 
 // === Request Types ===
 
-export type GetMarketContextRequest = operations["market_get_context"]["parameters"]["query"];
+export type GetMarketContextRequest = MarketContextQuery;
 
 export type GetScopeStripRequest = undefined;
 
@@ -50,7 +50,7 @@ export type GetIntelligenceDetailRequest = {
 // === Response Types ===
 
 /** 市场上下文 */
-export type MarketContextResponse = components["schemas"]["MarketContextResponse"];
+export type MarketContextResponse = MarketContextContract;
 
 /** 市场解读 */
 export type ScopeStripResponse = {

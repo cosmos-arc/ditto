@@ -161,7 +161,13 @@ describe("page-ai-copilot prototype", () => {
 				});
 
 				expect(geometry).toMatchObject({ hasRequiredRegions: true });
-				if (!("position" in geometry)) {
+					if (
+						!("position" in geometry) ||
+						geometry.shellBottom === undefined ||
+						geometry.statusTop === undefined ||
+						geometry.statusBottom === undefined ||
+						geometry.viewportBottom === undefined
+					) {
 					throw new Error("compact geometry did not include status data");
 				}
 				expect(geometry.position).toBe("static");

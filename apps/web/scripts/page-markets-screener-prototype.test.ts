@@ -138,7 +138,12 @@ describe("page-markets-screener prototype", () => {
 				await expectPanelVisible(page, "compare");
 
 				await page.locator('[data-tab-panel="compare"] label[for="overlay-compare"]').click();
-				await expect(await page.locator("#overlay-compare").evaluate((element) => element.checked)).toBe(true);
+					await expect(
+						await page.locator("#overlay-compare").evaluate((element) => {
+							if (!(element instanceof HTMLInputElement)) throw new TypeError("Expected comparison input");
+							return element.checked;
+						}),
+					).toBe(true);
 			} finally {
 				await browser.close();
 			}

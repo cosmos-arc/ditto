@@ -246,81 +246,6 @@ export function validateDtcgOutput(outputDir: string): ValidationResult {
   };
 }
 
-// ── Internal: Theme Override Grouping ─────────
-
-/**
- * Build a map of theme name → tokens for non-default context tokens.
- *
- * Groups tokens by their theme context (light, domain, density, intl, lightDomain).
- * The resolved DtcgToken for each override is looked up from the resolved tokens map.
- */
-function buildThemeOverrides(
-  allTokens: RawCssToken[],
-  resolvedTokens: Map<string, DtcgToken>,
-): Map<string, Map<string, DtcgToken>> {
-  const overrides = new Map<string, Map<string, DtcgToken>>();
-
-  for (const token of allTokens) {
-    if (token.context === "default") continue;
-
-    // Use context as the theme key
-    const themeKey = token.context;
-    let themeMap = overrides.get(themeKey);
-    if (!themeMap) {
-      themeMap = new Map();
-      overrides.set(themeKey, themeMap);
-    }
-
-    // Look up the resolved token by name.
-    // Note: resolvedTokens are keyed by DTCG path, but we also need
-    // name-based lookup. Build a name→resolved map from allTokens' layer context.
-    const dtcg = findResolvedToken(token.name, resolvedTokens);
-    if (dtcg) {
-      themeMap.set(token.name, dtcg);
-    }
-  }
-
-  return overrides;
-}
-
-/**
- * Find a resolved token by name from the resolved tokens map.
- *
- * The resolved tokens are keyed by DTCG path (e.g. `{base.brand.500}`),
- * so we need to match by extracting the name portion.
- */
-function findResolvedToken(
-  name: string,
-  resolvedTokens: Map<string, DtcgToken>,
-): DtcgToken | null {
-  // Build a reverse lookup: DTCG path → name
-  // We search through all resolved tokens to find one whose DTCG path
-  // ends with the token name.
-  for (const [dtcgPath, token] of resolvedTokens) {
-    const extractedName = dtcgPathToName(dtcgPath);
-    if (extractedName === name) {
-      return token;
-    }
-  }
-  return null;
-}
-
-/**
- * Extract a token name from a DTCG path string.
- *
- * Examples:
- *   `{base.brand.500}` → `brand-500`
- *   `{shell.header.height}` → `header-height`
- *   `{atmosphere.hue.shift}` → `hue-shift`
- */
-function dtcgPathToName(dtcgPath: string): string {
-  // Strip the surrounding braces and the layer prefix (first segment).
-  const stripped = dtcgPath.replace(/^\{|\}$/g, "");
-  const dotIndex = stripped.indexOf(".");
-  if (dotIndex === -1) return stripped.replace(/\./g, "-");
-  return stripped.slice(dotIndex + 1).replace(/\./g, "-");
-}
-
 // ── Internal: Validation Helpers ─────────────
 
 /** Regex for valid hex color values (3, 4, 6, or 8 hex digits). */
@@ -409,11 +334,11 @@ function validateSingleToken(
   errors: string[],
   warnings: string[],
 ): void {
-  const valueType = typeof token.$value;
-  const typeValue = typeof token.$type;
+  const valueType = typeof token["$value"];
+  const typeValue = typeof token["$type"];
 
   // $value must be string or object (for composites)
-  if (valueType !== "string" && (valueType !== "object" || token.$value === null)) {
+  if (valueType !== "string" && (valueType !== "object" || token["$value"] === null)) {
     errors.push(`[${context}] Token "${key}": $value must be string or object, got ${valueType}`);
     return;
   }
@@ -424,11 +349,11 @@ function validateSingleToken(
     return;
   }
 
-  const type = token.$type as string;
+  const type = token["$type"] as string;
 
   // Color tokens must have valid hex values (unless they're DTCG references)
-  if (type === "color" && typeof token.$value === "string") {
-    const val = token.$value as string;
+  if (type === "color" && typeof token["$value"] === "string") {
+    const val = token["$value"] as string;
 
     // DTCG references are valid for color tokens
     if (DTCG_REF_RE.test(val)) return;
@@ -453,7 +378,7 @@ function validateSingleToken(
  */
 function checkOrphanedReferences(
   tokensDir: string,
-  allTokenPaths: Set<string>,
+  _allTokenPaths: Set<string>,
   errors: string[],
   _warnings: string[],
 ): void {
@@ -561,7 +486,7 @@ function checkReferencesRecursive(
       !Array.isArray(value) &&
       "$value" in (value as Record<string, unknown>)
     ) {
-      const innerValue = (value as Record<string, unknown>).$value;
+      const innerValue = (value as Record<string, unknown>)["$value"];
       if (typeof innerValue === "string" && DTCG_REF_RE.test(innerValue)) {
         const refPath = innerValue.replace(/^\{|\}$/g, "");
         const withoutLayer = refPath.includes(".") ? refPath.slice(refPath.indexOf(".") + 1) : refPath;

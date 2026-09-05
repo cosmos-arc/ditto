@@ -104,6 +104,7 @@ export function tokenNameToNestedPath(name: string): string[] {
 
   while (i < segments.length) {
     const seg = segments[i];
+    if (seg === undefined) break;
 
     if (i === 0) {
       // First segment is always a namespace key
@@ -120,7 +121,8 @@ export function tokenNameToNestedPath(name: string): string[] {
     }
 
     // If the previous segment was numeric, this starts a new group
-    if (result.length > 0 && /^\d+$/.test(result[result.length - 1])) {
+    const previousSegment = result.at(-1);
+    if (previousSegment !== undefined && /^\d+$/.test(previousSegment)) {
       result.push(seg);
       i++;
       continue;
@@ -135,7 +137,9 @@ export function tokenNameToNestedPath(name: string): string[] {
 
     // Otherwise, merge with the previous segment to form a compound key
     if (result.length > 0) {
-      result[result.length - 1] = `${result[result.length - 1]}-${seg}`;
+      const previous = result.at(-1);
+      if (previous === undefined) throw new Error(`Cannot group token path segment: ${name}`);
+      result[result.length - 1] = `${previous}-${seg}`;
     } else {
       result.push(seg);
     }
@@ -155,10 +159,12 @@ export function setNestedValue(
   path: string[],
   value: DtcgToken,
 ): void {
+  if (path.length === 0) throw new Error("Cannot set a token at an empty path");
   let current: Record<string, unknown> = obj;
 
   for (let i = 0; i < path.length - 1; i++) {
     const key = path[i];
+    if (key === undefined) throw new Error("Token path contains an empty segment");
     const next = current[key];
 
     if (next === undefined || next === null || typeof next !== "object" || Array.isArray(next)) {
@@ -168,7 +174,9 @@ export function setNestedValue(
     current = current[key] as Record<string, unknown>;
   }
 
-  current[path[path.length - 1]] = value;
+  const leafKey = path.at(-1);
+  if (leafKey === undefined) throw new Error("Cannot set a token at an empty path");
+  current[leafKey] = value;
 }
 
 // ── Sorting Utility ──────────────────────────

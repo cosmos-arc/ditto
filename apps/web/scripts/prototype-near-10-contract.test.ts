@@ -62,7 +62,8 @@ describe("near-10 primary answer contract", () => {
 
 			expect(answers, `${page.id}: expected exactly one primary answer`).toHaveLength(1);
 
-			const answer = answers[0];
+				const answer = answers[0];
+				if (answer === undefined) throw new Error(`${page.id}: primary answer disappeared after validation`);
 			expect(answer.querySelectorAll("[data-answer-judgment]").length).toBeGreaterThanOrEqual(1);
 			expect(answer.querySelectorAll("[data-answer-metric]").length).toBeGreaterThanOrEqual(1);
 			expect(answer.querySelectorAll("[data-answer-evidence]").length).toBeGreaterThanOrEqual(2);

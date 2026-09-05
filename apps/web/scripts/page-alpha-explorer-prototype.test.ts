@@ -98,7 +98,7 @@ describe("page-alpha-explorer prototype", () => {
 		expect(document.querySelectorAll("h1")).toHaveLength(1);
 		expect(defaultView?.querySelector(".style-label")?.textContent).toContain("Graphite Studio");
 		expect(shell?.getAttribute("data-resizable-panel-group")).toBe("alpha-workbench");
-		expect(railItems.map((item) => item.dataset.railDomain)).toEqual(railDomains);
+		expect(railItems.map((item) => item.dataset["railDomain"])).toEqual(railDomains);
 		expect(railItems.filter((item) => item.getAttribute("aria-current") === "page")).toHaveLength(1);
 		expect(document.querySelector(".shell-rail [data-rail-domain='research']")?.getAttribute("aria-current")).toBe(
 			"page",

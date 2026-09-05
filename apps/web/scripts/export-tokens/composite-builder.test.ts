@@ -7,6 +7,13 @@ import { describe, it, expect } from "vitest";
 import { isComposite, buildCompositeValue } from "./composite-builder";
 import type { ParsedValue } from "./types";
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError("Expected a structured DTCG value");
+  }
+  return value as Record<string, unknown>;
+}
+
 describe("composite-builder", () => {
   // ── isComposite ────────────────────────────
 
@@ -75,7 +82,7 @@ describe("composite-builder", () => {
         value: "0 8px 24px oklch(0 0 0 / 0.4)",
       };
       const token = buildCompositeValue("interaction-dragging-shadow", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
+      const val = asRecord(token!.$value);
       expect(val).toHaveProperty("offsetX");
       expect(val).toHaveProperty("offsetY");
       expect(val).toHaveProperty("blur");
@@ -88,11 +95,11 @@ describe("composite-builder", () => {
         value: "0 8px 24px oklch(0 0 0 / 0.4)",
       };
       const token = buildCompositeValue("interaction-dragging-shadow", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
-      const offsetX = val.offsetX as Record<string, unknown>;
-      expect(offsetX.value).toBe("0");
-      expect(offsetX.type).toBe("dimension");
-      expect(offsetX.unit).toBe("px");
+      const val = asRecord(token!.$value);
+      const offsetX = val["offsetX"] as Record<string, unknown>;
+      expect(offsetX["value"]).toBe("0");
+      expect(offsetX["type"]).toBe("dimension");
+      expect(offsetX["unit"]).toBe("px");
     });
 
     it("shadow offsetY is dimension with value 8 and unit px", () => {
@@ -101,10 +108,10 @@ describe("composite-builder", () => {
         value: "0 8px 24px oklch(0 0 0 / 0.4)",
       };
       const token = buildCompositeValue("interaction-dragging-shadow", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
-      const offsetY = val.offsetY as Record<string, unknown>;
-      expect(offsetY.value).toBe("8");
-      expect(offsetY.unit).toBe("px");
+      const val = asRecord(token!.$value);
+      const offsetY = val["offsetY"] as Record<string, unknown>;
+      expect(offsetY["value"]).toBe("8");
+      expect(offsetY["unit"]).toBe("px");
     });
 
     it("shadow blur is dimension with value 24 and unit px", () => {
@@ -113,10 +120,10 @@ describe("composite-builder", () => {
         value: "0 8px 24px oklch(0 0 0 / 0.4)",
       };
       const token = buildCompositeValue("interaction-dragging-shadow", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
-      const blur = val.blur as Record<string, unknown>;
-      expect(blur.value).toBe("24");
-      expect(blur.unit).toBe("px");
+      const val = asRecord(token!.$value);
+      const blur = val["blur"] as Record<string, unknown>;
+      expect(blur["value"]).toBe("24");
+      expect(blur["unit"]).toBe("px");
     });
 
     it("shadow color is a hex string (converted from oklch)", () => {
@@ -125,8 +132,8 @@ describe("composite-builder", () => {
         value: "0 8px 24px oklch(0 0 0 / 0.4)",
       };
       const token = buildCompositeValue("interaction-dragging-shadow", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
-      expect(val.color).toMatch(/^#[0-9a-f]{8}$/);
+      const val = asRecord(token!.$value);
+      expect(val["color"]).toMatch(/^#[0-9a-f]{8}$/);
     });
 
     it("shadow with less than 4 parts returns other type", () => {
@@ -173,10 +180,10 @@ describe("composite-builder", () => {
         ["border-subtle", "{semantic.border.subtle}"],
       ]);
       const token = buildCompositeValue("card-border", pv, refMap);
-      const val = token!.$value as Record<string, unknown>;
-      expect(val.color).toBe("{semantic.border.subtle}");
-      expect(val.style).toBe("solid");
-      expect(val.width).toBe("1px");
+      const val = asRecord(token!.$value);
+      expect(val["color"]).toBe("{semantic.border.subtle}");
+      expect(val["style"]).toBe("solid");
+      expect(val["width"]).toBe("1px");
     });
 
     it("border with oklch color converts to hex", () => {
@@ -185,8 +192,8 @@ describe("composite-builder", () => {
         value: "1px solid oklch(0.255 0.006 253)",
       };
       const token = buildCompositeValue("panel-border", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
-      expect(val.color).toMatch(/^#[0-9a-f]{6}$/);
+      const val = asRecord(token!.$value);
+      expect(val["color"]).toMatch(/^#[0-9a-f]{6}$/);
     });
 
     it("border with transparent color preserves transparent", () => {
@@ -195,8 +202,8 @@ describe("composite-builder", () => {
         value: "1px solid transparent",
       };
       const token = buildCompositeValue("border-transparent", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
-      expect(val.color).toBe("transparent");
+      const val = asRecord(token!.$value);
+      expect(val["color"]).toBe("transparent");
     });
 
     it("border with unresolved var() keeps raw var() string", () => {
@@ -205,8 +212,8 @@ describe("composite-builder", () => {
         value: "1px solid var(--border-subtle)",
       };
       const token = buildCompositeValue("card-border", pv, emptyRefMap);
-      const val = token!.$value as Record<string, unknown>;
-      expect(val.color).toBe("var(--border-subtle)");
+      const val = asRecord(token!.$value);
+      expect(val["color"]).toBe("var(--border-subtle)");
     });
 
     it("border with less than 3 parts returns other type", () => {

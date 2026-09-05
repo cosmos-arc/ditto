@@ -2997,11 +2997,11 @@ describe("prototype design consistency", () => {
 		if (priorityQueueCount !== undefined && pendingPulseCount !== priorityQueueCount) {
 			violations.push(`home:pending-count:${pendingPulseCount ?? "missing"}:${priorityQueueCount}`);
 		}
-		if (pulseP1Count !== String(priorityCounts.P1 ?? 0)) {
-			violations.push(`home:pending-p1:${pulseP1Count ?? "missing"}:${priorityCounts.P1 ?? 0}`);
+		if (pulseP1Count !== String(priorityCounts["P1"] ?? 0)) {
+			violations.push(`home:pending-p1:${pulseP1Count ?? "missing"}:${priorityCounts["P1"] ?? 0}`);
 		}
-		if (pulseP2Count !== String(priorityCounts.P2 ?? 0)) {
-			violations.push(`home:pending-p2:${pulseP2Count ?? "missing"}:${priorityCounts.P2 ?? 0}`);
+		if (pulseP2Count !== String(priorityCounts["P2"] ?? 0)) {
+			violations.push(`home:pending-p2:${pulseP2Count ?? "missing"}:${priorityCounts["P2"] ?? 0}`);
 		}
 
 		const activityStream = document.querySelector('[data-contract-slot="recent-signals"]');

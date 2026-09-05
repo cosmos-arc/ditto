@@ -1,7 +1,13 @@
-import "@testing-library/jest-dom/vitest";
+import * as jestDomMatchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
+import { installRuntimeConfig } from "@/api/runtime-config";
 import { server } from "@/mocks/server";
+
+// The matcher-only entry point is workspace-isolation safe: unlike the
+// convenience `/vitest` entry point, it does not resolve Vitest from inside
+// jest-dom's package directory.
+expect.extend(jestDomMatchers);
 
 /* ── IntersectionObserver stub (jsdom lacks native support) ── */
 
@@ -24,6 +30,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+	installRuntimeConfig({ schemaVersion: 1, runtime: "mock", apiOrigin: "" }, { production: false });
 	vi.stubEnv("VITE_USE_MOCK", "true");
 });
 

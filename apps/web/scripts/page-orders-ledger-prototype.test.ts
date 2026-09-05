@@ -191,7 +191,12 @@ describe("page-orders-ledger prototype", () => {
 
 				await checkRadio(page, "view-default");
 				await page.locator('label[for="overlay-batch-cancel"]').first().click();
-				await expect(await page.locator("#overlay-batch-cancel").evaluate((element) => element.checked)).toBe(true);
+					await expect(
+						await page.locator("#overlay-batch-cancel").evaluate((element) => {
+							if (!(element instanceof HTMLInputElement)) throw new TypeError("Expected batch-cancel input");
+							return element.checked;
+						}),
+					).toBe(true);
 				await expectCssVisible(page, '[data-overlay="overlay-batch-cancel"]', true);
 			});
 		},

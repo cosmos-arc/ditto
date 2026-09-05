@@ -54,7 +54,7 @@ const VAR_RE = /^var\(([^)]+)\)$/;
  * @param referenceMap - Token name → DTCG path mapping (from buildReferenceMap).
  */
 export function buildCompositeValue(
-  tokenName: string,
+  _tokenName: string,
   parsedValue: ParsedValue,
   referenceMap: Map<string, string>,
 ): DtcgToken | null {
@@ -197,7 +197,8 @@ function buildTransition(
 ): DtcgToken {
   const tokens = extractVarReferences(parsed.value);
 
-  if (tokens.length < 2) {
+  const [durationToken, timingFunctionToken] = tokens;
+  if (durationToken === undefined || timingFunctionToken === undefined) {
     return {
       $value: parsed.value,
       $type: "other",
@@ -210,8 +211,8 @@ function buildTransition(
     };
   }
 
-  const duration = resolveVarReference(tokens[0], referenceMap);
-  const timingFunction = resolveVarReference(tokens[1], referenceMap);
+  const duration = resolveVarReference(durationToken, referenceMap);
+  const timingFunction = resolveVarReference(timingFunctionToken, referenceMap);
 
   const transitionValue: DtcgTransitionValue = {
     duration,
@@ -265,7 +266,7 @@ function parseDimensionPart(
   fallback: string,
 ): { value: string; type: "dimension"; unit: string } {
   const match = /^(-?[\d.]+)(px|rem|em|%)$/.exec(raw);
-  if (match) {
+  if (match?.[1] !== undefined && match[2] !== undefined) {
     return { value: match[1], type: "dimension", unit: match[2] };
   }
   // Bare number (e.g. "0") — default to px.
@@ -319,9 +320,11 @@ function resolveColorPart(
   const varMatch = VAR_RE.exec(trimmed);
 
   if (varMatch) {
-    const varName = varMatch[1].startsWith("--")
-      ? varMatch[1].slice(2)
-      : varMatch[1];
+    const capturedName = varMatch[1];
+    if (capturedName === undefined) return trimmed;
+    const varName = capturedName.startsWith("--")
+      ? capturedName.slice(2)
+      : capturedName;
     const dtcgPath = referenceMap.get(varName);
     if (dtcgPath) {
       return dtcgPath;
@@ -346,7 +349,9 @@ function extractVarReferences(value: string): string[] {
   const re = /var\(([^)]+)\)/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(value)) !== null) {
-    const name = match[1].startsWith("--") ? match[1].slice(2) : match[1];
+    const capturedName = match[1];
+    if (capturedName === undefined) continue;
+    const name = capturedName.startsWith("--") ? capturedName.slice(2) : capturedName;
     results.push(name);
   }
   return results;

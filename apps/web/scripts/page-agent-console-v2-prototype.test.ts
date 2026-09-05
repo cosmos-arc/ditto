@@ -97,7 +97,7 @@ describe("page-agent-console-v2 prototype", () => {
 			defaultView?.querySelectorAll<HTMLElement>(
 				"[data-header-utility-bar] [data-shell-utility]",
 			) ?? [],
-		).map((element) => element.dataset.shellUtility);
+		).map((element) => element.dataset["shellUtility"]);
 		const resizeSeparators = defaultView?.querySelectorAll("[data-resize-separator]");
 		const statusBar = defaultView?.querySelector(
 			":scope > .status-bar[data-contract-slot='status']",
@@ -110,10 +110,10 @@ describe("page-agent-console-v2 prototype", () => {
 			"agent-console-workspace",
 		);
 		expect(railLinks).toHaveLength(5);
-		expect(railLinks.map((link) => link.dataset.railDomain)).toEqual(railDomains);
+		expect(railLinks.map((link) => link.dataset["railDomain"])).toEqual(railDomains);
 		expect(
 			railLinks.find((link) => link.classList.contains("active"))?.dataset
-				.railDomain,
+				["railDomain"],
 		).toBe("platform");
 		expect(
 			defaultView?.querySelectorAll(".shell-rail .rail-icon:not(a)"),

@@ -243,7 +243,7 @@ export function parseTokenValue(rawValue: string): ParsedValue {
   // 4. Relative oklch: oklch(from var(--xxx) l c h / alpha)
   if (isRelativeOklch(trimmed)) {
     const match = RELATIVE_OKLCH_RE.exec(trimmed);
-    if (match) {
+    if (match?.[1] !== undefined) {
       return {
         type: "relativeOklch",
         baseVariable: stripVarPrefix(match[1]),
@@ -259,7 +259,7 @@ export function parseTokenValue(rawValue: string): ParsedValue {
 
   // 6. var() with fallback
   const fallbackMatch = VAR_FALLBACK_RE.exec(trimmed);
-  if (fallbackMatch) {
+  if (fallbackMatch?.[1] !== undefined && fallbackMatch[2] !== undefined) {
     return {
       type: "referenceWithFallback",
       variableName: stripVarPrefix(fallbackMatch[1].trim()),
@@ -269,7 +269,7 @@ export function parseTokenValue(rawValue: string): ParsedValue {
 
   // 7. Simple var() reference
   const simpleMatch = VAR_SIMPLE_RE.exec(trimmed);
-  if (simpleMatch) {
+  if (simpleMatch?.[1] !== undefined) {
     return {
       type: "reference",
       variableName: stripVarPrefix(simpleMatch[1].trim()),
@@ -561,12 +561,15 @@ function extractFallbackFromDynamic(rawValue: string): string {
   const baseValues: number[] = [];
   let match: RegExpExecArray | null;
   while ((match = calcRe.exec(rawValue)) !== null) {
-    baseValues.push(parseFloat(match[1]));
+    const captured = match[1];
+    if (captured !== undefined) baseValues.push(parseFloat(captured));
   }
 
   if (baseValues.length >= 3) {
+    const [lightness, chroma, hue] = baseValues;
+    if (lightness === undefined || chroma === undefined || hue === undefined) return "#28282e";
     try {
-      return oklchToHex(baseValues[0], baseValues[1], baseValues[2]);
+      return oklchToHex(lightness, chroma, hue);
     } catch {
       // Fall through to opaque hex.
     }

@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { chromium } from "playwright";
 
@@ -13,7 +13,7 @@ type RouteResult = {
 	readonly visible_assertions: Record<string, boolean>;
 };
 
-const baseUrl = process.env.DITTO_APP_BASE_URL ?? "http://127.0.0.1:5174";
+const baseUrl = process.env["DITTO_APP_BASE_URL"] ?? "http://127.0.0.1:5174";
 const output = resolve(process.argv[2] ?? "/tmp/ditto-q2-ui-live-20260901.json");
 const screenshotRoot = resolve(process.argv[3] ?? "/tmp/ditto-q2-ui-live-20260901");
 const routes = [
@@ -98,15 +98,15 @@ try {
 }
 
 const passed = results.every((result) => {
-	const snapshots = result.market_context?.source_snapshot_ids;
+	const snapshots = result.market_context?.["source_snapshot_ids"];
 	return (
 		result.acceptance_errors.length === 0 &&
 		result.console_errors.length === 0 &&
 		result.page_errors.length === 0 &&
 		result.failed_requests.length === 0 &&
 		Object.values(result.visible_assertions).every(Boolean) &&
-		result.market_context?.status === "degraded" &&
-		result.market_context?.regime_label === "risk_on" &&
+		result.market_context?.["status"] === "degraded" &&
+		result.market_context?.["regime_label"] === "risk_on" &&
 		Array.isArray(snapshots) &&
 		snapshots.some((value) => String(value).includes("global_index_daily"))
 	);
@@ -120,6 +120,6 @@ const artifact = {
 	routes: results,
 	schema: "ditto.q2-live-ui.v1",
 };
-await Bun.write(output, `${JSON.stringify(artifact, null, 2)}\n`);
+await writeFile(output, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 process.stdout.write(`${JSON.stringify({ output, passed })}\n`);
 if (!passed) process.exitCode = 1;

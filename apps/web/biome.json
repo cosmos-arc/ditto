@@ -1,13 +1,17 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
 	"files": {
+		"maxSize": 2097152,
 		"includes": [
 			"src/**",
-			"!!src/styles/fonts.css",
 			"scripts/agent_harness/**",
+			"scripts/check-leaf-dependencies.test.ts",
+			"scripts/check-leaf-dependencies.ts",
 			"scripts/generate-route-tree.mjs",
+			"scripts/dependency-cruiser-typescript-loader.mjs",
 			"index.html",
 			"*.config.*",
+			"tsconfig*.json",
 			"biome.json"
 		]
 	},
@@ -15,8 +19,9 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true,
+			"preset": "recommended",
 			"complexity": {
+				"useLiteralKeys": "off",
 				"useMaxParams": "warn"
 			},
 			"correctness": {
@@ -61,7 +66,12 @@
 	},
 	"overrides": [
 		{
-			"includes": ["src/routeTree.gen.ts", "src/types/api.d.ts", "src/types/generated/api.d.ts"],
+			"includes": [
+				"src/routeTree.gen.ts",
+				"src/types/api.d.ts",
+				"src/api/generated/schema.d.ts",
+				"src/api/generated/operation-contracts.ts"
+			],
 			"linter": { "enabled": false },
 			"formatter": { "enabled": false }
 		},

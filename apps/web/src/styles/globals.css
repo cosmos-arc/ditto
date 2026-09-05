@@ -107,14 +107,13 @@
 	--color-brand-primary: var(--brand-accent);
 
 	/* ── 签名色 Brass ── */
-	--color-brass-300: oklch(84% 0.04 74);
+	--color-brass-300: var(--brand-signature-highlight);
 	--color-brass-400: var(--brand-signature-muted);
 	--color-brass-500: var(--brand-signature-fg);
 	--color-signature-fg: var(--brand-signature-fg);
 	--color-signature-muted: var(--brand-signature-muted);
 	--color-signature-line: var(--brand-signature-line);
 	--color-signature-subtle: var(--brand-signature-subtle);
-	--color-signature-glow: oklch(from var(--brand-signature-fg) l c h / 0.6);
 
 	/* ── 代码 / 滚动条 / 分割线 ── */
 	--color-code-bg: var(--code-bg);
@@ -193,22 +192,22 @@
 	--color-signal-hold: var(--risk-medium-fg);
 
 	/* ── 数据可视化 ── */
-	--color-data-fresh: oklch(0.92 0.004 253);
-	--color-data-recent: oklch(0.92 0.004 253 / 0.8);
-	--color-data-stale: oklch(0.92 0.004 253 / 0.5);
-	--color-chart-1: oklch(0.623 0.127 252);
-	--color-chart-2: oklch(0.753 0.157 75);
-	--color-chart-3: oklch(0.591 0.142 153);
-	--color-chart-4: oklch(0.634 0.197 327);
-	--color-chart-5: oklch(0.702 0.137 199);
-	--color-chart-6: oklch(0.746 0.165 50);
-	--color-heatmap-0: oklch(0.3 0.04 253);
-	--color-heatmap-1: oklch(0.45 0.08 235);
-	--color-heatmap-2: oklch(0.55 0.12 235);
-	--color-heatmap-3: oklch(0.65 0.16 235);
-	--color-heatmap-4: oklch(0.72 0.18 235);
-	--color-sparkline: oklch(0.6 0.18 235);
-	--color-sparkline-negative: oklch(0.65 0.2 25);
+	--color-data-fresh: var(--data-fresh-color);
+	--color-data-recent: var(--data-recent-color);
+	--color-data-stale: var(--data-stale-color);
+	--color-chart-1: var(--chart-palette-1);
+	--color-chart-2: var(--chart-palette-2);
+	--color-chart-3: var(--chart-palette-3);
+	--color-chart-4: var(--chart-palette-4);
+	--color-chart-5: var(--chart-palette-5);
+	--color-chart-6: var(--chart-palette-6);
+	--color-heatmap-0: var(--heatmap-scale-0);
+	--color-heatmap-1: var(--heatmap-scale-1);
+	--color-heatmap-2: var(--heatmap-scale-2);
+	--color-heatmap-3: var(--heatmap-scale-3);
+	--color-heatmap-4: var(--heatmap-scale-4);
+	--color-sparkline: var(--sparkline-color);
+	--color-sparkline-negative: var(--sparkline-negative-color);
 	--color-asset-equity: var(--asset-equity);
 	--color-asset-bond: var(--asset-fixed-income);
 	--color-asset-commodity: var(--asset-commodity);
@@ -217,18 +216,18 @@
 	--color-asset-derivative: var(--asset-alternative);
 
 	/* ── LED / StatusDot ── */
-	--color-led-active: oklch(0.7 0.16 155);
-	--color-led-idle: oklch(0.55 0.03 253);
-	--color-led-error: oklch(0.65 0.2 25);
-	--color-led-success: oklch(0.7 0.16 155);
-	--color-status-led-healthy: oklch(0.72 0.17 155);
-	--color-status-led-degraded: oklch(0.78 0.14 65);
-	--color-status-led-warning: oklch(0.8 0.16 90);
-	--color-status-led-critical: oklch(0.6 0.22 25);
-	--color-status-led-live: oklch(0.75 0.15 195);
-	--color-status-led-idle: oklch(0.55 0.03 253);
-	--color-status-led-error: oklch(0.65 0.2 25);
-	--color-status-led-info: oklch(0.68 0.12 253);
+	--color-led-active: var(--execution-filled-fg);
+	--color-led-idle: var(--status-led-idle);
+	--color-led-error: var(--status-led-error);
+	--color-led-success: var(--execution-filled-fg);
+	--color-status-led-healthy: var(--status-led-healthy);
+	--color-status-led-degraded: var(--status-led-degraded);
+	--color-status-led-warning: var(--status-led-warning);
+	--color-status-led-critical: var(--status-led-critical);
+	--color-status-led-live: var(--status-led-live);
+	--color-status-led-idle: var(--status-led-idle);
+	--color-status-led-error: var(--status-led-error);
+	--color-status-led-info: var(--status-led-info);
 
 	/* ── 交互反馈 ── */
 	--color-focus-ring: var(--interaction-focus-ring);
@@ -239,7 +238,7 @@
 	--color-interaction-active-bg: var(--interaction-active-bg);
 	--color-interaction-selected-bg: var(--interaction-selected-bg);
 	--color-interaction-selected-border: var(--interaction-selected-border);
-	--color-toast-info: oklch(0.58 0.012 253);
+	--color-toast-info: var(--feedback-toast-info);
 	--color-toast-success: var(--green-500);
 	--color-toast-warning: var(--amber-500);
 	--color-toast-error: var(--red-500);
@@ -537,9 +536,7 @@ body {
 [data-slot="header"] button:focus-visible,
 [data-slot="decision-banner"] button:focus-visible {
 	outline: none;
-	box-shadow:
-		0 0 0 1.5px var(--color-accent),
-		0 0 0 4px oklch(from var(--color-accent) l c h / 0.25);
+	box-shadow: var(--focus-ring-shadow);
 	border-radius: var(--radius-sm);
 }
 
@@ -575,14 +572,8 @@ body {
 	padding-left: calc(var(--spacing-3) + var(--spacing-1));
 	padding-right: calc(var(--spacing-3) + var(--spacing-1));
 	border-radius: var(--radius-sm);
-	box-shadow: 0 1px 4px oklch(0 0 0 / 0.12);
+	box-shadow: var(--queue-hover-shadow);
 }
-/* Priority bar micro-glow on hover (per prototype) */
-[data-slot="queue-item"]:hover > div:first-child {
-	transition: box-shadow var(--duration-fast) var(--ease-out);
-	box-shadow: 0 0 6px 1px oklch(0 0 0 / 0.3);
-}
-
 /* ── Secondary panel child hover (per prototype) ── */
 [data-slot="home-secondary"] > * {
 	transition:
@@ -656,22 +647,18 @@ body {
 
 @keyframes value-flash-up {
 	0% {
-		text-shadow: 0 3px 6px oklch(from var(--market-up-fg) l c h / 0.08);
 		opacity: 0.85;
 	}
 	100% {
-		text-shadow: none;
 		opacity: 1;
 	}
 }
 
 @keyframes value-flash-down {
 	0% {
-		text-shadow: 0 -3px 6px oklch(from var(--market-down-fg) l c h / 0.08);
 		opacity: 0.85;
 	}
 	100% {
-		text-shadow: none;
 		opacity: 1;
 	}
 }

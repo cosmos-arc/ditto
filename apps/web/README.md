@@ -1,77 +1,70 @@
-# Ditto App
+# Ditto Web
 
-Ditto 量化平台前端 — 单页应用（SPA），与 ditto 后端 API 交互。
+Ditto 的 React 单页应用。它是根 monorepo 的 Bun workspace，由根 Pixi 统一编排，
+通过提交的 OpenAPI 3.1 快照与本地 FastAPI API 协作。
 
-## 技术栈
+## 技术边界
 
-| 功能 | 技术 |
-|------|------|
-| 语言 | TypeScript (strict) |
-| UI 框架 | React |
-| 包管理 | bun |
-| 构建 | Vite + Rolldown |
-| 样式 | Tailwind CSS v4 + Design Tokens (OKLCH) |
-| UI 组件 | shadcn/ui |
-| 状态管理 | TanStack Query + Zustand |
-| 路由 | TanStack Router |
-| 表单 | react-hook-form + zod |
-| 测试 | Vitest + React Testing Library |
-| 部署 | Cloudflare Pages |
+- React 19、TypeScript 6、Vite 8、Tailwind CSS v4。
+- TanStack Router/Query、Zustand、Vitest、Playwright、Biome。
+- `openapi-fetch` 绑定 `src/api/generated/schema.d.ts` 中的 `paths`，并用同一快照生成的
+  `src/api/generated/operation-contracts.ts` 在运行时核验 operation 状态码和响应媒体类型；feature adapter
+  将 HTTP DTO 转为 view model，组件不直接消费 generated 类型。
+- Bun 是唯一 JavaScript 包管理器；唯一锁文件位于仓库根 `bun.lock`。
+- 正式静态制品从 `ditto-runtime-config.json` 读取无秘密运行配置，不以编译期
+  `VITE_API_BASE_URL` 固化生产 API，也不默认部署到任何公共云。
 
-## 快速开始
+依赖方向由根 `dependency-cruiser` 门禁执行：
+
+```text
+app/routes → workflows → feature public APIs → shared → ui/lib
+feature api adapters → typed src/api
+```
+
+feature 间不做 deep import；跨 feature 行为进入 `src/workflows`。
+例如，`workflows/market-context` 将 Data Product certification evidence 解析为 exact snapshot scope，
+再调用 Markets 的显式 scope API；`workflows/home-dashboard` 将该 loader 注入 Home，Markets 页面也只在
+workflow 层消费同一编排。`features/markets` 和 `features/home` 都不反向定位 workflow 实现。
+
+## 开发与验证
+
+从仓库根执行：
 
 ```bash
-# 安装依赖
-bun install
-
-# 启动开发服务器
-bun dev
-
-# 验证
-bun run check   # lint + type + unit + architecture + harness
+pixi run -e dev bootstrap
+pixi run -e dev dev
+pixi run -e dev check-web
+pixi run -e dev check-contract
+pixi run -e dev test-system
 ```
 
-## 项目结构
-
-```
-ditto-app/
-├── src/
-│   ├── features/       # 业务功能模块（Feature-based）
-│   │   └── {name}/
-│   │       ├── components/
-│   │       ├── hooks/
-│   │       └── types.ts
-│   ├── components/ui/  # 共享 UI 组件（shadcn/ui）
-│   ├── lib/            # 工具函数 + API 层
-│   ├── styles/         # Design Tokens + 全局样式
-│   │   ├── design-tokens/  # 唯一真理源
-│   │   ├── themes/         # 主题覆盖
-│   │   ├── globals.css     # 共享 token + @theme 映射
-│   │   └── fonts.css       # 字体声明
-│   └── routes/         # 路由定义
-├── docs/               # 文档 + Prototype
-└── public/             # 静态资源
-```
-
-## 测试
+仅开发 Web 叶子任务时，可在本目录执行：
 
 ```bash
-bun run test:unit          # 单元测试（不需要浏览器）
-bun run test:prototype     # Prototype/Playwright 合同测试
-bun run test:coverage      # src 覆盖率门
+bun run lint
+bun run type
+bun run test:unit
+bun run test:prototype
+bun run build
 ```
 
-## 常用命令
+这些 Bun scripts 不定义跨栈 DAG；跨栈完成标准始终以根 Pixi 任务为准。
 
-| 命令 | 说明 |
-|------|------|
-| `bun run check` | 快速、无浏览器完成门 |
-| `bun run ci` | 覆盖率 + Prototype/Playwright + 构建 |
-| `bun run harness:check` | 双宿主 harness 静态验收 |
-| `bunx tsc --noEmit` | 类型检查 |
-| `bunx biome check .` | lint + format |
-| `bunx biome check --write .` | 自动修复 |
+## 目录
 
-## 详细规范
+```text
+src/
+├── api/             # typed transport、运行配置、generated schema
+├── workflows/       # 跨 feature 用例编排
+├── features/        # feature public API、adapter、view 与局部状态
+├── routes/          # TanStack Router composition
+├── components/      # 共享 UI/data-viz primitives
+├── stores/          # 不反向依赖 feature 的全局状态
+└── styles/          # OKLCH design tokens、主题和字体
+scripts/             # 受独立 tooling tsconfig 管理的生成/质量叶子工具
+public/              # runtime config 模板与静态资源
+```
 
-详见 [AGENTS.md](AGENTS.md)、[Agent Harness](docs/engineering/agent-harness.md) 与 [Frontend Architecture](docs/engineering/frontend-architecture.md)。
+修改本目录前请阅读 [AGENTS.md](AGENTS.md)。跨 API 改动同时遵守
+[契约规则](../../contracts/AGENTS.md)；仓库总体入口见
+[根 README](../../README.md)。

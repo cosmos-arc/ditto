@@ -46,10 +46,13 @@ export function findHardcodedColors(source: string): string[] {
 	const declarationPattern = /(^|[;{\s])([a-z-]+)\s*:\s*([^;{}]+)/gi;
 
 	for (const match of source.matchAll(declarationPattern)) {
-		const property = match[2];
-		if (!isColorDeclarationProperty(property)) continue;
+			const property = match[2];
+			if (property === undefined) continue;
+			if (!isColorDeclarationProperty(property)) continue;
 
-		const value = stripNonColorReferences(match[3]);
+			const declarationValue = match[3];
+			if (declarationValue === undefined) continue;
+			const value = stripNonColorReferences(declarationValue);
 
 		for (const hexMatch of value.matchAll(/#[0-9a-f]{3}(?:[0-9a-f]{3})?(?:[0-9a-f]{2})?\b/gi)) {
 			hits.push(hexMatch[0]);

@@ -47,10 +47,10 @@ describe("page-signals-inbox prototype", () => {
 		expect(shell?.querySelector(".shell-rail")).not.toBeNull();
 		expect(
 			railItems.map((item) => ({
-				domain: item.dataset.railDomain,
+				domain: item.dataset["railDomain"],
 				label: item.getAttribute("aria-label"),
 				title: item.getAttribute("title"),
-				icon: item.dataset.icon,
+				icon: item.dataset["icon"],
 				current: item.getAttribute("aria-current"),
 				active: item.classList.contains("active"),
 			})),
