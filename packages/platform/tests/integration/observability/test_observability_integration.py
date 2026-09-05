@@ -251,7 +251,7 @@ class TestSpan:
 
         spans = get_recorded_spans()
         assert spans[0].attributes.get("source") == "tushare"
-        assert spans[0].attributes.get("rows") == "100"
+        assert spans[0].attributes.get("rows") == 100
 
     def test_nested_spans(self) -> None:
         """测试嵌套 Span."""

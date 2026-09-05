@@ -7,13 +7,11 @@
 from typing import Any
 
 from . import metrics, tracing
+from ._lifecycle import shutdown
 
 
 def reset_for_testing() -> None:
     """重置所有可观测性状态（测试用）."""
-    # 先调用 shutdown 清理资源
-    from ditto_platform.foundation import shutdown  # noqa: PLC0415
-
     try:
         shutdown()
     except Exception:  # noqa: S110 - shutdown 失败不应继续重置流程

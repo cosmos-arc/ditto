@@ -4,6 +4,59 @@ import pytest
 
 
 @pytest.mark.unit
+def test_legacy_api_error_imports_preserve_canonical_class_identity() -> None:
+    """Compatibility imports must expose the root error classes themselves."""
+    from ditto_apps.api.errors import (
+        APIError as LegacyAPIError,
+    )
+    from ditto_apps.api.errors import (
+        BadRequestError as LegacyBadRequestError,
+    )
+    from ditto_apps.api.errors import (
+        ConflictError as LegacyConflictError,
+    )
+    from ditto_apps.api.errors import (
+        DateRangeError as LegacyDateRangeError,
+    )
+    from ditto_apps.api.errors import (
+        ForbiddenError as LegacyForbiddenError,
+    )
+    from ditto_apps.api.errors import (
+        FutureDateError as LegacyFutureDateError,
+    )
+    from ditto_apps.api.errors import (
+        NotFoundError as LegacyNotFoundError,
+    )
+    from ditto_apps.api.errors import (
+        RateLimitError as LegacyRateLimitError,
+    )
+    from ditto_apps.api.errors import (
+        UnprocessableEntityError as LegacyUnprocessableEntityError,
+    )
+    from ditto_apps.errors import (
+        APIError,
+        BadRequestError,
+        ConflictError,
+        DateRangeError,
+        ForbiddenError,
+        FutureDateError,
+        NotFoundError,
+        RateLimitError,
+        UnprocessableEntityError,
+    )
+
+    assert LegacyAPIError is APIError
+    assert LegacyBadRequestError is BadRequestError
+    assert LegacyConflictError is ConflictError
+    assert LegacyDateRangeError is DateRangeError
+    assert LegacyForbiddenError is ForbiddenError
+    assert LegacyFutureDateError is FutureDateError
+    assert LegacyNotFoundError is NotFoundError
+    assert LegacyRateLimitError is RateLimitError
+    assert LegacyUnprocessableEntityError is UnprocessableEntityError
+
+
+@pytest.mark.unit
 class TestAPIError:
     """测试 APIError 基类."""
 

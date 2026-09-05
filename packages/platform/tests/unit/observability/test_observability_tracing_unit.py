@@ -13,6 +13,7 @@ from ditto_platform.foundation.observability.tracing import (
     get_trace_id,
     reset_tracing,
 )
+from opentelemetry.trace import StatusCode
 
 
 @pytest.mark.unit
@@ -58,7 +59,7 @@ class TestSpanContextEdgeCases:
 
         with ctx:
             # [REVIEW]
-            ctx.set_status("completed")
+            ctx.set_status(StatusCode.ERROR)
 
 
 @pytest.mark.unit
