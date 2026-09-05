@@ -1,0 +1,14 @@
+# Historical material is intentionally available to humans but excluded from
+# default Agent/ripgrep discovery. Current facts live in architecture, ADR,
+# contract, runbook, source, and machine-enforced configuration paths.
+docs/archive/
+docs/architecture/archive/
+docs/reviews/
+docs/plans/
+docs/evidence/
+docs/acceptance/*-2026-*.md
+docs/acceptance/wave1-data-readiness.md
+docs/acceptance/wave1a-first-real-use.md
+apps/web/docs/archive/
+apps/web/docs/review/
+apps/web/docs/evidence/

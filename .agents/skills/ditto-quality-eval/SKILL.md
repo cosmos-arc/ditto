@@ -1,6 +1,6 @@
 ---
 name: ditto-quality-eval
-description: Use only when the user explicitly requests a repository-wide Ditto quality evaluation, scorecard, radar assessment, or full quality baseline. Supports quick, full, and selected-dimension modes; collects the baseline once, applies deterministic weights/schema, and writes docs/reviews only for full mode or an explicit --write request.
+description: Use only when the user explicitly requests a repository-wide Ditto backend, Web, system, or combined quality evaluation, scorecard, radar assessment, or full quality baseline. Supports quick, full, scope, and selected-dimension modes; collects each baseline once and writes only for full mode or explicit --write.
 ---
 
 # Ditto Quality Evaluation
@@ -9,6 +9,10 @@ Evaluate the repository with a repeatable rubric. Do not invoke this skill for o
 
 ## Select mode
 
+- `--scope backend` (default): Python packages, capability boundaries, PIT and API provider.
+- `--scope web`: React/TypeScript architecture, generated-contract consumption, UI tests, accessibility and artifacts. Read `references/web-quality.md`.
+- `--scope system`: OpenAPI chain, production cross-stack E2E, Harness, CI and release cohort. Read `references/system-quality.md`.
+- `--scope all`: combine all three scopes without counting shared checks twice.
 - `quick` (default): code, architecture, and tests; present results without writing a report.
 - `full`: all six dimensions; write `docs/reviews/YYYY-MM-DD-quality-eval.md`.
 - `--dimension code,arch,...`: evaluate only named dimensions; do not write unless `--write` is explicit.
@@ -27,13 +31,25 @@ Dimensions and weights are fixed:
 
 ## Collect one baseline
 
-Run each selected baseline command at most once and retain the complete command/result:
+Run each selected baseline command at most once and retain the complete command/result.
+Choose commands by scope; do not run an aggregate task and then repeat its leaves:
 
 ```bash
+# backend
 pixi run -e dev lint
 pixi run -e dev type
 pixi run -e dev test --fast
 pixi run -e dev arch-check
+
+# web
+pixi run -e dev check-web
+
+# system
+pixi run -e dev check-contract
+pixi run -e dev test-system
+pixi run -e dev harness-check
+
+# every scope
 git log --oneline -20
 ```
 
