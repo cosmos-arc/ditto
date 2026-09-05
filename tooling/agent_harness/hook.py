@@ -4,22 +4,32 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
 import shlex
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    from .evidence import change_manifest, manifest_digest, manifest_paths
+    from .lease import authorize_paths, generator_write_targets, protected_resources
+except ImportError:  # Direct script execution.
+    from lease import authorize_paths, generator_write_targets, protected_resources
+
+    from evidence import change_manifest, manifest_digest, manifest_paths
+
 CACHE_DIR = Path(".cache/ditto-agent-harness")
 MAX_FEEDBACK = 6_000
 PACKAGE_TEST_PARTS = 3
+RECEIPT_SCHEMA_VERSION = 1
+APPEND_REDIRECT_PREFIX_LENGTH = len(">>")
 
 try:
     from datetime import UTC as _UTC
@@ -145,6 +155,45 @@ def _is_dangerous_rm(tokens: Sequence[str]) -> bool:
     return {"r", "f"}.issubset(flags)
 
 
+def _javascript_package_violation(tokens: Sequence[str]) -> bool:
+    if not tokens:
+        return False
+    index = 0
+    executable = Path(tokens[index]).name
+    if executable in {"command", "env"}:
+        index += 1
+        while index < len(tokens) and (
+            tokens[index].startswith("-") or "=" in tokens[index]
+        ):
+            index += 1
+        if index >= len(tokens):
+            return False
+        executable = Path(tokens[index]).name
+    arguments = tokens[index + 1 :]
+    if executable in {"npx", "pnpx"}:
+        return True
+    if executable == "corepack" and arguments:
+        executable, arguments = Path(arguments[0]).name, arguments[1:]
+    if executable not in {"npm", "pnpm", "yarn"}:
+        return False
+    mutation_commands = {
+        "add",
+        "ci",
+        "dlx",
+        "exec",
+        "install",
+        "remove",
+        "rm",
+        "uninstall",
+        "update",
+        "upgrade",
+    }
+    subcommand = next(
+        (argument for argument in arguments if not argument.startswith("-")), ""
+    )
+    return subcommand in mutation_commands
+
+
 def policy_violation(command: str, branch: str) -> str | None:
     """Return a narrow, evidence-based command policy violation."""
     compact = " ".join(command.split())
@@ -159,6 +208,8 @@ def policy_violation(command: str, branch: str) -> str | None:
                 "recursive forced deletion is blocked; "
                 "use an exact recoverable operation"
             )
+        if _javascript_package_violation(tokens):
+            return "non-Bun package execution is blocked; use the root Bun workspace"
 
     package_mutations = (
         r"\b(?:python(?:3)?\s+-m\s+)?pip\s+(?:install|uninstall)\b",
@@ -172,19 +223,120 @@ def policy_violation(command: str, branch: str) -> str | None:
     return None
 
 
-def _normalize_python_path(raw: str, root: Path) -> Path | None:
+def _normalize_repository_path(raw: str, root: Path) -> str | None:
     path = Path(raw)
     candidate = path if path.is_absolute() else root / path
     try:
         candidate = candidate.resolve()
-        candidate.relative_to(root)
+        relative = candidate.relative_to(root.resolve())
     except (OSError, ValueError):
         return None
-    return candidate if candidate.suffix == ".py" else None
+    return relative.as_posix()
 
 
-def extract_python_paths(payload: dict[str, Any], root: Path) -> list[Path]:
-    """Extract edited Python files from Claude Edit/Write or Codex apply_patch."""
+def _redirection_targets(tokens: Sequence[str]) -> tuple[str, ...]:
+    targets: list[str] = []
+    for index, token in enumerate(tokens):
+        if token in {">", ">>"} and index + 1 < len(tokens):
+            targets.append(tokens[index + 1])
+        elif token.startswith(">>") and len(token) > APPEND_REDIRECT_PREFIX_LENGTH:
+            targets.append(token[APPEND_REDIRECT_PREFIX_LENGTH:])
+        elif token.startswith(">") and len(token) > 1:
+            targets.append(token[1:])
+    return tuple(targets)
+
+
+def _command_after_executable(tokens: Sequence[str], executable: str) -> str:
+    index = _executable_index(tokens, executable)
+    if index is None:
+        return ""
+    return next(
+        (value for value in tokens[index + 1 :] if not value.startswith("-")),
+        "",
+    )
+
+
+def _codegen_write_targets(tokens: Sequence[str]) -> tuple[str, ...]:
+    if any(token.endswith("/gen-api.sh") for token in tokens) and "--write" in tokens:
+        return (
+            "apps/web/src/api/generated/operation-contracts.ts",
+            "apps/web/src/api/generated/schema.d.ts",
+        )
+    return generator_write_targets(tokens)
+
+
+def _direct_write_targets(tokens: Sequence[str], root: Path) -> tuple[str, ...]:
+    candidates: list[str] = []
+    for executable in ("cp", "install", "mv"):
+        index = _executable_index(tokens, executable)
+        if index is not None:
+            operands = [
+                argument
+                for argument in tokens[index + 1 :]
+                if not argument.startswith("-")
+            ]
+            if operands:
+                candidates.append(operands[-1])
+    tee_index = _executable_index(tokens, "tee")
+    if tee_index is not None:
+        candidates.extend(
+            token for token in tokens[tee_index + 1 :] if not token.startswith("-")
+        )
+    sed_index = _executable_index(tokens, "sed")
+    if sed_index is not None and any(
+        argument == "--in-place" or argument.startswith("-i")
+        for argument in tokens[sed_index + 1 :]
+    ):
+        candidates.extend(tokens[sed_index + 1 :])
+
+    targets: set[str] = set()
+    for candidate in candidates:
+        normalized = _normalize_repository_path(candidate, root)
+        if normalized is not None and protected_resources((normalized,)):
+            targets.add(normalized)
+    return tuple(sorted(targets))
+
+
+def _mutates_bun_lock(tokens: Sequence[str]) -> bool:
+    token_set = set(tokens)
+    return _command_after_executable(tokens, "bun") in {
+        "add",
+        "install",
+        "remove",
+        "update",
+    } and not ({"--frozen-lockfile", "--no-save"} & token_set)
+
+
+def _mutates_pixi_lock(tokens: Sequence[str]) -> bool:
+    token_set = set(tokens)
+    return _command_after_executable(tokens, "pixi") in {
+        "add",
+        "install",
+        "lock",
+        "remove",
+        "update",
+        "upgrade",
+    } and not ({"--frozen", "--locked"} & token_set)
+
+
+def _known_command_write_targets(command: str, root: Path) -> tuple[str, ...]:
+    targets: set[str] = set()
+    for tokens in _tokenized_segments(command):
+        for raw in _redirection_targets(tokens):
+            normalized = _normalize_repository_path(raw, root)
+            if normalized is not None and protected_resources((normalized,)):
+                targets.add(normalized)
+        targets.update(_codegen_write_targets(tokens))
+        targets.update(_direct_write_targets(tokens, root))
+        if _mutates_bun_lock(tokens):
+            targets.add("bun.lock")
+        if _mutates_pixi_lock(tokens):
+            targets.add("pixi.lock")
+    return tuple(sorted(targets))
+
+
+def extract_edited_paths(payload: dict[str, Any], root: Path) -> list[str]:
+    """Extract repository-relative paths from structured write tool payloads."""
     raw_paths: list[str] = []
     tool_input = payload.get("tool_input")
     if isinstance(tool_input, dict):
@@ -197,23 +349,50 @@ def extract_python_paths(payload: dict[str, Any], root: Path) -> list[Path]:
             raw_paths.extend(
                 match.group(1).strip()
                 for match in re.finditer(
-                    r"^\*\*\* (?:(?:Add|Update) File|Move to):\s*(.+)$",
+                    r"^\*\*\* (?:(?:Add|Update|Delete) File|Move to):\s*(.+)$",
                     command,
                     re.MULTILINE,
                 )
             )
+            raw_paths.extend(_known_command_write_targets(command, root))
 
     for key in ("file_path", "path"):
         value = payload.get(key)
         if isinstance(value, str):
             raw_paths.append(value)
 
-    paths = {
-        normalized
-        for raw in raw_paths
-        if (normalized := _normalize_python_path(raw, root)) is not None
-    }
-    return sorted(paths)
+    return sorted(
+        {
+            normalized
+            for raw in raw_paths
+            if (normalized := _normalize_repository_path(raw, root)) is not None
+        }
+    )
+
+
+def extract_python_paths(payload: dict[str, Any], root: Path) -> list[Path]:
+    """Extract edited Python files from Claude Edit/Write or Codex apply_patch."""
+    return [
+        root / path
+        for path in extract_edited_paths(payload, root)
+        if Path(path).suffix == ".py"
+    ]
+
+
+def pre_tool_decision(
+    payload: dict[str, Any],
+    root: Path,
+    branch: str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Apply command policy and protected-path lease policy before a tool runs."""
+    if violation := policy_violation(command_from_payload(payload), branch):
+        return {"decision": "block", "reason": violation}
+    decision = authorize_paths(root, extract_edited_paths(payload, root), now=now)
+    if not decision.allowed:
+        return {"decision": "block", "reason": decision.reason[-MAX_FEEDBACK:]}
+    return {}
 
 
 def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
@@ -240,156 +419,17 @@ def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
     return VerificationResult(True, "\n\n".join(output)[-MAX_FEEDBACK:])
 
 
-def _git_nul_paths(root: Path, arguments: Sequence[str]) -> set[str]:
-    result = subprocess.run(
-        ["git", *arguments],
-        cwd=root,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            result.stderr.decode(errors="replace").strip()
-            or f"unable to run git {' '.join(arguments)}"
-        )
-    return {
-        os.fsdecode(raw)
-        for raw in result.stdout.split(b"\0")
-        if raw
-    }
-
-
-def changed_paths(root: Path) -> list[str]:
-    """Return every staged, unstaged, deleted, renamed, or untracked path."""
-    tracked = _git_nul_paths(
-        root,
-        (
-            "diff",
-            "--name-only",
-            "-z",
-            "--no-renames",
-            "--diff-filter=ACDMRT",
-            "HEAD",
-            "--",
-        ),
-    )
-    untracked = _git_nul_paths(
-        root, ("ls-files", "--others", "--exclude-standard", "-z", "--")
-    )
-    return sorted(tracked | untracked)
-
-
-_FINGERPRINT_CONFIGS = (
-    ".importlinter",
-    ".pre-commit-config.yaml",
-    "biome.json",
-    "bun.lock",
-    "bunfig.toml",
-    "package.json",
-    "pixi.lock",
-    "pixi.toml",
-    "pyproject.toml",
-    "apps/web/package.json",
-    "apps/web/tsconfig.json",
-    "apps/web/tsconfig.app.json",
-    "apps/web/tsconfig.node.json",
-    "apps/web/vitest.config.ts",
-)
-
-
-def _git_text(root: Path, *arguments: str) -> str:
-    result = subprocess.run(
-        ["git", *arguments],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.stdout.strip() if result.returncode == 0 else "unavailable"
-
-
-def _file_fingerprint(path: Path) -> dict[str, object]:
-    try:
-        metadata = path.lstat()
-    except FileNotFoundError:
-        return {"state": "deleted"}
-    if path.is_symlink():
-        content = os.fsencode(os.readlink(path))
-        kind = "symlink"
-    elif path.is_file():
-        content = path.read_bytes()
-        kind = "file"
-    else:
-        content = b""
-        kind = "other"
-    return {
-        "state": "present",
-        "kind": kind,
-        "mode": f"{metadata.st_mode & 0o7777:04o}",
-        "sha256": hashlib.sha256(content).hexdigest(),
-    }
-
-
-def _tool_versions(root: Path) -> dict[str, str]:
-    commands = {
-        "bun": ("bun", "--version"),
-        "git": ("git", "--version"),
-        "pixi": ("pixi", "--version"),
-        "python": (sys.executable, "--version"),
-    }
-    versions: dict[str, str] = {}
-    for name, command in commands.items():
-        try:
-            result = subprocess.run(
-                command,
-                cwd=root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-        except OSError:
-            versions[name] = "unavailable"
-            continue
-        output = (result.stdout or result.stderr).strip()
-        versions[name] = output if result.returncode == 0 and output else "unavailable"
-    return versions
-
-
-def change_manifest(root: Path, paths: Sequence[str] | None = None) -> dict[str, object]:
-    """Build the canonical evidence hashed by a verification receipt."""
-    selected = sorted(paths if paths is not None else changed_paths(root))
-    head = _git_text(root, "rev-parse", "HEAD")
-    upstream_base = _git_text(root, "merge-base", "HEAD", "origin/main")
-    base = head if upstream_base == "unavailable" else upstream_base
-    return {
-        "schema_version": 1,
-        "base_sha": base,
-        "head_sha": head,
-        "changes": {
-            relative: _file_fingerprint(root / relative) for relative in selected
-        },
-        "configs": {
-            relative: _file_fingerprint(root / relative)
-            for relative in _FINGERPRINT_CONFIGS
-        },
-        "tools": _tool_versions(root),
-    }
-
-
-def diff_digest(root: Path) -> str:
-    manifest = change_manifest(root)
-    encoded = json.dumps(
-        manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8", errors="surrogateescape")
-    return hashlib.sha256(encoded).hexdigest()
-
-
 def _is_harness(path: str) -> bool:
     return (
         path in {"AGENTS.md", "CLAUDE.md", "pixi.toml", ".pre-commit-config.yaml"}
-        or bool(re.fullmatch(r"packages/[^/]+/(?:AGENTS|CLAUDE)\.md", path))
+        or bool(
+            re.fullmatch(
+                r"(?:packages/[^/]+|apps/(?:backend|web)|contracts)/(?:AGENTS|CLAUDE)\.md",
+                path,
+            )
+        )
         or path.startswith(
-            (".agents/", ".claude/", ".codex/", "scripts/agent_harness/")
+            (".agents/", ".claude/", ".codex/", "tooling/agent_harness/")
         )
         or path == "docs/engineering/agent-harness.md"
     )
@@ -403,70 +443,228 @@ def _is_test(path: str) -> bool:
     )
 
 
+_ROOT_GATE_PATHS = {
+    ".gitattributes",
+    ".importlinter",
+    ".pre-commit-config.yaml",
+    "bun.lock",
+    "bunfig.toml",
+    "package.json",
+    "pixi.lock",
+    "pixi.toml",
+    "pyproject.toml",
+}
+_HIGH_RISK_PREFIXES = tuple(
+    f"packages/{name}/"
+    for name in (
+        "backtest",
+        "data",
+        "execution",
+        "features",
+        "portfolio",
+        "risk",
+        "strategy",
+    )
+)
+_HIGH_RISK_APPLICATION_PREFIXES = (
+    "packages/application/src/ditto_application/builders/",
+    "packages/application/src/ditto_application/processes/",
+    "packages/application/src/ditto_application/queries/",
+)
+_HIGH_RISK_APPLICATION_PATHS = frozenset(
+    f"packages/application/src/ditto_application/commands/{name}.py"
+    for name in (
+        "account",
+        "account_ledger",
+        "backtest",
+        "candidate_selection",
+        "experiments",
+        "ingestion",
+        "paper_account",
+        "paper_session",
+        "strategy",
+        "strategy_governance",
+        "trade",
+        "universe",
+    )
+)
+_HIGH_RISK_BACKEND_PREFIXES = (
+    "apps/backend/src/ditto_apps/api/routes/account_ledger",
+    "apps/backend/src/ditto_apps/api/routes/backtest",
+    "apps/backend/src/ditto_apps/api/routes/paper",
+    "apps/backend/src/ditto_apps/api/routes/portfolio_",
+    "apps/backend/src/ditto_apps/api/routes/strategy",
+    "apps/backend/src/ditto_apps/api/routes/trade",
+    "apps/backend/src/ditto_apps/models/account_ledger",
+    "apps/backend/src/ditto_apps/models/backtest",
+    "apps/backend/src/ditto_apps/models/paper",
+    "apps/backend/src/ditto_apps/models/portfolio_",
+    "apps/backend/src/ditto_apps/models/strategy",
+    "apps/backend/src/ditto_apps/models/trade",
+)
+_HIGH_RISK_BACKEND_PATHS = frozenset(
+    {
+        "apps/backend/src/ditto_apps/jobs/flows/backtest.py",
+        "apps/backend/src/ditto_apps/jobs/flows/materialization.py",
+        "apps/backend/src/ditto_apps/jobs/paper_eod.py",
+    }
+)
+_CONTRACT_PROVIDER_PATHS = {
+    ".redocly.yaml",
+    "apps/backend/src/ditto_apps/main.py",
+    "apps/backend/src/ditto_apps/middleware.py",
+    "apps/backend/src/ditto_apps/openapi_contract.py",
+}
+_CONTRACT_PREFIXES = (
+    "contracts/",
+    "tooling/contracts/",
+    "apps/backend/src/ditto_apps/api/",
+    "apps/backend/src/ditto_apps/models/",
+    "apps/web/src/api/",
+    "apps/web/scripts/gen-api",
+)
+_BACKEND_TEST_PREFIX = ("apps", "backend", "tests")
+
+
+def _path_classes(paths: Sequence[str]) -> set[str]:
+    return {category for path in paths for category in _path_categories(path)}
+
+
+def _is_high_risk_path(path: str) -> bool:
+    return (
+        path in _HIGH_RISK_APPLICATION_PATHS
+        or path in _HIGH_RISK_BACKEND_PATHS
+        or path.startswith(
+            (
+                *_HIGH_RISK_PREFIXES,
+                *_HIGH_RISK_APPLICATION_PREFIXES,
+                *_HIGH_RISK_BACKEND_PREFIXES,
+            )
+        )
+    )
+
+
+def _path_categories(path: str) -> set[str]:
+    if path in _ROOT_GATE_PATHS or path.startswith(".github/"):
+        return {"root"}
+    if _is_harness(path):
+        return {"harness"}
+
+    categories: set[str] = set()
+    if path in _CONTRACT_PROVIDER_PATHS or path.startswith(_CONTRACT_PREFIXES):
+        categories.add("contract")
+    if _is_high_risk_path(path):
+        categories.add("backend-tests" if _is_test(path) else "high-risk")
+    elif not categories and path.startswith(
+        ("packages/", "apps/backend/", "config/", "scripts/")
+    ):
+        categories.add("backend-tests" if _is_test(path) else "backend")
+    elif not categories and path.startswith("apps/web/"):
+        categories.add("web")
+    elif (
+        not categories
+        and path.startswith(("docs/", "deploy/"))
+        and path.endswith((".md", ".rst", ".txt"))
+    ):
+        categories.add("docs")
+    return categories or {"unknown"}
+
+
+def _collapse_diff_classes(classes: set[str]) -> str:
+    non_docs = classes - {"docs"}
+    exact_level = {
+        frozenset(): "docs",
+        frozenset({"harness"}): "harness",
+        frozenset({"contract", "high-risk"}): "contract-high-risk",
+    }.get(frozenset(non_docs))
+    if exact_level is not None:
+        level = exact_level
+    elif "unknown" in non_docs:
+        level = "unknown"
+    elif "root" in non_docs or ("harness" in non_docs and len(non_docs) > 1):
+        level = "root"
+    elif "web" in non_docs and non_docs != {"web"}:
+        level = "cross-stack"
+    elif non_docs <= {"contract", "backend", "backend-tests"} and (
+        "contract" in non_docs
+    ):
+        level = "contract"
+    elif non_docs <= {"high-risk", "backend", "backend-tests"} and (
+        "high-risk" in non_docs
+    ):
+        level = "high-risk"
+    elif non_docs <= {"backend", "backend-tests"}:
+        level = "backend" if "backend" in non_docs else "backend-tests"
+    elif len(non_docs) == 1:
+        level = next(iter(non_docs))
+    else:
+        level = "cross-stack"
+    return level
+
+
 def classify_diff(paths: Sequence[str]) -> str:
-    """Map a tracked diff to none, docs, tests, harness, or source."""
+    """Map the full changed set to a fail-closed monorepo verification class."""
     if not paths:
         return "none"
-    if all(
-        path.endswith((".md", ".rst", ".txt")) and not _is_harness(path)
-        for path in paths
+    return _collapse_diff_classes(_path_classes(paths))
+
+
+def _test_owner(path: str) -> str | None:
+    parts = Path(path).parts
+    if (
+        len(parts) >= PACKAGE_TEST_PARTS
+        and parts[0] == "packages"
+        and parts[2] == "tests"
     ):
-        return "docs"
-
-    source_or_config = any(
-        (
-            path.endswith(".py")
-            and not _is_test(path)
-            and not path.startswith("scripts/agent_harness/")
-        )
-        or path in {"pyproject.toml", "pixi.lock", ".importlinter"}
-        or (
-            path.startswith(("config/", "packages/"))
-            and not _is_test(path)
-            and not path.endswith(("AGENTS.md", "CLAUDE.md", "README.md"))
-        )
-        or path.startswith(".github/workflows/")
-        for path in paths
-    )
-    if source_or_config:
-        return "source"
-    if all(
-        _is_test(path) or path.endswith((".md", ".rst", ".txt")) for path in paths
-    ) and any(_is_test(path) for path in paths):
+        return f"packages/{parts[1]}/tests"
+    if (
+        len(parts) >= len(_BACKEND_TEST_PREFIX)
+        and parts[: len(_BACKEND_TEST_PREFIX)] == _BACKEND_TEST_PREFIX
+    ):
+        return "apps/backend/tests"
+    if parts and parts[0] == "tests":
         return "tests"
-    if any(_is_harness(path) for path in paths):
-        return "harness"
-    return "source"
+    return None
 
 
-def verification_commands(level: str, paths: Sequence[str]) -> list[list[str]]:
-    """Build non-destructive validation commands for a diff level."""
-    if level in {"none", "docs"}:
-        return []
-    if level == "harness":
-        return [["pixi", "run", "-e", "dev", "harness-check"]]
-    if level == "source":
-        return [["pixi", "run", "-e", "dev", "check"]]
-
+def _backend_test_commands(
+    paths: Sequence[str], *, root: Path | None = None
+) -> list[list[str]]:
+    workspace = root if root is not None else git_root(Path.cwd())
     test_files = [path for path in paths if _is_test(path) and path.endswith(".py")]
+    existing_test_files = [path for path in test_files if (workspace / path).is_file()]
     test_targets = set(test_files)
+    test_targets.intersection_update(existing_test_files)
     for path in paths:
-        parts = Path(path).parts
-        if _is_test(path) and not path.endswith(".py"):
-            if (
-                len(parts) >= PACKAGE_TEST_PARTS
-                and parts[0] == "packages"
-                and parts[2] == "tests"
-            ):
-                test_targets.add(f"packages/{parts[1]}/tests")
-            elif parts and parts[0] == "tests":
-                test_targets.add("tests")
+        if (
+            _is_test(path)
+            and (not path.endswith(".py") or path not in existing_test_files)
+            and (owner := _test_owner(path))
+        ):
+            test_targets.add(owner)
     commands: list[list[str]] = []
-    if test_files:
+    if existing_test_files:
         commands.extend(
             [
-                ["pixi", "run", "-e", "dev", "ruff", "format", "--check", *test_files],
-                ["pixi", "run", "-e", "dev", "ruff", "check", *test_files],
+                [
+                    "pixi",
+                    "run",
+                    "-e",
+                    "dev",
+                    "ruff",
+                    "format",
+                    "--check",
+                    *existing_test_files,
+                ],
+                [
+                    "pixi",
+                    "run",
+                    "-e",
+                    "dev",
+                    "ruff",
+                    "check",
+                    *existing_test_files,
+                ],
             ]
         )
     commands.append(["pixi", "run", "-e", "dev", "type", "--tests"])
@@ -486,10 +684,51 @@ def verification_commands(level: str, paths: Sequence[str]) -> list[list[str]]:
     return commands
 
 
+def verification_commands(
+    level: str, paths: Sequence[str], *, root: Path | None = None
+) -> list[list[str]]:
+    """Build a monotonic, non-destructive validation plan for all path classes."""
+    if paths:
+        classes = _path_classes(paths)
+    elif level == "contract-high-risk":
+        classes = {"contract", "high-risk"}
+    else:
+        classes = {level}
+    active_classes = classes - {"docs"}
+    if active_classes <= {"none"}:
+        return []
+
+    backend_classes = {"backend", "backend-tests", "high-risk"}
+    crosses_stacks = "web" in active_classes and bool(active_classes & backend_classes)
+    needs_system = (
+        "contract" in active_classes or crosses_stacks or level == "cross-stack"
+    )
+    needs_full_check = (
+        bool(active_classes & {"contract", "harness", "root", "unknown"})
+        or needs_system
+    )
+
+    commands: list[list[str]] = []
+    if needs_full_check:
+        commands.append(["pixi", "run", "-e", "dev", "check"])
+    elif "web" in active_classes:
+        commands.append(["pixi", "run", "-e", "dev", "check-web"])
+    elif active_classes & {"backend", "high-risk"}:
+        commands.append(["pixi", "run", "-e", "dev", "check-backend"])
+
+    if needs_system:
+        commands.append(["pixi", "run", "-e", "dev", "test-system"])
+    if "high-risk" in active_classes:
+        commands.append(["pixi", "run", "-e", "dev", "pytest", "-m", "pit"])
+    if needs_full_check or active_classes != {"backend-tests"}:
+        return commands
+    return _backend_test_commands(paths, root=root)
+
+
 def run_verification(
     root: Path, level: str, paths: Sequence[str]
 ) -> VerificationResult:
-    commands = verification_commands(level, paths)
+    commands = verification_commands(level, paths, root=root)
     if not commands:
         return VerificationResult(True, f"{level}: no Python verification required")
 
@@ -520,60 +759,202 @@ def receipt_path(root: Path, digest: str) -> Path:
     return root / CACHE_DIR / f"{digest}.json"
 
 
+def _is_valid_receipt_timestamp(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _receipt_is_valid(
+    path: Path,
+    *,
+    digest: str,
+    level: str,
+    paths: Sequence[str],
+    manifest: dict[str, object],
+) -> bool:
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return False
+    if not isinstance(loaded, dict):
+        return False
+    required_keys = {
+        "digest",
+        "evidence",
+        "level",
+        "paths",
+        "schema_version",
+        "verification_summary",
+        "verified_at",
+    }
+    if set(loaded) != required_keys:
+        return False
+    expected = {
+        "schema_version": RECEIPT_SCHEMA_VERSION,
+        "digest": digest,
+        "level": level,
+        "paths": list(paths),
+        "evidence": manifest,
+    }
+    if any(loaded.get(key) != value for key, value in expected.items()):
+        return False
+    summary = loaded.get("verification_summary")
+    verified_at = loaded.get("verified_at")
+    if (
+        not isinstance(summary, str)
+        or not summary
+        or not _is_valid_receipt_timestamp(verified_at)
+    ):
+        return False
+    return manifest_digest(manifest) == digest
+
+
+def _atomic_write_json(path: Path, value: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(
+            descriptor, "w", encoding="utf-8", errors="surrogateescape"
+        ) as stream:
+            json.dump(value, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _manifest_policy_violations(manifest: dict[str, object]) -> tuple[str, ...]:
+    policy = manifest.get("repository_policy")
+    if not isinstance(policy, dict):
+        raise RuntimeError("Harness manifest repository_policy must be an object")
+    raw_paths = policy.get("forbidden_package_manager_paths")
+    if not isinstance(raw_paths, list) or not all(
+        isinstance(path, str) for path in raw_paths
+    ):
+        raise RuntimeError(
+            "Harness manifest package-manager policy must be a path list"
+        )
+    return tuple(path for path in raw_paths if isinstance(path, str))
+
+
 def stop_decision(
     payload: dict[str, Any],
     root: Path,
-    paths: Sequence[str],
-    digest: str,
+    manifest: dict[str, object],
     verifier: Callable[
         [Path, str, Sequence[str]], VerificationResult
     ] = run_verification,
+    *,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Verify once per exact diff and return a host-compatible Stop result."""
+    try:
+        paths = manifest_paths(manifest)
+        violations = _manifest_policy_violations(manifest)
+    except RuntimeError as error:
+        reason = f"Harness manifest is invalid: {error}"
+        return {"decision": "block", "reason": reason[-MAX_FEEDBACK:]}
+    if violations:
+        reason = (
+            "Bun-only repository policy failed; remove forbidden package-manager "
+            f"files: {', '.join(violations)}"
+        )
+        return {"decision": "block", "reason": reason[-MAX_FEEDBACK:]}
     if not paths:
         return {}
-    cached = receipt_path(root, digest)
-    if cached.is_file():
-        return {}
+    lease_decision = authorize_paths(root, paths, now=now)
+    if not lease_decision.allowed:
+        return {
+            "decision": "block",
+            "reason": lease_decision.reason[-MAX_FEEDBACK:],
+        }
+    digest = manifest_digest(manifest)
 
     level = classify_diff(paths)
-    result = verifier(root, level, paths)
-    if result.ok:
-        cached.parent.mkdir(parents=True, exist_ok=True)
-        cached.write_text(
-            json.dumps(
-                {
-                    "digest": digest,
-                    "level": level,
-                    "paths": list(paths),
-                    "evidence": change_manifest(root, paths),
-                    "verified_at": datetime.now(_UTC).isoformat(),
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
+    cached = receipt_path(root, digest)
+    if _receipt_is_valid(
+        cached,
+        digest=digest,
+        level=level,
+        paths=paths,
+        manifest=manifest,
+    ):
         return {}
 
-    reason = (
-        f"Changed-scope verification ({level}) failed. Fix it and retry.\n\n"
-        f"{result.summary}"
-    )
-    if payload.get("stop_hook_active") is True:
-        return {
+    result = verifier(root, level, paths)
+    if result.ok:
+        _atomic_write_json(
+            cached,
+            {
+                "schema_version": RECEIPT_SCHEMA_VERSION,
+                "digest": digest,
+                "level": level,
+                "paths": list(paths),
+                "evidence": manifest,
+                "verification_summary": result.summary,
+                "verified_at": datetime.now(_UTC).isoformat(),
+            },
+        )
+        response: dict[str, Any] = {}
+    elif payload.get("stop_hook_active") is True:
+        response = {
             "systemMessage": (
                 "Verification still fails after the Stop retry. You may finish, "
-                "but the final "
-                f"response must report this failure explicitly.\n\n{result.summary}"
+                f"but the final response must report this failure explicitly.\n\n"
+                f"{result.summary}"
             )[-MAX_FEEDBACK:]
         }
-    return {"decision": "block", "reason": reason[-MAX_FEEDBACK:]}
+    else:
+        reason = (
+            f"Changed-scope verification ({level}) failed. Fix it and retry.\n\n"
+            f"{result.summary}"
+        )
+        response = {"decision": "block", "reason": reason[-MAX_FEEDBACK:]}
+    return response
 
 
 def emit(value: dict[str, Any]) -> None:
     print(json.dumps(value, ensure_ascii=False))
+
+
+def _evidence_capture_failure(event: str, error: Exception) -> int:
+    message = f"Harness evidence capture failed closed: {error}"[-MAX_FEEDBACK:]
+    if event == "check-changed":
+        print(message)
+        return 1
+    emit({"decision": "block", "reason": message})
+    return 0
+
+
+def _run_check_changed(
+    root: Path, manifest: dict[str, object], paths: Sequence[str]
+) -> int:
+    violations = _manifest_policy_violations(manifest)
+    if violations:
+        violation_list = ", ".join(violations)
+        print(
+            "Bun-only repository policy failed; remove forbidden "
+            + f"package-manager files: {violation_list}"
+        )
+        return 1
+    lease_decision = authorize_paths(root, paths)
+    if not lease_decision.allowed:
+        print(lease_decision.reason)
+        return 1
+    level = classify_diff(paths)
+    result = run_verification(root, level, paths)
+    print(result.summary)
+    return 0 if result.ok else 1
 
 
 def main() -> int:
@@ -597,10 +978,7 @@ def main() -> int:
             return 1
 
     if args.event == "pre-tool":
-        violation = policy_violation(
-            command_from_payload(payload), current_branch(root)
-        )
-        emit({"decision": "block", "reason": violation} if violation else {})
+        emit(pre_tool_decision(payload, root, current_branch(root)))
         return 0
 
     if args.event == "post-tool":
@@ -616,15 +994,15 @@ def main() -> int:
             )
         return 0
 
-    paths = changed_paths(root)
-    digest = diff_digest(root) if paths else hashlib.sha256(b"").hexdigest()
+    try:
+        manifest = change_manifest(root)
+        paths = manifest_paths(manifest)
+    except (OSError, RuntimeError) as error:
+        return _evidence_capture_failure(args.event, error)
     if args.event == "check-changed":
-        level = classify_diff(paths)
-        result = run_verification(root, level, paths)
-        print(result.summary)
-        return 0 if result.ok else 1
+        return _run_check_changed(root, manifest, paths)
 
-    emit(stop_decision(payload, root, paths, digest))
+    emit(stop_decision(payload, root, manifest))
     return 0
 
 

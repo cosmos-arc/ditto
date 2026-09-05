@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,15 +14,37 @@ SOURCE = ROOT / ".agents" / "skills"
 MIRROR = ROOT / ".claude" / "skills"
 
 
-def tree_files(root: Path) -> dict[str, bytes]:
-    """Return a deterministic mapping of relative paths to file bytes."""
+@dataclass(frozen=True)
+class TreeEntry:
+    """Portable file identity required for a trustworthy generated mirror."""
+
+    kind: str
+    content: bytes
+    executable: bool
+
+
+def tree_files(root: Path) -> dict[str, TreeEntry]:
+    """Return deterministic content, kind, and executable-bit identities."""
     if not root.is_dir():
         return {}
-    return {
-        path.relative_to(root).as_posix(): path.read_bytes()
-        for path in sorted(root.rglob("*"))
-        if path.is_file()
-    }
+    entries: dict[str, TreeEntry] = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_symlink():
+            entry = TreeEntry(
+                kind="symlink",
+                content=os.fsencode(path.readlink()),
+                executable=False,
+            )
+        elif path.is_file():
+            entry = TreeEntry(
+                kind="file",
+                content=path.read_bytes(),
+                executable=bool(path.stat().st_mode & 0o111),
+            )
+        else:
+            continue
+        entries[path.relative_to(root).as_posix()] = entry
+    return entries
 
 
 def compare_trees(source: Path = SOURCE, mirror: Path = MIRROR) -> list[str]:
@@ -33,7 +57,13 @@ def compare_trees(source: Path = SOURCE, mirror: Path = MIRROR) -> list[str]:
     for relative in sorted(mirror_files.keys() - source_files.keys()):
         problems.append(f"extra in Claude mirror: {relative}")
     for relative in sorted(source_files.keys() & mirror_files.keys()):
-        if source_files[relative] != mirror_files[relative]:
+        canonical = source_files[relative]
+        generated = mirror_files[relative]
+        if canonical.kind != generated.kind:
+            problems.append(f"kind drift: {relative}")
+        elif canonical.executable != generated.executable:
+            problems.append(f"executable mode drift: {relative}")
+        elif canonical.content != generated.content:
             problems.append(f"content drift: {relative}")
     return problems
 
@@ -44,7 +74,7 @@ def sync(source: Path = SOURCE, mirror: Path = MIRROR) -> None:
         raise SystemExit(f"canonical skill directory is missing or empty: {source}")
     if mirror.exists():
         shutil.rmtree(mirror)
-    shutil.copytree(source, mirror)
+    shutil.copytree(source, mirror, symlinks=True, copy_function=shutil.copy2)
 
 
 def main() -> int:

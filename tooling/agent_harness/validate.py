@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Ditto's slim dual-host agent harness."""
+"""Validate Ditto's canonical, polyglot dual-host agent harness."""
 
 from __future__ import annotations
 
@@ -10,19 +10,15 @@ import tomllib
 from pathlib import Path
 
 try:
+    from .repository_policy import forbidden_package_manager_paths, repository_paths
     from .sync_skills import compare_trees
 except ImportError:  # Direct script execution.
+    from repository_policy import forbidden_package_manager_paths, repository_paths
     from sync_skills import compare_trees
 
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPECTED_SKILLS = {
-    "ditto-architecture-change",
-    "ditto-change-review",
-    "ditto-pit-safety",
-    "ditto-quality-eval",
-    "ditto-test-first",
-}
+SKILL_REGISTRY = ROOT / ".agents" / "skills" / "registry.toml"
 LEGACY_PATHS = (
     ".claude/rules",
     ".claude/commands",
@@ -41,11 +37,52 @@ BANNED_WORKFLOW = re.compile(
 MAX_TEXT_BYTES = 2_000_000
 ROOT_AGENTS_MAX_LINES = 150
 ROOT_CLAUDE_MAX_LINES = 10
-PACKAGE_COUNT = 13
+EXPECTED_CAPABILITIES = frozenset(
+    {
+        "agent",
+        "analysis",
+        "application",
+        "backtest",
+        "data",
+        "execution",
+        "features",
+        "kernel",
+        "platform",
+        "portfolio",
+        "risk",
+        "strategy",
+    }
+)
 PACKAGE_AGENTS_MAX_LINES = 60
+WEB_AGENTS_MAX_LINES = 100
 PACKAGE_CLAUDE_MAX_LINES = 3
 SKILL_MAX_LINES = 120
 HOOK_EVENTS = {"PreToolUse", "PostToolUse", "Stop"}
+_HOOK_EVENT_ARGUMENTS = {
+    "PreToolUse": "pre-tool",
+    "PostToolUse": "post-tool",
+    "Stop": "stop",
+}
+_HOOK_TIMEOUTS = {"PreToolUse": 10, "PostToolUse": 120, "Stop": 900}
+_HOST_MATCHERS = {
+    "claude": {
+        "PreToolUse": {"Bash", "Edit", "Write"},
+        "PostToolUse": {"Edit", "Write"},
+        "Stop": set(),
+    },
+    "codex": {
+        "PreToolUse": {"Bash", "Edit", "Write", "apply_patch"},
+        "PostToolUse": {"Edit", "Write", "apply_patch"},
+        "Stop": set(),
+    },
+}
+_HOST_COMMAND_BASE = {
+    "claude": 'python3 "$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py"',
+    "codex": (
+        '/usr/bin/env python3 "$(git rev-parse --show-toplevel)/'
+        + 'tooling/agent_harness/hook.py"'
+    ),
+}
 
 
 def parse_frontmatter(path: Path) -> dict[str, str]:
@@ -72,20 +109,34 @@ def _line_count(path: Path) -> int:
     return len(path.read_text(encoding="utf-8").splitlines())
 
 
+def _validate_local_instruction(
+    directory: Path, max_lines: int, errors: list[str]
+) -> None:
+    agents = directory / "AGENTS.md"
+    wrapper = directory / "CLAUDE.md"
+    if not agents.is_file():
+        errors.append(f"missing local instructions: {agents.relative_to(ROOT)}")
+    elif _line_count(agents) > max_lines:
+        errors.append(f"{agents.relative_to(ROOT)} exceeds {max_lines} lines")
+    if (
+        not wrapper.is_file()
+        or wrapper.read_text(encoding="utf-8").strip() != "@AGENTS.md"
+    ):
+        errors.append(f"{wrapper.relative_to(ROOT)} is not an @AGENTS.md wrapper")
+
+
 def _text_files() -> list[Path]:
-    excluded_roots = {".git", ".pixi", ".cache", "node_modules", "artifacts"}
     files: list[Path] = []
-    for path in ROOT.rglob("*"):
-        if not path.is_file() or path.stat().st_size > MAX_TEXT_BYTES:
+    for name in sorted(repository_paths(ROOT)):
+        path = ROOT / name
+        if (
+            path.is_symlink()
+            or not path.is_file()
+            or path.stat().st_size > MAX_TEXT_BYTES
+        ):
             continue
         relative = path.relative_to(ROOT)
-        if relative.parts and relative.parts[0] in excluded_roots:
-            continue
-        if (
-            relative.parts
-            and relative.parts[0] == "docs"
-            and "archive" in relative.parts[:3]
-        ):
+        if {"archive", "archieve"}.intersection(relative.parts):
             continue
         files.append(path)
     return files
@@ -101,11 +152,12 @@ def _validate_instruction_files(errors: list[str]) -> None:
     ):
         errors.append("root CLAUDE.md must be a thin @AGENTS.md wrapper")
 
-    packages = sorted(path.parent for path in (ROOT / "packages").glob("*/AGENTS.md"))
-    if len(packages) != PACKAGE_COUNT:
-        errors.append(
-            f"expected {PACKAGE_COUNT} package AGENTS.md files, found {len(packages)}"
-        )
+    _validate_capability_inventory(ROOT, errors)
+    packages = [
+        ROOT / "packages" / name
+        for name in sorted(EXPECTED_CAPABILITIES)
+        if (ROOT / "packages" / name / "AGENTS.md").is_file()
+    ]
     for package in packages:
         agents = package / "AGENTS.md"
         wrapper = package / "CLAUDE.md"
@@ -119,11 +171,66 @@ def _validate_instruction_files(errors: list[str]) -> None:
         elif _line_count(wrapper) > PACKAGE_CLAUDE_MAX_LINES:
             errors.append(f"{wrapper.relative_to(ROOT)} exceeds 3 lines")
 
+    local_rules = (
+        (ROOT / "apps" / "backend", PACKAGE_AGENTS_MAX_LINES),
+        (ROOT / "apps" / "web", WEB_AGENTS_MAX_LINES),
+        (ROOT / "contracts", PACKAGE_AGENTS_MAX_LINES),
+    )
+    for directory, max_lines in local_rules:
+        _validate_local_instruction(directory, max_lines, errors)
+
+
+def _validate_capability_inventory(root: Path, errors: list[str]) -> None:
+    packages_root = root / "packages"
+    instruction_names = {path.parent.name for path in packages_root.glob("*/AGENTS.md")}
+    package_names = {
+        path.name
+        for path in packages_root.iterdir()
+        if path.is_dir()
+        and ((path / "pyproject.toml").is_file() or (path / "src").is_dir())
+    }
+    missing = sorted(EXPECTED_CAPABILITIES - instruction_names)
+    unexpected_instructions = sorted(instruction_names - EXPECTED_CAPABILITIES)
+    unexpected_packages = sorted(package_names - EXPECTED_CAPABILITIES)
+    if missing:
+        errors.append(f"missing capability instructions: {missing}")
+    if unexpected_instructions:
+        errors.append(f"unexpected capability instructions: {unexpected_instructions}")
+    if unexpected_packages:
+        errors.append(f"unexpected capability packages: {unexpected_packages}")
+
 
 def _skill_names(source: Path) -> set[str]:
     if not source.is_dir():
         return set()
     return {path.name for path in source.iterdir() if path.is_dir()}
+
+
+def load_skill_registry(path: Path = SKILL_REGISTRY) -> dict[str, str]:
+    """Load the declarative canonical skill inventory."""
+    loaded = tomllib.loads(path.read_text(encoding="utf-8"))
+    if loaded.get("schema_version") != 1:
+        raise ValueError("skill registry schema_version must be 1")
+    entries = loaded.get("skills")
+    if not isinstance(entries, list):
+        raise ValueError("skill registry must contain [[skills]] entries")
+
+    registry: dict[str, str] = {}
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict) or set(entry) != {"name", "owner"}:
+            raise ValueError(
+                f"skill registry entry {index} must contain name and owner"
+            )
+        name = entry.get("name")
+        owner = entry.get("owner")
+        if not isinstance(name, str) or not name:
+            raise ValueError(f"skill registry entry {index} has an invalid name")
+        if owner not in {"backend", "web", "cross-stack"}:
+            raise ValueError(f"skill registry entry {name} has an invalid owner")
+        if name in registry:
+            raise ValueError(f"duplicate skill registry entry: {name}")
+        registry[name] = owner
+    return registry
 
 
 def _validate_skill(name: str, source: Path, errors: list[str]) -> None:
@@ -157,9 +264,14 @@ def _validate_skill(name: str, source: Path, errors: list[str]) -> None:
 def _validate_skills(errors: list[str]) -> None:
     source = ROOT / ".agents" / "skills"
     skill_names = _skill_names(source)
-    if skill_names != EXPECTED_SKILLS:
+    try:
+        expected_skills = set(load_skill_registry())
+    except (FileNotFoundError, tomllib.TOMLDecodeError, ValueError) as error:
+        errors.append(f"invalid skill registry: {error}")
+        expected_skills = set()
+    if skill_names != expected_skills:
         errors.append(
-            f"expected skills {sorted(EXPECTED_SKILLS)}, found {sorted(skill_names)}"
+            f"expected skills {sorted(expected_skills)}, found {sorted(skill_names)}"
         )
     for name in sorted(skill_names):
         _validate_skill(name, source, errors)
@@ -194,7 +306,7 @@ def _load_json(path: Path, errors: list[str]) -> dict[str, object] | None:
 
 
 def _validate_hook_target(path: Path, errors: list[str]) -> None:
-    if path.is_file() and "scripts/agent_harness/hook.py" not in path.read_text(
+    if path.is_file() and "tooling/agent_harness/hook.py" not in path.read_text(
         encoding="utf-8"
     ):
         errors.append(f"{path.relative_to(ROOT)} does not target the shared hook")
@@ -213,6 +325,61 @@ def _event_matchers(config: dict[str, object], event: str) -> set[str]:
         if isinstance(entry, dict)
         and isinstance((matcher := entry.get("matcher")), str)
     }
+
+
+def _validate_host_event(
+    hooks: dict[object, object], host: str, event: str, errors: list[str]
+) -> None:
+    expected_matchers = _HOST_MATCHERS[host]
+    entries = hooks.get(event)
+    if not isinstance(entries, list) or len(entries) != 1:
+        errors.append(f"{host} {event} must contain exactly one hook entry")
+        return
+    entry = entries[0]
+    if not isinstance(entry, dict):
+        errors.append(f"{host} {event} hook entry must be an object")
+        return
+    matcher = entry.get("matcher", "")
+    matcher_tokens = (
+        set(matcher.split("|")) if isinstance(matcher, str) and matcher else set()
+    )
+    if matcher_tokens != expected_matchers[event]:
+        expected = sorted(expected_matchers[event])
+        errors.append(f"{host} {event} matcher must be {expected}")
+    commands = entry.get("hooks")
+    if not isinstance(commands, list) or len(commands) != 1:
+        errors.append(f"{host} {event} must contain exactly one command hook")
+        return
+    command_hook = commands[0]
+    if not isinstance(command_hook, dict):
+        errors.append(f"{host} {event} command hook must be an object")
+        return
+    command = command_hook.get("command")
+    expected_command = (
+        _HOST_COMMAND_BASE[host]
+        + f" --host {host} --event {_HOOK_EVENT_ARGUMENTS[event]}"
+    )
+    if (
+        command_hook.get("type") != "command"
+        or not isinstance(command, str)
+        or command != expected_command
+    ):
+        errors.append(f"{host} {event} must invoke the shared hook with host and event")
+    if command_hook.get("timeout") != _HOOK_TIMEOUTS[event]:
+        errors.append(f"{host} {event} timeout must be {_HOOK_TIMEOUTS[event]} seconds")
+
+
+def _validate_host_hook_contract(
+    config: dict[str, object], host: str, errors: list[str]
+) -> None:
+    hooks = config.get("hooks")
+    if not isinstance(hooks, dict):
+        errors.append(f"{host} hooks must be an object")
+        return
+    if set(hooks) != HOOK_EVENTS:
+        errors.append(f"{host} hooks must define PreToolUse, PostToolUse, and Stop")
+    for event in sorted(HOOK_EVENTS):
+        _validate_host_event(hooks, host, event, errors)
 
 
 def _validate_host_configs(errors: list[str]) -> None:
@@ -238,33 +405,41 @@ def _validate_host_configs(errors: list[str]) -> None:
             or permissions.get("defaultMode") != "default"
         ):
             errors.append("Claude permissions.defaultMode must be default")
-        hooks = settings.get("hooks")
-        if not isinstance(hooks, dict) or set(hooks) != HOOK_EVENTS:
-            errors.append(
-                "Claude settings must define PreToolUse, PostToolUse, and Stop hooks"
-            )
+        _validate_host_hook_contract(settings, "claude", errors)
 
     if codex is not None:
-        hooks = codex.get("hooks")
-        if not isinstance(hooks, dict) or set(hooks) != HOOK_EVENTS:
-            errors.append("Codex hooks must define PreToolUse, PostToolUse, and Stop")
+        _validate_host_hook_contract(codex, "codex", errors)
         post_matchers = _event_matchers(codex, "PostToolUse")
         if not any("apply_patch" in matcher.split("|") for matcher in post_matchers):
             errors.append("Codex PostToolUse must match apply_patch")
 
     _validate_hook_target(settings_path, errors)
     _validate_hook_target(codex_path, errors)
-    hook_script = ROOT / "scripts" / "agent_harness" / "hook.py"
+    hook_script = ROOT / "tooling" / "agent_harness" / "hook.py"
     if not hook_script.is_file():
         errors.append("shared hook target is missing")
 
 
-def _validate_toml(errors: list[str]) -> None:
-    for path in (ROOT / "pixi.toml", ROOT / "pyproject.toml"):
+def _validate_bun_only(root: Path, errors: list[str]) -> None:
+    errors.extend(
+        f"forbidden package-manager file: {path}"
+        for path in forbidden_package_manager_paths(root)
+    )
+
+
+def _validate_structured_configs(errors: list[str]) -> None:
+    for path in (
+        ROOT / "pixi.toml",
+        ROOT / "pyproject.toml",
+        ROOT / "bunfig.toml",
+        SKILL_REGISTRY,
+    ):
         try:
             tomllib.loads(path.read_text(encoding="utf-8"))
         except (FileNotFoundError, tomllib.TOMLDecodeError) as error:
             errors.append(f"invalid TOML {path.relative_to(ROOT)}: {error}")
+    for path in (ROOT / "package.json", ROOT / "apps" / "web" / "package.json"):
+        _load_json(path, errors)
 
 
 def validate() -> list[str]:
@@ -273,7 +448,8 @@ def validate() -> list[str]:
     _validate_skills(errors)
     _validate_legacy_content(errors)
     _validate_host_configs(errors)
-    _validate_toml(errors)
+    _validate_bun_only(ROOT, errors)
+    _validate_structured_configs(errors)
     return errors
 
 

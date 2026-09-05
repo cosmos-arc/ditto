@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from scripts.agent_harness.sync_skills import compare_trees
-from scripts.agent_harness.validate import parse_frontmatter, validate
+import tooling.agent_harness.validate as validate_module
+from tooling.agent_harness.sync_skills import TreeEntry, compare_trees
+from tooling.agent_harness.validate import (
+    load_skill_registry,
+    parse_frontmatter,
+    validate,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -40,8 +47,59 @@ class SkillMirrorTests(unittest.TestCase):
                 (tree / "SKILL.md").write_text("same\n", encoding="utf-8")
             assert compare_trees(source, mirror) == []
 
+    def test_file_kind_and_executable_mode_must_match(self) -> None:
+        source = Path("source")
+        mirror = Path("mirror")
+        symlink = {"SKILL.md": TreeEntry("symlink", b"target", False)}
+        regular = {"SKILL.md": TreeEntry("file", b"same", False)}
+        executable = {"SKILL.md": TreeEntry("file", b"same", True)}
+
+        with patch(
+            "tooling.agent_harness.sync_skills.tree_files",
+            side_effect=(symlink, regular),
+        ):
+            assert compare_trees(source, mirror) == ["kind drift: SKILL.md"]
+        with patch(
+            "tooling.agent_harness.sync_skills.tree_files",
+            side_effect=(executable, regular),
+        ):
+            assert compare_trees(source, mirror) == ["executable mode drift: SKILL.md"]
+
+
+class SkillRegistryTests(unittest.TestCase):
+    def test_registry_is_the_skill_inventory_source_of_truth(self) -> None:
+        registry = load_skill_registry(ROOT / ".agents" / "skills" / "registry.toml")
+
+        assert registry["ditto-api-contract-change"] == "cross-stack"
+        assert registry["ditto-app-dev"] == "web"
+        assert registry["ditto-pit-safety"] == "backend"
+        assert len(registry) == 11
+
 
 class FormatFixtureTests(unittest.TestCase):
+    def test_legacy_scan_uses_tracked_and_nonignored_untracked_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / ".gitignore").write_text("build/\nnode_modules/\n")
+            for relative in (
+                "build/results.json",
+                "apps/web/node_modules/lib.js",
+                "new.py",
+                "tracked.py",
+            ):
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("super" + "powers: forbidden")
+            subprocess.run(["git", "add", "tracked.py"], cwd=root, check=True)
+            with patch.object(validate_module, "ROOT", root):
+                errors: list[str] = []
+                validate_module._validate_legacy_content(errors)
+            assert sorted(errors) == [
+                "legacy workflow dependency in new.py",
+                "legacy workflow dependency in tracked.py",
+            ]
+
     def test_frontmatter_json_and_toml_fixtures(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -76,6 +134,161 @@ class FormatFixtureTests(unittest.TestCase):
         }
 
         assert any("apply_patch" in matcher.split("|") for matcher in matchers)
+
+    def test_both_hosts_pre_tool_hooks_cover_structured_writes(self) -> None:
+        expected = {
+            "claude": {"Bash", "Edit", "Write"},
+            "codex": {"Bash", "Edit", "Write", "apply_patch"},
+        }
+        paths = {
+            "claude": ROOT / ".claude" / "settings.json",
+            "codex": ROOT / ".codex" / "hooks.json",
+        }
+
+        for host, path in paths.items():
+            with self.subTest(host=host):
+                config = json.loads(path.read_text(encoding="utf-8"))
+                entries = config["hooks"]["PreToolUse"]
+                assert len(entries) == 1
+                assert set(entries[0]["matcher"].split("|")) == expected[host]
+                command = entries[0]["hooks"][0]["command"]
+                assert f"--host {host} --event pre-tool" in command
+
+    def test_inert_host_hook_entries_are_rejected(self) -> None:
+        config: dict[str, object] = {
+            "hooks": {
+                "PreToolUse": [],
+                "PostToolUse": [
+                    {
+                        "matcher": "Edit|Write|apply_patch",
+                        "hooks": [{"type": "command", "command": "", "timeout": 0}],
+                    }
+                ],
+                "Stop": [],
+            }
+        }
+        errors: list[str] = []
+
+        validate_module._validate_host_hook_contract(config, "codex", errors)
+
+        assert any("PreToolUse" in error for error in errors)
+        assert any("PostToolUse" in error for error in errors)
+        assert any("Stop" in error for error in errors)
+
+    def test_descriptive_text_cannot_masquerade_as_a_hook_command(self) -> None:
+        config = json.loads(
+            (ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8")
+        )
+        config["hooks"]["PostToolUse"][0]["hooks"][0]["command"] = (
+            "echo tooling/agent_harness/hook.py --host codex --event post-tool"
+        )
+        errors: list[str] = []
+
+        validate_module._validate_host_hook_contract(config, "codex", errors)
+
+        assert any("PostToolUse" in error for error in errors)
+
+    def test_capability_instruction_inventory_uses_exact_names(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packages = root / "packages"
+            packages.mkdir()
+            for index in range(12):
+                package = packages / f"wrong-{index}"
+                package.mkdir()
+                (package / "AGENTS.md").write_text("fixture\n", encoding="utf-8")
+            errors: list[str] = []
+
+            validate_module._validate_capability_inventory(root, errors)
+
+            assert any("missing capability instructions" in error for error in errors)
+            assert any(
+                "unexpected capability instructions" in error for error in errors
+            )
+
+    def test_capability_inventory_rejects_package_without_instructions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packages = root / "packages"
+            for name in validate_module.EXPECTED_CAPABILITIES:
+                package = packages / name
+                package.mkdir(parents=True)
+                (package / "AGENTS.md").write_text("fixture\n", encoding="utf-8")
+            rogue = packages / "rogue"
+            rogue.mkdir()
+            (rogue / "pyproject.toml").write_text(
+                '[project]\nname = "rogue"\n', encoding="utf-8"
+            )
+            errors: list[str] = []
+
+            validate_module._validate_capability_inventory(root, errors)
+
+            assert any("rogue" in error for error in errors)
+
+    def test_bun_only_policy_finds_nonignored_manager_files_anywhere(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "apps" / "web").mkdir(parents=True)
+            (root / "apps" / "web" / "pnpm-workspace.yaml").write_text(
+                "packages: []\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+
+            validate_module._validate_bun_only(root, errors)
+
+            assert errors == [
+                "forbidden package-manager file: apps/web/pnpm-workspace.yaml"
+            ]
+
+    def test_bun_only_policy_rejects_nested_or_legacy_bun_locks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "apps" / "web").mkdir(parents=True)
+            (root / "apps" / "web" / "bun.lock").write_text(
+                "fixture\n", encoding="utf-8"
+            )
+            (root / "bun.lockb").write_text("fixture\n", encoding="utf-8")
+            errors: list[str] = []
+
+            validate_module._validate_bun_only(root, errors)
+
+            assert errors == [
+                "forbidden package-manager file: apps/web/bun.lock",
+                "forbidden package-manager file: bun.lockb",
+            ]
+
+    def test_bun_only_git_scan_excludes_ignored_untracked_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / ".gitignore").write_text("ignored/\n", encoding="utf-8")
+            (root / "ignored").mkdir()
+            (root / "ignored" / "pnpm-lock.yaml").write_text(
+                "ignored\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+
+            validate_module._validate_bun_only(root, errors)
+
+            assert errors == []
+
+    def test_bun_only_git_scan_keeps_unstaged_deletions_in_index_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            forbidden = root / "package-lock.json"
+            forbidden.write_text("{}\n", encoding="utf-8")
+            subprocess.run(["git", "add", "package-lock.json"], cwd=root, check=True)
+            forbidden.unlink()
+            errors: list[str] = []
+
+            validate_module._validate_bun_only(root, errors)
+
+            assert errors == ["forbidden package-manager file: package-lock.json"]
+            subprocess.run(["git", "add", "-u"], cwd=root, check=True)
+            errors.clear()
+            validate_module._validate_bun_only(root, errors)
+            assert errors == []
 
 
 if __name__ == "__main__":
