@@ -8,6 +8,17 @@ _PUBLIC_API_MANIFEST = Path("docs/architecture/public-api.md")
 _ROOT_API_SECTION = "### Root Package API Surface"
 
 
+def _root_init_files(root: Path) -> tuple[Path, ...]:
+    return tuple(
+        sorted(
+            (
+                *root.glob("packages/*/src/ditto_*/__init__.py"),
+                *root.glob("apps/backend/src/ditto_apps/__init__.py"),
+            )
+        )
+    )
+
+
 def _declares_all(init_file: Path) -> bool:
     tree = ast.parse(init_file.read_text(encoding="utf-8"))
     for node in tree.body:
@@ -70,7 +81,7 @@ def test_all_root_packages_declare_explicit_all() -> None:
     root = Path.cwd()
     missing = [
         init_file.relative_to(root).as_posix()
-        for init_file in sorted(root.glob("packages/*/src/ditto_*/__init__.py"))
+        for init_file in _root_init_files(root)
         if not _declares_all(init_file)
     ]
 
@@ -82,7 +93,7 @@ def test_root_public_api_manifest_matches_package_all() -> None:
     root = Path.cwd()
     actual = {
         init_file.parent.name: _literal_all(init_file)
-        for init_file in sorted(root.glob("packages/*/src/ditto_*/__init__.py"))
+        for init_file in _root_init_files(root)
     }
 
     manifest = _root_public_api_entries()

@@ -29,13 +29,13 @@ _CURRENT_GENERIC_HELPER_SOURCE_PATHS = frozenset(
     {
         "packages/application/src/ditto_application/config/helpers.py",
         "packages/application/src/ditto_application/processes/materialization/helpers.py",
-        "packages/apps/src/ditto_apps/api/utils/__init__.py",
-        "packages/apps/src/ditto_apps/api/utils/identifier.py",
-        "packages/apps/src/ditto_apps/cli/utils/__init__.py",
-        "packages/apps/src/ditto_apps/cli/utils/identifier.py",
-        "packages/apps/src/ditto_apps/cli/utils/output.py",
-        "packages/apps/src/ditto_apps/cli/utils/params.py",
-        "packages/apps/src/ditto_apps/cli/utils/validation.py",
+        "apps/backend/src/ditto_apps/api/utils/__init__.py",
+        "apps/backend/src/ditto_apps/api/utils/identifier.py",
+        "apps/backend/src/ditto_apps/cli/utils/__init__.py",
+        "apps/backend/src/ditto_apps/cli/utils/identifier.py",
+        "apps/backend/src/ditto_apps/cli/utils/output.py",
+        "apps/backend/src/ditto_apps/cli/utils/params.py",
+        "apps/backend/src/ditto_apps/cli/utils/validation.py",
         "packages/data/src/ditto_data/helpers/__init__.py",
         "packages/data/src/ditto_data/helpers/adjustment.py",
         "packages/data/src/ditto_data/helpers/pit/__init__.py",
@@ -65,10 +65,14 @@ def test_generic_helper_allowances_are_owned_reasoned_and_current() -> None:
 
 def test_generic_helper_allowlist_matches_existing_python_sources() -> None:
     root = Path(__file__).resolve().parents[5]
+    production_sources = (
+        *(root / "packages").glob("*/src/**/*.py"),
+        *(root / "apps" / "backend" / "src").glob("**/*.py"),
+    )
 
     actual = {
         path.relative_to(root).as_posix()
-        for path in sorted((root / "packages").glob("*/src/**/*.py"))
+        for path in sorted(production_sources)
         if _MODULE.is_generic_helper_namespace_path(  # type: ignore[attr-defined]
             path.relative_to(root).as_posix()
         )

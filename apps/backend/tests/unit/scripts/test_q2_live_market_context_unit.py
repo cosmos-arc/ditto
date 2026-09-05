@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from types import SimpleNamespace
 
 import polars as pl
 import pytest
@@ -11,33 +10,58 @@ from ditto_apps.scripts.q2_live_market_context import (
     inspect_global_session_visibility,
     select_interval_snapshot_ids,
 )
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.source_snapshot import ProviderSnapshot
+
+
+def _snapshot(
+    *,
+    snapshot_id: str,
+    request_start: str,
+    request_end: str,
+    payload_uri: str,
+) -> ProviderSnapshot:
+    return ProviderSnapshot(
+        snapshot_id=snapshot_id,
+        dataset_id="index_daily",
+        source="tushare",
+        request_start=request_start,
+        request_end=request_end,
+        schema_version="1",
+        checksum=f"sha256:{snapshot_id}",
+        canonical_asset=DataAssetRef(
+            dataset_id="index_daily",
+            namespace="market/index",
+        ),
+        request_parameters_hash=f"request:{snapshot_id}",
+        response_metadata=(),
+        license_record_id="license:tushare",
+        row_count=1,
+        payload_uri=payload_uri,
+        payload_retained=True,
+        created_at=datetime(2024, 3, 29, tzinfo=UTC),
+    )
 
 
 @pytest.mark.unit
 def test_select_interval_snapshot_ids_rejects_point_snapshot_for_range() -> None:
     snapshots = (
-        SimpleNamespace(
-            dataset_id="index_daily",
+        _snapshot(
+            snapshot_id="snapshot-point",
             request_start="2024-03-29",
             request_end="2024-03-29",
-            snapshot_id="snapshot-point",
-            payload_retained=True,
             payload_uri="point.parquet",
         ),
-        SimpleNamespace(
-            dataset_id="index_daily",
+        _snapshot(
+            snapshot_id="snapshot-range-b",
             request_start="2024-02-01",
             request_end="2024-03-29",
-            snapshot_id="snapshot-range-b",
-            payload_retained=True,
             payload_uri="range-b.parquet",
         ),
-        SimpleNamespace(
-            dataset_id="index_daily",
+        _snapshot(
+            snapshot_id="snapshot-range-a",
             request_start="2024-02-01",
             request_end="2024-03-29",
-            snapshot_id="snapshot-range-a",
-            payload_retained=True,
             payload_uri="range-a.parquet",
         ),
     )

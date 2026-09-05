@@ -6,7 +6,10 @@ from collections.abc import Generator
 
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_apps.registry.infra.observability import ObservabilityProvider
+from ditto_apps.registry.infra.observability import (
+    ObservabilityLifecycle,
+    ObservabilityProvider,
+)
 from ditto_kernel.tracing import reset_trace_handler, traced
 from ditto_platform.foundation import (
     Environment,
@@ -21,7 +24,7 @@ class _TestingObservabilityConfigProvider(Provider):
 
     scope = Scope.APP
 
-    @provide(override=True)
+    @provide
     def observability_config(self) -> ObservabilityConfig:
         """覆盖真实配置读取，避免测试依赖 Settings 图。"""
         return ObservabilityConfig(
@@ -53,7 +56,7 @@ def test_observability_provider_bridges_kernel_traces_to_infra_spans() -> None:
     )
 
     try:
-        container.get(None)
+        container.get(ObservabilityLifecycle)
 
         @traced("kernel.bridge.provider")
         def sample(value: int) -> int:

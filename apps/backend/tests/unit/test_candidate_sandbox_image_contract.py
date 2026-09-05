@@ -11,6 +11,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parents[4]
 IMAGE_ROOT = REPO_ROOT / "deploy" / "agent-sandbox"
+
+# These assert runner semantics, not startup latency under parallel coverage.
+_RUNNER_PROCESS_TIMEOUT_SECONDS = 30
 BASE_DIGEST = "67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8"
 
 
@@ -112,7 +115,7 @@ def test_candidate_runner_executes_the_fixed_fit_contract(tmp_path: Path) -> Non
         env={
             "DITTO_SANDBOX_RUNTIME_MANIFEST": str(IMAGE_ROOT / "runtime-manifest.json")
         },
-        timeout=3,
+        timeout=_RUNNER_PROCESS_TIMEOUT_SECONDS,
         check=False,
     )
 
@@ -149,7 +152,7 @@ def test_candidate_runner_rejects_source_tampering_without_output() -> None:
         env={
             "DITTO_SANDBOX_RUNTIME_MANIFEST": str(IMAGE_ROOT / "runtime-manifest.json")
         },
-        timeout=3,
+        timeout=_RUNNER_PROCESS_TIMEOUT_SECONDS,
         check=False,
     )
 
@@ -178,7 +181,7 @@ def test_candidate_runner_accepts_host_validated_helper_functions() -> None:
         env={
             "DITTO_SANDBOX_RUNTIME_MANIFEST": str(IMAGE_ROOT / "runtime-manifest.json")
         },
-        timeout=3,
+        timeout=_RUNNER_PROCESS_TIMEOUT_SECONDS,
         check=False,
     )
 

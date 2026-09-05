@@ -211,10 +211,11 @@ def test_runner_enforces_wall_timeout_and_removes_the_exact_container(
     runner, seccomp = _runner(executable, tmp_path)
 
     started = time.monotonic()
-    result = runner.run(_command("timeout", seccomp_path=seccomp, timeout=1))
+    result = runner.run(_command("timeout", seccomp_path=seccomp, timeout=3))
 
-    # Keep a physical upper bound below the fake child's ten-second sleep while
-    # allowing process scheduling jitter during the eight-worker full suite.
+    # Coverage instrumentation can delay the child interpreter before it writes
+    # the cidfile. Keep enough startup headroom while remaining below the fake
+    # child's ten-second sleep.
     assert time.monotonic() - started < 8
     assert result.timed_out is True
     assert cleanup.read_text(encoding="utf-8") == "cleaned"
@@ -227,10 +228,10 @@ def test_runner_timeout_is_not_extended_by_orphaned_output_pipes(
     runner, seccomp = _runner(executable, tmp_path)
 
     started = time.monotonic()
-    result = runner.run(_command("orphan-pipe", seccomp_path=seccomp, timeout=1))
+    result = runner.run(_command("orphan-pipe", seccomp_path=seccomp, timeout=3))
 
     # The hard bound remains below the orphan's ten-second sleep, while leaving
-    # headroom for the eight-worker coverage run to schedule the cleanup probe.
+    # coverage-instrumented startup headroom before the cidfile is written.
     assert time.monotonic() - started < 8
     assert result.timed_out is True
     assert cleanup.read_text(encoding="utf-8") == "cleaned"

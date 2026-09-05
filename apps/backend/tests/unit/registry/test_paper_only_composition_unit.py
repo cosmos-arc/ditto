@@ -10,9 +10,12 @@ from ditto_execution.broker.gateways import __all__ as gateway_exports
 
 
 def test_composition_root_has_no_broker_gateway_provider() -> None:
-    with make_app_container() as container:
+    container = make_app_container()
+    try:
         with pytest.raises(NoFactoryError):
             container.get(BrokerGateway)
+    finally:
+        container.close()
 
 
 def test_execution_exports_only_the_paper_gateway() -> None:

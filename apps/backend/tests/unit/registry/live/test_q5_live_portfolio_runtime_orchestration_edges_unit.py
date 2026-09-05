@@ -19,6 +19,7 @@ from ditto_application.commands.account import (
     ImportAccountBaselineHandler,
 )
 from ditto_application.processes.execution.eod_coordinator import (
+    DatasetReadiness,
     EodStrategyOutcome,
     EodStrategyRequest,
 )
@@ -35,7 +36,10 @@ from ditto_application.processes.execution.strategy_run_process import (
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.daily_decision import DailyDecisionQueryFacade
-from ditto_application.queries.portfolio_comparison import GetPortfolioComparisonQuery
+from ditto_application.queries.portfolio_comparison import (
+    GetPortfolioComparisonQuery,
+    PortfolioComparisonRequest,
+)
 from ditto_application.queries.source import SourceDataPort
 from ditto_apps.operations.q4_live_account_acceptance import canonical_hash
 from ditto_apps.operations.q5_live_portfolio_acceptance import (
@@ -356,7 +360,7 @@ class _ScriptedCoordinator:
         *,
         signal_date: str,
         strategies: tuple[EodStrategyRequest, ...],
-        dataset_states: Mapping[str, object],
+        dataset_states: Mapping[str, DatasetReadiness],
     ) -> tuple[EodStrategyOutcome, ...]:
         request = strategies[0]
         assert signal_date == "2026-09-02"
@@ -398,7 +402,7 @@ class _ScriptedCoordinator:
                 strategy_id=request.strategy_id,
                 strategy_version=request.strategy_version,
                 batch_key=batch_key,
-                status=cast("object", status),
+                status=status,
                 required_dataset_states=(),
                 artifact_id=artifact_id,
                 checksum="signal-checksum",
@@ -742,9 +746,9 @@ def test_runtime_success_closes_both_containers_and_authenticates_evidence(
     )
     snapshot_writer = _SnapshotWriter()
     decision = _DecisionEvidence(readiness={"status": "review"})
-    comparison_requests: list[object] = []
+    comparison_requests: list[PortfolioComparisonRequest] = []
 
-    def comparison(request: object) -> dict[str, object]:
+    def comparison(request: PortfolioComparisonRequest) -> dict[str, object]:
         comparison_requests.append(request)
         return {"as_of": approved.signal_date, "status": "comparable"}
 
@@ -787,7 +791,9 @@ def test_runtime_success_closes_both_containers_and_authenticates_evidence(
     request = comparison_requests[0]
     assert request.source_snapshot_ids == (approved.provider_snapshot_id,)
     assert result["operator_id"] == "operator"
-    assert result["strategy_run"]["target"] == runtime._result_payload(strategy_result)
+    strategy_run = result["strategy_run"]
+    assert isinstance(strategy_run, dict)
+    assert strategy_run["target"] == runtime._result_payload(strategy_result)
     evidence_hash = cast("str", result["evidence_hash"])
     body = {key: value for key, value in result.items() if key != "evidence_hash"}
     assert evidence_hash == canonical_hash(body)

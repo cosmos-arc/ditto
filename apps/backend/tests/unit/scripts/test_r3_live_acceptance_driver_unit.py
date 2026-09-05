@@ -119,10 +119,14 @@ def test_candidate_selection_tick_replays_missing_evidence(
     ticks: list[datetime] = []
     monkeypatch.setattr(registry_driver, "_detail", lambda _experiment_id: detail)
 
+    def scheduler_tick(*, occurred_at: datetime) -> dict[str, object]:
+        ticks.append(occurred_at)
+        return {"occurred_at": occurred_at.isoformat()}
+
     result = registry_driver._tick_until(
         "experiment-live",
         target="candidate_selection",
-        scheduler_tick=lambda *, occurred_at: ticks.append(occurred_at),
+        scheduler_tick=scheduler_tick,
     )
 
     assert result is detail
@@ -145,11 +149,15 @@ def test_tick_until_raises_when_wall_clock_deadline_exceeds(monkeypatch) -> None
     )
     fired: list[datetime] = []
 
+    def scheduler_tick(*, occurred_at: datetime) -> dict[str, object]:
+        fired.append(occurred_at)
+        return {"occurred_at": occurred_at.isoformat()}
+
     with pytest.raises(ValueError, match="did not reach candidate_selection within"):
         registry_driver._tick_until(
             "experiment-live",
             target="candidate_selection",
-            scheduler_tick=lambda *, occurred_at: fired.append(occurred_at),
+            scheduler_tick=scheduler_tick,
         )
 
     assert fired == []  # deadline tripped before any tick fired

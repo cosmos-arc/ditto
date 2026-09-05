@@ -5,20 +5,31 @@ from __future__ import annotations
 import asyncio
 from copy import deepcopy
 from datetime import UTC, datetime
-from typing import cast
+from pathlib import Path
 
 import orjson
 import pytest
 from ditto_agent._canonical import canonical_bytes
+from ditto_application.agent_authoring_contracts import AgentAuthoringApprovalVerifier
 from ditto_application.commands.agent_authoring import AgentAuthoringCommandFacade
-from ditto_application.commands.strategy import CreateStrategyCommand
-from ditto_application.contracts import StrategySpecInfo
+from ditto_application.commands.strategy import (
+    CreateStrategyCommand,
+    UpdateStrategyCommand,
+)
+from ditto_application.commands.strategy_governance import SubmitReviewCommand
+from ditto_application.contracts import StrategySpecInfo, StrategyVersionStateInfo
 from ditto_application.mutation_idempotency import canonical_request_hash
 from ditto_apps.scripts.q5_live_agent_author import _AUTHOR_SPEC_TEMPLATE
 from ditto_apps.scripts.q5_live_agent_author_save import (
     approved_save_request,
     execute_governed_save,
 )
+
+
+def _record(value: object) -> dict[str, object]:
+    assert isinstance(value, dict)
+    assert all(isinstance(key, str) for key in value)
+    return value
 
 
 def _proposal() -> dict[str, object]:
@@ -99,19 +110,20 @@ def test_exact_save_revalidates_the_frozen_proposal_before_any_write(
     proposal = _proposal()
     assert callable(mutation)
     mutation(proposal)
+    request = _record(proposal["exact_save_request"])
+    arguments = _record(request["arguments"])
 
     with pytest.raises(ValueError):
         approved_save_request(
             proposal,
-            approved_request_hash=canonical_request_hash(
-                proposal["exact_save_request"]["arguments"]
-            ),
+            approved_request_hash=canonical_request_hash(arguments),
         )
 
 
 def test_exact_save_returns_only_the_approved_host_frozen_arguments() -> None:
     proposal = _proposal()
-    request_hash = proposal["exact_save_request"]["arguments_hash"]
+    request_hash = _record(proposal["exact_save_request"])["arguments_hash"]
+    assert isinstance(request_hash, str)
 
     approved = approved_save_request(
         proposal,
@@ -136,7 +148,8 @@ def test_exact_save_accepts_verified_v1_prewrite_hash_after_artifact_roundtrip()
     None
 ):
     proposal = _proposal()
-    request_hash = proposal["exact_save_request"]["arguments_hash"]
+    request_hash = _record(proposal["exact_save_request"])["arguments_hash"]
+    assert isinstance(request_hash, str)
     persisted = orjson.loads(canonical_bytes(proposal))
 
     approved = approved_save_request(
@@ -145,16 +158,20 @@ def test_exact_save_accepts_verified_v1_prewrite_hash_after_artifact_roundtrip()
     )
 
     assert approved.request_hash == request_hash
-    spec = approved.arguments["spec_json"]
-    assert spec["constraints"][0]["params"]["max_weight"] == 1.0
-    assert spec["execution"]["cost_model"]["slippage_bps"] == 5.0
+    spec = _record(approved.arguments["spec_json"])
+    constraints = spec["constraints"]
+    assert isinstance(constraints, list)
+    params = _record(_record(constraints[0])["params"])
+    cost_model = _record(_record(spec["execution"])["cost_model"])
+    assert params["max_weight"] == 1.0
+    assert cost_model["slippage_bps"] == 5.0
 
 
 class _CreateHandler:
     def __init__(self) -> None:
-        self.calls: list[object] = []
+        self.calls: list[CreateStrategyCommand] = []
 
-    def handle(self, command: object) -> StrategySpecInfo:
+    def handle(self, command: CreateStrategyCommand) -> StrategySpecInfo:
         self.calls.append(command)
         return StrategySpecInfo(
             strategy_id="agent_etf_518880_rotation",
@@ -167,29 +184,38 @@ class _CreateHandler:
         )
 
 
-class _UnexpectedHandler:
-    def handle(self, command: object) -> object:
+class _UnexpectedUpdateHandler:
+    def handle(self, command: UpdateStrategyCommand) -> StrategySpecInfo:
         del command
-        raise AssertionError("exact-save acceptance must not update or submit review")
+        raise AssertionError("exact-save acceptance must not update")
+
+
+class _UnexpectedSubmitHandler:
+    def handle(self, command: SubmitReviewCommand) -> StrategyVersionStateInfo:
+        del command
+        raise AssertionError("exact-save acceptance must not submit review")
 
 
 def test_governed_save_revalidates_durable_approval_at_the_write_boundary(
-    tmp_path: object,
+    tmp_path: Path,
 ) -> None:
     proposal = _proposal()
-    request_hash = proposal["exact_save_request"]["arguments_hash"]
+    request_hash = _record(proposal["exact_save_request"])["arguments_hash"]
+    assert isinstance(request_hash, str)
     approved = approved_save_request(
         proposal,
         approved_request_hash=request_hash,
     )
     create = _CreateHandler()
 
-    def facade_factory(verifier: object) -> AgentAuthoringCommandFacade:
+    def facade_factory(
+        verifier: AgentAuthoringApprovalVerifier,
+    ) -> AgentAuthoringCommandFacade:
         return AgentAuthoringCommandFacade(
             approval_verifier=verifier,
             create_handler=create,
-            update_handler=_UnexpectedHandler(),
-            submit_review_handler=_UnexpectedHandler(),
+            update_handler=_UnexpectedUpdateHandler(),
+            submit_review_handler=_UnexpectedSubmitHandler(),
         )
 
     result = asyncio.run(
@@ -214,6 +240,10 @@ def test_governed_save_revalidates_durable_approval_at_the_write_boundary(
     }
     assert result["receipt_hash"]
     assert result["approval_action_hash"]
-    command = cast("CreateStrategyCommand", create.calls[0])
-    assert type(command.spec_json["constraints"][0]["params"]["max_weight"]) is float
-    assert type(command.spec_json["execution"]["cost_model"]["slippage_bps"]) is float
+    command = create.calls[0]
+    constraints = command.spec_json["constraints"]
+    assert isinstance(constraints, list)
+    params = _record(_record(constraints[0])["params"])
+    cost_model = _record(_record(command.spec_json["execution"])["cost_model"])
+    assert type(params["max_weight"]) is float
+    assert type(cost_model["slippage_bps"]) is float

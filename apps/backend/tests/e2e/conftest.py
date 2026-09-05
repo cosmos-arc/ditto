@@ -361,6 +361,6 @@ def reporter(golden_spec: GoldenDatasetSpec) -> Generator[E2EReporter]:
     yield reporter
 
     output_path = Path(
-        f"packages/apps/tests/reports/e2e_validation_{date.today():%Y%m%d}.md"
+        f"apps/backend/tests/reports/e2e_validation_{date.today():%Y%m%d}.md"
     )
     reporter.generate_markdown(output_path)

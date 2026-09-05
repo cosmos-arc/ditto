@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,16 @@ def test_orbstack_hardened_sandbox_blocks_the_complete_attack_suite() -> None:
     assert report["status"] == "passed"
     assert report["release_gate_passed"] is True
     assert report["attack_case_count"] == 11
-    assert all(case["passed"] is True for case in report["attack_results"])
-    assert report["fresh_container_check"]["passed"] is True
-    assert report["concurrency_check"]["passed"] is True
+    attack_results = report["attack_results"]
+    assert isinstance(attack_results, list)
+    assert all(
+        isinstance(case, Mapping) and case.get("passed") is True
+        for case in attack_results
+    )
+    fresh_container_check = report["fresh_container_check"]
+    concurrency_check = report["concurrency_check"]
+    assert isinstance(fresh_container_check, Mapping)
+    assert isinstance(concurrency_check, Mapping)
+    assert fresh_container_check["passed"] is True
+    assert concurrency_check["passed"] is True
     assert report["containers_remaining"] == []

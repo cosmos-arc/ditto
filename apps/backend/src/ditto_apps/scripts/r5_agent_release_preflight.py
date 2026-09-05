@@ -521,7 +521,7 @@ def _operational_check(path: Path) -> ReleaseCheck:
 
 def _interface_check(repo_root: Path) -> ReleaseCheck:
     name = "interface_contracts"
-    openapi_path = repo_root / "docs/openapi/v1.json"
+    openapi_path = repo_root / "contracts/openapi/v1.json"
     runbook_path = repo_root / "docs/operations/r5-agent-runbook.md"
     security_path = repo_root / "docs/security/r5-agent-security-boundary.md"
     roadmap_path = repo_root / "docs/roadmaps/ditto-development-roadmap.md"

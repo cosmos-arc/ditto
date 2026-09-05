@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -744,6 +745,10 @@ def test_acceptance_builds_an_isolated_deterministic_degraded_evidence_chain(
     )
 
     assert result["passed"] is True
+    assert isinstance(result["market_context"], Mapping)
+    assert isinstance(result["missing_data_behavior"], Mapping)
+    assert isinstance(result["historical_replay"], Mapping)
+    assert isinstance(result["certifications"], Sequence)
     assert result["market_context"]["status"] == "degraded"
     assert result["missing_data_behavior"]["passed"] is True
     assert result["historical_replay"]["deterministic"] is True

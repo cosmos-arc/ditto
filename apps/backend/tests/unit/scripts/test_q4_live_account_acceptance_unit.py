@@ -77,8 +77,14 @@ def _proposal(tmp_path: Path) -> dict[str, object]:
     )
 
 
+def _record(value: object) -> dict[str, object]:
+    assert isinstance(value, dict)
+    assert all(isinstance(key, str) for key in value)
+    return value
+
+
 def _approval_hash(proposal: dict[str, object]) -> str:
-    request = cast("dict[str, object]", proposal["exact_acceptance_request"])
+    request = _record(proposal["exact_acceptance_request"])
     return cast("str", request["approval_hash"])
 
 
@@ -255,11 +261,13 @@ def test_bootstrap_writes_real_manual_rebuild_but_no_paper_trade(
 
     assert receipt["status"] == "passed"
     assert receipt["request_hash"] == approval_hash
-    assert receipt["manual"]["event_count"] == 4
-    assert receipt["manual"]["cash"] == "100500.00"
-    assert receipt["manual"]["position_quantity"] == "100"
-    assert receipt["paper"]["session_count"] == 0
-    assert receipt["paper"]["execution_count"] == 0
+    manual = _record(receipt["manual"])
+    paper = _record(receipt["paper"])
+    assert manual["event_count"] == 4
+    assert manual["cash"] == "100500.00"
+    assert manual["position_quantity"] == "100"
+    assert paper["session_count"] == 0
+    assert paper["execution_count"] == 0
     assert (root / "state" / "evidence-signing.key").stat().st_mode & 0o777 == 0o600
 
     with (
@@ -274,7 +282,7 @@ def test_bootstrap_writes_real_manual_rebuild_but_no_paper_trade(
             events=events,
             as_of="2026-09-02",
         )
-        assert rebuilt.ledger_hash == receipt["manual"]["ledger_hash"]
+        assert rebuilt.ledger_hash == manual["ledger_hash"]
         assert store.get_session("pap09-session-2026-09-03") is None
 
 
@@ -300,8 +308,8 @@ def test_bootstrap_recovers_accounts_when_receipt_write_was_interrupted(
     )
 
     assert recovered["approved_at"] == first["approved_at"]
-    assert recovered["manual"]["event_count"] == 4
-    assert recovered["paper"]["execution_count"] == 0
+    assert _record(recovered["manual"])["event_count"] == 4
+    assert _record(recovered["paper"])["execution_count"] == 0
 
 
 def test_one_real_day_is_signed_reconciled_restartable_and_idempotent(
@@ -350,16 +358,19 @@ def test_one_real_day_is_signed_reconciled_restartable_and_idempotent(
 
     assert first["status"] == "recorded"
     assert first["trade_date"] == "2026-09-03"
-    assert first["execution"]["fill_count"] == 1
-    assert first["execution"]["ledger_fill_count"] == 1
-    assert first["execution"]["balanced"] is True
-    assert first["execution"]["session_status"] == "paused"
-    assert first["pit"]["decision_precedes_execution"] is True
+    first_execution = _record(first["execution"])
+    first_pit = _record(first["pit"])
+    second_execution = _record(second["execution"])
+    assert first_execution["fill_count"] == 1
+    assert first_execution["ledger_fill_count"] == 1
+    assert first_execution["balanced"] is True
+    assert first_execution["session_status"] == "paused"
+    assert first_pit["decision_precedes_execution"] is True
     assert replay["status"] == "waiting_for_next_published_day"
     assert replay["completed_days"] == 1
     assert second["trade_date"] == "2026-09-04"
     assert second["real_trading_day_ordinal"] == 2
-    assert second["execution"]["pre_trade_position_quantity"] == 100
+    assert second_execution["pre_trade_position_quantity"] == 100
     assert (evidence_root / "days" / "2026-09-03.json").is_file()
     assert (evidence_root / "days" / "2026-09-04.json").is_file()
 
@@ -402,8 +413,9 @@ def test_explicit_closed_day_override_records_published_approval_day(
     )
 
     assert receipt["trade_date"] == "2026-09-02"
-    assert receipt["pit"]["trade_day_precedes_execution_local_date"] is False
-    assert receipt["pit"]["market_close_precedes_recording"] is True
+    pit = _record(receipt["pit"])
+    assert pit["trade_day_precedes_execution_local_date"] is False
+    assert pit["market_close_precedes_recording"] is True
     assert receipt["eligibility_override"] == {
         "kind": "approval_day_after_market_close",
         "operator_authorization": _CLOSED_DAY_AUTHORIZATION,
@@ -447,7 +459,7 @@ def test_later_trading_day_can_be_recorded_after_close_without_reusing_override(
     )
 
     assert receipt["trade_date"] == "2026-09-03"
-    assert receipt["pit"]["market_close_precedes_recording"] is True
+    assert _record(receipt["pit"])["market_close_precedes_recording"] is True
     assert "eligibility_override" not in receipt
 
 
@@ -507,8 +519,12 @@ def test_completed_database_day_without_evidence_is_recovered_exactly(
 
     assert recovered["status"] == "recorded"
     assert recovered["trade_date"] == "2026-09-03"
-    assert recovered["pit"]["execution_at"] == first["pit"]["execution_at"]
-    assert recovered["signature"]["value"] != first["signature"]["value"]
+    recovered_pit = _record(recovered["pit"])
+    first_pit = _record(first["pit"])
+    recovered_signature = _record(recovered["signature"])
+    first_signature = _record(first["signature"])
+    assert recovered_pit["execution_at"] == first_pit["execution_at"]
+    assert recovered_signature["value"] != first_signature["value"]
     progress = verify_soak_progress(
         data_root=tmp_path / "acceptance",
         evidence_root=tmp_path / "tracked-evidence",

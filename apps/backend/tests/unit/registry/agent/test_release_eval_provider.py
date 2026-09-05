@@ -31,7 +31,13 @@ from ditto_apps.registry.agent.release_eval_provider import (
 )
 
 DATASETS = (
-    Path(__file__).parents[5] / "agent" / "src" / "ditto_agent" / "evals" / "datasets"
+    Path(__file__).parents[6]
+    / "packages"
+    / "agent"
+    / "src"
+    / "ditto_agent"
+    / "evals"
+    / "datasets"
 )
 
 

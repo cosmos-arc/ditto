@@ -68,8 +68,12 @@ def test_selection_egress_is_top_three_plus_one_exact_exclusion() -> None:
 
     assert payload["candidate_count"] == 5
     assert payload["exclusion_count"] == 2
-    assert len(payload["top_candidates"]) == 3
-    assert payload["focus_exclusion"]["instrument_id"] == 1_003_251
+    top_candidates = payload["top_candidates"]
+    focus_exclusion = payload["focus_exclusion"]
+    assert isinstance(top_candidates, tuple)
+    assert isinstance(focus_exclusion, dict)
+    assert len(top_candidates) == 3
+    assert focus_exclusion["instrument_id"] == 1_003_251
     assert "candidates" not in payload
     assert "exclusions" not in payload
 

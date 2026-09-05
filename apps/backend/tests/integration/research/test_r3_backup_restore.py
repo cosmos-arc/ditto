@@ -94,6 +94,7 @@ from ditto_application.processes.experiments.holdout import (
     HoldoutSelectionReason as ApplicationHoldoutSelectionReason,
 )
 from ditto_application.processes.experiments.scheduler_store import (
+    ExperimentSchedulerSnapshot,
     ExperimentSchedulerStore,
     FirstAttempt,
     QueuedAttempt,
@@ -313,8 +314,8 @@ def _seed_holdout(
     database: ResearchExperimentDatabase,
     writer: SQLiteExperimentWriter,
 ) -> HoldoutClaimRecord:
-    del database
-    launch, _lease = _persist_candidate_selection(writer)
+    reader = SQLiteExperimentReader(database)
+    launch, _lease = _persist_candidate_selection(writer, reader)
     provider = _SelectionEvidenceProvider(launch)
     clock_value = [NOW + timedelta(minutes=2)]
 
@@ -324,7 +325,7 @@ def _seed_holdout(
         return value
 
     coordinator = ExperimentExecutionCoordinator(
-        store=ExperimentSchedulerStore(writer._reader, writer),
+        store=ExperimentSchedulerStore(reader, writer),
         first_attempt_factory=_FirstAttemptFactory(),
         owner_token="r3-backup-coordinator",
         lease_duration=timedelta(minutes=5),
@@ -350,8 +351,8 @@ def _seed_holdout(
             occurred_at=NOW + timedelta(minutes=2, seconds=1),
         )
     )
-    claim = writer._reader.get_holdout_claim(receipt.claim_id)
-    projection = writer._reader.get_experiment_projection(EXPERIMENT_ID)
+    claim = reader.get_holdout_claim(receipt.claim_id)
+    projection = reader.get_experiment_projection(EXPERIMENT_ID)
     assert claim is not None
     assert projection is not None
     assert receipt.experiment_revision == 5
@@ -360,7 +361,7 @@ def _seed_holdout(
     assert any(
         event.reason_code == "scheduler_stage_complete"
         and event.stage is ExperimentStage.CANDIDATE_SELECTION
-        for event in writer._reader.list_status_events(EXPERIMENT_ID)
+        for event in reader.list_status_events(EXPERIMENT_ID)
     )
     assert claim.claim_id == CLAIM_ID
     return claim
@@ -679,6 +680,7 @@ def _complete_fold(
 
 def _persist_candidate_selection(
     writer: SQLiteExperimentWriter,
+    reader: SQLiteExperimentReader,
 ) -> tuple[ExperimentLaunchSpec, SchedulerLease]:
     launch = _launch()
     writer.create_experiment(
@@ -716,7 +718,7 @@ def _persist_candidate_selection(
         detail=_preflight_detail(launch, folds, gates),
         launch_fence=ExperimentEnqueueFence.create(gates=gates, folds=folds),
     )
-    slot = writer._reader.get_scheduler_slot()
+    slot = reader.get_scheduler_slot()
     lease = writer.try_claim_lease(
         launch.experiment_id,
         "r3-backup-seed-owner",
@@ -739,7 +741,7 @@ def _persist_candidate_selection(
         reason_code="scheduler_dispatch",
         detail={},
     )
-    views = writer._reader.list_folds(launch.experiment_id)
+    views = reader.list_folds(launch.experiment_id)
     _complete_fold(
         writer,
         next(item for item in views if item.spec.fold_role is FoldRole.EXPLORATION),
@@ -845,8 +847,9 @@ class _SelectionEvidenceProvider:
     def read_selection_evidence(
         self,
         experiment_id: ExperimentId,
-        _expected_content_hash: ContentHash,
+        expected_content_hash: ContentHash,
     ) -> PublishedSelectionEvidence:
+        assert expected_content_hash == self.ledger.content_hash
         return PublishedSelectionEvidence(
             ArtifactRecord(
                 artifact_id=f"selection-evidence-{self.ledger.content_hash}",
@@ -872,12 +875,16 @@ class _SelectionEvidenceProvider:
 
     def publish_selection_evidence(
         self,
-        _snapshot: object,
+        snapshot: ExperimentSchedulerSnapshot,
         *,
         lease_fence: LeaseFence,
         now_epoch_us: int,
-    ) -> None:
+    ) -> PublishedSelectionEvidence:
         del lease_fence, now_epoch_us
+        return self.read_selection_evidence(
+            snapshot.projection.record.experiment_id,
+            self.ledger.content_hash,
+        )
 
 
 def _review_packet() -> ReviewPacket:

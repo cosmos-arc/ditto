@@ -38,7 +38,7 @@ def test_application_provider_predicate_matches_provider_modules() -> None:
     assert not predicate(
         "packages/application/src/ditto_application/processes/providers.py"
     )
-    assert not predicate("packages/apps/src/ditto_apps/providers.py")
+    assert not predicate("apps/backend/src/ditto_apps/providers.py")
 
 
 def test_application_provider_rejects_os_environ_subscript() -> None:

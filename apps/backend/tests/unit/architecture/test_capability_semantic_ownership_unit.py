@@ -240,7 +240,7 @@ def test_platform_semantic_scanner_reports_instrument_id_ownership():
 
 def test_semantic_scanners_ignore_non_data_and_non_platform_sources():
     source = '"publication_safety", "instrument_id"'
-    rel_path = "packages/apps/src/ditto_apps/routes/example.py"
+    rel_path = "apps/backend/src/ditto_apps/routes/example.py"
 
     assert check_data_no_derived_feature_ownership(source, rel_path) == []
     assert check_platform_no_domain_semantics(source, rel_path) == []

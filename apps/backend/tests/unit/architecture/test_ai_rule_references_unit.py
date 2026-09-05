@@ -80,7 +80,7 @@ engine_version = "engine 层"
 def run() -> None:
     """engine 层 function docstring."""
 '''
-    rel_path = "packages/apps/src/ditto_apps/example.py"
+    rel_path = "apps/backend/src/ditto_apps/example.py"
 
     assert check_source_architecture_terms(source, rel_path) == [
         f"{rel_path}: contains stale source architecture term 'Interfaces 层'",

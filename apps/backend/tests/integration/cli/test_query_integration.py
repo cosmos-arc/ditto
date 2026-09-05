@@ -11,8 +11,8 @@
 from pathlib import Path
 
 import pytest
+from apps.backend.tests.integration.cli.helpers import assert_cli_result
 from ditto_apps.cli.main import app
-from packages.apps.tests.integration.cli.helpers import assert_cli_result
 from typer.testing import CliRunner
 
 runner = CliRunner()

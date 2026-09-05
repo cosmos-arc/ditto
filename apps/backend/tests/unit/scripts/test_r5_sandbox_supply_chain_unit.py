@@ -19,7 +19,13 @@ def test_spdx_sbom_is_sorted_and_binds_every_observed_package() -> None:
     )
 
     assert sbom["spdxVersion"] == "SPDX-2.3"
-    assert [package["name"] for package in sbom["packages"]] == [
+    packages = sbom["packages"]
+    relationships = sbom["relationships"]
+    assert isinstance(packages, list)
+    assert isinstance(relationships, list)
+    assert all(isinstance(package, dict) for package in packages)
+    assert all(isinstance(relationship, dict) for relationship in relationships)
+    assert [package["name"] for package in packages] == [
         "ditto/r5-research-sandbox",
         "python-base-image",
         "base-files",
@@ -29,11 +35,11 @@ def test_spdx_sbom_is_sorted_and_binds_every_observed_package() -> None:
     ]
     contained = {
         relationship["relatedSpdxElement"]
-        for relationship in sbom["relationships"]
+        for relationship in relationships
         if relationship["relationshipType"] == "CONTAINS"
     }
     assert contained == {
         package["SPDXID"]
-        for package in sbom["packages"]
+        for package in packages
         if package["name"] not in {"ditto/r5-research-sandbox", "python-base-image"}
     } | {"SPDXRef-File-candidate-runner-py"}

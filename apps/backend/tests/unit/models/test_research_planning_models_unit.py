@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
+from typing import Any
 
 import pytest
 from ditto_apps.models.research import ExperimentPlanningRequest
 from pydantic import ValidationError
 
 
-def _payload() -> dict[str, object]:
+def _payload() -> dict[str, Any]:
     return {
         "experiment_id": "exp-1",
         "research_cycle_id": "cycle-1",
@@ -94,7 +96,7 @@ def test_planning_request_preserves_complete_python_document() -> None:
     ],
 )
 def test_planning_request_forbids_extra_fields_at_every_typed_boundary(
-    mutate: object,
+    mutate: Callable[[dict[str, Any]], None],
 ) -> None:
     payload = _payload()
     mutate(payload)

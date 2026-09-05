@@ -10,9 +10,14 @@ from typing import cast
 
 import orjson
 import pytest
+from ditto_application.agent_authoring_contracts import AgentAuthoringApprovalVerifier
 from ditto_application.commands.agent_authoring import AgentAuthoringCommandFacade
+from ditto_application.commands.strategy import (
+    CreateStrategyCommand,
+    UpdateStrategyCommand,
+)
 from ditto_application.commands.strategy_governance import SubmitReviewCommand
-from ditto_application.contracts import StrategyVersionStateInfo
+from ditto_application.contracts import StrategySpecInfo, StrategyVersionStateInfo
 from ditto_application.mutation_idempotency import canonical_request_hash
 from ditto_apps.scripts.q5_live_agent_author_review import (
     approved_review_request,
@@ -52,6 +57,12 @@ _HARD_GATES = (
     "holdout_claim",
     "artifact_completeness",
 )
+
+
+def _record(value: object) -> dict[str, object]:
+    assert isinstance(value, dict)
+    assert all(isinstance(key, str) for key in value)
+    return value
 
 
 def _author_proposal() -> dict[str, object]:
@@ -219,20 +230,21 @@ def _proposal_inputs() -> tuple[dict[str, object], dict[str, object]]:
 
 def test_review_proposal_binds_exact_completed_research_and_safe_action() -> None:
     proposal, _ = _proposal_inputs()
-    request = cast("dict[str, object]", proposal["exact_submit_review_request"])
-    arguments = cast("dict[str, object]", request["arguments"])
+    request = _record(proposal["exact_submit_review_request"])
+    arguments = _record(request["arguments"])
+    research = _record(proposal["research"])
 
     assert request["arguments_hash"] == canonical_request_hash(arguments)
     assert arguments == {
         "strategy_id": _STRATEGY_ID,
         "version": 1,
-        "bundle_hash": proposal["research"]["review_bundle_hash"],
+        "bundle_hash": research["review_bundle_hash"],
         "reason": (
             f"Submit completed Q5 Agent Author experiment {_EXPERIMENT_ID} to "
             "review; no publish or trade authority."
         ),
     }
-    assert proposal["research"]["hard_gate_pass_count"] == 10
+    assert research["hard_gate_pass_count"] == 10
     assert proposal["safety"] == {
         "provider_calls": 0,
         "publishes_strategy": False,
@@ -245,7 +257,9 @@ def test_review_proposal_binds_exact_completed_research_and_safe_action() -> Non
 @pytest.mark.pit
 def test_review_proposal_rejects_future_context_sentinel() -> None:
     planning = _planning_document()
-    planning["context_input_refs"][0]["knowledge_cutoff"] = "2026-09-02T00:00:00Z"
+    context_refs = planning["context_input_refs"]
+    assert isinstance(context_refs, list)
+    _record(context_refs[0])["knowledge_cutoff"] = "2026-09-02T00:00:00Z"
     planning_hash = hashlib.sha256(
         orjson.dumps(planning, option=orjson.OPT_SORT_KEYS)
     ).hexdigest()
@@ -285,9 +299,9 @@ def test_exact_review_rejects_lineage_tamper_after_proposal() -> None:
 
 class _SubmitHandler:
     def __init__(self) -> None:
-        self.calls: list[object] = []
+        self.calls: list[SubmitReviewCommand] = []
 
-    def handle(self, command: object) -> StrategyVersionStateInfo:
+    def handle(self, command: SubmitReviewCommand) -> StrategyVersionStateInfo:
         self.calls.append(command)
         return StrategyVersionStateInfo(
             strategy_id=_STRATEGY_ID,
@@ -297,10 +311,16 @@ class _SubmitHandler:
         )
 
 
-class _UnexpectedHandler:
-    def handle(self, command: object) -> object:
+class _UnexpectedCreateHandler:
+    def handle(self, command: CreateStrategyCommand) -> StrategySpecInfo:
         del command
-        raise AssertionError("exact-review acceptance must not create or update")
+        raise AssertionError("exact-review acceptance must not create")
+
+
+class _UnexpectedUpdateHandler:
+    def handle(self, command: UpdateStrategyCommand) -> StrategySpecInfo:
+        del command
+        raise AssertionError("exact-review acceptance must not update")
 
 
 def test_governed_review_revalidates_approval_and_only_submits_review(
@@ -314,11 +334,13 @@ def test_governed_review_revalidates_approval_and_only_submits_review(
     )
     submit = _SubmitHandler()
 
-    def facade_factory(verifier: object) -> AgentAuthoringCommandFacade:
+    def facade_factory(
+        verifier: AgentAuthoringApprovalVerifier,
+    ) -> AgentAuthoringCommandFacade:
         return AgentAuthoringCommandFacade(
             approval_verifier=verifier,
-            create_handler=_UnexpectedHandler(),
-            update_handler=_UnexpectedHandler(),
+            create_handler=_UnexpectedCreateHandler(),
+            update_handler=_UnexpectedUpdateHandler(),
             submit_review_handler=submit,
         )
 
@@ -333,7 +355,7 @@ def test_governed_review_revalidates_approval_and_only_submits_review(
     )
 
     assert len(submit.calls) == 1
-    command = cast("SubmitReviewCommand", submit.calls[0])
+    command = submit.calls[0]
     assert command.strategy_id == _STRATEGY_ID
     assert command.version == 1
     assert command.bundle_hash == approved.bundle_hash

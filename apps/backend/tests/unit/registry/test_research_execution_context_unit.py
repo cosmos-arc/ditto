@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import cast
 from unittest.mock import MagicMock
@@ -80,7 +81,7 @@ def test_create_experiment_tick_bundle_context_manager_protocol(
     """``create_experiment_tick_bundle`` must be usable as a @contextmanager."""
 
     @contextmanager
-    def consumer() -> object:
+    def consumer() -> Iterator[ExperimentExecutionBundle]:
         with create_experiment_tick_bundle() as bundle:
             yield bundle
 

@@ -650,6 +650,7 @@ def test_certified_etf_paper_flow_completes_five_consecutive_trading_days(
             assert outcome.status == "completed"
             assert len(intents) == 1
             intent = intents[0]
+            assert intent.quantity is not None
             RecordFillHandler(
                 intent_port=harness.trade,
                 fill_port=harness.trade,
@@ -877,7 +878,9 @@ def test_changed_same_day_input_after_a_fill_fails_closed_as_conflict(
     ]
     assert [artifact.artifact_id for artifact in active] == [first.artifact_id]
     assert decision.readiness["status"] == "review"
-    assert "RERUN_CONFLICT" in decision.readiness["reason_codes"]
+    reason_codes = decision.readiness["reason_codes"]
+    assert isinstance(reason_codes, tuple)
+    assert "RERUN_CONFLICT" in reason_codes
     assert decision.run_package["artifact_id"] == first.artifact_id
     assert decision.run_package["conflict_artifact_id"] == conflict.artifact_id
 

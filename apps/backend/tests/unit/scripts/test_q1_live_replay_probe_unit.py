@@ -47,7 +47,7 @@ def test_durable_payload_paths_cover_market_and_provider_payloads(
 
 
 def test_collect_live_replay_evidence_accepts_exact_skip_replay() -> None:
-    state = {
+    state: dict[str, object] = {
         "ingestion_records": [{"dataset": "stock_daily", "status": "SUCCESS"}],
         "payloads": [{"path": "market/stock/bars/2024.parquet", "sha256": "a" * 64}],
         "sqlite_table_row_counts": {"instrument": 1},
@@ -77,12 +77,11 @@ def test_collect_live_replay_evidence_accepts_exact_skip_replay() -> None:
 
 
 def test_collect_live_replay_evidence_fails_when_state_mutates() -> None:
-    states = iter(
-        (
-            {"payloads": [{"sha256": "a" * 64}]},
-            {"payloads": [{"sha256": "b" * 64}]},
-        )
+    states: tuple[dict[str, object], ...] = (
+        {"payloads": [{"sha256": "a" * 64}]},
+        {"payloads": [{"sha256": "b" * 64}]},
     )
+    observations = iter(states)
 
     with pytest.raises(ValueError, match=r"^Q1 replay mutated durable runtime state$"):
         collect_live_replay_evidence(
@@ -90,12 +89,12 @@ def test_collect_live_replay_evidence_fails_when_state_mutates() -> None:
             run_replay=lambda: (
                 ReplayRunObservation("stock_daily", "2024-03-29", "skipped", 5_356),
             ),
-            observe=lambda: next(states),
+            observe=lambda: next(observations),
         )
 
 
 def test_collect_live_replay_evidence_fails_when_dataset_is_not_skipped() -> None:
-    state = {"payloads": [{"sha256": "a" * 64}]}
+    state: dict[str, object] = {"payloads": [{"sha256": "a" * 64}]}
 
     with pytest.raises(
         ValueError, match=r"^Q1 replay was not a complete partition skip$"
@@ -110,7 +109,7 @@ def test_collect_live_replay_evidence_fails_when_dataset_is_not_skipped() -> Non
 
 
 def test_collect_live_replay_evidence_requires_exact_partition_dates() -> None:
-    state = {"payloads": [{"sha256": "a" * 64}]}
+    state: dict[str, object] = {"payloads": [{"sha256": "a" * 64}]}
 
     with pytest.raises(
         ValueError, match=r"^Q1 replay was not a complete partition skip$"

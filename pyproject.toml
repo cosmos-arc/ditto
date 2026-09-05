@@ -373,7 +373,6 @@ exclude_lines = [
     "@overload",
     "class .*\\bProtocol\\):",
     "if self\\.debug:",
-    "logger\\.(debug|trace)",
 ]
 fail_under = 0
 partial_branches = ["pragma: no branch", "if TYPE_CHECKING:"]

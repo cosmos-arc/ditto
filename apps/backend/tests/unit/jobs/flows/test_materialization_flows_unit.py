@@ -85,7 +85,9 @@ class TestDailyMaterializationFlow:
             trade_date="2026-07-16"
         )
 
-        assert result["summary"]["materialized_count"] == 0
+        summary = result["summary"]
+        assert isinstance(summary, dict)
+        assert summary["materialized_count"] == 0
         bundle.materialization_service.materialize_daily.assert_called_once_with(
             trade_date="2026-07-16",
             mode="incremental",

@@ -10,7 +10,7 @@ CONTRACT_MODULES = (
 
 PRODUCTION_CODE_DIRS = (
     Path("packages/application/src"),
-    Path("packages/apps/src"),
+    Path("apps/backend/src"),
 )
 
 FORBIDDEN_DATASET_ENUM_ROUTE_METADATA_FRAGMENTS = (

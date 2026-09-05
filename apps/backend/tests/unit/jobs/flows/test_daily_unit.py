@@ -7,6 +7,8 @@ testing individual code paths and branches without full integration setup.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import ditto_apps.jobs.flows.daily as daily_module
 import pytest
 from ditto_application.processes.quality.batch import QualityBatchCoordinator
@@ -26,6 +28,46 @@ def _prefect_runner(entrypoint):
 
 CHECK_TRADING_DAY_RUNNER = _prefect_runner(check_trading_day)
 DAILY_INGESTION_FLOW_RUNNER = _prefect_runner(daily_ingestion_flow)
+
+
+def _assert_authoritative_dq_evidence(
+    first: dict[str, object],
+    second: dict[str, object],
+    *,
+    ingest: MagicMock,
+    l3_service: MagicMock,
+) -> None:
+    first_t1 = first["t1_results"]
+    second_t1 = second["t1_results"]
+    first_dqc = first["dqc_results"]
+    second_dqc = second["dqc_results"]
+    assert isinstance(first_t1, dict)
+    assert isinstance(second_t1, dict)
+    assert isinstance(first_dqc, dict)
+    assert isinstance(second_dqc, dict)
+    first_stock = first_t1["stock_daily"]
+    second_stock = second_t1["stock_daily"]
+    first_results = first_dqc["results_by_dataset"]
+    second_results = second_dqc["results_by_dataset"]
+    assert isinstance(first_stock, dict)
+    assert isinstance(second_stock, dict)
+    assert isinstance(first_results, dict)
+    assert isinstance(second_results, dict)
+    stock_quality = second_results["stock_daily"]
+    valuation_quality = second_results["valuation_metrics"]
+    assert isinstance(stock_quality, dict)
+    assert isinstance(valuation_quality, dict)
+    assert first_stock["status"] == "success"
+    assert second_stock["status"] == "skipped"
+    assert first_results == second_results
+    assert stock_quality["passed"] is True
+    assert valuation_quality["passed"] is True
+    assert ingest.call_count == 4
+    assert l3_service.check_dataset.call_count == 4
+    assert all(
+        call.kwargs["market_wide"] is True
+        for call in l3_service.check_dataset.call_args_list
+    )
 
 
 def test_sync_runner_ingests_only_explicit_dependency_closed_scope(
@@ -68,8 +110,12 @@ def test_sync_runner_ingests_only_explicit_dependency_closed_scope(
         Dataset.STOCK_DAILY,
         Dataset.ADJ_FACTOR,
     ]
-    assert set(result["t0_results"]) == {"stock_basic"}
-    assert set(result["t1_results"]) == {"stock_daily", "adj_factor"}
+    t0_results = result["t0_results"]
+    t1_results = result["t1_results"]
+    assert isinstance(t0_results, dict)
+    assert isinstance(t1_results, dict)
+    assert set(t0_results) == {"stock_basic"}
+    assert set(t1_results) == {"stock_daily", "adj_factor"}
     assert dq.call_args.kwargs["datasets"] == [
         "stock_basic",
         "stock_daily",
@@ -333,23 +379,11 @@ def test_sync_runner_second_same_day_run_keeps_authoritative_dq_evidence(
 
     first = daily_module.run_daily_ingestion("2026-07-16")
     second = daily_module.run_daily_ingestion("2026-07-16")
-
-    assert first["t1_results"]["stock_daily"]["status"] == "success"
-    assert second["t1_results"]["stock_daily"]["status"] == "skipped"
-    assert (
-        first["dqc_results"]["results_by_dataset"]
-        == second["dqc_results"]["results_by_dataset"]
-    )
-    assert second["dqc_results"]["results_by_dataset"]["stock_daily"]["passed"] is True
-    assert (
-        second["dqc_results"]["results_by_dataset"]["valuation_metrics"]["passed"]
-        is True
-    )
-    assert ingest.call_count == 4
-    assert l3_service.check_dataset.call_count == 4
-    assert all(
-        call.kwargs["market_wide"] is True
-        for call in l3_service.check_dataset.call_args_list
+    _assert_authoritative_dq_evidence(
+        first,
+        second,
+        ingest=ingest,
+        l3_service=l3_service,
     )
 
 

@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.quality import GoldenDatasetSpec
 from ditto_data.services.market_service import (
     AdjType,
     MarketBarsQuery,
@@ -299,7 +298,6 @@ class TestQuery:
         market_service: MarketService,
         stock_bars_writer: StockBarsWriter,
         sample_bars_with_adj: pl.DataFrame,
-        golden_spec: GoldenDatasetSpec,
     ) -> None:
         """S3-02: 多标的批量查询验证.
 
@@ -310,11 +308,7 @@ class TestQuery:
             market_service: MarketService 实例.
             stock_bars_writer: Stock 日线数据 Writer.
             sample_bars_with_adj: 样本日线数据.
-            golden_spec: 黄金数据集配置（用于参考）.
-
         """
-        _ = golden_spec  # 预留参数，实际测试使用 sample_bars_with_adj
-
         # Arrange: 写入测试数据
         stock_bars_writer.write(
             df=sample_bars_with_adj,
@@ -734,23 +728,20 @@ class TestPITQueryValidation:
                     f"Instrument {ticker} max date {max_date} exceeds query range"
                 )
 
-    def test_pit_golden_dataset_sample(
+    def test_pit_synthetic_dataset_sample(
         self,
         market_service: MarketService,
         stock_bars_writer: StockBarsWriter,
         sample_bars_with_adj: pl.DataFrame,
-        golden_spec: GoldenDatasetSpec,
     ) -> None:
-        """黄金数据集 PIT 查询抽样验证.
+        """仓库内合成数据集 PIT 查询抽样验证.
 
-        对黄金数据集中的部分标的进行 PIT 查询验证。
+        对固定的临时数据集进行 PIT 查询验证，不依赖本机 TDX 文件。
 
         Args:
             market_service: MarketService 实例.
             stock_bars_writer: Stock 日线数据 Writer.
             sample_bars_with_adj: 样本日线数据.
-            golden_spec: 黄金数据集配置.
-
         """
         # Arrange: 写入测试数据
         stock_bars_writer.write(

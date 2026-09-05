@@ -6,12 +6,9 @@ Ditto FastAPI 主应用.
 
 from __future__ import annotations
 
-import os
 import time
-import uuid
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Protocol, TypeVar, cast
 
 # Third-party imports
@@ -20,7 +17,6 @@ import orjson
 
 # Local imports - using editable packages
 from dishka.integrations.fastapi import setup_dishka
-from ditto_kernel.exceptions import DataError, DittoError
 from ditto_platform.foundation import (
     ConfigInitCoordinator,
     ConfigInitError,
@@ -30,36 +26,40 @@ from ditto_platform.foundation import (
     get_environment,
     logger,
 )
-from fastapi import FastAPI, Request, Response
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ditto_apps.api.app_metadata import (
     APP_DESCRIPTION,
     APP_TITLE,
     APP_VERSION,
+    BuildMetadata,
     generate_stable_operation_id,
+    openapi_license_info,
+    openapi_servers,
 )
+from ditto_apps.api.cors import configure_cors, configure_origin_guard
+from ditto_apps.api.maturity import OPENAPI_TAGS
 from ditto_apps.api.routes.system import (
     get_status,
     health_check,
+    readiness_check,
     root,
 )
+from ditto_apps.config.runtime import RuntimePaths
 from ditto_apps.middleware import (
-    data_error_handler,
-    ditto_error_handler,
-    general_exception_handler,
-    http_exception_handler,
-    validation_exception_handler,
+    HTTPObservabilityMiddleware,
+    configure_exception_handlers,
 )
-from ditto_apps.openapi_contract import configure_openapi, register_application_routes
+from ditto_apps.openapi_contract import (
+    canonical_contract_sha256,
+    configure_openapi,
+    register_application_routes,
+    standard_error_responses,
+)
 from ditto_apps.registry.container import make_async_app_container
 from ditto_apps.registry.infra.config import data_store_settings_type
-
-# Initialize project root
-project_root = Path(__file__).parent.parent.parent.parent
+from ditto_apps.registry.infra.observability import ObservabilityLifecycle
 
 T = TypeVar("T")
 
@@ -67,7 +67,7 @@ T = TypeVar("T")
 _generate_stable_operation_id = generate_stable_operation_id
 ditto_version = APP_VERSION
 
-__all__ = ["app", "get_status", "health_check", "root"]
+__all__ = ["app", "get_status", "health_check", "readiness_check", "root"]
 
 
 class AsyncContainerProtocol(Protocol):
@@ -121,12 +121,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     注意：dishka 中间件在应用创建后立即设置，而不是在 lifespan 中。
     """
     logger.info("Starting Ditto API server", event="server_start")
+    app.state.runtime_initialized = False
 
     # 从 app.state 获取容器（由 setup_dishka 设置）
     container = app.state.dishka_container
     typed_container = cast(AsyncContainerProtocol, container)
 
     try:
+        # 生命周期型 provider 不会被 Dishka 隐式实例化；HTTP 服务必须显式
+        # 启动它，确保首个请求前 tracing/metrics/kernel bridge 已就绪。
+        await typed_container.get(ObservabilityLifecycle)
+        runtime_paths = await typed_container.get(RuntimePaths)
+        app.state.runtime_paths = runtime_paths
+
         # 初始化配置（fail-fast 模式）
         logger.info("Initializing configuration", event="config_init_start")
         coordinator: ConfigInitCoordinator = await typed_container.get(
@@ -154,6 +161,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         )
 
         app.state.settings = await typed_container.get(Settings)
+        runtime_paths.cache_root.mkdir(parents=True, exist_ok=True)
+        app.state.build_metadata = BuildMetadata.from_environment(
+            generated_contract_sha256=canonical_contract_sha256(),
+            production=app.state.settings.is_production,
+        )
+        app.state.runtime_initialized = True
 
         yield
     except SystemExit:
@@ -166,6 +179,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         )
         raise
     finally:
+        app.state.runtime_initialized = False
         # 关闭容器（自动清理所有资源）
         logger.info("Shutting down Ditto API server", event="server_shutdown")
         await typed_container.close()
@@ -178,8 +192,12 @@ app = FastAPI(
     version=ditto_version,
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=OPENAPI_TAGS,
+    servers=openapi_servers(),
+    license_info=openapi_license_info(),
     lifespan=lifespan,
     generate_unique_id_function=_generate_stable_operation_id,
+    responses=standard_error_responses(),
     default_response_class=ORJSONResponse,  # 使用 orjson 提升性能
 )
 
@@ -190,88 +208,22 @@ configure_openapi(app)
 container = make_async_app_container()
 setup_dishka(container=container, app=app)
 
-# 配置 CORS（环境感知）
 _env = get_environment()
-if _env.is_production:
-    _cors_raw = os.environ.get("CORS_ORIGINS", "")
-    _cors_origins: list[str] = (
-        [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else []
-    )
-else:
-    _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 register_application_routes(app, include_debug=not _env.is_production)
 
 
-# Request logging middleware
-@app.middleware("http")
-async def log_requests(
-    request: Request,
-    call_next: Callable[[Request], Awaitable[Response]],
-) -> Response:
-    """Log incoming requests and outgoing responses."""
-    # Generate unique request ID
-    request_id = str(uuid.uuid4())
+# The guard is innermost so denied browser requests still receive correlation,
+# bounded metrics, a root span, and one terminal log from the HTTP boundary.
+configure_origin_guard(app)
+app.add_middleware(HTTPObservabilityMiddleware)
 
-    # 存储到 request.state，供异常处理器使用
-    request.state.request_id = request_id
-
-    # Get start time
-    start_time = time.time()
-
-    # Log request
-    logger.info(
-        f"{request.method} {request.url.path}",
-        event="request",
-        method=request.method,
-        path=request.url.path,
-        request_id=request_id,
-    )
-
-    # Process request
-    try:
-        response = await call_next(request)
-
-        # Calculate duration
-        duration_ms = (time.time() - start_time) * 1000
-
-        # Add request ID to response headers
-        response.headers["X-Request-ID"] = request_id
-
-        # Log response
-        logger.info(
-            f"{request.method} {request.url.path} - {response.status_code}",
-            event="response",
-            method=request.method,
-            path=request.url.path,
-            status_code=response.status_code,
-            duration_ms=duration_ms,
-            request_id=request_id,
-        )
-
-        return response
-
-    except Exception:
-        # Re-raise exception to let FastAPI exception handlers process it
-        raise
+# CORS is outermost so allowed Web origins can read structured error responses;
+# its origin guard rejects disallowed browser requests before route execution.
+configure_cors(app, origin_guard_already_installed=True)
 
 
-# 注册异常处理器（顺序：从具体到通用）
-
-
-app.add_exception_handler(DataError, data_error_handler)
-app.add_exception_handler(DittoError, ditto_error_handler)
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(Exception, general_exception_handler)
+# 注册与纯契约工厂一致的异常响应边界。
+configure_exception_handlers(app)
 
 
 if __name__ == "__main__":

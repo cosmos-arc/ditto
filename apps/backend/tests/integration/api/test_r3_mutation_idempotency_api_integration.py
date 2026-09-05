@@ -11,6 +11,9 @@ from unittest.mock import MagicMock
 
 import httpx
 import pytest
+from apps.backend.tests.integration.api import (
+    test_research_experiment_planning_api_integration as planning_support,
+)
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
 from ditto_analysis.experiments import ExperimentId
@@ -73,9 +76,6 @@ from ditto_strategy.storage.sqlite.strategy_spec_store import (
 )
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
-from packages.apps.tests.integration.api import (
-    test_research_experiment_planning_api_integration as planning_support,
-)
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 

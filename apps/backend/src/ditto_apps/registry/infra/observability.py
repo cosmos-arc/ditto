@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from typing import Any
 
 from dishka import Provider, Scope, provide
@@ -39,11 +40,20 @@ from ditto_apps.operations.workstation_metrics import (
 )
 from ditto_apps.registry.infra.config import RuntimeFlags
 
-__all__ = ["ObservabilityProvider", "register_app_metric_definitions"]
+__all__ = [
+    "ObservabilityLifecycle",
+    "ObservabilityProvider",
+    "register_app_metric_definitions",
+]
 
 _LATE_HISTOGRAM_REGISTRATION_ERROR = (
     "Histogram metric definitions must be registered before configure_metrics()"
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ObservabilityLifecycle:
+    """Explicit DI key proving that process observability is active."""
 
 
 class ObservabilityProvider(Provider):
@@ -83,12 +93,14 @@ class ObservabilityProvider(Provider):
         )
 
     @provide
-    def observability(self, config: ObservabilityConfig) -> Iterator[None]:
+    def observability(
+        self, config: ObservabilityConfig
+    ) -> Iterator[ObservabilityLifecycle]:
         """初始化并在生命周期结束时关闭观测系统。"""
         register_app_metric_definitions()
         init(config)
         install_trace_handler(_make_kernel_bridge())
-        yield
+        yield ObservabilityLifecycle()
         reset_trace_handler()
         shutdown()
 

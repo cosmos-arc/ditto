@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import sqlite3
 from datetime import UTC, date, datetime
-from types import SimpleNamespace
 
 import orjson
 import polars as pl
@@ -24,6 +23,12 @@ from ditto_data.catalog import (
     DataCatalogEntry,
     DataSchemaFingerprint,
 )
+from ditto_data.catalog.certification import (
+    CertificationEvidence,
+    DatasetCertificationReport,
+    EvidenceCheck,
+)
+from ditto_data.catalog.coverage import DatasetCoverage
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 
 _NOW = datetime(2026, 8, 1, tzinfo=UTC)
@@ -86,6 +91,65 @@ def _snapshot(
             payload_retained=payload_retained,
             created_at=created_at,
         )
+    )
+
+
+def _active_report(
+    *,
+    snapshot_ids: tuple[str, ...],
+    recovery_uri: str,
+    consumer_uri: str,
+) -> DatasetCertificationReport:
+    coverage = DatasetCoverage(
+        dataset_id="dividend",
+        schedule="natural_days",
+        target_from=date(2015, 1, 1),
+        target_to=date(2026, 7, 31),
+        native_from=date(2015, 1, 1),
+        native_to=date(2026, 7, 31),
+        actual_from=date(2015, 1, 1),
+        actual_to=date(2026, 7, 31),
+        raw_from=date(2015, 1, 1),
+        complete_from=date(2015, 1, 1),
+        expected_partitions=1,
+        actual_partitions=1,
+        gaps=(),
+        exceptions=(),
+        collected_at=_NOW,
+    )
+    passing = EvidenceCheck("passing", "evidence://passing", passed=True)
+    evidence = CertificationEvidence(
+        source_ids=("tushare",),
+        schema_versions=("fundamental.dividend.v2",),
+        snapshot_ids=snapshot_ids,
+        dq_rule_version="dividend-dq-v1",
+        dq_results=(passing,),
+        pit_replay_results=(passing,),
+        fallback_history=("fallback=none",),
+        override_history=(),
+        freshness_results=(passing,),
+        recovery_results=(
+            EvidenceCheck(
+                "isolated_backup_restore_hash_parity",
+                recovery_uri,
+                passed=True,
+            ),
+        ),
+        license_record_ids=("license:tushare:dividend:reviewed",),
+        consumer_results=(
+            EvidenceCheck(
+                "production_consumer_read_smoke",
+                consumer_uri,
+                passed=True,
+            ),
+        ),
+    )
+    return DatasetCertificationReport.create(
+        dataset_id="dividend",
+        profile="r2-modern-a-share-v1",
+        coverage=coverage,
+        evidence=evidence,
+        generated_at=_NOW,
     )
 
 
@@ -393,33 +457,10 @@ def test_resolve_reusable_certification_requires_exact_addressed_inputs(
     consumer_path.parent.mkdir(parents=True)
     consumer_path.write_bytes(content)
     recovery_uri = "artifact+sha256://recovery/current"
-    active = SimpleNamespace(
-        dataset_id="dividend",
-        profile="r2-modern-a-share-v1",
-        coverage=SimpleNamespace(
-            target_from=date(2015, 1, 1),
-            target_to=date(2026, 7, 31),
-            is_complete=True,
-        ),
-        evidence=SimpleNamespace(
-            snapshot_ids=snapshot_ids,
-            recovery_results=(
-                SimpleNamespace(
-                    name="isolated_backup_restore_hash_parity",
-                    evidence_uri=recovery_uri,
-                    passed=True,
-                ),
-            ),
-            consumer_results=(
-                SimpleNamespace(
-                    name="production_consumer_read_smoke",
-                    evidence_uri=(
-                        "artifact+sha256://r2-live/consumer/dividend/" + digest
-                    ),
-                    passed=True,
-                ),
-            ),
-        ),
+    active = _active_report(
+        snapshot_ids=snapshot_ids,
+        recovery_uri=recovery_uri,
+        consumer_uri="artifact+sha256://r2-live/consumer/dividend/" + digest,
     )
 
     resolved_path, resolved_hash = resolve_reusable_certification(
@@ -442,15 +483,10 @@ def test_resolve_reusable_certification_requires_exact_addressed_inputs(
 
 @pytest.mark.unit
 def test_resolve_reusable_certification_rejects_snapshot_drift(tmp_path) -> None:
-    active = SimpleNamespace(
-        dataset_id="dividend",
-        profile="r2-modern-a-share-v1",
-        coverage=SimpleNamespace(
-            target_from=date(2015, 1, 1),
-            target_to=date(2026, 7, 31),
-            is_complete=True,
-        ),
-        evidence=SimpleNamespace(snapshot_ids=("snapshot:stale",)),
+    active = _active_report(
+        snapshot_ids=("snapshot:stale",),
+        recovery_uri="artifact+sha256://recovery/current",
+        consumer_uri="artifact+sha256://r2-live/consumer/dividend/" + "a" * 64,
     )
 
     with pytest.raises(ValueError, match="snapshot binding drift"):

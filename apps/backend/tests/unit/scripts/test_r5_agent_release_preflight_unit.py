@@ -44,7 +44,7 @@ def _copy_release_surface(tmp_path: Path) -> Path:
         (repo / a4_evidence).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO_ROOT / a4_evidence, repo / a4_evidence)
     for relative in (
-        Path("docs/openapi/v1.json"),
+        Path("contracts/openapi/v1.json"),
         Path("docs/operations/r5-agent-runbook.md"),
         Path("docs/security/r5-agent-security-boundary.md"),
         Path("docs/roadmaps/ditto-development-roadmap.md"),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -121,6 +122,12 @@ def _technical() -> dict[str, object]:
     }
 
 
+def _record(value: object) -> Mapping[str, object]:
+    assert isinstance(value, Mapping)
+    assert all(isinstance(key, str) for key in value)
+    return value
+
+
 def test_author_context_is_minimal_holdout_blind_and_lineage_bound() -> None:
     payload = minimal_author_context(
         selection=_selection(),
@@ -130,10 +137,13 @@ def test_author_context_is_minimal_holdout_blind_and_lineage_bound() -> None:
     )
 
     assert payload["holdout_excluded"] is True
-    assert payload["selection"]["top_candidate"]["instrument_id"] == 2_001_724
-    assert "candidates" not in payload["selection"]
+    selection = _record(payload["selection"])
+    top_candidate = _record(selection["top_candidate"])
+    technical = _record(payload["technical"])
+    assert top_candidate["instrument_id"] == 2_001_724
+    assert "candidates" not in selection
     assert "holdout_metrics" not in repr(payload)
-    assert payload["technical"]["selected_readings"] == (
+    assert technical["selected_readings"] == (
         {
             "timeframe": "daily",
             "name": "rsi",
@@ -242,7 +252,9 @@ def test_author_tool_exposes_only_frozen_choices_and_builds_complete_spec() -> N
     )
     tool = _CapturingAuthorDraftTool()
 
-    assert set(tool.spec.input_schema["properties"]) == {
+    properties = tool.spec.input_schema["properties"]
+    assert isinstance(properties, Mapping)
+    assert set(properties) == {
         "lookback",
         "vol_window",
         "signal_weights_choice",
@@ -261,8 +273,9 @@ def test_author_tool_exposes_only_frozen_choices_and_builds_complete_spec() -> N
 
     assert evidence.result["valid"] is True
     assert tool.arguments is not None
-    assert tool.arguments["spec_json"]["params"] == {
+    spec = _record(tool.arguments["spec_json"])
+    assert spec["params"] == {
         "lookback": 126,
         "vol_window": 20,
     }
-    assert tool.arguments["spec_json"]["signal_weights"] == [0.6, 0.2, 0.2]
+    assert spec["signal_weights"] == [0.6, 0.2, 0.2]

@@ -16,7 +16,7 @@ type ManifestRouteEntry = tuple[str, ApiMaturity, str]
 
 
 def _normalize_manifest_prefix(prefix: str) -> str:
-    if prefix in {"/", "/healthz"}:
+    if prefix in {"/", "/healthz", "/readyz"}:
         return prefix
     if prefix.startswith("/api/v1"):
         return prefix
@@ -60,6 +60,6 @@ def test_api_route_maturity_manifest_matches_openapi_prefix_registry() -> None:
 @pytest.mark.unit
 def test_api_route_maturity_manifest_module_paths_exist() -> None:
     """Manifest rows should point to concrete route or app modules."""
-    app_src = _REPO_ROOT / "packages" / "apps" / "src" / "ditto_apps"
+    app_src = _REPO_ROOT / "apps" / "backend" / "src" / "ditto_apps"
     for _, _, module in _manifest_route_entries().values():
         assert (app_src / module).is_file()

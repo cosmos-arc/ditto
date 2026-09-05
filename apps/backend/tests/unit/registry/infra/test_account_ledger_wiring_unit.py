@@ -40,11 +40,12 @@ def test_account_ledger_port_and_application_handlers_share_one_lifetime(
     tmp_path: Path,
 ) -> None:
     database = tmp_path / "metadata.sqlite"
-    with make_container(
+    container = make_container(
         _TestSqliteProvider(database),
         ExecutionStorageProvider(),
         AppAccountLedgerProvider(),
-    ) as container:
+    )
+    try:
         journal = container.get(AccountEventJournalPort)
 
         assert container.get(AccountEventJournalPort) is journal
@@ -58,5 +59,7 @@ def test_account_ledger_port_and_application_handlers_share_one_lifetime(
             container.get(AccountEventEvidenceQueryFacade),
             AccountEventEvidenceQueryFacade,
         )
+    finally:
+        container.close()
 
     assert database.exists()

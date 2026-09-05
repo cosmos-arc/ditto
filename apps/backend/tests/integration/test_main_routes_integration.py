@@ -103,7 +103,7 @@ class TestMainRoutesAssembly:
 
     def test_health_endpoint_exists(self) -> None:
         """验证健康检查端点存在."""
-        health_paths = {"/healthz", "/"}
+        health_paths = {"/healthz", "/readyz", "/"}
         actual_paths = {route.path for route in app.routes if isinstance(route, Route)}
 
         assert health_paths.issubset(actual_paths), (
