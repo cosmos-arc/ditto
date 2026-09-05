@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from ditto_agent._canonical import canonical_sha256
@@ -167,7 +168,7 @@ def _terminal() -> ModelResult:
 @pytest.mark.parametrize("decision", ["approve", "reject"])
 async def test_api_decision_resumes_persisted_interruption_after_restart(
     tmp_path: Path,
-    decision: str,
+    decision: Literal["approve", "reject"],
 ) -> None:
     bundle = build_agent_database(tmp_path)
     manifest = AgentManifest(

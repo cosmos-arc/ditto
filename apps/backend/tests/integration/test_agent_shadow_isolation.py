@@ -13,7 +13,7 @@ import pytest
 from ditto_agent._canonical import canonical_bytes
 from ditto_agent.decision_opinion import DecisionOpinionGenerator
 from ditto_agent.models.fake import ScriptedAgentModel, ScriptedOutcome
-from ditto_agent.models.port import ModelResult, ModelUsage
+from ditto_agent.models.port import ModelRequest, ModelResult, ModelUsage
 from ditto_agent.outcome_feedback import (
     DecisionOpinionAdoption,
     DecisionOutcomeLinker,
@@ -26,6 +26,8 @@ from ditto_application.processes.risk.agent_decision_briefing import (
     DecisionBriefingInput,
     DecisionBriefingProcess,
     DecisionOpinionGenerationRequest,
+    DecisionOpinionRecord,
+    DecisionOpinionView,
     DecisionOpinionWriteError,
 )
 from ditto_application.queries.daily_decision_v3 import (
@@ -334,7 +336,9 @@ async def test_shadow_on_off_keeps_all_core_outputs_byte_identical(
     assert len(events) == 1
     assert events[0].event_type == "shadow_decision_opinion_persisted"
     _assert_core_outputs_equal(baseline, _core_outputs())
-    assert model.requests[0].tools == ()
+    model_request = model.requests[0]
+    assert isinstance(model_request, ModelRequest)
+    assert model_request.tools == ()
 
     connection = bundle.database.get_connection()
     with pytest.raises(sqlite3.IntegrityError):
@@ -392,7 +396,7 @@ def test_shadow_has_no_downstream_consumer_or_financial_tool_surface() -> None:
         repo_root / "packages" / "portfolio" / "src",
         repo_root / "packages" / "risk" / "src",
         repo_root / "packages" / "execution" / "src",
-        repo_root / "packages" / "apps" / "src" / "ditto_apps" / "jobs",
+        repo_root / "apps" / "backend" / "src" / "ditto_apps" / "jobs",
         repo_root
         / "packages"
         / "application"
@@ -454,13 +458,15 @@ class _MaliciousGenerator:
 
     async def generate(
         self,
-        _request: DecisionOpinionGenerationRequest,
-    ) -> _MaliciousOpinion:
+        request: DecisionOpinionGenerationRequest,
+    ) -> DecisionOpinionView:
+        del request
         return self._opinion
 
 
 class _FailingWriter:
-    def append_opinion(self, _record: object) -> bool:
+    def append_opinion(self, record: DecisionOpinionRecord) -> bool:
+        del record
         raise DecisionOpinionWriteError("shadow store unavailable")
 
 
@@ -579,7 +585,9 @@ async def test_late_outcome_feedback_never_enters_prompt_or_downstream_outputs(
 
     assert bundle.feedback_writer.append_feedback(feedback)
     assert bundle.feedback_reader.get_feedback(feedback.feedback_id) == feedback
-    assert future_sentinel not in model.requests[0].input_text
-    assert "holdout" not in model.requests[0].input_text.lower()
+    model_request = model.requests[0]
+    assert isinstance(model_request, ModelRequest)
+    assert future_sentinel not in model_request.input_text
+    assert "holdout" not in model_request.input_text.lower()
     _assert_core_outputs_equal(baseline, _core_outputs())
     bundle.close()

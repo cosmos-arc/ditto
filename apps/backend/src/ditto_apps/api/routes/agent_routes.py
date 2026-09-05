@@ -83,7 +83,10 @@ from ditto_apps.api.routes.agent_presenters import (
 from ditto_apps.api.routes.agent_presenters import (
     session_response as _session_response,
 )
+from ditto_apps.api.sse_contract import sse_openapi_response as _sse_openapi_response
 from ditto_apps.models.agent import (
+    AGENT_CAMPAIGN_TERMINAL_EVENT_TYPES,
+    AGENT_RUN_TERMINAL_EVENT_TYPES,
     AgentApprovalDecisionRequest,
     AgentApprovalDecisionResponse,
     AgentApprovalResponse,
@@ -91,6 +94,7 @@ from ditto_apps.models.agent import (
     AgentCampaignCancelRequest,
     AgentCampaignCreateRequest,
     AgentCampaignResponse,
+    AgentCampaignSseEvent,
     AgentCampaignValidationRequest,
     AgentCampaignValidationResponse,
     AgentCapabilityResponse,
@@ -100,6 +104,7 @@ from ditto_apps.models.agent import (
     AgentRunCreateRequest,
     AgentRunExecuteRequest,
     AgentRunResponse,
+    AgentRunSseEvent,
     AgentSessionCreateRequest,
     AgentSessionResponse,
 )
@@ -130,8 +135,9 @@ def _raise_runtime_error(exc: AgentRuntimeError) -> Never:
             str(exc), status_code=409, error_code=exc.reason_code.upper()
         ) from exc
     if isinstance(exc, AgentInvalidRequest):
+        status_code = 410 if exc.reason_code == "agent_event_cursor_expired" else 422
         raise APIError(
-            str(exc), status_code=422, error_code=exc.reason_code.upper()
+            str(exc), status_code=status_code, error_code=exc.reason_code.upper()
         ) from exc
     raise APIError(
         "Agent runtime failed", status_code=500, error_code=exc.reason_code.upper()
@@ -152,8 +158,9 @@ def _raise_campaign_error(exc: CampaignRuntimeError) -> Never:
             str(exc), status_code=409, error_code=exc.reason_code.upper()
         ) from exc
     if isinstance(exc, CampaignInvalidRequest):
+        status_code = 410 if exc.reason_code == "campaign_event_cursor_expired" else 422
         raise APIError(
-            str(exc), status_code=422, error_code=exc.reason_code.upper()
+            str(exc), status_code=status_code, error_code=exc.reason_code.upper()
         ) from exc
     raise APIError(
         "Campaign runtime failed",
@@ -165,6 +172,7 @@ def _raise_campaign_error(exc: CampaignRuntimeError) -> Never:
 @router.get(
     "/capabilities",
     response_model=APIResponse[AgentCapabilityResponse],
+    operation_id="agent_get_agent_capabilities",
 )
 @inject
 async def get_agent_capabilities(
@@ -181,6 +189,7 @@ async def get_agent_capabilities(
 @router.get(
     "/decision-opinions",
     response_model=APIResponse[AgentDecisionOpinionResponse],
+    operation_id="agent_get_agent_decision_opinion",
 )
 @inject
 async def get_agent_decision_opinion(
@@ -216,6 +225,7 @@ async def get_agent_decision_opinion(
 @router.get(
     "/sessions",
     response_model=APIResponse[list[AgentSessionResponse]],
+    operation_id="agent_list_agent_sessions",
 )
 @inject
 async def list_agent_sessions(
@@ -246,6 +256,7 @@ async def list_agent_sessions(
     "/sessions",
     response_model=APIResponse[AgentSessionResponse],
     status_code=201,
+    operation_id="agent_create_agent_session",
 )
 @inject
 async def create_agent_session(
@@ -271,6 +282,7 @@ async def create_agent_session(
     "/runs",
     response_model=APIResponse[AgentRunResponse],
     status_code=201,
+    operation_id="agent_create_agent_run",
 )
 @inject
 async def create_agent_run(
@@ -333,6 +345,7 @@ async def create_agent_run(
 @router.get(
     "/runs",
     response_model=APIResponse[list[AgentRunResponse]],
+    operation_id="agent_list_agent_runs",
 )
 @inject
 async def list_agent_runs(
@@ -370,6 +383,7 @@ async def list_agent_runs(
 @router.get(
     "/runs/{run_id}",
     response_model=APIResponse[AgentRunResponse],
+    operation_id="agent_get_agent_run",
 )
 @inject
 async def get_agent_run(
@@ -386,9 +400,14 @@ async def get_agent_run(
 
 @router.get(
     "/runs/{run_id}/events",
-    response_model=None,
+    response_model=AgentRunSseEvent,
     response_class=Response,
-    responses={200: {"content": {"text/event-stream": {}}}},
+    responses=_sse_openapi_response(
+        data_schema="AgentRunSseEvent",
+        terminal_field="event_type",
+        terminal_values=tuple(item.value for item in AGENT_RUN_TERMINAL_EVENT_TYPES),
+    ),
+    operation_id="agent_get_agent_run_events",
 )
 @inject
 async def get_agent_run_events(
@@ -406,7 +425,7 @@ async def get_agent_run_events(
     except AgentRuntimeError as exc:
         _raise_runtime_error(exc)
     return Response(
-        content=encode_agent_sse(events),
+        content=encode_agent_sse(events, after_event_id=last_event_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -415,6 +434,7 @@ async def get_agent_run_events(
 @router.post(
     "/runs/{run_id}/cancel",
     response_model=APIResponse[AgentRunResponse],
+    operation_id="agent_cancel_agent_run",
 )
 @inject
 async def cancel_agent_run(
@@ -439,6 +459,7 @@ async def cancel_agent_run(
 @router.post(
     "/runs/{run_id}/execute",
     response_model=APIResponse[AgentRunResponse],
+    operation_id="agent_execute_agent_run",
 )
 @inject
 async def execute_agent_run(
@@ -462,6 +483,7 @@ async def execute_agent_run(
 @router.get(
     "/approvals",
     response_model=APIResponse[list[AgentApprovalResponse]],
+    operation_id="agent_list_agent_approvals",
 )
 @inject
 async def list_agent_approvals(
@@ -495,6 +517,7 @@ async def list_agent_approvals(
 @router.get(
     "/approvals/{approval_id}",
     response_model=APIResponse[AgentApprovalResponse],
+    operation_id="agent_get_agent_approval",
 )
 @inject
 async def get_agent_approval(
@@ -512,6 +535,7 @@ async def get_agent_approval(
 @router.post(
     "/approvals/{approval_id}/decision",
     response_model=APIResponse[AgentApprovalDecisionResponse],
+    operation_id="agent_decide_agent_approval",
 )
 @inject
 async def decide_agent_approval(
@@ -540,6 +564,7 @@ async def decide_agent_approval(
     "/campaigns",
     response_model=APIResponse[AgentCampaignResponse],
     status_code=201,
+    operation_id="agent_create_agent_campaign",
 )
 @inject
 async def create_agent_campaign(
@@ -571,6 +596,7 @@ async def create_agent_campaign(
 @router.post(
     "/campaigns/validation",
     response_model=APIResponse[AgentCampaignValidationResponse],
+    operation_id="agent_validate_agent_campaign",
 )
 @inject
 async def validate_agent_campaign(
@@ -601,6 +627,7 @@ async def validate_agent_campaign(
 @router.get(
     "/campaigns",
     response_model=APIResponse[list[AgentCampaignResponse]],
+    operation_id="agent_list_agent_campaigns",
 )
 @inject
 async def list_agent_campaigns(
@@ -632,6 +659,7 @@ async def list_agent_campaigns(
 @router.post(
     "/campaigns/{campaign_id}/approve",
     response_model=APIResponse[AgentCampaignResponse],
+    operation_id="agent_approve_agent_campaign",
 )
 @inject
 async def approve_agent_campaign(
@@ -667,6 +695,7 @@ async def approve_agent_campaign(
 @router.get(
     "/campaigns/{campaign_id}",
     response_model=APIResponse[AgentCampaignResponse],
+    operation_id="agent_get_agent_campaign",
 )
 @inject
 async def get_agent_campaign(
@@ -683,9 +712,16 @@ async def get_agent_campaign(
 
 @router.get(
     "/campaigns/{campaign_id}/events",
-    response_model=None,
+    response_model=AgentCampaignSseEvent,
     response_class=Response,
-    responses={200: {"content": {"text/event-stream": {}}}},
+    responses=_sse_openapi_response(
+        data_schema="AgentCampaignSseEvent",
+        terminal_field="event_type",
+        terminal_values=tuple(
+            item.value for item in AGENT_CAMPAIGN_TERMINAL_EVENT_TYPES
+        ),
+    ),
+    operation_id="agent_get_agent_campaign_events",
 )
 @inject
 async def get_agent_campaign_events(
@@ -703,7 +739,7 @@ async def get_agent_campaign_events(
     except CampaignRuntimeError as exc:
         _raise_campaign_error(exc)
     return Response(
-        content=encode_campaign_sse(events),
+        content=encode_campaign_sse(events, after_event_id=last_event_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -712,6 +748,7 @@ async def get_agent_campaign_events(
 @router.post(
     "/campaigns/{campaign_id}/cancel",
     response_model=APIResponse[AgentCampaignResponse],
+    operation_id="agent_cancel_agent_campaign",
 )
 @inject
 async def cancel_agent_campaign(

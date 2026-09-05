@@ -19,6 +19,7 @@ from ditto_agent.storage.sqlite.records import (
 )
 from ditto_analysis.errors import AnalysisError, ExperimentConflictError
 from ditto_analysis.experiments.campaign_persistence import (
+    CampaignEventRecord,
     CampaignManifestRecord,
     CampaignReaderProtocol,
 )
@@ -153,6 +154,41 @@ def _string(value: object, field: str) -> str:
     if type(value) is not str or not value or value != value.strip():
         raise CampaignRuntimeUnavailable(f"campaign_{field}_projection_invalid")
     return value
+
+
+def _validated_campaign_event_views(
+    events: tuple[CampaignEventRecord, ...],
+    *,
+    campaign_id: str,
+) -> tuple[CampaignEventView, ...]:
+    """Validate the complete persisted status chain before slicing a replay."""
+    views: list[CampaignEventView] = []
+    previous_status: str | None = None
+    try:
+        for expected_ordinal, event in enumerate(events):
+            if (
+                str(event.campaign_id) != campaign_id
+                or event.ordinal != expected_ordinal
+                or event.previous_status != previous_status
+            ):
+                raise CampaignRuntimeUnavailable("campaign_event_stream_invalid")
+            view = CampaignEventView(
+                event_id=event.ordinal + 1,
+                durable_event_id=event.event_id,
+                campaign_id=campaign_id,
+                event_type=event.event_type,
+                previous_status=event.previous_status,
+                status=CampaignStatus(event.status),
+                payload_hash=hashlib.sha256(event.detail_payload).hexdigest(),
+                occurred_at=datetime_from_epoch_us(event.occurred_at_epoch_us),
+            )
+            views.append(view)
+            previous_status = event.status
+    except CampaignRuntimeUnavailable:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise CampaignRuntimeUnavailable("campaign_event_stream_invalid") from exc
+    return tuple(views)
 
 
 def _validate_campaign(command: CampaignValidationCommand) -> CampaignValidationView:
@@ -708,19 +744,18 @@ class PersistedCampaignRuntime(CampaignRuntimePort):
             raise CampaignRuntimeUnavailable(
                 str(exc.details.get("reason_code", "campaign_persistence_failed"))
             ) from exc
-        return tuple(
-            CampaignEventView(
-                event_id=event.ordinal + 1,
-                durable_event_id=event.event_id,
-                campaign_id=campaign_id,
-                event_type=event.event_type,
-                previous_status=event.previous_status,
-                status=CampaignStatus(event.status),
-                payload_hash=hashlib.sha256(event.detail_payload).hexdigest(),
-                occurred_at=datetime_from_epoch_us(event.occurred_at_epoch_us),
+        views = _validated_campaign_event_views(events, campaign_id=campaign_id)
+        if after_event_id not in (None, 0) and all(
+            event.event_id != after_event_id for event in views
+        ):
+            raise CampaignInvalidRequest(
+                "Last-Event-ID is not retained by this Campaign",
+                reason_code="campaign_event_cursor_expired",
             )
-            for event in events
-            if after_event_id is None or event.ordinal + 1 > after_event_id
+        return tuple(
+            event
+            for event in views
+            if after_event_id is None or event.event_id > after_event_id
         )
 
     def cancel_campaign(self, command: CampaignCancelCommand) -> CampaignView:

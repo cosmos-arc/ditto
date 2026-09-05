@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import orjson
+from ditto_agent.runtime.episode import episode_event_hash
 from ditto_agent.runtime.service import (
     AgentApprovalDecision,
     AgentApprovalView,
@@ -13,18 +14,22 @@ from ditto_agent.runtime.service import (
 )
 from ditto_application.agent_campaign_runtime import (
     CampaignEventView,
+    CampaignStatus,
     CampaignValidationView,
     CampaignView,
 )
 from ditto_application.queries.decision_opinion import DecisionOpinionReadModel
 
 from ditto_apps.models.agent import (
+    AGENT_RUN_TERMINAL_EVENT_TYPES,
     AgentApprovalDecisionResponse,
     AgentApprovalResponse,
     AgentCampaignBudget,
     AgentCampaignGuardrail,
     AgentCampaignResponse,
     AgentCampaignSandboxLimits,
+    AgentCampaignSseEvent,
+    AgentCampaignSseEventType,
     AgentCampaignToolRecord,
     AgentCampaignUsage,
     AgentCampaignValidationResponse,
@@ -35,6 +40,8 @@ from ditto_apps.models.agent import (
     AgentRunExecutionPlanResponse,
     AgentRunGuardrail,
     AgentRunResponse,
+    AgentRunSseEvent,
+    AgentRunSseEventType,
     AgentRunToolRecord,
     AgentRunUsage,
     AgentSessionResponse,
@@ -314,26 +321,116 @@ def campaign_validation_response(
     )
 
 
-def encode_agent_sse(events: tuple[AgentEventView, ...]) -> bytes:
+def _run_sse_event(event: AgentEventView) -> AgentRunSseEvent:
+    """Validate one internal projection against the versioned public data DTO."""
+    if event.schema_version != 1:
+        raise ValueError("Agent SSE schema_version must be 1")
+    return AgentRunSseEvent(
+        schema_version=1,
+        event_id=event.event_id,
+        run_id=event.run_id,
+        run_sequence=event.run_sequence,
+        event_type=AgentRunSseEventType(event.event_type),
+        payload_hash=event.payload_hash,
+        occurred_at=event.occurred_at,
+        prev_hash=event.prev_hash,
+        event_hash=event.event_hash,
+    )
+
+
+def _campaign_sse_event(event: CampaignEventView) -> AgentCampaignSseEvent:
+    """Validate one Campaign projection against the versioned public data DTO."""
+    if event.schema_version != 1:
+        raise ValueError("Campaign SSE schema_version must be 1")
+    return AgentCampaignSseEvent(
+        schema_version=1,
+        event_id=event.event_id,
+        durable_event_id=event.durable_event_id,
+        campaign_id=event.campaign_id,
+        event_type=AgentCampaignSseEventType(event.event_type),
+        previous_status=(
+            None
+            if event.previous_status is None
+            else CampaignStatus(event.previous_status)
+        ),
+        status=CampaignStatus(event.status),
+        payload_hash=event.payload_hash,
+        occurred_at=event.occurred_at,
+    )
+
+
+def _validate_replay_cursor(after_event_id: int | None) -> None:
+    if after_event_id is not None and (
+        type(after_event_id) is not int or after_event_id < 0
+    ):
+        raise ValueError("after_event_id must be a non-negative integer")
+
+
+def _validate_run_adjacency(
+    previous: AgentRunSseEvent,
+    event: AgentRunSseEvent,
+) -> None:
+    if event.event_id <= previous.event_id:
+        raise ValueError("Agent SSE events must have strictly increasing IDs")
+    if event.run_id != previous.run_id:
+        raise ValueError("Agent SSE replay cannot mix run identities")
+    if event.run_sequence != previous.run_sequence + 1:
+        raise ValueError("Agent SSE run_sequence must be contiguous")
+    if event.prev_hash != previous.event_hash:
+        raise ValueError("Agent SSE prev_hash must link the preceding event")
+
+
+def _validate_run_event_hash(event: AgentRunSseEvent) -> None:
+    expected_hash = episode_event_hash(
+        event_id=event.event_id,
+        run_id=event.run_id,
+        run_sequence=event.run_sequence,
+        event_type=event.event_type,
+        payload_hash=event.payload_hash,
+        occurred_at=event.occurred_at,
+        prev_hash=event.prev_hash,
+    )
+    if event.event_hash != expected_hash:
+        raise ValueError("Agent SSE event_hash does not authenticate its event")
+
+
+def _validate_campaign_adjacency(
+    previous: AgentCampaignSseEvent,
+    event: AgentCampaignSseEvent,
+) -> None:
+    if event.event_id != previous.event_id + 1:
+        raise ValueError("Campaign SSE event_id must be contiguous")
+    if event.campaign_id != previous.campaign_id:
+        raise ValueError("Campaign SSE replay cannot mix Campaign identities")
+    if event.previous_status is not previous.status:
+        raise ValueError("Campaign SSE previous_status must match the preceding status")
+
+
+def encode_agent_sse(
+    events: tuple[AgentEventView, ...],
+    *,
+    after_event_id: int | None = None,
+) -> bytes:
     """Serialize an ordered persisted replay without creating business events."""
+    _validate_replay_cursor(after_event_id)
+    validated = tuple(_run_sse_event(event) for event in events)
+    if validated and after_event_id is None and validated[0].run_sequence != 1:
+        raise ValueError("Agent SSE fresh replay must start at run_sequence 1")
     chunks: list[bytes] = []
-    previous_event_id = 0
-    for event in events:
-        if event.event_id <= previous_event_id:
-            raise ValueError("Agent SSE events must have strictly increasing IDs")
-        previous_event_id = event.event_id
+    previous: AgentRunSseEvent | None = None
+    for index, event in enumerate(validated):
+        if after_event_id is not None and event.event_id <= after_event_id:
+            raise ValueError("Agent SSE event did not advance beyond after_event_id")
+        if previous is not None:
+            _validate_run_adjacency(previous, event)
+        _validate_run_event_hash(event)
+        if (
+            event.event_type in AGENT_RUN_TERMINAL_EVENT_TYPES
+            and index != len(validated) - 1
+        ):
+            raise ValueError("Agent SSE terminal event must be the final frame")
         data = orjson.dumps(
-            {
-                "schema_version": event.schema_version,
-                "event_id": event.event_id,
-                "run_id": event.run_id,
-                "run_sequence": event.run_sequence,
-                "event_type": event.event_type,
-                "payload_hash": event.payload_hash,
-                "occurred_at": event.occurred_at,
-                "prev_hash": event.prev_hash,
-                "event_hash": event.event_hash,
-            },
+            event.model_dump(mode="python"),
             option=orjson.OPT_SORT_KEYS | orjson.OPT_UTC_Z,
         )
         chunks.append(
@@ -347,29 +444,30 @@ def encode_agent_sse(events: tuple[AgentEventView, ...]) -> bytes:
                 )
             )
         )
+        previous = event
     return b"".join(chunks)
 
 
-def encode_campaign_sse(events: tuple[CampaignEventView, ...]) -> bytes:
+def encode_campaign_sse(
+    events: tuple[CampaignEventView, ...],
+    *,
+    after_event_id: int | None = None,
+) -> bytes:
     """Serialize ordered persisted Campaign events without executing work."""
+    _validate_replay_cursor(after_event_id)
+    validated = tuple(_campaign_sse_event(event) for event in events)
     chunks: list[bytes] = []
-    previous_event_id = 0
-    for event in events:
-        if event.event_id <= previous_event_id:
-            raise ValueError("Campaign SSE events must have strictly increasing IDs")
-        previous_event_id = event.event_id
+    previous: AgentCampaignSseEvent | None = None
+    for event in validated:
+        expected_first_id = 1 if after_event_id is None else after_event_id + 1
+        if previous is None and event.event_id != expected_first_id:
+            raise ValueError(
+                "Campaign SSE event_id must be contiguous from the replay cursor"
+            )
+        if previous is not None:
+            _validate_campaign_adjacency(previous, event)
         data = orjson.dumps(
-            {
-                "schema_version": event.schema_version,
-                "event_id": event.event_id,
-                "durable_event_id": event.durable_event_id,
-                "campaign_id": event.campaign_id,
-                "event_type": event.event_type,
-                "previous_status": event.previous_status,
-                "status": event.status,
-                "payload_hash": event.payload_hash,
-                "occurred_at": event.occurred_at,
-            },
+            event.model_dump(mode="python"),
             option=orjson.OPT_SORT_KEYS | orjson.OPT_UTC_Z,
         )
         chunks.append(
@@ -383,6 +481,7 @@ def encode_campaign_sse(events: tuple[CampaignEventView, ...]) -> bytes:
                 )
             )
         )
+        previous = event
     return b"".join(chunks)
 
 

@@ -17,15 +17,22 @@ from ditto_agent.presentation import AgentContextPresentation
 from ditto_agent.runtime.service import (
     AgentApprovalDecision,
     AgentApprovalDecisionCommand,
+    AgentApprovalListView,
+    AgentApprovalStatus,
+    AgentApprovalView,
+    AgentCapabilityView,
     AgentEventView,
     AgentRequestConflict,
     AgentRunCancelCommand,
     AgentRunCreateCommand,
     AgentRunExecuteCommand,
+    AgentRunListView,
     AgentRuntimePort,
+    AgentRuntimeState,
     AgentRuntimeUnavailable,
     AgentRunView,
     AgentSessionCreateCommand,
+    AgentSessionListView,
     AgentSessionView,
 )
 from ditto_application.queries.decision_opinion import (
@@ -41,7 +48,6 @@ from ditto_apps.api.routes.agent_routes import (
     get_agent_decision_opinion,
 )
 from ditto_apps.models.agent import (
-    AgentDecisionOpinionIdentity,
     AgentDecisionOpinionQueryParams,
     AgentRunCancelRequest,
     AgentRunContext,
@@ -73,6 +79,60 @@ _get_agent_decision_opinion = getattr(
 class _RecordingRuntime(AgentRuntimePort):
     def __init__(self) -> None:
         self.commands: list[object] = []
+
+    def get_capabilities(self) -> AgentCapabilityView:
+        return AgentCapabilityView(
+            enabled=True,
+            runtime_state=AgentRuntimeState.AVAILABLE,
+            provider="test-provider",
+            available_profiles=(ModelProfile.BALANCED,),
+            default_profile=ModelProfile.BALANCED,
+            degradation_reason=None,
+            checked_at=_NOW,
+        )
+
+    def list_sessions(self, *, limit: int, offset: int) -> AgentSessionListView:
+        return AgentSessionListView(items=(), total=0, limit=limit, offset=offset)
+
+    def list_runs(
+        self,
+        *,
+        status: RunStatus | None,
+        session_id: str | None,
+        context_type: str | None,
+        context_id: str | None,
+        limit: int,
+        offset: int,
+    ) -> AgentRunListView:
+        del status, session_id, context_type, context_id
+        return AgentRunListView(items=(), total=0, limit=limit, offset=offset)
+
+    def get_approval(self, approval_id: str) -> AgentApprovalView:
+        return AgentApprovalView(
+            approval_id=approval_id,
+            run_id="run-1",
+            action_type="test_action",
+            target_identity="test-target",
+            action_payload={},
+            action_hash=_HASH,
+            status=AgentApprovalStatus.PENDING,
+            requested_at=_NOW,
+            expires_at=_NOW,
+            operator_id=None,
+            reason=None,
+            decided_at=None,
+        )
+
+    def list_approvals(
+        self,
+        *,
+        status: AgentApprovalStatus | None,
+        run_id: str | None,
+        limit: int,
+        offset: int,
+    ) -> AgentApprovalListView:
+        del status, run_id
+        return AgentApprovalListView(items=(), total=0, limit=limit, offset=offset)
 
     def create_session(self, command: AgentSessionCreateCommand) -> AgentSessionView:
         self.commands.append(command)
@@ -167,6 +227,7 @@ def test_openapi_registers_stable_r51_agent_surface() -> None:
     assert "get" in schema["paths"]["/api/v1/agent/approvals/{approval_id}"]
     opinion_operation = schema["paths"]["/api/v1/agent/decision-opinions"]["get"]
     assert {
+        "X-Ditto-API-Contract-Version",
         "strategy_id",
         "strategy_version",
         "trade_date",
@@ -194,6 +255,30 @@ def test_openapi_registers_stable_r51_agent_surface() -> None:
         "projection_version",
         "projection_updated_at",
     } <= run_schema["properties"].keys()
+
+    stream_content = schema["paths"]["/api/v1/agent/runs/{run_id}/events"]["get"][
+        "responses"
+    ]["200"]["content"]["text/event-stream"]
+    assert stream_content["schema"] == {"type": "string"}
+    assert stream_content["x-ditto-sse-data-schema"] == {
+        "$ref": "#/components/schemas/AgentRunSseEvent"
+    }
+    assert stream_content["x-ditto-sse-terminal"] == {
+        "field": "event_type",
+        "values": [
+            "approval_resume_completed",
+            "run_completed",
+            "run_failed",
+            "run_cancelled",
+        ],
+    }
+    assert schema["paths"]["/api/v1/agent/runs/{run_id}/events"]["get"]["responses"][
+        "410"
+    ]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/ErrorResponse"
+    }
+    run_event_schema = schema["components"]["schemas"]["AgentRunSseEvent"]
+    assert run_event_schema["properties"]["schema_version"]["const"] == 1
 
 
 @pytest.mark.asyncio
@@ -224,7 +309,7 @@ async def test_decision_opinion_route_preserves_exact_identity_and_projection() 
     artifact_id = "daily-decision-v3:strategy-1:2026-08-15:account-1:sleeve-1"
     response = await _get_agent_decision_opinion(
         query,
-        AgentDecisionOpinionIdentity(
+        AgentDecisionOpinionQueryParams(
             strategy_id="strategy-1",
             strategy_version="3",
             trade_date="2026-08-15",
@@ -316,6 +401,28 @@ def test_openapi_registers_fixed_campaign_surface_and_write_fences() -> None:
         "projection_version",
         "projection_updated_at",
     } <= response_schema["properties"].keys()
+
+    stream_content = schema["paths"]["/api/v1/agent/campaigns/{campaign_id}/events"][
+        "get"
+    ]["responses"]["200"]["content"]["text/event-stream"]
+    assert stream_content["schema"] == {"type": "string"}
+    assert stream_content["x-ditto-sse-data-schema"] == {
+        "$ref": "#/components/schemas/AgentCampaignSseEvent"
+    }
+    assert stream_content["x-ditto-sse-terminal"] == {
+        "field": "event_type",
+        "values": [
+            "campaign_completed",
+            "campaign_cancelled",
+        ],
+    }
+    assert schema["paths"]["/api/v1/agent/campaigns/{campaign_id}/events"]["get"][
+        "responses"
+    ]["410"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/ErrorResponse"
+    }
+    campaign_event_schema = schema["components"]["schemas"]["AgentCampaignSseEvent"]
+    assert campaign_event_schema["properties"]["schema_version"]["const"] == 1
 
 
 @pytest.mark.asyncio
@@ -427,7 +534,9 @@ async def test_market_context_run_is_narrowed_to_market_context_evidence() -> No
 
     command = runtime.commands[0]
     assert isinstance(command, AgentRunCreateCommand)
-    assert command.execution_plan.allowed_tools == ("market_context_evidence",)
+    plan = command.execution_plan
+    assert plan is not None
+    assert plan.allowed_tools == ("market_context_evidence",)
 
 
 @pytest.mark.asyncio
@@ -461,7 +570,9 @@ async def test_instrument_run_is_narrowed_to_technical_evidence() -> None:
 
     command = runtime.commands[0]
     assert isinstance(command, AgentRunCreateCommand)
-    assert command.execution_plan.allowed_tools == ("instrument_technical_evidence",)
+    plan = command.execution_plan
+    assert plan is not None
+    assert plan.allowed_tools == ("instrument_technical_evidence",)
 
 
 @pytest.mark.asyncio

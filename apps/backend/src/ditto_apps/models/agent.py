@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Literal
+from enum import StrEnum
+from typing import Annotated, Final, Literal, Self
 
 from ditto_agent.contracts.runtime import ModelProfile, RetentionClass, RunStatus
 from ditto_agent.runtime.service import (
@@ -13,11 +14,130 @@ from ditto_agent.runtime.service import (
     AgentRuntimeState,
 )
 from ditto_application.agent_campaign_runtime import CampaignStatus
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class _StrictModel(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class AgentRunSseEventType(StrEnum):
+    """Closed v1 public event vocabulary for governed Agent runs."""
+
+    RUN_QUEUED = "run_queued"
+    RUN_STARTED = "run_started"
+    PROVIDER_ATTEMPT = "provider_attempt"
+    PROVIDER_RETRY = "provider_retry"
+    TOOL_CALL = "tool_call"
+    TOOL_RESULT = "tool_result"
+    APPROVAL_WAITING = "approval_waiting"
+    APPROVAL_REQUESTED = "approval_requested"
+    APPROVAL_RESUME_STARTED = "approval_resume_started"
+    APPROVAL_RESUME_PAUSED = "approval_resume_paused"
+    APPROVAL_RESUME_COMPLETED = "approval_resume_completed"
+    RUN_PAUSED = "run_paused"
+    RUN_COMPLETED = "run_completed"
+    RUN_FAILED = "run_failed"
+    RUN_CANCELLED = "run_cancelled"
+
+
+class AgentCampaignSseEventType(StrEnum):
+    """Closed v1 public event vocabulary for governed Agent Campaigns."""
+
+    CAMPAIGN_CREATED = "campaign_created"
+    CAMPAIGN_AUTHORIZED = "campaign_authorized"
+    CANDIDATE_FOLD_RESERVED = "candidate_fold_reserved"
+    CANDIDATE_DISPATCHED = "candidate_dispatched"
+    CANDIDATE_RETRIED = "candidate_retried"
+    CANDIDATE_EVALUATED = "candidate_evaluated"
+    CAMPAIGN_PAUSED = "campaign_paused"
+    CAMPAIGN_PAUSED_BUDGET = "campaign_paused_budget"
+    CAMPAIGN_COMPLETED = "campaign_completed"
+    CAMPAIGN_CANCEL_REQUESTED = "campaign_cancel_requested"
+    CAMPAIGN_CANCELLED = "campaign_cancelled"
+
+
+AGENT_RUN_TERMINAL_EVENT_TYPES: Final[tuple[AgentRunSseEventType, ...]] = (
+    AgentRunSseEventType.APPROVAL_RESUME_COMPLETED,
+    AgentRunSseEventType.RUN_COMPLETED,
+    AgentRunSseEventType.RUN_FAILED,
+    AgentRunSseEventType.RUN_CANCELLED,
+)
+AGENT_CAMPAIGN_TERMINAL_EVENT_TYPES: Final[tuple[AgentCampaignSseEventType, ...]] = (
+    AgentCampaignSseEventType.CAMPAIGN_COMPLETED,
+    AgentCampaignSseEventType.CAMPAIGN_CANCELLED,
+)
+AGENT_CAMPAIGN_TERMINAL_STATUSES: Final[tuple[CampaignStatus, ...]] = (
+    CampaignStatus.CANCELLED,
+    CampaignStatus.COMPLETED,
+    CampaignStatus.COMPLETED_WITH_FAILURES,
+    CampaignStatus.FAILED,
+)
+
+
+class _AgentSseEventBase(_StrictModel):
+    """Fields shared by each versioned Agent SSE data object."""
+
+    schema_version: Literal[1]
+    event_id: int = Field(gt=0)
+    payload_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    occurred_at: datetime
+
+    @field_validator("occurred_at")
+    @classmethod
+    def require_aware_occurred_at(cls, value: datetime) -> datetime:
+        """Reject local timestamps at the durable replay boundary."""
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("occurred_at must be timezone-aware")
+        return value
+
+
+class AgentRunSseEvent(_AgentSseEventBase):
+    """Versioned, hash-linked data object carried by one Run SSE frame."""
+
+    run_id: str = Field(min_length=1, max_length=512)
+    run_sequence: int = Field(gt=0)
+    event_type: AgentRunSseEventType
+    prev_hash: str | None = Field(pattern=r"^[0-9a-f]{64}$")
+    event_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def require_predecessor_shape(self) -> Self:
+        """Require exactly the first Run event to be the hash-chain origin."""
+        if (self.run_sequence == 1) != (self.prev_hash is None):
+            raise ValueError("prev_hash must be null exactly for run_sequence 1")
+        return self
+
+
+class AgentCampaignSseEvent(_AgentSseEventBase):
+    """Versioned, state-linked data object carried by one Campaign SSE frame."""
+
+    durable_event_id: str = Field(min_length=1, max_length=512)
+    campaign_id: str = Field(min_length=1, max_length=512)
+    event_type: AgentCampaignSseEventType
+    previous_status: CampaignStatus | None
+    status: CampaignStatus
+
+    @model_validator(mode="after")
+    def require_predecessor_and_terminal_shape(self) -> Self:
+        """Bind the public ordinal origin and terminal event/status semantics."""
+        if (self.event_id == 1) != (self.previous_status is None):
+            raise ValueError("previous_status must be null exactly for event_id 1")
+        terminal_status = self.status in AGENT_CAMPAIGN_TERMINAL_STATUSES
+        terminal_event = self.event_type in AGENT_CAMPAIGN_TERMINAL_EVENT_TYPES
+        if terminal_event and not terminal_status:
+            raise ValueError("Campaign terminal events require a terminal status")
+        if (
+            self.event_type is AgentCampaignSseEventType.CAMPAIGN_CANCELLED
+            and self.status is not CampaignStatus.CANCELLED
+        ):
+            raise ValueError("campaign_cancelled requires cancelled status")
+        if (
+            self.event_type is AgentCampaignSseEventType.CAMPAIGN_COMPLETED
+            and self.status is CampaignStatus.CANCELLED
+        ):
+            raise ValueError("campaign_completed cannot use cancelled status")
+        return self
 
 
 class AgentSessionCreateRequest(_StrictModel):
@@ -511,6 +631,9 @@ class AgentCampaignResponse(_StrictModel):
 
 
 __all__ = [
+    "AGENT_CAMPAIGN_TERMINAL_EVENT_TYPES",
+    "AGENT_CAMPAIGN_TERMINAL_STATUSES",
+    "AGENT_RUN_TERMINAL_EVENT_TYPES",
     "AgentApprovalDecisionRequest",
     "AgentApprovalDecisionResponse",
     "AgentApprovalResponse",
@@ -525,6 +648,8 @@ __all__ = [
     "AgentCampaignManifest",
     "AgentCampaignResponse",
     "AgentCampaignSandboxLimits",
+    "AgentCampaignSseEvent",
+    "AgentCampaignSseEventType",
     "AgentCampaignToolRecord",
     "AgentCampaignUsage",
     "AgentCampaignValidationRequest",
@@ -541,6 +666,8 @@ __all__ = [
     "AgentRunExecutionScope",
     "AgentRunGuardrail",
     "AgentRunResponse",
+    "AgentRunSseEvent",
+    "AgentRunSseEventType",
     "AgentRunToolRecord",
     "AgentRunUsage",
     "AgentSessionCreateRequest",

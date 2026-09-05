@@ -68,7 +68,6 @@ from ditto_agent.storage.sqlite.reader import AgentStoreReader
 from ditto_agent.storage.sqlite.records import (
     IdempotencyDisposition,
     StoredAgentRun,
-    StoredRunEvent,
 )
 from ditto_agent.storage.sqlite.writer import AgentStoreWriter
 from ditto_agent.tools.registry import EvidenceToolRegistry
@@ -76,6 +75,9 @@ from ditto_agent.tools.registry import EvidenceToolRegistry
 from ditto_apps.registry.agent._run_execution import (
     RunExecutionContext,
     execute_persisted_run,
+)
+from ditto_apps.registry.agent.event_stream import (
+    validated_event_views as _validated_event_views,
 )
 from ditto_apps.registry.agent.runtime_presenters import (
     approval_decision as _approval_view,
@@ -99,19 +101,6 @@ _IDENTITY_NAMESPACE = uuid.UUID("db5b9277-cfb4-5c61-98f2-65472fe1e8ca")
 def _identity(kind: str, key: str, request_hash: str) -> str:
     value = uuid.uuid5(_IDENTITY_NAMESPACE, f"{kind}:{key}:{request_hash}")
     return f"{kind}-{value.hex}"
-
-
-def _event_view(event: StoredRunEvent) -> AgentEventView:
-    return AgentEventView(
-        event_id=event.event_id,
-        run_id=event.run_id,
-        run_sequence=event.run_sequence,
-        event_type=event.event_type,
-        payload_hash=event.payload_hash,
-        occurred_at=event.occurred_at,
-        prev_hash=event.prev_hash,
-        event_hash=event.event_hash,
-    )
 
 
 def _run_request_payload(command: AgentRunCreateCommand) -> dict[str, object]:
@@ -697,16 +686,29 @@ class PersistedAgentRuntime(AgentRuntimePort):
         after_event_id: int | None = None,
     ) -> tuple[AgentEventView, ...]:
         """Read only persisted events after an optional global event ID."""
-        if after_event_id is not None and after_event_id < 0:
-            raise ValueError("after_event_id must be non-negative")
+        if after_event_id is not None and (
+            type(after_event_id) is not int or after_event_id < 0
+        ):
+            raise AgentInvalidRequest(
+                "Last-Event-ID must be a non-negative integer",
+                reason_code="agent_event_cursor_invalid",
+            )
         self.get_run(run_id)
         try:
             events = self._reader.list_run_events(run_id)
         except AgentPersistenceError as exc:
             _raise_persistence(exc)
+        views = _validated_event_views(events, run_id=run_id)
+        if after_event_id not in (None, 0) and all(
+            event.event_id != after_event_id for event in views
+        ):
+            raise AgentInvalidRequest(
+                "Last-Event-ID is not retained by this Agent run",
+                reason_code="agent_event_cursor_expired",
+            )
         return tuple(
-            _event_view(event)
-            for event in events
+            event
+            for event in views
             if after_event_id is None or event.event_id > after_event_id
         )
 

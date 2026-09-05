@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -28,6 +29,7 @@ from ditto_agent.runtime.service import (
     AgentRuntimeUnavailable,
     AgentSessionCreateCommand,
 )
+from ditto_agent.storage.sqlite.records import StoredRunEvent
 from ditto_agent.tools.registry import EvidenceToolRegistry
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.agent_routes import encode_agent_sse, router
@@ -92,6 +94,31 @@ def _http_app(runtime: AgentRuntimePort) -> tuple[FastAPI, AsyncContainer]:
     return app, container
 
 
+def _create_persisted_run(
+    runtime: PersistedAgentRuntime,
+    *,
+    identity: str,
+) -> str:
+    session = runtime.create_session(
+        AgentSessionCreateCommand(
+            retention_class=RetentionClass.STANDARD,
+            idempotency_key=f"{identity}-session",
+        )
+    )
+    run = runtime.create_run(
+        AgentRunCreateCommand(
+            session_id=session.session_id,
+            objective="Replay persisted evidence.",
+            authority_hash=_HASH,
+            max_model_tokens=512,
+            max_model_spend_usd=Decimal("0.25"),
+            model_profile=ModelProfile.BALANCED,
+            idempotency_key=f"{identity}-run",
+        )
+    )
+    return run.run_id
+
+
 def test_persisted_sse_is_monotonic_and_last_event_id_resumes_without_execution(
     tmp_path: Path,
 ) -> None:
@@ -131,7 +158,10 @@ def test_persisted_sse_is_monotonic_and_last_event_id_resumes_without_execution(
         resumed = runtime.list_run_events(
             run.run_id, after_event_id=all_events[0].event_id
         )
-        payload = encode_agent_sse(resumed)
+        payload = encode_agent_sse(
+            resumed,
+            after_event_id=all_events[0].event_id,
+        )
 
         assert tuple(event.event_id for event in all_events) == tuple(
             sorted(event.event_id for event in all_events)
@@ -155,6 +185,72 @@ def test_persisted_sse_is_monotonic_and_last_event_id_resumes_without_execution(
             third.payload_hash,
         ]
         assert len(bundle.reader.list_run_events(run.run_id)) == 3
+    finally:
+        bundle.close()
+
+
+def test_run_event_cursor_must_belong_to_the_target_stream(tmp_path: Path) -> None:
+    runtime, bundle = _runtime(tmp_path)
+    try:
+        target_run_id = _create_persisted_run(runtime, identity="cursor-target")
+        foreign_run_id = _create_persisted_run(runtime, identity="cursor-foreign")
+        foreign_cursor = runtime.list_run_events(foreign_run_id)[0].event_id
+        target_tail = bundle.writer.append_run_event(
+            run_id=target_run_id,
+            event_type="provider_attempt",
+            payload_hash=canonical_sha256({"attempt": 1}),
+            occurred_at=_NOW + timedelta(seconds=1),
+        )
+
+        for cursor in (foreign_cursor, target_tail.event_id + 100):
+            with pytest.raises(AgentInvalidRequest) as error:
+                runtime.list_run_events(target_run_id, after_event_id=cursor)
+            assert error.value.reason_code == "agent_event_cursor_expired"
+        assert (
+            runtime.list_run_events(
+                target_run_id,
+                after_event_id=target_tail.event_id,
+            )
+            == ()
+        )
+    finally:
+        bundle.close()
+
+
+def test_run_event_stream_is_fully_validated_before_cursor_filtering(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime, bundle = _runtime(tmp_path)
+    try:
+        run_id = _create_persisted_run(runtime, identity="chain-target")
+        second = bundle.writer.append_run_event(
+            run_id=run_id,
+            event_type="provider_attempt",
+            payload_hash=canonical_sha256({"attempt": 1}),
+            occurred_at=_NOW + timedelta(seconds=1),
+        )
+        bundle.writer.append_run_event(
+            run_id=run_id,
+            event_type="provider_retry",
+            payload_hash=canonical_sha256({"attempt": 2}),
+            occurred_at=_NOW + timedelta(seconds=2),
+        )
+        durable_events = bundle.reader.list_run_events(run_id)
+
+        def corrupted_events(_run_id: str) -> tuple[StoredRunEvent, ...]:
+            assert _run_id == run_id
+            return (
+                replace(durable_events[0], event_hash="f" * 64),
+                *durable_events[1:],
+            )
+
+        monkeypatch.setattr(bundle.reader, "list_run_events", corrupted_events)
+
+        with pytest.raises(AgentRuntimeUnavailable) as error:
+            runtime.list_run_events(run_id, after_event_id=second.event_id)
+
+        assert error.value.reason_code == "agent_event_stream_invalid"
     finally:
         bundle.close()
 
@@ -204,6 +300,38 @@ async def test_http_sse_honors_last_event_id_and_remains_read_only(
         assert f"id: {first.event_id}\n" not in response.text
         assert f"id: {second.event_id}\n" in response.text
         assert len(bundle.reader.list_run_events(run.run_id)) == 2
+    finally:
+        await container.close()
+        bundle.close()
+
+
+@pytest.mark.asyncio
+async def test_http_sse_returns_typed_gone_for_a_foreign_cursor(
+    tmp_path: Path,
+) -> None:
+    runtime, bundle = _runtime(tmp_path)
+    app, container = _http_app(runtime)
+    try:
+        target_run_id = _create_persisted_run(runtime, identity="http-cursor-target")
+        foreign_run_id = _create_persisted_run(runtime, identity="http-cursor-foreign")
+        foreign_cursor = runtime.list_run_events(foreign_run_id)[0].event_id
+        bundle.writer.append_run_event(
+            run_id=target_run_id,
+            event_type="provider_attempt",
+            payload_hash=canonical_sha256({"attempt": 1}),
+            occurred_at=_NOW + timedelta(seconds=1),
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            response = await client.get(
+                f"/api/v1/agent/runs/{target_run_id}/events",
+                headers={"Last-Event-ID": str(foreign_cursor)},
+            )
+
+        assert response.status_code == 410
+        assert response.json()["error_code"] == "AGENT_EVENT_CURSOR_EXPIRED"
     finally:
         await container.close()
         bundle.close()

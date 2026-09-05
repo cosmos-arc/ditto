@@ -29,7 +29,9 @@ def test_agent_dependency_outage_is_isolated_from_core_ditto(
         raise OSError(f"{dependency.value} unavailable")
 
     healthy: Callable[[], object] = object
-    probes = dict.fromkeys(AgentDependency, healthy)
+    probes: dict[AgentDependency, Callable[[], object]] = {}
+    for item in AgentDependency:
+        probes[item] = healthy
     probes[dependency] = unavailable
     boundary = AgentStartupBoundary(
         settings=AgentFeatureSettings(agent_enabled=True),

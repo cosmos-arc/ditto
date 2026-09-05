@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Never, cast
+from typing import Never, Protocol, cast
 
 import pytest
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
 from ditto_agent.storage.sqlite.errors import AgentPersistenceError
+from ditto_agent.storage.sqlite.records import (
+    IdempotencyRecord,
+    IdempotencyReservation,
+)
+from ditto_agent.storage.sqlite.writer import AgentStoreWriter
 from ditto_analysis.errors import ExperimentPersistenceError
 from ditto_analysis.experiments.campaign_persistence import CampaignReaderProtocol
 from ditto_analysis.experiments.models import ExperimentId
@@ -212,22 +217,69 @@ class _Scheduler(CampaignTrialSchedulerPort):
         self.cancel_calls += 1
 
 
+class _IdempotencyWriterProtocol(Protocol):
+    def reserve_idempotency(
+        self,
+        *,
+        scope: str,
+        idempotency_key: str,
+        request_hash: str,
+        occurred_at: datetime,
+    ) -> IdempotencyReservation: ...
+
+    def complete_idempotency(
+        self,
+        *,
+        scope: str,
+        idempotency_key: str,
+        expected_request_hash: str,
+        result_identity: str,
+        occurred_at: datetime,
+    ) -> IdempotencyRecord: ...
+
+
 class _CrashOnFirstCompletion:
-    def __init__(self, delegate: object) -> None:
+    def __init__(self, delegate: AgentStoreWriter) -> None:
         self._delegate = delegate
         self._crashed = False
 
-    def __getattr__(self, name: str) -> object:
-        return getattr(self._delegate, name)
+    def reserve_idempotency(
+        self,
+        *,
+        scope: str,
+        idempotency_key: str,
+        request_hash: str,
+        occurred_at: datetime,
+    ) -> IdempotencyReservation:
+        return self._delegate.reserve_idempotency(
+            scope=scope,
+            idempotency_key=idempotency_key,
+            request_hash=request_hash,
+            occurred_at=occurred_at,
+        )
 
-    def complete_idempotency(self, **kwargs: object) -> object:
+    def complete_idempotency(
+        self,
+        *,
+        scope: str,
+        idempotency_key: str,
+        expected_request_hash: str,
+        result_identity: str,
+        occurred_at: datetime,
+    ) -> IdempotencyRecord:
         if not self._crashed:
             self._crashed = True
             raise AgentPersistenceError(
                 "simulated completion crash",
                 reason_code="simulated_completion_crash",
             )
-        return self._delegate.complete_idempotency(**kwargs)
+        return self._delegate.complete_idempotency(
+            scope=scope,
+            idempotency_key=idempotency_key,
+            expected_request_hash=expected_request_hash,
+            result_identity=result_identity,
+            occurred_at=occurred_at,
+        )
 
 
 class _FailingCampaignReader:
@@ -248,7 +300,7 @@ class _FailingCampaignReader:
 def _runtime(
     tmp_path: Path,
     *,
-    idempotency_writer: object | None = None,
+    idempotency_writer: _IdempotencyWriterProtocol | None = None,
 ) -> tuple[
     PersistedCampaignRuntime,
     AutonomousCampaignCoordinator,
@@ -432,6 +484,15 @@ async def test_campaign_lifecycle_is_idempotent_and_sse_resumes_from_store(
             assert resumed.headers["content-type"].startswith("text/event-stream")
             assert resumed.content.count(b"event: campaign_authorized\n") == 1
             assert b"event: campaign_created\n" not in resumed.content
+
+            expired_cursor = await client.get(
+                "/api/v1/agent/campaigns/campaign-api/events",
+                headers={"Last-Event-ID": "999"},
+            )
+            assert expired_cursor.status_code == 410
+            assert (
+                expired_cursor.json()["error_code"] == "CAMPAIGN_EVENT_CURSOR_EXPIRED"
+            )
 
             shown = await client.get("/api/v1/agent/campaigns/campaign-api")
             assert shown.json()["data"] == authority
