@@ -86,13 +86,13 @@ describe("UniverseListPage governed catalog", () => {
 			}),
 			http.put("/api/v1/universes/:id", async ({ params, request }) => {
 				const body = (await request.json()) as { name: string; description?: string };
-				const current = rows.find((row) => row.universe_id === params.id);
+				const current = rows.find((row) => row.universe_id === params["id"]);
 				const updated = { ...current, ...body } as (typeof rows)[number];
-				rows = rows.map((row) => (row.universe_id === params.id ? updated : row));
+				rows = rows.map((row) => (row.universe_id === params["id"] ? updated : row));
 				return HttpResponse.json({ data: updated });
 			}),
 			http.delete("/api/v1/universes/:id", ({ params }) => {
-				rows = rows.filter((row) => row.universe_id !== params.id);
+				rows = rows.filter((row) => row.universe_id !== params["id"]);
 				return HttpResponse.json({ data: true });
 			}),
 		);

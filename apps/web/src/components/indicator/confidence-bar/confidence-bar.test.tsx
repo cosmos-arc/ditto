@@ -60,22 +60,19 @@ describe("ConfidenceBar", () => {
 
 	// ── Color variants ──
 
-	it.each([
-		"brand",
-		"success",
-		"warning",
-		"danger",
-		"neutral",
-	] as const)("applies correct color class for color=%s", (color) => {
-		render(<ConfidenceBar value={50} color={color} />);
-		const fill = screen.getByTestId("confidence-fill");
-		expect(fill.className).toContain(COLOR_CLASSES[color]);
-	});
+	it.each(["brand", "success", "warning", "danger", "neutral"] as const)(
+		"applies correct color class for color=%s",
+		(color) => {
+			render(<ConfidenceBar value={50} color={color} />);
+			const fill = screen.getByTestId("confidence-fill");
+			expect(fill.className).toContain(COLOR_CLASSES[color]);
+		},
+	);
 
 	it("applies neutral color by default", () => {
 		render(<ConfidenceBar value={50} />);
 		const fill = screen.getByTestId("confidence-fill");
-		expect(fill.className).toContain(COLOR_CLASSES.neutral);
+		expect(fill.className).toContain(COLOR_CLASSES["neutral"]);
 	});
 
 	// ── Size variants ──
@@ -153,8 +150,8 @@ describe("ConfidenceBar", () => {
 			/>,
 		);
 		const segments = screen.getAllByTestId("confidence-segment");
-		expect(segments[0].className).toContain(COLOR_CLASSES.success);
-		expect(segments[1].className).toContain(COLOR_CLASSES.danger);
+		expect(segments[0]?.className).toContain(COLOR_CLASSES["success"]);
+		expect(segments[1]?.className).toContain(COLOR_CLASSES["danger"]);
 	});
 
 	it("does not render single fill in segmented mode", () => {

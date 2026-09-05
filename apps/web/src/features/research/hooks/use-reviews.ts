@@ -1,7 +1,7 @@
 /**
  * useReviews —— review queue（待审查 / 已批准待发布版本）.
  *
- * 数据来自 `GET /v1/research/reviews`，mapper 在 queryFn 内翻译为 view-model。
+ * 数据来自 `GET /api/v1/research/reviews`，mapper 在 queryFn 内翻译为 view-model。
  */
 import { useQuery } from "@tanstack/react-query";
 import { reviewKeys } from "../api/query-keys";

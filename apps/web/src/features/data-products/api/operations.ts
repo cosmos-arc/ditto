@@ -1,5 +1,5 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 import type {
 	DataProductOperationsScope,
 	DecideRemediationApprovalCommand,
@@ -20,14 +20,7 @@ import type {
 } from "../types/operations";
 
 type CatalogRemediationBacklogResponse = components["schemas"]["CatalogRemediationBacklogResponse"];
-type CatalogSourceHealthReportResponse = components["schemas"]["CatalogSourceHealthReportResponse"];
-type CatalogSourceHealthSummaryReportResponse = components["schemas"]["CatalogSourceHealthSummaryReportResponse"];
-type CatalogSourceFallbackPolicyPreviewResponse = components["schemas"]["CatalogSourceFallbackPolicyPreviewResponse"];
 type CatalogSourceFallbackPolicyStateResponse = components["schemas"]["CatalogSourceFallbackPolicyStateResponse"];
-type CatalogSourceFallbackPolicySummaryResponse = components["schemas"]["CatalogSourceFallbackPolicySummaryResponse"];
-type CatalogRemediationItemDetailResponse = components["schemas"]["CatalogRemediationItemDetailResponse"];
-type PromotionReadinessReportResponse = components["schemas"]["PromotionReadinessReportResponse"];
-type MaturityPromotionHistoryItem = components["schemas"]["MaturityPromotionHistoryItem"];
 type CatalogRemediationApprovalResponse = components["schemas"]["CatalogRemediationApprovalResponse"];
 type CatalogRemediationApprovalExecutionResponse = components["schemas"]["CatalogRemediationApprovalExecutionResponse"];
 type CatalogSourceFallbackPolicyDraftRequest = components["schemas"]["CatalogSourceFallbackPolicyDraftRequest"];
@@ -60,12 +53,20 @@ export const dataProductOperationsKeys = {
 	approvals: (datasetId: string) => [...dataProductOperationsKeys.all, datasetId, "remediation-approvals"] as const,
 };
 
-function scopeQuery(path: string, scope: DataProductOperationsScope, pluralDataset: boolean): string {
-	const search = new URLSearchParams();
-	search.append(pluralDataset ? "dataset_ids" : "dataset_id", scope.datasetId);
-	search.append(pluralDataset ? "trade_dates" : "trade_date", scope.tradeDate);
-	for (const source of scope.availableSources ?? []) search.append("available_sources", source);
-	return `${path}?${search.toString()}`;
+function pluralScopeQuery(scope: DataProductOperationsScope) {
+	return {
+		dataset_ids: [scope.datasetId],
+		trade_dates: [scope.tradeDate],
+		...(scope.availableSources ? { available_sources: [...scope.availableSources] } : {}),
+	};
+}
+
+function singularScopeQuery(scope: DataProductOperationsScope) {
+	return {
+		dataset_id: scope.datasetId,
+		trade_date: scope.tradeDate,
+		...(scope.availableSources ? { available_sources: [...scope.availableSources] } : {}),
+	};
 }
 
 function mapApproval(response: CatalogRemediationApprovalResponse): RemediationApprovalView {
@@ -102,9 +103,9 @@ function mapRemediationItem(
 }
 
 export async function fetchRemediationBacklog(scope: DataProductOperationsScope): Promise<RemediationBacklogView> {
-	const response = await apiClient.get<CatalogRemediationBacklogResponse>(
-		scopeQuery("/v1/ingestion/catalog/remediation/backlog", scope, true),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/remediation/backlog", {
+		params: { query: pluralScopeQuery(scope) },
+	});
 	return {
 		generatedAt: response.generated_at,
 		totalItems: response.total_items,
@@ -116,9 +117,9 @@ export async function fetchRemediationDetail(
 	itemId: string,
 	scope: DataProductOperationsScope,
 ): Promise<RemediationItemDetailView> {
-	const response = await apiClient.get<CatalogRemediationItemDetailResponse>(
-		scopeQuery(`/v1/ingestion/catalog/remediation/items/${encodeURIComponent(itemId)}`, scope, true),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/remediation/items/{item_id}", {
+		params: { path: { item_id: itemId }, query: pluralScopeQuery(scope) },
+	});
 	return {
 		approvalIntents: (response.approval_intents ?? []).map((intent) => ({
 			action: intent.action,
@@ -142,9 +143,9 @@ export async function fetchRemediationDetail(
 }
 
 export async function fetchSourceHealth(scope: DataProductOperationsScope): Promise<SourceHealthView> {
-	const response = await apiClient.get<CatalogSourceHealthReportResponse>(
-		scopeQuery("/v1/ingestion/catalog/source-health", scope, false),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/source-health", {
+		params: { query: singularScopeQuery(scope) },
+	});
 	return {
 		blockers: response.source_selection_blockers ?? [],
 		datasetId: response.dataset_id,
@@ -165,9 +166,9 @@ export async function fetchSourceHealth(scope: DataProductOperationsScope): Prom
 }
 
 export async function fetchSourceHealthSummary(scope: DataProductOperationsScope): Promise<SourceHealthSummaryView> {
-	const response = await apiClient.get<CatalogSourceHealthSummaryReportResponse>(
-		scopeQuery("/v1/ingestion/catalog/source-health/summary", scope, true),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/source-health/summary", {
+		params: { query: pluralScopeQuery(scope) },
+	});
 	return {
 		attentionReasons: (response.attention_reason_counts ?? []).map((item) => ({
 			count: item.count,
@@ -182,9 +183,9 @@ export async function fetchSourceHealthSummary(scope: DataProductOperationsScope
 }
 
 export async function fetchFallbackPreview(scope: DataProductOperationsScope): Promise<FallbackPreviewView> {
-	const response = await apiClient.get<CatalogSourceFallbackPolicyPreviewResponse>(
-		scopeQuery("/v1/ingestion/catalog/source-fallback/preview", scope, false),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/source-fallback/preview", {
+		params: { query: singularScopeQuery(scope) },
+	});
 	return {
 		approvalRequired: response.approval_required,
 		blockers: response.source_selection_blockers ?? [],
@@ -204,9 +205,9 @@ export async function fetchFallbackPreview(scope: DataProductOperationsScope): P
 }
 
 export async function fetchFallbackPolicies(datasetId: string): Promise<readonly FallbackPolicyView[]> {
-	const responses = await apiClient.get<readonly CatalogSourceFallbackPolicyStateResponse[]>(
-		withQueryParams("/v1/ingestion/catalog/source-fallback/policies", { dataset_id: datasetId }),
-	);
+	const responses = await apiClient.get("/api/v1/ingestion/catalog/source-fallback/policies", {
+		params: { query: { dataset_id: datasetId } },
+	});
 	return responses.map((response) => ({
 		approvalRequired: response.approval_required,
 		authorityHash: response.authority_hash,
@@ -227,9 +228,9 @@ export async function fetchFallbackPolicies(datasetId: string): Promise<readonly
 }
 
 export async function fetchFallbackSummary(scope: DataProductOperationsScope): Promise<FallbackSummaryView> {
-	const response = await apiClient.get<CatalogSourceFallbackPolicySummaryResponse>(
-		scopeQuery("/v1/ingestion/catalog/source-fallback/summary", scope, true),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/source-fallback/summary", {
+		params: { query: pluralScopeQuery(scope) },
+	});
 	return {
 		approvalRequiredCount: response.approval_required_count,
 		executionAllowedCount: response.execution_allowed_count,
@@ -245,9 +246,9 @@ export async function fetchFallbackSummary(scope: DataProductOperationsScope): P
 export async function fetchPromotionReadiness(
 	scope: DataProductOperationsScope,
 ): Promise<PromotionReadinessView | null> {
-	const response = await apiClient.get<PromotionReadinessReportResponse>(
-		scopeQuery("/v1/ingestion/catalog/promotion/readiness", scope, true),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/promotion/readiness", {
+		params: { query: pluralScopeQuery(scope) },
+	});
 	const item = response.datasets.find((candidate) => candidate.dataset_id === scope.datasetId);
 	return item
 		? {
@@ -263,9 +264,9 @@ export async function fetchPromotionReadiness(
 }
 
 export async function fetchPromotionHistory(datasetId: string): Promise<readonly PromotionHistoryView[]> {
-	const responses = await apiClient.get<readonly MaturityPromotionHistoryItem[]>(
-		withQueryParams("/v1/ingestion/catalog/promotion/history", { dataset_id: datasetId }),
-	);
+	const responses = await apiClient.get("/api/v1/ingestion/catalog/promotion/history", {
+		params: { query: { dataset_id: datasetId } },
+	});
 	return responses.map((item) => ({
 		action: item.action,
 		actionAt: item.action_at ?? null,
@@ -279,9 +280,7 @@ export async function fetchPromotionHistory(datasetId: string): Promise<readonly
 }
 
 export async function fetchRemediationApprovals(datasetId: string): Promise<readonly RemediationApprovalView[]> {
-	const responses = await apiClient.get<readonly CatalogRemediationApprovalResponse[]>(
-		"/v1/ingestion/catalog/remediation/approvals",
-	);
+	const responses = await apiClient.get("/api/v1/ingestion/catalog/remediation/approvals");
 	return responses.filter((response) => response.item_id.includes(datasetId)).map(mapApproval);
 }
 
@@ -292,15 +291,13 @@ export async function requestRemediationApproval(
 		action: command.action,
 		intent_type: command.intentType,
 		item_id: command.itemId,
-		method: command.method,
-		notes: command.notes,
-		path: command.path,
-		request_payload: command.requestPayload,
+		...(command.method === undefined ? {} : { method: command.method }),
+		...(command.notes === undefined ? {} : { notes: command.notes }),
+		...(command.path === undefined ? {} : { path: command.path }),
+		...(command.requestPayload === undefined ? {} : { request_payload: { ...command.requestPayload } }),
 		requested_by: command.requestedBy,
 	};
-	return mapApproval(
-		await apiClient.post<CatalogRemediationApprovalResponse>("/v1/ingestion/catalog/remediation/approvals", payload),
-	);
+	return mapApproval(await apiClient.post("/api/v1/ingestion/catalog/remediation/approvals", { body: payload }));
 }
 
 export async function decideRemediationApproval(
@@ -310,13 +307,13 @@ export async function decideRemediationApproval(
 		authority_hash: command.authorityHash,
 		decided_by: command.decidedBy,
 		decision: command.decision,
-		notes: command.notes,
+		...(command.notes === undefined ? {} : { notes: command.notes }),
 	};
 	return mapApproval(
-		await apiClient.post<CatalogRemediationApprovalResponse>(
-			`/v1/ingestion/catalog/remediation/approvals/${encodeURIComponent(command.approvalId)}/decision`,
-			payload,
-		),
+		await apiClient.post("/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/decision", {
+			body: payload,
+			params: { path: { approval_id: command.approvalId } },
+		}),
 	);
 }
 
@@ -326,12 +323,12 @@ export async function executeRemediationApproval(
 	const payload: CatalogRemediationApprovalExecutionRequest = {
 		authority_hash: command.authorityHash,
 		executed_by: command.executedBy,
-		notes: command.notes,
+		...(command.notes === undefined ? {} : { notes: command.notes }),
 	};
-	return apiClient.post<CatalogRemediationApprovalExecutionResponse>(
-		`/v1/ingestion/catalog/remediation/approvals/${encodeURIComponent(command.approvalId)}/execute`,
-		payload,
-	);
+	return apiClient.post("/api/v1/ingestion/catalog/remediation/approvals/{approval_id}/execute", {
+		body: payload,
+		params: { path: { approval_id: command.approvalId } },
+	});
 }
 
 export async function draftFallbackPolicy(
@@ -355,10 +352,7 @@ export async function draftFallbackPolicy(
 		trade_date: preview.tradeDate,
 		unsupported_sources: [],
 	};
-	return apiClient.post<CatalogSourceFallbackPolicyStateResponse>(
-		"/v1/ingestion/catalog/source-fallback/policies",
-		payload,
-	);
+	return apiClient.post("/api/v1/ingestion/catalog/source-fallback/policies", { body: payload });
 }
 
 export async function transitionFallbackPolicy(
@@ -367,20 +361,25 @@ export async function transitionFallbackPolicy(
 	const payload: CatalogSourceFallbackPolicyLifecycleRequest = {
 		actor: command.actor,
 		authority_hash: command.authorityHash,
-		notes: command.notes,
+		...(command.notes === undefined ? {} : { notes: command.notes }),
 	};
-	return apiClient.post<CatalogSourceFallbackPolicyStateResponse>(
-		`/v1/ingestion/catalog/source-fallback/policies/${encodeURIComponent(command.policyId)}/${command.action}`,
-		payload,
-	);
+	const init = { body: payload, params: { path: { policy_id: command.policyId } } };
+	switch (command.action) {
+		case "approval":
+			return apiClient.post("/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/approval", init);
+		case "activation":
+			return apiClient.post("/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/activation", init);
+		case "retirement":
+			return apiClient.post("/api/v1/ingestion/catalog/source-fallback/policies/{policy_id}/retirement", init);
+	}
 }
 
 export async function revokePromotion(command: RevokePromotionCommand): Promise<MaturityPromotionRevokeResponse> {
 	const payload: MaturityPromotionRevokeRequest = {
 		dataset_id: command.datasetId,
-		notes: command.notes,
+		...(command.notes === undefined ? {} : { notes: command.notes }),
 		revocation_reason: command.reason,
 		revoked_by: command.revokedBy,
 	};
-	return apiClient.post<MaturityPromotionRevokeResponse>("/v1/ingestion/catalog/promotion/revoke", payload);
+	return apiClient.post("/api/v1/ingestion/catalog/promotion/revoke", { body: payload });
 }

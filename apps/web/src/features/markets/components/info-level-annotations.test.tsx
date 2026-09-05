@@ -3,11 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { ASharesPage } from "./a-shares-page";
-import { CalendarPage } from "./calendar-page";
+import { ASharesPage, CalendarPage, MarketsPage, WatchlistPage } from "@/workflows/market-pages";
 import { IntelligencePage } from "./intelligence-page";
-import { MarketsPage } from "./markets-page";
-import { WatchlistPage } from "./watchlist-page";
 
 function wrapper() {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

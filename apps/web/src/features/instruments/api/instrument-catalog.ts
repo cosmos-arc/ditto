@@ -1,5 +1,5 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 
 export type CatalogInstrument = components["schemas"]["Instrument"];
 export type InstrumentCatalogFilter = {
@@ -18,15 +18,17 @@ export type InstrumentCatalog = {
 export async function fetchInstrumentCatalog(filter: InstrumentCatalogFilter = {}): Promise<InstrumentCatalog> {
 	const limit = filter.limit ?? 100;
 	const offset = filter.offset ?? 0;
-	const response = await apiClient.getResponse<CatalogInstrument[]>(
-		withQueryParams("/v1/metadata/instruments", {
-			asset_class: filter.assetClass,
-			exchange: filter.exchange,
-			is_active: filter.isActive,
-			limit,
-			offset,
-		}),
-	);
+	const response = await apiClient.getPayload("/api/v1/metadata/instruments", {
+		params: {
+			query: {
+				...(filter.assetClass ? { asset_class: filter.assetClass } : {}),
+				...(filter.exchange ? { exchange: filter.exchange } : {}),
+				...(filter.isActive === undefined ? {} : { is_active: filter.isActive }),
+				limit,
+				offset,
+			},
+		},
+	});
 	return {
 		items: response.data,
 		total: response.pagination?.total ?? response.data.length,

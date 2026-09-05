@@ -35,7 +35,7 @@ export function SignalToOrderPipelineStrip() {
 		{ label: "已下单", count: orders ? orders.submitted + orders.partial : 0 },
 		{ label: "成交", count: filledCount },
 	] as const;
-	const orderCounts = orders
+	const orderCounts: readonly [number, number, number, number, number] = orders
 		? [orders.pending, orders.submitted, orders.partial, orders.filled, orders.failed]
 		: [0, 0, 0, 0, 0];
 	const totalOrders = orderCounts.reduce((total, count) => total + count, 0);

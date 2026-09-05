@@ -21,7 +21,7 @@ vi.mock("@tanstack/react-router", async () => {
 			readonly children: ReactNode;
 			readonly to: string;
 			readonly params?: Readonly<Record<string, string>>;
-		}) => <a href={params?.id ? to.replace("$id", params.id) : to}>{children}</a>,
+		}) => <a href={params?.["id"] ? to.replace("$id", params["id"]) : to}>{children}</a>,
 	};
 });
 
@@ -39,11 +39,13 @@ function wrapper({ children }: { readonly children: ReactNode }) {
 	);
 }
 
+const renderNoGovernanceActions = () => null;
+
 describe("StrategyDetailPage governed workspace", () => {
 	beforeEach(() => server.use(...strategyHandlers));
 
 	it("renders live strategy identity and fails closed on unbound performance evidence", async () => {
-		render(<StrategyDetailPage />, { wrapper });
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, { wrapper });
 
 		const workspace = await screen.findByRole("region", { name: "策略详情工作区" });
 		await expect(within(workspace).findByText("ETF 行业轮动")).resolves.toBeInTheDocument();
@@ -55,6 +57,19 @@ describe("StrategyDetailPage governed workspace", () => {
 		expect(screen.queryByText("1.82")).not.toBeInTheDocument();
 	});
 
+	it("forwards governance composition through the versions renderer", async () => {
+		const user = userEvent.setup();
+		render(
+			<StrategyDetailPage
+				renderGovernanceActions={({ version }) => <span>governed strategy v{version.version}</span>}
+			/>,
+			{ wrapper },
+		);
+
+		await user.click(await screen.findByRole("tab", { name: "版本" }));
+		await expect(screen.findByText("governed strategy v4")).resolves.toBeInTheDocument();
+	});
+
 	it("hands backtest submission to exact experiment planning without creating a run", async () => {
 		let experimentWrites = 0;
 		server.use(
@@ -64,7 +79,7 @@ describe("StrategyDetailPage governed workspace", () => {
 			}),
 		);
 		const user = userEvent.setup();
-		render(<StrategyDetailPage />, { wrapper });
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, { wrapper });
 
 		await user.click(await screen.findByRole("button", { name: "提交回测" }));
 		const sheet = screen.getByRole("dialog", { name: "提交回测" });
@@ -94,7 +109,7 @@ describe("StrategyDetailPage governed workspace", () => {
 			}),
 		);
 		const user = userEvent.setup();
-		render(<StrategyDetailPage />, { wrapper });
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, { wrapper });
 
 		await user.click(await screen.findByRole("button", { name: "弃用策略" }));
 		const sheet = screen.getByRole("dialog", { name: "弃用版本" });
@@ -116,7 +131,7 @@ describe("StrategyDetailPage governed workspace", () => {
 			}),
 		);
 		const user = userEvent.setup();
-		render(<StrategyDetailPage />, { wrapper });
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, { wrapper });
 
 		await user.click(await screen.findByRole("button", { name: "复制策略" }));
 		expect(screen.getByRole("dialog", { name: "克隆策略" })).toBeInTheDocument();

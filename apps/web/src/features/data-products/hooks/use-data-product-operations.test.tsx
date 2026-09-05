@@ -26,7 +26,7 @@ describe("data product operation mutations", () => {
 						intent_type: "write",
 						item_id: "source_health:stock_daily:2026-08-18",
 						method: "POST",
-						path: "/v1/ingestion/stock_daily/2026-08-18",
+						path: "/api/v1/ingestion/stock_daily/2026-08-18",
 						request_payload: { dataset_id: "stock_daily", trade_date: "2026-08-18" },
 						requested_at: "2026-08-18T08:00:00Z",
 						requested_by: "operator",
@@ -50,7 +50,7 @@ describe("data product operation mutations", () => {
 				intentType: "write",
 				itemId: "source_health:stock_daily:2026-08-18",
 				method: "POST",
-				path: "/v1/ingestion/stock_daily/2026-08-18",
+				path: "/api/v1/ingestion/stock_daily/2026-08-18",
 				requestPayload: { dataset_id: "stock_daily", trade_date: "2026-08-18" },
 				requestedBy: "operator",
 			});

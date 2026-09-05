@@ -82,7 +82,7 @@ export const dataProductsHandlers: RequestHandler[] = [
 				actual_partitions: 2499,
 				certified_from: "2015-01-05",
 				complete_from: "2015-01-05",
-				dataset_id: datasetId(params.datasetId),
+				dataset_id: datasetId(params["datasetId"]),
 				expected_partitions: 2500,
 				gaps: ["2026-07-15"],
 				profile: "research_daily",
@@ -96,7 +96,7 @@ export const dataProductsHandlers: RequestHandler[] = [
 		HttpResponse.json({
 			data: {
 				consumer_results: [{ evidence_uri: "evidence://consumer/r1", name: "R1 preflight", passed: true }],
-				dataset_id: datasetId(params.datasetId),
+				dataset_id: datasetId(params["datasetId"]),
 				dq_results: [
 					{ evidence_uri: "evidence://dq/completeness", name: "partition completeness", passed: true },
 					{ evidence_uri: "evidence://dq/provider", name: "provider parity: tushare vs local_tdx", passed: false },
@@ -115,8 +115,8 @@ export const dataProductsHandlers: RequestHandler[] = [
 		HttpResponse.json({
 			data: [
 				{
-					content_hash: `sha256:${datasetId(params.datasetId)}`,
-					dataset_id: datasetId(params.datasetId),
+					content_hash: `sha256:${datasetId(params["datasetId"])}`,
+					dataset_id: datasetId(params["datasetId"]),
 					generated_at: "2026-08-30T07:10:00Z",
 					profile: "research_daily",
 					report_id: "cert-calendar-1",
@@ -132,14 +132,14 @@ export const dataProductsHandlers: RequestHandler[] = [
 	http.get("/api/v1/data-products/:datasetId/evidence", ({ params }) =>
 		HttpResponse.json({
 			data: {
-				content_hash: `sha256:${datasetId(params.datasetId)}`,
-				dataset_id: datasetId(params.datasetId),
+				content_hash: `sha256:${datasetId(params["datasetId"])}`,
+				dataset_id: datasetId(params["datasetId"]),
 				fallback_history: ["tushare -> local_tdx (preview only)"],
 				override_history: ["coverage exception rejected"],
 				profile: "research_daily",
 				report_id: "cert-calendar-1",
-				schema_versions: [`${datasetId(params.datasetId)}:v2`],
-				snapshot_ids: [`snapshot-${datasetId(params.datasetId)}-20260830`],
+				schema_versions: [`${datasetId(params["datasetId"])}:v2`],
+				snapshot_ids: [`snapshot-${datasetId(params["datasetId"])}-20260830`],
 				source_ids: ["tushare", "local_tdx"],
 			},
 		}),
@@ -148,7 +148,7 @@ export const dataProductsHandlers: RequestHandler[] = [
 	http.get("/api/v1/data-products/:datasetId/license", ({ params }) =>
 		HttpResponse.json({
 			data: {
-				dataset_id: datasetId(params.datasetId),
+				dataset_id: datasetId(params["datasetId"]),
 				license_record_ids: ["license-tushare-reviewed-v1"],
 				profile: "research_daily",
 				report_id: "cert-calendar-1",
@@ -157,7 +157,7 @@ export const dataProductsHandlers: RequestHandler[] = [
 	),
 
 	http.get("/api/v1/ingestion/catalog/remediation/items/:itemId", ({ params, request }) => {
-		const itemId = datasetId(params.itemId);
+		const itemId = datasetId(params["itemId"]);
 		const activeDatasetId = itemId.split(":")[1] ?? "calendar";
 		const activeTradeDate = tradeDate(request);
 		return HttpResponse.json({
@@ -167,7 +167,7 @@ export const dataProductsHandlers: RequestHandler[] = [
 						action: "repair_catalog_freshness",
 						intent_type: "write",
 						method: "POST",
-						path: `/v1/ingestion/${activeDatasetId}/${activeTradeDate}`,
+						path: `/api/v1/ingestion/${activeDatasetId}/${activeTradeDate}`,
 						request_template: { dataset_id: activeDatasetId, trade_date: activeTradeDate },
 						required_operator_inputs: [],
 					},
@@ -257,7 +257,7 @@ export const dataProductsHandlers: RequestHandler[] = [
 		const activeDatasetId = new URL(request.url).searchParams.get("dataset_id");
 		return HttpResponse.json({
 			data: activeDatasetId
-				? fallbackPolicies.filter((policy) => policy.dataset_id === activeDatasetId)
+				? fallbackPolicies.filter((policy) => policy["dataset_id"] === activeDatasetId)
 				: fallbackPolicies,
 		});
 	}),
@@ -280,31 +280,31 @@ export const dataProductsHandlers: RequestHandler[] = [
 	}),
 
 	http.post("/api/v1/ingestion/catalog/remediation/approvals/:approvalId/decision", async ({ params, request }) => {
-		const approvalId = datasetId(params.approvalId);
-		const approval = remediationApprovals.find((candidate) => candidate.approval_id === approvalId);
+		const approvalId = datasetId(params["approvalId"]);
+		const approval = remediationApprovals.find((candidate) => candidate["approval_id"] === approvalId);
 		if (!approval) return HttpResponse.json({ detail: "approval not found" }, { status: 404 });
 		const body = (await request.json()) as MockRecord;
-		if (body.authority_hash !== approval.authority_hash)
+		if (body["authority_hash"] !== approval["authority_hash"])
 			return HttpResponse.json({ detail: "authority hash mismatch" }, { status: 409 });
 		const decided = {
 			...approval,
 			decided_at: "2026-08-30T07:25:00Z",
-			decided_by: body.decided_by,
-			decision_notes: body.notes ?? null,
-			status: body.decision,
+			decided_by: body["decided_by"],
+			decision_notes: body["notes"] ?? null,
+			status: body["decision"],
 		};
 		upsertBy(remediationApprovals, "approval_id", approvalId, decided);
 		return HttpResponse.json({ data: decided });
 	}),
 
 	http.post("/api/v1/ingestion/catalog/remediation/approvals/:approvalId/execute", async ({ params, request }) => {
-		const approvalId = datasetId(params.approvalId);
-		const approval = remediationApprovals.find((candidate) => candidate.approval_id === approvalId);
+		const approvalId = datasetId(params["approvalId"]);
+		const approval = remediationApprovals.find((candidate) => candidate["approval_id"] === approvalId);
 		if (!approval) return HttpResponse.json({ detail: "approval not found" }, { status: 404 });
 		const body = (await request.json()) as MockRecord;
-		if (body.authority_hash !== approval.authority_hash)
+		if (body["authority_hash"] !== approval["authority_hash"])
 			return HttpResponse.json({ detail: "authority hash mismatch" }, { status: 409 });
-		if (approval.status !== "approved")
+		if (approval["status"] !== "approved")
 			return HttpResponse.json({ detail: "approval is not executable" }, { status: 409 });
 		const completed = { ...approval, status: "completed" };
 		upsertBy(remediationApprovals, "approval_id", approvalId, completed);
@@ -312,11 +312,11 @@ export const dataProductsHandlers: RequestHandler[] = [
 			data: {
 				approval: completed,
 				execution: {
-					action: approval.action,
+					action: approval["action"],
 					approval_id: approvalId,
 					executed_at: "2026-08-30T07:30:00Z",
-					executed_by: body.executed_by,
-					notes: body.notes ?? null,
+					executed_by: body["executed_by"],
+					notes: body["notes"] ?? null,
 					result_payload: { fixture: true },
 					status: "success",
 				},
@@ -326,15 +326,15 @@ export const dataProductsHandlers: RequestHandler[] = [
 
 	http.post("/api/v1/ingestion/catalog/source-fallback/policies", async ({ request }) => {
 		const body = (await request.json()) as MockRecord;
-		const policyId = `fallback-${String(body.dataset_id ?? "calendar")}`;
+		const policyId = `fallback-${String(body["dataset_id"] ?? "calendar")}`;
 		const policy = {
 			...body,
 			authority_hash: AUTHORITY_HASH,
 			authority_payload: {
 				action: "approval",
-				dataset_id: body.dataset_id,
-				selected_source: body.selected_source,
-				trade_date: body.trade_date,
+				dataset_id: body["dataset_id"],
+				selected_source: body["selected_source"],
+				trade_date: body["trade_date"],
 			},
 			created_at: "2026-08-30T07:20:00Z",
 			policy_id: policyId,
@@ -345,21 +345,21 @@ export const dataProductsHandlers: RequestHandler[] = [
 	}),
 
 	http.post("/api/v1/ingestion/catalog/source-fallback/policies/:policyId/:action", async ({ params, request }) => {
-		const policyId = datasetId(params.policyId);
-		const action = datasetId(params.action);
-		const policy = fallbackPolicies.find((candidate) => candidate.policy_id === policyId);
+		const policyId = datasetId(params["policyId"]);
+		const action = datasetId(params["action"]);
+		const policy = fallbackPolicies.find((candidate) => candidate["policy_id"] === policyId);
 		if (!policy) return HttpResponse.json({ detail: "fallback policy not found" }, { status: 404 });
 		const body = (await request.json()) as MockRecord;
-		if (body.authority_hash !== policy.authority_hash)
+		if (body["authority_hash"] !== policy["authority_hash"])
 			return HttpResponse.json({ detail: "authority hash mismatch" }, { status: 409 });
 		const status = action === "approval" ? "approved" : action === "activation" ? "active" : "retired";
 		const nextAction = action === "approval" ? "activation" : "retirement";
 		const transitioned = {
 			...policy,
-			authority_payload: { ...((policy.authority_payload as MockRecord) ?? {}), action: nextAction },
+			authority_payload: { ...((policy["authority_payload"] as MockRecord) ?? {}), action: nextAction },
 			decided_at: "2026-08-30T07:25:00Z",
-			decided_by: body.actor,
-			decision_notes: body.notes ?? null,
+			decided_by: body["actor"],
+			decision_notes: body["notes"] ?? null,
 			status,
 		};
 		upsertBy(fallbackPolicies, "policy_id", policyId, transitioned);
@@ -370,14 +370,14 @@ export const dataProductsHandlers: RequestHandler[] = [
 		const body = (await request.json()) as MockRecord;
 		return HttpResponse.json({
 			data: {
-				dataset_id: body.dataset_id,
+				dataset_id: body["dataset_id"],
 				dataset_maturity_after: "experimental",
 				dataset_maturity_before: "initial-focus",
 				evidence_uri: "ditto://evidence/promotion/mock",
-				notes: body.notes ?? null,
-				revocation_reason: body.revocation_reason,
+				notes: body["notes"] ?? null,
+				revocation_reason: body["revocation_reason"],
 				revoked_at: "2026-08-30T07:35:00Z",
-				revoked_by: body.revoked_by,
+				revoked_by: body["revoked_by"],
 			},
 		});
 	}),

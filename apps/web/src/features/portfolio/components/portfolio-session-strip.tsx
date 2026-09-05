@@ -24,7 +24,7 @@ function ContextMetric({
 }: {
 	readonly label: string;
 	readonly value: string;
-	readonly tone?: "healthy" | "warning";
+	readonly tone?: "healthy" | "warning" | undefined;
 	readonly dot?: boolean;
 }) {
 	const toneClass =

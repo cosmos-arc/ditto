@@ -1,6 +1,4 @@
-import type { components } from "@/types/generated/api";
-
-type RegimeDiagnosticsResponse = components["schemas"]["RegimeDiagnosticsResponse"];
+import type { RegimeDiagnosticsDto as RegimeDiagnosticsResponse } from "@/features/research/api/regime-diagnostics";
 
 const observations: RegimeDiagnosticsResponse["observations"] = [
 	["2026-03-16", 28, "bear", 0.3],

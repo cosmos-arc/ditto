@@ -26,6 +26,12 @@ function baseSpec(constraints: StrategySpec["constraints"] = []): StrategySpec {
 	};
 }
 
+function updaterAt(mock: ReturnType<typeof vi.fn>, index: number): (draft: StrategySpec) => StrategySpec {
+	const updater: unknown = mock.mock.calls[index]?.[0];
+	if (typeof updater !== "function") throw new Error(`expected updater call at index ${index}`);
+	return updater as (draft: StrategySpec) => StrategySpec;
+}
+
 describe("StrategyPipelineView", () => {
 	it("keeps fixed slots in grammar order with generated predecessor/successor rules", () => {
 		const { container } = render(
@@ -64,12 +70,16 @@ describe("StrategyPipelineView", () => {
 				selectedKey={null}
 			/>,
 		);
-		fireEvent.click(screen.getAllByLabelText("下移 Trend Filter")[0]);
-		const move = onChange.mock.calls[0][0] as (draft: StrategySpec) => StrategySpec;
-		expect(move(spec).constraints[0].params.threshold).toBe(1);
+		const moveButton = screen.getAllByLabelText("下移 Trend Filter")[0];
+		if (!moveButton) throw new Error("expected move button");
+		fireEvent.click(moveButton);
+		const move = updaterAt(onChange, 0);
+		expect(move(spec).constraints[0]?.params["threshold"]).toBe(1);
 
-		fireEvent.click(screen.getAllByLabelText("删除 Trend Filter")[0]);
-		const remove = onChange.mock.calls[1][0] as (draft: StrategySpec) => StrategySpec;
+		const removeButton = screen.getAllByLabelText("删除 Trend Filter")[0];
+		if (!removeButton) throw new Error("expected remove button");
+		fireEvent.click(removeButton);
+		const remove = updaterAt(onChange, 1);
 		expect(remove(spec).constraints).toHaveLength(1);
 	});
 
@@ -88,7 +98,9 @@ describe("StrategyPipelineView", () => {
 				selectedKey={null}
 			/>,
 		);
-		fireEvent.keyDown(screen.getAllByRole("button", { name: /Trend Filter/ })[0], { key: "ArrowDown", altKey: true });
+		const filterButton = screen.getAllByRole("button", { name: /Trend Filter/ })[0];
+		if (!filterButton) throw new Error("expected filter button");
+		fireEvent.keyDown(filterButton, { key: "ArrowDown", altKey: true });
 		expect(onChange).toHaveBeenCalledOnce();
 	});
 

@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
+import { ApiError } from "@/api";
 import { Button } from "@/components/ui/button";
-import { AgentContextActions } from "@/features/agent";
 import { ShellHeaderExtension, StatusBar, StudioLayout } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
+import { ContextActions } from "@/providers";
 import {
 	buildExperimentPlanningRequest,
 	createDefaultExperimentDraft,
@@ -185,7 +185,7 @@ export function ExperimentCreatePage({ onLaunched }: ExperimentCreatePageProps) 
 								Governance assistant
 							</p>
 							{currentIdentity ? (
-								<AgentContextActions
+								<ContextActions
 									className="flex flex-col items-stretch gap-1.5"
 									contextType="experiment-planning-draft"
 									contextId={currentIdentity}

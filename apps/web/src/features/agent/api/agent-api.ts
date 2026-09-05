@@ -1,5 +1,12 @@
-import { type ApiResponse, apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import {
+	assertAgentApproval,
+	assertAgentApprovalDecision,
+	assertAgentApprovalList,
+	assertAgentRun,
+	assertAgentRunList,
+} from "@/api/agent-validation";
+import type { components } from "@/api/generated/schema";
 import type {
 	AgentApprovalFilters,
 	AgentApprovalView,
@@ -19,11 +26,11 @@ import type {
 	CreateAgentRunInput,
 } from "../types";
 
-type AgentCapabilityResponse = components["schemas"]["AgentCapabilityResponse"];
-type AgentSessionResponse = components["schemas"]["AgentSessionResponse"];
-type AgentRunResponse = components["schemas"]["AgentRunResponse"];
-type AgentApprovalResponse = components["schemas"]["AgentApprovalResponse"];
-type AgentCampaignResponse = components["schemas"]["AgentCampaignResponse"];
+export type AgentCapabilityResponse = components["schemas"]["AgentCapabilityResponse"];
+export type AgentSessionResponse = components["schemas"]["AgentSessionResponse"];
+export type AgentRunResponse = components["schemas"]["AgentRunResponse"];
+export type AgentApprovalResponse = components["schemas"]["AgentApprovalResponse"];
+export type AgentCampaignResponse = components["schemas"]["AgentCampaignResponse"];
 type AgentRunCreateRequest = components["schemas"]["AgentRunCreateRequest"];
 type AgentRunExecuteRequest = components["schemas"]["AgentRunExecuteRequest"];
 type AgentSessionCreateRequest = components["schemas"]["AgentSessionCreateRequest"];
@@ -31,8 +38,11 @@ type AgentApprovalDecisionRequest = components["schemas"]["AgentApprovalDecision
 type AgentCampaignCreateRequest = components["schemas"]["AgentCampaignCreateRequest"];
 type AgentCampaignApproveRequest = components["schemas"]["AgentCampaignApproveRequest"];
 type AgentCampaignCancelRequest = components["schemas"]["AgentCampaignCancelRequest"];
-type AgentCampaignValidationResponse = components["schemas"]["AgentCampaignValidationResponse"];
-type AgentDecisionOpinionResponse = components["schemas"]["AgentDecisionOpinionResponse"];
+type AgentCampaignValidationRequest =
+	| components["schemas"]["AgentCampaignHypothesisValidationRequest"]
+	| components["schemas"]["AgentCampaignExperimentPlanValidationRequest"]
+	| components["schemas"]["AgentCampaignGovernanceValidationRequest"]
+	| components["schemas"]["AgentCampaignManifestValidationRequest"];
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -49,7 +59,16 @@ export const agentQueryKeys = {
 	opinion: (identity: AgentDecisionOpinionIdentity) => [...agentQueryKeys.all, "decision-opinion", identity] as const,
 };
 
-function pagination(envelope: ApiResponse<unknown>, itemCount: number): AgentPage<never>["pagination"] {
+type PaginatedEnvelope = {
+	readonly pagination?: {
+		readonly limit?: number;
+		readonly offset?: number;
+		readonly total?: number;
+		readonly has_more?: boolean;
+	} | null;
+};
+
+function pagination(envelope: PaginatedEnvelope, itemCount: number): AgentPage<never>["pagination"] {
 	const value = envelope.pagination;
 	const limit = value?.limit ?? Math.max(itemCount, DEFAULT_PAGE_SIZE);
 	const offset = value?.offset ?? 0;
@@ -212,7 +231,7 @@ function mapCampaign(response: AgentCampaignResponse): AgentCampaignView {
 }
 
 export async function fetchAgentCapability(): Promise<AgentCapabilityView> {
-	const response = await apiClient.get<AgentCapabilityResponse>("/v1/agent/capabilities");
+	const response = await apiClient.get("/api/v1/agent/capabilities");
 	return {
 		enabled: response.enabled,
 		runtimeState: response.runtime_state,
@@ -225,9 +244,7 @@ export async function fetchAgentCapability(): Promise<AgentCapabilityView> {
 }
 
 export async function listAgentSessions(offset = 0, limit = DEFAULT_PAGE_SIZE): Promise<AgentPage<AgentSessionView>> {
-	const envelope = await apiClient.getResponse<readonly AgentSessionResponse[]>(
-		withQueryParams("/v1/agent/sessions", { limit, offset }),
-	);
+	const envelope = await apiClient.getPayload("/api/v1/agent/sessions", { params: { query: { limit, offset } } });
 	return {
 		items: envelope.data.map((item) => ({
 			sessionId: item.session_id,
@@ -239,55 +256,69 @@ export async function listAgentSessions(offset = 0, limit = DEFAULT_PAGE_SIZE): 
 }
 
 export async function listAgentRuns(filters: AgentRunFilters = {}): Promise<AgentPage<AgentRunView>> {
-	const envelope = await apiClient.getResponse<readonly AgentRunResponse[]>(
-		withQueryParams("/v1/agent/runs", {
-			status: filters.status,
-			session_id: filters.sessionId,
-			context_type: filters.contextType,
-			context_id: filters.contextId,
-			limit: filters.limit ?? DEFAULT_PAGE_SIZE,
-			offset: filters.offset ?? 0,
-		}),
-	);
+	const envelope = await apiClient.getPayload("/api/v1/agent/runs", {
+		params: {
+			query: {
+				...(filters.status ? { status: filters.status } : {}),
+				...(filters.sessionId ? { session_id: filters.sessionId } : {}),
+				...(filters.contextType ? { context_type: filters.contextType } : {}),
+				...(filters.contextId ? { context_id: filters.contextId } : {}),
+				limit: filters.limit ?? DEFAULT_PAGE_SIZE,
+				offset: filters.offset ?? 0,
+			},
+		},
+	});
+	assertAgentRunList(envelope.data);
 	return { items: envelope.data.map(mapAgentRun), pagination: pagination(envelope, envelope.data.length) };
 }
 
 export async function getAgentRun(runId: string): Promise<AgentRunView> {
-	return mapAgentRun(await apiClient.get<AgentRunResponse>(`/v1/agent/runs/${encodeURIComponent(runId)}`));
+	const run = await apiClient.get("/api/v1/agent/runs/{run_id}", { params: { path: { run_id: runId } } });
+	assertAgentRun(run);
+	return mapAgentRun(run);
 }
 
 export async function listAgentApprovals(filters: AgentApprovalFilters = {}): Promise<AgentPage<AgentApprovalView>> {
-	const envelope = await apiClient.getResponse<readonly AgentApprovalResponse[]>(
-		withQueryParams("/v1/agent/approvals", {
-			status: filters.status,
-			run_id: filters.runId,
-			limit: filters.limit ?? DEFAULT_PAGE_SIZE,
-			offset: filters.offset ?? 0,
-		}),
-	);
+	const envelope = await apiClient.getPayload("/api/v1/agent/approvals", {
+		params: {
+			query: {
+				...(filters.status ? { status: filters.status } : {}),
+				...(filters.runId ? { run_id: filters.runId } : {}),
+				limit: filters.limit ?? DEFAULT_PAGE_SIZE,
+				offset: filters.offset ?? 0,
+			},
+		},
+	});
+	assertAgentApprovalList(envelope.data);
 	return { items: envelope.data.map(mapApproval), pagination: pagination(envelope, envelope.data.length) };
 }
 
 export async function getAgentApproval(approvalId: string): Promise<AgentApprovalView> {
-	return mapApproval(
-		await apiClient.get<AgentApprovalResponse>(`/v1/agent/approvals/${encodeURIComponent(approvalId)}`),
-	);
+	const approval = await apiClient.get("/api/v1/agent/approvals/{approval_id}", {
+		params: { path: { approval_id: approvalId } },
+	});
+	assertAgentApproval(approval);
+	return mapApproval(approval);
 }
 
 export async function listAgentCampaigns(filters: AgentCampaignFilters = {}): Promise<AgentPage<AgentCampaignView>> {
-	const envelope = await apiClient.getResponse<readonly AgentCampaignResponse[]>(
-		withQueryParams("/v1/agent/campaigns", {
-			status: filters.status,
-			limit: filters.limit ?? DEFAULT_PAGE_SIZE,
-			offset: filters.offset ?? 0,
-		}),
-	);
+	const envelope = await apiClient.getPayload("/api/v1/agent/campaigns", {
+		params: {
+			query: {
+				...(filters.status ? { status: filters.status } : {}),
+				limit: filters.limit ?? DEFAULT_PAGE_SIZE,
+				offset: filters.offset ?? 0,
+			},
+		},
+	});
 	return { items: envelope.data.map(mapCampaign), pagination: pagination(envelope, envelope.data.length) };
 }
 
 export async function getAgentCampaign(campaignId: string): Promise<AgentCampaignView> {
 	return mapCampaign(
-		await apiClient.get<AgentCampaignResponse>(`/v1/agent/campaigns/${encodeURIComponent(campaignId)}`),
+		await apiClient.get("/api/v1/agent/campaigns/{campaign_id}", {
+			params: { path: { campaign_id: campaignId } },
+		}),
 	);
 }
 
@@ -296,8 +327,9 @@ export async function createAgentSession(
 	idempotencyKey: string,
 ): Promise<AgentSessionView> {
 	const payload: AgentSessionCreateRequest = { retention_class: retentionClass };
-	const response = await apiClient.post<AgentSessionResponse>("/v1/agent/sessions", payload, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	const response = await apiClient.post("/api/v1/agent/sessions", {
+		body: payload,
+		params: { header: { "Idempotency-Key": idempotencyKey } },
 	});
 	return { sessionId: response.session_id, createdAt: response.created_at, retentionClass: response.retention_class };
 }
@@ -319,26 +351,31 @@ export async function createAgentRun(input: CreateAgentRunInput): Promise<AgentR
 		objective: input.objective,
 		session_id: input.sessionId,
 	};
-	return mapAgentRun(
-		await apiClient.post<AgentRunResponse>("/v1/agent/runs", payload, {
-			headers: { "Idempotency-Key": input.idempotencyKey },
-		}),
-	);
+	const run = await apiClient.post("/api/v1/agent/runs", {
+		body: payload,
+		params: { header: { "Idempotency-Key": input.idempotencyKey } },
+	});
+	assertAgentRun(run);
+	return mapAgentRun(run);
 }
 
 export async function executeAgentRun(run: Pick<AgentRunView, "runId" | "revision">): Promise<AgentRunView> {
 	const payload: AgentRunExecuteRequest = { expected_revision: run.revision };
-	return mapAgentRun(
-		await apiClient.post<AgentRunResponse>(`/v1/agent/runs/${encodeURIComponent(run.runId)}/execute`, payload),
-	);
+	const response = await apiClient.post("/api/v1/agent/runs/{run_id}/execute", {
+		body: payload,
+		params: { path: { run_id: run.runId } },
+	});
+	assertAgentRun(response);
+	return mapAgentRun(response);
 }
 
 export async function cancelAgentRun(run: Pick<AgentRunView, "runId" | "revision">): Promise<AgentRunView> {
-	return mapAgentRun(
-		await apiClient.post<AgentRunResponse>(`/v1/agent/runs/${encodeURIComponent(run.runId)}/cancel`, {
-			expected_revision: run.revision,
-		}),
-	);
+	const response = await apiClient.post("/api/v1/agent/runs/{run_id}/cancel", {
+		body: { expected_revision: run.revision },
+		params: { path: { run_id: run.runId } },
+	});
+	assertAgentRun(response);
+	return mapAgentRun(response);
 }
 
 export async function decideAgentApproval(command: {
@@ -352,9 +389,13 @@ export async function decideAgentApproval(command: {
 		decision: command.decision,
 		expected_action_hash: command.actionHash,
 		operator_id: command.operatorId,
-		reason: command.reason,
+		...(command.reason === undefined ? {} : { reason: command.reason }),
 	};
-	await apiClient.post(`/v1/agent/approvals/${encodeURIComponent(command.approvalId)}/decision`, payload);
+	const receipt = await apiClient.post("/api/v1/agent/approvals/{approval_id}/decision", {
+		body: payload,
+		params: { path: { approval_id: command.approvalId } },
+	});
+	assertAgentApprovalDecision(receipt);
 }
 
 function campaignManifest(input: AgentCampaignManifestInput): AgentCampaignCreateRequest["manifest"] {
@@ -376,7 +417,7 @@ function campaignManifest(input: AgentCampaignManifestInput): AgentCampaignCreat
 	};
 }
 
-function campaignValidationPayload(input: AgentCampaignValidationInput): object {
+function campaignValidationPayload(input: AgentCampaignValidationInput): AgentCampaignValidationRequest {
 	if (input.step === "hypothesis") {
 		return { ...input, hypothesis: { ...input.hypothesis } };
 	}
@@ -408,10 +449,9 @@ function campaignValidationPayload(input: AgentCampaignValidationInput): object 
 export async function validateAgentCampaignStep(
 	input: AgentCampaignValidationInput,
 ): Promise<AgentCampaignValidationView> {
-	const response = await apiClient.post<AgentCampaignValidationResponse>(
-		"/v1/agent/campaigns/validation",
-		campaignValidationPayload(input),
-	);
+	const response = await apiClient.post("/api/v1/agent/campaigns/validation", {
+		body: campaignValidationPayload(input),
+	});
 	return {
 		step: response.step,
 		valid: response.valid,
@@ -426,8 +466,9 @@ export async function createAgentCampaign(
 ): Promise<AgentCampaignView> {
 	const payload: AgentCampaignCreateRequest = { manifest: campaignManifest(manifest) };
 	return mapCampaign(
-		await apiClient.post<AgentCampaignResponse>("/v1/agent/campaigns", payload, {
-			headers: { "Idempotency-Key": idempotencyKey },
+		await apiClient.post("/api/v1/agent/campaigns", {
+			body: payload,
+			params: { header: { "Idempotency-Key": idempotencyKey } },
 		}),
 	);
 }
@@ -445,11 +486,13 @@ export async function approveAgentCampaign(command: {
 		expires_at: command.expiresAt,
 	};
 	return mapCampaign(
-		await apiClient.post<AgentCampaignResponse>(
-			`/v1/agent/campaigns/${encodeURIComponent(command.campaignId)}/approve`,
-			payload,
-			{ headers: { "Idempotency-Key": command.idempotencyKey } },
-		),
+		await apiClient.post("/api/v1/agent/campaigns/{campaign_id}/approve", {
+			body: payload,
+			params: {
+				path: { campaign_id: command.campaignId },
+				header: { "Idempotency-Key": command.idempotencyKey },
+			},
+		}),
 	);
 }
 
@@ -460,29 +503,33 @@ export async function cancelAgentCampaign(command: {
 }): Promise<AgentCampaignView> {
 	const payload: AgentCampaignCancelRequest = { expected_authorization_hash: command.authorizationHash };
 	return mapCampaign(
-		await apiClient.post<AgentCampaignResponse>(
-			`/v1/agent/campaigns/${encodeURIComponent(command.campaignId)}/cancel`,
-			payload,
-			{ headers: { "Idempotency-Key": command.idempotencyKey } },
-		),
+		await apiClient.post("/api/v1/agent/campaigns/{campaign_id}/cancel", {
+			body: payload,
+			params: {
+				path: { campaign_id: command.campaignId },
+				header: { "Idempotency-Key": command.idempotencyKey },
+			},
+		}),
 	);
 }
 
 export async function fetchDecisionOpinion(identity: AgentDecisionOpinionIdentity): Promise<AgentDecisionOpinionView> {
-	const response = await apiClient.get<AgentDecisionOpinionResponse>(
-		withQueryParams("/v1/agent/decision-opinions", {
-			strategy_id: identity.strategyId,
-			strategy_version: identity.strategyVersion,
-			trade_date: identity.tradeDate,
-			account_id: identity.accountId,
-			sleeve_id: identity.sleeveId,
-			v3_artifact_id: identity.v3ArtifactId,
-			decision_time: identity.decisionTime,
-			knowledge_cutoff: identity.knowledgeCutoff,
-			publication_cutoff: identity.publicationCutoff,
-			source_snapshot_id: identity.sourceSnapshotId,
-		}),
-	);
+	const response = await apiClient.get("/api/v1/agent/decision-opinions", {
+		params: {
+			query: {
+				strategy_id: identity.strategyId,
+				strategy_version: identity.strategyVersion,
+				trade_date: identity.tradeDate,
+				account_id: identity.accountId,
+				sleeve_id: identity.sleeveId,
+				v3_artifact_id: identity.v3ArtifactId,
+				decision_time: identity.decisionTime,
+				knowledge_cutoff: identity.knowledgeCutoff,
+				publication_cutoff: identity.publicationCutoff,
+				source_snapshot_id: identity.sourceSnapshotId,
+			},
+		},
+	});
 	return {
 		identity,
 		status: response.status,

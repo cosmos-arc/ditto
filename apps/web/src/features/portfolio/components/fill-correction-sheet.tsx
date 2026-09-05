@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from "react";
+import { ApiError } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ApiError } from "@/lib/api-client";
 import type { FillLedgerEntry } from "@/types";
 import { classifyMutationFailure } from "../api/mutation-result";
 import { useCorrectFill } from "../hooks";

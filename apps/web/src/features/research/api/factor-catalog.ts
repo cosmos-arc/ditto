@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 
 type FactorDescriptorResponse = components["schemas"]["FactorDescriptorResponse"];
 
@@ -42,22 +42,22 @@ function stringList(value: unknown): readonly string[] {
 
 function lookbackLabel(value: unknown): string {
 	if (!isRecord(value)) return "—";
-	const amount = finiteNumber(value.value);
-	const unit = text(value.unit);
+	const amount = finiteNumber(value["value"]);
+	const unit = text(value["unit"]);
 	return amount === null || unit === null ? "—" : `${amount} ${unit}`;
 }
 
 function diagnosticPreview(value: unknown): FactorDiagnosticPreview | null {
 	if (!isRecord(value)) return null;
 	return {
-		rankIc: finiteNumber(value.rank_ic),
-		icIr: finiteNumber(value.ic_ir),
-		sharpe: finiteNumber(value.sharpe),
-		turnover: finiteNumber(value.turnover),
-		decay: finiteNumber(value.decay),
-		coverage: finiteNumber(value.coverage),
-		universe: text(value.universe),
-		status: text(value.status),
+		rankIc: finiteNumber(value["rank_ic"]),
+		icIr: finiteNumber(value["ic_ir"]),
+		sharpe: finiteNumber(value["sharpe"]),
+		turnover: finiteNumber(value["turnover"]),
+		decay: finiteNumber(value["decay"]),
+		coverage: finiteNumber(value["coverage"]),
+		universe: text(value["universe"]),
+		status: text(value["status"]),
 	};
 }
 
@@ -65,14 +65,14 @@ export function mapFactorCatalogItem(dto: FactorDescriptorResponse): FactorCatal
 	const payload = dto.resolved_payload;
 	return {
 		factorId: dto.factor_id,
-		lanes: stringList(payload.lanes),
-		lookback: lookbackLabel(payload.lookback),
-		pitRequirement: text(payload.pit_requirement) ?? "unspecified",
-		diagnosticPreview: diagnosticPreview(payload.diagnostic_preview),
+		lanes: stringList(payload["lanes"]),
+		lookback: lookbackLabel(payload["lookback"]),
+		pitRequirement: text(payload["pit_requirement"]) ?? "unspecified",
+		diagnosticPreview: diagnosticPreview(payload["diagnostic_preview"]),
 	};
 }
 
 export async function fetchFactorCatalog(): Promise<readonly FactorCatalogItem[]> {
-	const rows = await apiClient.get<FactorDescriptorResponse[]>("/v1/research/factors");
+	const rows = await apiClient.get("/api/v1/research/factors");
 	return rows.map(mapFactorCatalogItem);
 }

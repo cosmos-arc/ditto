@@ -1,17 +1,21 @@
 import { useRef, useState } from "react";
-import { ApiError } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
-import type { CandidateSelectionReceiptResponse } from "../api/experiments";
+import { ApiError } from "@/api";
+import type {
+	CandidateSelectionReceiptResponse,
+	ExperimentCandidateResponse,
+	ExperimentComparisonResponse,
+	ExperimentSelectionStateResponse,
+} from "../api/experiments";
 import { useCandidateSelection } from "../hooks";
 import { HoldoutEvaluationPanel } from "./holdout-evaluation-panel";
 
 interface CandidateComparisonProps {
 	readonly experimentId: string;
 	readonly revision: number;
-	readonly candidates: readonly components["schemas"]["ExperimentCandidateResponse"][];
-	readonly comparison: components["schemas"]["ExperimentComparisonResponse"] | null;
+	readonly candidates: readonly ExperimentCandidateResponse[];
+	readonly comparison: ExperimentComparisonResponse | null;
 	readonly selectionEvidenceReady: boolean;
-	readonly selectionState: components["schemas"]["ExperimentSelectionStateResponse"] | null;
+	readonly selectionState: ExperimentSelectionStateResponse | null;
 	readonly onInspect?: (candidateId: string) => void;
 }
 

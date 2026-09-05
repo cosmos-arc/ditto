@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import {
 	buildExperimentPlanningRequest,
+	controlExperiment,
 	createDefaultExperimentDraft,
 	estimateCandidateCount,
 	launchExperiment,
@@ -27,6 +28,22 @@ describe("experiment planning adapter", () => {
 		expect(estimateCandidateCount("[]")).toBe(1);
 		expect(estimateCandidateCount(createDefaultExperimentDraft().axesJson)).toBe(3);
 		expect(estimateCandidateCount("not-json")).toBeNull();
+		expect(estimateCandidateCount("[null]")).toBeNull();
+		expect(estimateCandidateCount('[{"values":[]} ]')).toBeNull();
+	});
+
+	it("rejects non-object planning sections and non-finite numeric authority", () => {
+		expect(() => buildExperimentPlanningRequest({ ...createDefaultExperimentDraft(), strategySpecJson: "[]" })).toThrow(
+			/Strategy spec 必须是 JSON object/u,
+		);
+		expect(() => buildExperimentPlanningRequest({ ...createDefaultExperimentDraft(), seed: Number.NaN })).toThrow(
+			/Seed 必须是有限数值/u,
+		);
+	});
+
+	it("derives a deterministic identity for a structurally valid request not created by the draft builder", () => {
+		const request = { ...buildExperimentPlanningRequest(createDefaultExperimentDraft()) };
+		expect(planningRequestIdentity(request)).toBe(JSON.stringify(request));
 	});
 
 	it("preflights without an idempotency header or launch write", async () => {
@@ -99,7 +116,30 @@ describe("experiment planning adapter", () => {
 
 		expect(idempotency).toBe("launch-command-1");
 		expect(rawBody).toContain(`"confirmed_plan_hash":"${"d".repeat(64)}"`);
-		expect(body.confirmed_plan_hash).toBe("d".repeat(64));
-		expect(body.experiment_id).toBe(planning.experiment_id);
+		expect(body["confirmed_plan_hash"]).toBe("d".repeat(64));
+		expect(body["experiment_id"]).toBe(planning.experiment_id);
+	});
+
+	it("routes cancel and resume to distinct revision-bound lifecycle endpoints", async () => {
+		const paths: string[] = [];
+		server.use(
+			http.post(/\/api\/v1\/research\/experiments\/exp-1\/(cancel|resume)/, ({ request }) => {
+				paths.push(new URL(request.url).pathname);
+				return HttpResponse.json({
+					data: {
+						experiment_id: "exp-1",
+						status: "queued",
+						desired_state: "running",
+						revision: 4,
+						live_run_ids: [],
+						occurred_at: "2026-09-04T00:00:00Z",
+					},
+				});
+			}),
+		);
+
+		await controlExperiment("exp-1", "cancel", 3, "cancel-3");
+		await controlExperiment("exp-1", "resume", 3, "resume-3");
+		expect(paths).toEqual(["/api/v1/research/experiments/exp-1/cancel", "/api/v1/research/experiments/exp-1/resume"]);
 	});
 });

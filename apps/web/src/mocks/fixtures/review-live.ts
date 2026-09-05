@@ -5,10 +5,8 @@
  * 每项携带 `experiment_id`（null 表示尚无 packet）。`mockReviewPacket` 是完整
  * ReviewPacket read model（11 hard-gate + 6 hash + lineage + rationale）。
  */
-import type { components } from "@/types/generated/api";
-
-type StrategyVersionResponse = components["schemas"]["StrategyVersionResponse"];
-type ExperimentReviewPacketResponse = components["schemas"]["ExperimentReviewPacketResponse"];
+import type { ExperimentReviewPacketResponse } from "@/features/research/api/review-packet";
+import type { StrategyVersionResponse } from "@/features/strategy/api/strategies";
 
 export const mockReviewQueue: StrategyVersionResponse[] = [
 	{

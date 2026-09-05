@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { components } from "@/types/generated/api";
+import type { components } from "@/api/generated/schema";
 import { mapReviewPacket } from "../api/review-packet";
 import { mapReviewQueueEntry } from "../api/reviews";
 

@@ -4,12 +4,23 @@ import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
-import type { components } from "@/types/generated/api";
-import type { PortfolioComparisonIdentity } from "../api/portfolio-comparison";
+import { ContextActionsProvider, type ContextActionsRequest } from "@/providers";
+import type { PortfolioComparison, PortfolioComparisonIdentity } from "../api/portfolio-comparison";
 import { PortfolioComparisonWorkspace } from "./portfolio-comparison-workspace";
 import { PortfolioPage } from "./portfolio-page";
 
-type Comparison = components["schemas"]["PortfolioComparisonResponse"];
+type Comparison = PortfolioComparison;
+
+const renderContextActions = vi.fn((request: ContextActionsRequest) => (
+	<a
+		href="#context-action"
+		data-context-id={request.contextId}
+		data-context-type={request.contextType}
+		data-objective={request.evidenceObjective}
+	>
+		{request.evidenceLabel ?? "请求证据分析"}
+	</a>
+));
 
 const identity: PortfolioComparisonIdentity = {
 	strategy_id: "strategy-1",
@@ -124,12 +135,17 @@ const comparison: Comparison = {
 function wrapper() {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 	return function Wrapper({ children }: { children: ReactNode }) {
-		return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+		return (
+			<ContextActionsProvider renderActions={renderContextActions}>
+				<QueryClientProvider client={client}>{children}</QueryClientProvider>
+			</ContextActionsProvider>
+		);
 	};
 }
 
 afterEach(() => {
 	vi.unstubAllEnvs();
+	renderContextActions.mockClear();
 	window.history.replaceState({}, "", "/portfolio");
 });
 
@@ -149,14 +165,12 @@ describe("PortfolioComparisonWorkspace", () => {
 		expect(screen.getByText("valuation:abc")).toBeInTheDocument();
 		expect(screen.getByText("snapshot:stock + snapshot:fund")).toBeInTheDocument();
 		const diagnostic = screen.getByRole("link", { name: "请求组合诊断" });
-		const url = new URL(diagnostic.getAttribute("href") ?? "", "http://ditto.local");
-		expect(url.pathname).toBe("/research/agent");
-		expect(url.searchParams.get("contextType")).toBe("portfolio");
-		expect(url.searchParams.get("contextId")).toContain(identity.model_portfolio_id);
-		expect(url.searchParams.get("objective")).toContain(identity.paper_account_id);
-		expect(url.searchParams.get("objective")).toContain(identity.manual_account_id);
-		expect(url.searchParams.get("objective")).toContain(identity.paper_session_id);
-		expect(url.searchParams.get("objective")).toContain(identity.source_snapshot_ids[0] ?? "");
+		expect(diagnostic).toHaveAttribute("data-context-type", "portfolio");
+		expect(diagnostic.getAttribute("data-context-id")).toContain(identity.model_portfolio_id);
+		expect(diagnostic.getAttribute("data-objective")).toContain(identity.paper_account_id);
+		expect(diagnostic.getAttribute("data-objective")).toContain(identity.manual_account_id);
+		expect(diagnostic.getAttribute("data-objective")).toContain(identity.paper_session_id);
+		expect(diagnostic.getAttribute("data-objective")).toContain(identity.source_snapshot_ids[0] ?? "");
 	});
 
 	it("previews constraints and stress without exposing any apply action", async () => {

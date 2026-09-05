@@ -25,6 +25,12 @@ const SAMPLE_SPEC: StrategySpec = {
 	paramConstraints: [],
 };
 
+function firstUpdater(mock: ReturnType<typeof vi.fn>): (draft: StrategySpec) => StrategySpec {
+	const updater: unknown = mock.mock.calls[0]?.[0];
+	if (typeof updater !== "function") throw new Error("expected an updater call");
+	return updater as (draft: StrategySpec) => StrategySpec;
+}
+
 describe("StrategySpecForm", () => {
 	it("renders scalar fields populated with current spec values", () => {
 		render(<StrategySpecForm spec={SAMPLE_SPEC} onChange={vi.fn()} />);
@@ -37,7 +43,7 @@ describe("StrategySpecForm", () => {
 		render(<StrategySpecForm spec={SAMPLE_SPEC} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("名称"), { target: { value: "新策略" } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		expect(updater(SAMPLE_SPEC).name).toBe("新策略");
 	});
 
@@ -46,7 +52,7 @@ describe("StrategySpecForm", () => {
 		render(<StrategySpecForm spec={SAMPLE_SPEC} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("k"), { target: { value: "10" } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		expect(updater(SAMPLE_SPEC).selector.params).toEqual({ k: 10 });
 	});
 
@@ -55,7 +61,7 @@ describe("StrategySpecForm", () => {
 		render(<StrategySpecForm spec={SAMPLE_SPEC} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("下单类型"), { target: { value: "limit" } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		expect(updater(SAMPLE_SPEC).execution.defaultOrderType).toBe("limit");
 	});
 });

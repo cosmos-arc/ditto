@@ -65,7 +65,7 @@ export const instrumentsHandlers: RequestHandler[] = [
 	}),
 
 	http.get("/api/v1/metadata/instruments/:id", ({ params }) => {
-		const instrumentId = Number(params.id);
+		const instrumentId = Number(params["id"]);
 		const instrument = INSTRUMENTS.find(
 			(item) => item.instrument_id === instrumentId || Number(item.ticker) === instrumentId,
 		);

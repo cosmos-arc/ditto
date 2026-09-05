@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
+import { ApiError } from "@/api";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
 import type { UniverseDefinition } from "../api/universes";
 import { useUniverseCommands, useUniverseMembers, useUniverses } from "../hooks";
 

@@ -64,7 +64,11 @@ export function ParamConstraintsEditor({ spec, onChange }: ParamConstraintsEdito
 	function move(from: number, to: number): void {
 		onChange((draft) => {
 			const next = [...draft.paramConstraints];
-			[next[from], next[to]] = [next[to], next[from]];
+			const source = next[from];
+			const target = next[to];
+			if (!source || !target) return draft;
+			next[from] = target;
+			next[to] = source;
 			return { ...draft, paramConstraints: next };
 		});
 	}

@@ -1,3 +1,5 @@
+import { isMockRuntime } from "@/api";
+
 export function shouldUseHomePrototypeMocks(): boolean {
-	return import.meta.env.VITE_USE_MOCK === "true";
+	return isMockRuntime();
 }

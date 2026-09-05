@@ -33,7 +33,7 @@ function mapAdjustment(adjustment: FillAdjustmentResponse): FillLedgerAdjustment
 
 type FillLedgerResolution = {
 	readonly state: FillLedgerState;
-	readonly consistencyIssue?: FillLedgerConsistencyIssue;
+	readonly consistencyIssue?: FillLedgerConsistencyIssue | undefined;
 };
 
 function mapFillToLedgerEntry(
@@ -52,7 +52,8 @@ function mapFillToLedgerEntry(
 		fee: fill.fee,
 		slippage: fill.slippage,
 		notes: fill.notes,
-		...resolution,
+		state: resolution.state,
+		...(resolution.consistencyIssue === undefined ? {} : { consistencyIssue: resolution.consistencyIssue }),
 		adjustment: adjustment ? mapAdjustment(adjustment) : null,
 	};
 }
@@ -70,8 +71,8 @@ function createIssue(
 	code: FillLedgerConsistencyIssue,
 	fillId: string,
 	options: {
-		readonly relatedFillId?: string | null;
-		readonly adjustmentId?: string | null;
+		readonly relatedFillId?: string | null | undefined;
+		readonly adjustmentId?: string | null | undefined;
 		readonly mismatchedFields?: readonly FillLedgerIdentityField[];
 	} = {},
 ): FillLedgerIssue {

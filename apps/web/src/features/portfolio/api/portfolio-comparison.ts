@@ -1,22 +1,12 @@
-import { apiClient } from "@/lib/api-client";
-import type { components, operations } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components, operations } from "@/api/generated/schema";
 
 export type PortfolioComparisonIdentity = operations["portfolio_get_comparison"]["parameters"]["query"];
 export type PortfolioScenarioRequest = components["schemas"]["PortfolioScenarioBody"];
 export type PortfolioComparison = components["schemas"]["PortfolioComparisonResponse"];
 export type PortfolioScenarioPreview = components["schemas"]["PortfolioScenarioPreviewResponse"];
 
-function comparisonUrl(identity: PortfolioComparisonIdentity): string {
-	const search = new URLSearchParams();
-	for (const [key, value] of Object.entries(identity)) {
-		if (value == null || key === "source_snapshot_ids") continue;
-		search.set(key, String(value));
-	}
-	for (const snapshotId of identity.source_snapshot_ids) {
-		search.append("source_snapshot_ids", snapshotId);
-	}
-	return `/v1/portfolio/comparison?${search.toString()}`;
-}
+import { assertPortfolioScenarioPreview } from "./runtime-validation";
 
 function sameSnapshotSet(left: readonly string[], right: readonly string[]): boolean {
 	const sortedLeft = [...left].sort();
@@ -36,13 +26,16 @@ function assertComparisonIdentity(identity: PortfolioComparisonIdentity, compari
 }
 
 export async function fetchPortfolioComparison(identity: PortfolioComparisonIdentity): Promise<PortfolioComparison> {
-	const comparison = await apiClient.get<PortfolioComparison>(comparisonUrl(identity));
+	const comparison = await apiClient.get("/api/v1/portfolio/comparison", {
+		params: { query: identity },
+	});
 	assertComparisonIdentity(identity, comparison);
 	return comparison;
 }
 
 export async function previewPortfolioScenario(request: PortfolioScenarioRequest): Promise<PortfolioScenarioPreview> {
-	const preview = await apiClient.post<PortfolioScenarioPreview>("/v1/portfolio/scenario-previews", request);
+	const preview = await apiClient.post("/api/v1/portfolio/scenario-previews", { body: request });
+	assertPortfolioScenarioPreview(preview);
 	if (preview.baseline_kind !== request.baseline_kind) throw new Error("scenario baseline mismatch");
 	if (preview.risk.as_of !== request.as_of) throw new Error("scenario as_of mismatch");
 	if (!sameSnapshotSet(preview.risk.source_snapshot_ids, request.source_snapshot_ids)) {

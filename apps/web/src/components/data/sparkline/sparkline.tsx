@@ -9,8 +9,8 @@ export type SparklineColor = "up" | "down" | "neutral";
 
 interface SparklineProps {
 	readonly data: readonly number[];
-	readonly color?: SparklineColor;
-	readonly gradient?: boolean;
+	readonly color?: SparklineColor | undefined;
+	readonly gradient?: boolean | undefined;
 	readonly strokeWidth?: number;
 	readonly animate?: boolean;
 	readonly width?: number;
@@ -53,7 +53,10 @@ function strokeLinePath(pts: readonly Point[]): string {
 /** Build area fill path from points + bottom closure. */
 function toAreaPath(pts: readonly Point[], height: number): string {
 	if (pts.length < 2) return "";
-	return `${strokeLinePath(pts)} L${pts[pts.length - 1].x},${height} L${pts[0].x},${height} Z`;
+	const first = pts[0];
+	const last = pts.at(-1);
+	if (!first || !last) return "";
+	return `${strokeLinePath(pts)} L${last.x},${height} L${first.x},${height} Z`;
 }
 
 /**

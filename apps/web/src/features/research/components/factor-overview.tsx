@@ -81,9 +81,9 @@ export function FactorOverview({ id }: FactorOverviewProps) {
 										{} as Record<string, number>,
 									);
 									const parts = [
-										counts.pass ? `${counts.pass} pass` : null,
-										counts.warning ? `${counts.warning} warning` : null,
-										counts.fail ? `${counts.fail} fail` : null,
+										counts["pass"] ? `${counts["pass"]} pass` : null,
+										counts["warning"] ? `${counts["warning"]} warning` : null,
+										counts["fail"] ? `${counts["fail"]} fail` : null,
 									].filter(Boolean);
 									return parts.join(", ");
 								})()}

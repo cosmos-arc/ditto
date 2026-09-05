@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "@/types/generated/api";
+import type { components } from "@/api/generated/schema";
+import { capturedRequest, requestJson, requestPath } from "@/test/request";
 import {
 	fetchPortfolioComparison,
 	type PortfolioComparisonIdentity,
@@ -45,13 +46,13 @@ describe("portfolio comparison API", () => {
 
 		await expect(fetchPortfolioComparison(identity)).resolves.toEqual(payload);
 
-		const [url, init] = fetchMock.mock.calls[0] ?? [];
-		const requestUrl = new URL(String(url), "http://ditto.local");
+		const request = capturedRequest(fetchMock.mock.calls);
+		const requestUrl = new URL(request.url);
 		expect(requestUrl.pathname).toBe("/api/v1/portfolio/comparison");
 		expect(requestUrl.searchParams.get("model_portfolio_id")).toBe("model-main");
 		expect(requestUrl.searchParams.get("paper_session_id")).toBe("paper-session-1");
 		expect(requestUrl.searchParams.getAll("source_snapshot_ids")).toEqual(["snapshot:stock", "snapshot:fund"]);
-		expect(init).toEqual(expect.objectContaining({ method: "GET" }));
+		expect(request.method).toBe("GET");
 	});
 
 	it("fails closed before rendering when the response identity drifts", async () => {
@@ -77,10 +78,16 @@ describe("portfolio comparison API", () => {
 	it("posts a preview-only scenario body without an apply target or write identifier", async () => {
 		const payload = {
 			baseline_kind: "paper",
+			proposed_weights: {},
+			applied_constraints: [],
 			risk: {
+				before: { cash_weight: 0.1, gross_exposure: 0.9, industry_exposure: {}, stressed_return: -0.04 },
+				after: { cash_weight: 0.15, gross_exposure: 0.85, industry_exposure: {}, stressed_return: -0.03 },
 				as_of: identity.as_of,
+				constraint_findings: [],
 				source_snapshot_ids: identity.source_snapshot_ids,
-				valuation_snapshot_id: identity.valuation_snapshot_id,
+				turnover: 0.05,
+				valuation_snapshot_id: "valuation:abc",
 			},
 		} as Scenario;
 		const fetchMock = vi.fn<typeof fetch>(
@@ -104,10 +111,10 @@ describe("portfolio comparison API", () => {
 			}),
 		).resolves.toEqual(payload);
 
-		const [url, init] = fetchMock.mock.calls[0] ?? [];
-		expect(url).toBe("/api/v1/portfolio/scenario-previews");
-		expect(init).toEqual(expect.objectContaining({ method: "POST" }));
-		const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/portfolio/scenario-previews");
+		expect(request.method).toBe("POST");
+		const body = (await requestJson(request)) as Record<string, unknown>;
 		expect(body).toMatchObject({
 			baseline_kind: "paper",
 			excluded_instrument_ids: [600519],

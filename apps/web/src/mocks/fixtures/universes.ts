@@ -1,6 +1,4 @@
-import type { components } from "@/types/generated/api";
-
-type UniverseResponse = components["schemas"]["UniverseResponse"];
+import type { UniverseResponse } from "@/features/research/api/universes";
 
 export const mockUniverseDefinitions: UniverseResponse[] = [
 	{

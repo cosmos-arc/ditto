@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useRef } from "react";
+import { ApiError } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -10,7 +11,6 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ApiError } from "@/lib/api-client";
 import type { StrategyDetail, StrategyListItem, StrategySpec } from "@/types/strategy";
 import { useCreateStrategy } from "../hooks";
 

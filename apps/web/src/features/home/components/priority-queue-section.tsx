@@ -1,6 +1,6 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import type { PendingAction } from "@/types";
 import { usePendingActions } from "../hooks";

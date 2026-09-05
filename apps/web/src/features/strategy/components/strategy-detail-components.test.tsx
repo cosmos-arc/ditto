@@ -23,6 +23,8 @@ function createWrapper() {
 	};
 }
 
+const renderNoGovernanceActions = () => null;
+
 beforeEach(() => server.use(...strategyHandlers));
 
 describe("StrategyDetailMeta", () => {
@@ -50,16 +52,32 @@ describe("StrategyDetailMeta", () => {
 
 describe("StrategyVersionsView", () => {
 	it("渲染版本列表", async () => {
-		render(<StrategyVersionsView id="strat-001" />, { wrapper: createWrapper() });
+		render(<StrategyVersionsView id="strat-001" renderGovernanceActions={renderNoGovernanceActions} />, {
+			wrapper: createWrapper(),
+		});
 		await expect(screen.findByText("v1")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("v2")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("v3")).resolves.toBeInTheDocument();
 	});
 
 	it("显示版本审查结论", async () => {
-		render(<StrategyVersionsView id="strat-001" />, { wrapper: createWrapper() });
+		render(<StrategyVersionsView id="strat-001" renderGovernanceActions={renderNoGovernanceActions} />, {
+			wrapper: createWrapper(),
+		});
 		const approved = await screen.findAllByText("approved");
 		expect(approved.length).toBeGreaterThanOrEqual(1);
+	});
+
+	it("delegates cross-feature governance composition through an explicit renderer", async () => {
+		render(
+			<StrategyVersionsView
+				id="strat-001"
+				renderGovernanceActions={({ version }) => <span>governance slot v{version.version}</span>}
+			/>,
+			{ wrapper: createWrapper() },
+		);
+
+		await expect(screen.findByText("governance slot v1")).resolves.toBeInTheDocument();
 	});
 });
 

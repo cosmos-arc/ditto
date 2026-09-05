@@ -21,7 +21,7 @@ interface ReviewDecisionPanelProps {
 	readonly reviewOutcome: string;
 	readonly hardReviewBlocked: boolean;
 	readonly bundleHash: string;
-	readonly experimentId?: string;
+	readonly experimentId?: string | undefined;
 }
 
 export function ReviewDecisionPanel({

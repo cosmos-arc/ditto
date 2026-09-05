@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
 import { useStrategy } from "../hooks";
+import type { StrategyGovernanceActionsRenderer } from "./governance-actions";
 import { StrategyDetailMeta } from "./strategy-detail-meta";
 import { type StrategyDetailOverlay, StrategyDetailOverlays } from "./strategy-detail-overlays";
 import { StrategyFactorsView } from "./strategy-factors-view";
@@ -12,7 +13,11 @@ import { StrategyVersionsView } from "./strategy-versions-view";
 
 type DetailTab = "overview" | "versions" | "factors";
 
-export function StrategyDetailPage() {
+interface StrategyDetailPageProps {
+	readonly renderGovernanceActions: StrategyGovernanceActionsRenderer;
+}
+
+export function StrategyDetailPage({ renderGovernanceActions }: StrategyDetailPageProps) {
 	const { id } = useParams({ strict: false }) as { id: string };
 	const strategyId = id ?? "";
 	const detail = useStrategy(strategyId);
@@ -74,7 +79,7 @@ export function StrategyDetailPage() {
 							</TabsContent>
 							<TabsContent value="versions" className="m-0 h-full min-h-0 overflow-auto">
 								<div data-info-level="l1" data-info-unit="strategy-versions">
-									<StrategyVersionsView id={strategyId} />
+									<StrategyVersionsView id={strategyId} renderGovernanceActions={renderGovernanceActions} />
 								</div>
 							</TabsContent>
 							<TabsContent value="factors" className="m-0 h-full min-h-0 overflow-auto">

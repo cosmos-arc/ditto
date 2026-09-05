@@ -2,7 +2,7 @@ import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import type { DataProductCheck, DataProductQuality as DataProductQualityModel } from "../api";
 
 interface DataProductQualityProps {
-	readonly data?: DataProductQualityModel;
+	readonly data?: DataProductQualityModel | undefined;
 	readonly isLoading: boolean;
 	readonly isError: boolean;
 }

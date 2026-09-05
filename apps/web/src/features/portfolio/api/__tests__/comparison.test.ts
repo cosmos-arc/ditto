@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { capturedRequest, requestPath } from "@/test/request";
 import { fetchComparisonAttribution } from "../comparison";
 
 afterEach(() => {
@@ -40,9 +41,10 @@ describe("fetchComparisonAttribution", () => {
 			],
 		});
 
-		expect(fetchMock).toHaveBeenCalledWith(
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe(
 			"/api/v1/manual/comparison?strategy_id=seed_etf_industry_rotation&run_id=run-001",
-			expect.objectContaining({ method: "GET" }),
 		);
+		expect(request.method).toBe("GET");
 	});
 });

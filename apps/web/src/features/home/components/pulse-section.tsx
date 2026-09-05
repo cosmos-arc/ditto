@@ -77,7 +77,7 @@ export function PulseSection() {
 
 					{/* 4. Regime — 市场环境 */}
 					<div className="flex items-center gap-1 whitespace-nowrap rounded-[4px] px-1 py-0.5">
-						<span className="rounded-[10px] bg-[oklch(1_0_0/0.05)] px-2 py-px text-xs font-medium tracking-[0.02em] text-(--color-foreground-secondary)">
+						<span className="rounded-[10px] bg-(--surface-hover) px-2 py-px text-xs font-medium tracking-[0.02em] text-(--color-foreground-secondary)">
 							{data?.regimeType ?? "—"}
 						</span>
 					</div>

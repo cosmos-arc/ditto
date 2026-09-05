@@ -4,6 +4,6 @@ export { useDecisionBanner } from "./use-decision-banner";
 export { useHomeAlerts } from "./use-home-alerts";
 export { useHomePulse } from "./use-home-pulse";
 export { useMarketIndices } from "./use-market-indices";
-export { useMarketPulseMetrics } from "./use-market-pulse-metrics";
+export { type LoadMarketContext, useMarketPulseMetrics } from "./use-market-pulse-metrics";
 export { usePendingActions } from "./use-pending-actions";
 export { useRecentSignals } from "./use-recent-signals";

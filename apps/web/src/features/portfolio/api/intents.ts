@@ -1,11 +1,12 @@
-import { apiClient } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 
 export type UpdateIntentStatusRequest = components["schemas"]["UpdateIntentStatusRequest"];
 export type IntentStatus = UpdateIntentStatusRequest["status"];
 
 export function updateIntentStatus(intentId: string, status: IntentStatus): Promise<boolean> {
-	return apiClient.put<boolean>(`/v1/manual/intents/${encodeURIComponent(intentId)}/status`, {
-		status,
-	} satisfies UpdateIntentStatusRequest);
+	return apiClient.put("/api/v1/manual/intents/{intent_id}/status", {
+		body: { status } satisfies UpdateIntentStatusRequest,
+		params: { path: { intent_id: intentId } },
+	});
 }

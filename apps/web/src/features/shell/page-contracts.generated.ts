@@ -2472,7 +2472,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactTestRefs": [
         "src/features/agent/components/agent-console-page.test.tsx",
         "src/features/agent/components/agent-overlays.test.tsx",
-        "src/features/system/components/system-components.test.tsx"
+        "src/workflows/system-agent-ops/system-agent-ops-page.test.tsx"
       ],
       "reactComponentRefs": [
         "SystemAgentOpsPage"
@@ -2844,7 +2844,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "contractStatus": "verified",
       "overlayStatus": "triggerable",
       "prototypeVerified": true,
-      "reactParityVerified": true,
+      "reactParityVerified": false,
       "reactTestRefs": [
         "src/features/system/components/system-components.test.tsx",
         "src/features/system/hooks/system-hooks.test.tsx",

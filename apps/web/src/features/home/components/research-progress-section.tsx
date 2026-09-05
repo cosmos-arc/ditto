@@ -1,5 +1,5 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useAgentFindings } from "../hooks";
 

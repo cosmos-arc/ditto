@@ -23,27 +23,27 @@ export function EquityPnlBlock() {
 				{usePrototypeMocks && data && (
 					<div className="flex flex-col gap-3">
 						<div className="flex gap-4">
-							{data.series.length > 0 &&
-								(() => {
-									const latest = data.series[data.series.length - 1];
-									return (
-										<>
-											<Metric
-												variant="equity"
-												label="总权益"
-												value={`¥${latest.equity.toLocaleString()}`}
-												sub={`日盈亏 ¥${latest.pnl.toLocaleString()}`}
-												trend={latest.pnl >= 0 ? "up" : "down"}
-											/>
-											<Metric
-												variant="standard"
-												label="累计收益率"
-												value={`${latest.pnlPercent.toFixed(2)}%`}
-												trend={latest.pnlPercent >= 0 ? "up" : "down"}
-											/>
-										</>
-									);
-								})()}
+							{(() => {
+								const latest = data.series.at(-1);
+								if (!latest) return null;
+								return (
+									<>
+										<Metric
+											variant="equity"
+											label="总权益"
+											value={`¥${latest.equity.toLocaleString()}`}
+											sub={`日盈亏 ¥${latest.pnl.toLocaleString()}`}
+											trend={latest.pnl >= 0 ? "up" : "down"}
+										/>
+										<Metric
+											variant="standard"
+											label="累计收益率"
+											value={`${latest.pnlPercent.toFixed(2)}%`}
+											trend={latest.pnlPercent >= 0 ? "up" : "down"}
+										/>
+									</>
+								);
+							})()}
 						</div>
 					</div>
 				)}

@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { ApiError } from "@/api";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useExperiments } from "@/features/research/hooks";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
 import type { ExperimentListItem } from "@/types";
 
 function statusVariant(status: string): "healthy" | "live" | "warning" | "error" | "idle" {

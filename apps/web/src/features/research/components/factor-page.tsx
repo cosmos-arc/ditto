@@ -30,7 +30,7 @@ function ScopeField({
 	);
 }
 
-function RequirementRow({ label, value }: { readonly label: string; readonly value?: string }) {
+function RequirementRow({ label, value }: { readonly label: string; readonly value?: string | undefined }) {
 	return (
 		<div className="border-b border-(--color-border-subtle) py-3 last:border-b-0">
 			<dt className="text-xs text-(--color-foreground-tertiary)">{label}</dt>

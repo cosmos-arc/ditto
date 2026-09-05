@@ -50,7 +50,7 @@ export function OrdersHealthStrip() {
 					>
 						<i aria-hidden="true" className={`size-1.5 rounded-full ${dotClass}`} />
 						<span>{label}</span>
-						<span className="flex h-4 items-center rounded-sm bg-[oklch(1_0_0/.04)] px-1 font-data text-xs leading-[13.5px] font-medium">
+						<span className="flex h-4 items-center rounded-sm bg-(--overlay-4) px-1 font-data text-xs leading-[13.5px] font-medium">
 							{data?.[key] ?? "—"}
 						</span>
 					</div>

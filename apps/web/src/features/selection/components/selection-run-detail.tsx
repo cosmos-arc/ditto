@@ -1,5 +1,5 @@
-import { AgentContextActions } from "@/features/agent";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
+import { ContextActions } from "@/providers";
 import type { SelectionRun, SelectionRunDiff } from "../api";
 
 function compactIdentity(value: string): string {
@@ -104,7 +104,7 @@ export function SelectionRunDetail({
 							<p className="my-2 text-xs leading-5 text-(--color-foreground-tertiary)">
 								Agent 只能引用该 run 的精确排名、排除原因和 evidence；不能新增候选。
 							</p>
-							<AgentContextActions
+							<ContextActions
 								contextId={run.run_id}
 								contextType="selection"
 								evidenceLabel="生成 SelectionMemo"

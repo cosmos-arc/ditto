@@ -5,11 +5,8 @@ import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
-import type { components } from "@/types/generated/api";
+import type { PaperAccountLedger as PaperLedger, PaperSessionRead } from "../api/paper-accounts";
 import { PaperAccountWorkspace } from "./paper-account-workspace";
-
-type PaperLedger = components["schemas"]["PaperAccountLedgerResponse"];
-type PaperSessionRead = components["schemas"]["PaperSessionReadResponse"];
 
 const sessionRead: PaperSessionRead = {
 	session: {
@@ -153,8 +150,9 @@ describe("PaperAccountWorkspace", () => {
 				});
 			}),
 			http.post("/api/v1/paper/sessions/paper-s-1/recover", async ({ request }) => {
-				calls.recover(await request.json());
-				return HttpResponse.json({ data: { idempotency_key: "recover-1", recovered_execution_count: 2 } });
+				const body = (await request.json()) as { idempotency_key: string };
+				calls.recover(body);
+				return HttpResponse.json({ data: { idempotency_key: body.idempotency_key, recovered_execution_count: 2 } });
 			}),
 			http.post("/api/v1/paper/sessions/paper-s-1/reconcile", async ({ request }) => {
 				calls.reconcile(await request.json());
@@ -182,8 +180,33 @@ describe("PaperAccountWorkspace", () => {
 		useReadHandlers();
 		server.use(
 			http.post("/api/v1/paper/sessions/paper-s-1/orders", async ({ request }) => {
-				posted = await request.json();
-				return HttpResponse.json({ data: sessionRead.executions[0] }, { status: 201 });
+				const body = (await request.json()) as {
+					idempotency_key: string;
+					instrument_id: number;
+					order_id: string;
+					settlement_date: string;
+					side: "buy" | "sell";
+					trade_date: string;
+				};
+				posted = body;
+				return HttpResponse.json(
+					{
+						data: {
+							...sessionRead.executions[0],
+							fill: {
+								...sessionRead.executions[0]?.fill,
+								direction: body.side,
+								instrument_id: body.instrument_id,
+								order_id: body.order_id,
+								settlement_date: body.settlement_date,
+								trade_date: body.trade_date,
+							},
+							idempotency_key: body.idempotency_key,
+							order_id: body.order_id,
+						},
+					},
+					{ status: 201 },
+				);
 			}),
 		);
 
@@ -217,8 +240,33 @@ describe("PaperAccountWorkspace", () => {
 		useReadHandlers();
 		server.use(
 			http.post("/api/v1/paper/sessions/paper-s-1/orders", async ({ request }) => {
-				posted = await request.json();
-				return HttpResponse.json({ data: sessionRead.executions[0] }, { status: 201 });
+				const body = (await request.json()) as {
+					idempotency_key: string;
+					instrument_id: number;
+					order_id: string;
+					settlement_date: string;
+					side: "buy" | "sell";
+					trade_date: string;
+				};
+				posted = body;
+				return HttpResponse.json(
+					{
+						data: {
+							...sessionRead.executions[0],
+							fill: {
+								...sessionRead.executions[0]?.fill,
+								direction: body.side,
+								instrument_id: body.instrument_id,
+								order_id: body.order_id,
+								settlement_date: body.settlement_date,
+								trade_date: body.trade_date,
+							},
+							idempotency_key: body.idempotency_key,
+							order_id: body.order_id,
+						},
+					},
+					{ status: 201 },
+				);
 			}),
 		);
 

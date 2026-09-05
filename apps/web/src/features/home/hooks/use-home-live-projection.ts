@@ -1,7 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchDailyDecisionV3 } from "@/features/portfolio/api/daily-decision";
-import { resolveTradingExecutionScope } from "@/features/portfolio/api/execution-scope";
-import { tradingKeys } from "@/features/portfolio/api/query-keys";
+import { fetchDailyDecisionV3, resolveTradingExecutionScope, tradingKeys } from "@/features/portfolio";
 import { type HomeLiveProjection, mapDailyDecisionV3ToHomeProjection } from "../api/home-projection";
 
 export function useHomeLiveProjection<T>(

@@ -1,6 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import type { GetSignalDetailResponse } from "@/types";
 import { mapDailyDecisionToSignalDetail, mapDailyDecisionV2ToLegacy } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useDailyDecisionV2 } from "./use-daily-decision-v2";
@@ -14,7 +12,7 @@ export function useSignalDetail(id: string) {
 	);
 	const mockQuery = useQuery({
 		queryKey: ["trading", "signals", id],
-		queryFn: () => apiClient.get<GetSignalDetailResponse>(`/portfolio/review/${id}`),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getSignalDetail }) => getSignalDetail(id)),
 		enabled: usePrototypeMocks,
 	});
 

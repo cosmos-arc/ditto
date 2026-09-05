@@ -50,7 +50,7 @@ const EQUITY_VALUE_CLASS = "text-3xl";
 function valueSizeClass(variant: string | null | undefined, size: string | null | undefined): string {
 	if (variant === "equity") return EQUITY_VALUE_CLASS;
 	if (variant === "strip") return "text-sm";
-	return VALUE_SIZE_CLASS[size ?? "md"];
+	return VALUE_SIZE_CLASS[size ?? "md"] ?? VALUE_SIZE_CLASS["md"] ?? "text-lg";
 }
 
 function sparklineColor(trend: TrendDirection | undefined): "up" | "down" | "neutral" {
@@ -64,9 +64,9 @@ function sparklineColor(trend: TrendDirection | undefined): "up" | "down" | "neu
 interface MetricProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof metricVariants> {
 	readonly label: string;
 	readonly value: string | number;
-	readonly sub?: string | readonly string[];
-	readonly trend?: TrendDirection;
-	readonly sparkline?: readonly number[];
+	readonly sub?: string | readonly string[] | undefined;
+	readonly trend?: TrendDirection | undefined;
+	readonly sparkline?: readonly number[] | undefined;
 }
 
 /* ── Component ── */

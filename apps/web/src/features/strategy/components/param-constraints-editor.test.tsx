@@ -32,6 +32,12 @@ function specWith(constraints: readonly ParamConstraintSpec[]): StrategySpec {
 	};
 }
 
+function updaterAt(mock: ReturnType<typeof vi.fn>, index = 0): (draft: StrategySpec) => StrategySpec {
+	const updater: unknown = mock.mock.calls[index]?.[0];
+	if (typeof updater !== "function") throw new Error(`expected updater call at index ${index}`);
+	return updater as (draft: StrategySpec) => StrategySpec;
+}
+
 describe("ParamConstraintsEditor", () => {
 	it("renders name / dtype / min / max / step for a numeric constraint", () => {
 		render(<ParamConstraintsEditor spec={specWith([INT_CONSTRAINT])} onChange={vi.fn()} />);
@@ -60,7 +66,7 @@ describe("ParamConstraintsEditor", () => {
 		render(<ParamConstraintsEditor spec={base} onChange={onChange} />);
 		fireEvent.click(screen.getByRole("button", { name: "添加参数约束" }));
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = updaterAt(onChange);
 		const next = updater(base);
 		expect(next.paramConstraints).toHaveLength(2);
 		expect(next.paramConstraints[1]).toEqual({ name: "", dtype: "int", allowedValues: [] });
@@ -72,7 +78,7 @@ describe("ParamConstraintsEditor", () => {
 		render(<ParamConstraintsEditor spec={base} onChange={onChange} />);
 		fireEvent.click(screen.getByLabelText("删除约束 1"));
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = updaterAt(onChange);
 		expect(updater(base).paramConstraints).toEqual([STR_CONSTRAINT]);
 	});
 
@@ -82,7 +88,7 @@ describe("ParamConstraintsEditor", () => {
 		render(<ParamConstraintsEditor spec={base} onChange={onChange} />);
 		fireEvent.click(screen.getByLabelText("下移约束 1"));
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = updaterAt(onChange);
 		expect(updater(base).paramConstraints).toEqual([STR_CONSTRAINT, INT_CONSTRAINT]);
 	});
 
@@ -92,9 +98,9 @@ describe("ParamConstraintsEditor", () => {
 		render(<ParamConstraintsEditor spec={base} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("参数名 1"), { target: { value: "window" } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).paramConstraints[0].name).toBe("window");
-		expect(updater(base).paramConstraints[0].dtype).toBe("int");
+		const updater = updaterAt(onChange);
+		expect(updater(base).paramConstraints[0]?.name).toBe("window");
+		expect(updater(base).paramConstraints[0]?.dtype).toBe("int");
 	});
 
 	it("changing dtype to float shows min/max/step fields", () => {
@@ -103,8 +109,8 @@ describe("ParamConstraintsEditor", () => {
 		render(<ParamConstraintsEditor spec={base} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("类型 1"), { target: { value: "float" } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).paramConstraints[0].dtype).toBe("float");
+		const updater = updaterAt(onChange);
+		expect(updater(base).paramConstraints[0]?.dtype).toBe("float");
 	});
 
 	it("editing allowedValues splits comma-separated text into a string array", () => {
@@ -113,7 +119,7 @@ describe("ParamConstraintsEditor", () => {
 		render(<ParamConstraintsEditor spec={base} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("允许值 1"), { target: { value: "x, y ,z," } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
-		expect(updater(base).paramConstraints[0].allowedValues).toEqual(["x", "y", "z"]);
+		const updater = updaterAt(onChange);
+		expect(updater(base).paramConstraints[0]?.allowedValues).toEqual(["x", "y", "z"]);
 	});
 });

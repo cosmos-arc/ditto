@@ -1,11 +1,11 @@
 import { type ReactNode, useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AgentContextActions } from "@/features/agent";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
+import { ContextActions } from "@/providers";
 import {
 	useExperiment,
 	useExperimentArtifacts,
@@ -111,7 +111,7 @@ export function ExperimentDetailPage({ experimentId }: ExperimentDetailPageProps
 					data-info-level="l1"
 					data-info-unit="experiment-actions"
 				>
-					<AgentContextActions
+					<ContextActions
 						className="flex items-center gap-1.5"
 						contextType="experiment-revision"
 						contextId={`${experimentId}@${server.revision}`}

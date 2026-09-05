@@ -111,13 +111,13 @@ export const researchHandlers: RequestHandler[] = [
 		HttpResponse.json({ data: mockExperimentSelectionEvidence }),
 	),
 	http.post("/api/v1/research/experiments/:experimentId/:action", async ({ params, request }) => {
-		if (!new Set(["pause", "cancel", "resume", "retry-fold"]).has(String(params.action))) return undefined;
+		if (!new Set(["pause", "cancel", "resume", "retry-fold"]).has(String(params["action"]))) return undefined;
 		const body = (await request.json()) as { expected_revision?: number };
 		return HttpResponse.json({
 			data: {
-				experiment_id: String(params.experimentId),
-				status: String(params.action),
-				desired_state: String(params.action),
+				experiment_id: String(params["experimentId"]),
+				status: String(params["action"]),
+				desired_state: String(params["action"]),
 				revision: (body.expected_revision ?? mockExperimentDetail.revision) + 1,
 				live_run_ids: [],
 				occurred_at: "2026-08-01T00:00:00Z",
@@ -133,7 +133,7 @@ export const researchHandlers: RequestHandler[] = [
 		return HttpResponse.json({
 			data: {
 				selection_id: "selection-mock-1",
-				experiment_id: String(params.experimentId),
+				experiment_id: String(params["experimentId"]),
 				candidate_id: body.candidate_id,
 				comparison_payload_hash: body.comparison_payload_hash,
 				candidate_evidence_artifact_id: "candidate-bundle-2",
@@ -157,7 +157,7 @@ export const researchHandlers: RequestHandler[] = [
 			data: {
 				selection_id: body.selection_id,
 				claim_id: "claim-mock-1",
-				experiment_id: String(params.experimentId),
+				experiment_id: String(params["experimentId"]),
 				candidate_id: body.candidate_id,
 				fold_id: "holdout",
 				logical_run_id: "run-holdout-mock-1",
@@ -176,7 +176,7 @@ export const researchHandlers: RequestHandler[] = [
 		const experimentId = new URL(request.url).searchParams.get("experiment_id") ?? "exp-1042";
 		return HttpResponse.json({
 			data: {
-				candidate_id: String(params.candidateId),
+				candidate_id: String(params["candidateId"]),
 				experiment_id: experimentId,
 				artifact_id: "candidate-bundle-2",
 				content_hash: "2".repeat(64),
@@ -200,7 +200,7 @@ export const researchHandlers: RequestHandler[] = [
 		const experimentId = new URL(request.url).searchParams.get("experiment_id") ?? "exp-1042";
 		return HttpResponse.json({
 			data: {
-				candidate_id: String(params.candidateId),
+				candidate_id: String(params["candidateId"]),
 				experiment_id: experimentId,
 				artifact_id: "candidate-bundle-2",
 				content_hash: "2".repeat(64),
@@ -213,7 +213,7 @@ export const researchHandlers: RequestHandler[] = [
 		const experimentId = new URL(request.url).searchParams.get("experiment_id") ?? "exp-1042";
 		return HttpResponse.json({
 			data: {
-				candidate_id: String(params.candidateId),
+				candidate_id: String(params["candidateId"]),
 				experiment_id: experimentId,
 				artifact_id: "candidate-bundle-2",
 				content_hash: "2".repeat(64),
@@ -239,7 +239,7 @@ export const researchHandlers: RequestHandler[] = [
 		const query = new URL(request.url).searchParams;
 		return HttpResponse.json({
 			data: {
-				factor_id: String(params.factorId),
+				factor_id: String(params["factorId"]),
 				snapshot_id: query.get("snapshot_id") ?? "snapshot-r3",
 				snapshot_hash: "a".repeat(64),
 				registry_hash: query.get("registry_hash") ?? "f".repeat(64),
@@ -257,7 +257,7 @@ export const researchHandlers: RequestHandler[] = [
 	// === R3 review queue + review-packet live-shape（generated DTO + {data} 信封）===
 	http.get("/api/v1/research/reviews", () => HttpResponse.json({ data: mockReviewQueue })),
 	http.get("/api/v1/research/experiments/:experimentId/review-packet", ({ params }) => {
-		const experimentId = String(params.experimentId);
+		const experimentId = String(params["experimentId"]);
 		if (experimentId !== mockReviewPacket.experiment_id) {
 			return new HttpResponse(null, { status: 404 });
 		}

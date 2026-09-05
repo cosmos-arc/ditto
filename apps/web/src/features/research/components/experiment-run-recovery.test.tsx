@@ -156,4 +156,66 @@ describe("ExperimentRunControls recovery", () => {
 		expect(keys[0]).toBeTruthy();
 		expect(keys[1]).toBe(keys[0]);
 	});
+
+	it("exposes only lifecycle-valid controls for paused, queued, and terminal runs", () => {
+		const paused = render(<ExperimentRunControls detail={{ ...mockExperimentDetail, status: "paused" }} />, {
+			wrapper,
+		});
+		expect(screen.getByRole("button", { name: "恢复" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "取消" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "暂停" })).not.toBeInTheDocument();
+		paused.unmount();
+
+		const queued = render(<ExperimentRunControls detail={{ ...mockExperimentDetail, status: "queued" }} />, {
+			wrapper,
+		});
+		expect(screen.getByRole("button", { name: "取消" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "恢复" })).not.toBeInTheDocument();
+		queued.unmount();
+
+		render(<ExperimentRunControls detail={{ ...mockExperimentDetail, status: "completed", folds: [] }} />, { wrapper });
+		expect(screen.queryByRole("button")).not.toBeInTheDocument();
+	});
+
+	it("retries only the exact failed fold revision and renders the durable receipt", async () => {
+		let body: unknown;
+		let key = "";
+		server.use(
+			http.post("/api/v1/research/experiments/:id/retry-fold", async ({ request }) => {
+				body = await request.json();
+				key = request.headers.get("Idempotency-Key") ?? "";
+				return HttpResponse.json({
+					data: {
+						experiment_id: "exp-1042",
+						status: "queued",
+						desired_state: "running",
+						revision: 10,
+						live_run_ids: [],
+						occurred_at: "2026-08-01T00:00:00Z",
+					},
+				});
+			}),
+		);
+		const user = userEvent.setup();
+		render(<ExperimentRunControls detail={mockExperimentDetail} />, { wrapper });
+
+		await user.click(screen.getByRole("button", { name: "重试 fold-2" }));
+		await expect(screen.findByText(/queued · revision 10/u)).resolves.toBeInTheDocument();
+		expect(body).toEqual({ candidate_id: "candidate-2", fold_id: "fold-2", expected_revision: 4 });
+		expect(key).toBeTruthy();
+	});
+
+	it("shows a typed retry-fold conflict without pretending the fold recovered", async () => {
+		server.use(
+			http.post("/api/v1/research/experiments/:id/retry-fold", () =>
+				HttpResponse.json({ detail: "fold revision changed", error_code: "FOLD_REVISION_CONFLICT" }, { status: 409 }),
+			),
+		);
+		const user = userEvent.setup();
+		render(<ExperimentRunControls detail={mockExperimentDetail} />, { wrapper });
+
+		await user.click(screen.getByRole("button", { name: "重试 fold-2" }));
+		await expect(screen.findByRole("alert")).resolves.toHaveTextContent(/409 FOLD_REVISION_CONFLICT/u);
+		expect(screen.queryByText(/revision 10/u)).not.toBeInTheDocument();
+	});
 });

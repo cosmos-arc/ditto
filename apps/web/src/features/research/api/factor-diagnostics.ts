@@ -1,5 +1,5 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components, operations } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components, operations } from "@/api/generated/schema";
 
 type FactorDiagnosticsOperation = operations["design_research_factor_diagnostics"];
 type FactorDiagnosticsPath = FactorDiagnosticsOperation["parameters"]["path"];
@@ -37,9 +37,9 @@ export function fetchFactorDiagnostics(
 		end_date: scope.endDate,
 		registry_hash: scope.registryHash,
 	};
-	return apiClient.get<FactorDiagnosticsResponse>(
-		withQueryParams(`/v1/research/factors/${encodeURIComponent(factorId)}/diagnostics`, query),
-	);
+	return apiClient.get("/api/v1/research/factors/{factor_id}/diagnostics", {
+		params: { path: { factor_id: factorId }, query },
+	});
 }
 
 export function mapFactorDiagnostics(dto: FactorDiagnosticsResponse): FactorDiagnostics {

@@ -1,5 +1,5 @@
-import { AgentContextActions } from "@/features/agent";
-import { ApiError } from "@/lib/api-client";
+import { ApiError } from "@/api";
+import { ContextActions } from "@/providers";
 import type { CandidateEvidenceResourceKind } from "../api/candidate-evidence";
 import { useCandidateEvidence } from "../hooks";
 
@@ -65,7 +65,7 @@ export function CandidateEvidenceDrilldown({ experimentId, candidateId }: Candid
 		<div className="flex flex-col">
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<h3 className="text-sm font-semibold">Candidate evidence · {candidateId}</h3>
-				<AgentContextActions
+				<ContextActions
 					contextType="experiment-candidate"
 					contextId={`${experimentId}:${candidateId}`}
 					evidenceObjective="复核候选的选择、排除、因子贡献与 provenance"

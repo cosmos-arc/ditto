@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { DOMAINS, type DomainId } from "@/features/navigation/types";
+import { DOMAINS, type DomainId } from "@/features/navigation";
 
 interface AgentLauncherSidecarProps {
 	readonly domain: DomainId;

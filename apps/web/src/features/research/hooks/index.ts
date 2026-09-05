@@ -1,31 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type {
-	GetFactorsResponse,
-	GetResearchRunsResponse,
-	GetReviewQueueResponse,
-	PaginatedRequest,
-	ResearchPulseResponse,
-} from "@/types";
+import { isMockRuntime } from "@/api";
+import type { PaginatedRequest } from "@/types";
 
 export function useResearchPulse() {
+	const usePrototypeMocks = isMockRuntime();
 	return useQuery({
 		queryKey: ["research", "pulse"],
-		queryFn: () => apiClient.get<ResearchPulseResponse>("/research/pulse"),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getResearchPulse }) => getResearchPulse()),
+		enabled: usePrototypeMocks,
 	});
 }
 
 export function useFactors(params?: PaginatedRequest) {
+	const usePrototypeMocks = isMockRuntime();
 	return useQuery({
 		queryKey: ["research", "factors", params],
-		queryFn: () => apiClient.get<GetFactorsResponse>(withQueryParams("/factors", params)),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getFactors }) => getFactors(params)),
+		enabled: usePrototypeMocks,
 	});
 }
 
 export function useResearchRuns() {
+	const usePrototypeMocks = isMockRuntime();
 	return useQuery({
 		queryKey: ["research", "runs"],
-		queryFn: () => apiClient.get<GetResearchRunsResponse>("/research/runs"),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getResearchRuns }) => getResearchRuns()),
+		enabled: usePrototypeMocks,
 	});
 }
 
@@ -48,9 +48,11 @@ export { useReviewPacket } from "./use-review-packet";
 export { useReviews } from "./use-reviews";
 
 export function useReviewQueue() {
+	const usePrototypeMocks = isMockRuntime();
 	return useQuery({
 		queryKey: ["research", "review-queue"],
-		queryFn: () => apiClient.get<GetReviewQueueResponse>("/research/review-queue"),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getReviewQueue }) => getReviewQueue()),
+		enabled: usePrototypeMocks,
 	});
 }
 

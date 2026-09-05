@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 import type {
 	BacktestAuditRecord,
 	BacktestBenchmark,
@@ -10,11 +10,11 @@ import type {
 } from "../types";
 
 export type RunResponse = components["schemas"]["RunResponse"];
-type BacktestReportResponse = components["schemas"]["BacktestReportResponse"];
-type NavPointResponse = components["schemas"]["NavPointResponse"];
-type BenchmarkNavResponse = components["schemas"]["BenchmarkNavResponse"];
-type TradeResponse = components["schemas"]["TradeResponse"];
-type AuditRecordResponse = components["schemas"]["AuditRecordResponse"];
+export type BacktestReportResponse = components["schemas"]["BacktestReportResponse"];
+export type NavPointResponse = components["schemas"]["NavPointResponse"];
+export type BenchmarkNavResponse = components["schemas"]["BenchmarkNavResponse"];
+export type TradeResponse = components["schemas"]["TradeResponse"];
+export type AuditRecordResponse = components["schemas"]["AuditRecordResponse"];
 
 export function mapBacktestRun(dto: RunResponse): BacktestRun {
 	return {
@@ -36,12 +36,14 @@ export function mapBacktestRun(dto: RunResponse): BacktestRun {
 }
 
 export async function fetchBacktestRuns(): Promise<BacktestRun[]> {
-	const rows = await apiClient.get<RunResponse[]>("/v1/backtests/runs");
+	const rows = await apiClient.get("/api/v1/backtests/runs");
 	return rows.map(mapBacktestRun);
 }
 
 export async function fetchBacktestRun(runId: string): Promise<BacktestRun> {
-	const dto = await apiClient.get<RunResponse>(`/v1/backtests/runs/${encodeURIComponent(runId)}`);
+	const dto = await apiClient.get("/api/v1/backtests/runs/{run_id}", {
+		params: { path: { run_id: runId } },
+	});
 	return mapBacktestRun(dto);
 }
 
@@ -50,8 +52,8 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 	const trades = dto.aggregated_trade_stats;
 	return {
 		runId: dto.run_id,
-		periodStart: dto.period?.start ?? "",
-		periodEnd: dto.period?.end ?? "",
+		periodStart: dto.period?.["start"] ?? "",
+		periodEnd: dto.period?.["end"] ?? "",
 		initialCash: dto.initial_cash,
 		finalNav: dto.final_nav,
 		rebalanceFreq: dto.rebalance_freq,
@@ -100,17 +102,23 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 }
 
 export async function fetchBacktestReport(runId: string): Promise<BacktestReport> {
-	const dto = await apiClient.get<BacktestReportResponse>(`/v1/backtests/runs/${encodeURIComponent(runId)}/report`);
+	const dto = await apiClient.get("/api/v1/backtests/runs/{run_id}/report", {
+		params: { path: { run_id: runId } },
+	});
 	return mapBacktestReport(dto);
 }
 
 export async function fetchBacktestNav(runId: string): Promise<BacktestNavPoint[]> {
-	const rows = await apiClient.get<NavPointResponse[]>(`/v1/backtests/runs/${encodeURIComponent(runId)}/nav`);
+	const rows = await apiClient.get("/api/v1/backtests/runs/{run_id}/nav", {
+		params: { path: { run_id: runId } },
+	});
 	return rows.map((row) => ({ tradeDate: row.trade_date, nav: row.nav }));
 }
 
 export async function fetchBacktestBenchmark(runId: string): Promise<BacktestBenchmark> {
-	const dto = await apiClient.get<BenchmarkNavResponse>(`/v1/backtests/runs/${encodeURIComponent(runId)}/benchmark`);
+	const dto = await apiClient.get("/api/v1/backtests/runs/{run_id}/benchmark", {
+		params: { path: { run_id: runId } },
+	});
 	return {
 		runId: dto.run_id,
 		dates: dto.dates ?? [],
@@ -120,7 +128,9 @@ export async function fetchBacktestBenchmark(runId: string): Promise<BacktestBen
 }
 
 export async function fetchBacktestTrades(runId: string): Promise<BacktestTradeRecord[]> {
-	const rows = await apiClient.get<TradeResponse[]>(`/v1/backtests/runs/${encodeURIComponent(runId)}/trades`);
+	const rows = await apiClient.get("/api/v1/backtests/runs/{run_id}/trades", {
+		params: { path: { run_id: runId } },
+	});
 	return rows.map((row) => ({
 		tradeDate: row.trade_date,
 		instrumentId: row.instrument_id,
@@ -135,7 +145,9 @@ export async function fetchBacktestTrades(runId: string): Promise<BacktestTradeR
 }
 
 export async function fetchBacktestAudit(runId: string): Promise<BacktestAuditRecord[]> {
-	const rows = await apiClient.get<AuditRecordResponse[]>(`/v1/backtests/runs/${encodeURIComponent(runId)}/audit`);
+	const rows = await apiClient.get("/api/v1/backtests/runs/{run_id}/audit", {
+		params: { path: { run_id: runId } },
+	});
 	return rows.map((row) => ({
 		id: row.id,
 		runId: row.run_id,

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 interface ContextSectionProps extends React.HTMLAttributes<HTMLDivElement> {
 	readonly title: string;
-	readonly count?: number;
+	readonly count?: number | undefined;
 	readonly defaultOpen?: boolean;
 	readonly action?: React.ReactNode;
 	readonly children: React.ReactNode;

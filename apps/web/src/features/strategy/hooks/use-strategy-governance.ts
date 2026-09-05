@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { ApiError } from "@/lib/api-client";
+import { ApiError } from "@/api";
 import { strategyKeys } from "../api/query-keys";
 import {
 	approveStrategyReview,
@@ -11,7 +11,7 @@ import {
 	submitStrategyReview,
 } from "../api/strategy-lifecycle";
 
-type EvidenceContext = { readonly experimentId?: string | null };
+type EvidenceContext = { readonly experimentId?: string | null | undefined };
 
 export type DecisionVariables = EvidenceContext & {
 	readonly version: number;

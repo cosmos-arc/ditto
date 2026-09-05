@@ -95,6 +95,7 @@ describe("R1 trading live responsive states", () => {
 
 		const list = await screen.findByRole("list", { name: "手工成交记录" });
 		const [row] = await screen.findAllByRole("listitem");
+		if (!row) throw new Error("expected fill ledger row");
 		expect(screen.getByRole("status", { name: "手工执行流水加载完成" })).toHaveTextContent("共 1 笔");
 		expect(list).toHaveAttribute("tabindex", "0");
 		expect(list).toHaveClass("overflow-x-auto");

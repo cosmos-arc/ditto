@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { MarketsPage } from "./markets-page";
+import { MarketsPage } from "@/workflows/market-pages";
 
 function wrapper() {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

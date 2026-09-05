@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { createDailyDecisionV3ViewModel } from "./daily-decision-v3.fixture";
+import { createDailyDecisionV3ViewModel } from "@/features/portfolio/components/daily-decision-v3.fixture";
+import { ContextActionsProvider } from "@/providers/context-actions";
 import { buildDecisionOpinionIdentity, DecisionBriefing } from "./decision-briefing";
 
 const mocks = vi.hoisted(() => ({ useDecisionOpinion: vi.fn() }));
@@ -11,6 +12,33 @@ vi.mock("@/features/agent", async () => {
 });
 
 describe("DecisionBriefing", () => {
+	it("delegates the exact Daily Decision evidence request to neutral context actions", () => {
+		const decision = createDailyDecisionV3ViewModel();
+		const renderActions = vi.fn(() => <span>neutral evidence action</span>);
+		mocks.useDecisionOpinion.mockReturnValue({
+			data: undefined,
+			isLoading: false,
+			isError: false,
+			error: null,
+			refetch: vi.fn(),
+		});
+
+		render(
+			<ContextActionsProvider renderActions={renderActions}>
+				<DecisionBriefing decision={decision} />
+			</ContextActionsProvider>,
+		);
+
+		expect(screen.getByText("neutral evidence action")).toBeInTheDocument();
+		expect(renderActions).toHaveBeenCalledOnce();
+		expect(renderActions).toHaveBeenCalledWith({
+			contextType: "daily-decision-v3",
+			contextId: "strategy-r4:7:2026-08-19:paper-r4:sleeve-r4",
+			evidenceObjective: "复核当前 Daily Decision V3 的风险证据、分歧与不确定性",
+			evidenceLabel: "请求证据分析",
+		});
+	});
+
 	it("builds the exact V3/PIT identity and renders a shadow-only opinion", () => {
 		const decision = createDailyDecisionV3ViewModel();
 		const identity = buildDecisionOpinionIdentity(decision);

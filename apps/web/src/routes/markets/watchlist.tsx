@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { WatchlistPage } from "@/features/markets";
+import { WatchlistPage } from "@/workflows/market-pages";
 
 export const Route = createFileRoute("/markets/watchlist")({
 	component: WatchlistPage,

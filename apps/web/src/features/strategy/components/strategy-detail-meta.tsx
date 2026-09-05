@@ -1,6 +1,6 @@
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { ApiError } from "@/lib/api-client";
 import type { StrategyLifecycleState } from "@/types/strategy";
 import { useStrategy } from "../hooks";
 

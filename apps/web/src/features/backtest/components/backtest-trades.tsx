@@ -1,7 +1,7 @@
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api-client";
 import { useBacktestTrades } from "../hooks";
 
 interface BacktestTradesProps {

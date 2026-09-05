@@ -2,7 +2,7 @@ import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import type { DataProductCoverage as DataProductCoverageModel } from "../api";
 
 interface DataProductCoverageProps {
-	readonly data?: DataProductCoverageModel;
+	readonly data?: DataProductCoverageModel | undefined;
 	readonly isLoading: boolean;
 	readonly isError: boolean;
 }

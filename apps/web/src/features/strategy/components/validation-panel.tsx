@@ -12,7 +12,7 @@ interface ValidationPanelProps {
 /**
  * Spec 校验面板（保存前 pre-save validation）。
  *
- * 展示 `POST /v1/strategies/{id}/versions/{v}/validate` 的 canonical hash、合法性、
+ * 展示 `POST /api/v1/strategies/{id}/versions/{v}/validate` 的 canonical hash、合法性、
  * 变更检测与错误列表。后端对非法 candidate 返 200 + `valid=false`（不抛），UI 如实
  * 反射，绝不自造通过。
  */

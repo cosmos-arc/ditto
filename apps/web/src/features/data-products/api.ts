@@ -1,5 +1,5 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 
 export const DEFAULT_DATA_PRODUCT_PROFILE = "research_daily";
 
@@ -24,45 +24,51 @@ export const dataProductKeys = {
 	license: (datasetId: string, profile: string) => [...dataProductKeys.detail(datasetId, profile), "license"] as const,
 };
 
-function productPath(datasetId: string, view: string, profile: string): string {
-	return withQueryParams(`/v1/data-products/${encodeURIComponent(datasetId)}/${view}`, { profile });
-}
-
 export function fetchDataProducts(profile = DEFAULT_DATA_PRODUCT_PROFILE): Promise<readonly DataProductView[]> {
-	return apiClient.get<readonly DataProductView[]>(withQueryParams("/v1/data-products", { profile }));
+	return apiClient.get("/api/v1/data-products", { params: { query: { profile } } });
 }
 
 export function fetchDataProductCoverage(
 	datasetId: string,
 	profile = DEFAULT_DATA_PRODUCT_PROFILE,
 ): Promise<DataProductCoverage> {
-	return apiClient.get<DataProductCoverage>(productPath(datasetId, "coverage", profile));
+	return apiClient.get("/api/v1/data-products/{dataset_id}/coverage", {
+		params: { path: { dataset_id: datasetId }, query: { profile } },
+	});
 }
 
 export function fetchDataProductQuality(
 	datasetId: string,
 	profile = DEFAULT_DATA_PRODUCT_PROFILE,
 ): Promise<DataProductQuality> {
-	return apiClient.get<DataProductQuality>(productPath(datasetId, "quality", profile));
+	return apiClient.get("/api/v1/data-products/{dataset_id}/quality", {
+		params: { path: { dataset_id: datasetId }, query: { profile } },
+	});
 }
 
 export function fetchDataProductRuns(
 	datasetId: string,
 	profile = DEFAULT_DATA_PRODUCT_PROFILE,
 ): Promise<readonly DataProductRun[]> {
-	return apiClient.get<readonly DataProductRun[]>(productPath(datasetId, "runs", profile));
+	return apiClient.get("/api/v1/data-products/{dataset_id}/runs", {
+		params: { path: { dataset_id: datasetId }, query: { profile } },
+	});
 }
 
 export function fetchDataProductEvidence(
 	datasetId: string,
 	profile = DEFAULT_DATA_PRODUCT_PROFILE,
 ): Promise<DataProductEvidence> {
-	return apiClient.get<DataProductEvidence>(productPath(datasetId, "evidence", profile));
+	return apiClient.get("/api/v1/data-products/{dataset_id}/evidence", {
+		params: { path: { dataset_id: datasetId }, query: { profile } },
+	});
 }
 
 export function fetchDataProductLicense(
 	datasetId: string,
 	profile = DEFAULT_DATA_PRODUCT_PROFILE,
 ): Promise<DataProductLicense> {
-	return apiClient.get<DataProductLicense>(productPath(datasetId, "license", profile));
+	return apiClient.get("/api/v1/data-products/{dataset_id}/license", {
+		params: { path: { dataset_id: datasetId }, query: { profile } },
+	});
 }

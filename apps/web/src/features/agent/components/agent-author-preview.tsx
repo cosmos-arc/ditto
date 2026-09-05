@@ -15,17 +15,25 @@ function record(value: unknown): Readonly<Record<string, unknown>> | null {
 }
 
 function changeRows(payload: Readonly<Record<string, unknown>>): readonly Change[] {
-	const raw = Array.isArray(payload.changes) ? payload.changes : Array.isArray(payload.patch) ? payload.patch : [];
+	const raw = Array.isArray(payload["changes"])
+		? payload["changes"]
+		: Array.isArray(payload["patch"])
+			? payload["patch"]
+			: [];
 	return raw.flatMap((value) => {
 		const item = record(value);
-		if (!item || typeof item.path !== "string") return [];
+		if (!item || typeof item["path"] !== "string") return [];
 		return [
 			{
 				operation:
-					typeof item.op === "string" ? item.op : typeof item.operation === "string" ? item.operation : "change",
-				path: item.path,
-				before: item.before ?? null,
-				after: item.after ?? item.value ?? null,
+					typeof item["op"] === "string"
+						? item["op"]
+						: typeof item["operation"] === "string"
+							? item["operation"]
+							: "change",
+				path: item["path"],
+				before: item["before"] ?? null,
+				after: item["after"] ?? item["value"] ?? null,
 			},
 		];
 	});
@@ -43,14 +51,14 @@ function stringArray(value: unknown): readonly string[] {
 
 export function AgentAuthorPreview({ approval }: { readonly approval: AgentApprovalView }) {
 	const payload = approval.actionPayload;
-	const exactPayload = { ...payload, ...(record(payload.parameters) ?? {}) };
+	const exactPayload = { ...payload, ...(record(payload["parameters"]) ?? {}) };
 	const changes = changeRows(exactPayload);
-	const evidenceRefs = stringArray(exactPayload.evidence_refs);
+	const evidenceRefs = stringArray(exactPayload["evidence_refs"]);
 	const artifactHash =
-		typeof exactPayload.artifact_hash === "string"
-			? exactPayload.artifact_hash
-			: typeof exactPayload.manifest_hash === "string"
-				? exactPayload.manifest_hash
+		typeof exactPayload["artifact_hash"] === "string"
+			? exactPayload["artifact_hash"]
+			: typeof exactPayload["manifest_hash"] === "string"
+				? exactPayload["manifest_hash"]
 				: null;
 
 	return (
@@ -100,8 +108,8 @@ export function AgentAuthorPreview({ approval }: { readonly approval: AgentAppro
 			<div className="mt-4 grid gap-3 sm:grid-cols-2">
 				<div className="rounded-(--radius-sm) bg-(--color-surface-strip) p-3">
 					<p className="text-xs text-(--color-foreground-tertiary)">validation / guardrail</p>
-					<p className="mt-1 break-all font-data text-xs">{exactText(exactPayload.validation ?? "not provided")}</p>
-					<p className="mt-1 break-all font-data text-xs">{exactText(exactPayload.guardrail ?? "not provided")}</p>
+					<p className="mt-1 break-all font-data text-xs">{exactText(exactPayload["validation"] ?? "not provided")}</p>
+					<p className="mt-1 break-all font-data text-xs">{exactText(exactPayload["guardrail"] ?? "not provided")}</p>
 				</div>
 				<div className="rounded-(--radius-sm) bg-(--color-surface-strip) p-3">
 					<p className="text-xs text-(--color-foreground-tertiary)">artifact / evidence</p>

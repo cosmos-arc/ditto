@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import type { GetRiskVarResponse } from "@/types";
+import { shouldUsePrototypeMocks } from "../api/runtime";
 
 export function useRiskVar() {
+	const usePrototypeMocks = shouldUsePrototypeMocks();
 	return useQuery({
 		queryKey: ["trading", "risk", "var"],
-		queryFn: () => apiClient.get<GetRiskVarResponse>("/trading/risk/var"),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getRiskVar }) => getRiskVar()),
+		enabled: usePrototypeMocks,
 	});
 }

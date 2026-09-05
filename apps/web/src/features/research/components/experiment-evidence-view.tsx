@@ -1,8 +1,8 @@
-import type { components } from "@/types/generated/api";
+import type { ExperimentArtifactResponse, ExperimentSelectionEvidenceResponse } from "../api/experiments";
 
 interface ExperimentEvidenceViewProps {
-	readonly artifacts: readonly components["schemas"]["ExperimentArtifactResponse"][];
-	readonly selectionEvidence: components["schemas"]["ExperimentSelectionEvidenceResponse"] | null;
+	readonly artifacts: readonly ExperimentArtifactResponse[];
+	readonly selectionEvidence: ExperimentSelectionEvidenceResponse | null;
 }
 
 export function ExperimentEvidenceView({ artifacts, selectionEvidence }: ExperimentEvidenceViewProps) {

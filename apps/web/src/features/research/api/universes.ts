@@ -1,10 +1,10 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 
-type UniverseResponse = components["schemas"]["UniverseResponse"];
-type MemberResponse = components["schemas"]["MemberResponse"];
-type CreateUniverseRequest = components["schemas"]["CreateUniverseRequest"];
-type UpdateUniverseRequest = components["schemas"]["UpdateUniverseRequest"];
+export type UniverseResponse = components["schemas"]["UniverseResponse"];
+export type MemberResponse = components["schemas"]["MemberResponse"];
+export type CreateUniverseRequest = components["schemas"]["CreateUniverseRequest"];
+export type UpdateUniverseRequest = components["schemas"]["UpdateUniverseRequest"];
 
 export interface UniverseDefinition {
 	readonly universeId: string;
@@ -29,14 +29,14 @@ function mapUniverse(dto: UniverseResponse): UniverseDefinition {
 }
 
 export async function fetchUniverses(): Promise<UniverseDefinition[]> {
-	const rows = await apiClient.get<UniverseResponse[]>("/v1/universes");
+	const rows = await apiClient.get("/api/v1/universes");
 	return rows.map(mapUniverse);
 }
 
 export async function fetchUniverseMembers(universeId: string, asOf: string): Promise<UniverseMember[]> {
-	const rows = await apiClient.get<MemberResponse[]>(
-		withQueryParams(`/v1/universes/${encodeURIComponent(universeId)}/members`, { asof: asOf }),
-	);
+	const rows = await apiClient.get("/api/v1/universes/{universe_id}/members", {
+		params: { path: { universe_id: universeId }, query: { asof: asOf } },
+	});
 	return rows.map((row) => ({ instrumentId: row.instrument_id }));
 }
 
@@ -50,7 +50,7 @@ export async function createUniverse(input: {
 		name: input.name,
 		description: input.description || null,
 	};
-	return mapUniverse(await apiClient.post<UniverseResponse>("/v1/universes", payload));
+	return mapUniverse(await apiClient.post("/api/v1/universes", { body: payload }));
 }
 
 export async function updateUniverse(
@@ -58,8 +58,8 @@ export async function updateUniverse(
 	input: {
 		readonly name: string;
 		readonly description?: string;
-		readonly effectiveDate?: string;
-		readonly members?: readonly string[];
+		readonly effectiveDate?: string | undefined;
+		readonly members?: readonly string[] | undefined;
 	},
 ): Promise<UniverseDefinition> {
 	const payload: UpdateUniverseRequest = {
@@ -68,9 +68,16 @@ export async function updateUniverse(
 		effective_date: input.effectiveDate || null,
 		members: input.members ? [...input.members] : null,
 	};
-	return mapUniverse(await apiClient.put<UniverseResponse>(`/v1/universes/${encodeURIComponent(universeId)}`, payload));
+	return mapUniverse(
+		await apiClient.put("/api/v1/universes/{universe_id}", {
+			body: payload,
+			params: { path: { universe_id: universeId } },
+		}),
+	);
 }
 
 export function deleteUniverse(universeId: string): Promise<boolean> {
-	return apiClient.delete<boolean>(`/v1/universes/${encodeURIComponent(universeId)}`);
+	return apiClient.delete("/api/v1/universes/{universe_id}", {
+		params: { path: { universe_id: universeId } },
+	});
 }

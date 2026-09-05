@@ -5,7 +5,7 @@
  * 中的 camelCase view-model。后端 spec_json 存的是 legacy `StrategySpec` asdict，
  * {@link parseSpecJson} 用 type guard 容错解析，缺失字段回退中性默认。
  */
-import type { components } from "@/types/generated/api";
+import type { components } from "@/api/generated/schema";
 import type {
 	ConstraintSpec,
 	CostModelSpec,
@@ -101,15 +101,15 @@ function asOptionalNumber(value: unknown): number | undefined {
 function parseParamConstraints(value: unknown): readonly ParamConstraintSpec[] {
 	if (!Array.isArray(value)) return [];
 	return value.flatMap((item: unknown): ParamConstraintSpec[] => {
-		if (!isRecord(item) || !isParamDtype(item.dtype)) return [];
+		if (!isRecord(item) || !isParamDtype(item["dtype"])) return [];
 		const constraint: { name: string; dtype: ParamDtype; allowedValues: readonly string[] } & {
 			minValue?: number;
 			maxValue?: number;
 			step?: number;
-		} = { name: asString(item.name), dtype: item.dtype, allowedValues: asStringArray(item.allowed_values) };
-		const minValue = asOptionalNumber(item.min_value);
-		const maxValue = asOptionalNumber(item.max_value);
-		const step = asOptionalNumber(item.step);
+		} = { name: asString(item["name"]), dtype: item["dtype"], allowedValues: asStringArray(item["allowed_values"]) };
+		const minValue = asOptionalNumber(item["min_value"]);
+		const maxValue = asOptionalNumber(item["max_value"]);
+		const step = asOptionalNumber(item["step"]);
 		if (minValue !== undefined) constraint.minValue = minValue;
 		if (maxValue !== undefined) constraint.maxValue = maxValue;
 		if (step !== undefined) constraint.step = step;
@@ -119,39 +119,40 @@ function parseParamConstraints(value: unknown): readonly ParamConstraintSpec[] {
 
 function parseScorer(value: unknown): ScorerSpec {
 	if (!isRecord(value)) return { method: "", params: {} };
-	return { method: asString(value.method), params: asParams(value.params) };
+	return { method: asString(value["method"]), params: asParams(value["params"]) };
 }
 
 function parseSelector(value: unknown): SelectorSpec {
 	if (!isRecord(value)) return { method: "", params: {} };
-	return { method: asString(value.method), params: asParams(value.params) };
+	return { method: asString(value["method"]), params: asParams(value["params"]) };
 }
 
 function parseCostModel(value: unknown): CostModelSpec | undefined {
 	if (!isRecord(value)) return undefined;
 	const model: { commissionRate?: number; slippageBps?: number; stampDuty?: number; impactModel?: string } = {};
-	if (typeof value.commission_rate === "number") model.commissionRate = value.commission_rate;
-	if (typeof value.slippage_bps === "number") model.slippageBps = value.slippage_bps;
-	if (typeof value.stamp_duty === "number") model.stampDuty = value.stamp_duty;
-	if (typeof value.impact_model === "string") model.impactModel = value.impact_model;
+	if (typeof value["commission_rate"] === "number") model.commissionRate = value["commission_rate"];
+	if (typeof value["slippage_bps"] === "number") model.slippageBps = value["slippage_bps"];
+	if (typeof value["stamp_duty"] === "number") model.stampDuty = value["stamp_duty"];
+	if (typeof value["impact_model"] === "string") model.impactModel = value["impact_model"];
 	return Object.keys(model).length > 0 ? model : undefined;
 }
 
 function parseExecution(value: unknown): ExecutionSpec {
 	if (!isRecord(value)) return { frequency: "", method: "", defaultOrderType: "market" };
-	return {
-		frequency: asString(value.frequency),
-		method: asString(value.method),
-		defaultOrderType: asString(value.default_order_type) || "market",
-		costModel: parseCostModel(value.cost_model),
+	const execution = {
+		frequency: asString(value["frequency"]),
+		method: asString(value["method"]),
+		defaultOrderType: asString(value["default_order_type"]) || "market",
 	};
+	const costModel = parseCostModel(value["cost_model"]);
+	return costModel === undefined ? execution : { ...execution, costModel };
 }
 
 function parseConstraints(value: unknown): readonly ConstraintSpec[] {
 	if (!Array.isArray(value)) return [];
 	return value.flatMap((item: unknown): ConstraintSpec[] => {
 		if (!isRecord(item)) return [];
-		return [{ type: asString(item.type), params: asParams(item.params) }];
+		return [{ type: asString(item["type"]), params: asParams(item["params"]) }];
 	});
 }
 
@@ -162,20 +163,20 @@ export function parseSpecJson(
 ): StrategySpec {
 	const spec = isRecord(specJson) ? specJson : {};
 	return {
-		strategyId: asString(spec.strategy_id) || fallback.strategyId,
-		name: asString(spec.name) || fallback.name,
-		template: asString(spec.template),
-		universe: asString(spec.universe),
-		assetClass: asString(spec.asset_class),
-		benchmark: asString(spec.benchmark),
-		scorer: parseScorer(spec.scorer),
-		selector: parseSelector(spec.selector),
-		execution: parseExecution(spec.execution),
-		constraints: parseConstraints(spec.constraints),
-		params: asParams(spec.params),
-		signalExpressions: asStringArray(spec.signal_expressions),
-		signalWeights: asNumberArray(spec.signal_weights),
-		paramConstraints: parseParamConstraints(spec.param_constraints),
+		strategyId: asString(spec["strategy_id"]) || fallback.strategyId,
+		name: asString(spec["name"]) || fallback.name,
+		template: asString(spec["template"]),
+		universe: asString(spec["universe"]),
+		assetClass: asString(spec["asset_class"]),
+		benchmark: asString(spec["benchmark"]),
+		scorer: parseScorer(spec["scorer"]),
+		selector: parseSelector(spec["selector"]),
+		execution: parseExecution(spec["execution"]),
+		constraints: parseConstraints(spec["constraints"]),
+		params: asParams(spec["params"]),
+		signalExpressions: asStringArray(spec["signal_expressions"]),
+		signalWeights: asNumberArray(spec["signal_weights"]),
+		paramConstraints: parseParamConstraints(spec["param_constraints"]),
 	};
 }
 

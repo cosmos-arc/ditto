@@ -3,7 +3,7 @@ import type { SparklineColor } from "@/components/data/sparkline";
 import { Sparkline } from "@/components/data/sparkline";
 import { ContextSection } from "@/components/domain/context-section";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
-import { useMarketPulseMetrics } from "../hooks";
+import { type LoadMarketContext, useMarketPulseMetrics } from "../hooks";
 
 const DRIVER_LABELS: Record<string, string> = {
 	breadth: "市场宽度",
@@ -35,8 +35,12 @@ function changeTextColor(change: string): string {
  * Matches prototype .pulse-metric items: label + value/change + optional sparkline.
  * Consumes MarketPulseMetric mock data (4 metrics with inline sparklines).
  */
-export function MarketPulseSection() {
-	const { data, error, isError, isLoading } = useMarketPulseMetrics();
+export function MarketPulseSection({
+	loadMarketContext,
+}: {
+	readonly loadMarketContext?: LoadMarketContext | undefined;
+}) {
+	const { data, error, isError, isLoading } = useMarketPulseMetrics(loadMarketContext);
 
 	return (
 		<ContextSection

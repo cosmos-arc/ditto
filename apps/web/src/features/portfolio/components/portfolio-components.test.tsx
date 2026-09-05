@@ -5,7 +5,11 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { liveDailyDecisionV3 as mockDailyDecisionV3, portfolioHandlers } from "@/mocks/handlers/portfolio";
 import { server } from "@/mocks/server";
-import type { components } from "@/types/generated/api";
+import type {
+	DailyDecisionReportResponse,
+	DailyDecisionV2Response,
+	DailyDecisionV3Response,
+} from "../api/daily-decision";
 import { EquityPnlBlock } from "./equity-pnl-block";
 import { PortfolioOverviewPage } from "./portfolio-overview-page";
 import { PortfolioPage } from "./portfolio-page";
@@ -15,10 +19,6 @@ import { PortfolioPage } from "./portfolio-page";
 import { PortfolioSessionStrip } from "./portfolio-session-strip";
 import { PositionsSummary } from "./positions-summary";
 import { RiskAlertsBlock } from "./risk-alerts-block";
-
-type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
-type DailyDecisionV3Response = components["schemas"]["DailyDecisionV3Response"];
-type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -202,6 +202,14 @@ const liveDailyDecisionV3 = {
 } satisfies DailyDecisionV3Response;
 
 describe("Trading route page contract handoffs", () => {
+	it("forwards an explicit account as-of date into manual onboarding", () => {
+		window.history.replaceState({}, "", "/portfolio/manual?as_of=2042-01-02");
+
+		render(<PortfolioPage mode="manual" />, { wrapper: createWrapper() });
+
+		expect(screen.getByLabelText("开户日期")).toHaveValue("2042-01-02");
+	});
+
 	it("covers PortfolioPage route composition", () => {
 		render(<PortfolioPage />, { wrapper: createWrapper() });
 

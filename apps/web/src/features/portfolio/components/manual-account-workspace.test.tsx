@@ -5,10 +5,13 @@ import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
-import type { components } from "@/types/generated/api";
+import type {
+	CorrectManualEventBody,
+	ManualAccountLedger as Ledger,
+	ManualEventBody,
+	ReverseManualEventBody,
+} from "../api/manual-accounts";
 import { ManualAccountWorkspace } from "./manual-account-workspace";
-
-type Ledger = components["schemas"]["AccountLedgerResponse"];
 
 const ledger: Ledger = {
 	account: {
@@ -76,6 +79,17 @@ const ledger: Ledger = {
 	},
 };
 
+function responseEvent(overrides: Partial<Ledger["events"][number]>): Ledger["events"][number] {
+	const original = ledger.events[0];
+	if (original === undefined) throw new Error("manual account fixture requires an event");
+	return {
+		...original,
+		event_hash: "account-event:sha256:response-event",
+		event_id: "response-event",
+		...overrides,
+	};
+}
+
 function createWrapper() {
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false }, mutations: { retry: false } },
@@ -105,9 +119,16 @@ describe("ManualAccountWorkspace", () => {
 		server.use(
 			http.get("/api/v1/manual/accounts/manual-a/ledger", () => HttpResponse.json({ data: ledger })),
 			http.post("/api/v1/manual/accounts/manual-a/events", async ({ request }) => {
-				posted = await request.json();
+				const body = (await request.json()) as ManualEventBody;
+				posted = body;
 				return HttpResponse.json(
-					{ data: { account: ledger.account, event: ledger.events[0], status: "created" } },
+					{
+						data: {
+							account: ledger.account,
+							event: responseEvent({ event_type: body.event_type, idempotency_key: body.idempotency_key }),
+							status: "created",
+						},
+					},
 					{ status: 201 },
 				);
 			}),
@@ -148,9 +169,20 @@ describe("ManualAccountWorkspace", () => {
 		server.use(
 			http.get("/api/v1/manual/accounts/manual-a/ledger", () => HttpResponse.json({ data: ledger })),
 			http.post("/api/v1/manual/accounts/manual-a/reversals", async ({ request }) => {
-				reverseRequest(await request.json());
+				const body = (await request.json()) as ReverseManualEventBody;
+				reverseRequest(body);
 				return HttpResponse.json(
-					{ data: { account: ledger.account, event: ledger.events[0], status: "created" } },
+					{
+						data: {
+							account: ledger.account,
+							event: responseEvent({
+								event_type: "reversal",
+								idempotency_key: body.idempotency_key,
+								reverses_event_id: body.reverses_event_id,
+							}),
+							status: "created",
+						},
+					},
 					{ status: 201 },
 				);
 			}),
@@ -176,9 +208,21 @@ describe("ManualAccountWorkspace", () => {
 		server.use(
 			http.get("/api/v1/manual/accounts/manual-a/ledger", () => HttpResponse.json({ data: ledger })),
 			http.post("/api/v1/manual/accounts/manual-a/corrections", async ({ request }) => {
-				correctionBody = await request.json();
+				const body = (await request.json()) as CorrectManualEventBody;
+				correctionBody = body;
 				return HttpResponse.json(
-					{ data: { account: ledger.account, event: ledger.events[0], status: "created" } },
+					{
+						data: {
+							account: ledger.account,
+							event: responseEvent({
+								corrects_event_id: body.corrects_event_id,
+								event_type: "correction",
+								idempotency_key: body.replacement.idempotency_key,
+								replacement_event_type: body.replacement.event_type,
+							}),
+							status: "created",
+						},
+					},
 					{ status: 201 },
 				);
 			}),
@@ -213,9 +257,16 @@ describe("ManualAccountWorkspace", () => {
 				);
 			}),
 			http.post("/api/v1/manual/accounts/manual-a/events", async ({ request }) => {
-				createdBodies.push(await request.json());
+				const body = (await request.json()) as ManualEventBody;
+				createdBodies.push(body);
 				return HttpResponse.json(
-					{ data: { account: ledger.account, event: ledger.events[0], status: "created" } },
+					{
+						data: {
+							account: ledger.account,
+							event: responseEvent({ event_type: body.event_type, idempotency_key: body.idempotency_key }),
+							status: "created",
+						},
+					},
 					{ status: 201 },
 				);
 			}),

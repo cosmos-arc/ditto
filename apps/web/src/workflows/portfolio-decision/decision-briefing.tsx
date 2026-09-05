@@ -1,8 +1,9 @@
 import { StatusBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { type AgentDecisionOpinionIdentity, useDecisionOpinion } from "@/features/agent";
+import type { DailyDecisionV3ViewModel } from "@/features/portfolio";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
-import type { DailyDecisionV3ViewModel } from "../types/daily-decision-v3";
+import { ContextActions } from "@/providers/context-actions";
 
 function exactValue(value: string | null): string | null {
 	const normalized = value?.trim();
@@ -58,7 +59,7 @@ export function buildDecisionOpinionIdentity(decision: DailyDecisionV3ViewModel)
 	};
 }
 
-function EvidenceAnalysisLink({ decision }: { readonly decision: DailyDecisionV3ViewModel }) {
+function EvidenceAnalysisAction({ decision }: { readonly decision: DailyDecisionV3ViewModel }) {
 	const contextId = [
 		decision.identity.strategyId,
 		decision.identity.strategyVersion,
@@ -68,16 +69,13 @@ function EvidenceAnalysisLink({ decision }: { readonly decision: DailyDecisionV3
 	]
 		.map((part) => part ?? "missing")
 		.join(":");
-	const search = new URLSearchParams({
-		tab: "runs",
-		contextType: "daily-decision-v3",
-		contextId,
-		objective: "复核当前 Daily Decision V3 的风险证据、分歧与不确定性",
-	});
 	return (
-		<Button asChild size="sm" variant="outline">
-			<a href={`/research/agent?${search.toString()}`}>请求证据分析</a>
-		</Button>
+		<ContextActions
+			contextType="daily-decision-v3"
+			contextId={contextId}
+			evidenceObjective="复核当前 Daily Decision V3 的风险证据、分歧与不确定性"
+			evidenceLabel="请求证据分析"
+		/>
 	);
 }
 
@@ -95,7 +93,7 @@ export function DecisionBriefing({ decision }: { readonly decision: DailyDecisio
 				actions={
 					<div className="flex items-center gap-2">
 						<StatusBadge label="SHADOW ONLY" variant="warning" />
-						<EvidenceAnalysisLink decision={decision} />
+						<EvidenceAnalysisAction decision={decision} />
 					</div>
 				}
 			/>

@@ -131,7 +131,7 @@ export function FillLedgerList({ enabled = true }: FillLedgerListProps) {
 									<FillLedgerRow
 										key={fill.id}
 										fill={fill}
-										splitCount={fillsByIntent[fill.intentId]}
+										splitCount={fillsByIntent[fill.intentId] ?? 0}
 										onCorrect={openCorrection}
 									/>
 								))}

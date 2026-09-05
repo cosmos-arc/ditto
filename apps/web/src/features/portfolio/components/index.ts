@@ -1,5 +1,4 @@
 export { DailyDecisionV3Workspace } from "./daily-decision-v3-workspace";
-export { DecisionBriefing } from "./decision-briefing";
 export { EquityPnlBlock } from "./equity-pnl-block";
 export { FillLedgerList } from "./fill-ledger-list";
 export { PortfolioComparisonWorkspace } from "./portfolio-comparison-workspace";

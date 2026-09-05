@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FactorPage } from "@/features/research";
-import type { FactorDiagnosticsScope } from "@/features/research/api/factor-diagnostics";
+import { type FactorDiagnosticsScope, FactorPage } from "@/features/research";
 
 interface FactorDiagnosticsSearch {
 	readonly snapshotId: string;
@@ -11,10 +10,10 @@ interface FactorDiagnosticsSearch {
 
 function parseDiagnosticsSearch(search: Record<string, unknown>): FactorDiagnosticsSearch {
 	return {
-		snapshotId: typeof search.snapshotId === "string" ? search.snapshotId : "",
-		startDate: typeof search.startDate === "string" ? search.startDate : "",
-		endDate: typeof search.endDate === "string" ? search.endDate : "",
-		registryHash: typeof search.registryHash === "string" ? search.registryHash : "",
+		snapshotId: typeof search["snapshotId"] === "string" ? search["snapshotId"] : "",
+		startDate: typeof search["startDate"] === "string" ? search["startDate"] : "",
+		endDate: typeof search["endDate"] === "string" ? search["endDate"] : "",
+		registryHash: typeof search["registryHash"] === "string" ? search["registryHash"] : "",
 	};
 }
 

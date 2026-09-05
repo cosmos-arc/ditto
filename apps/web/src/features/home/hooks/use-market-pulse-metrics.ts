@@ -1,8 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchCurrentMarketContext, type MarketContext } from "@/features/markets/api/market-evidence";
-import { apiClient } from "@/lib/api-client";
+import type { MarketContext } from "@/features/markets";
 import type { GetMarketPulseMetricsResponse } from "@/types";
 import { shouldUseHomePrototypeMocks } from "../api/runtime";
+
+export type LoadMarketContext = () => Promise<MarketContext>;
+
+function missingMarketContextProvider(): Promise<never> {
+	return Promise.reject(new Error("live MarketContext requires an app workflow provider"));
+}
 
 const REGIME_LABELS: Record<NonNullable<MarketContext["regime_label"]>, string> = {
 	risk_on: "风险偏好",
@@ -94,18 +99,20 @@ export function marketContextToPulse(context: MarketContext): GetMarketPulseMetr
 	};
 }
 
-export function useMarketPulseMetrics() {
+export function useMarketPulseMetrics(loadMarketContext: LoadMarketContext = missingMarketContextProvider) {
 	const useMocks = shouldUseHomePrototypeMocks();
 	const liveQuery = useQuery({
 		queryKey: ["market-evidence", "context", "current"],
-		queryFn: () => fetchCurrentMarketContext(),
+		// Do not hand the provider directly to TanStack Query: query functions receive
+		// a QueryFunctionContext argument, while this port deliberately accepts none.
+		queryFn: () => loadMarketContext(),
 		select: marketContextToPulse,
 		staleTime: 60_000,
 		enabled: !useMocks,
 	});
 	const mockQuery = useQuery({
 		queryKey: ["market", "pulse-metrics"],
-		queryFn: () => apiClient.get<GetMarketPulseMetricsResponse>("/home/pulse-metrics"),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getMarketPulseMetrics }) => getMarketPulseMetrics()),
 		enabled: useMocks,
 	});
 	return useMocks ? mockQuery : liveQuery;

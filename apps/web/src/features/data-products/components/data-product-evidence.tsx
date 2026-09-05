@@ -4,8 +4,8 @@ import { OperationPreview } from "./operation-preview";
 
 interface DataProductEvidenceProps {
 	readonly datasetId: string;
-	readonly evidence?: EvidenceModel;
-	readonly license?: DataProductLicense;
+	readonly evidence?: EvidenceModel | undefined;
+	readonly license?: DataProductLicense | undefined;
 	readonly isLoading: boolean;
 	readonly isError: boolean;
 }

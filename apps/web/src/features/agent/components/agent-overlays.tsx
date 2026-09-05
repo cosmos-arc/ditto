@@ -94,9 +94,9 @@ export function AgentRunCreateSheet({
 	open,
 }: {
 	readonly capability: AgentCapabilityView | undefined;
-	readonly contextId?: string;
-	readonly contextType?: string;
-	readonly initialObjective?: string;
+	readonly contextId?: string | undefined;
+	readonly contextType?: string | undefined;
+	readonly initialObjective?: string | undefined;
 	readonly onCreated: (run: AgentRunView) => void;
 	readonly onOpenChange: (open: boolean) => void;
 	readonly open: boolean;

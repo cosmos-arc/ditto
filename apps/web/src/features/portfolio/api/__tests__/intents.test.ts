@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { capturedRequest, requestJson, requestPath } from "@/test/request";
 import { updateIntentStatus } from "../intents";
 
 afterEach(() => {
@@ -18,12 +19,9 @@ describe("updateIntentStatus", () => {
 
 		await expect(updateIntentStatus("intent-510300", "filled")).resolves.toBe(true);
 
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/v1/manual/intents/intent-510300/status",
-			expect.objectContaining({
-				method: "PUT",
-				body: JSON.stringify({ status: "filled" }),
-			}),
-		);
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/manual/intents/intent-510300/status");
+		expect(request.method).toBe("PUT");
+		expect(await requestJson(request)).toEqual({ status: "filled" });
 	});
 });

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
-import { ApiError } from "@/lib/api-client";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import type { FactorCatalogItem } from "../api/factor-catalog";
 
 function errorMessage(error: Error): string {

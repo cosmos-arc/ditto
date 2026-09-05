@@ -1,3 +1,10 @@
+export {
+	GovernanceActions,
+	type StrategyGovernanceActionsRenderer,
+	type StrategyGovernanceActionsSlotProps,
+	type StrategyReviewEvidence,
+	type StrategyReviewEvidenceIssue,
+} from "./components/governance-actions";
 export { NodeLibrary } from "./components/node-library";
 export { ReviewDecisionPanel } from "./components/review-decision-panel";
 export { StrategyDetailPage } from "./components/strategy-detail-page";

@@ -1,5 +1,5 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 
 export type CreateSelectionRunBody = components["schemas"]["CreateSelectionRunBody"];
 export type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
@@ -17,26 +17,28 @@ export const selectionKeys = {
 };
 
 export function listSelectionRuns(specId: string, limit = 20): Promise<readonly SelectionRun[]> {
-	return apiClient.get<readonly SelectionRun[]>(withQueryParams("/v1/selections/runs", { limit, spec_id: specId }));
+	return apiClient.get("/api/v1/selections/runs", { params: { query: { limit, spec_id: specId } } });
 }
 
 export function getSelectionRun(runId: string): Promise<SelectionRun> {
-	return apiClient.get<SelectionRun>(`/v1/selections/runs/${encodeURIComponent(runId)}`);
+	return apiClient.get("/api/v1/selections/runs/{run_id}", { params: { path: { run_id: runId } } });
 }
 
 export function getIndustryRotation(snapshotId: string): Promise<IndustryRotation> {
-	return apiClient.get<IndustryRotation>(`/v1/selections/industry-rotations/${encodeURIComponent(snapshotId)}`);
+	return apiClient.get("/api/v1/selections/industry-rotations/{snapshot_id}", {
+		params: { path: { snapshot_id: snapshotId } },
+	});
 }
 
 export function compareSelectionRuns(beforeRunId: string, afterRunId: string): Promise<SelectionRunDiff> {
 	if (!beforeRunId || !afterRunId || beforeRunId === afterRunId) {
 		throw new Error("selection comparison requires distinct exact run IDs");
 	}
-	return apiClient.get<SelectionRunDiff>(
-		`/v1/selections/runs/${encodeURIComponent(beforeRunId)}/compare/${encodeURIComponent(afterRunId)}`,
-	);
+	return apiClient.get("/api/v1/selections/runs/{before_run_id}/compare/{after_run_id}", {
+		params: { path: { before_run_id: beforeRunId, after_run_id: afterRunId } },
+	});
 }
 
 export function createSelectionRun(body: CreateSelectionRunBody): Promise<SelectionWorkspaceReceipt> {
-	return apiClient.post<SelectionWorkspaceReceipt>("/v1/selections/runs", body);
+	return apiClient.post("/api/v1/selections/runs", { body });
 }

@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api-client";
 import {
 	createPaperAccount,
 	createPaperSession,
@@ -57,7 +57,7 @@ function PaperOnboarding({
 	onWorkspaceSelected,
 }: {
 	readonly asOf: string;
-	readonly onWorkspaceSelected?: (accountId: string, sessionId: string) => void;
+	readonly onWorkspaceSelected?: ((accountId: string, sessionId: string) => void) | undefined;
 }) {
 	const [accountId, setAccountId] = useState("");
 	const [accountName, setAccountName] = useState("");
@@ -463,7 +463,7 @@ function ExecutionList({
 	onSelect,
 }: {
 	readonly executions: readonly PaperExecutionReceipt[];
-	readonly selectedId?: string;
+	readonly selectedId?: string | undefined;
 	readonly onSelect: (id: string) => void;
 }) {
 	return (
@@ -503,7 +503,7 @@ function ExecutionList({
 	);
 }
 
-function FillInspector({ execution }: { readonly execution?: PaperExecutionReceipt }) {
+function FillInspector({ execution }: { readonly execution?: PaperExecutionReceipt | undefined }) {
 	if (!execution)
 		return (
 			<section className="rounded-(--radius-md) border border-(--color-border-subtle) p-5 text-xs text-(--color-foreground-tertiary)">
@@ -595,10 +595,10 @@ export function PaperAccountWorkspace({
 	asOf,
 	onWorkspaceSelected,
 }: {
-	readonly accountId?: string;
-	readonly sessionId?: string;
-	readonly asOf?: string;
-	readonly onWorkspaceSelected?: (accountId: string, sessionId: string) => void;
+	readonly accountId?: string | undefined;
+	readonly sessionId?: string | undefined;
+	readonly asOf?: string | undefined;
+	readonly onWorkspaceSelected?: ((accountId: string, sessionId: string) => void) | undefined;
 }) {
 	const effectiveAsOf = asOf ?? localIsoDate();
 	const queryClient = useQueryClient();

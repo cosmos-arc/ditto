@@ -1,8 +1,8 @@
-import type { components } from "@/types/generated/api";
+import type { ExperimentFoldResponse, ExperimentGateResponse } from "../api/experiments";
 
 interface ExperimentValidationViewProps {
-	readonly folds: readonly components["schemas"]["ExperimentFoldResponse"][];
-	readonly gates: readonly components["schemas"]["ExperimentGateResponse"][];
+	readonly folds: readonly ExperimentFoldResponse[];
+	readonly gates: readonly ExperimentGateResponse[];
 }
 
 export function ExperimentValidationView({ folds, gates }: ExperimentValidationViewProps) {

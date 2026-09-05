@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ApiError } from "@/lib/api-client";
+import { ApiError } from "@/api";
 import type { CandidateSelectionReceiptResponse } from "../api/experiments";
 import { useHoldoutEvaluation } from "../hooks";
 

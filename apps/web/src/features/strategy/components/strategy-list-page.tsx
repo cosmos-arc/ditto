@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data";
 import { Button } from "@/components/ui/button";
 import { CatalogLayout, ShellHeaderExtension } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
 import type { StrategyLifecycleState, StrategyListItem } from "@/types/strategy";
 import { useStrategies, useStrategy } from "../hooks";
 import { type StrategyListOverlay, StrategyListOverlays } from "./strategy-list-overlays";

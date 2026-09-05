@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { InstrumentHubPage, type InstrumentHubSearch } from "@/features/instruments";
+import { InstrumentHubPage, type InstrumentHubSearch } from "@/workflows/instrument-analysis";
 
 function optionalString(value: unknown): string | undefined {
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 export function parseInstrumentSearch(search: Record<string, unknown>): InstrumentHubSearch {
-	const tab = search.tab;
+	const tab = search["tab"];
 	return {
-		selectionRunId: optionalString(search.selectionRunId),
+		selectionRunId: optionalString(search["selectionRunId"]),
 		tab: tab === "chart" || tab === "fundamentals" || tab === "technical" ? tab : "overview",
 	};
 }

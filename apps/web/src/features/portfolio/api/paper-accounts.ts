@@ -1,59 +1,116 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type {
+	CreatePaperAccountBody,
+	CreatePaperSessionBody,
+	OperatePaperOrderBody,
+	PaperAccountLedger,
+	PaperAccountReceipt,
+	PaperExecutionReceipt,
+	PaperReconciliation,
+	PaperRecoverReceipt,
+	PaperSessionCommandReceipt,
+	PaperSessionRead,
+	PausePaperSessionBody,
+	ReconcilePaperSessionBody,
+	RecoverPaperSessionBody,
+} from "./account-models";
+import {
+	parsePaperAccountLedger,
+	parsePaperAccountReceipt,
+	parsePaperExecutionReceipt,
+	parsePaperReconciliation,
+	parsePaperRecoverReceipt,
+	parsePaperSessionCommandReceipt,
+	parsePaperSessionRead,
+} from "./runtime-validation";
 
-export type PaperAccountLedger = components["schemas"]["PaperAccountLedgerResponse"];
-export type PaperAccountReceipt = components["schemas"]["PaperAccountReceiptResponse"];
-export type PaperExecutionReceipt = components["schemas"]["PaperExecutionReceiptResponse"];
-export type PaperReconciliation = components["schemas"]["PaperReconciliationResponse"];
-export type PaperRecoverReceipt = components["schemas"]["PaperRecoverResponse"];
-export type PaperSessionCommandReceipt = components["schemas"]["PaperSessionCommandResponse"];
-export type PaperSessionRead = components["schemas"]["PaperSessionReadResponse"];
-export type CreatePaperAccountBody = components["schemas"]["CreatePaperAccountBody"];
-export type CreatePaperSessionBody = components["schemas"]["CreatePaperSessionBody"];
-export type OperatePaperOrderBody = components["schemas"]["OperatePaperOrderBody"];
-export type PausePaperSessionBody = components["schemas"]["PausePaperSessionBody"];
-export type ReconcilePaperSessionBody = components["schemas"]["ReconcilePaperSessionBody"];
-export type RecoverPaperSessionBody = components["schemas"]["RecoverPaperSessionBody"];
+export type {
+	CreatePaperAccountBody,
+	CreatePaperSessionBody,
+	OperatePaperOrderBody,
+	PaperAccountLedger,
+	PaperAccountReceipt,
+	PaperExecutionReceipt,
+	PaperReconciliation,
+	PaperRecoverReceipt,
+	PaperSessionCommandReceipt,
+	PaperSessionRead,
+	PausePaperSessionBody,
+	ReconcilePaperSessionBody,
+	RecoverPaperSessionBody,
+} from "./account-models";
 
-function accountPath(accountId: string, suffix: string): string {
-	return `/v1/paper/accounts/${encodeURIComponent(accountId)}${suffix}`;
+export async function createPaperAccount(body: CreatePaperAccountBody): Promise<PaperAccountReceipt> {
+	const payload = await apiClient.post("/api/v1/paper/accounts", { body });
+	return parsePaperAccountReceipt(payload, body.account_id);
 }
 
-function sessionPath(sessionId: string, suffix = ""): string {
-	return `/v1/paper/sessions/${encodeURIComponent(sessionId)}${suffix}`;
+export async function fetchPaperAccountLedger(accountId: string, asOf: string): Promise<PaperAccountLedger> {
+	const payload = await apiClient.get("/api/v1/paper/accounts/{account_id}/ledger", {
+		params: { path: { account_id: accountId }, query: { as_of: asOf } },
+	});
+	return parsePaperAccountLedger(payload, accountId, asOf);
 }
 
-export function createPaperAccount(body: CreatePaperAccountBody): Promise<PaperAccountReceipt> {
-	return apiClient.post<PaperAccountReceipt>("/v1/paper/accounts", body);
+export async function createPaperSession(body: CreatePaperSessionBody): Promise<PaperSessionCommandReceipt> {
+	const payload = await apiClient.post("/api/v1/paper/sessions", { body });
+	return parsePaperSessionCommandReceipt(payload, body.session_id, body.start_immediately ? "start" : "create");
 }
 
-export function fetchPaperAccountLedger(accountId: string, asOf: string): Promise<PaperAccountLedger> {
-	return apiClient.get<PaperAccountLedger>(withQueryParams(accountPath(accountId, "/ledger"), { as_of: asOf }));
+export async function fetchPaperSession(sessionId: string): Promise<PaperSessionRead> {
+	const payload = await apiClient.get("/api/v1/paper/sessions/{session_id}", {
+		params: { path: { session_id: sessionId } },
+	});
+	return parsePaperSessionRead(payload, sessionId);
 }
 
-export function createPaperSession(body: CreatePaperSessionBody): Promise<PaperSessionCommandReceipt> {
-	return apiClient.post<PaperSessionCommandReceipt>("/v1/paper/sessions", body);
+export async function operatePaperOrder(
+	sessionId: string,
+	body: OperatePaperOrderBody,
+): Promise<PaperExecutionReceipt> {
+	const payload = await apiClient.post("/api/v1/paper/sessions/{session_id}/orders", {
+		body,
+		params: { path: { session_id: sessionId } },
+	});
+	return parsePaperExecutionReceipt(payload, {
+		direction: body.side,
+		idempotencyKey: body.idempotency_key,
+		instrumentId: body.instrument_id,
+		orderId: body.order_id,
+		settlementDate: body.settlement_date,
+		tradeDate: body.trade_date,
+	});
 }
 
-export function fetchPaperSession(sessionId: string): Promise<PaperSessionRead> {
-	return apiClient.get<PaperSessionRead>(sessionPath(sessionId));
+export async function pausePaperSession(
+	sessionId: string,
+	body: PausePaperSessionBody,
+): Promise<PaperSessionCommandReceipt> {
+	const payload = await apiClient.post("/api/v1/paper/sessions/{session_id}/pause", {
+		body,
+		params: { path: { session_id: sessionId } },
+	});
+	return parsePaperSessionCommandReceipt(payload, sessionId, "pause");
 }
 
-export function operatePaperOrder(sessionId: string, body: OperatePaperOrderBody): Promise<PaperExecutionReceipt> {
-	return apiClient.post<PaperExecutionReceipt>(sessionPath(sessionId, "/orders"), body);
-}
-
-export function pausePaperSession(sessionId: string, body: PausePaperSessionBody): Promise<PaperSessionCommandReceipt> {
-	return apiClient.post<PaperSessionCommandReceipt>(sessionPath(sessionId, "/pause"), body);
-}
-
-export function reconcilePaperSession(
+export async function reconcilePaperSession(
 	sessionId: string,
 	body: ReconcilePaperSessionBody,
 ): Promise<PaperReconciliation> {
-	return apiClient.post<PaperReconciliation>(sessionPath(sessionId, "/reconcile"), body);
+	const payload = await apiClient.post("/api/v1/paper/sessions/{session_id}/reconcile", {
+		body,
+		params: { path: { session_id: sessionId } },
+	});
+	return parsePaperReconciliation(payload, sessionId);
 }
 
-export function recoverPaperSession(sessionId: string, body: RecoverPaperSessionBody): Promise<PaperRecoverReceipt> {
-	return apiClient.post<PaperRecoverReceipt>(sessionPath(sessionId, "/recover"), body);
+export async function recoverPaperSession(
+	sessionId: string,
+	body: RecoverPaperSessionBody,
+): Promise<PaperRecoverReceipt> {
+	const payload = await apiClient.post("/api/v1/paper/sessions/{session_id}/recover", {
+		body,
+		params: { path: { session_id: sessionId } },
+	});
+	return parsePaperRecoverReceipt(payload, body.idempotency_key);
 }

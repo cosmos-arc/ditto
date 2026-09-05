@@ -1,5 +1,5 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 
 export type CandidateEvidenceResourceKind = "selections" | "exclusions" | "factor-contributions";
 type SelectionPage = components["schemas"]["CandidateSelectionPageResponse"];
@@ -38,13 +38,16 @@ export async function fetchCandidateEvidencePage(
 	) {
 		throw new Error("INVALID_CANDIDATE_EVIDENCE_CURSOR: cursor identity does not match resource scope");
 	}
-	const dto = await apiClient.get<CandidateEvidenceDto>(
-		withQueryParams(`/v1/research/candidates/${encodeURIComponent(candidateId)}/${resourceKind}`, {
-			experiment_id: experimentId,
-			cursor: cursor?.cursor,
-			limit: 20,
-		}),
-	);
+	const params = {
+		path: { candidate_id: candidateId },
+		query: { experiment_id: experimentId, ...(cursor ? { cursor: cursor.cursor } : {}), limit: 20 },
+	};
+	const dto: CandidateEvidenceDto =
+		resourceKind === "selections"
+			? await apiClient.get("/api/v1/research/candidates/{candidate_id}/selections", { params })
+			: resourceKind === "exclusions"
+				? await apiClient.get("/api/v1/research/candidates/{candidate_id}/exclusions", { params })
+				: await apiClient.get("/api/v1/research/candidates/{candidate_id}/factor-contributions", { params });
 	if (
 		dto.experiment_id !== experimentId ||
 		dto.candidate_id !== candidateId ||

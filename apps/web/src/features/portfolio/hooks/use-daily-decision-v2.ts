@@ -17,7 +17,7 @@ export function useDailyDecisionV2<TData = DailyDecisionV2Response>(
 	return useQuery({
 		queryKey: [...tradingKeys.dailyDecision(strategyId, tradeDate, accountId), "v2"],
 		queryFn: () => fetchDailyDecisionV2({ strategyId, accountId, tradeDate }),
-		select,
-		enabled: options.enabled,
+		...(select === undefined ? {} : { select }),
+		enabled: options.enabled ?? true,
 	});
 }

@@ -131,13 +131,13 @@ describe("DataTable", () => {
 	it("highlights selected row", () => {
 		render(<DataTable<TestRow> columns={COLUMNS} data={DATA} selectedId="b" />);
 		const rows = document.querySelectorAll("tbody tr");
-		expect(rows[1].className).toContain("bg-(--color-surface-2)");
+		expect(rows.item(1).className).toContain("bg-(--color-surface-2)");
 	});
 
 	it("does not highlight unselected rows", () => {
 		render(<DataTable<TestRow> columns={COLUMNS} data={DATA} selectedId="b" />);
 		const rows = document.querySelectorAll("tbody tr");
-		expect(rows[0].className).not.toContain("bg-(--color-surface-2)");
+		expect(rows.item(0).className).not.toContain("bg-(--color-surface-2)");
 	});
 
 	/* ── Empty state ── */

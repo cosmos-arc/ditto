@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { capturedRequest } from "@/test/request";
 import { fetchFillLedger } from "../fill-ledger";
 
 type TestFill = {
@@ -64,8 +65,8 @@ function installLedgerFetch(
 	effective: readonly TestFill[],
 	adjustments: readonly TestAdjustment[],
 ) {
-	const fetchMock = vi.fn<typeof fetch>(async (input) => {
-		const url = String(input);
+	const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+		const url = capturedRequest([[input, init]]).url;
 		const data = url.includes("/fill-adjustments") ? adjustments : url.includes("/fills/effective") ? effective : raw;
 		return new Response(JSON.stringify({ data }), {
 			status: 200,
@@ -96,8 +97,8 @@ describe("fetchFillLedger", () => {
 			notes: "manual paper fill",
 			settlement_date: "2026-07-03",
 		};
-		const fetchMock = vi.fn<typeof fetch>(async (input) => {
-			const url = String(input);
+		const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+			const url = capturedRequest([[input, init]]).url;
 			const data = url.includes("/fill-adjustments") ? [] : [fill];
 			return new Response(JSON.stringify({ data }), {
 				status: 200,
@@ -167,8 +168,8 @@ describe("fetchFillLedger", () => {
 			reason: "券商回单数量修正",
 			created_at: "2026-07-16T09:31:00+08:00",
 		};
-		const fetchMock = vi.fn<typeof fetch>(async (input) => {
-			const url = String(input);
+		const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+			const url = capturedRequest([[input, init]]).url;
 			const data = url.includes("/fill-adjustments")
 				? [adjustment]
 				: url.includes("/fills/effective")
@@ -232,16 +233,18 @@ describe("fetchFillLedger", () => {
 				settlement_date: "2026-07-03",
 			},
 		];
+		const firstRawFill = rawFills[0];
+		if (!firstRawFill) throw new Error("expected raw fill fixture");
 		const adjustment = {
 			adjustment_id: "adjustment-void-001",
-			fill_id: rawFills[0].fill_id,
+			fill_id: firstRawFill.fill_id,
 			adjustment_type: "void",
 			replacement_fill_id: null,
 			reason: "后台证据冲突",
 			created_at: "2026-07-16T09:31:00+08:00",
 		};
-		const fetchMock = vi.fn<typeof fetch>(async (input) => {
-			const url = String(input);
+		const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+			const url = capturedRequest([[input, init]]).url;
 			const data = url.includes("/fill-adjustments")
 				? [adjustment]
 				: url.includes("/fills/effective")

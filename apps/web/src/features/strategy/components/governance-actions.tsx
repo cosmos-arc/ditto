@@ -1,7 +1,5 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useState } from "react";
-import { useReviewPacket } from "@/features/research/hooks/use-review-packet";
-import { ApiError } from "@/lib/api-client";
 import type { StrategyLifecycleState, StrategyVersion } from "@/types/strategy";
 import { useStrategyGovernance } from "../hooks/use-strategy-governance";
 import { DecisionDialog, ReactivateDialog } from "./governance-dialogs";
@@ -9,12 +7,30 @@ import { DecisionDialog, ReactivateDialog } from "./governance-dialogs";
 type DecisionKind = "submit" | "approve" | "reject" | "deprecate";
 type DialogKind = DecisionKind | "reactivate" | null;
 
-interface GovernanceActionsProps {
+export interface StrategyReviewEvidenceIssue {
+	readonly code: string;
+	readonly message: string;
+	readonly status?: number;
+}
+
+export interface StrategyReviewEvidence {
+	readonly bundleHash: string | null;
+	readonly hardReviewBlocked: boolean;
+	readonly issue: StrategyReviewEvidenceIssue | null;
+}
+
+export interface StrategyGovernanceActionsSlotProps {
 	readonly strategyId: string;
 	readonly version: StrategyVersion;
 	/** 当前 active pointer revision（reactivate 乐观 CAS 基线；null 时隐藏 reactivate）。 */
 	readonly expectedPointerRevision: number | null;
 	readonly currentActiveVersion: number | null;
+}
+
+export type StrategyGovernanceActionsRenderer = (props: StrategyGovernanceActionsSlotProps) => ReactNode;
+
+interface GovernanceActionsProps extends StrategyGovernanceActionsSlotProps {
+	readonly reviewEvidence: StrategyReviewEvidence;
 }
 
 interface ActionDef {
@@ -43,6 +59,10 @@ const DECISION_TITLES: Record<DecisionKind, { readonly title: string; readonly c
 
 type Governance = ReturnType<typeof useStrategyGovernance>;
 
+function formatEvidenceIssue(issue: StrategyReviewEvidenceIssue): string {
+	return `${issue.status === undefined ? "" : `${issue.status} `}${issue.code}: ${issue.message}`;
+}
+
 function isDecisionPending(governance: Governance, kind: DecisionKind): boolean {
 	switch (kind) {
 		case "submit":
@@ -60,33 +80,38 @@ function isDecisionPending(governance: Governance, kind: DecisionKind): boolean 
  * 版本治理动作面板（接入 StrategyVersionsView 每行）。
  *
  * 按 `version.lifecycleState` 渲染可用决策动作 + reactivate（published 且持有 active pointer
- * revision 时）。publish 不在此面板——它是 evidence-gated（需 review packet 的 bundle_hash），
- * 由 review-detail 页的 `ReviewDecisionPanel` 在 approved 结论下执行。决策动作经
- * DecisionDialog（actor+reason），reactivate 经 ReactivateDialog（type-to-confirm + CAS）。
+ * revision 时）。跨 feature 的 review packet 查询由 workflow 注入为显式 evidence；本组件
+ * 只消费该证据合同，并在 evidence 缺失、失败或 hard-gate 阻断时 fail closed。publish 不在
+ * 此面板——它由 review-detail 页在 approved 结论下执行。决策动作经 DecisionDialog
+ * （actor+reason），reactivate 经 ReactivateDialog（type-to-confirm + CAS）。
  */
 export function GovernanceActions({
 	strategyId,
 	version,
 	expectedPointerRevision,
 	currentActiveVersion,
+	reviewEvidence,
 }: GovernanceActionsProps): ReactElement {
 	const governance = useStrategyGovernance(strategyId);
-	const packet = useReviewPacket(version.experimentId);
 	const [dialog, setDialog] = useState<DialogKind>(null);
 
 	const actions = version.reviewOutcome === "rejected" ? [] : (ACTIONS_BY_STATE[version.lifecycleState] ?? []);
 	const canReactivate = version.lifecycleState === "published" && expectedPointerRevision !== null;
-	const hardReviewBlocked = packet.data?.hardReviewBlocked ?? true;
-	const bundleHash = packet.data?.bundleHash ?? null;
+	const evidenceReady =
+		reviewEvidence.issue === null &&
+		!reviewEvidence.hardReviewBlocked &&
+		reviewEvidence.bundleHash !== null &&
+		reviewEvidence.bundleHash.length > 0;
 	const activeDecision = dialog !== null && dialog !== "reactivate" ? dialog : null;
 	const decisionMeta = activeDecision ? DECISION_TITLES[activeDecision] : null;
 
 	function dispatchDecision(kind: DecisionKind, actor: string, reason: string): void {
 		const variables = { version: version.version, actor, reason, experimentId: version.experimentId };
+		if ((kind === "submit" || kind === "approve") && !evidenceReady) return;
 		switch (kind) {
 			case "submit":
-				if (!bundleHash || hardReviewBlocked) return;
-				governance.submitReview.mutate({ ...variables, bundleHash });
+				if (!reviewEvidence.bundleHash) return;
+				governance.submitReview.mutate({ ...variables, bundleHash: reviewEvidence.bundleHash });
 				break;
 			case "approve":
 				governance.approve.mutate(variables);
@@ -109,10 +134,10 @@ export function GovernanceActions({
 					<button
 						key={action.kind}
 						type="button"
-						disabled={(action.kind === "submit" || action.kind === "approve") && hardReviewBlocked}
+						disabled={(action.kind === "submit" || action.kind === "approve") && !evidenceReady}
 						title={
-							(action.kind === "submit" || action.kind === "approve") && hardReviewBlocked
-								? "review packet 缺失或 hard-gate 阻断"
+							(action.kind === "submit" || action.kind === "approve") && !evidenceReady
+								? (reviewEvidence.issue?.message ?? "review packet 缺失或 hard-gate 阻断")
 								: action.title
 						}
 						onClick={() => setDialog(action.kind)}
@@ -139,11 +164,9 @@ export function GovernanceActions({
 					</button>
 				)}
 			</div>
-			{packet.error && version.experimentId && (
+			{reviewEvidence.issue && (
 				<p role="alert" className="text-xs text-(--color-led-danger)">
-					{packet.error instanceof ApiError
-						? `${packet.error.status} ${packet.error.errorCode ?? "REVIEW_PACKET_ERROR"}: ${packet.error.message}`
-						: packet.error.message}
+					{formatEvidenceIssue(reviewEvidence.issue)}
 				</p>
 			)}
 

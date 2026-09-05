@@ -1,9 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { components } from "@/types/generated/api";
+import type { DailyDecisionV2Response } from "../api/daily-decision";
 import { DailyDecisionWorkspace } from "./daily-decision-workspace";
-
-type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
 
 function report(status: "blocked" | "review" | "ready"): DailyDecisionV2Response {
 	return {

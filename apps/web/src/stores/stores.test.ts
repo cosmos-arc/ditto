@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useNavigationStore } from "./navigation.store";
+import { useNavigationStore } from "@/features/navigation";
 import { useThemeStore } from "./theme.store";
 
 describe("themeStore", () => {
@@ -55,9 +55,9 @@ describe("navigationStore", () => {
 
 	it("toggleSection 切换区块折叠", () => {
 		useNavigationStore.getState().toggleSection("watchlist");
-		expect(useNavigationStore.getState().collapsedSections.watchlist).toBe(true);
+		expect(useNavigationStore.getState().collapsedSections["watchlist"]).toBe(true);
 		useNavigationStore.getState().toggleSection("watchlist");
-		expect(useNavigationStore.getState().collapsedSections.watchlist).toBe(false);
+		expect(useNavigationStore.getState().collapsedSections["watchlist"]).toBe(false);
 	});
 
 	it("isSectionCollapsed 查询区块折叠状态", () => {

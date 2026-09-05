@@ -1,7 +1,7 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components, operations } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components, operations } from "@/api/generated/schema";
 
-type RegimeDiagnosticsDto = components["schemas"]["RegimeDiagnosticsResponse"];
+export type RegimeDiagnosticsDto = components["schemas"]["RegimeDiagnosticsResponse"];
 type RegimeObservationDto = components["schemas"]["RegimeObservationResponse"];
 type RegimeQuery = operations["market_get_regime"]["parameters"]["query"];
 
@@ -106,5 +106,5 @@ export async function fetchRegimeDiagnostics(scope: RegimeDiagnosticsScope): Pro
 		end_date: scope.endDate,
 		knowledge_cutoff: scope.knowledgeCutoff,
 	};
-	return mapDiagnostics(await apiClient.get<RegimeDiagnosticsDto>(withQueryParams("/v1/market/regime", query)));
+	return mapDiagnostics(await apiClient.get("/api/v1/market/regime", { params: { query } }));
 }

@@ -33,7 +33,13 @@ interface StrategyStudioOverlaysProps {
 	readonly authorPreviewIsStale: boolean;
 }
 
-function IdentityGrid({ strategyId, detail }: { readonly strategyId: string; readonly detail?: StrategyDetail }) {
+function IdentityGrid({
+	strategyId,
+	detail,
+}: {
+	readonly strategyId: string;
+	readonly detail?: StrategyDetail | undefined;
+}) {
 	return (
 		<dl className="grid grid-cols-[6.5rem_1fr] gap-x-3 gap-y-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-2) p-3 text-xs">
 			<dt className="text-(--color-foreground-tertiary)">策略版本</dt>

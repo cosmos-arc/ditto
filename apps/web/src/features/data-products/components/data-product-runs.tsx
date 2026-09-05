@@ -4,7 +4,7 @@ import { OperationPreview } from "./operation-preview";
 
 interface DataProductRunsProps {
 	readonly datasetId: string;
-	readonly data?: readonly DataProductRun[];
+	readonly data?: readonly DataProductRun[] | undefined;
 	readonly isLoading: boolean;
 	readonly isError: boolean;
 }

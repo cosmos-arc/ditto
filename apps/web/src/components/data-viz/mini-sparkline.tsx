@@ -2,7 +2,7 @@ interface MiniSparklineProps {
 	readonly data: readonly number[];
 	readonly width?: number;
 	readonly height?: number;
-	readonly trend?: "up" | "down" | "neutral";
+	readonly trend?: "up" | "down" | "neutral" | undefined;
 	readonly ariaLabel?: string;
 	readonly className?: string;
 }

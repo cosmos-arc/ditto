@@ -1,10 +1,11 @@
 import { StatusBadge } from "@/components/status";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
-import type { components } from "@/types/generated/api";
+import type {
+	DailyDecisionAction,
+	DailyDecisionV2Response,
+	DailyDecisionReasonCode as GeneratedReasonCode,
+} from "../api/daily-decision";
 
-type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
-type DailyDecisionAction = components["schemas"]["DailyDecisionActionResponse"];
-type GeneratedReasonCode = DailyDecisionV2Response["readiness"]["reason_codes"][number];
 type ReasonCode = GeneratedReasonCode | "EOD_RUN_INCOMPLETE" | "SIGNAL_INTENT_MISMATCH";
 
 const RECOVERY_LABEL: Record<ReasonCode, string> = {

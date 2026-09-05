@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShellHeaderExtension } from "@/features/shell/components/shell-header-extension";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShellHeaderExtension } from "@/features/shell";
 import { cn } from "@/lib/utils";
 import {
 	useAgentApproval,
@@ -40,15 +40,15 @@ import {
 } from "./agent-overlays";
 
 export type AgentConsoleSearch = {
-	readonly tab?: AgentTab;
-	readonly status?: string;
-	readonly selected?: string;
-	readonly sessionId?: string;
-	readonly sessionOffset?: number;
-	readonly offset?: number;
-	readonly contextType?: string;
-	readonly contextId?: string;
-	readonly objective?: string;
+	readonly tab?: AgentTab | undefined;
+	readonly status?: string | undefined;
+	readonly selected?: string | undefined;
+	readonly sessionId?: string | undefined;
+	readonly sessionOffset?: number | undefined;
+	readonly offset?: number | undefined;
+	readonly contextType?: string | undefined;
+	readonly contextId?: string | undefined;
+	readonly objective?: string | undefined;
 };
 
 export type AgentConsoleSurface = "approval-inbox" | "research-lab" | "system-ops" | "unified";
@@ -915,9 +915,13 @@ function Inspector({
 	);
 }
 
-function normalizeSearch(
-	value: AgentConsoleSearch,
-): Required<Pick<AgentConsoleSearch, "tab" | "offset" | "sessionOffset">> & AgentConsoleSearch {
+type NormalizedAgentConsoleSearch = Omit<AgentConsoleSearch, "tab" | "offset" | "sessionOffset"> & {
+	readonly tab: AgentTab;
+	readonly offset: number;
+	readonly sessionOffset: number;
+};
+
+function normalizeSearch(value: AgentConsoleSearch): NormalizedAgentConsoleSearch {
 	return {
 		...value,
 		tab: value.tab ?? "runs",
@@ -932,9 +936,9 @@ export function AgentConsolePage({
 	onSearchChange,
 	surface = "unified",
 }: {
-	readonly initialSearch?: AgentConsoleSearch;
-	readonly search?: AgentConsoleSearch;
-	readonly onSearchChange?: (search: AgentConsoleSearch) => void;
+	readonly initialSearch?: AgentConsoleSearch | undefined;
+	readonly search?: AgentConsoleSearch | undefined;
+	readonly onSearchChange?: ((search: AgentConsoleSearch) => void) | undefined;
 	readonly surface?: AgentConsoleSurface;
 }) {
 	const [localSearch, setLocalSearch] = useState(() => normalizeSearch(initialSearch));
@@ -1049,12 +1053,28 @@ export function AgentConsolePage({
 	const showRuns = surface !== "approval-inbox";
 	const showCampaigns = surface !== "approval-inbox";
 	const showApprovals = surface === "approval-inbox" || surface === "unified";
+	const availableTabs: readonly AgentTab[] = [
+		...(showRuns ? (["runs"] as const) : []),
+		...(showCampaigns ? (["campaigns"] as const) : []),
+		...(showApprovals ? (["approvals"] as const) : []),
+	];
 
 	return (
-		<section
+		<Tabs
+			value={search.tab}
+			onValueChange={(value) =>
+				updateSearch({
+					tab: value as AgentTab,
+					selected: undefined,
+					sessionId: undefined,
+					status: undefined,
+					offset: 0,
+				})
+			}
 			data-slot="shell"
+			role="region"
 			aria-label={surfaceCopy.label}
-			className="flex h-full min-h-0 flex-col overflow-hidden bg-(--color-surface-1) text-(--color-foreground)"
+			className="h-full min-h-0 gap-0 overflow-hidden bg-(--color-surface-1) text-(--color-foreground)"
 		>
 			<ShellHeaderExtension>
 				<div
@@ -1095,24 +1115,13 @@ export function AgentConsolePage({
 					<span className="hidden shrink-0 text-xs font-medium text-(--color-foreground-secondary) 2xl:inline">
 						{surfaceCopy.title}
 					</span>
-					<Tabs
-						value={search.tab}
-						onValueChange={(value) =>
-							updateSearch({
-								tab: value as AgentTab,
-								selected: undefined,
-								sessionId: undefined,
-								status: undefined,
-								offset: 0,
-							})
-						}
-					>
+					<div data-slot="tabs">
 						<TabsList className="agent-tabs" variant="line" aria-label="Agent task views">
 							{showRuns && <TabsTrigger value="runs">Runs</TabsTrigger>}
 							{showCampaigns && <TabsTrigger value="campaigns">Campaigns</TabsTrigger>}
 							{showApprovals && <TabsTrigger value="approvals">Approvals</TabsTrigger>}
 						</TabsList>
-					</Tabs>
+					</div>
 				</div>
 				<div className="flex flex-wrap items-center justify-end gap-2">
 					{search.tab === "runs" && (
@@ -1195,186 +1204,209 @@ export function AgentConsolePage({
 					)}
 				</div>
 			</div>
-			<div
-				data-slot="workspace"
-				className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[18rem_minmax(0,1fr)_23.25rem]"
-			>
-				<aside
-					data-slot="source"
-					aria-label="Agent projections"
-					className="list-panel min-h-40 overflow-y-auto border-b border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:min-h-0 xl:border-r xl:border-b-0"
+			{availableTabs.map((tab) => (
+				<TabsContent
+					key={tab}
+					value={tab}
+					forceMount
+					data-slot={tab === search.tab ? "workspace" : undefined}
+					className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[18rem_minmax(0,1fr)_23.25rem]"
 				>
-					<div className="border-b border-(--color-border-subtle) px-3 py-2">
-						<p className="text-xs font-medium">
-							{search.tab === "runs"
-								? "Run history"
-								: search.tab === "campaigns"
-									? "Campaign history"
-									: "Approval Inbox"}
-						</p>
-						<p className="mt-1 text-[11px] text-(--color-foreground-tertiary)">
-							fresh-load recovery · server pagination
-						</p>
-					</div>
-					{currentPageSummary && (
-						<CurrentPageSummary items={currentPageSummary.items} total={currentPageSummary.total} />
-					)}
-					{search.tab === "runs" && (
-						<section aria-label="Session recovery" className="border-b border-(--color-border-subtle)">
-							<div className="flex items-center justify-between px-3 py-2">
-								<p className="text-[11px] font-medium text-(--color-foreground-secondary)">Recent sessions</p>
-								{search.sessionId && (
-									<Button
-										type="button"
-										size="xs"
-										variant="ghost"
-										onClick={() => updateSearch({ sessionId: undefined, offset: 0, selected: undefined })}
-									>
-										全部 Session
-									</Button>
+					{tab === search.tab && (
+						<>
+							<aside
+								id={`agent-${surface}-task-list`}
+								data-slot="source"
+								aria-label="Agent projections"
+								className="list-panel min-h-40 overflow-y-auto border-b border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:min-h-0 xl:border-r xl:border-b-0"
+							>
+								<div className="border-b border-(--color-border-subtle) px-3 py-2">
+									<p className="text-xs font-medium">
+										{search.tab === "runs"
+											? "Run history"
+											: search.tab === "campaigns"
+												? "Campaign history"
+												: "Approval Inbox"}
+									</p>
+									<p className="mt-1 text-[11px] text-(--color-foreground-tertiary)">
+										fresh-load recovery · server pagination
+									</p>
+								</div>
+								{currentPageSummary && (
+									<CurrentPageSummary items={currentPageSummary.items} total={currentPageSummary.total} />
 								)}
-							</div>
-							<PanelState
-								error={sessionList.error}
-								isLoading={sessionList.isLoading}
-								label="sessions"
-								onRetry={() => void sessionList.refetch()}
-							/>
-							{!sessionList.isLoading && !sessionList.error && sessionList.data && (
-								<>
-									<SessionList
-										page={sessionList.data}
-										selected={search.sessionId ?? ""}
-										onSelect={(sessionId) => updateSearch({ sessionId, offset: 0, selected: undefined })}
+								{search.tab === "runs" && (
+									<section aria-label="Session recovery" className="border-b border-(--color-border-subtle)">
+										<div className="flex items-center justify-between px-3 py-2">
+											<p className="text-[11px] font-medium text-(--color-foreground-secondary)">Recent sessions</p>
+											{search.sessionId && (
+												<Button
+													type="button"
+													size="xs"
+													variant="ghost"
+													onClick={() => updateSearch({ sessionId: undefined, offset: 0, selected: undefined })}
+												>
+													全部 Session
+												</Button>
+											)}
+										</div>
+										<PanelState
+											error={sessionList.error}
+											isLoading={sessionList.isLoading}
+											label="sessions"
+											onRetry={() => void sessionList.refetch()}
+										/>
+										{!sessionList.isLoading && !sessionList.error && sessionList.data && (
+											<>
+												<SessionList
+													page={sessionList.data}
+													selected={search.sessionId ?? ""}
+													onSelect={(sessionId) => updateSearch({ sessionId, offset: 0, selected: undefined })}
+												/>
+												<PageControls
+													pagination={sessionList.data.pagination}
+													onOffset={(sessionOffset) => updateSearch({ sessionOffset })}
+												/>
+											</>
+										)}
+									</section>
+								)}
+								<PanelState
+									error={activeList.error}
+									isLoading={activeList.isLoading}
+									label={search.tab}
+									onRetry={() => void activeList.refetch()}
+								/>
+								{!activeList.isLoading && !activeList.error && search.tab === "runs" && runList.data && (
+									<>
+										<RunList
+											page={runList.data}
+											selected={selectedId}
+											onSelect={(selected) => updateSearch({ selected })}
+										/>
+										<PageControls
+											pagination={runList.data.pagination}
+											onOffset={(offset) => updateSearch({ offset, selected: undefined })}
+										/>
+									</>
+								)}
+								{!activeList.isLoading && !activeList.error && search.tab === "campaigns" && campaignList.data && (
+									<>
+										<CampaignList
+											page={campaignList.data}
+											selected={selectedId}
+											onSelect={(selected) => updateSearch({ selected })}
+										/>
+										<PageControls
+											pagination={campaignList.data.pagination}
+											onOffset={(offset) => updateSearch({ offset, selected: undefined })}
+										/>
+									</>
+								)}
+								{!activeList.isLoading && !activeList.error && search.tab === "approvals" && approvalList.data && (
+									<>
+										<ApprovalList
+											page={approvalList.data}
+											selected={selectedId}
+											onSelect={(selected) => updateSearch({ selected })}
+										/>
+										<PageControls
+											pagination={approvalList.data.pagination}
+											onOffset={(offset) => updateSearch({ offset, selected: undefined })}
+										/>
+									</>
+								)}
+							</aside>
+							<main
+								data-slot="main"
+								className="main-panel min-h-0 min-w-0 overflow-y-auto bg-(--color-surface-panel-base)"
+							>
+								<PanelState
+									error={
+										search.tab === "runs"
+											? runDetail.error
+											: search.tab === "campaigns"
+												? campaignDetail.error
+												: approvalDetail.error
+									}
+									isLoading={
+										Boolean(selectedId) &&
+										(search.tab === "runs"
+											? runDetail.isLoading
+											: search.tab === "campaigns"
+												? campaignDetail.isLoading
+												: approvalDetail.isLoading)
+									}
+									label="selected projection"
+									onRetry={() =>
+										void (search.tab === "runs"
+											? runDetail.refetch()
+											: search.tab === "campaigns"
+												? campaignDetail.refetch()
+												: approvalDetail.refetch())
+									}
+								/>
+								{!selectedId && (
+									<div className="flex h-full min-h-80 items-center justify-center p-8 text-center">
+										<div>
+											<p className="text-sm font-medium">
+												选择一个 {search.tab === "runs" ? "Run" : search.tab === "campaigns" ? "Campaign" : "Approval"}
+											</p>
+											<p className="mt-2 text-xs text-(--color-foreground-tertiary)">
+												URL 会保存任务视图、筛选、分页和选中 identity。
+											</p>
+											<a
+												href={`#agent-${surface}-task-list`}
+												className="mt-4 inline-flex rounded-(--radius-sm) border border-(--color-border-subtle) px-3 py-1.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) focus-visible:ring-2 focus-visible:ring-(--color-focus-ring) focus-visible:outline-none"
+											>
+												返回 Agent 任务列表
+											</a>
+										</div>
+									</div>
+								)}
+								{search.tab === "runs" && run && (
+									<RunDetail
+										run={run}
+										streamState={runStream}
+										canExecute={runExecutable}
+										onCancel={() => setRunCancelOpen(true)}
+										onExecute={() => executeRun.mutate({ runId: run.runId, revision: run.revision })}
+										onInspect={setInspectorSelection}
+										executionError={executeRun.error}
+										isExecuting={executeRun.isPending}
 									/>
-									<PageControls
-										pagination={sessionList.data.pagination}
-										onOffset={(sessionOffset) => updateSearch({ sessionOffset })}
+								)}
+								{search.tab === "campaigns" && campaign && (
+									<CampaignDetail
+										campaign={campaign}
+										streamState={campaignStream}
+										onApprove={() => setCampaignApprovalOpen(true)}
+										onCancel={() => setCampaignCancelOpen(true)}
+										onInspect={setInspectorSelection}
 									/>
-								</>
-							)}
-						</section>
-					)}
-					<PanelState
-						error={activeList.error}
-						isLoading={activeList.isLoading}
-						label={search.tab}
-						onRetry={() => void activeList.refetch()}
-					/>
-					{!activeList.isLoading && !activeList.error && search.tab === "runs" && runList.data && (
-						<>
-							<RunList page={runList.data} selected={selectedId} onSelect={(selected) => updateSearch({ selected })} />
-							<PageControls
-								pagination={runList.data.pagination}
-								onOffset={(offset) => updateSearch({ offset, selected: undefined })}
-							/>
+								)}
+								{search.tab === "approvals" && approval && (
+									<ApprovalDetail approval={approval} onReview={() => setApprovalOpen(true)} />
+								)}
+							</main>
+							<aside
+								data-slot="inspector"
+								aria-label="Projection inspector"
+								className="inspector min-h-56 overflow-y-auto border-t border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:min-h-0 xl:border-t-0 xl:border-l"
+							>
+								<Inspector
+									selection={inspectorSelection}
+									capability={capability.data}
+									run={run}
+									campaign={campaign}
+									approval={approval}
+									onOpenDrawer={() => setDrawerOpen(true)}
+								/>
+							</aside>
 						</>
 					)}
-					{!activeList.isLoading && !activeList.error && search.tab === "campaigns" && campaignList.data && (
-						<>
-							<CampaignList
-								page={campaignList.data}
-								selected={selectedId}
-								onSelect={(selected) => updateSearch({ selected })}
-							/>
-							<PageControls
-								pagination={campaignList.data.pagination}
-								onOffset={(offset) => updateSearch({ offset, selected: undefined })}
-							/>
-						</>
-					)}
-					{!activeList.isLoading && !activeList.error && search.tab === "approvals" && approvalList.data && (
-						<>
-							<ApprovalList
-								page={approvalList.data}
-								selected={selectedId}
-								onSelect={(selected) => updateSearch({ selected })}
-							/>
-							<PageControls
-								pagination={approvalList.data.pagination}
-								onOffset={(offset) => updateSearch({ offset, selected: undefined })}
-							/>
-						</>
-					)}
-				</aside>
-				<main data-slot="main" className="main-panel min-h-0 min-w-0 overflow-y-auto bg-(--color-surface-panel-base)">
-					<PanelState
-						error={
-							search.tab === "runs"
-								? runDetail.error
-								: search.tab === "campaigns"
-									? campaignDetail.error
-									: approvalDetail.error
-						}
-						isLoading={
-							Boolean(selectedId) &&
-							(search.tab === "runs"
-								? runDetail.isLoading
-								: search.tab === "campaigns"
-									? campaignDetail.isLoading
-									: approvalDetail.isLoading)
-						}
-						label="selected projection"
-						onRetry={() =>
-							void (search.tab === "runs"
-								? runDetail.refetch()
-								: search.tab === "campaigns"
-									? campaignDetail.refetch()
-									: approvalDetail.refetch())
-						}
-					/>
-					{!selectedId && (
-						<div className="flex h-full min-h-80 items-center justify-center p-8 text-center">
-							<div>
-								<p className="text-sm font-medium">
-									选择一个 {search.tab === "runs" ? "Run" : search.tab === "campaigns" ? "Campaign" : "Approval"}
-								</p>
-								<p className="mt-2 text-xs text-(--color-foreground-tertiary)">
-									URL 会保存任务视图、筛选、分页和选中 identity。
-								</p>
-							</div>
-						</div>
-					)}
-					{search.tab === "runs" && run && (
-						<RunDetail
-							run={run}
-							streamState={runStream}
-							canExecute={runExecutable}
-							onCancel={() => setRunCancelOpen(true)}
-							onExecute={() => executeRun.mutate({ runId: run.runId, revision: run.revision })}
-							onInspect={setInspectorSelection}
-							executionError={executeRun.error}
-							isExecuting={executeRun.isPending}
-						/>
-					)}
-					{search.tab === "campaigns" && campaign && (
-						<CampaignDetail
-							campaign={campaign}
-							streamState={campaignStream}
-							onApprove={() => setCampaignApprovalOpen(true)}
-							onCancel={() => setCampaignCancelOpen(true)}
-							onInspect={setInspectorSelection}
-						/>
-					)}
-					{search.tab === "approvals" && approval && (
-						<ApprovalDetail approval={approval} onReview={() => setApprovalOpen(true)} />
-					)}
-				</main>
-				<aside
-					data-slot="inspector"
-					aria-label="Projection inspector"
-					className="inspector min-h-56 overflow-y-auto border-t border-(--color-border-subtle) bg-(--color-surface-panel-base) xl:min-h-0 xl:border-t-0 xl:border-l"
-				>
-					<Inspector
-						selection={inspectorSelection}
-						capability={capability.data}
-						run={run}
-						campaign={campaign}
-						approval={approval}
-						onOpenDrawer={() => setDrawerOpen(true)}
-					/>
-				</aside>
-			</div>
+				</TabsContent>
+			))}
 			<div data-slot="mobile-controls" className="sticky bottom-0 z-10 flex-none xl:static">
 				{hasMobileActions && (
 					<nav
@@ -1514,6 +1546,6 @@ export function AgentConsolePage({
 					reasonCode={inspectorSelection.value === "not provided" ? null : inspectorSelection.value}
 				/>
 			)}
-		</section>
+		</Tabs>
 	);
 }

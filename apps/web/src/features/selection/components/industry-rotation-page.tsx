@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { AgentContextActions } from "@/features/agent";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { ErrorState } from "@/lib/error-boundary";
 import { StaleIndicator } from "@/lib/stale-indicator";
+import { ContextActions } from "@/providers";
 import { getIndustryRotation, selectionKeys } from "../api";
 
 function querySnapshotId(): string {
@@ -171,7 +171,7 @@ export function IndustryRotationPage({ initialSnapshotId }: { readonly initialSn
 									</p>
 								</section>
 								<section className="border-t border-(--color-border-subtle) pt-4">
-									<AgentContextActions
+									<ContextActions
 										contextId={query.data.snapshot_id}
 										contextType="selection"
 										evidenceObjective="解释精确行业排名"

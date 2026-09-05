@@ -571,11 +571,13 @@ function PortfolioPnlRail() {
 					</div>
 				</div>
 				<div className="grid grid-cols-3 gap-1.5">
-					{[
-						["累计", "+7.18%"],
-						["超额", "+1.42%"],
-						["回撤", "-3.24%"],
-					].map(([label, value]) => (
+					{(
+						[
+							["累计", "+7.18%"],
+							["超额", "+1.42%"],
+							["回撤", "-3.24%"],
+						] as const
+					).map(([label, value]) => (
 						<div key={label} className="rounded-(--radius-sm) border border-(--color-border-subtle) p-1.5">
 							<p className="text-xs leading-[inherit] text-(--color-foreground-tertiary)">{label}</p>
 							<p className={`mt-0.5 font-data text-[12px] font-semibold ${toneClass(value)}`}>
@@ -642,11 +644,13 @@ function PortfolioAnalysisBand() {
 						<span className="text-xs leading-[inherit] text-(--color-foreground-tertiary)">实时快照</span>
 					</div>
 					<div className="grid grid-cols-3 gap-2">
-						{[
-							["日波动率", "1.24%"],
-							["Beta", "0.87"],
-							["VaR 95%", "-38,240"],
-						].map(([label, value]) => (
+						{(
+							[
+								["日波动率", "1.24%"],
+								["Beta", "0.87"],
+								["VaR 95%", "-38,240"],
+							] as const
+						).map(([label, value]) => (
 							<div key={label} className="rounded bg-(--color-surface-panel-base) p-2">
 								<p className="text-xs leading-[inherit] text-(--color-foreground-tertiary)">{label}</p>
 								<p

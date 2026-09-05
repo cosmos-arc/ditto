@@ -197,25 +197,25 @@ export type AgentCampaignView = {
 };
 
 export type AgentRunFilters = {
-	readonly status?: AgentRunStatus;
-	readonly sessionId?: string;
-	readonly contextType?: string;
-	readonly contextId?: string;
-	readonly limit?: number;
-	readonly offset?: number;
+	readonly status?: AgentRunStatus | undefined;
+	readonly sessionId?: string | undefined;
+	readonly contextType?: string | undefined;
+	readonly contextId?: string | undefined;
+	readonly limit?: number | undefined;
+	readonly offset?: number | undefined;
 };
 
 export type AgentApprovalFilters = {
-	readonly status?: AgentApprovalView["status"];
-	readonly runId?: string;
-	readonly limit?: number;
-	readonly offset?: number;
+	readonly status?: AgentApprovalView["status"] | undefined;
+	readonly runId?: string | undefined;
+	readonly limit?: number | undefined;
+	readonly offset?: number | undefined;
 };
 
 export type AgentCampaignFilters = {
-	readonly status?: AgentCampaignStatus;
-	readonly limit?: number;
-	readonly offset?: number;
+	readonly status?: AgentCampaignStatus | undefined;
+	readonly limit?: number | undefined;
+	readonly offset?: number | undefined;
 };
 
 export type CreateAgentRunInput = {

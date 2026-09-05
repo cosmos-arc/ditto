@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RiskPage } from "@/features/portfolio";
+import { PortfolioRiskWithDecisionBriefing } from "@/workflows/portfolio-decision";
 
 export const Route = createFileRoute("/portfolio/risk")({
-	component: RiskPage,
+	component: PortfolioRiskWithDecisionBriefing,
 	staticData: { title: "风控中心" },
 });

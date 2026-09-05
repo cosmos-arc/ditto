@@ -1,7 +1,4 @@
-import { apiClient } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
-
-type AgentCapabilityResponse = components["schemas"]["AgentCapabilityResponse"];
+import { apiClient } from "@/api";
 
 export type SystemRuntimeStatus = {
 	readonly environment: string;
@@ -32,7 +29,7 @@ function requiredString(record: Record<string, unknown>, key: string): string {
 }
 
 export async function fetchSystemRuntimeStatus(): Promise<SystemRuntimeStatus> {
-	const response = await apiClient.get<unknown>("/v1/status");
+	const response = await apiClient.get("/api/v1/status");
 	if (!isRecord(response) || !isRecord(response.features) || !isRecord(response.observability)) {
 		throw new Error("status response is incomplete");
 	}
@@ -57,7 +54,7 @@ export async function fetchSystemRuntimeStatus(): Promise<SystemRuntimeStatus> {
 }
 
 export async function fetchSystemAgentCapability(): Promise<SystemAgentCapability> {
-	const response = await apiClient.get<AgentCapabilityResponse>("/v1/agent/capabilities");
+	const response = await apiClient.get("/api/v1/agent/capabilities");
 	return {
 		availableProfiles: response.available_profiles,
 		checkedAt: response.checked_at,

@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import type {
+	AgentApprovalResponse,
+	AgentCampaignResponse,
+	AgentRunResponse,
+	AgentSessionResponse,
+} from "@/features/agent/api/agent-api";
+import { parseAgentSse } from "@/features/agent/api/agent-event-stream";
 import { server } from "@/mocks/server";
-import type { components } from "@/types/generated/api";
 import { agentHandlers } from "./agent";
-
-type AgentCampaignResponse = components["schemas"]["AgentCampaignResponse"];
-type AgentApprovalResponse = components["schemas"]["AgentApprovalResponse"];
-type AgentRunResponse = components["schemas"]["AgentRunResponse"];
-type AgentSessionResponse = components["schemas"]["AgentSessionResponse"];
 
 beforeEach(() => {
 	server.use(...agentHandlers);
@@ -57,12 +58,20 @@ describe("agentHandlers", () => {
 		expect(approvals.data[0]).toMatchObject({ approval_id: "approval-research-104", status: "pending" });
 	});
 
-	it("closes the visual fixture event stream with one deterministic terminal event", async () => {
-		const response = await fetch("/api/v1/agent/campaigns/campaign-alpha-011/events");
-		const body = await response.text();
+	it("serves runtime-valid Run and Campaign stream fixtures", async () => {
+		const [runResponse, campaignResponse] = await Promise.all([
+			fetch("/api/v1/agent/runs/run-research-104/events"),
+			fetch("/api/v1/agent/campaigns/campaign-alpha-011/events"),
+		]);
+		const [runBody, campaignBody] = await Promise.all([runResponse.text(), campaignResponse.text()]);
 
-		expect(response.headers.get("content-type")).toContain("text/event-stream");
-		expect(body).toContain("id: 18");
-		expect(body).toContain("event: campaign_completed");
+		expect(runResponse.headers.get("content-type")).toContain("text/event-stream");
+		expect(campaignResponse.headers.get("content-type")).toContain("text/event-stream");
+		expect(parseAgentSse(runBody, 17, { kind: "runs", identity: "run-research-104" })).toEqual([
+			expect.objectContaining({ id: 18, eventType: "approval_waiting" }),
+		]);
+		expect(parseAgentSse(campaignBody, 17, { kind: "campaigns", identity: "campaign-alpha-011" })).toEqual([
+			expect.objectContaining({ id: 18, eventType: "campaign_completed" }),
+		]);
 	});
 });

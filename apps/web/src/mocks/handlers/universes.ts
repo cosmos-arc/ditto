@@ -1,10 +1,6 @@
 import { HttpResponse, http, type RequestHandler } from "msw";
-import type { components } from "@/types/generated/api";
+import type { CreateUniverseRequest, UniverseResponse, UpdateUniverseRequest } from "@/features/research/api/universes";
 import { mockUniverseDefinitions, mockUniverseMembers } from "../fixtures/universes";
-
-type UniverseResponse = components["schemas"]["UniverseResponse"];
-type CreateUniverseRequest = components["schemas"]["CreateUniverseRequest"];
-type UpdateUniverseRequest = components["schemas"]["UpdateUniverseRequest"];
 
 let definitions: UniverseResponse[] = mockUniverseDefinitions.map((row) => ({ ...row }));
 let members: Record<string, number[]> = Object.fromEntries(
@@ -45,11 +41,11 @@ export const universeHandlers: RequestHandler[] = [
 		return HttpResponse.json({ data: created }, { status: 201 });
 	}),
 	http.get("/api/v1/universes/:universeId", ({ params }) => {
-		const row = definitions.find((item) => item.universe_id === params.universeId);
+		const row = definitions.find((item) => item.universe_id === params["universeId"]);
 		return row ? HttpResponse.json({ data: row }) : notFound();
 	}),
 	http.put("/api/v1/universes/:universeId", async ({ params, request }) => {
-		const index = definitions.findIndex((item) => item.universe_id === params.universeId);
+		const index = definitions.findIndex((item) => item.universe_id === params["universeId"]);
 		if (index < 0) return notFound();
 		if (definitions[index]?.universe_type !== "custom") {
 			return HttpResponse.json(
@@ -68,7 +64,7 @@ export const universeHandlers: RequestHandler[] = [
 		return HttpResponse.json({ data: updated });
 	}),
 	http.delete("/api/v1/universes/:universeId", ({ params }) => {
-		const row = definitions.find((item) => item.universe_id === params.universeId);
+		const row = definitions.find((item) => item.universe_id === params["universeId"]);
 		if (!row) return notFound();
 		if (row.universe_type !== "custom") {
 			return HttpResponse.json(
@@ -76,7 +72,7 @@ export const universeHandlers: RequestHandler[] = [
 				{ status: 409 },
 			);
 		}
-		definitions = definitions.filter((item) => item.universe_id !== params.universeId);
+		definitions = definitions.filter((item) => item.universe_id !== params["universeId"]);
 		delete members[row.universe_id];
 		return HttpResponse.json({ data: true });
 	}),
@@ -85,9 +81,9 @@ export const universeHandlers: RequestHandler[] = [
 		if (!asOf) {
 			return HttpResponse.json({ detail: "asof is required", error_code: "UNIVERSE_ASOF_REQUIRED" }, { status: 422 });
 		}
-		if (!definitions.some((row) => row.universe_id === params.universeId)) return notFound();
+		if (!definitions.some((row) => row.universe_id === params["universeId"])) return notFound();
 		return HttpResponse.json({
-			data: (members[String(params.universeId)] ?? []).map((instrumentId) => ({ instrument_id: instrumentId })),
+			data: (members[String(params["universeId"])] ?? []).map((instrumentId) => ({ instrument_id: instrumentId })),
 		});
 	}),
 ];

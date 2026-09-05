@@ -4,6 +4,7 @@ import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { MarketCalendarList } from "./market-calendar-list";
 import { CalendarOverlay, type CalendarOverlayId, calendarActions } from "./market-page-overlays";
+import type { MarketCalendarCoverageQuery } from "./market-view-contracts";
 
 function CalendarToolbar({ onOpen }: { readonly onOpen: (id: CalendarOverlayId) => void }) {
 	return (
@@ -17,7 +18,7 @@ function CalendarToolbar({ onOpen }: { readonly onOpen: (id: CalendarOverlayId) 
 	);
 }
 
-export function CalendarPage() {
+export function CalendarPage({ coverage }: { readonly coverage: MarketCalendarCoverageQuery }) {
 	const [activeOverlay, setActiveOverlay] = useState<CalendarOverlayId | null>(null);
 	return (
 		<>
@@ -29,7 +30,7 @@ export function CalendarPage() {
 				}
 				main={
 					<div data-info-level="l2" data-info-unit="calendar-main">
-						<MarketCalendarList />
+						<MarketCalendarList query={coverage} />
 					</div>
 				}
 				detail={

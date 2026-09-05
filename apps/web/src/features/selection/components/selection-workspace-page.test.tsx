@@ -2,21 +2,31 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { selectionRunInputFixture } from "@/mocks/fixtures/selection";
 import { selectionHandlers } from "@/mocks/handlers/selection";
 import { server } from "@/mocks/server";
+import { ContextActionsProvider, type ContextActionsRequest } from "@/providers";
 import { SelectionWorkspacePage } from "./selection-workspace-page";
+
+const renderContextActions = vi.fn((request: ContextActionsRequest) => (
+	<a href="#context-action" data-context-id={request.contextId} data-context-type={request.contextType}>
+		{request.evidenceLabel ?? "请求证据分析"}
+	</a>
+));
 
 function wrapper() {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 	return ({ children }: { children: ReactNode }) => (
-		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		<ContextActionsProvider renderActions={renderContextActions}>
+			<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		</ContextActionsProvider>
 	);
 }
 
 beforeEach(() => {
 	localStorage.clear();
+	renderContextActions.mockClear();
 	server.use(...selectionHandlers);
 });
 
@@ -46,8 +56,8 @@ describe("SelectionWorkspacePage", () => {
 		);
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
-		expect(memo).toHaveAttribute("href", expect.stringContaining("contextType=selection"));
-		expect(memo).toHaveAttribute("href", expect.stringContaining("contextId=selection-run%3Asha256%3Arun-one"));
+		expect(memo).toHaveAttribute("data-context-type", "selection");
+		expect(memo).toHaveAttribute("data-context-id", "selection-run:sha256:run-one");
 	});
 
 	it("compares two exact saved runs and labels the source of drift", async () => {

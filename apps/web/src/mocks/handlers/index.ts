@@ -3,6 +3,7 @@ import { agentHandlers } from "./agent";
 import { aiHandlers } from "./ai";
 import { backtestHandlers } from "./backtest";
 import { dataProductsHandlers } from "./data-products";
+import { failClosedApiHandler } from "./fail-closed";
 import { homeHandlers } from "./home";
 import { instrumentsHandlers } from "./instruments";
 import { intelligenceHandlers } from "./intelligence";
@@ -37,4 +38,5 @@ export const handlers: RequestHandler[] = [
 	...riskHandlers,
 	...selectionHandlers,
 	...technicalAnalysisHandlers,
+	failClosedApiHandler,
 ];

@@ -1,10 +1,9 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { ErrorState } from "@/lib/error-boundary";
-import { useMarketCatalog } from "../hooks";
+import type { MarketCatalogQuery } from "./market-view-contracts";
 
-export function ASharesOverview() {
-	const query = useMarketCatalog({ assetClass: "stock", isActive: true, limit: 100 });
+export function ASharesOverview({ query }: { readonly query: MarketCatalogQuery }) {
 	const items = query.data?.items ?? [];
 	const exchangeCounts = items.reduce<Record<string, number>>((counts, item) => {
 		counts[item.exchange] = (counts[item.exchange] ?? 0) + 1;

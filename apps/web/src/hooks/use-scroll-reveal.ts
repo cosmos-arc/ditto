@@ -46,6 +46,7 @@ export function useScrollReveal(options?: ScrollRevealOptions): ScrollRevealRetu
 
 			const observer = new IntersectionObserver(
 				([entry]) => {
+					if (!entry) return;
 					const visible = entry.isIntersecting;
 					setIsVisible(visible);
 

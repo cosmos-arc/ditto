@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { AgentLauncherSidecar } from "@/features/agent";
+import { useEffect } from "react";
 import { useActiveDomain } from "../hooks/use-active-domain";
 import { useAtmosphere } from "../hooks/use-atmosphere";
 import { ShellHeader } from "./header";
 import { NoiseLayer } from "./noise-layer";
 import { Rail } from "./rail";
 
-interface AppShellProps {
-	children: ReactNode;
+interface WorkspaceShellProps {
+	readonly children: ReactNode;
+	readonly launcher?: (activeDomain: ReturnType<typeof useActiveDomain>) => ReactNode;
+	readonly onOpenLauncher?: (() => void) | undefined;
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function WorkspaceShell({ children, launcher, onOpenLauncher }: WorkspaceShellProps) {
 	const activeDomain = useActiveDomain();
-	const [isAgentLauncherOpen, setIsAgentLauncherOpen] = useState(false);
 	useAtmosphere();
 
 	useEffect(() => {
@@ -33,10 +33,10 @@ export function AppShell({ children }: AppShellProps) {
 				<Rail />
 			</div>
 			<div className="col-start-2">
-				<ShellHeader activeDomain={activeDomain} onOpenAgent={() => setIsAgentLauncherOpen(true)} />
+				<ShellHeader activeDomain={activeDomain} onOpenAgent={onOpenLauncher} />
 			</div>
 			<div className="relative col-start-2 row-start-2 min-h-0 overflow-hidden">{children}</div>
-			<AgentLauncherSidecar domain={activeDomain} open={isAgentLauncherOpen} onOpenChange={setIsAgentLauncherOpen} />
+			{launcher?.(activeDomain)}
 			<NoiseLayer />
 		</div>
 	);

@@ -49,7 +49,7 @@ function installOperationsHandlers({ promotionStatus = 200 }: { readonly promoti
 				data: {
 					generated_at: "2026-08-18T08:00:00Z",
 					item: {
-						item_id: params.itemId,
+						item_id: params["itemId"],
 						source: "source_health",
 						dataset_id: "stock_daily",
 						namespace: "market",
@@ -73,7 +73,7 @@ function installOperationsHandlers({ promotionStatus = 200 }: { readonly promoti
 							action: "repair_catalog_freshness",
 							intent_type: "write",
 							method: "POST",
-							path: "/v1/ingestion/stock_daily/2026-08-18",
+							path: "/api/v1/ingestion/stock_daily/2026-08-18",
 							request_template: { dataset_id: "stock_daily", trade_date: "2026-08-18", force: true },
 							required_operator_inputs: [],
 						},

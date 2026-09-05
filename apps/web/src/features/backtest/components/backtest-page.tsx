@@ -1,13 +1,13 @@
 import { useParams } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { ApiError } from "@/api";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AgentContextActions } from "@/features/agent";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
+import { ContextActions } from "@/providers";
 import { useBacktestReport, useBacktestRun } from "../hooks";
 import { BacktestAuditView } from "./backtest-audit-view";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
@@ -112,7 +112,7 @@ export function BacktestPage() {
 			<ShellHeaderExtension>
 				<div className="ml-auto flex min-w-0 items-center gap-2 overflow-hidden">
 					<PageActionBar ariaLabel="回测结果操作" actions={backtestActions} onOpen={setActiveOverlay} />
-					<AgentContextActions
+					<ContextActions
 						className="flex shrink-0 items-center gap-1.5"
 						contextType="backtest-run"
 						contextId={`${run.runId}:${run.strategyId}@${run.strategyVersion}`}
@@ -227,7 +227,7 @@ export function BacktestPage() {
 			<BacktestOverlays
 				active={activeOverlay}
 				agentActions={
-					<AgentContextActions
+					<ContextActions
 						contextType="backtest-run"
 						contextId={`${run.runId}:${run.strategyId}@${run.strategyVersion}`}
 						evidenceObjective="复核当前回测运行的报告、净值、基准、成交与审计证据"

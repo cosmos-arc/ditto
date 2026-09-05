@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { ApiError } from "@/lib/api-client";
+import { ApiError } from "@/api";
 import { server } from "@/mocks/server";
 import { strategyKeys } from "../api/query-keys";
 import { useStrategyGovernance } from "./use-strategy-governance";
@@ -99,6 +99,35 @@ describe("useStrategyGovernance", () => {
 		expect(refetchSpy).toHaveBeenCalledTimes(1);
 	});
 
+	it("does not recover the active pointer for a non-conflict transport failure", async () => {
+		server.use(
+			http.post("/api/v1/strategies/:id/versions/:v/reactivate", () =>
+				HttpResponse.json({ detail: "temporarily unavailable", error_code: "UPSTREAM_UNAVAILABLE" }, { status: 503 }),
+			),
+		);
+		const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+		const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+		const refetchSpy = vi.spyOn(qc, "refetchQueries");
+		const { result } = renderHook(() => useStrategyGovernance("s"), { wrapper: createWrapper(qc) });
+
+		await act(async () => {
+			await result.current.reactivate
+				.mutateAsync({
+					version: 3,
+					actor: "analyst",
+					reason: "切回",
+					confirmation: "strategy:reactivate:s@3:pointer-revision:2:confirm",
+					impactSummary: "恢复稳定策略",
+					expectedPointerRevision: 2,
+				})
+				.catch(() => undefined);
+		});
+
+		await waitFor(() => expect(result.current.reactivate.error).toBeInstanceOf(ApiError));
+		expect(invalidateSpy).not.toHaveBeenCalled();
+		expect(refetchSpy).not.toHaveBeenCalled();
+	});
+
 	it("keeps approve and publish as separate evidence-bound commands", async () => {
 		const calls: Array<{ path: string; body: Record<string, unknown>; key: string }> = [];
 		server.use(
@@ -150,5 +179,48 @@ describe("useStrategyGovernance", () => {
 		});
 		expect(calls.every((call) => call.key.length > 0)).toBe(true);
 		expect(calls[0]?.key).not.toBe(calls[1]?.key);
+	});
+
+	it("invalidates strategy and review scopes without inventing experiment evidence when identity is absent", async () => {
+		server.use(
+			http.post("/api/v1/strategies/:id/versions/:v/reject", () =>
+				HttpResponse.json({ data: { strategy_id: "s", version: 2, state: "draft", review_outcome: "rejected" } }),
+			),
+		);
+		const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+		const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+		const { result } = renderHook(() => useStrategyGovernance("s"), { wrapper: createWrapper(qc) });
+
+		await act(async () => {
+			await result.current.reject.mutateAsync({ version: 2, actor: "reviewer", reason: "insufficient evidence" });
+		});
+
+		expect(invalidateSpy).toHaveBeenCalledTimes(4);
+		expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["research", "reviews", "list"] });
+		expect(invalidateSpy).not.toHaveBeenCalledWith(
+			expect.objectContaining({ queryKey: expect.arrayContaining(["experiments"]) }),
+		);
+	});
+
+	it("still creates a bounded idempotency identity when randomUUID is unavailable", async () => {
+		let key = "";
+		server.use(
+			http.post("/api/v1/strategies/:id/versions/:v/deprecate", ({ request }) => {
+				key = request.headers.get("Idempotency-Key") ?? "";
+				return HttpResponse.json({
+					data: { strategy_id: "s", version: 2, state: "deprecated", review_outcome: "approved" },
+				});
+			}),
+		);
+		vi.stubGlobal("crypto", {});
+		const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+		const { result } = renderHook(() => useStrategyGovernance("s"), { wrapper: createWrapper(qc) });
+
+		await act(async () => {
+			await result.current.deprecate.mutateAsync({ version: 2, actor: "operator", reason: "superseded" });
+		});
+
+		expect(key).toMatch(/^strategy-governance-\d+-[a-z0-9]+$/u);
+		vi.unstubAllGlobals();
 	});
 });

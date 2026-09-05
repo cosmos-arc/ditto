@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
-import { AnalyticalLayout } from "@/features/shell";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
+import { AnalyticalLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { ASharesOverview } from "./a-shares-overview";
 import { ASharesOverlay, type ASharesOverlayId, aSharesActions } from "./market-page-overlays";
+import type { MarketCatalogQuery } from "./market-view-contracts";
 
-export function ASharesPage() {
+export function ASharesPage({ catalog }: { readonly catalog: MarketCatalogQuery }) {
 	const [activeOverlay, setActiveOverlay] = useState<ASharesOverlayId | null>(null);
 	return (
 		<>
@@ -25,7 +25,7 @@ export function ASharesPage() {
 						data-info-unit="a-shares-main"
 						className="h-full overflow-y-auto p-(--density-panel-padding)"
 					>
-						<ASharesOverview />
+						<ASharesOverview query={catalog} />
 					</div>
 				}
 				activity={

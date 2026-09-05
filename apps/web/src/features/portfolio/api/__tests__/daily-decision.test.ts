@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { capturedRequest, requestPath } from "@/test/request";
 import { fetchDailyDecision, fetchDailyDecisionV2, fetchDailyDecisionV3 } from "../daily-decision";
 import { DEFAULT_STRATEGY_ID, tradingKeys } from "../query-keys";
 
@@ -43,10 +44,9 @@ describe("fetchDailyDecisionV2", () => {
 		const report = await fetchDailyDecisionV2();
 
 		expect(report.readiness.status).toBe("review");
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/v1/manual/daily-decision/v2?strategy_id=seed_etf_industry_rotation",
-			expect.objectContaining({ method: "GET" }),
-		);
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/manual/daily-decision/v2?strategy_id=seed_etf_industry_rotation");
+		expect(request.method).toBe("GET");
 	});
 
 	it("uses the explicit strategy and account execution scope from the URL", async () => {
@@ -73,10 +73,11 @@ describe("fetchDailyDecisionV2", () => {
 
 		try {
 			await fetchDailyDecisionV2();
-			expect(fetchMock).toHaveBeenCalledWith(
+			const request = capturedRequest(fetchMock.mock.calls);
+			expect(requestPath(request)).toBe(
 				"/api/v1/manual/daily-decision/v2?strategy_id=seed_etf_trend_swing&account_id=paper-r1",
-				expect.objectContaining({ method: "GET" }),
 			);
+			expect(request.method).toBe("GET");
 		} finally {
 			window.history.replaceState(null, "", originalUrl);
 		}
@@ -109,7 +110,13 @@ describe("fetchDailyDecisionV3", () => {
 							factor_risk: { availability: "unavailable" },
 							stress_tests: { catalog_version: "stress-v1", losses: {} },
 							reconciliation: { status: "matched", differences: [], alert_idempotency_key: null },
-							provenance: {},
+							provenance: {
+								decision_time: null,
+								knowledge_cutoff: null,
+								publication_cutoff: null,
+								generated_at: null,
+								source_snapshot_ids: [],
+							},
 						},
 					}),
 					{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -124,10 +131,11 @@ describe("fetchDailyDecisionV3", () => {
 		});
 
 		expect(report.readiness).toBe("review");
-		expect(fetchMock).toHaveBeenCalledWith(
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe(
 			"/api/v1/manual/daily-decision/v3?strategy_id=strategy-r4&trade_date=2026-08-18&account_id=paper-r4",
-			expect.objectContaining({ method: "GET" }),
 		);
+		expect(request.method).toBe("GET");
 	});
 });
 
@@ -155,10 +163,9 @@ describe("fetchDailyDecision", () => {
 		const report = await fetchDailyDecision();
 
 		expect(report.strategy_id).toBe(DEFAULT_STRATEGY_ID);
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/v1/manual/daily-decision?strategy_id=seed_etf_industry_rotation",
-			expect.objectContaining({ method: "GET" }),
-		);
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/manual/daily-decision?strategy_id=seed_etf_industry_rotation");
+		expect(request.method).toBe("GET");
 	});
 
 	it("passes an explicit trade date without adding /api in the hook path", async () => {
@@ -186,9 +193,10 @@ describe("fetchDailyDecision", () => {
 			tradeDate: "2026-07-01",
 		});
 
-		expect(fetchMock).toHaveBeenCalledWith(
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe(
 			"/api/v1/manual/daily-decision?strategy_id=seed_etf_trend_swing&trade_date=2026-07-01",
-			expect.objectContaining({ method: "GET" }),
 		);
+		expect(request.method).toBe("GET");
 	});
 });

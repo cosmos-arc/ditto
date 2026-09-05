@@ -5,9 +5,9 @@
  * query graph 由 experiment workbench adapter 扩展。
  */
 
-import { apiClient } from "@/lib/api-client";
+import { apiClient, preserveExactJson } from "@/api";
+import type { components, operations } from "@/api/generated/schema";
 import type { ExperimentListItem } from "@/types";
-import type { components, operations } from "@/types/generated/api";
 
 export type ExperimentSummaryResponse = components["schemas"]["ExperimentSummaryResponse"];
 export type ExperimentDetailResponse = components["schemas"]["ExperimentDetailResponse"];
@@ -16,6 +16,8 @@ export type ExperimentGateResponse = components["schemas"]["ExperimentGateRespon
 export type ExperimentComparisonResponse = components["schemas"]["ExperimentComparisonResponse"];
 export type ExperimentArtifactResponse = components["schemas"]["ExperimentArtifactResponse"];
 export type ExperimentSelectionEvidenceResponse = components["schemas"]["ExperimentSelectionEvidenceResponse"];
+export type ExperimentFoldResponse = components["schemas"]["ExperimentFoldResponse"];
+export type ExperimentSelectionStateResponse = components["schemas"]["ExperimentSelectionStateResponse"];
 export type ExperimentControlReceiptResponse = components["schemas"]["ExperimentControlReceiptResponse"];
 export type CandidateSelectionRequest = components["schemas"]["CandidateSelectionRequest"];
 export type CandidateSelectionReceiptResponse = components["schemas"]["CandidateSelectionReceiptResponse"];
@@ -201,7 +203,7 @@ export function estimateCandidateCount(axesJson: string): number | null {
 		if (axes.length === 0) return 1;
 		const combinations = axes.reduce<number>((count, axis) => {
 			if (typeof axis !== "object" || axis === null || Array.isArray(axis)) throw new Error("invalid axis");
-			const values = (axis as Record<string, unknown>).values;
+			const values = (axis as Record<string, unknown>)["values"];
 			if (!Array.isArray(values) || values.length === 0) throw new Error("invalid axis values");
 			return count * values.length;
 		}, 1);
@@ -263,10 +265,11 @@ export function planningRequestIdentity(planning: ExperimentPlanningRequest): st
 }
 
 export function preflightExperiment(planning: ExperimentPlanningRequest): Promise<ExperimentPreflightResponse> {
-	return apiClient.postRawJson<ExperimentPreflightResponse>(
-		`/v1/research/experiments/${encodeURIComponent(planning.experiment_id)}/preflight`,
-		planningRequestIdentity(planning),
-	);
+	return apiClient.post("/api/v1/research/experiments/{experiment_id}/preflight", {
+		body: planning,
+		exactJson: preserveExactJson(planning, planningRequestIdentity(planning)),
+		params: { path: { experiment_id: planning.experiment_id } },
+	});
 }
 
 export function launchExperiment(
@@ -277,8 +280,10 @@ export function launchExperiment(
 	const request: ExperimentLaunchRequest = { ...planning, confirmed_plan_hash: confirmedPlanHash };
 	const planningJson = planningRequestIdentity(planning);
 	const rawBody = `${planningJson.slice(0, -1)},"confirmed_plan_hash":${encodeScalar(request.confirmed_plan_hash, "Confirmed plan hash")}}`;
-	return apiClient.postRawJson<ExperimentLaunchResponse>("/v1/research/experiments", rawBody, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/research/experiments", {
+		body: request,
+		exactJson: preserveExactJson(request, rawBody),
+		params: { header: { "Idempotency-Key": idempotencyKey } },
 	});
 }
 
@@ -317,9 +322,9 @@ export function mapExperimentLaunchReceipt(dto: ExperimentLaunchResponse): Exper
 	};
 }
 
-/** 列出实验（`GET /v1/research/experiments`）。 */
+/** 列出实验（`GET /api/v1/research/experiments`）。 */
 export function fetchExperiments(): Promise<ExperimentSummaryResponse[]> {
-	return apiClient.get<ExperimentSummaryResponse[]>("/v1/research/experiments");
+	return apiClient.get("/api/v1/research/experiments");
 }
 
 export function mapExperimentListItem(dto: ExperimentSummaryResponse): ExperimentListItem {
@@ -337,35 +342,39 @@ export function mapExperimentListItem(dto: ExperimentSummaryResponse): Experimen
 }
 
 export function fetchExperiment(experimentId: string): Promise<ExperimentDetailResponse> {
-	return apiClient.get<ExperimentDetailResponse>(`/v1/research/experiments/${encodeURIComponent(experimentId)}`);
+	return apiClient.get("/api/v1/research/experiments/{experiment_id}", {
+		params: { path: { experiment_id: experimentId } },
+	});
 }
 
 export function fetchExperimentCandidates(experimentId: string): Promise<ExperimentCandidateResponse[]> {
-	return apiClient.get<ExperimentCandidateResponse[]>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/candidates`,
-	);
+	return apiClient.get("/api/v1/research/experiments/{experiment_id}/candidates", {
+		params: { path: { experiment_id: experimentId } },
+	});
 }
 
 export function fetchExperimentGates(experimentId: string): Promise<ExperimentGateResponse[]> {
-	return apiClient.get<ExperimentGateResponse[]>(`/v1/research/experiments/${encodeURIComponent(experimentId)}/gates`);
+	return apiClient.get("/api/v1/research/experiments/{experiment_id}/gates", {
+		params: { path: { experiment_id: experimentId } },
+	});
 }
 
 export function fetchExperimentComparison(experimentId: string): Promise<ExperimentComparisonResponse> {
-	return apiClient.get<ExperimentComparisonResponse>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/comparison`,
-	);
+	return apiClient.get("/api/v1/research/experiments/{experiment_id}/comparison", {
+		params: { path: { experiment_id: experimentId } },
+	});
 }
 
 export function fetchExperimentArtifacts(experimentId: string): Promise<ExperimentArtifactResponse[]> {
-	return apiClient.get<ExperimentArtifactResponse[]>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/artifacts`,
-	);
+	return apiClient.get("/api/v1/research/experiments/{experiment_id}/artifacts", {
+		params: { path: { experiment_id: experimentId } },
+	});
 }
 
 export function fetchExperimentSelectionEvidence(experimentId: string): Promise<ExperimentSelectionEvidenceResponse> {
-	return apiClient.get<ExperimentSelectionEvidenceResponse>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/selection-evidence`,
-	);
+	return apiClient.get("/api/v1/research/experiments/{experiment_id}/selection-evidence", {
+		params: { path: { experiment_id: experimentId } },
+	});
 }
 
 export function controlExperiment(
@@ -374,11 +383,21 @@ export function controlExperiment(
 	expectedRevision: number,
 	idempotencyKey: string,
 ): Promise<ExperimentControlReceiptResponse> {
-	return apiClient.post<ExperimentControlReceiptResponse>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/${action}`,
-		{ expected_revision: expectedRevision },
-		{ headers: { "Idempotency-Key": idempotencyKey } },
-	);
+	const init = {
+		body: { expected_revision: expectedRevision },
+		params: {
+			path: { experiment_id: experimentId },
+			header: { "Idempotency-Key": idempotencyKey },
+		},
+	};
+	switch (action) {
+		case "pause":
+			return apiClient.post("/api/v1/research/experiments/{experiment_id}/pause", init);
+		case "cancel":
+			return apiClient.post("/api/v1/research/experiments/{experiment_id}/cancel", init);
+		case "resume":
+			return apiClient.post("/api/v1/research/experiments/{experiment_id}/resume", init);
+	}
 }
 
 export function retryExperimentFold(
@@ -386,11 +405,13 @@ export function retryExperimentFold(
 	request: components["schemas"]["ExperimentRetryFoldRequest"],
 	idempotencyKey: string,
 ): Promise<ExperimentControlReceiptResponse> {
-	return apiClient.post<ExperimentControlReceiptResponse>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/retry-fold`,
-		request,
-		{ headers: { "Idempotency-Key": idempotencyKey } },
-	);
+	return apiClient.post("/api/v1/research/experiments/{experiment_id}/retry-fold", {
+		body: request,
+		params: {
+			path: { experiment_id: experimentId },
+			header: { "Idempotency-Key": idempotencyKey },
+		},
+	});
 }
 
 export function selectExperimentCandidate(
@@ -398,11 +419,13 @@ export function selectExperimentCandidate(
 	request: CandidateSelectionRequest,
 	idempotencyKey: string,
 ): Promise<CandidateSelectionReceiptResponse> {
-	return apiClient.post<CandidateSelectionReceiptResponse>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/candidate-selection`,
-		request,
-		{ headers: { "Idempotency-Key": idempotencyKey } },
-	);
+	return apiClient.post("/api/v1/research/experiments/{experiment_id}/candidate-selection", {
+		body: request,
+		params: {
+			path: { experiment_id: experimentId },
+			header: { "Idempotency-Key": idempotencyKey },
+		},
+	});
 }
 
 export function evaluateExperimentHoldout(
@@ -410,9 +433,11 @@ export function evaluateExperimentHoldout(
 	request: HoldoutEvaluationRequest,
 	idempotencyKey: string,
 ): Promise<HoldoutEvaluationReceiptResponse> {
-	return apiClient.post<HoldoutEvaluationReceiptResponse>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/holdout-evaluations`,
-		request,
-		{ headers: { "Idempotency-Key": idempotencyKey } },
-	);
+	return apiClient.post("/api/v1/research/experiments/{experiment_id}/holdout-evaluations", {
+		body: request,
+		params: {
+			path: { experiment_id: experimentId },
+			header: { "Idempotency-Key": idempotencyKey },
+		},
+	});
 }

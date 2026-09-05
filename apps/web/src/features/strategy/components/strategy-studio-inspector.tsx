@@ -1,5 +1,5 @@
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
-import { AgentContextActions } from "@/features/agent";
+import { ContextActions } from "@/providers";
 import type { NodeDescriptorView, SpecValidation, StrategyDetail, StrategySpec } from "@/types/strategy";
 import { NodeInspector } from "./strategy-inspector";
 
@@ -76,7 +76,7 @@ export function StrategyStudioInspector({
 			</section>
 			<div className="border-b border-(--color-border-subtle) p-3">
 				<p className="mb-2 text-[11px] font-medium text-(--color-foreground-secondary)">治理型 Agent</p>
-				<AgentContextActions
+				<ContextActions
 					contextType="strategy-version"
 					contextId={`${detail.strategyId}@${detail.version}`}
 					evidenceObjective="复核当前策略版本的证据、风险与不确定性"

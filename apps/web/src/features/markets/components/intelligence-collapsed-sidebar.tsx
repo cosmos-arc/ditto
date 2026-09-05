@@ -1,9 +1,9 @@
-import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
+import { SidebarToggle } from "@/features/shell";
 import { cn } from "@/lib/utils";
 
 interface CollapsedItem {
 	readonly icon: React.ReactNode;
-	readonly badge?: number;
+	readonly badge?: number | undefined;
 	readonly "aria-label": string;
 }
 

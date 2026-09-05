@@ -1,5 +1,5 @@
 interface GlobalCommandButtonProps {
-	readonly onOpenCommand?: () => void;
+	readonly onOpenCommand?: (() => void) | undefined;
 }
 
 export function GlobalCommandButton({ onOpenCommand }: GlobalCommandButtonProps) {

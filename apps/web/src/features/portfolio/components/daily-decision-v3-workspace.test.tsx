@@ -5,10 +5,12 @@ import { DailyDecisionV3Workspace } from "./daily-decision-v3-workspace";
 
 describe("DailyDecisionV3Workspace", () => {
 	it("renders the ready cockpit with risk headline, provenance, and actions", () => {
+		const baseAction = createDailyDecisionV3ViewModel().actions[0];
+		if (!baseAction) throw new Error("expected daily-decision action fixture");
 		const decision = createDailyDecisionV3ViewModel({
 			actions: [
 				{
-					...createDailyDecisionV3ViewModel().actions[0],
+					...baseAction,
 					filledQuantity: 250,
 					remainingQuantity: 750,
 					riskFlags: ["LIMIT_UP", "CONCENTRATION_REVIEW"],

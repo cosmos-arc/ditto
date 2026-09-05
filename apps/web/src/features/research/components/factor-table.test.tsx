@@ -153,11 +153,11 @@ describe("FactorTable", () => {
 
 		// f-005 (failed) should have red color
 		const failedBar = bars[4] as HTMLElement;
-		expect(failedBar.dataset.health).toBe("failed");
+		expect(failedBar.dataset["health"]).toBe("failed");
 
 		// f-004 (warning) should have amber color
 		const warningBar = bars[3] as HTMLElement;
-		expect(warningBar.dataset.health).toBe("warning");
+		expect(warningBar.dataset["health"]).toBe("warning");
 	});
 
 	// === Sharpe column ===
@@ -170,17 +170,17 @@ describe("FactorTable", () => {
 		// f-001: sharpe=1.85 >= 1.5 => ▲ (green/up)
 		const sharpeHigh = screen.getByTestId("sharpe-f-001");
 		expect(sharpeHigh).toHaveTextContent("▲");
-		expect(sharpeHigh.dataset.trend).toBe("up");
+		expect(sharpeHigh.dataset["trend"]).toBe("up");
 
 		// f-002: sharpe=1.42 >= 1.0 => ▶ (neutral/flat)
 		const sharpeMid = screen.getByTestId("sharpe-f-002");
 		expect(sharpeMid).toHaveTextContent("▶");
-		expect(sharpeMid.dataset.trend).toBe("flat");
+		expect(sharpeMid.dataset["trend"]).toBe("flat");
 
 		// f-003: sharpe=0.95 < 1.0 => ▼ (red/down)
 		const sharpeLow = screen.getByTestId("sharpe-f-003");
 		expect(sharpeLow).toHaveTextContent("▼");
-		expect(sharpeLow.dataset.trend).toBe("down");
+		expect(sharpeLow.dataset["trend"]).toBe("down");
 	});
 
 	// === Universe column ===
@@ -206,19 +206,19 @@ describe("FactorTable", () => {
 
 		// f-001: |IC| = 0.052 >= 0.05 => "strong"
 		const icStrong = screen.getByTestId("ic-f-001");
-		expect(icStrong.dataset.level).toBe("strong");
+		expect(icStrong.dataset["level"]).toBe("strong");
 
 		// f-002: |IC| = 0.041 >= 0.03 => "normal"
 		const icNormal = screen.getByTestId("ic-f-002");
-		expect(icNormal.dataset.level).toBe("normal");
+		expect(icNormal.dataset["level"]).toBe("normal");
 
 		// f-004: |IC| = 0.025 >= 0.02 => "muted"
 		const icMuted = screen.getByTestId("ic-f-004");
-		expect(icMuted.dataset.level).toBe("muted");
+		expect(icMuted.dataset["level"]).toBe("muted");
 
 		// f-005: |IC| = 0.015 < 0.02 => "dim"
 		const icDim = screen.getByTestId("ic-f-005");
-		expect(icDim.dataset.level).toBe("dim");
+		expect(icDim.dataset["level"]).toBe("dim");
 	});
 
 	it("renders IC spark bar with proportional width", async () => {
@@ -240,18 +240,18 @@ describe("FactorTable", () => {
 
 		// f-001: |IR| = 0.85 >= 0.8 => "strong"
 		const irStrong = screen.getByTestId("ir-f-001");
-		expect(irStrong.dataset.level).toBe("strong");
+		expect(irStrong.dataset["level"]).toBe("strong");
 
 		// f-002: |IR| = 0.72 >= 0.5 => "normal"
 		const irNormal = screen.getByTestId("ir-f-002");
-		expect(irNormal.dataset.level).toBe("normal");
+		expect(irNormal.dataset["level"]).toBe("normal");
 
 		// f-004: |IR| = 0.42 >= 0.3 => "muted"
 		const irMuted = screen.getByTestId("ir-f-004");
-		expect(irMuted.dataset.level).toBe("muted");
+		expect(irMuted.dataset["level"]).toBe("muted");
 
 		// f-005: |IR| = 0.30 >= 0.3 => "muted" (boundary)
 		const irMutedBoundary = screen.getByTestId("ir-f-005");
-		expect(irMutedBoundary.dataset.level).toBe("muted");
+		expect(irMutedBoundary.dataset["level"]).toBe("muted");
 	});
 });

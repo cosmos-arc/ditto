@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
+import { ApiError } from "@/api";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
 import { useBacktestRuns } from "../hooks";
 import type { BacktestRun } from "../types";
 import { BacktestCompareOverlay } from "./backtest-overlays";

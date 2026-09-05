@@ -1,23 +1,24 @@
 /**
  * Review-packet adapter（research 域，R3 live-shape）。
  *
- * `GET /v1/research/experiments/{id}/review-packet` → `ExperimentReviewPacketResponse`
+ * `GET /api/v1/research/experiments/{id}/review-packet` → `ExperimentReviewPacketResponse`
  * （完整 ReviewPacket read model：11 hard-gate + 证据 hash + lineage + rationale）。
  * adapter 返回解封后的 generated DTO，mapper 翻译为 camelCase view-model。
  */
-import { apiClient } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 import type { ReviewGate, ReviewPacket, ReviewSelectionExposure, SelectionTraceRef } from "@/types/review";
 
 export type ExperimentReviewPacketResponse = components["schemas"]["ExperimentReviewPacketResponse"];
 export type ReviewGateOutcomeResponse = components["schemas"]["ReviewGateOutcomeResponse"];
 export type ReviewSelectionTraceRefResponse = components["schemas"]["ReviewSelectionTraceRefResponse"];
 
-/** 读取一个 experiment 的 review packet（`GET /v1/research/experiments/{id}/review-packet`）。 */
+/** 读取一个 experiment 的 review packet（`GET /api/v1/research/experiments/{id}/review-packet`）。 */
 export function fetchReviewPacket(experimentId: string): Promise<ExperimentReviewPacketResponse> {
-	return apiClient.get<ExperimentReviewPacketResponse>(
-		`/v1/research/experiments/${encodeURIComponent(experimentId)}/review-packet`,
-	);
+	return apiClient.get("/api/v1/research/experiments/{experiment_id}/review-packet", {
+		params: { path: { experiment_id: experimentId } },
+	});
 }
 
 function mapGate(dto: ReviewGateOutcomeResponse): ReviewGate {

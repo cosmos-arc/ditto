@@ -25,16 +25,15 @@ describe("AlertRow", () => {
 
 	// ── Severity variants ──
 
-	it.each([
-		"critical",
-		"warning",
-		"info",
-	] as const)("renders StatusDot with correct variant for severity=%s", (severity) => {
-		render(<AlertRow severity={severity} title="Test" />);
-		const dot = document.querySelector("[data-slot='status-dot']") as HTMLElement;
-		const expectedDotVariant = severity === "warning" ? "degraded" : severity;
-		expect(dot).toHaveAttribute("data-variant", expectedDotVariant);
-	});
+	it.each(["critical", "warning", "info"] as const)(
+		"renders StatusDot with correct variant for severity=%s",
+		(severity) => {
+			render(<AlertRow severity={severity} title="Test" />);
+			const dot = document.querySelector("[data-slot='status-dot']") as HTMLElement;
+			const expectedDotVariant = severity === "warning" ? "degraded" : severity;
+			expect(dot).toHaveAttribute("data-variant", expectedDotVariant);
+		},
+	);
 
 	it("applies pulse to critical severity dot", () => {
 		render(<AlertRow severity="critical" title="Test" />);

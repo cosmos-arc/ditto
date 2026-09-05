@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { StrategyVersionsView } from "./strategy-versions-view";
 
+const renderNoGovernanceActions = () => null;
+
 function wrapper({ children }: { readonly children: ReactNode }) {
 	return (
 		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -37,7 +39,10 @@ describe("StrategyVersionsView immutable detail", () => {
 		);
 
 		const user = userEvent.setup();
-		render(<StrategyVersionsView id="seed_etf_industry_rotation" />, { wrapper });
+		render(
+			<StrategyVersionsView id="seed_etf_industry_rotation" renderGovernanceActions={renderNoGovernanceActions} />,
+			{ wrapper },
+		);
 		await user.click(await screen.findByRole("button", { name: /查看 v2/ }));
 
 		await expect(screen.findByText("Canonical Spec")).resolves.toBeInTheDocument();
@@ -53,7 +58,10 @@ describe("StrategyVersionsView immutable detail", () => {
 			),
 		);
 		const user = userEvent.setup();
-		render(<StrategyVersionsView id="seed_etf_industry_rotation" />, { wrapper });
+		render(
+			<StrategyVersionsView id="seed_etf_industry_rotation" renderGovernanceActions={renderNoGovernanceActions} />,
+			{ wrapper },
+		);
 		await user.click(await screen.findByRole("button", { name: /查看 v1/ }));
 
 		await expect(screen.findByText(/STRATEGY_VERSION_NOT_FOUND/)).resolves.toBeInTheDocument();

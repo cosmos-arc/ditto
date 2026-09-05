@@ -56,7 +56,7 @@ export function DataHealthSection() {
 								<span className="text-xs text-(--color-foreground-secondary)">{provider.label}</span>
 							</div>
 							<span className={`text-xs ${STATUS_TEXT_COLOR[provider.status] ?? "text-(--color-foreground-tertiary)"}`}>
-								{provider.status === "healthy" ? "正常" : provider.statusText.split("·")[0].trim()}
+								{provider.status === "healthy" ? "正常" : (provider.statusText.split("·")[0]?.trim() ?? "未知")}
 							</span>
 						</div>
 					))}

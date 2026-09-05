@@ -5,5 +5,7 @@
  * prototype mock（MSW）。`VITE_USE_MOCK === "true"` 时测试/原型态启用 MSW handler。
  */
 export function shouldUsePrototypeMocks(): boolean {
-	return import.meta.env.VITE_USE_MOCK === "true";
+	return isMockRuntime();
 }
+
+import { isMockRuntime } from "@/api";

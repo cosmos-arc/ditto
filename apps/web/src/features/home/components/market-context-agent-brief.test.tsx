@@ -4,8 +4,20 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchMarketContext } from "@/features/markets";
 import { server } from "@/mocks/server";
 import { AgentFindingsSection } from "./agent-findings-section";
+
+const CURRENT_MARKET_CONTEXT_SCOPE = {
+	asOf: "2026-08-31T09:00:00Z",
+	knowledgeCutoff: "2026-08-31T09:00:00Z",
+	publicationCutoff: "2026-08-31T09:00:00Z",
+	sourceSnapshotIds: ["snapshot-stock", "snapshot-index"],
+} as const;
+
+function loadMarketContext() {
+	return fetchMarketContext(CURRENT_MARKET_CONTEXT_SCOPE);
+}
 
 function wrapper() {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -71,13 +83,16 @@ describe("Today MarketContext Agent Brief", () => {
 		let createBody: Record<string, unknown> | null = null;
 		server.use(
 			http.post("/api/v1/agent/sessions", () =>
-				HttpResponse.json({
-					data: {
-						created_at: "2026-08-31T09:00:00Z",
-						retention_class: "standard",
-						session_id: "session-market-1",
+				HttpResponse.json(
+					{
+						data: {
+							created_at: "2026-08-31T09:00:00Z",
+							retention_class: "standard",
+							session_id: "session-market-1",
+						},
 					},
-				}),
+					{ status: 201 },
+				),
 			),
 			http.post("/api/v1/agent/runs", async ({ request }) => {
 				createBody = (await request.json()) as Record<string, unknown>;
@@ -87,7 +102,7 @@ describe("Today MarketContext Agent Brief", () => {
 		);
 
 		const user = userEvent.setup();
-		render(<AgentFindingsSection />, { wrapper: wrapper() });
+		render(<AgentFindingsSection loadMarketContext={loadMarketContext} />, { wrapper: wrapper() });
 
 		await user.click(await screen.findByRole("button", { name: "生成 MarketContext Agent Brief" }));
 		await expect(screen.findByText(/风险偏好偏强/)).resolves.toBeInTheDocument();

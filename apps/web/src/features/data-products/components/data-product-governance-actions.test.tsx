@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -33,7 +33,7 @@ function approval(overrides: Partial<RemediationApprovalView> = {}): Remediation
 		intentType: "write",
 		itemId: "source_health:stock_daily:2026-08-18",
 		method: "POST",
-		path: "/v1/ingestion/stock_daily/2026-08-18",
+		path: "/api/v1/ingestion/stock_daily/2026-08-18",
 		requestPayload: ACTION_PAYLOAD,
 		requestedAt: "2026-08-18T08:00:00Z",
 		requestedBy: "operator",
@@ -61,7 +61,7 @@ function fallbackPreview(): FallbackPreviewView {
 	};
 }
 
-function fallbackPolicy(): FallbackPolicyView {
+function fallbackPolicy(overrides: Partial<FallbackPolicyView> = {}): FallbackPolicyView {
 	return {
 		approvalRequired: true,
 		authorityHash: AUTHORITY_HASH,
@@ -83,6 +83,7 @@ function fallbackPolicy(): FallbackPolicyView {
 		selectedSource: "tushare",
 		status: "draft",
 		tradeDate: "2026-08-18",
+		...overrides,
 	};
 }
 
@@ -94,7 +95,7 @@ function remediationDetail(): RemediationItemDetailView {
 				intentType: "write",
 				method: "POST",
 				notes: null,
-				path: "/v1/ingestion/stock_daily/2026-08-18",
+				path: "/api/v1/ingestion/stock_daily/2026-08-18",
 				requestTemplate: ACTION_PAYLOAD,
 				requiredOperatorInputs: [],
 			},
@@ -228,6 +229,178 @@ describe("DataProductGovernanceActions", () => {
 			revoked_by: "operator",
 		});
 	});
+
+	it("requests approval without executing the remediation intent", async () => {
+		const user = userEvent.setup();
+		let requestBody: unknown;
+		server.use(
+			http.post("/api/v1/ingestion/catalog/remediation/approvals", async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({ data: rawApproval("requested") });
+			}),
+		);
+		renderActions();
+
+		await user.click(screen.getByRole("button", { name: "预览 remediation request" }));
+		expect(screen.getByText("Exact request payload")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "请求审批" })).toBeDisabled();
+		await user.type(screen.getByLabelText("治理确认短语"), "remediation:request:source_health:stock_daily:2026-08-18");
+		await user.click(screen.getByRole("button", { name: "请求审批" }));
+
+		expect(await screen.findByRole("status")).toHaveTextContent("approval requested · approval-001");
+		expect(requestBody).toEqual({
+			action: "repair_catalog_freshness",
+			intent_type: "write",
+			item_id: "source_health:stock_daily:2026-08-18",
+			method: "POST",
+			path: "/api/v1/ingestion/stock_daily/2026-08-18",
+			request_payload: ACTION_PAYLOAD,
+			requested_by: "operator",
+		});
+	});
+
+	it("allows rejecting an exact valid approval without an execution confirmation phrase", async () => {
+		const user = userEvent.setup();
+		let requestBody: unknown;
+		server.use(
+			http.post("/api/v1/ingestion/catalog/remediation/approvals/:approvalId/decision", async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({ data: rawApproval("rejected") });
+			}),
+		);
+		renderActions({ approvals: [approval()] });
+
+		await user.click(screen.getByRole("button", { name: "检查 remediation approval" }));
+		await user.click(screen.getByRole("button", { name: "拒绝" }));
+
+		expect(await screen.findByRole("status")).toHaveTextContent("approval rejected");
+		expect(requestBody).toEqual({
+			authority_hash: AUTHORITY_HASH,
+			decided_by: "operator",
+			decision: "rejected",
+		});
+	});
+
+	it("executes only the approved authority hash", async () => {
+		const user = userEvent.setup();
+		let requestBody: unknown;
+		server.use(
+			http.post("/api/v1/ingestion/catalog/remediation/approvals/:approvalId/execute", async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({
+					data: {
+						approval: rawApproval("completed"),
+						execution: { status: "success" },
+					},
+				});
+			}),
+		);
+		renderActions({ approvals: [approval({ status: "approved" })] });
+
+		await user.click(screen.getByRole("button", { name: "检查 remediation approval" }));
+		await user.type(screen.getByLabelText("治理确认短语"), `remediation:execute:${AUTHORITY_HASH}`);
+		await user.click(screen.getByRole("button", { name: "执行已批准动作" }));
+
+		expect(await screen.findByRole("status")).toHaveTextContent("remediation success");
+		expect(requestBody).toEqual({ authority_hash: AUTHORITY_HASH, executed_by: "operator" });
+	});
+
+	it("drafts the exact fallback preview selected by the operator", async () => {
+		const user = userEvent.setup();
+		let requestBody: unknown;
+		server.use(
+			http.post("/api/v1/ingestion/catalog/source-fallback/policies", async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({ data: { policy_id: "fallback-created" } });
+			}),
+		);
+		renderActions();
+
+		await user.click(screen.getByRole("button", { name: "预览 fallback draft" }));
+		expect(screen.getByText("wind")).toBeInTheDocument();
+		expect(screen.getByText("tushare")).toBeInTheDocument();
+		await user.type(screen.getByLabelText("治理确认短语"), "fallback:draft:stock_daily:2026-08-18:tushare");
+		await user.click(screen.getByRole("button", { name: "创建 fallback draft" }));
+
+		expect(await screen.findByRole("status")).toHaveTextContent("fallback draft · fallback-created");
+		expect(requestBody).toMatchObject({
+			created_by: "operator",
+			dataset_id: "stock_daily",
+			default_source: "wind",
+			selected_source: "tushare",
+			trade_date: "2026-08-18",
+		});
+	});
+
+	it.each([
+		{ action: "activation", status: "approved", result: "active" },
+		{ action: "retirement", status: "active", result: "retired" },
+	] as const)("binds fallback $action to the current policy authority", async ({ action, status, result }) => {
+		const user = userEvent.setup();
+		let requestBody: unknown;
+		server.use(
+			http.post(`/api/v1/ingestion/catalog/source-fallback/policies/:policyId/${action}`, async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({ data: { status: result } });
+			}),
+		);
+		renderActions({
+			fallbackPolicies: [
+				fallbackPolicy({
+					authorityPayload: { action, dataset_id: "stock_daily" },
+					status,
+				}),
+			],
+		});
+
+		await user.click(screen.getByRole("button", { name: `检查 fallback ${action}` }));
+		await user.type(screen.getByLabelText("治理确认短语"), `fallback:${action}:${AUTHORITY_HASH}`);
+		await user.click(screen.getByRole("button", { name: `确认 fallback ${action}` }));
+
+		expect(await screen.findByRole("status")).toHaveTextContent(`fallback ${result}`);
+		expect(requestBody).toEqual({ actor: "operator", authority_hash: AUTHORITY_HASH });
+	});
+
+	it("surfaces a mutation failure and preserves the operator's governed context", async () => {
+		const user = userEvent.setup();
+		server.use(
+			http.post("/api/v1/ingestion/catalog/remediation/approvals", () =>
+				HttpResponse.json({ detail: "authority service unavailable" }, { status: 503 }),
+			),
+		);
+		renderActions();
+
+		await user.click(screen.getByRole("button", { name: "预览 remediation request" }));
+		await user.type(screen.getByLabelText("治理确认短语"), "remediation:request:source_health:stock_daily:2026-08-18");
+		await user.click(screen.getByRole("button", { name: "请求审批" }));
+
+		await waitFor(() => {
+			expect(screen.getByRole("alert")).toHaveTextContent("authority service unavailable");
+		});
+		expect(screen.getByText("Exact request payload")).toBeInTheDocument();
+	});
+
+	it("uses the selected promotion revocation reason", async () => {
+		const user = userEvent.setup();
+		let requestBody: unknown;
+		server.use(
+			http.post("/api/v1/ingestion/catalog/promotion/revoke", async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({ data: { dataset_id: "stock_daily" } });
+			}),
+		);
+		renderActions({ promotion: { ...NO_PROMOTION, active: true, currentMaturity: null, status: "ready" } });
+
+		await user.click(screen.getByRole("button", { name: "撤销晋级" }));
+		expect(screen.getByText("unknown")).toBeInTheDocument();
+		await user.selectOptions(screen.getByLabelText("撤销原因"), "evidence_invalidated");
+		await user.type(screen.getByLabelText("治理确认短语"), "promotion:revoke:stock_daily:2026-08-18:confirm");
+		await user.click(screen.getByRole("button", { name: "确认撤销晋级" }));
+
+		await waitFor(() => {
+			expect(requestBody).toMatchObject({ revocation_reason: "evidence_invalidated" });
+		});
+	});
 });
 
 function rawApproval(status: string) {
@@ -239,7 +412,7 @@ function rawApproval(status: string) {
 		intent_type: "write",
 		item_id: "source_health:stock_daily:2026-08-18",
 		method: "POST",
-		path: "/v1/ingestion/stock_daily/2026-08-18",
+		path: "/api/v1/ingestion/stock_daily/2026-08-18",
 		request_payload: ACTION_PAYLOAD,
 		requested_at: "2026-08-18T08:00:00Z",
 		requested_by: "operator",

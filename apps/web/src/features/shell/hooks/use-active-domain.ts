@@ -1,5 +1,5 @@
 import { useLocation } from "@tanstack/react-router";
-import { DOMAINS, type DomainId } from "@/features/navigation/types";
+import { DOMAINS, type DomainId } from "@/features/navigation";
 
 function isDomainActive(domainId: DomainId, pathname: string): boolean {
 	const domain = DOMAINS.find((d) => d.id === domainId);

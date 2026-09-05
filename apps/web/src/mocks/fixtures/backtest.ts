@@ -1,11 +1,11 @@
-import type { components } from "@/types/generated/api";
-
-type RunResponse = components["schemas"]["RunResponse"];
-type BacktestReportResponse = components["schemas"]["BacktestReportResponse"];
-type NavPointResponse = components["schemas"]["NavPointResponse"];
-type BenchmarkNavResponse = components["schemas"]["BenchmarkNavResponse"];
-type TradeResponse = components["schemas"]["TradeResponse"];
-type AuditRecordResponse = components["schemas"]["AuditRecordResponse"];
+import type {
+	AuditRecordResponse,
+	BacktestReportResponse,
+	BenchmarkNavResponse,
+	NavPointResponse,
+	RunResponse,
+	TradeResponse,
+} from "@/features/backtest/api/backtests";
 
 export const mockBacktestRuns: RunResponse[] = [
 	{

@@ -1,3 +1,6 @@
+export { fetchDailyDecisionV3 } from "./api/daily-decision";
+export { resolveTradingExecutionScope } from "./api/execution-scope";
+export { tradingKeys } from "./api/query-keys";
 export { AccountIdentityStrip } from "./components/account-identity-strip";
 export { EquityPnlBlock } from "./components/equity-pnl-block";
 export { FillLedgerList } from "./components/fill-ledger-list";
@@ -42,3 +45,4 @@ export { useSignalDetail } from "./hooks/use-signal-detail";
 export { useSignals } from "./hooks/use-signals";
 export { useSignalsQueue } from "./hooks/use-signals-queue";
 export { useUpdateIntentStatus } from "./hooks/use-update-intent-status";
+export type { DailyDecisionV3ViewModel } from "./types/daily-decision-v3";

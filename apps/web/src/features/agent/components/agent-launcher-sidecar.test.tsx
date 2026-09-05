@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AppShell } from "@/features/shell/components/app-shell";
+import { ContextActions } from "@/providers";
+import { AppShell } from "@/workflows/app-shell";
 
 const mockUseLocation = vi.fn().mockReturnValue({ pathname: "/" });
 const mockUseMatches = vi.fn().mockReturnValue([]);
@@ -59,6 +60,23 @@ describe("Agent launcher sidecar", () => {
 		await user.keyboard("{Escape}");
 
 		expect(screen.queryByRole("dialog", { name: "Agent 工作入口" })).not.toBeInTheDocument();
+	});
+
+	it("injects Agent context actions without exposing Agent imports to business features", () => {
+		render(
+			<AppShell>
+				<ContextActions contextId="experiment-7@2" contextType="experiment-revision" evidenceObjective="复核实验证据" />
+			</AppShell>,
+		);
+
+		const action = screen.getByRole("link", { name: "请求证据分析" });
+		const href = new URL(action.getAttribute("href") ?? "", "http://ditto.local");
+		expect(Object.fromEntries(href.searchParams)).toEqual({
+			contextId: "experiment-7@2",
+			contextType: "experiment-revision",
+			objective: "复核实验证据",
+			tab: "runs",
+		});
 	});
 
 	it.each([

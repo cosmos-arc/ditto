@@ -22,6 +22,12 @@ function specWith(expressions: readonly string[], weights: readonly number[]): S
 	};
 }
 
+function firstUpdater(mock: ReturnType<typeof vi.fn>): (draft: StrategySpec) => StrategySpec {
+	const updater: unknown = mock.mock.calls[0]?.[0];
+	if (typeof updater !== "function") throw new Error("expected an updater call");
+	return updater as (draft: StrategySpec) => StrategySpec;
+}
+
 describe("SignalExpressionsEditor", () => {
 	it("renders each coupled expression/weight pair", () => {
 		render(<SignalExpressionsEditor spec={specWith(["momentum_1m", "reversal_1w"], [0.6, 0.4])} onChange={vi.fn()} />);
@@ -37,7 +43,7 @@ describe("SignalExpressionsEditor", () => {
 		render(<SignalExpressionsEditor spec={base} onChange={onChange} />);
 		fireEvent.click(screen.getByRole("button", { name: "添加信号" }));
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		const next = updater(base);
 		expect(next.signalExpressions).toEqual(["momentum_1m", "new_signal"]);
 		expect(next.signalWeights).toEqual([0.6, 0]);
@@ -50,7 +56,7 @@ describe("SignalExpressionsEditor", () => {
 		render(<SignalExpressionsEditor spec={base} onChange={onChange} />);
 		fireEvent.click(screen.getByLabelText("删除信号 2"));
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		const next = updater(base);
 		expect(next.signalExpressions).toEqual(["a", "c"]);
 		expect(next.signalWeights).toEqual([0.5, 0.2]);
@@ -62,7 +68,7 @@ describe("SignalExpressionsEditor", () => {
 		render(<SignalExpressionsEditor spec={base} onChange={onChange} />);
 		fireEvent.click(screen.getByLabelText("下移信号 1"));
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		const next = updater(base);
 		expect(next.signalExpressions).toEqual(["b", "a"]);
 		expect(next.signalWeights).toEqual([0.4, 0.6]);
@@ -74,7 +80,7 @@ describe("SignalExpressionsEditor", () => {
 		render(<SignalExpressionsEditor spec={base} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("信号表达式 2"), { target: { value: "b_edited" } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		const next = updater(base);
 		expect(next.signalExpressions).toEqual(["a", "b_edited"]);
 		expect(next.signalWeights).toEqual([0.6, 0.4]);
@@ -86,7 +92,7 @@ describe("SignalExpressionsEditor", () => {
 		render(<SignalExpressionsEditor spec={base} onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("权重 1"), { target: { value: "0.9" } });
 
-		const updater = onChange.mock.calls[0][0] as (d: StrategySpec) => StrategySpec;
+		const updater = firstUpdater(onChange);
 		const next = updater(base);
 		expect(next.signalWeights).toEqual([0.9]);
 		expect(next.signalExpressions).toEqual(["a"]);

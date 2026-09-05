@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { components } from "@/types/generated/api";
+import type { components } from "@/api/generated/schema";
 import {
 	mapNodeDescriptor,
 	mapSpecDiff,
@@ -259,7 +259,7 @@ describe("strategy mappers", () => {
 			expect(vm.targetSpecHash).toBe("h1");
 			expect(vm.changes).toHaveLength(2);
 			expect(vm.changes[0]).toMatchObject({ path: "universe", op: "replace", old: "csi300", new: "hs300" });
-			expect(vm.changes[1].new).toBe(5);
+			expect(vm.changes[1]?.new).toBe(5);
 		});
 
 		it("maps empty changes to empty array", () => {

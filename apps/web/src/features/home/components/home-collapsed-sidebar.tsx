@@ -1,10 +1,10 @@
 import { MiniSparkline } from "@/components/data-viz";
-import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
+import { SidebarToggle } from "@/features/shell";
 import { cn } from "@/lib/utils";
 
 interface CollapsedItem {
 	readonly icon: React.ReactNode;
-	readonly badge?: number;
+	readonly badge?: number | undefined;
 	readonly indicator?: "healthy" | "degraded" | "warning" | "critical";
 	readonly "aria-label": string;
 }
@@ -31,11 +31,14 @@ export function HomeCollapsedSidebar({
 	onExpand,
 	className,
 }: HomeCollapsedSidebarProps) {
-	const marketTrend = marketTrendData
-		? marketTrendData[marketTrendData.length - 1] >= marketTrendData[0]
-			? "up"
-			: "down"
-		: undefined;
+	const firstMarketValue = marketTrendData?.[0];
+	const lastMarketValue = marketTrendData?.at(-1);
+	const marketTrend =
+		firstMarketValue !== undefined && lastMarketValue !== undefined
+			? lastMarketValue >= firstMarketValue
+				? "up"
+				: "down"
+			: undefined;
 
 	const items: CollapsedItem[] = [
 		{

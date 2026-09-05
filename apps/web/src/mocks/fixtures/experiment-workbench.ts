@@ -1,6 +1,12 @@
-import type { components } from "@/types/generated/api";
+import type {
+	ExperimentArtifactResponse,
+	ExperimentComparisonResponse,
+	ExperimentDetailResponse,
+	ExperimentGateResponse,
+	ExperimentSelectionEvidenceResponse,
+} from "@/features/research/api/experiments";
 
-export const mockExperimentDetail: components["schemas"]["ExperimentDetailResponse"] = {
+export const mockExperimentDetail: ExperimentDetailResponse = {
 	experiment_id: "exp-1042",
 	status: "completed",
 	desired_state: "completed",
@@ -68,7 +74,7 @@ export const mockExperimentDetail: components["schemas"]["ExperimentDetailRespon
 	updated_at: "2026-07-29T14:00:00Z",
 };
 
-export const mockExperimentComparison: components["schemas"]["ExperimentComparisonResponse"] = {
+export const mockExperimentComparison: ExperimentComparisonResponse = {
 	experiment_id: "exp-1042",
 	payload_hash: "e".repeat(64),
 	revision: 9,
@@ -81,7 +87,7 @@ export const mockExperimentComparison: components["schemas"]["ExperimentComparis
 	},
 };
 
-export const mockExperimentGates: components["schemas"]["ExperimentGateResponse"][] = [
+export const mockExperimentGates: ExperimentGateResponse[] = [
 	{
 		evaluation_id: "gate-1",
 		experiment_id: "exp-1042",
@@ -100,7 +106,7 @@ export const mockExperimentGates: components["schemas"]["ExperimentGateResponse"
 	},
 ];
 
-export const mockExperimentArtifacts: components["schemas"]["ExperimentArtifactResponse"][] = [
+export const mockExperimentArtifacts: ExperimentArtifactResponse[] = [
 	{
 		artifact_id: "candidate-bundle-2",
 		experiment_id: "exp-1042",
@@ -122,7 +128,7 @@ export const mockExperimentArtifacts: components["schemas"]["ExperimentArtifactR
 	},
 ];
 
-export const mockExperimentSelectionEvidence: components["schemas"]["ExperimentSelectionEvidenceResponse"] = {
+export const mockExperimentSelectionEvidence: ExperimentSelectionEvidenceResponse = {
 	artifact_id: "selection-evidence-1",
 	experiment_id: "exp-1042",
 	content_hash: "5".repeat(64),

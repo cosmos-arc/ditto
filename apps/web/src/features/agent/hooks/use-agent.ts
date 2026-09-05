@@ -224,7 +224,7 @@ export function useAgentEventNotifications(
 			return;
 		}
 		const stream = createRecoverableAgentEventStream({
-			path: `/v1/agent/${kind}/${encodeURIComponent(identity)}/events`,
+			target: { kind, identity },
 			initialCursor: cursor,
 			visibilityTarget: document,
 			onState: setState,

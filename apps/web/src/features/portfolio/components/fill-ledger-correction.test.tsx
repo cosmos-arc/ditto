@@ -233,7 +233,7 @@ describe("append-only fill correction ledger", () => {
 				return HttpResponse.json({
 					data: {
 						...(body as Record<string, unknown>),
-						fill_id: params.fillId,
+						fill_id: params["fillId"],
 						adjustment_type: "void",
 						replacement_fill_id: null,
 						created_at: "2026-07-16T10:00:00+08:00",
@@ -272,11 +272,11 @@ describe("append-only fill correction ledger", () => {
 				submitted.push(body);
 				return HttpResponse.json({
 					data: {
-						adjustment_id: (body as Record<string, unknown>).adjustment_id,
-						fill_id: params.fillId,
+						adjustment_id: (body as Record<string, unknown>)["adjustment_id"],
+						fill_id: params["fillId"],
 						adjustment_type: "replace",
-						replacement_fill_id: (body as Record<string, unknown>).replacement_fill_id,
-						reason: (body as Record<string, unknown>).reason,
+						replacement_fill_id: (body as Record<string, unknown>)["replacement_fill_id"],
+						reason: (body as Record<string, unknown>)["reason"],
 						created_at: "2026-07-16T10:01:00+08:00",
 					},
 				});
@@ -321,11 +321,11 @@ describe("append-only fill correction ledger", () => {
 				if (submitted.length === 1) return HttpResponse.error();
 				return HttpResponse.json({
 					data: {
-						adjustment_id: body.adjustment_id,
-						fill_id: params.fillId,
+						adjustment_id: body["adjustment_id"],
+						fill_id: params["fillId"],
 						adjustment_type: "replace",
-						replacement_fill_id: body.replacement_fill_id,
-						reason: body.reason,
+						replacement_fill_id: body["replacement_fill_id"],
+						reason: body["reason"],
 						created_at: "2026-07-16T10:02:00+08:00",
 					},
 				});
@@ -366,11 +366,11 @@ describe("append-only fill correction ledger", () => {
 				}
 				return HttpResponse.json({
 					data: {
-						adjustment_id: body.adjustment_id,
-						fill_id: params.fillId,
+						adjustment_id: body["adjustment_id"],
+						fill_id: params["fillId"],
 						adjustment_type: "replace",
-						replacement_fill_id: body.replacement_fill_id,
-						reason: body.reason,
+						replacement_fill_id: body["replacement_fill_id"],
+						reason: body["reason"],
 						created_at: "2026-07-16T10:02:30+08:00",
 					},
 				});
@@ -460,7 +460,7 @@ describe("append-only fill correction ledger", () => {
 				return HttpResponse.json({
 					data: {
 						...body,
-						fill_id: params.fillId,
+						fill_id: params["fillId"],
 						adjustment_type: "void",
 						replacement_fill_id: null,
 						created_at: "2026-07-16T10:03:00+08:00",

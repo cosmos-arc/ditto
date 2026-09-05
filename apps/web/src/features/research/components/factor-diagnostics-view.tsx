@@ -1,6 +1,6 @@
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
-import { ApiError } from "@/lib/api-client";
 import type { FactorDiagnosticsScope } from "../api/factor-diagnostics";
 import { useFactorDiagnostics } from "../hooks/use-factor-detail";
 

@@ -1,18 +1,12 @@
 /** Governed review packet workbench for one exact experiment and strategy version. */
 import type { ReactElement, ReactNode } from "react";
 import { useState } from "react";
+import { ApiError } from "@/api";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentContextActions } from "@/features/agent";
-import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
-import { ReviewDecisionPanel } from "@/features/strategy";
-import { StrategyGovernanceAudit } from "@/features/strategy/components/strategy-governance-audit";
-import { useStrategyVersions } from "@/features/strategy/hooks/use-strategy-versions";
-import { useVersionDiff } from "@/features/strategy/hooks/use-version-diff";
-import { ApiError } from "@/lib/api-client";
-import { useReviewPacket } from "../hooks/use-review-packet";
 import {
 	CandidateRationale,
 	EvidenceHashes,
@@ -22,7 +16,10 @@ import {
 	ReviewDecisionBanner,
 	SelectionExposureEvidence,
 	SpecDiffView,
-} from "./review-packet-sections";
+	useReviewPacket,
+} from "@/features/research";
+import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
+import { ReviewDecisionPanel, StrategyGovernanceAudit, useStrategyVersions, useVersionDiff } from "@/features/strategy";
 
 interface ReviewDetailPageProps {
 	readonly experimentId: string;

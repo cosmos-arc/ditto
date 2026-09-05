@@ -605,8 +605,10 @@ describe("SignalsPage", () => {
 		server.use(
 			http.get("/api/v1/manual/daily-decision/v2", () => {
 				const response = structuredClone(liveDailyDecisionV2);
+				const firstAction = response.actions[0];
+				if (!firstAction) throw new Error("expected live decision action fixture");
 				response.actions[0] = {
-					...response.actions[0],
+					...firstAction,
 					filled_quantity: fillRecorded ? 400 : 0,
 					remaining_quantity: fillRecorded ? 600 : 1000,
 					intent_status: fillRecorded ? "partially_filled" : "pending",

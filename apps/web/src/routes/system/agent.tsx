@@ -4,7 +4,7 @@ import {
 	type AgentConsoleSearch,
 	parseAgentConsoleSearch as parseSearch,
 } from "@/features/agent";
-import { SystemAgentOpsPage } from "@/features/system";
+import { SystemAgentOpsPage } from "@/workflows/system-agent-ops";
 
 export const parseAgentConsoleSearch = (search: Record<string, unknown>): AgentConsoleRouteSearch =>
 	parseSearch(search, { allowedTabs: ["runs", "campaigns"], defaultTab: "runs" });

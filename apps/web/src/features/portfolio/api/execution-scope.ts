@@ -2,8 +2,14 @@ import { DEFAULT_STRATEGY_ID } from "./query-keys";
 
 export type TradingExecutionScope = {
 	readonly strategyId: string;
-	readonly accountId?: string;
-	readonly tradeDate?: string;
+	readonly accountId: string | undefined;
+	readonly tradeDate: string | undefined;
+};
+
+type TradingExecutionScopeOverrides = {
+	readonly strategyId?: string | undefined;
+	readonly accountId?: string | undefined;
+	readonly tradeDate?: string | undefined;
 };
 
 function nonEmpty(value: string | null | undefined): string | undefined {
@@ -16,7 +22,7 @@ function nonEmpty(value: string | null | undefined): string | undefined {
  * the selection linkable/auditable while still keeping the published ETF seed
  * as the first-run strategy default. No account is guessed.
  */
-export function resolveTradingExecutionScope(overrides: Partial<TradingExecutionScope> = {}): TradingExecutionScope {
+export function resolveTradingExecutionScope(overrides: TradingExecutionScopeOverrides = {}): TradingExecutionScope {
 	const search = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
 	return {
 		strategyId: nonEmpty(overrides.strategyId) ?? nonEmpty(search.get("strategy_id")) ?? DEFAULT_STRATEGY_ID,

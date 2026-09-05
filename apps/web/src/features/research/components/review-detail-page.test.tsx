@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { mockReviewPacket } from "@/mocks/fixtures/review-live";
 import { server } from "@/mocks/server";
-import { ReviewDetailPage } from "./review-detail-page";
+import { ReviewDetailPage } from "@/workflows/review-detail";
 
 function wrapper({ children }: { readonly children: ReactNode }) {
 	return (

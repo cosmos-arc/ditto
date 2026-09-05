@@ -57,7 +57,7 @@ describe("DittoTooltipContent", () => {
 		// max-w-[240px]
 		expect(classStr).toContain("max-w-[240px]");
 		// shadow
-		expect(classStr).toContain("shadow-[0_4px_12px_oklch(0_0_0/0.3)]");
+		expect(classStr).toContain("shadow-(--tooltip-shadow)");
 	});
 
 	it("merges custom className", () => {

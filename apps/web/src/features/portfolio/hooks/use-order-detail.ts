@@ -1,6 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import type { GetOrderDetailResponse } from "@/types";
 import { mapDailyDecisionV2ToOrderDetail } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useDailyDecisionV2 } from "./use-daily-decision-v2";
@@ -12,7 +10,7 @@ export function useOrderDetail(id: string) {
 	});
 	const mockQuery = useQuery({
 		queryKey: ["trading", "orders", id],
-		queryFn: () => apiClient.get<GetOrderDetailResponse>(`/trading/orders/${id}`),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getOrderDetail }) => getOrderDetail(id)),
 		enabled: usePrototypeMocks && id.length > 0,
 	});
 

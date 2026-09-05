@@ -1,7 +1,7 @@
+import { ApiError } from "@/api";
 import { AreaChart } from "@/components/chart/area-chart";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api-client";
 import { useBacktestBenchmark, useBacktestNav } from "../hooks";
 
 interface BacktestOverviewProps {

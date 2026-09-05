@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { strategyHandlers } from "@/mocks/handlers/strategy";
 import { server } from "@/mocks/server";
 import { StrategyDetailPage } from "./strategy-detail-page";
+
+const renderNoGovernanceActions = () => null;
+
 import { StrategyPage } from "./strategy-page";
 
 // Mock TanStack Router's useParams (used by StrategyDetailPage)
@@ -21,7 +24,7 @@ vi.mock("@tanstack/react-router", async () => {
 			readonly children: ReactNode;
 			readonly to: string;
 			readonly params?: Readonly<Record<string, string>>;
-		}) => <a href={params?.id ? to.replace("$id", params.id) : to}>{children}</a>,
+		}) => <a href={params?.["id"] ? to.replace("$id", params["id"]) : to}>{children}</a>,
 	};
 });
 
@@ -46,7 +49,9 @@ describe("StrategyDetailPage info-level annotations", () => {
 	beforeEach(() => server.use(...strategyHandlers));
 
 	it("annotates 3 L1 information units (active tab only)", async () => {
-		render(<StrategyDetailPage />, { wrapper: createWrapper() });
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, {
+			wrapper: createWrapper(),
+		});
 
 		await screen.findByText("ETF 行业轮动");
 
@@ -59,7 +64,9 @@ describe("StrategyDetailPage info-level annotations", () => {
 	});
 
 	it("annotates 3 L2 information units", async () => {
-		render(<StrategyDetailPage />, { wrapper: createWrapper() });
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, {
+			wrapper: createWrapper(),
+		});
 
 		await screen.findByText("策略流程");
 
@@ -73,7 +80,9 @@ describe("StrategyDetailPage info-level annotations", () => {
 	});
 
 	it("annotates L3 pipeline node items (scorer + selector + execution + constraints)", async () => {
-		render(<StrategyDetailPage />, { wrapper: createWrapper() });
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, {
+			wrapper: createWrapper(),
+		});
 
 		await screen.findByText("策略流程");
 

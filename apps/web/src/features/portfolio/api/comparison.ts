@@ -1,6 +1,6 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 import type { GetComparisonAttributionResponse } from "@/types";
-import type { components } from "@/types/generated/api";
 import { DEFAULT_STRATEGY_ID } from "./query-keys";
 
 type ComparisonMetricsResponse = components["schemas"]["ComparisonMetricsResponse"];
@@ -55,12 +55,14 @@ export async function fetchComparisonAttribution({
 	strategyId = DEFAULT_STRATEGY_ID,
 	runId,
 }: FetchComparisonParams): Promise<GetComparisonAttributionResponse> {
-	const metrics = await apiClient.get<ComparisonMetricsResponse>(
-		withQueryParams("/v1/manual/comparison", {
-			strategy_id: strategyId,
-			run_id: runId,
-		}),
-	);
+	const metrics = await apiClient.get("/api/v1/manual/comparison", {
+		params: {
+			query: {
+				strategy_id: strategyId,
+				run_id: runId,
+			},
+		},
+	});
 
 	return mapComparisonMetrics(metrics);
 }

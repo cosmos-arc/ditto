@@ -99,7 +99,7 @@ describe("data product evidence hooks", () => {
 				const url = new URL(request.url);
 				const path = `${url.pathname.replace("/api/v1/data-products/", "")}?${url.searchParams.toString()}`;
 				requestedPaths.push(path);
-				if (params.view === "coverage") {
+				if (params["view"] === "coverage") {
 					return HttpResponse.json({
 						data: {
 							dataset_id: "index weight",
@@ -114,7 +114,7 @@ describe("data product evidence hooks", () => {
 						},
 					});
 				}
-				if (params.view === "quality") {
+				if (params["view"] === "quality") {
 					return HttpResponse.json({
 						data: {
 							dataset_id: "index weight",
@@ -129,8 +129,8 @@ describe("data product evidence hooks", () => {
 						},
 					});
 				}
-				if (params.view === "runs") return HttpResponse.json({ data: [] });
-				if (params.view === "evidence") {
+				if (params["view"] === "runs") return HttpResponse.json({ data: [] });
+				if (params["view"] === "evidence") {
 					return HttpResponse.json({
 						data: {
 							dataset_id: "index weight",

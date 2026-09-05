@@ -3,11 +3,14 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { ErrorState } from "@/lib/error-boundary";
-import type { components } from "@/types/generated/api";
-import { useInstrumentTechnicalAnalysis } from "../hooks/use-instrument-technical-analysis";
+import type { TechnicalAnalysisDirection, TechnicalAnalysisIndicator } from "../api/technical-analysis";
+import {
+	type InstrumentTechnicalDependencies,
+	useInstrumentTechnicalAnalysis,
+} from "../hooks/use-instrument-technical-analysis";
 
-type Direction = components["schemas"]["Direction"];
-type Reading = components["schemas"]["TechnicalAnalysisIndicatorResponse"];
+type Direction = TechnicalAnalysisDirection;
+type Reading = TechnicalAnalysisIndicator;
 
 const DIRECTION_LABEL: Record<Direction, string> = {
 	bearish: "偏空",
@@ -54,10 +57,12 @@ function ReadingValue({ reading }: { readonly reading: Reading }) {
 }
 
 export function InstrumentTechnicalView({
+	dependencies,
 	id,
 	onSnapshotIdentity,
 	selectionRunId,
 }: {
+	readonly dependencies: InstrumentTechnicalDependencies;
 	readonly id: string;
 	readonly onSnapshotIdentity?: (snapshotId: string | null) => void;
 	readonly selectionRunId: string | undefined;
@@ -65,6 +70,7 @@ export function InstrumentTechnicalView({
 	const { analysis, candidate, exclusion, identity, selection, sourceEvidence } = useInstrumentTechnicalAnalysis(
 		id,
 		selectionRunId,
+		dependencies,
 	);
 
 	useEffect(() => {

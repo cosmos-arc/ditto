@@ -1,6 +1,6 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
+import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import type { Signal, SignalDirection } from "@/types";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useSignals } from "../hooks";

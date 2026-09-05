@@ -12,7 +12,7 @@ interface NodeLibraryProps {
 /**
  * 节点库（Studio 左栏只读调色板）。
  *
- * 数据源 `GET /v1/research/node-descriptors` → `NodeDescriptorView`。按 `category`
+ * 数据源 `GET /api/v1/research/node-descriptors` → `NodeDescriptorView`。按 `category`
  * （UNIVERSE/FACTOR_SET/SCORER/SELECTOR/ALLOCATOR/EXECUTION_ASSUMPTION/VALIDATION）
  * 分组展示受治理的流水线节点类型，供流水线编辑器 add/configure 参考。
  */

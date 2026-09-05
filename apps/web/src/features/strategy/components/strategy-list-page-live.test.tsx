@@ -22,7 +22,7 @@ vi.mock("@tanstack/react-router", async () => {
 			readonly params?: Readonly<Record<string, string>>;
 			readonly className?: string;
 		}) => (
-			<a href={params?.id ? to.replace("$id", params.id) : to} className={className}>
+			<a href={params?.["id"] ? to.replace("$id", params["id"]) : to} className={className}>
 				{children}
 			</a>
 		),
@@ -82,7 +82,7 @@ describe("StrategyListPage governed catalog", () => {
 		server.use(
 			http.get("/api/v1/strategies", () => HttpResponse.json({ data: STRATEGIES })),
 			http.get("/api/v1/strategies/:id", ({ params }) => {
-				const item = STRATEGIES.find((strategy) => strategy.strategy_id === params.id) ?? STRATEGIES[0];
+				const item = STRATEGIES.find((strategy) => strategy.strategy_id === params["id"]) ?? STRATEGIES[0];
 				return HttpResponse.json({ data: item });
 			}),
 		);
@@ -117,8 +117,8 @@ describe("StrategyListPage governed catalog", () => {
 				return HttpResponse.json({
 					data: {
 						...STRATEGIES[0],
-						strategy_id: String(payload.strategy_id),
-						name: String(payload.name),
+						strategy_id: String(payload["strategy_id"]),
+						name: String(payload["name"]),
 						version: 1,
 						status: "draft",
 					},
@@ -138,8 +138,8 @@ describe("StrategyListPage governed catalog", () => {
 
 		await expect(within(sheet).findByText("已创建草稿 alpha_etf_copy")).resolves.toBeInTheDocument();
 		expect(idempotencyKey).toMatch(/^strategy-create:/);
-		expect(payload.strategy_id).toBe("alpha_etf_copy");
-		expect((payload.spec_json as Record<string, unknown>).strategy_id).toBe("alpha_etf_copy");
+		expect(payload["strategy_id"]).toBe("alpha_etf_copy");
+		expect((payload["spec_json"] as Record<string, unknown>)["strategy_id"]).toBe("alpha_etf_copy");
 		expect(within(sheet).getByRole("link", { name: "打开 Strategy Studio" })).toHaveAttribute(
 			"href",
 			"/research/strategies/alpha_etf_copy/studio",

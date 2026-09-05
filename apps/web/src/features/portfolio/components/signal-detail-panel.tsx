@@ -1,4 +1,5 @@
 import { type FormEvent, useRef, useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
 import type { SignalExecutionIntent } from "@/types";
 import type { RecordFillRequest } from "../api/fills";
 import { classifyMutationFailure } from "../api/mutation-result";

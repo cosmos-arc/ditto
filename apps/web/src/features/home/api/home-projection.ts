@@ -1,3 +1,4 @@
+import type { components } from "@/api/generated/schema";
 import type {
 	DecisionBannerResponse,
 	GetDataHealthResponse,
@@ -10,7 +11,6 @@ import type {
 	PendingAction,
 	RecentSignal,
 } from "@/types";
-import type { components } from "@/types/generated/api";
 
 type DailyDecisionV3Response = components["schemas"]["DailyDecisionV3Response"];
 

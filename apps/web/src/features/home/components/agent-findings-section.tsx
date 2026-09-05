@@ -1,8 +1,8 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { useAgentCapability, useAgentRuns, useCreateAgentRun } from "@/features/agent/hooks";
+import { useAgentCapability, useAgentRuns, useCreateAgentRun } from "@/features/agent";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
-import { useAgentFindings, useMarketPulseMetrics } from "../hooks";
+import { type LoadMarketContext, useAgentFindings, useMarketPulseMetrics } from "../hooks";
 
 const FINDING_ICON_CLASS: Record<string, string> = {
 	insight: "text-(--color-brand-500)",
@@ -14,9 +14,13 @@ const FINDING_ICON_CLASS: Record<string, string> = {
  * AgentFindingsSection — "Agent 洞察" findings feed.
  * Matches prototype .findings-feed with .finding-item rows.
  */
-export function AgentFindingsSection() {
+export function AgentFindingsSection({
+	loadMarketContext,
+}: {
+	readonly loadMarketContext?: LoadMarketContext | undefined;
+}) {
 	const findings = useAgentFindings();
-	const market = useMarketPulseMetrics();
+	const market = useMarketPulseMetrics(loadMarketContext);
 	const capability = useAgentCapability();
 	const brief = market.data?.brief;
 	const contextId = brief ? `${brief.featureSetId}:${brief.sourceSnapshotSetId}` : "";

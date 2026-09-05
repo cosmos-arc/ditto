@@ -1,10 +1,10 @@
-import type { components } from "@/types/generated/api";
-
-type AgentCapabilityResponse = components["schemas"]["AgentCapabilityResponse"];
-type AgentApprovalResponse = components["schemas"]["AgentApprovalResponse"];
-type AgentCampaignResponse = components["schemas"]["AgentCampaignResponse"];
-type AgentRunResponse = components["schemas"]["AgentRunResponse"];
-type AgentSessionResponse = components["schemas"]["AgentSessionResponse"];
+import type {
+	AgentApprovalResponse,
+	AgentCampaignResponse,
+	AgentCapabilityResponse,
+	AgentRunResponse,
+	AgentSessionResponse,
+} from "@/features/agent/api/agent-api";
 
 const budget: AgentCampaignResponse["budget"] = {
 	candidate_limit: 24,

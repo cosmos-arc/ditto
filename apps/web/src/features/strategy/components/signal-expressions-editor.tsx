@@ -86,8 +86,21 @@ export function SignalExpressionsEditor({ spec, onChange }: SignalExpressionsEdi
 										onClick={() => {
 											const nextExpr = [...expressions];
 											const nextWeight = [...weights];
-											[nextExpr[index], nextExpr[index - 1]] = [nextExpr[index - 1], nextExpr[index]];
-											[nextWeight[index], nextWeight[index - 1]] = [nextWeight[index - 1], nextWeight[index]];
+											const currentExpression = nextExpr[index];
+											const previousExpression = nextExpr[index - 1];
+											const currentWeight = nextWeight[index];
+											const previousWeight = nextWeight[index - 1];
+											if (
+												currentExpression === undefined ||
+												previousExpression === undefined ||
+												currentWeight === undefined ||
+												previousWeight === undefined
+											)
+												return;
+											nextExpr[index] = previousExpression;
+											nextExpr[index - 1] = currentExpression;
+											nextWeight[index] = previousWeight;
+											nextWeight[index - 1] = currentWeight;
 											updateBoth(nextExpr, nextWeight);
 										}}
 										className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"
@@ -101,8 +114,21 @@ export function SignalExpressionsEditor({ spec, onChange }: SignalExpressionsEdi
 										onClick={() => {
 											const nextExpr = [...expressions];
 											const nextWeight = [...weights];
-											[nextExpr[index], nextExpr[index + 1]] = [nextExpr[index + 1], nextExpr[index]];
-											[nextWeight[index], nextWeight[index + 1]] = [nextWeight[index + 1], nextWeight[index]];
+											const currentExpression = nextExpr[index];
+											const nextExpression = nextExpr[index + 1];
+											const currentWeight = nextWeight[index];
+											const followingWeight = nextWeight[index + 1];
+											if (
+												currentExpression === undefined ||
+												nextExpression === undefined ||
+												currentWeight === undefined ||
+												followingWeight === undefined
+											)
+												return;
+											nextExpr[index] = nextExpression;
+											nextExpr[index + 1] = currentExpression;
+											nextWeight[index] = followingWeight;
+											nextWeight[index + 1] = currentWeight;
 											updateBoth(nextExpr, nextWeight);
 										}}
 										className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { StrategyDetailPage } from "@/features/strategy";
+import { StrategyGovernanceDetailPage } from "@/workflows/strategy-governance";
 
 export const Route = createFileRoute("/research/strategies/$id/")({
-	component: StrategyDetailPage,
+	component: StrategyGovernanceDetailPage,
 	staticData: { title: "策略详情" },
 });

@@ -1,5 +1,5 @@
 import { useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, StatusBar } from "@/features/shell";
@@ -8,14 +8,25 @@ import { InstrumentChartView } from "./instrument-chart-view";
 import { InstrumentMetaStrip } from "./instrument-meta-strip";
 import { InstrumentOverview } from "./instrument-overview";
 import { type InstrumentOverlayId, InstrumentPageOverlays, instrumentActions } from "./instrument-page-overlays";
-import { InstrumentTechnicalView } from "./instrument-technical-view";
 
 export interface InstrumentHubSearch {
-	readonly selectionRunId?: string;
+	readonly selectionRunId?: string | undefined;
 	readonly tab?: "chart" | "fundamentals" | "overview" | "technical";
 }
 
-export function InstrumentHubPage({ search = {} }: { readonly search?: InstrumentHubSearch }) {
+export interface InstrumentTechnicalSlotProps {
+	readonly id: string;
+	readonly onSnapshotIdentity?: (snapshotId: string | null) => void;
+	readonly selectionRunId: string | undefined;
+}
+
+export function InstrumentHubPage({
+	renderTechnical,
+	search = {},
+}: {
+	readonly renderTechnical?: (props: InstrumentTechnicalSlotProps) => ReactNode;
+	readonly search?: InstrumentHubSearch;
+}) {
 	const { id } = useParams({ strict: false }) as { id: string };
 	const instrumentId = id ?? "";
 	const [activeOverlay, setActiveOverlay] = useState<InstrumentOverlayId | null>(null);
@@ -71,11 +82,17 @@ export function InstrumentHubPage({ search = {} }: { readonly search?: Instrumen
 							</TabsContent>
 							<TabsContent value="technical" className="h-full min-h-0 overflow-hidden">
 								<div data-info-level="l1" data-info-unit="instrument-technical" className="h-full">
-									<InstrumentTechnicalView
-										id={instrumentId}
-										onSnapshotIdentity={setTechnicalSnapshotId}
-										selectionRunId={search.selectionRunId}
-									/>
+									{renderTechnical ? (
+										renderTechnical({
+											id: instrumentId,
+											onSnapshotIdentity: setTechnicalSnapshotId,
+											selectionRunId: search.selectionRunId,
+										})
+									) : (
+										<p className="p-6 text-sm text-(--color-foreground-tertiary)">
+											技术证据需要由 app workflow 注入精确 SelectionRun 与 Data Product evidence。
+										</p>
+									)}
 								</div>
 							</TabsContent>
 							<TabsContent value="fundamentals">

@@ -141,7 +141,7 @@ export function DataProductGovernanceActions({
 	const remediationPhrase = approval
 		? `remediation:${approval.status === "approved" ? "execute" : "approve"}:${approval.authorityHash}`
 		: "";
-	const fallbackAction = policy?.authorityPayload.action;
+	const fallbackAction = policy?.authorityPayload["action"];
 	const fallbackPhrase = policy ? `fallback:${String(fallbackAction)}:${policy.authorityHash}` : "";
 	const draftPhrase = fallbackPreview
 		? `fallback:draft:${datasetId}:${tradeDate}:${fallbackPreview.selectedSource}`

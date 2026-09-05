@@ -1,19 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import type { FactorAnalysisResponse, FactorDetailResponse } from "@/types";
+import { isMockRuntime } from "@/api";
 import { type FactorDiagnosticsScope, fetchFactorDiagnostics, mapFactorDiagnostics } from "../api/factor-diagnostics";
 
 export function useFactorDetail(id: string) {
+	const usePrototypeMocks = isMockRuntime();
 	return useQuery({
 		queryKey: ["factors", id],
-		queryFn: () => apiClient.get<FactorDetailResponse>(`/factors/${id}`),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getFactorDetail }) => getFactorDetail(id)),
+		enabled: usePrototypeMocks && id.length > 0,
 	});
 }
 
 export function useFactorAnalysis(id: string) {
+	const usePrototypeMocks = isMockRuntime();
 	return useQuery({
 		queryKey: ["factors", id, "analysis"],
-		queryFn: () => apiClient.get<FactorAnalysisResponse>(`/factors/${id}/analysis`),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getFactorAnalysis }) => getFactorAnalysis(id)),
+		enabled: usePrototypeMocks && id.length > 0,
 	});
 }
 

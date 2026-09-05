@@ -103,13 +103,13 @@ function RiskGauge({
 		<div className="flex items-center gap-2.5">
 			<div className="relative size-[72px] shrink-0">
 				<svg viewBox="0 0 72 72" className="-rotate-90" aria-hidden="true">
-					<circle cx="36" cy="36" r={radius} fill="none" stroke="oklch(1 0 0 / 0.06)" strokeWidth="7.2" />
+					<circle cx="36" cy="36" r={radius} fill="none" stroke="var(--risk-gauge-track)" strokeWidth="7.2" />
 					<circle
 						cx="36"
 						cy="36"
 						r={radius}
 						fill="none"
-						stroke="oklch(0.64 0.12 235)"
+						stroke="var(--risk-gauge-fg)"
 						strokeWidth="7.2"
 						strokeLinecap="round"
 						strokeDasharray={circumference}
@@ -227,11 +227,11 @@ function RiskChart({ title, subtitle }: { readonly title: keyof typeof RISK_SERI
 						opacity="0.5"
 						vectorEffect="non-scaling-stroke"
 					/>
-					<path d={`${series} L 100 100 L 0 100 Z`} fill="oklch(0.76 0.055 74 / 0.08)" opacity="0.9" />
+					<path d={`${series} L 100 100 L 0 100 Z`} fill="var(--brand-signature-subtle)" opacity="0.9" />
 					<path
 						d={series}
 						fill="none"
-						stroke="oklch(0.76 0.055 74)"
+						stroke="var(--brand-signature-fg)"
 						strokeWidth="2"
 						vectorEffect="non-scaling-stroke"
 					/>

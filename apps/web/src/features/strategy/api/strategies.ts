@@ -1,5 +1,5 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components, operations } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components, operations } from "@/api/generated/schema";
 import type { StrategyGovernanceEvent } from "@/types/strategy";
 
 export type StrategyResponse = components["schemas"]["StrategyResponse"];
@@ -13,21 +13,28 @@ export type FetchStrategiesParams = {
 	readonly offset?: number;
 };
 
-/** 列出策略（`GET /v1/strategies`）。 */
+/** 列出策略（`GET /api/v1/strategies`）。 */
 export function fetchStrategies(params: FetchStrategiesParams = {}): Promise<StrategyResponse[]> {
-	return apiClient.get<StrategyResponse[]>(
-		withQueryParams("/v1/strategies", { limit: params.limit, offset: params.offset }),
-	);
+	return apiClient.get("/api/v1/strategies", {
+		params: {
+			query: {
+				...(params.limit === undefined ? {} : { limit: params.limit }),
+				...(params.offset === undefined ? {} : { offset: params.offset }),
+			},
+		},
+	});
 }
 
-/** 读取单个策略详情（`GET /v1/strategies/{id}`）。 */
+/** 读取单个策略详情（`GET /api/v1/strategies/{id}`）。 */
 export function fetchStrategy(strategyId: string): Promise<StrategyResponse> {
-	return apiClient.get<StrategyResponse>(`/v1/strategies/${encodeURIComponent(strategyId)}`);
+	return apiClient.get("/api/v1/strategies/{strategy_id}", { params: { path: { strategy_id: strategyId } } });
 }
 
-/** 列出策略的治理版本（`GET /v1/strategies/{id}/versions`）。 */
+/** 列出策略的治理版本（`GET /api/v1/strategies/{id}/versions`）。 */
 export function fetchStrategyVersions(strategyId: string): Promise<StrategyVersionResponse[]> {
-	return apiClient.get<StrategyVersionResponse[]>(`/v1/strategies/${encodeURIComponent(strategyId)}/versions`);
+	return apiClient.get("/api/v1/strategies/{strategy_id}/versions", {
+		params: { path: { strategy_id: strategyId } },
+	});
 }
 
 type VersionDetailPath = operations["design_strategy_version_detail"]["parameters"]["path"];
@@ -37,23 +44,25 @@ export function fetchStrategyVersionDetail(
 	strategyId: VersionDetailPath["strategy_id"],
 	version: VersionDetailPath["version"],
 ): Promise<StrategyVersionDetailResponse> {
-	return apiClient.get<StrategyVersionDetailResponse>(
-		`/v1/strategies/${encodeURIComponent(strategyId)}/versions/${version}`,
-	);
+	return apiClient.get("/api/v1/strategies/{strategy_id}/versions/{version}", {
+		params: { path: { strategy_id: strategyId, version } },
+	});
 }
 
-/** 读取版本 vs parent 的字段级 canonical spec diff（`GET /v1/strategies/{id}/versions/{v}/diff`）。 */
+/** 读取版本 vs parent 的字段级 canonical spec diff（`GET /api/v1/strategies/{id}/versions/{v}/diff`）。 */
 export function fetchVersionDiff(strategyId: string, version: number): Promise<StrategyVersionDiffResponse> {
-	return apiClient.get<StrategyVersionDiffResponse>(
-		`/v1/strategies/${encodeURIComponent(strategyId)}/versions/${version}/diff`,
-	);
+	return apiClient.get("/api/v1/strategies/{strategy_id}/versions/{version}/diff", {
+		params: { path: { strategy_id: strategyId, version } },
+	});
 }
 
 export type StrategyActiveResponse = components["schemas"]["StrategyActiveResponse"];
 
-/** 读取 active pointer（`GET /v1/strategies/{id}/active`）；无 active 时后端返 404。 */
+/** 读取 active pointer（`GET /api/v1/strategies/{id}/active`）；无 active 时后端返 404。 */
 export function fetchActive(strategyId: string): Promise<StrategyActiveResponse> {
-	return apiClient.get<StrategyActiveResponse>(`/v1/strategies/${encodeURIComponent(strategyId)}/active`);
+	return apiClient.get("/api/v1/strategies/{strategy_id}/active", {
+		params: { path: { strategy_id: strategyId } },
+	});
 }
 
 export function fetchStrategyEvents(
@@ -61,12 +70,12 @@ export function fetchStrategyEvents(
 	afterEventId: string | null,
 	limit: number,
 ): Promise<StrategyGovernanceEventResponse[]> {
-	return apiClient.get<StrategyGovernanceEventResponse[]>(
-		withQueryParams(`/v1/strategies/${encodeURIComponent(strategyId)}/events`, {
-			after_event_id: afterEventId,
-			limit,
-		}),
-	);
+	return apiClient.get("/api/v1/strategies/{strategy_id}/events", {
+		params: {
+			path: { strategy_id: strategyId },
+			query: { ...(afterEventId ? { after_event_id: afterEventId } : {}), limit },
+		},
+	});
 }
 
 export function mapStrategyGovernanceEvent(dto: StrategyGovernanceEventResponse): StrategyGovernanceEvent {

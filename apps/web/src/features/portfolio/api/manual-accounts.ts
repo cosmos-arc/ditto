@@ -1,42 +1,83 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type {
+	CorrectManualEventBody,
+	CreateManualAccountBody,
+	ManualAccountLedger,
+	ManualAccountReceipt,
+	ManualEventBody,
+	ReverseManualEventBody,
+} from "./account-models";
+import { parseManualAccountLedger, parseManualAccountReceipt } from "./runtime-validation";
 
-export type ManualAccount = components["schemas"]["AccountResponse"];
-export type ManualAccountEvent = components["schemas"]["AccountEventResponse"];
-export type ManualAccountLedger = components["schemas"]["AccountLedgerResponse"];
-export type ManualAccountReceipt = components["schemas"]["AccountCommandReceiptResponse"];
-export type CreateManualAccountBody = components["schemas"]["CreateManualAccountBody"];
-export type ManualEventBody = components["schemas"]["ManualEventBody"];
-export type ManualBusinessEventType = components["schemas"]["ManualBusinessEventType"];
-export type CorrectManualEventBody = components["schemas"]["CorrectManualEventBody"];
-export type ReverseManualEventBody = components["schemas"]["ReverseManualEventBody"];
+export type {
+	CorrectManualEventBody,
+	CreateManualAccountBody,
+	ManualAccount,
+	ManualAccountEvent,
+	ManualAccountLedger,
+	ManualAccountReceipt,
+	ManualBusinessEventType,
+	ManualEventBody,
+	ReverseManualEventBody,
+} from "./account-models";
 
-function accountPath(accountId: string, suffix: string): string {
-	return `/v1/manual/accounts/${encodeURIComponent(accountId)}${suffix}`;
+export async function createManualAccount(body: CreateManualAccountBody): Promise<ManualAccountReceipt> {
+	const payload = await apiClient.post("/api/v1/manual/accounts", { body });
+	return parseManualAccountReceipt(payload, { accountId: body.account_id, kind: "account" });
 }
 
-export function createManualAccount(body: CreateManualAccountBody): Promise<ManualAccountReceipt> {
-	return apiClient.post<ManualAccountReceipt>("/v1/manual/accounts", body);
+export async function fetchManualAccountLedger(accountId: string, asOf: string): Promise<ManualAccountLedger> {
+	const payload = await apiClient.get("/api/v1/manual/accounts/{account_id}/ledger", {
+		params: { path: { account_id: accountId }, query: { as_of: asOf } },
+	});
+	return parseManualAccountLedger(payload, accountId, asOf);
 }
 
-export function fetchManualAccountLedger(accountId: string, asOf: string): Promise<ManualAccountLedger> {
-	return apiClient.get<ManualAccountLedger>(withQueryParams(accountPath(accountId, "/ledger"), { as_of: asOf }));
+export async function recordManualAccountEvent(
+	accountId: string,
+	body: ManualEventBody,
+): Promise<ManualAccountReceipt> {
+	const payload = await apiClient.post("/api/v1/manual/accounts/{account_id}/events", {
+		body,
+		params: { path: { account_id: accountId } },
+	});
+	return parseManualAccountReceipt(payload, {
+		accountId,
+		eventType: body.event_type,
+		idempotencyKey: body.idempotency_key,
+		kind: "business",
+	});
 }
 
-export function recordManualAccountEvent(accountId: string, body: ManualEventBody): Promise<ManualAccountReceipt> {
-	return apiClient.post<ManualAccountReceipt>(accountPath(accountId, "/events"), body);
-}
-
-export function correctManualAccountEvent(
+export async function correctManualAccountEvent(
 	accountId: string,
 	body: CorrectManualEventBody,
 ): Promise<ManualAccountReceipt> {
-	return apiClient.post<ManualAccountReceipt>(accountPath(accountId, "/corrections"), body);
+	const payload = await apiClient.post("/api/v1/manual/accounts/{account_id}/corrections", {
+		body,
+		params: { path: { account_id: accountId } },
+	});
+	return parseManualAccountReceipt(payload, {
+		accountId,
+		correctsEventId: body.corrects_event_id,
+		idempotencyKey: body.replacement.idempotency_key,
+		kind: "correction",
+		replacementEventType: body.replacement.event_type,
+	});
 }
 
-export function reverseManualAccountEvent(
+export async function reverseManualAccountEvent(
 	accountId: string,
 	body: ReverseManualEventBody,
 ): Promise<ManualAccountReceipt> {
-	return apiClient.post<ManualAccountReceipt>(accountPath(accountId, "/reversals"), body);
+	const payload = await apiClient.post("/api/v1/manual/accounts/{account_id}/reversals", {
+		body,
+		params: { path: { account_id: accountId } },
+	});
+	return parseManualAccountReceipt(payload, {
+		accountId,
+		idempotencyKey: body.idempotency_key,
+		kind: "reversal",
+		reversesEventId: body.reverses_event_id,
+	});
 }

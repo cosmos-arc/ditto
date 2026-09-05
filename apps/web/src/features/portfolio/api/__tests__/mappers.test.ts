@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { components } from "@/types/generated/api";
+import type { components } from "@/api/generated/schema";
 import {
+	mapDailyDecisionToOrdersSummary,
 	mapDailyDecisionToSignalDetail,
 	mapDailyDecisionToSignalsQueue,
 	mapDailyDecisionToSignalsResponse,
@@ -249,12 +250,144 @@ describe("trading api mappers", () => {
 		});
 	});
 
+	it("preserves a backend-confirmed intent in the confirmed queue", () => {
+		const firstIntent = report.signal_intents[0];
+		if (!firstIntent) throw new Error("expected signal intent fixture");
+		const confirmed = {
+			...report,
+			signal_intents: [{ ...firstIntent, status: "confirmed" }],
+		} satisfies DailyDecisionReportResponse;
+
+		expect(mapDailyDecisionToSignalsQueue(confirmed)).toEqual({
+			pending: 0,
+			confirmed: 1,
+			ignored: 0,
+			ordered: 0,
+		});
+	});
+
+	it("reports every persisted order lifecycle bucket without conflation", () => {
+		const firstIntent = report.signal_intents[0];
+		if (!firstIntent) throw new Error("expected signal intent fixture");
+		const lifecycle = {
+			...report,
+			signal_intents: ["filled", "partially_filled", "cancelled", "expired", "pending"].map((status, index) => ({
+				...firstIntent,
+				intent_id: `intent-${index}`,
+				status,
+			})),
+		} satisfies DailyDecisionReportResponse;
+
+		expect(mapDailyDecisionToOrdersSummary(lifecycle)).toEqual({
+			pending: 1,
+			submitted: 0,
+			partial: 1,
+			filled: 1,
+			failed: 2,
+		});
+	});
+
+	it("blocks incomplete V3 risk evidence and keeps partial diagnostics explicit", () => {
+		const blocked = mapDailyDecisionV3({
+			...v3Report,
+			v2: {
+				...v3Report.v2,
+				identity: {
+					...v3Report.v2.identity,
+					strategy_version: "",
+					intended_trade_date: null,
+					account_id: null,
+					sleeve_id: "",
+				},
+				account_positions: {
+					positions: [],
+					as_of: null,
+					baseline_id: null,
+					cash_available: null,
+					total_value: null,
+					exposure: null,
+				},
+			},
+			blocking_reasons: ["PIT_PROVENANCE_INCOMPLETE"],
+			portfolio_construction: {
+				status: "failed",
+				failure_code: null,
+				solver: null,
+				solver_version: null,
+				mode: null,
+				solver_status: null,
+				duration_ms: null,
+				policy_digest: null,
+			},
+			tail_risk: {
+				historical_es99: null,
+				historical_var99: null,
+				parametric_var99: null,
+				monte_carlo_var99: null,
+				monte_carlo_seed: null,
+			},
+			factor_risk: {
+				availability: "partial",
+				total_risk: null,
+				marginal_contributions: {},
+				percentage_contributions: {},
+				euler_residual: null,
+			},
+			stress_tests: { catalog_version: "stress-v3", losses: {} },
+			reconciliation: { status: "mismatch", differences: ["cash"], alert_idempotency_key: null },
+			provenance: {
+				decision_time: null,
+				knowledge_cutoff: null,
+				publication_cutoff: null,
+				source_snapshot_ids: [""],
+				generated_at: null,
+			},
+		});
+
+		expect(blocked.identity.tradeDate).toBe("2026-08-18");
+		expect(blocked.readiness).toMatchObject({ status: "blocked", reportedStatus: "ready" });
+		expect(blocked.readiness.blockingReasons).toEqual([
+			"PIT_PROVENANCE_INCOMPLETE",
+			"TAIL_RISK_UNAVAILABLE",
+			"PORTFOLIO_CONSTRUCTION_FAILED",
+			"RECONCILIATION_MISMATCH",
+		]);
+		expect(blocked.completeness).toEqual({
+			status: "blocked",
+			issues: [
+				"PIT_PROVENANCE_INCOMPLETE",
+				"TAIL_RISK_UNAVAILABLE",
+				"PORTFOLIO_CONSTRUCTION_FAILED",
+				"RECONCILIATION_MISMATCH",
+				"FACTOR_RISK_PARTIAL",
+			],
+		});
+		expect(blocked.provenance.complete).toBe(false);
+	});
+
+	it("marks non-blocking factor and stress gaps as partial", () => {
+		const partial = mapDailyDecisionV3({
+			...v3Report,
+			factor_risk: { ...v3Report.factor_risk, availability: "unavailable" },
+			stress_tests: { ...v3Report.stress_tests, unavailable_scenarios: ["liquidity_crunch"] },
+			reconciliation: { ...v3Report.reconciliation, status: "reconciled" },
+		});
+
+		expect(partial.readiness.status).toBe("ready");
+		expect(partial.completeness).toEqual({
+			status: "partial",
+			issues: ["FACTOR_RISK_UNAVAILABLE", "STRESS_SCENARIOS_UNAVAILABLE"],
+		});
+	});
+
 	it("keeps a partially filled intent in the actionable queue for subsequent fills", () => {
+		const baseIntent = report.signal_intents[0];
+		if (!baseIntent) throw new Error("expected signal intent fixture");
 		const partiallyFilled = {
 			...report,
 			signal_intents: [
 				{
-					...report.signal_intents[0],
+					...baseIntent,
 					status: "partially_filled",
 				},
 			],
@@ -317,14 +450,16 @@ describe("trading api mappers", () => {
 				},
 			],
 			execution_review: {
-				deviation: report.deviation,
-				pnl: report.pnl,
+				deviation: report.deviation ?? null,
+				pnl: report.pnl ?? null,
 				effective_fills: [],
 				exceptions: [],
 				unresolved_conflicts: [],
 			},
 		};
-		Reflect.deleteProperty(v2.actions[0], "intent_status");
+		const firstAction = v2.actions[0];
+		if (!firstAction) throw new Error("expected V2 action fixture");
+		Reflect.deleteProperty(firstAction, "intent_status");
 
 		const adapted = mapDailyDecisionV2ToLegacy(v2);
 		const orders = mapDailyDecisionV2ToOrdersResponse(v2);

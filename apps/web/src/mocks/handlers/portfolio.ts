@@ -1,5 +1,18 @@
 import { HttpResponse, http, type RequestHandler } from "msw";
-import type { components } from "@/types/generated/api";
+import type {
+	DailyDecisionReportResponse,
+	DailyDecisionV2Response,
+	DailyDecisionV3Response,
+	TradeIntentResponse,
+} from "@/features/portfolio/api/daily-decision";
+import type {
+	FillAdjustmentResponse,
+	FillResponse,
+	RecordFillRequest,
+	ReplaceFillRequest,
+	VoidFillRequest,
+} from "@/features/portfolio/api/fills";
+import type { ManualAccountLedger } from "@/features/portfolio/api/manual-accounts";
 import {
 	mockEquity,
 	mockOrdersSummary,
@@ -10,17 +23,6 @@ import {
 	mockSignalsQueue,
 	mockTradingSession,
 } from "../fixtures/portfolio";
-
-type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
-type DailyDecisionV2Response = components["schemas"]["DailyDecisionV2Response"];
-type DailyDecisionV3Response = components["schemas"]["DailyDecisionV3Response"];
-type TradeIntentResponse = components["schemas"]["TradeIntentResponse"];
-type FillAdjustmentResponse = components["schemas"]["FillAdjustmentResponse"];
-type FillResponse = components["schemas"]["FillResponse"];
-type RecordFillRequest = components["schemas"]["RecordFillRequest"];
-type ReplaceFillRequest = components["schemas"]["ReplaceFillRequest"];
-type VoidFillRequest = components["schemas"]["VoidFillRequest"];
-type ManualAccountLedger = components["schemas"]["AccountLedgerResponse"];
 
 const manualAccountLedger: ManualAccountLedger = {
 	account: {
@@ -196,7 +198,7 @@ export const liveDailyDecisionV2: DailyDecisionV2Response = {
 		strategy_version: "1",
 		account_id: "paper-a",
 		sleeve_id: "manual-paper-a-seed_etf_industry_rotation",
-		signal_date: liveDailyDecision.trade_date,
+		signal_date: liveDailyDecision.trade_date ?? null,
 		decision_date: "2026-07-02",
 		intended_trade_date: "2026-07-03",
 	},
@@ -249,9 +251,9 @@ export const liveDailyDecisionV2: DailyDecisionV2Response = {
 		target_weight: intent.target_weight,
 		current_weight: intent.current_weight,
 		delta_weight: intent.delta_weight,
-		raw_quantity: intent.quantity,
-		rounded_quantity: intent.quantity,
-		suggested_quantity: intent.quantity,
+		raw_quantity: intent.quantity ?? null,
+		rounded_quantity: intent.quantity ?? null,
+		suggested_quantity: intent.quantity ?? null,
 		reference_price: intent.instrument_id === 510300 ? 4.31 : 2.68,
 		lot_size: 100,
 		cash_impact:
@@ -264,8 +266,8 @@ export const liveDailyDecisionV2: DailyDecisionV2Response = {
 		intent_status: intent.status,
 	})),
 	execution_review: {
-		deviation: liveDailyDecision.deviation,
-		pnl: liveDailyDecision.pnl,
+		deviation: liveDailyDecision.deviation ?? null,
+		pnl: liveDailyDecision.pnl ?? null,
 		effective_fills: liveFills,
 		exceptions: [],
 		unresolved_conflicts: [],
@@ -515,7 +517,7 @@ export const portfolioHandlers: RequestHandler[] = [
 	}),
 
 	http.post("/api/v1/manual/fills/:fillId/void", async ({ params, request }) => {
-		const fillId = String(params.fillId);
+		const fillId = String(params["fillId"]);
 		const payload = await request.json();
 		if (!isVoidFillRequest(payload)) return HttpResponse.json({ detail: "Invalid void payload" }, { status: 400 });
 		const replay = liveFillAdjustments.find((item) => item.adjustment_id === payload.adjustment_id);
@@ -534,7 +536,7 @@ export const portfolioHandlers: RequestHandler[] = [
 	}),
 
 	http.post("/api/v1/manual/fills/:fillId/replace", async ({ params, request }) => {
-		const fillId = String(params.fillId);
+		const fillId = String(params["fillId"]);
 		const payload = await request.json();
 		if (!isReplaceFillRequest(payload))
 			return HttpResponse.json({ detail: "Invalid replace payload" }, { status: 400 });

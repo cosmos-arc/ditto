@@ -3,7 +3,7 @@ import { Drawer } from "@/components/indicator/overlay/drawer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { AgentContextActions } from "@/features/agent";
+import { ContextActions } from "@/providers";
 import type { FactorDiagnosticsScope } from "../api/factor-diagnostics";
 import { FactorDiagnosticsView } from "./factor-diagnostics-view";
 
@@ -56,7 +56,7 @@ export function FactorPageOverlays({ factorId, open, onClose, scope }: FactorPag
 						</p>
 					</div>
 					{scope ? (
-						<AgentContextActions
+						<ContextActions
 							contextType="factor-diagnostics"
 							contextId={factorContextId(factorId, scope)}
 							evidenceObjective="复核当前不可变因子诊断的证据、时间边界与异常"

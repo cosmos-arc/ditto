@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchMarketContext } from "@/features/markets";
 import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
 import { mockDecisionBanner } from "@/mocks/fixtures/home";
 import { homeHandlers } from "@/mocks/handlers/home";
@@ -16,6 +17,25 @@ import { MarketPulseSection } from "./market-pulse-section";
 import { PriorityQueueSection } from "./priority-queue-section";
 import { PulseSection } from "./pulse-section";
 import { ResearchProgressSection } from "./research-progress-section";
+
+const CURRENT_MARKET_CONTEXT_SCOPE = {
+	asOf: "2026-08-31T09:00:00Z",
+	knowledgeCutoff: "2026-08-31T09:00:00Z",
+	publicationCutoff: "2026-08-31T09:00:00Z",
+	sourceSnapshotIds: [
+		"snapshot-stock",
+		"snapshot-index",
+		"snapshot-global",
+		"snapshot-weights",
+		"snapshot-macro",
+		"snapshot-fx",
+		"snapshot-commodity",
+	],
+} as const;
+
+function loadMarketContext() {
+	return fetchMarketContext(CURRENT_MARKET_CONTEXT_SCOPE);
+}
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -106,7 +126,7 @@ describe("BannerSection", () => {
 describe("HomePage", () => {
 	it("live 模式保留同一 Command Center 工作面而不是整页占位", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
-		render(<HomePage />, { wrapper: createWrapper() });
+		render(<HomePage loadMarketContext={loadMarketContext} />, { wrapper: createWrapper() });
 
 		await expect(screen.findByText("今日优先事项")).resolves.toBeInTheDocument();
 		await expect(screen.findByText("#510300 BUY 建议待人工复核")).resolves.toBeInTheDocument();
@@ -148,7 +168,9 @@ describe("HomePage", () => {
 		render(<HomePage />, { wrapper: createWrapper() });
 
 		await screen.findByText("贵州茅台（600519）出现卖出信号");
-		await user.click(screen.getAllByRole("button", { name: "查看详情" })[0]);
+		const detailsButton = screen.getAllByRole("button", { name: "查看详情" })[0];
+		if (!detailsButton) throw new Error("expected signal details button");
+		await user.click(detailsButton);
 
 		const evidence = await screen.findByRole("dialog", { name: "信号证据" });
 		expect(evidence).toHaveTextContent("RSI 背离叠加放量");

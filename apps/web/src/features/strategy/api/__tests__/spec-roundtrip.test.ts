@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { components } from "@/types/generated/api";
+import type { components } from "@/api/generated/schema";
 import { mapStrategyDetail, parseSpecJson, serializeStrategySpec } from "../mappers";
 
 type StrategyResponse = components["schemas"]["StrategyResponse"];
@@ -48,7 +48,7 @@ describe("strategy spec round-trip", () => {
 		const spec = parseSpecJson(SEED_SPEC_JSON, { strategyId: "s", name: "n" });
 		const json = serializeStrategySpec(spec);
 
-		const execution = json.execution as Record<string, unknown>;
+		const execution = json["execution"] as Record<string, unknown>;
 		expect(json).toHaveProperty("strategy_id");
 		expect(json).toHaveProperty("asset_class");
 		expect(execution).toHaveProperty("cost_model");
@@ -137,14 +137,14 @@ describe("strategy spec round-trip", () => {
 			{ strategyId: "s", name: "n" },
 		);
 		const json = serializeStrategySpec(spec);
-		const constraints = json.param_constraints as ReadonlyArray<Record<string, unknown>>;
+		const constraints = json["param_constraints"] as ReadonlyArray<Record<string, unknown>>;
 
 		expect(Array.isArray(constraints)).toBe(true);
 		expect(constraints[0]).toMatchObject({ name: "lookback", dtype: "int", min_value: 21, max_value: 504, step: 1 });
 		expect(constraints[0]).toHaveProperty("allowed_values");
 		expect(constraints[0]).not.toHaveProperty("minValue");
 		expect(constraints[0]).not.toHaveProperty("allowedValues");
-		expect(json.signal_expressions).toEqual(spec.signalExpressions);
-		expect(json.signal_weights).toEqual(spec.signalWeights);
+		expect(json["signal_expressions"]).toEqual(spec.signalExpressions);
+		expect(json["signal_weights"]).toEqual(spec.signalWeights);
 	});
 });

@@ -1,11 +1,11 @@
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AnalyticalLayout } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
 import type { RegimeDiagnostics, RegimeDiagnosticsScope } from "../api/regime-diagnostics";
 import { isCompleteRegimeScope, useRegimeDiagnostics } from "../hooks/use-regime-diagnostics";
 import { RegimeDiagnosticsView, regimeLabelMeta } from "./regime-diagnostics-view";
@@ -158,7 +158,7 @@ function RegimeStrip({
 	scope,
 	onBind,
 }: {
-	readonly diagnostics?: RegimeDiagnostics;
+	readonly diagnostics?: RegimeDiagnostics | undefined;
 	readonly scope: RegimeDiagnosticsScope | null;
 	readonly onBind: () => void;
 }) {
@@ -289,7 +289,7 @@ function RegimeEvidenceRail({
 	diagnostics,
 	scope,
 }: {
-	readonly diagnostics?: RegimeDiagnostics;
+	readonly diagnostics?: RegimeDiagnostics | undefined;
 	readonly scope: RegimeDiagnosticsScope | null;
 }) {
 	return (
@@ -341,7 +341,7 @@ function RegimeEvidenceRail({
 	);
 }
 
-function TransitionBand({ diagnostics }: { readonly diagnostics?: RegimeDiagnostics }) {
+function TransitionBand({ diagnostics }: { readonly diagnostics?: RegimeDiagnostics | undefined }) {
 	const transitions = diagnostics?.transitions.slice(-4).toReversed() ?? [];
 	return (
 		<div

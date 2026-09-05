@@ -203,10 +203,11 @@ export function movePipelineNode(
 	const targetIndex = filterIndexes[currentPosition + direction];
 	if (targetIndex === undefined) return spec;
 	const constraints = [...spec.constraints];
-	[constraints[node.constraintIndex], constraints[targetIndex]] = [
-		constraints[targetIndex],
-		constraints[node.constraintIndex],
-	];
+	const current = constraints[node.constraintIndex];
+	const target = constraints[targetIndex];
+	if (!current || !target) return spec;
+	constraints[node.constraintIndex] = target;
+	constraints[targetIndex] = current;
 	return { ...spec, constraints };
 }
 

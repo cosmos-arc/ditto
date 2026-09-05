@@ -9,16 +9,18 @@
  * execution/constraints/params/signal_expressions/signal_weights/param_constraints），
  * 与真实 seed（etf_industry_rotation）一致。
  */
-import type { components } from "@/types/generated/api";
-
-type StrategyResponse = components["schemas"]["StrategyResponse"];
-type StrategyVersionResponse = components["schemas"]["StrategyVersionResponse"];
-type StrategyVersionDetailResponse = components["schemas"]["StrategyVersionDetailResponse"];
-type StrategySpecValidationResponse = components["schemas"]["StrategySpecValidationResponse"];
-type StrategyVersionDiffResponse = components["schemas"]["StrategyVersionDiffResponse"];
-type NodeDescriptorResponse = components["schemas"]["NodeDescriptorResponse"];
-type StrategyActivePointerResponse = components["schemas"]["StrategyActivePointerResponse"];
-type StrategyVersionStateResponse = components["schemas"]["StrategyVersionStateResponse"];
+import type { NodeDescriptorResponse } from "@/features/strategy/api/node-descriptors";
+import type {
+	StrategyResponse,
+	StrategyVersionDetailResponse,
+	StrategyVersionDiffResponse,
+	StrategyVersionResponse,
+} from "@/features/strategy/api/strategies";
+import type {
+	StrategyActivePointerResponse,
+	StrategySpecValidationResponse,
+	StrategyVersionStateResponse,
+} from "@/features/strategy/api/strategy-lifecycle";
 
 const seedSpecJson = {
 	strategy_id: "seed_etf_industry_rotation",
@@ -89,7 +91,9 @@ export const mockStrategyList: StrategyResponse[] = [
 	},
 ];
 
-export const mockStrategyDetailDto: StrategyResponse = mockStrategyList[0];
+const firstMockStrategy = mockStrategyList[0];
+if (!firstMockStrategy) throw new Error("mock strategy list must not be empty");
+export const mockStrategyDetailDto: StrategyResponse = firstMockStrategy;
 
 export const mockStrategyVersionList: StrategyVersionResponse[] = [
 	{

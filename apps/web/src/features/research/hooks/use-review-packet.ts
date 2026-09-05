@@ -1,7 +1,7 @@
 /**
  * useReviewPacket —— 一个 experiment 的完整 review packet read model.
  *
- * 数据来自 `GET /v1/research/experiments/{id}/review-packet`。`enabled` 由调用方
+ * 数据来自 `GET /api/v1/research/experiments/{id}/review-packet`。`enabled` 由调用方
  * 按 experimentId 是否可用门控（review queue 项 experimentId 为 null 时禁用）。
  */
 import { useQuery } from "@tanstack/react-query";

@@ -1,6 +1,6 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { Panel } from "@/features/shell/components/panel";
+import { Panel } from "@/features/shell";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useDecisionBanner } from "../hooks";
 

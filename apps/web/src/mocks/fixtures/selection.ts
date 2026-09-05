@@ -1,10 +1,10 @@
-import type { components } from "@/types/generated/api";
-
-type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
-type CreateSelectionRunBody = components["schemas"]["CreateSelectionRunBody"];
-type SelectionRun = components["schemas"]["SelectionRunResponse"];
-type SelectionRunDiff = components["schemas"]["SelectionRunDiffResponse"];
-type SelectionWorkspaceReceipt = components["schemas"]["SelectionWorkspaceReceiptResponse"];
+import type {
+	CreateSelectionRunBody,
+	IndustryRotation,
+	SelectionRun,
+	SelectionRunDiff,
+	SelectionWorkspaceReceipt,
+} from "@/features/selection/api";
 
 export const selectionRunInputFixture = {
 	as_of: "2026-08-31T07:00:00Z",

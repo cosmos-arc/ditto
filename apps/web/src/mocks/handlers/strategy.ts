@@ -44,13 +44,13 @@ export const strategyHandlers: RequestHandler[] = [
 		});
 	}),
 	http.get("/api/v1/strategies/:id", ({ params }) => {
-		const id = String(params.id);
+		const id = String(params["id"]);
 		const found = mockStrategyList.find((s) => s.strategy_id === id) ?? mockStrategyDetailDto;
 		return HttpResponse.json({ data: found });
 	}),
 	http.get("/api/v1/strategies/:id/versions", () => HttpResponse.json({ data: mockStrategyVersionList })),
 	http.get("/api/v1/strategies/:id/versions/:version", ({ params }) =>
-		HttpResponse.json({ data: { ...mockStrategyVersionDetail, version: Number(params.version) } }),
+		HttpResponse.json({ data: { ...mockStrategyVersionDetail, version: Number(params["version"]) } }),
 	),
 	http.get("/api/v1/strategies/:id/active", () => HttpResponse.json({ data: mockActivePointerDto })),
 	http.get("/api/v1/strategies/:id/events", ({ params, request }) => {
@@ -60,7 +60,7 @@ export const strategyHandlers: RequestHandler[] = [
 			data: [
 				{
 					event_id: "strategy-event-2",
-					strategy_id: String(params.id),
+					strategy_id: String(params["id"]),
 					target_version: 3,
 					event_type: "strategy.activated",
 					decision_or_activation_kind: "publish",
@@ -70,7 +70,7 @@ export const strategyHandlers: RequestHandler[] = [
 				},
 				{
 					event_id: "strategy-event-1",
-					strategy_id: String(params.id),
+					strategy_id: String(params["id"]),
 					target_version: 3,
 					event_type: "strategy.review_decided",
 					decision_or_activation_kind: "approve",
@@ -100,8 +100,8 @@ export const strategyHandlers: RequestHandler[] = [
 			payload: { operation: kind, publishable: false },
 			lineage: [`author-preview:${kind}:${subjectId}`],
 		});
-		const strategyId = String(params.id);
-		const version = String(params.version);
+		const strategyId = String(params["id"]);
+		const version = String(params["version"]);
 		return HttpResponse.json({
 			data: {
 				strategy_id: strategyId,

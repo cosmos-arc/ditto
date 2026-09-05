@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { aiHandlers } from "@/mocks/handlers/ai";
 import { systemHandlers } from "@/mocks/handlers/system";
 import { server } from "@/mocks/server";
-import { SystemAgentOpsPage } from "./agents-page";
 import { SystemSettingsPage } from "./settings-page";
 import { SystemPage } from "./system-page";
 
@@ -72,14 +71,6 @@ describe("System route page contract handoffs", () => {
 		await expect(screen.findByText("Catalog API 不可用")).resolves.toBeInTheDocument();
 		await expect(screen.findByRole("alert")).resolves.toHaveTextContent("catalog unavailable");
 		expect(screen.getByRole("button", { name: "重试" })).toBeInTheDocument();
-	});
-
-	it("covers the governed SystemAgentOpsPage route composition", async () => {
-		render(<SystemAgentOpsPage />, { wrapper: createWrapper() });
-
-		expect(screen.getByRole("region", { name: "System Agent Ops" })).toBeInTheDocument();
-		expect(screen.getByRole("tab", { name: "Runs" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "新建 Run" })).toBeDisabled();
 	});
 
 	it("renders System Settings from server-reported runtime capabilities", async () => {

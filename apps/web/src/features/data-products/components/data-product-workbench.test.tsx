@@ -60,7 +60,7 @@ function installReadyHandlers(): void {
 		http.get("/api/v1/data-products/:datasetId/coverage", ({ params }) =>
 			HttpResponse.json({
 				data: {
-					dataset_id: params.datasetId,
+					dataset_id: params["datasetId"],
 					profile: "research_daily",
 					raw_from: "2005-01-04",
 					complete_from: "2015-01-05",
@@ -75,7 +75,7 @@ function installReadyHandlers(): void {
 		http.get("/api/v1/data-products/:datasetId/quality", ({ params }) =>
 			HttpResponse.json({
 				data: {
-					dataset_id: params.datasetId,
+					dataset_id: params["datasetId"],
 					profile: "research_daily",
 					report_id: "cert-calendar-1",
 					dq_rule_version: "dq-v3",
@@ -94,7 +94,7 @@ function installReadyHandlers(): void {
 			HttpResponse.json({
 				data: [
 					{
-						dataset_id: params.datasetId,
+						dataset_id: params["datasetId"],
 						profile: "research_daily",
 						report_id: "cert-calendar-1",
 						generated_at: "2026-07-18T03:20:00Z",
@@ -110,7 +110,7 @@ function installReadyHandlers(): void {
 		http.get("/api/v1/data-products/:datasetId/evidence", ({ params }) =>
 			HttpResponse.json({
 				data: {
-					dataset_id: params.datasetId,
+					dataset_id: params["datasetId"],
 					profile: "research_daily",
 					report_id: "cert-calendar-1",
 					content_hash: "sha256:calendar",
@@ -125,7 +125,7 @@ function installReadyHandlers(): void {
 		http.get("/api/v1/data-products/:datasetId/license", ({ params }) =>
 			HttpResponse.json({
 				data: {
-					dataset_id: params.datasetId,
+					dataset_id: params["datasetId"],
 					profile: "research_daily",
 					report_id: "cert-calendar-1",
 					license_record_ids: ["license-tushare-reviewed-v1"],
@@ -153,7 +153,7 @@ describe("DataProductWorkbench", () => {
 				}),
 			),
 			http.get("/api/v1/data-products/:datasetId/:view", ({ params }) => {
-				requestedViews.push(String(params.view));
+				requestedViews.push(String(params["view"]));
 				return HttpResponse.json({ detail: "not certified" }, { status: 404 });
 			}),
 		);

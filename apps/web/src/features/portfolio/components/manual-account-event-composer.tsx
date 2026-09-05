@@ -151,7 +151,7 @@ export function ManualAccountEventComposer({
 }: {
 	readonly asOf: string;
 	readonly busy: boolean;
-	readonly correctionTarget?: ManualAccountEvent;
+	readonly correctionTarget?: ManualAccountEvent | undefined;
 	readonly onSubmit: (body: ManualEventBody) => Promise<void> | void;
 	readonly onCancelCorrection?: () => void;
 }) {

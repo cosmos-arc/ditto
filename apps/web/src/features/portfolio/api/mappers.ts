@@ -1,3 +1,4 @@
+import type { components } from "@/api/generated/schema";
 import type {
 	GetOrderDetailResponse,
 	GetOrdersRequest,
@@ -15,7 +16,6 @@ import type {
 	SignalExecutionIntent,
 	SignalStatus,
 } from "@/types";
-import type { components } from "@/types/generated/api";
 import type { DailyDecisionReadiness, DailyDecisionV3ViewModel } from "../types/daily-decision-v3";
 
 type DailyDecisionReportResponse = components["schemas"]["DailyDecisionReportResponse"];
@@ -65,6 +65,7 @@ const READINESS_VIEW: Record<ReadinessState, ReadinessView> = {
 
 const INTENT_STATUS_TO_SIGNAL_STATUS: Record<string, SignalStatus> = {
 	pending: "pending",
+	confirmed: "confirmed",
 	filled: "ordered",
 	partially_filled: "pending",
 	cancelled: "ignored",

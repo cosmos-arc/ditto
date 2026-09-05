@@ -1,6 +1,6 @@
 interface PageTitleBlockProps {
-	readonly title?: string;
-	readonly subtitle?: string;
+	readonly title?: string | undefined;
+	readonly subtitle?: string | undefined;
 }
 
 export function PageTitleBlock({ title, subtitle }: PageTitleBlockProps) {

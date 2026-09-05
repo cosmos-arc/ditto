@@ -1,7 +1,7 @@
+import { ApiError } from "@/api";
 import { Metric } from "@/components/data/metric";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api-client";
 import { useBacktestReport } from "../hooks";
 
 const LOADING_METRIC_IDS = [

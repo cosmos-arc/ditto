@@ -148,9 +148,12 @@ describe("Generated page contracts", () => {
 			if (!contract.landing) continue;
 			const landing = contract.landing as unknown as Record<string, unknown>;
 
-			expect(landing.prototypeVerified, `${contract.route} missing prototypeVerified`).toBeTypeOf("boolean");
-			expect(landing.reactParityVerified, `${contract.route} missing reactParityVerified`).toBeTypeOf("boolean");
-			expect(landing.visualAuditStatus, `${contract.route} still exposes ambiguous visualAuditStatus`).toBeUndefined();
+			expect(landing["prototypeVerified"], `${contract.route} missing prototypeVerified`).toBeTypeOf("boolean");
+			expect(landing["reactParityVerified"], `${contract.route} missing reactParityVerified`).toBeTypeOf("boolean");
+			expect(
+				landing["visualAuditStatus"],
+				`${contract.route} still exposes ambiguous visualAuditStatus`,
+			).toBeUndefined();
 		}
 	});
 

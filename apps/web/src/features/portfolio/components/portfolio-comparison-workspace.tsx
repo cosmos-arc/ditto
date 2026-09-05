@@ -2,8 +2,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { AgentContextActions } from "@/features/agent";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
+import { ContextActions } from "@/providers";
 import {
 	fetchPortfolioComparison,
 	type PortfolioComparison,
@@ -14,7 +14,7 @@ import {
 import { tradingKeys } from "../api/query-keys";
 
 interface PortfolioComparisonWorkspaceProps {
-	readonly identity?: PortfolioComparisonIdentity;
+	readonly identity?: PortfolioComparisonIdentity | undefined;
 }
 
 type PortfolioColumn = PortfolioComparison["model"];
@@ -410,7 +410,7 @@ export function PortfolioComparisonWorkspace({ identity }: PortfolioComparisonWo
 					<p className="mt-1 text-xs text-(--color-foreground-secondary)">同价、同日、同快照的可解释组合对照</p>
 				</div>
 				<div className="flex max-w-full flex-col items-end gap-2 text-right text-xs text-(--color-foreground-tertiary)">
-					<AgentContextActions
+					<ContextActions
 						contextType="portfolio"
 						contextId={agentContext.contextId}
 						evidenceLabel="请求组合诊断"

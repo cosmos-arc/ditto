@@ -3,8 +3,8 @@ import { GlobalCommandButton } from "./global-command-button";
 import { ViewPreferencesMenu } from "./view-preferences-menu";
 
 interface HeaderUtilityBarProps {
-	readonly onOpenCommand?: () => void;
-	readonly onOpenAgent?: () => void;
+	readonly onOpenCommand?: (() => void) | undefined;
+	readonly onOpenAgent?: (() => void) | undefined;
 }
 
 function UtilityIconButton({
@@ -15,7 +15,7 @@ function UtilityIconButton({
 }: {
 	readonly "aria-label": string;
 	readonly children: ReactNode;
-	readonly onClick?: () => void;
+	readonly onClick?: (() => void) | undefined;
 	readonly utility: "agent" | "notifications" | "help";
 }) {
 	return (

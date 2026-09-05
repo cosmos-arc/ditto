@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchMarketContext } from "@/features/markets";
 import { homeHandlers } from "@/mocks/handlers/home";
 import { portfolioHandlers } from "@/mocks/handlers/portfolio";
 import { server } from "@/mocks/server";
@@ -10,6 +11,21 @@ import { useHomePulse } from "./use-home-pulse";
 import { useMarketPulseMetrics } from "./use-market-pulse-metrics";
 import { usePendingActions } from "./use-pending-actions";
 import { useRecentSignals } from "./use-recent-signals";
+
+const CURRENT_MARKET_CONTEXT_SCOPE = {
+	asOf: "2026-08-31T09:00:00Z",
+	knowledgeCutoff: "2026-08-31T09:00:00Z",
+	publicationCutoff: "2026-08-31T09:00:00Z",
+	sourceSnapshotIds: [
+		"snapshot-stock",
+		"snapshot-index",
+		"snapshot-global",
+		"snapshot-weights",
+		"snapshot-macro",
+		"snapshot-fx",
+		"snapshot-commodity",
+	],
+} as const;
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -87,16 +103,26 @@ describe("useRecentSignals", () => {
 });
 
 describe("Home live projection hooks", () => {
+	it("fails closed when app composition omits the live MarketContext provider", async () => {
+		vi.stubEnv("VITE_USE_MOCK", "false");
+		const market = renderHook(() => useMarketPulseMetrics(), { wrapper: createWrapper() });
+
+		await waitFor(() => expect(market.result.current.isError).toBe(true));
+		expect(market.result.current.error).toEqual(new Error("live MarketContext requires an app workflow provider"));
+	});
+
 	it("shares Daily Decision V3 while sourcing the market brief from exact MarketContext evidence", async () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		const wrapper = createWrapper();
+		const loadMarketContext = vi.fn(() => fetchMarketContext(CURRENT_MARKET_CONTEXT_SCOPE));
 		const decision = renderHook(() => useDecisionBanner(), { wrapper });
 		const pulse = renderHook(() => useHomePulse(), { wrapper });
-		const market = renderHook(() => useMarketPulseMetrics(), { wrapper });
+		const market = renderHook(() => useMarketPulseMetrics(loadMarketContext), { wrapper });
 
 		await waitFor(() => expect(decision.result.current.isSuccess).toBe(true));
 		await waitFor(() => expect(pulse.result.current.isSuccess).toBe(true));
 		await waitFor(() => expect(market.result.current.isSuccess).toBe(true));
+		expect(loadMarketContext).toHaveBeenCalledOnce();
 
 		expect(decision.result.current.data).toMatchObject({ dailyPnl: 197, ivix: null, northboundFlow: null });
 		expect(pulse.result.current.data).toMatchObject({ pendingActions: 1, runningJobs: null });

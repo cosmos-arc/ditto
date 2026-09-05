@@ -1,4 +1,3 @@
-export { AppShell } from "./components/app-shell";
 export { GlobalCommandButton } from "./components/global-command-button";
 export { ShellHeader } from "./components/header";
 export { HeaderUtilityBar } from "./components/header-utility-bar";
@@ -8,9 +7,12 @@ export { PageTitleBlock } from "./components/page-title-block";
 export { Panel, PanelBody, PanelHeader } from "./components/panel";
 export { Rail } from "./components/rail";
 export { ShellHeaderExtension } from "./components/shell-header-extension";
+export { SidebarToggle } from "./components/sidebar-toggle";
 export { StatusBar } from "./components/status-bar";
 export { ThemeSwitcher } from "./components/theme-switcher";
 export { ViewPreferencesMenu } from "./components/view-preferences-menu";
+export { WorkspaceShell } from "./components/workspace-shell";
+export { useUIPreferences } from "./hooks/use-ui-preferences";
 export { AnalyticalLayout } from "./layouts/analytical.layout";
 export { CatalogLayout } from "./layouts/catalog.layout";
 export { CommandCenterLayout } from "./layouts/command-center.layout";

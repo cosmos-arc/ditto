@@ -1,6 +1,6 @@
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api-client";
 import { useBacktestAudit } from "../hooks";
 
 export function BacktestAuditView({ jobId }: { readonly jobId: string }) {

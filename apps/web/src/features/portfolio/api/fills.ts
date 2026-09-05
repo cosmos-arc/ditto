@@ -1,6 +1,7 @@
-import { apiClient, withQueryParams } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 import { DEFAULT_STRATEGY_ID } from "./query-keys";
+import { assertFillAdjustment } from "./runtime-validation";
 
 export type FillResponse = components["schemas"]["FillResponse"];
 export type FillAdjustmentResponse = components["schemas"]["FillAdjustmentResponse"];
@@ -9,39 +10,43 @@ export type ReplaceFillRequest = components["schemas"]["ReplaceFillRequest"];
 export type VoidFillRequest = components["schemas"]["VoidFillRequest"];
 
 export interface FetchFillsParams {
-	readonly strategyId?: string;
-	readonly startDate?: string;
-	readonly endDate?: string;
+	readonly strategyId?: string | undefined;
+	readonly startDate?: string | undefined;
+	readonly endDate?: string | undefined;
 }
 
 export interface FetchFillAdjustmentsParams {
-	readonly strategyId?: string;
-	readonly fillId?: string;
-	readonly intentId?: string;
+	readonly strategyId?: string | undefined;
+	readonly fillId?: string | undefined;
+	readonly intentId?: string | undefined;
 }
 
 export function fetchFills(params: FetchFillsParams = {}): Promise<readonly FillResponse[]> {
 	const { strategyId = DEFAULT_STRATEGY_ID, startDate, endDate } = params;
 
-	return apiClient.get<readonly FillResponse[]>(
-		withQueryParams("/v1/manual/fills", {
-			strategy_id: strategyId,
-			start_date: startDate,
-			end_date: endDate,
-		}),
-	);
+	return apiClient.get("/api/v1/manual/fills", {
+		params: {
+			query: {
+				strategy_id: strategyId,
+				...(startDate ? { start_date: startDate } : {}),
+				...(endDate ? { end_date: endDate } : {}),
+			},
+		},
+	});
 }
 
 export function fetchEffectiveFills(params: FetchFillsParams = {}): Promise<readonly FillResponse[]> {
 	const { strategyId = DEFAULT_STRATEGY_ID, startDate, endDate } = params;
 
-	return apiClient.get<readonly FillResponse[]>(
-		withQueryParams("/v1/manual/fills/effective", {
-			strategy_id: strategyId,
-			start_date: startDate,
-			end_date: endDate,
-		}),
-	);
+	return apiClient.get("/api/v1/manual/fills/effective", {
+		params: {
+			query: {
+				strategy_id: strategyId,
+				...(startDate ? { start_date: startDate } : {}),
+				...(endDate ? { end_date: endDate } : {}),
+			},
+		},
+	});
 }
 
 export function fetchFillAdjustments(
@@ -49,23 +54,35 @@ export function fetchFillAdjustments(
 ): Promise<readonly FillAdjustmentResponse[]> {
 	const { strategyId = DEFAULT_STRATEGY_ID, fillId, intentId } = params;
 
-	return apiClient.get<readonly FillAdjustmentResponse[]>(
-		withQueryParams("/v1/manual/fill-adjustments", {
-			strategy_id: strategyId,
-			fill_id: fillId,
-			intent_id: intentId,
-		}),
-	);
+	return apiClient.get("/api/v1/manual/fill-adjustments", {
+		params: {
+			query: {
+				strategy_id: strategyId,
+				...(fillId ? { fill_id: fillId } : {}),
+				...(intentId ? { intent_id: intentId } : {}),
+			},
+		},
+	});
 }
 
 export function recordFill(payload: RecordFillRequest): Promise<FillResponse> {
-	return apiClient.post<FillResponse>("/v1/manual/fills", payload);
+	return apiClient.post("/api/v1/manual/fills", { body: payload });
 }
 
-export function voidFill(fillId: string, payload: VoidFillRequest): Promise<FillAdjustmentResponse> {
-	return apiClient.post<FillAdjustmentResponse>(`/v1/manual/fills/${encodeURIComponent(fillId)}/void`, payload);
+export async function voidFill(fillId: string, payload: VoidFillRequest): Promise<FillAdjustmentResponse> {
+	const adjustment = await apiClient.post("/api/v1/manual/fills/{fill_id}/void", {
+		body: payload,
+		params: { path: { fill_id: fillId } },
+	});
+	assertFillAdjustment(adjustment);
+	return adjustment;
 }
 
-export function replaceFill(fillId: string, payload: ReplaceFillRequest): Promise<FillAdjustmentResponse> {
-	return apiClient.post<FillAdjustmentResponse>(`/v1/manual/fills/${encodeURIComponent(fillId)}/replace`, payload);
+export async function replaceFill(fillId: string, payload: ReplaceFillRequest): Promise<FillAdjustmentResponse> {
+	const adjustment = await apiClient.post("/api/v1/manual/fills/{fill_id}/replace", {
+		body: payload,
+		params: { path: { fill_id: fillId } },
+	});
+	assertFillAdjustment(adjustment);
+	return adjustment;
 }

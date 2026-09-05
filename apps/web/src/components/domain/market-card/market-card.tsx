@@ -16,7 +16,7 @@ interface MarketCardProps extends React.HTMLAttributes<HTMLElement> {
 
 /* ── Regime → BadgeVariant mapping ── */
 
-const REGIME_VARIANT_MAP: Record<string, "regime-on" | "regime-off" | "regime-mixed"> = {
+const REGIME_VARIANT_MAP: Record<MarketCardProps["regime"], "regime-on" | "regime-off" | "regime-mixed"> = {
 	on: "regime-on",
 	off: "regime-off",
 	mixed: "regime-mixed",
@@ -24,7 +24,7 @@ const REGIME_VARIANT_MAP: Record<string, "regime-on" | "regime-off" | "regime-mi
 
 /* ── Regime label mapping ── */
 
-const REGIME_LABEL_MAP: Record<string, string> = {
+const REGIME_LABEL_MAP: Record<MarketCardProps["regime"], string> = {
 	on: "风险偏好",
 	off: "规避",
 	mixed: "震荡",

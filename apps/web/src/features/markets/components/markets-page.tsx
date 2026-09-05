@@ -3,17 +3,15 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { ContextBar, ContextBarItem, ContextBarSep } from "@/components/indicator/context-bar";
-import type { CatalogInstrument } from "@/features/instruments/api/instrument-catalog";
-import { RadarLayout, StatusBar } from "@/features/shell";
-import { Panel, PanelBody, PanelHeader } from "@/features/shell/components/panel";
+import { Panel, PanelBody, PanelHeader, RadarLayout, StatusBar } from "@/features/shell";
 import { ErrorState } from "@/lib/error-boundary";
 import type { MarketContext } from "../api/market-evidence";
-import { useMarketCatalog, useMarketContext } from "../hooks";
 import { MarketsOverviewOverlay, type MarketsOverviewOverlayId, marketsOverviewActions } from "./market-page-overlays";
+import type { MarketCatalogInstrument, MarketCatalogQuery, MarketContextQuery } from "./market-view-contracts";
 
 const CONTEXT_CATEGORIES = new Set(["global", "rates", "fx", "commodity", "macro"]);
 
-function countBy(items: readonly CatalogInstrument[], field: "asset_class" | "exchange") {
+function countBy(items: readonly MarketCatalogInstrument[], field: "asset_class" | "exchange") {
 	const counts = new Map<string, number>();
 	for (const item of items) counts.set(item[field], (counts.get(item[field]) ?? 0) + 1);
 	return [...counts.entries()].sort(([left], [right]) => left.localeCompare(right));
@@ -179,7 +177,7 @@ function EvidenceRail({
 	context,
 	exchangeCounts,
 }: {
-	readonly context?: MarketContext;
+	readonly context?: MarketContext | undefined;
 	readonly exchangeCounts: [string, number][];
 }) {
 	return (
@@ -240,10 +238,14 @@ function EvidenceRail({
 	);
 }
 
-export function MarketsPage() {
+export function MarketsPage({
+	catalogQuery,
+	contextQuery,
+}: {
+	readonly catalogQuery: MarketCatalogQuery;
+	readonly contextQuery: MarketContextQuery;
+}) {
 	const [activeOverlay, setActiveOverlay] = useState<MarketsOverviewOverlayId | null>(null);
-	const catalogQuery = useMarketCatalog({ limit: 100 });
-	const contextQuery = useMarketContext();
 	const items = catalogQuery.data?.items ?? [];
 	const exchangeCounts = countBy(items, "exchange");
 	const assetCounts = countBy(items, "asset_class");

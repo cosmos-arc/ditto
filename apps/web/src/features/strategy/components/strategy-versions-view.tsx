@@ -1,16 +1,17 @@
 import { useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
-import { ApiError } from "@/lib/api-client";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useStrategyActive, useStrategyVersion, useStrategyVersions } from "../hooks";
-import { GovernanceActions } from "./governance-actions";
+import type { StrategyGovernanceActionsRenderer } from "./governance-actions";
 
-interface StrategyVersionsViewProps {
+export interface StrategyVersionsViewProps {
 	readonly id: string;
+	readonly renderGovernanceActions: StrategyGovernanceActionsRenderer;
 }
 
-export function StrategyVersionsView({ id }: StrategyVersionsViewProps) {
+export function StrategyVersionsView({ id, renderGovernanceActions }: StrategyVersionsViewProps) {
 	const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 	const { data, isLoading, refetch } = useStrategyVersions(id);
 	const detail = useStrategyVersion(id, selectedVersion);
@@ -39,12 +40,12 @@ export function StrategyVersionsView({ id }: StrategyVersionsViewProps) {
 											<span className="font-medium">v{ver.version}</span>
 											<span className="text-(--color-foreground-tertiary)">{ver.reviewOutcome}</span>
 										</div>
-										<GovernanceActions
-											strategyId={id}
-											version={ver}
-											expectedPointerRevision={pointerRevision}
-											currentActiveVersion={currentActiveVersion}
-										/>
+										{renderGovernanceActions({
+											strategyId: id,
+											version: ver,
+											expectedPointerRevision: pointerRevision,
+											currentActiveVersion,
+										})}
 									</div>
 									<div className="flex items-center gap-3">
 										<span className="text-xs text-(--color-foreground-tertiary)">

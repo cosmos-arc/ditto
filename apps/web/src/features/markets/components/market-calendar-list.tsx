@@ -1,11 +1,9 @@
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
-import { useDataProductCoverage } from "@/features/data-products";
 import { ErrorState } from "@/lib/error-boundary";
+import type { MarketCalendarCoverageQuery } from "./market-view-contracts";
 
-export function MarketCalendarList() {
-	const query = useDataProductCoverage("calendar");
-
+export function MarketCalendarList({ query }: { readonly query: MarketCalendarCoverageQuery }) {
 	if (query.isLoading) return <LoadingSkeleton variant="table" rows={6} />;
 	if (query.isError) return <ErrorState onRetry={() => void query.refetch()} />;
 	if (!query.data) return null;

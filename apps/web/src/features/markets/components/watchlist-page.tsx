@@ -4,16 +4,15 @@ import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { ErrorState } from "@/lib/error-boundary";
 import { LOCAL_WATCHLIST_STORAGE_KEY, readLocalWatchlist } from "@/lib/local-watchlist";
-import { useMarketCatalog } from "../hooks";
 import { WatchlistOverlay, type WatchlistOverlayId } from "./market-page-overlays";
+import type { MarketCatalogQuery } from "./market-view-contracts";
 
 const watchlistActions = [
 	{ id: "add-instrument", label: "添加标的" },
 	{ id: "bulk-delete", label: "批量删除" },
 ] as const;
 
-export function WatchlistPage() {
-	const catalog = useMarketCatalog({ limit: 100 });
+export function WatchlistPage({ catalog }: { readonly catalog: MarketCatalogQuery }) {
 	const [ids, setIds] = useState<number[]>(readLocalWatchlist);
 	const [draftId, setDraftId] = useState("");
 	const [feedback, setFeedback] = useState<string | null>(null);

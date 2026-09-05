@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { capturedRequest, requestJson, requestPath } from "@/test/request";
 import {
 	fetchEffectiveFills,
 	fetchFillAdjustments,
@@ -44,10 +45,9 @@ describe("fetchFills", () => {
 
 		await expect(fetchFills()).resolves.toEqual([]);
 
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/v1/manual/fills?strategy_id=seed_etf_industry_rotation",
-			expect.objectContaining({ method: "GET" }),
-		);
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/manual/fills?strategy_id=seed_etf_industry_rotation");
+		expect(request.method).toBe("GET");
 	});
 
 	it("reads effective fills and append-only adjustment evidence from separate endpoints", async () => {
@@ -65,16 +65,14 @@ describe("fetchFills", () => {
 			fetchFillAdjustments({ strategyId: "strategy-r1", fillId: "fill-001", intentId: "intent-001" }),
 		).resolves.toEqual([]);
 
-		expect(fetchMock).toHaveBeenNthCalledWith(
-			1,
-			"/api/v1/manual/fills/effective?strategy_id=strategy-r1",
-			expect.objectContaining({ method: "GET" }),
-		);
-		expect(fetchMock).toHaveBeenNthCalledWith(
-			2,
+		const effectiveRequest = capturedRequest(fetchMock.mock.calls, 0);
+		const adjustmentsRequest = capturedRequest(fetchMock.mock.calls, 1);
+		expect(requestPath(effectiveRequest)).toBe("/api/v1/manual/fills/effective?strategy_id=strategy-r1");
+		expect(effectiveRequest.method).toBe("GET");
+		expect(requestPath(adjustmentsRequest)).toBe(
 			"/api/v1/manual/fill-adjustments?strategy_id=strategy-r1&fill_id=fill-001&intent_id=intent-001",
-			expect.objectContaining({ method: "GET" }),
 		);
+		expect(adjustmentsRequest.method).toBe("GET");
 	});
 });
 
@@ -97,13 +95,10 @@ describe("recordFill", () => {
 		const fill = await recordFill(recordFillPayload);
 
 		expect(fill.fill_id).toBe("fill-intent-510300-001");
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/v1/manual/fills",
-			expect.objectContaining({
-				method: "POST",
-				body: JSON.stringify(recordFillPayload),
-			}),
-		);
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/manual/fills");
+		expect(request.method).toBe("POST");
+		expect(await requestJson(request)).toEqual(recordFillPayload);
 	});
 });
 
@@ -131,10 +126,10 @@ describe("append-only fill correction", () => {
 			adjustment_id: "adjustment-void-001",
 			adjustment_type: "void",
 		});
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/v1/manual/fills/fill-001/void",
-			expect.objectContaining({ method: "POST", body: JSON.stringify(payload) }),
-		);
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/manual/fills/fill-001/void");
+		expect(request.method).toBe("POST");
+		expect(await requestJson(request)).toEqual(payload);
 	});
 
 	it("posts a replacement fill and its linked adjustment as one correction request", async () => {
@@ -171,9 +166,9 @@ describe("append-only fill correction", () => {
 			adjustment_id: "adjustment-replace-001",
 			replacement_fill_id: "fill-001-replacement",
 		});
-		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/v1/manual/fills/fill-001/replace",
-			expect.objectContaining({ method: "POST", body: JSON.stringify(payload) }),
-		);
+		const request = capturedRequest(fetchMock.mock.calls);
+		expect(requestPath(request)).toBe("/api/v1/manual/fills/fill-001/replace");
+		expect(request.method).toBe("POST");
+		expect(await requestJson(request)).toEqual(payload);
 	});
 });

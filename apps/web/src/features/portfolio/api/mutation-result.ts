@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/api-client";
+import { ApiError } from "@/api";
 
 export type MutationFailureKind = "none" | "conflict" | "unknown" | "definite";
 

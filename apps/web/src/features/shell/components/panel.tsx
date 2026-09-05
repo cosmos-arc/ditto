@@ -39,8 +39,8 @@ export function Panel({ className, children, ...rest }: PanelProps) {
 
 interface PanelHeaderProps {
 	title: string;
-	subtitle?: string;
-	count?: number;
+	subtitle?: string | undefined;
+	count?: number | undefined;
 	actions?: ReactNode;
 }
 

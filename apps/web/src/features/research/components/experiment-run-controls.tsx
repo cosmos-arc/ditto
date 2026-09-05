@@ -1,11 +1,15 @@
 import { useRef, useState } from "react";
-import { ApiError } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
-import type { ExperimentControlAction } from "../api/experiments";
+import { ApiError } from "@/api";
+import type {
+	ExperimentControlAction,
+	ExperimentControlReceiptResponse,
+	ExperimentDetailResponse,
+	ExperimentFoldResponse,
+} from "../api/experiments";
 import { useExperimentControl, useExperimentRetryFold } from "../hooks";
 
 interface ExperimentRunControlsProps {
-	readonly detail: components["schemas"]["ExperimentDetailResponse"];
+	readonly detail: ExperimentDetailResponse;
 }
 
 function idempotencyKey(prefix: string): string {
@@ -23,7 +27,7 @@ function typedError(error: Error | null): string | null {
 export function ExperimentRunControls({ detail }: ExperimentRunControlsProps) {
 	const control = useExperimentControl();
 	const retry = useExperimentRetryFold();
-	const [receipt, setReceipt] = useState<components["schemas"]["ExperimentControlReceiptResponse"] | null>(null);
+	const [receipt, setReceipt] = useState<ExperimentControlReceiptResponse | null>(null);
 	const attempts = useRef(new Map<string, string>());
 	const status = detail.status.toLowerCase();
 	const actions: ExperimentControlAction[] =
@@ -61,7 +65,7 @@ export function ExperimentRunControls({ detail }: ExperimentRunControlsProps) {
 		);
 	}
 
-	function retryFold(fold: components["schemas"]["ExperimentFoldResponse"]): void {
+	function retryFold(fold: ExperimentFoldResponse): void {
 		const identity = `retry:${fold.fold_id}:${fold.revision}`;
 		retry.mutate(
 			{

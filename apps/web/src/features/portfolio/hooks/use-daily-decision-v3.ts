@@ -14,6 +14,6 @@ export function useDailyDecisionV3(
 		queryKey: tradingKeys.dailyDecisionV3(strategyId, tradeDate, accountId),
 		queryFn: () => fetchDailyDecisionV3({ strategyId, accountId, tradeDate }),
 		select: mapDailyDecisionV3,
-		enabled: options.enabled,
+		enabled: options.enabled ?? true,
 	});
 }

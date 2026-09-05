@@ -1,10 +1,10 @@
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { ShellHeaderExtension, StatusBar, StudioLayout } from "@/features/shell";
-import { ApiError } from "@/lib/api-client";
 import type { NodeDescriptorView, SpecValidation } from "@/types/strategy";
 import { serializeStrategySpec } from "../api/mappers";
 import { addDescriptorNode } from "../api/pipeline-model";

@@ -5,8 +5,15 @@ import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
+import { ContextActionsProvider, type ContextActionsRequest } from "@/providers";
 import type { FactorDiagnosticsScope } from "../api/factor-diagnostics";
 import { FactorPage } from "./factor-page";
+
+const renderContextActions = vi.fn((request: ContextActionsRequest) => (
+	<a href="#context-action" data-context-id={request.contextId} data-context-type={request.contextType}>
+		{request.evidenceLabel ?? "请求证据分析"}
+	</a>
+));
 
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
@@ -41,13 +48,18 @@ function createWrapper() {
 		defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
 	});
 	return function Wrapper({ children }: { readonly children: ReactNode }) {
-		return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+		return (
+			<ContextActionsProvider renderActions={renderContextActions}>
+				<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+			</ContextActionsProvider>
+		);
 	};
 }
 
 describe("FactorPage governed workspace", () => {
 	beforeEach(() => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
+		renderContextActions.mockClear();
 	});
 
 	it("fails closed before the complete immutable diagnostics scope is bound", () => {
@@ -119,6 +131,11 @@ describe("FactorPage governed workspace", () => {
 		await user.click(screen.getByRole("button", { name: "AI 解读" }));
 		const aiDrawer = screen.getByRole("dialog", { name: "AI 解读" });
 		expect(within(aiDrawer).getByText(/不会生成未经服务端证据支持的结论/)).toBeInTheDocument();
-		expect(within(aiDrawer).getByRole("link", { name: "请求证据分析" })).toBeInTheDocument();
+		const action = within(aiDrawer).getByRole("link", { name: "请求证据分析" });
+		expect(action).toHaveAttribute("data-context-type", "factor-diagnostics");
+		expect(action).toHaveAttribute(
+			"data-context-id",
+			`momentum_1m:${SCOPE.snapshotId}:${SCOPE.startDate}:${SCOPE.endDate}:${SCOPE.registryHash}`,
+		);
 	});
 });

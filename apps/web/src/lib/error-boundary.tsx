@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 // ── ErrorState ──────────────────────────────────────────────
 
 interface ErrorStateProps {
-	readonly title?: string;
-	readonly description?: string;
-	readonly onRetry?: () => void;
-	readonly className?: string;
+	readonly title?: string | undefined;
+	readonly description?: string | undefined;
+	readonly onRetry?: (() => void) | undefined;
+	readonly className?: string | undefined;
 }
 
 function ErrorState({ title = "加载失败", description, onRetry, className }: ErrorStateProps) {

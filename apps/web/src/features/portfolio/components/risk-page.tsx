@@ -1,22 +1,27 @@
+import type { ReactNode } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { AnalyticalLayout, StatusBar } from "@/features/shell";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useDailyDecisionV3 } from "../hooks";
-import { DecisionBriefing } from "./decision-briefing";
+import type { DailyDecisionV3ViewModel } from "../types/daily-decision-v3";
 import { RiskDecisionCenter } from "./risk-decision-center";
 import { RiskMockWorkspace } from "./risk-workspace";
 
-export function RiskPage() {
+interface RiskPageProps {
+	readonly renderDecisionBriefing?: ((decision: DailyDecisionV3ViewModel) => ReactNode) | undefined;
+}
+
+export function RiskPage({ renderDecisionBriefing }: RiskPageProps = {}) {
 	if (!shouldUsePrototypeMocks()) {
-		return <RiskLivePage />;
+		return <RiskLivePage renderDecisionBriefing={renderDecisionBriefing} />;
 	}
 
 	return <RiskMockWorkspace />;
 }
 
-function RiskLivePage() {
+function RiskLivePage({ renderDecisionBriefing }: RiskPageProps) {
 	const { data, isLoading, isError, refetch } = useDailyDecisionV3();
 
 	return (
@@ -75,7 +80,7 @@ function RiskLivePage() {
 						{data && (
 							<>
 								<RiskDecisionCenter decision={data} />
-								<DecisionBriefing decision={data} />
+								{renderDecisionBriefing?.(data)}
 							</>
 						)}
 					</div>

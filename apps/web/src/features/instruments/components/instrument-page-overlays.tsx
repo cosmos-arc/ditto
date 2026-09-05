@@ -47,7 +47,7 @@ export function InstrumentPageOverlays({
 	readonly instrumentId: string;
 	readonly onAddWatchlist: () => void;
 	readonly onClose: () => void;
-	readonly selectionRunId?: string;
+	readonly selectionRunId?: string | undefined;
 	readonly technicalSnapshotId?: string | null;
 }) {
 	if (!active) return null;

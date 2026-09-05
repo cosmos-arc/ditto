@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ApiError } from "@/api";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api-client";
 import {
 	correctManualAccountEvent,
 	createManualAccount,
@@ -62,7 +62,7 @@ function Onboarding({
 	onAccountSelected,
 }: {
 	readonly asOf: string;
-	readonly onAccountSelected?: (accountId: string) => void;
+	readonly onAccountSelected?: ((accountId: string) => void) | undefined;
 }) {
 	const [accountId, setAccountId] = useState("");
 	const [name, setName] = useState("");
@@ -282,7 +282,7 @@ function LedgerPanel({
 	readonly ledgerHash: string;
 	readonly valuationComplete: boolean;
 	readonly busy: boolean;
-	readonly reversalTarget?: ManualAccountEvent;
+	readonly reversalTarget?: ManualAccountEvent | undefined;
 	readonly onReverse: (target: ManualAccountEvent, reason: string) => Promise<void> | void;
 	readonly onStartReversal: (event: ManualAccountEvent) => void;
 	readonly onCancelReversal: () => void;
@@ -414,9 +414,9 @@ export function ManualAccountWorkspace({
 	asOf,
 	onAccountSelected,
 }: {
-	readonly accountId?: string;
-	readonly asOf?: string;
-	readonly onAccountSelected?: (accountId: string) => void;
+	readonly accountId?: string | undefined;
+	readonly asOf?: string | undefined;
+	readonly onAccountSelected?: ((accountId: string) => void) | undefined;
 }) {
 	const effectiveAsOf = asOf ?? localIsoDate();
 	const queryClient = useQueryClient();

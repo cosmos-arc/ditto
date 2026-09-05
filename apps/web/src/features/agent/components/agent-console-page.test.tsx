@@ -234,6 +234,11 @@ describe("AgentConsolePage", () => {
 
 	it("exposes every required visual-audit contract slot", () => {
 		const { container } = render(<AgentConsolePage initialSearch={{ tab: "runs" }} />, { wrapper });
+		for (const tab of screen.getAllByRole("tab")) {
+			const controlledId = tab.getAttribute("aria-controls");
+			expect(controlledId, `${tab.textContent} aria-controls`).toBeTruthy();
+			expect(document.getElementById(controlledId!), `${tab.textContent} tabpanel`).not.toBeNull();
+		}
 
 		for (const [name, slot] of Object.entries({
 			shell: "shell",
@@ -252,6 +257,11 @@ describe("AgentConsolePage", () => {
 		expect(shell).toHaveClass("h-full", "min-h-0", "overflow-hidden");
 		const workspace = container.querySelector("[data-slot='workspace']");
 		expect(workspace).toHaveClass("flex-1", "xl:grid-cols-[18rem_minmax(0,1fr)_23.25rem]");
+		expect(screen.getByRole("main")).toContainElement(screen.getByRole("link", { name: "返回 Agent 任务列表" }));
+		expect(screen.getByRole("link", { name: "返回 Agent 任务列表" })).toHaveAttribute(
+			"href",
+			"#agent-unified-task-list",
+		);
 	});
 
 	it("keeps historical projections readable when runtime is disabled and blocks creation", async () => {

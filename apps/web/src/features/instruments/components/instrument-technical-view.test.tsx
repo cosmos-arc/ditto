@@ -7,11 +7,8 @@ import { selectionRunFixtures } from "@/mocks/fixtures/selection";
 import { instrumentsHandlers } from "@/mocks/handlers/instruments";
 import { selectionHandlers } from "@/mocks/handlers/selection";
 import { server } from "@/mocks/server";
-import type { components } from "@/types/generated/api";
-import { InstrumentTechnicalView } from "./instrument-technical-view";
-
-type TechnicalAnalysisQueryBody = components["schemas"]["TechnicalAnalysisQueryBody"];
-type TechnicalAnalysisSnapshot = components["schemas"]["TechnicalAnalysisSnapshotResponse"];
+import { InstrumentTechnicalView } from "@/workflows/instrument-analysis";
+import type { TechnicalAnalysisQueryBody, TechnicalAnalysisSnapshot } from "../api/technical-analysis";
 
 const run = selectionRunFixtures[0];
 const certifiedTechnicalSnapshotId = `snapshot:tushare:stock_daily:sha256:${"9".repeat(64)}`;

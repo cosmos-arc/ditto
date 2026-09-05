@@ -16,7 +16,7 @@ describe("dataProductsHandlers", () => {
 				intent_type: "write",
 				item_id: "source_health:calendar:2026-08-30",
 				method: "POST",
-				path: "/v1/ingestion/calendar/2026-08-30",
+				path: "/api/v1/ingestion/calendar/2026-08-30",
 				request_payload: { dataset_id: "calendar", trade_date: "2026-08-30" },
 				requested_by: "operator",
 			}),

@@ -23,7 +23,7 @@ vi.mock("@tanstack/react-router", async () => {
 			readonly params?: Readonly<Record<string, string>>;
 			readonly className?: string;
 		}) => (
-			<a href={params?.id ? to.replace("$id", params.id) : to} className={className}>
+			<a href={params?.["id"] ? to.replace("$id", params["id"]) : to} className={className}>
 				{children}
 			</a>
 		),

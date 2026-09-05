@@ -21,7 +21,7 @@ describe("useCorrectFill", () => {
 				return HttpResponse.json({
 					data: {
 						...(payload as Record<string, unknown>),
-						fill_id: params.fillId,
+						fill_id: params["fillId"],
 						adjustment_type: "void",
 						replacement_fill_id: null,
 						created_at: "2026-07-16T10:00:00+08:00",

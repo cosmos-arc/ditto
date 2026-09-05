@@ -11,6 +11,6 @@ export function useFillLedger(params: FetchFillsParams = {}, options: { readonly
 	return useQuery({
 		queryKey: tradingKeys.fills(strategyId, startDate, endDate),
 		queryFn: () => fetchFillLedger({ strategyId, startDate, endDate }),
-		enabled: options.enabled,
+		enabled: options.enabled ?? true,
 	});
 }

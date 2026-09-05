@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CommandCenterLayout } from "@/features/shell";
-import { SidebarToggle } from "@/features/shell/components/sidebar-toggle";
-import { useUIPreferences } from "@/features/shell/hooks/use-ui-preferences";
+import { CommandCenterLayout, SidebarToggle, useUIPreferences } from "@/features/shell";
 import type { PendingAction } from "@/types";
+import type { LoadMarketContext } from "../hooks";
 import { AgentFindingsSection } from "./agent-findings-section";
 import { BannerSection } from "./banner-section";
 import { DataHealthSection } from "./data-health-section";
@@ -29,7 +28,7 @@ import { ResearchProgressSection } from "./research-progress-section";
  *   main-primary: flex 0 0 auto, content-sized, gap var(--density-section-gap)
  *   shell-secondary: grid 1fr/1fr, flex 1
  */
-export function HomePage() {
+export function HomePage({ loadMarketContext }: { readonly loadMarketContext?: LoadMarketContext | undefined }) {
 	const { sidebarCollapsed, toggleSidebarCollapsed } = useUIPreferences();
 	const [selectedAction, setSelectedAction] = useState<PendingAction | null>(null);
 	const [signalEvidenceOpen, setSignalEvidenceOpen] = useState(false);
@@ -121,7 +120,7 @@ export function HomePage() {
 							className="grid h-[508px] min-h-0 flex-none grid-cols-2 gap-[var(--density-gutter)] overflow-hidden rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-panel-base)"
 						>
 							<ResearchProgressSection />
-							<AgentFindingsSection />
+							<AgentFindingsSection loadMarketContext={loadMarketContext} />
 						</div>
 					</div>
 				}
@@ -133,7 +132,7 @@ export function HomePage() {
 							data-slot="sidebar-rail"
 							className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden border-l border-(--color-border-subtle)"
 						>
-							<MarketPulseSection />
+							<MarketPulseSection loadMarketContext={loadMarketContext} />
 							<GlobalAlertsSection />
 							<DataHealthSection />
 							<SidebarToggle />

@@ -16,7 +16,7 @@ import { PositionsSummary } from "./positions-summary";
 import { SignalToOrderPipelineStrip } from "./signal-to-order-pipeline-strip";
 
 interface PortfolioPageProps {
-	readonly comparisonRunId?: string;
+	readonly comparisonRunId?: string | undefined;
 	readonly mode?: PortfolioMode;
 }
 
@@ -105,6 +105,9 @@ export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}
 					? "manual"
 					: "model";
 	const comparisonIdentity = accountMode === "comparison" ? readComparisonIdentity(search) : undefined;
+	const explicitAsOf = /^\d{4}-\d{2}-\d{2}$/u.test(search.get("as_of") ?? "")
+		? (search.get("as_of") ?? undefined)
+		: undefined;
 	const [manualAccountId, setManualAccountId] = useState(() =>
 		accountMode === "manual" ? (search.get("account_id") ?? undefined) : undefined,
 	);
@@ -129,6 +132,7 @@ export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}
 		return (
 			<ManualAccountWorkspace
 				accountId={manualAccountId}
+				asOf={explicitAsOf}
 				onAccountSelected={(accountId) => {
 					const next = new URL(window.location.href);
 					next.searchParams.set("mode", "manual");
@@ -145,6 +149,7 @@ export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}
 			<PaperAccountWorkspace
 				accountId={paperWorkspace.accountId}
 				sessionId={paperWorkspace.sessionId}
+				asOf={explicitAsOf}
 				onWorkspaceSelected={(accountId, sessionId) => {
 					const next = new URL(window.location.href);
 					next.searchParams.set("mode", "paper");

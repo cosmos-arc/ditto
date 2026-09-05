@@ -60,7 +60,7 @@ describe("ScrollReveal", () => {
 		// Simulate IntersectionObserver firing with isIntersecting: true
 		const entry = { isIntersecting: true } as IntersectionObserverEntry;
 		act(() => {
-			instances[0].callback([entry], {} as IntersectionObserver);
+			instances[0]?.callback([entry], {} as IntersectionObserver);
 		});
 
 		const wrapper = container.firstElementChild as HTMLElement;

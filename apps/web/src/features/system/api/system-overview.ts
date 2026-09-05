@@ -1,11 +1,4 @@
-import { apiClient } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
-
-type CatalogAssetResponse = components["schemas"]["CatalogAssetResponse"];
-type CatalogRemediationBacklogResponse = components["schemas"]["CatalogRemediationBacklogResponse"];
-type CatalogSourceHealthSummaryReportResponse = components["schemas"]["CatalogSourceHealthSummaryReportResponse"];
-type CatalogSourceFallbackPolicySummaryResponse = components["schemas"]["CatalogSourceFallbackPolicySummaryResponse"];
-type PromotionReadinessReportResponse = components["schemas"]["PromotionReadinessReportResponse"];
+import { apiClient } from "@/api";
 
 export type SystemCatalogAsset = {
 	readonly datasetId: string;
@@ -91,17 +84,14 @@ export const systemOverviewKeys = {
 	promotion: (scope: SystemOverviewScope) => [...systemOverviewKeys.scope(scope), "promotion"] as const,
 };
 
-function scopedPath(path: string, scope: SystemOverviewScope): string {
-	const query = new URLSearchParams();
-	for (const datasetId of scope.datasetIds) query.append("dataset_ids", datasetId);
-	query.append("trade_dates", scope.tradeDate);
-	return `${path}?${query.toString()}`;
+function scopedQuery(scope: SystemOverviewScope) {
+	return { dataset_ids: [...scope.datasetIds], trade_dates: [scope.tradeDate] };
 }
 
 export async function fetchSystemCatalogAssets(): Promise<readonly SystemCatalogAsset[]> {
-	const response = await apiClient.get<readonly CatalogAssetResponse[]>(
-		"/v1/ingestion/catalog/assets?limit=100&offset=0",
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/assets", {
+		params: { query: { limit: 100, offset: 0 } },
+	});
 	return response.map((item) => ({
 		datasetId: item.asset.dataset_id,
 		freshnessAt: item.freshness_at,
@@ -114,9 +104,9 @@ export async function fetchSystemCatalogAssets(): Promise<readonly SystemCatalog
 }
 
 export async function fetchSystemRemediation(scope: SystemOverviewScope): Promise<SystemRemediationBacklog> {
-	const response = await apiClient.get<CatalogRemediationBacklogResponse>(
-		scopedPath("/v1/ingestion/catalog/remediation/backlog", scope),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/remediation/backlog", {
+		params: { query: scopedQuery(scope) },
+	});
 	return {
 		generatedAt: response.generated_at,
 		items: response.items.map((item) => ({
@@ -134,9 +124,9 @@ export async function fetchSystemRemediation(scope: SystemOverviewScope): Promis
 }
 
 export async function fetchSystemSourceHealth(scope: SystemOverviewScope): Promise<SystemSourceHealthSummary> {
-	const response = await apiClient.get<CatalogSourceHealthSummaryReportResponse>(
-		scopedPath("/v1/ingestion/catalog/source-health/summary", scope),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/source-health/summary", {
+		params: { query: scopedQuery(scope) },
+	});
 	return {
 		attentionItems: response.attention_required.map((item) => ({
 			datasetId: item.dataset_id,
@@ -156,9 +146,9 @@ export async function fetchSystemSourceHealth(scope: SystemOverviewScope): Promi
 }
 
 export async function fetchSystemFallback(scope: SystemOverviewScope): Promise<SystemFallbackSummary> {
-	const response = await apiClient.get<CatalogSourceFallbackPolicySummaryResponse>(
-		scopedPath("/v1/ingestion/catalog/source-fallback/summary", scope),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/source-fallback/summary", {
+		params: { query: scopedQuery(scope) },
+	});
 	return {
 		approvalRequiredCount: response.approval_required_count,
 		executionAllowedCount: response.execution_allowed_count,
@@ -175,9 +165,9 @@ export async function fetchSystemFallback(scope: SystemOverviewScope): Promise<S
 }
 
 export async function fetchSystemPromotion(scope: SystemOverviewScope): Promise<SystemPromotionReadiness> {
-	const response = await apiClient.get<PromotionReadinessReportResponse>(
-		scopedPath("/v1/ingestion/catalog/promotion/readiness", scope),
-	);
+	const response = await apiClient.get("/api/v1/ingestion/catalog/promotion/readiness", {
+		params: { query: scopedQuery(scope) },
+	});
 	return {
 		activePromotionCount: response.active_promotion_count,
 		datasetCount: response.dataset_count,

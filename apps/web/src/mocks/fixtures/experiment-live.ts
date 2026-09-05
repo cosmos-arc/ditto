@@ -4,9 +4,7 @@
  * T18 仅接线 experiment 列表；完整工作台属 T19。与 {@link "./research"} 中的
  * prototype mock（旧 `Experiment` 形状）并存，组件迁移完成后清理。
  */
-import type { components } from "@/types/generated/api";
-
-type ExperimentSummaryResponse = components["schemas"]["ExperimentSummaryResponse"];
+import type { ExperimentSummaryResponse } from "@/features/research/api/experiments";
 
 export const mockExperimentSummaryList: ExperimentSummaryResponse[] = [
 	{

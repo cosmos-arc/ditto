@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ReviewDetailPage } from "@/features/research/components/review-detail-page";
+import { ReviewDetailPage } from "@/workflows/review-detail";
 
 interface ReviewDetailSearch {
 	readonly strategyId: string;
@@ -8,9 +8,9 @@ interface ReviewDetailSearch {
 
 /** 解析 review-detail 所需的策略/版本上下文（queue 链接三参全传）。 */
 function parseReviewSearch(search: Record<string, unknown>): ReviewDetailSearch {
-	const rawVersion = search.version;
+	const rawVersion = search["version"];
 	return {
-		strategyId: typeof search.strategyId === "string" ? search.strategyId : "",
+		strategyId: typeof search["strategyId"] === "string" ? search["strategyId"] : "",
 		version: typeof rawVersion === "number" ? rawVersion : Number.parseInt(String(rawVersion ?? "0"), 10) || 0,
 	};
 }

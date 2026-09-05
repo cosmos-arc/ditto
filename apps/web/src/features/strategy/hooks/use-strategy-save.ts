@@ -18,7 +18,7 @@ export type SaveStrategyVariables = {
 const SAVE_INVALIDATION_SCOPES = ["versions", "detail", "list"] as const;
 
 /**
- * 保存编辑（`PUT /v1/strategies/{id}`，version 乐观锁 → 后端 governance create_draft(parent)
+ * 保存编辑（`PUT /api/v1/strategies/{id}`，version 乐观锁 → 后端 governance create_draft(parent)
  * 产生新 version）。成功后把返回 spec 重新载入 store（同步 working/saved，清除 dirty）并失效
  * versions/detail/list scope。
  */

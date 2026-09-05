@@ -1,8 +1,8 @@
 import { HttpResponse, http } from "msw";
-import type { components } from "@/types/generated/api";
-
-type QueryBody = components["schemas"]["TechnicalAnalysisQueryBody"];
-type Snapshot = components["schemas"]["TechnicalAnalysisSnapshotResponse"];
+import type {
+	TechnicalAnalysisQueryBody as QueryBody,
+	TechnicalAnalysisSnapshot as Snapshot,
+} from "@/features/instruments/api/technical-analysis";
 
 export const technicalAnalysisHandlers = [
 	http.post("/api/v1/technical-analysis/snapshots/query", async ({ request }) => {

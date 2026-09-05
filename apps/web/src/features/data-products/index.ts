@@ -7,7 +7,12 @@ export type {
 	DataProductRun,
 	DataProductView,
 } from "./api";
-export { DEFAULT_DATA_PRODUCT_PROFILE, dataProductKeys } from "./api";
+export {
+	DEFAULT_DATA_PRODUCT_PROFILE,
+	dataProductKeys,
+	fetchDataProductEvidence,
+	fetchDataProducts,
+} from "./api";
 export { DataProductWorkbench } from "./components";
 export {
 	useDataProductCoverage,

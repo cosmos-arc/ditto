@@ -1,23 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import type { GetSignalsRequest, GetSignalsResponse } from "@/types";
+import type { GetSignalsRequest } from "@/types";
 import { mapDailyDecisionToSignalsResponse, mapDailyDecisionV2ToLegacy } from "../api/mappers";
 import { DEFAULT_STRATEGY_ID, tradingKeys } from "../api/query-keys";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useDailyDecisionV2 } from "./use-daily-decision-v2";
-
-function buildSignalsQuery(params?: GetSignalsRequest): string {
-	if (!params) return "/portfolio/review";
-
-	const searchParams = new URLSearchParams();
-	if (params.tab) searchParams.set("tab", params.tab);
-	if (params.page) searchParams.set("page", String(params.page));
-	if (params.limit) searchParams.set("limit", String(params.limit));
-	if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
-
-	const qs = searchParams.toString();
-	return qs ? `/portfolio/review?${qs}` : "/portfolio/review";
-}
 
 export function useSignals(params?: GetSignalsRequest) {
 	const usePrototypeMocks = shouldUsePrototypeMocks();
@@ -28,7 +14,7 @@ export function useSignals(params?: GetSignalsRequest) {
 	);
 	const mockQuery = useQuery({
 		queryKey: tradingKeys.signals(DEFAULT_STRATEGY_ID, params?.tab),
-		queryFn: () => apiClient.get<GetSignalsResponse>(buildSignalsQuery(params)),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getSignals }) => getSignals(params)),
 		enabled: usePrototypeMocks,
 	});
 

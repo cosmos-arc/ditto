@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { DecisionBanner } from "@/components/domain/decision-banner";
 import { type BadgeVariant, StatusBadge } from "@/components/status";
 import { AnalyticalLayout, Panel, PanelBody, PanelHeader, StatusBar } from "@/features/shell";
@@ -5,8 +6,8 @@ import { resolveTradingExecutionScope, type TradingExecutionScope } from "../api
 import { mapReadinessStatus } from "../api/mappers";
 import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useDailyDecisionV3 } from "../hooks";
+import type { DailyDecisionV3ViewModel } from "../types/daily-decision-v3";
 import { DailyDecisionV3Workspace } from "./daily-decision-v3-workspace";
-import { DecisionBriefing } from "./decision-briefing";
 import { EquityPnlBlock } from "./equity-pnl-block";
 import { PortfolioOverviewOrdersPanel } from "./portfolio-overview-orders-panel";
 import { PortfolioOverviewSignalsPanel } from "./portfolio-overview-signals-panel";
@@ -101,21 +102,25 @@ function ExecutionScopeForm({ scope }: { readonly scope: TradingExecutionScope }
 }
 
 function DecisionBriefingUnavailable({
+	hasDecision,
 	liveMode,
 	isLoading,
 	isError,
 }: {
+	readonly hasDecision: boolean;
 	readonly liveMode: boolean;
 	readonly isLoading: boolean;
 	readonly isError: boolean;
 }) {
-	const message = isLoading
-		? "正在等待 Daily Decision V3，shadow opinion 尚未查询。"
-		: isError
-			? "Decision Briefing unavailable；V3 readiness 与交易动作保持关闭。"
-			: liveMode
-				? "尚无可验证的 V3 exact identity，shadow opinion 未查询。"
-				: "Agent shadow opinion 独立于 Daily Decision V3；不可用时不改变 readiness、actions 或执行状态。";
+	const message = hasDecision
+		? "Decision Briefing 未由 app composition 提供；V3 readiness 与交易动作不受影响。"
+		: isLoading
+			? "正在等待 Daily Decision V3，shadow opinion 尚未查询。"
+			: isError
+				? "Decision Briefing unavailable；V3 readiness 与交易动作保持关闭。"
+				: liveMode
+					? "尚无可验证的 V3 exact identity，shadow opinion 未查询。"
+					: "Agent shadow opinion 独立于 Daily Decision V3；不可用时不改变 readiness、actions 或执行状态。";
 
 	return (
 		<Panel data-slot="decision-briefing" aria-label="Decision Briefing" className="h-full">
@@ -132,7 +137,11 @@ function DecisionBriefingUnavailable({
 
 /* ── Page Component ── */
 
-export function PortfolioOverviewPage() {
+export function PortfolioOverviewPage({
+	renderDecisionBriefing,
+}: {
+	readonly renderDecisionBriefing?: (decision: DailyDecisionV3ViewModel) => ReactNode;
+} = {}) {
 	const liveMode = !shouldUsePrototypeMocks();
 	const executionScope = resolveTradingExecutionScope();
 	const {
@@ -232,10 +241,15 @@ export function PortfolioOverviewPage() {
 				activity={<PortfolioOverviewSignalsPanel />}
 				analysis={
 					<div className="h-full overflow-y-auto p-(--density-panel-padding) pt-0">
-						{liveMode && dailyDecision ? (
-							<DecisionBriefing decision={dailyDecision} />
+						{liveMode && dailyDecision && renderDecisionBriefing ? (
+							renderDecisionBriefing(dailyDecision)
 						) : (
-							<DecisionBriefingUnavailable liveMode={liveMode} isLoading={isLoading} isError={isError} />
+							<DecisionBriefingUnavailable
+								hasDecision={Boolean(dailyDecision)}
+								liveMode={liveMode}
+								isLoading={isLoading}
+								isError={isError}
+							/>
 						)}
 					</div>
 				}

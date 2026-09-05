@@ -1,5 +1,5 @@
 import { useMatches, useRouter } from "@tanstack/react-router";
-import { DOMAINS, type DomainId } from "@/features/navigation/types";
+import { DOMAINS, type DomainId } from "@/features/navigation";
 import { HeaderUtilityBar } from "./header-utility-bar";
 import { PageTitleBlock } from "./page-title-block";
 import { SHELL_HEADER_EXTENSION_ID } from "./shell-header-extension";
@@ -36,7 +36,7 @@ function resolveTitle(matches: readonly { routeId?: string }[], router: RouterWi
 
 interface ShellHeaderProps {
 	readonly activeDomain?: DomainId;
-	readonly onOpenAgent?: () => void;
+	readonly onOpenAgent?: (() => void) | undefined;
 }
 
 /**

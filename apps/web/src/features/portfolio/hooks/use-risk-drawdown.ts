@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import type { GetRiskDrawdownResponse } from "@/types";
+import { shouldUsePrototypeMocks } from "../api/runtime";
 
 export function useRiskDrawdown() {
+	const usePrototypeMocks = shouldUsePrototypeMocks();
 	return useQuery({
 		queryKey: ["trading", "risk", "drawdown"],
-		queryFn: () => apiClient.get<GetRiskDrawdownResponse>("/trading/risk/drawdown"),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getRiskDrawdown }) => getRiskDrawdown()),
+		enabled: usePrototypeMocks,
 	});
 }

@@ -3,33 +3,34 @@ import { Drawer } from "@/components/indicator/overlay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AgentCampaignStatus, AgentCampaignView, AgentCapabilityView, AgentStreamState } from "@/features/agent";
-import { AgentCampaignApprovalDialog, AgentCampaignDraftSheet } from "@/features/agent/components";
 import {
+	AgentCampaignApprovalDialog,
+	AgentCampaignDraftSheet,
 	useAgentCampaign,
 	useAgentCampaigns,
 	useAgentCapability,
 	useAgentEventNotifications,
-} from "@/features/agent/hooks";
+} from "@/features/agent";
 import { ShellHeaderExtension, StatusBar } from "@/features/shell";
 import { cn } from "@/lib/utils";
 
 export type AlphaExplorerMode = "copilot" | "autoresearch" | "factor-lab";
 
 export interface AlphaExplorerSearch {
-	readonly mode?: AlphaExplorerMode;
-	readonly selected?: string;
+	readonly mode?: AlphaExplorerMode | undefined;
+	readonly selected?: string | undefined;
 }
 
 interface AlphaExplorerPageProps {
-	readonly search?: AlphaExplorerSearch;
-	readonly onSearchChange?: (search: AlphaExplorerSearch) => void;
+	readonly search?: AlphaExplorerSearch | undefined;
+	readonly onSearchChange?: ((search: AlphaExplorerSearch) => void) | undefined;
 }
 
 interface AlphaExplorerPageViewProps {
 	readonly campaigns: readonly AgentCampaignView[];
 	readonly selectedCampaign: AgentCampaignView | undefined;
 	readonly state: "loading" | "error" | "empty" | "ready";
-	readonly errorMessage?: string;
+	readonly errorMessage?: string | undefined;
 	readonly onSelectCampaign: (campaignId: string) => void;
 	readonly onOpenApproval: () => void;
 }
@@ -45,7 +46,7 @@ interface AlphaExplorerHeaderProps {
 }
 
 type OverlayState =
-	| { readonly kind: "deep-dive" }
+	| { readonly kind: "deep-dive"; readonly campaignId: string }
 	| { readonly kind: "artifact"; readonly ref: string }
 	| { readonly kind: "guardrail" }
 	| { readonly kind: "copilot" }
@@ -276,7 +277,7 @@ function ExplorationMain({
 }: Pick<
 	AlphaExplorerPageViewProps,
 	"campaigns" | "selectedCampaign" | "state" | "errorMessage" | "onSelectCampaign"
-> & { readonly onDeepDive: () => void }) {
+> & { readonly onDeepDive: (campaignId: string) => void }) {
 	return (
 		<main
 			data-slot="main"
@@ -318,7 +319,7 @@ function ExplorationMain({
 								onSelect={() => onSelectCampaign(campaign.campaignId)}
 								onDeepDive={() => {
 									onSelectCampaign(campaign.campaignId);
-									onDeepDive();
+									onDeepDive(campaign.campaignId);
 								}}
 							/>
 						))}
@@ -605,7 +606,7 @@ export function AlphaExplorerPageView({
 					state={state}
 					errorMessage={errorMessage}
 					onSelectCampaign={onSelectCampaign}
-					onDeepDive={() => setOverlay({ kind: "deep-dive" })}
+					onDeepDive={(campaignId) => setOverlay({ kind: "deep-dive", campaignId })}
 				/>
 				<CandidateInspector
 					campaign={selectedCampaign}
@@ -622,7 +623,11 @@ export function AlphaExplorerPageView({
 				<ExperimentGraph campaign={selectedCampaign} onArtifact={(ref) => setOverlay({ kind: "artifact", ref })} />
 			</div>
 			<AlphaCandidateDeepDiveDrawer
-				campaign={selectedCampaign}
+				campaign={
+					overlay?.kind === "deep-dive"
+						? campaigns.find((campaign) => campaign.campaignId === overlay.campaignId)
+						: selectedCampaign
+				}
 				open={overlay?.kind === "deep-dive"}
 				onClose={() => setOverlay(null)}
 			/>
@@ -707,7 +712,9 @@ export function AlphaExplorerPage({ search = {}, onSearchChange }: AlphaExplorer
 				selectedCampaign={selectedCampaign}
 				state={state}
 				errorMessage={error ? displayError(error) : undefined}
-				onSelectCampaign={(campaignId) => onSearchChange?.({ ...search, mode, selected: campaignId })}
+				onSelectCampaign={(campaignId) => {
+					onSearchChange?.({ ...search, mode, selected: campaignId });
+				}}
 				onOpenApproval={() => setApprovalOpen(true)}
 			/>
 			<AgentCampaignDraftSheet

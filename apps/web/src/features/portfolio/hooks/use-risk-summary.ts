@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import type { RiskSummaryResponse } from "@/types";
+import { shouldUsePrototypeMocks } from "../api/runtime";
 
 export function useRiskSummary() {
+	const usePrototypeMocks = shouldUsePrototypeMocks();
 	return useQuery({
 		queryKey: ["trading", "risk", "summary"],
-		queryFn: () => apiClient.get<RiskSummaryResponse>("/trading/risk/summary"),
+		queryFn: () => import("@/mocks/prototype-api").then(({ getRiskSummary }) => getRiskSummary()),
+		enabled: usePrototypeMocks,
 	});
 }

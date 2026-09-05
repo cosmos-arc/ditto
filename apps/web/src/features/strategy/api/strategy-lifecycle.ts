@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api-client";
-import type { components } from "@/types/generated/api";
+import { apiClient } from "@/api";
+import type { components } from "@/api/generated/schema";
 import type { StrategyResponse } from "./strategies";
 
 export type StrategySpecValidateRequest = components["schemas"]["StrategySpecValidateRequest"];
@@ -15,24 +15,24 @@ export type PublishStrategyVersionRequest = components["schemas"]["PublishStrate
 export type StrategyVersionStateResponse = components["schemas"]["StrategyVersionStateResponse"];
 export type StrategyActivePointerResponse = components["schemas"]["StrategyActivePointerResponse"];
 
-/** 版本化治理路径前缀（`/v1/strategies/{id}/versions/{v}`）。 */
-function versionedPath(strategyId: string, version: number): string {
-	return `/v1/strategies/${encodeURIComponent(strategyId)}/versions/${version}`;
+function versionParams(strategyId: string, version: number) {
+	return { strategy_id: strategyId, version };
 }
 
 /**
- * Pre-save candidate spec 校验（`POST /v1/strategies/{id}/versions/{v}/validate`）。
+ * Pre-save candidate spec 校验（`POST /api/v1/strategies/{id}/versions/{v}/validate`）。
  *
  * 后端对非法 candidate 返 200 + `valid=false`（不抛）；仅 version 不存在时 404。
  */
 export function validateSpec(
 	strategyId: string,
 	version: number,
-	specJson: Readonly<Record<string, unknown>>,
+	specJson: StrategySpecValidateRequest["spec_json"],
 ): Promise<StrategySpecValidationResponse> {
-	return apiClient.post<StrategySpecValidationResponse>(`${versionedPath(strategyId, version)}/validate`, {
-		spec_json: specJson,
-	} satisfies StrategySpecValidateRequest);
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/validate", {
+		body: { spec_json: specJson } satisfies StrategySpecValidateRequest,
+		params: { path: versionParams(strategyId, version) },
+	});
 }
 
 /** Run every detached Author stage without saving, reviewing, or publishing. */
@@ -41,24 +41,29 @@ export function previewStrategyAuthor(
 	version: number,
 	payload: StrategyAuthorPreviewRequest,
 ): Promise<StrategyAuthorPreviewResponse> {
-	return apiClient.post<StrategyAuthorPreviewResponse>(`${versionedPath(strategyId, version)}/author-preview`, payload);
-}
-
-/** 创建新策略（`POST /v1/strategies`），用于 Studio 新建 draft。 */
-export function createStrategy(payload: CreateStrategyRequest, idempotencyKey: string): Promise<StrategyResponse> {
-	return apiClient.post<StrategyResponse>("/v1/strategies", payload, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/author-preview", {
+		body: payload,
+		params: { path: versionParams(strategyId, version) },
 	});
 }
 
-/** 更新策略（`PUT /v1/strategies/{id}`），version 字段为乐观锁，走 governance create_draft(parent)。 */
+/** 创建新策略（`POST /api/v1/strategies`），用于 Studio 新建 draft。 */
+export function createStrategy(payload: CreateStrategyRequest, idempotencyKey: string): Promise<StrategyResponse> {
+	return apiClient.post("/api/v1/strategies", {
+		body: payload,
+		params: { header: { "Idempotency-Key": idempotencyKey } },
+	});
+}
+
+/** 更新策略（`PUT /api/v1/strategies/{id}`），version 字段为乐观锁，走 governance create_draft(parent)。 */
 export function updateStrategy(
 	strategyId: string,
 	payload: UpdateStrategyRequest,
 	idempotencyKey: string,
 ): Promise<StrategyResponse> {
-	return apiClient.put<StrategyResponse>(`/v1/strategies/${encodeURIComponent(strategyId)}`, payload, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.put("/api/v1/strategies/{strategy_id}", {
+		body: payload,
+		params: { path: { strategy_id: strategyId }, header: { "Idempotency-Key": idempotencyKey } },
 	});
 }
 
@@ -71,8 +76,12 @@ export function submitStrategyReview(
 	body: SubmitReviewRequest,
 	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/submit-review`, body, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/submit-review", {
+		body,
+		params: {
+			path: versionParams(strategyId, version),
+			header: { "Idempotency-Key": idempotencyKey },
+		},
 	});
 }
 
@@ -83,8 +92,9 @@ export function approveStrategyReview(
 	body: GovernanceDecisionRequest,
 	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/approve`, body, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/approve", {
+		body,
+		params: { path: versionParams(strategyId, version), header: { "Idempotency-Key": idempotencyKey } },
 	});
 }
 
@@ -95,8 +105,9 @@ export function rejectStrategyReview(
 	body: GovernanceDecisionRequest,
 	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/reject`, body, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/reject", {
+		body,
+		params: { path: versionParams(strategyId, version), header: { "Idempotency-Key": idempotencyKey } },
 	});
 }
 
@@ -107,8 +118,9 @@ export function deprecateStrategyVersion(
 	body: GovernanceDecisionRequest,
 	idempotencyKey: string,
 ): Promise<StrategyVersionStateResponse> {
-	return apiClient.post<StrategyVersionStateResponse>(`${versionedPath(strategyId, version)}/deprecate`, body, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/deprecate", {
+		body,
+		params: { path: versionParams(strategyId, version), header: { "Idempotency-Key": idempotencyKey } },
 	});
 }
 
@@ -123,8 +135,9 @@ export function reactivateStrategyVersion(
 	body: ReactivateStrategyRequest,
 	idempotencyKey: string,
 ): Promise<StrategyActivePointerResponse> {
-	return apiClient.post<StrategyActivePointerResponse>(`${versionedPath(strategyId, version)}/reactivate`, body, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/reactivate", {
+		body,
+		params: { path: versionParams(strategyId, version), header: { "Idempotency-Key": idempotencyKey } },
 	});
 }
 
@@ -140,7 +153,8 @@ export function publishStrategyVersion(
 	body: PublishStrategyVersionRequest,
 	idempotencyKey: string,
 ): Promise<StrategyActivePointerResponse> {
-	return apiClient.post<StrategyActivePointerResponse>(`${versionedPath(strategyId, version)}/publish`, body, {
-		headers: { "Idempotency-Key": idempotencyKey },
+	return apiClient.post("/api/v1/strategies/{strategy_id}/versions/{version}/publish", {
+		body,
+		params: { path: versionParams(strategyId, version), header: { "Idempotency-Key": idempotencyKey } },
 	});
 }

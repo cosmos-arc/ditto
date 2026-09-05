@@ -26,6 +26,12 @@ function baseSpec(type = "builtin.trend_filter@1"): StrategySpec {
 	};
 }
 
+function firstUpdater(mock: ReturnType<typeof vi.fn>): (draft: StrategySpec) => StrategySpec {
+	const updater: unknown = mock.mock.calls[0]?.[0];
+	if (typeof updater !== "function") throw new Error("expected an updater call");
+	return updater as (draft: StrategySpec) => StrategySpec;
+}
+
 describe("NodeInspector", () => {
 	it("shows a read-only overview when no node is selected", () => {
 		render(<NodeInspector spec={baseSpec()} descriptors={DESCRIPTORS} selectedKey={null} onChange={vi.fn()} />);
@@ -44,8 +50,8 @@ describe("NodeInspector", () => {
 		const spec = baseSpec();
 		render(<NodeInspector spec={spec} descriptors={DESCRIPTORS} selectedKey="filter:0" onChange={onChange} />);
 		fireEvent.change(screen.getByLabelText("threshold"), { target: { value: "0.5" } });
-		const updater = onChange.mock.calls[0][0] as (draft: StrategySpec) => StrategySpec;
-		expect(updater(spec).constraints[0].params.threshold).toBe(0.5);
+		const updater = firstUpdater(onChange);
+		expect(updater(spec).constraints[0]?.params["threshold"]).toBe(0.5);
 	});
 
 	it("shows unknown descriptor config read-only", () => {
