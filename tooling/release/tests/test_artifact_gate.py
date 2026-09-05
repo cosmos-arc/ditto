@@ -19,6 +19,54 @@ from tooling.release.cohort_verify import verify_cohort_manifest
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def test_owned_temporary_directory_resolves_system_symlink_before_staging(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    alias = tmp_path / "system-temp-alias"
+    alias.symlink_to(scratch, target_is_directory=True)
+
+    class Temporary:
+        def __enter__(self) -> str:
+            return str(alias)
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+    class StagingObserved(Exception):
+        pass
+
+    def stage(_workspace: Path, destination: Path) -> NoReturn:
+        assert destination == scratch.resolve(strict=True)
+        raise StagingObserved
+
+    def noop(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(artifact_gate, "_executable", str)
+    monkeypatch.setattr(
+        artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
+    )
+    monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(artifact_gate, "_run", lambda *_args, **_kwargs: "0")
+    for name in (
+        "_verify_live_runtime_config",
+        "_normalized_web_tar",
+        "_verify_web_artifact_metadata",
+        "_run_ephemeral_container",
+        "_canonicalize_spdx_sbom",
+    ):
+        monkeypatch.setattr(artifact_gate, name, noop)
+    monkeypatch.setattr(
+        artifact_gate.tempfile, "TemporaryDirectory", lambda **_kwargs: Temporary()
+    )
+    monkeypatch.setattr(artifact_gate, "_stage_web_dependency_metadata", stage)
+    with pytest.raises(StagingObserved):
+        artifact_gate.run_artifact_gate(tmp_path)
+
+
 def test_syft_has_writable_ephemeral_storage_without_root_or_network(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

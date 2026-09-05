@@ -830,7 +830,7 @@ def run_artifact_gate(root: Path) -> None:
         label="backend SPDX SBOM",
     )
     with tempfile.TemporaryDirectory(prefix="ditto-web-sbom-") as temporary:
-        sbom_source = Path(temporary)
+        sbom_source = Path(temporary).resolve(strict=True)
         _stage_web_dependency_metadata(workspace, sbom_source)
         _run_ephemeral_container(
             docker,
