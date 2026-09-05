@@ -19,11 +19,12 @@ concurrency:
 
 jobs:
   release-cohort:
-    name: Build and attest release cohort
+    name: Build and verify release cohort
     permissions:
-      attestations: write
-      contents: write
-      id-token: write
+      actions: read
+      contents: read
+    outputs:
+      product-version: ${{ steps.identity.outputs.product_version }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -31,6 +32,29 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify release source provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          runs_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&per_page=100")"
+          latest_conclusion="$(
+            jq --raw-output --arg sha "$GITHUB_SHA" '
+              [
+                .workflow_runs[]
+                | select(
+                    .head_sha == $sha
+                    and .event == "push"
+                    and .head_branch == "main"
+                  )
+              ]
+              | sort_by(.run_started_at // .created_at)
+              | reverse
+              | .[0].conclusion // ""
+            ' <<<"$runs_json"
+          )"
+          test "$latest_conclusion" = "success"
       - uses: ./.github/actions/setup-bun
       - name: Resolve immutable release identity
         id: identity
@@ -44,6 +68,8 @@ jobs:
             product_version="$REQUESTED_VERSION"
           fi
           printf '%s' "$product_version" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          manifest_version="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["version"])')"
+          test "$product_version" = "$manifest_version"
           generated_at="$(python3 -c 'from datetime import UTC, datetime; import sys; print(datetime.fromtimestamp(int(sys.argv[1]), UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))' "$(git show -s --format=%ct "$GITHUB_SHA")")"
           contract_sha256="$(sha256sum contracts/openapi/v1.json | cut -d ' ' -f 1)"
           environment_lock_sha256="$(sha256sum pixi.lock | cut -d ' ' -f 1)"
@@ -56,6 +82,25 @@ jobs:
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
       - name: Prepare artifact directory
         run: mkdir -p dist
+      - name: Stage release inputs
+        run: |
+          for source in contracts/openapi/v1.json contracts/cohorts/compatibility-policy.json contracts/cohorts/compatibility-policy.sha256 pixi.lock bun.lock; do
+            test -f "$source"
+            test ! -L "$source"
+          done
+          mkdir -p dist/release-inputs/contracts/openapi
+          mkdir -p dist/release-inputs/contracts/cohorts
+          install -m 0644 contracts/cohorts/compatibility-policy.json dist/release-inputs/contracts/cohorts/compatibility-policy.json
+          install -m 0644 contracts/cohorts/compatibility-policy.sha256 dist/release-inputs/contracts/cohorts/compatibility-policy.sha256
+          install -m 0644 contracts/openapi/v1.json dist/release-inputs/contracts/openapi/v1.json
+          install -m 0644 pixi.lock dist/release-inputs/pixi.lock
+          install -m 0644 bun.lock dist/release-inputs/bun.lock
+          cmp contracts/openapi/v1.json dist/release-inputs/contracts/openapi/v1.json
+          cmp pixi.lock dist/release-inputs/pixi.lock
+          cmp bun.lock dist/release-inputs/bun.lock
+          python3 -m tooling.release.cohort_bundle stage-tools \
+            --source-root . \
+            --workspace-root dist
       - name: Install the frozen Web workspace
         run: bun install --frozen-lockfile
       - name: Build immutable Web release artifact
@@ -84,7 +129,8 @@ jobs:
           context: .
           file: deploy/docker/Dockerfile
           push: false
-          outputs: type=oci,dest=dist/ditto-image.tar
+          load: true
+          tags: ditto-release:${{ github.sha }}
           build-args: |
             DITTO_PRODUCT_VERSION=${{ steps.identity.outputs.product_version }}
             DITTO_GIT_SHA=${{ github.sha }}
@@ -93,55 +139,175 @@ jobs:
             DITTO_API_CONTRACT_SHA256=${{ steps.identity.outputs.contract_sha256 }}
           provenance: false
           sbom: false
-      - name: Generate SPDX SBOM from release subject
+      - name: Verify and export the release image
+        env:
+          IMAGE: ditto-release:${{ github.sha }}
+          PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
+          CONTRACT_SHA256: ${{ steps.identity.outputs.contract_sha256 }}
         run: |
+          test "$(docker image inspect --format '{{.Config.User}}' "$IMAGE")" = "65532:65532"
+          container_id="$(docker run --detach --rm --env TUSHARE_TOKEN=ci-smoke-offline-credential --publish 127.0.0.1::8000 "$IMAGE")"
+          trap 'docker logs "$container_id"; docker stop "$container_id"' EXIT
+          port="$(docker port "$container_id" 8000/tcp | sed 's/.*://')"
+          ready=0
+          for attempt in $(seq 1 60); do
+            echo "release readiness attempt $attempt/60"
+            if curl --fail --silent --show-error "http://127.0.0.1:$port/readyz"; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:$port/api/v1/status" \
+            | jq --exit-status --arg version "$PRODUCT_VERSION" --arg sha "$GITHUB_SHA" --arg contract "$CONTRACT_SHA256" \
+                '.product_version == $version and .git_sha == $sha and .api_contract_version == "v1" and .api_contract_sha256 == $contract'
+          docker stop "$container_id"
+          trap - EXIT
+          docker save --output dist/ditto-image.tar "$IMAGE"
+          docker run --rm \
+            --volume "$PWD/dist:/work:ro" \
+            ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+            image --input /work/ditto-image.tar --exit-code 1 --severity HIGH,CRITICAL
+      - name: Generate SPDX SBOM from release subject
+        env:
+          PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
+          CONTRACT_SHA256: ${{ steps.identity.outputs.contract_sha256 }}
+          GENERATED_AT: ${{ steps.identity.outputs.generated_at }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/web-sbom/apps/web"
+          install -m 0644 package.json bun.lock "$RUNNER_TEMP/web-sbom/"
+          install -m 0644 apps/web/package.json "$RUNNER_TEMP/web-sbom/apps/web/package.json"
           docker run --rm \
             --network none \
             --volume "$PWD/dist:/work" \
             ghcr.io/anchore/syft:v1.51.1@sha256:95fe0835e5bebc6f8b1f8acef68d47d63d594ef4c0f25c097ff853b23cbac74c \
-            oci-archive:/work/ditto-image.tar \
+            docker-archive:/work/ditto-image.tar \
             --output spdx-json=/work/ditto-backend.spdx.json
           docker run --rm \
             --network none \
-            --volume "$PWD/apps/web/dist:/web:ro" \
+            --volume "$RUNNER_TEMP/web-sbom:/web:ro" \
             --volume "$PWD/dist:/work" \
             ghcr.io/anchore/syft:v1.51.1@sha256:95fe0835e5bebc6f8b1f8acef68d47d63d594ef4c0f25c097ff853b23cbac74c \
             dir:/web \
             --output spdx-json=/work/ditto-web.spdx.json
-          test -s dist/ditto-backend.spdx.json
-          test -s dist/ditto-web.spdx.json
-          jq --exit-status '.spdxVersion | startswith("SPDX-")' dist/ditto-backend.spdx.json
-          jq --exit-status '.spdxVersion | startswith("SPDX-")' dist/ditto-web.spdx.json
-      - name: Generate release cohort manifest
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from tooling.release.artifact_gate import (
+              _bind_and_verify_web_sbom,
+              _canonicalize_spdx_sbom,
+              _verify_web_artifact_metadata,
+          )
+          from tooling.release.cohort_manifest import ReleaseCoordinates
+
+          release = ReleaseCoordinates(
+              product_version=os.environ["PRODUCT_VERSION"],
+              git_sha=os.environ["GITHUB_SHA"],
+              api_contract_version="v1",
+              api_contract_sha256=os.environ["CONTRACT_SHA256"],
+              generated_at=os.environ["GENERATED_AT"],
+          )
+          _verify_web_artifact_metadata(Path("dist/ditto-web.tar"), release=release)
+          _canonicalize_spdx_sbom(Path("dist/ditto-backend.spdx.json"), label="backend SPDX SBOM")
+          _bind_and_verify_web_sbom(
+              Path("dist/ditto-web.spdx.json"),
+              web_tar=Path("dist/ditto-web.tar"),
+              package_manifest=Path("apps/web/package.json"),
+          )
+          PY
+      - name: Generate and verify release cohort manifest
         env:
           PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
           GENERATED_AT: ${{ steps.identity.outputs.generated_at }}
         run: |
           python3 -m tooling.release.cohort_manifest \
-            --workspace-root . \
-            --artifact contracts/openapi/v1.json \
-            --artifact pixi.lock \
-            --artifact bun.lock \
-            --artifact dist/ditto-image.tar \
-            --artifact dist/ditto-backend.spdx.json \
-            --artifact dist/ditto-web.tar \
-            --artifact dist/ditto-web.spdx.json \
-            --backend-artifact dist/ditto-image.tar \
-            --web-artifact dist/ditto-web.tar \
+            --workspace-root dist \
+            --artifact release-inputs/contracts/openapi/v1.json \
+            --artifact release-inputs/contracts/cohorts/compatibility-policy.json \
+            --artifact release-inputs/contracts/cohorts/compatibility-policy.sha256 \
+            --artifact release-inputs/pixi.lock \
+            --artifact release-inputs/bun.lock \
+            --artifact release-tools/tooling/__init__.py \
+            --artifact release-tools/tooling/release/__init__.py \
+            --artifact release-tools/tooling/release/cohort_manifest.py \
+            --artifact release-tools/tooling/release/cohort_verify.py \
+            --artifact release-tools/verify-cohort.py \
+            --artifact ditto-image.tar \
+            --artifact ditto-backend.spdx.json \
+            --artifact ditto-web.tar \
+            --artifact ditto-web.spdx.json \
+            --backend-artifact ditto-image.tar \
+            --web-artifact ditto-web.tar \
             --product-version "$PRODUCT_VERSION" \
             --git-sha "$GITHUB_SHA" \
             --api-contract-version v1 \
             --api-contract-sha256 "${{ steps.identity.outputs.contract_sha256 }}" \
             --generated-at "$GENERATED_AT" \
-            --output dist/release-cohort.json
-          sha256sum \
-            dist/ditto-image.tar \
-            dist/ditto-backend.spdx.json \
-            dist/ditto-web.tar \
-            dist/ditto-web.spdx.json \
-            dist/release-cohort.json \
-            > dist/SHA256SUMS
+            --output release-cohort.json
+          python3 -m tooling.release.cohort_verify \
+            --workspace-root dist \
+            --manifest release-cohort.json
+          python3 -m tooling.release.compatibility_policy register-previous \
+            --workspace-root dist \
+            --release-manifest dist/release-cohort.json \
+            --output-policy dist/next-cohort-policy/compatibility-policy.json \
+            --output-digest dist/next-cohort-policy/compatibility-policy.sha256
+          python3 -m tooling.release.cohort_bundle create \
+            --workspace-root dist \
+            --manifest release-cohort.json \
+            --include next-cohort-policy/compatibility-policy.json \
+            --include next-cohort-policy/compatibility-policy.sha256 \
+            --output ditto-release-cohort.tar \
+            --source-date-epoch "$(git show -s --format=%ct "$GITHUB_SHA")"
+          (
+            cd dist
+            sha256sum \
+              ditto-image.tar \
+              ditto-backend.spdx.json \
+              ditto-web.tar \
+              ditto-web.spdx.json \
+              release-inputs/contracts/openapi/v1.json \
+              release-inputs/pixi.lock \
+              release-inputs/bun.lock \
+              release-cohort.json \
+              next-cohort-policy/compatibility-policy.json \
+              next-cohort-policy/compatibility-policy.sha256 \
+              ditto-release-cohort.tar \
+              > SHA256SUMS
+          )
+
+      - name: Upload verified release staging
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ditto-release-staging-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-cohort:
+    name: Attest and publish release cohort
+    needs: release-cohort
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download verified release staging
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ditto-release-staging-${{ github.sha }}
+          path: dist
+      - name: Verify staged artifact integrity
+        run: |
+          test -f dist/SHA256SUMS
+          (cd dist && sha256sum --check --strict SHA256SUMS)
       - name: Attest release provenance
+        id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
@@ -149,18 +315,45 @@ jobs:
             dist/ditto-backend.spdx.json
             dist/ditto-web.tar
             dist/ditto-web.spdx.json
+            dist/release-inputs/contracts/openapi/v1.json
+            dist/release-inputs/pixi.lock
+            dist/release-inputs/bun.lock
             dist/release-cohort.json
+            dist/next-cohort-policy/compatibility-policy.json
+            dist/next-cohort-policy/compatibility-policy.sha256
+            dist/ditto-release-cohort.tar
             dist/SHA256SUMS
+      - name: Export and verify attestation bundle
+        env:
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          test -n "$ATTESTATION_BUNDLE"
+          test -s "$ATTESTATION_BUNDLE"
+          install -m 0644 "$ATTESTATION_BUNDLE" dist/ditto-release-cohort.attestation.json
+          gh attestation verify dist/ditto-release-cohort.tar \
+            --repo "$GITHUB_REPOSITORY" \
+            --bundle dist/ditto-release-cohort.attestation.json \
+            --signer-workflow "github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-digest "$GITHUB_SHA" \
+            --source-ref "$GITHUB_REF" \
+            --deny-self-hosted-runners
       - name: Upload immutable release cohort
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ditto-${{ steps.identity.outputs.product_version }}-${{ github.sha }}
+          name: ditto-${{ needs.release-cohort.outputs.product-version }}-${{ github.sha }}
           path: |
             dist/ditto-image.tar
             dist/ditto-backend.spdx.json
             dist/ditto-web.tar
             dist/ditto-web.spdx.json
+            dist/release-inputs/contracts/openapi/v1.json
+            dist/release-inputs/pixi.lock
+            dist/release-inputs/bun.lock
             dist/release-cohort.json
+            dist/next-cohort-policy/compatibility-policy.json
+            dist/next-cohort-policy/compatibility-policy.sha256
+            dist/ditto-release-cohort.tar
+            dist/ditto-release-cohort.attestation.json
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 90
@@ -168,16 +361,23 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
+          PRODUCT_VERSION: ${{ needs.release-cohort.outputs.product-version }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
             --title "Ditto $PRODUCT_VERSION" \
             --notes "Immutable release cohort for Git commit $GITHUB_SHA." \
-            "dist/ditto-image.tar#Backend OCI artifact" \
+            "dist/ditto-image.tar#Backend container image artifact" \
             "dist/ditto-backend.spdx.json#Backend SPDX SBOM" \
             "dist/ditto-web.tar#Web static artifact" \
             "dist/ditto-web.spdx.json#Web SPDX SBOM" \
+            "dist/release-inputs/contracts/openapi/v1.json#OpenAPI contract release input" \
+            "dist/release-inputs/pixi.lock#Python environment release input" \
+            "dist/release-inputs/bun.lock#Web dependency release input" \
             "dist/release-cohort.json#Release cohort manifest" \
+            "dist/next-cohort-policy/compatibility-policy.json#Next release compatibility policy candidate" \
+            "dist/next-cohort-policy/compatibility-policy.sha256#Next release compatibility policy digest" \
+            "dist/ditto-release-cohort.tar#Portable self-verifying release cohort" \
+            "dist/ditto-release-cohort.attestation.json#Sigstore attestation bundle for offline verification" \
             "dist/SHA256SUMS#Artifact checksums"

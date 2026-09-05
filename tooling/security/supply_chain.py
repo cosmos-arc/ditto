@@ -9,10 +9,12 @@ tree, and both package-manager lockfiles.
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 _GITLEAKS_CURRENT = (
@@ -27,7 +29,15 @@ _OSV_SCANNER = (
     "ghcr.io/google/osv-scanner:v2.5.1@sha256:"
     "8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734"
 )
-_SENTINEL = 'token = "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"\n'
+# Construct only inside the temporary detector probe, never a source-tree secret.
+_SENTINEL = "".join(
+    ('SLACK_TOKEN="xoxb-', '123456789012-123456789012-AbCdEfGhIjKlMnOpQrStUvWx"\n')
+)
+_DOCKER_PROBE_TIMEOUT_SECONDS = 30
+_REPOSITORY_ENUMERATION_TIMEOUT_SECONDS = 30
+_GITLEAKS_SCAN_TIMEOUT_SECONDS = 10 * 60
+_SCANNER_SENTINEL_TIMEOUT_SECONDS = 2 * 60
+_OSV_SCAN_TIMEOUT_SECONDS = 15 * 60
 
 
 class SupplyChainGateError(RuntimeError):
@@ -45,11 +55,47 @@ def _run(
     command: list[str],
     *,
     cwd: Path,
+    timeout_seconds: int,
     expected: frozenset[int] = frozenset({0}),
 ) -> int:
-    result = subprocess.run(command, cwd=cwd, check=False)  # noqa: S603
+    container_name = None
+    if len(command) > 1 and command[1] == "run":
+        container_name = f"ditto-security-{uuid.uuid4().hex}"
+        command = [*command[:2], "--name", container_name, *command[2:]]
+    try:
+        result = subprocess.run(  # noqa: S603
+            command,
+            cwd=cwd,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except (subprocess.TimeoutExpired, KeyboardInterrupt) as error:
+        if container_name is not None:
+            try:
+                cleanup = subprocess.run(  # noqa: S603
+                    [command[0], "rm", "--force", container_name],
+                    cwd=cwd,
+                    check=False,
+                    timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+                )
+                if cleanup.returncode != 0:
+                    error.add_note(f"container cleanup failed: {container_name}")
+            except (OSError, subprocess.TimeoutExpired) as cleanup_error:
+                error.add_note(
+                    f"container cleanup failed for {container_name}: {cleanup_error}"
+                )
+        if isinstance(error, KeyboardInterrupt):
+            raise
+        message = " ".join(
+            (
+                "security command timed out after",
+                f"{timeout_seconds} seconds:",
+                shlex.join(command),
+            )
+        )
+        raise SupplyChainGateError(message) from error
     if result.returncode not in expected:
-        rendered = " ".join(command)
+        rendered = shlex.join(command)
         raise SupplyChainGateError(
             f"security command failed ({result.returncode}): {rendered}"
         )
@@ -67,18 +113,31 @@ def _require_docker(root: Path) -> str:
     _run(
         [docker, "version", "--format", "{{.Server.Version}}"],
         cwd=root,
+        timeout_seconds=_DOCKER_PROBE_TIMEOUT_SECONDS,
     )
     return docker
 
 
 def _repository_files(root: Path) -> tuple[Path, ...]:
     git = _executable("git")
-    result = subprocess.run(  # noqa: S603
-        [git, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-        cwd=root,
-        check=False,
-        capture_output=True,
-    )
+    command = [git, "ls-files", "--cached", "--others", "--exclude-standard", "-z"]
+    try:
+        result = subprocess.run(  # noqa: S603
+            command,
+            cwd=root,
+            check=False,
+            capture_output=True,
+            timeout=_REPOSITORY_ENUMERATION_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        message = " ".join(
+            (
+                "repository enumeration timed out after",
+                f"{_REPOSITORY_ENUMERATION_TIMEOUT_SECONDS} seconds:",
+                shlex.join(command),
+            )
+        )
+        raise SupplyChainGateError(message) from error
     if result.returncode != 0:
         raise SupplyChainGateError("could not enumerate the current repository tree")
     files: list[Path] = []
@@ -132,6 +191,7 @@ def run_supply_chain_gate(root: Path) -> None:
             ".",
         ],
         cwd=workspace,
+        timeout_seconds=_GITLEAKS_SCAN_TIMEOUT_SECONDS,
     )
     _run(
         [
@@ -156,6 +216,7 @@ def run_supply_chain_gate(root: Path) -> None:
             "--log-opts=--all",
         ],
         cwd=workspace,
+        timeout_seconds=_GITLEAKS_SCAN_TIMEOUT_SECONDS,
     )
 
     with tempfile.TemporaryDirectory(prefix="ditto-security-tree-") as raw_tree:
@@ -182,11 +243,59 @@ def run_supply_chain_gate(root: Path) -> None:
                 ".",
             ],
             cwd=workspace,
+            timeout_seconds=_GITLEAKS_SCAN_TIMEOUT_SECONDS,
+        )
+        _run(
+            [
+                docker,
+                "run",
+                "--rm",
+                "--network",
+                "none",
+                *user,
+                "--volume",
+                f"{staged_tree}:/scan:ro",
+                "--workdir",
+                "/scan",
+                _GITLEAKS_KNOWN_GOOD,
+                "detect",
+                "--no-git",
+                "--source",
+                ".",
+                "--redact",
+                "--no-banner",
+                "--exit-code",
+                "1",
+            ],
+            cwd=workspace,
+            timeout_seconds=_GITLEAKS_SCAN_TIMEOUT_SECONDS,
         )
 
     with tempfile.TemporaryDirectory(prefix="ditto-gitleaks-sentinel-") as raw_probe:
         probe = Path(raw_probe)
         (probe / "leak.txt").write_text(_SENTINEL, encoding="utf-8")
+        _run(
+            [
+                docker,
+                "run",
+                "--rm",
+                "--network",
+                "none",
+                *user,
+                "--volume",
+                f"{probe}:/probe:ro",
+                _GITLEAKS_CURRENT,
+                "dir",
+                "/probe/leak.txt",
+                "--redact",
+                "--no-banner",
+                "--exit-code",
+                "23",
+            ],
+            cwd=workspace,
+            timeout_seconds=_SCANNER_SENTINEL_TIMEOUT_SECONDS,
+            expected=frozenset({23}),
+        )
         _run(
             [
                 docker,
@@ -208,6 +317,7 @@ def run_supply_chain_gate(root: Path) -> None:
                 "23",
             ],
             cwd=workspace,
+            timeout_seconds=_SCANNER_SENTINEL_TIMEOUT_SECONDS,
             expected=frozenset({23}),
         )
 
@@ -230,6 +340,7 @@ def run_supply_chain_gate(root: Path) -> None:
             "./",
         ],
         cwd=workspace,
+        timeout_seconds=_OSV_SCAN_TIMEOUT_SECONDS,
     )
 
 

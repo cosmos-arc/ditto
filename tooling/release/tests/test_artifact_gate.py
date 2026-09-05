@@ -2,19 +2,64 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import shutil
+import subprocess
+import tarfile
 from pathlib import Path
+from typing import NoReturn
+
+import pytest
 
 from tooling.release import artifact_gate
+from tooling.release.cohort_manifest import CohortManifest, ReleaseCoordinates
+from tooling.release.cohort_verify import verify_cohort_manifest
+
+ROOT = Path(__file__).resolve().parents[3]
 
 
 class _HealthyResponse:
     status = 200
+
+    def __init__(self, payload: bytes = b"") -> None:
+        self._payload = payload
 
     def __enter__(self) -> _HealthyResponse:
         return self
 
     def __exit__(self, *_args: object) -> None:
         return None
+
+    def read(self) -> bytes:
+        return self._payload
+
+
+def _release() -> ReleaseCoordinates:
+    return ReleaseCoordinates(
+        product_version="1.2.3",
+        git_sha="a" * 40,
+        api_contract_version="v1",
+        api_contract_sha256="b" * 64,
+        generated_at="2026-09-05T00:00:00Z",
+    )
+
+
+def test_artifact_command_timeout_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def timeout_run(command: list[str], **_kwargs: object) -> NoReturn:
+        raise subprocess.TimeoutExpired(command, timeout=17)
+
+    monkeypatch.setattr(artifact_gate.subprocess, "run", timeout_run)
+
+    with pytest.raises(artifact_gate.ArtifactGateError, match=r"timed out.*17"):
+        artifact_gate._run(
+            ["docker", "version"],
+            cwd=tmp_path,
+            timeout_seconds=17,
+        )
 
 
 def test_container_smoke_injects_offline_token_only_at_runtime(
@@ -29,16 +74,20 @@ def test_container_smoke_injects_offline_token_only_at_runtime(
         *,
         cwd: Path,
         capture_output: bool = False,
+        timeout_seconds: int,
+        expected: frozenset[int] = frozenset({0}),
     ) -> str:
-        del cwd, capture_output
+        del capture_output, expected
         commands.append(command)
         if command[1:3] == ["image", "inspect"]:
             return "65532:65532"
         if command[1] == "run":
+            cidfile = Path(command[command.index("--cidfile") + 1])
+            cidfile.write_text("container-id\n", encoding="utf-8")
             return "container-id"
         if command[1] == "port":
             return "127.0.0.1:18000"
-        if command[1] == "logs":
+        if command[1] in {"logs", "rm"}:
             return ""
         raise AssertionError(f"unexpected command: {command!r}")
 
@@ -46,16 +95,382 @@ def test_container_smoke_injects_offline_token_only_at_runtime(
     monkeypatch.setattr(
         artifact_gate.urllib.request,
         "urlopen",
-        lambda *_args, **_kwargs: _HealthyResponse(),
-    )
-    monkeypatch.setattr(
-        artifact_gate.subprocess,
-        "run",
-        lambda *_args, **_kwargs: None,
+        lambda url, **_kwargs: (
+            _HealthyResponse(
+                json.dumps(
+                    {
+                        "product_version": "1.2.3",
+                        "git_sha": "a" * 40,
+                        "api_contract_version": "v1",
+                        "api_contract_sha256": "b" * 64,
+                    }
+                ).encode()
+            )
+            if str(url).endswith("/api/v1/status")
+            else _HealthyResponse()
+        ),
     )
 
-    artifact_gate._smoke_container("docker", tmp_path, "ditto-ci:test")
+    artifact_gate._smoke_container(
+        "docker",
+        tmp_path,
+        "ditto-ci:test",
+        release=_release(),
+    )
 
     docker_run = next(command for command in commands if command[1] == "run")
     assert "TUSHARE_TOKEN=ci-smoke-offline-credential" in docker_run
     assert docker_run.index("--env") < docker_run.index("ditto-ci:test")
+    assert "--name" in docker_run
+    assert "--cidfile" in docker_run
+    assert any(command[1:3] == ["rm", "--force"] for command in commands)
+
+
+def test_container_smoke_rejects_runtime_identity_drift(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: Path,
+        capture_output: bool = False,
+        timeout_seconds: int,
+        expected: frozenset[int] = frozenset({0}),
+    ) -> str:
+        del cwd, capture_output, timeout_seconds, expected
+        if command[1:3] == ["image", "inspect"]:
+            return "65532:65532"
+        if command[1] == "run":
+            cidfile = Path(command[command.index("--cidfile") + 1])
+            cidfile.write_text("container-id\n", encoding="utf-8")
+            return "container-id"
+        if command[1] == "port":
+            return "127.0.0.1:18000"
+        if command[1] in {"logs", "rm"}:
+            return ""
+        raise AssertionError(f"unexpected command: {command!r}")
+
+    monkeypatch.setattr(artifact_gate, "_run", fake_run)
+    monkeypatch.setattr(
+        artifact_gate.urllib.request,
+        "urlopen",
+        lambda url, **_kwargs: (
+            _HealthyResponse(
+                json.dumps(
+                    {
+                        "product_version": "9.9.9",
+                        "git_sha": "a" * 40,
+                        "api_contract_version": "v1",
+                        "api_contract_sha256": "b" * 64,
+                    }
+                ).encode()
+            )
+            if str(url).endswith("/api/v1/status")
+            else _HealthyResponse()
+        ),
+    )
+
+    with pytest.raises(artifact_gate.ArtifactGateError, match="product_version"):
+        artifact_gate._smoke_container(
+            "docker",
+            tmp_path,
+            "ditto-ci:test",
+            release=_release(),
+        )
+
+
+def test_web_artifact_metadata_is_read_from_the_final_tar(
+    tmp_path: Path,
+) -> None:
+    web_dist = tmp_path / "web"
+    web_dist.mkdir()
+    (web_dist / "index.html").write_text("<main>Ditto</main>\n", encoding="utf-8")
+    (web_dist / "ditto-build-metadata.json").write_text(
+        json.dumps(
+            {
+                "apiContractSha256": "b" * 64,
+                "apiContractVersion": "v1",
+                "gitSha": "a" * 40,
+                "productVersion": "1.2.3",
+                "schema": "ditto.web-build-metadata",
+                "schemaVersion": 1,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    web_tar = tmp_path / "ditto-web.tar"
+    artifact_gate._normalized_web_tar(web_dist, web_tar, timestamp=1)
+
+    artifact_gate._verify_web_artifact_metadata(web_tar, release=_release())
+
+    with tarfile.open(web_tar, mode="a:") as archive:
+        replacement = tmp_path / "replacement.json"
+        replacement.write_text(
+            '{"productVersion":"9.9.9"}\n',
+            encoding="utf-8",
+        )
+        archive.add(replacement, arcname="ditto-build-metadata.json")
+    with pytest.raises(artifact_gate.ArtifactGateError, match=r"metadata.*duplicate"):
+        artifact_gate._verify_web_artifact_metadata(web_tar, release=_release())
+
+
+def test_web_sbom_binds_tar_and_contains_every_direct_runtime_dependency(
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "package.json"
+    package.write_text(
+        json.dumps(
+            {
+                "name": "@ditto/web",
+                "version": "1.2.3",
+                "dependencies": {"react": "19.2.4", "zustand": "5.0.12"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    web_tar = tmp_path / "ditto-web.tar"
+    web_tar.write_bytes(b"web artifact")
+    sbom = tmp_path / "ditto-web.spdx.json"
+    sbom.write_text(
+        json.dumps(
+            {
+                "SPDXID": "SPDXRef-DOCUMENT",
+                "spdxVersion": "SPDX-2.3",
+                "packages": [
+                    {"SPDXID": "SPDXRef-Package-react", "name": "react"},
+                    {"SPDXID": "SPDXRef-Package-zustand", "name": "zustand"},
+                ],
+                "relationships": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    artifact_gate._bind_and_verify_web_sbom(
+        sbom,
+        web_tar=web_tar,
+        package_manifest=package,
+    )
+
+    document = json.loads(sbom.read_text(encoding="utf-8"))
+    artifact = next(
+        item
+        for item in document["packages"]
+        if item["SPDXID"] == "SPDXRef-Ditto-Web-Artifact"
+    )
+    assert artifact["checksums"] == [
+        {
+            "algorithm": "SHA256",
+            "checksumValue": hashlib.sha256(web_tar.read_bytes()).hexdigest(),
+        }
+    ]
+    assert document["documentDescribes"] == ["SPDXRef-Ditto-Web-Artifact"]
+
+
+def test_web_sbom_rejects_a_missing_direct_runtime_dependency(tmp_path: Path) -> None:
+    package = tmp_path / "package.json"
+    package.write_text(
+        '{"name":"@ditto/web","version":"1.2.3","dependencies":{"react":"19.2.4","zustand":"5.0.12"}}',
+        encoding="utf-8",
+    )
+    web_tar = tmp_path / "ditto-web.tar"
+    web_tar.write_bytes(b"web artifact")
+    sbom = tmp_path / "ditto-web.spdx.json"
+    sbom.write_text(
+        '{"SPDXID":"SPDXRef-DOCUMENT","spdxVersion":"SPDX-2.3","packages":[{"SPDXID":"SPDXRef-Package-react","name":"react"}],"relationships":[]}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(artifact_gate.ArtifactGateError, match=r"direct.*zustand"):
+        artifact_gate._bind_and_verify_web_sbom(
+            sbom,
+            web_tar=web_tar,
+            package_manifest=package,
+        )
+
+
+def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    contract = tmp_path / "contracts" / "openapi" / "v1.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_bytes(b'{"openapi":"3.1.0"}\n')
+    (tmp_path / "pixi.lock").write_bytes(b"pixi\n")
+    (tmp_path / "bun.lock").write_bytes(b"bun\n")
+    output = tmp_path / "dist"
+    output.mkdir()
+    backend = output / "ditto-image.tar"
+    web = output / "ditto-web.tar"
+    backend_sbom = output / "ditto-backend.spdx.json"
+    web_sbom = output / "ditto-web.spdx.json"
+    backend.write_bytes(b"backend")
+    web.write_bytes(b"web")
+    backend_sbom.write_text(
+        json.dumps(
+            {
+                "SPDXID": "SPDXRef-DOCUMENT",
+                "packages": [{"SPDXID": "SPDXRef-Backend", "name": "ditto-backend"}],
+                "spdxVersion": "SPDX-2.3",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    web_sbom.write_text(
+        json.dumps(
+            {
+                "SPDXID": "SPDXRef-DOCUMENT",
+                "documentDescribes": ["SPDXRef-Ditto-Web-Artifact"],
+                "packages": [
+                    {
+                        "SPDXID": "SPDXRef-Ditto-Web-Artifact",
+                        "checksums": [
+                            {
+                                "algorithm": "SHA256",
+                                "checksumValue": hashlib.sha256(
+                                    web.read_bytes()
+                                ).hexdigest(),
+                            }
+                        ],
+                        "name": "@ditto/web-artifact",
+                    }
+                ],
+                "spdxVersion": "SPDX-2.3",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    policy = tmp_path / "contracts" / "cohorts" / "compatibility-policy.json"
+    policy.parent.mkdir(parents=True)
+    policy.write_text(
+        json.dumps(
+            {
+                "api_contract_version": "v1",
+                "current": {"source": "web_build"},
+                "previous": [],
+                "schema": "ditto.cohort-compatibility-policy",
+                "schema_version": 1,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (policy.parent / "compatibility-policy.sha256").write_text(
+        f"{hashlib.sha256(policy.read_bytes()).hexdigest()}"
+        "  compatibility-policy.json\n",
+        encoding="utf-8",
+    )
+    for relative in (
+        "tooling/__init__.py",
+        "tooling/release/__init__.py",
+        "tooling/release/cohort_manifest.py",
+        "tooling/release/cohort_verify.py",
+        "tooling/release/offline_verify.py",
+    ):
+        source = ROOT / relative
+        destination = tmp_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+    verification_calls: list[tuple[Path, Path]] = []
+
+    def record_verification(
+        *, workspace_root: Path, manifest_path: Path
+    ) -> CohortManifest:
+        verification_calls.append((workspace_root, manifest_path))
+        return verify_cohort_manifest(
+            workspace_root=workspace_root,
+            manifest_path=manifest_path,
+        )
+
+    monkeypatch.setattr(
+        artifact_gate,
+        "verify_cohort_manifest",
+        record_verification,
+    )
+
+    manifest_path, cohort_artifacts = artifact_gate._materialize_portable_cohort(
+        workspace=tmp_path,
+        output=output,
+        artifact_paths=(backend, backend_sbom, web, web_sbom),
+        backend_artifact=backend,
+        web_artifact=web,
+        release=ReleaseCoordinates(
+            product_version="1.2.3",
+            git_sha="a" * 40,
+            api_contract_version="v1",
+            api_contract_sha256=hashlib.sha256(contract.read_bytes()).hexdigest(),
+            generated_at="2026-09-05T00:00:00Z",
+        ),
+    )
+
+    verified = verify_cohort_manifest(
+        workspace_root=output,
+        manifest_path=manifest_path,
+    )
+    paths = {str(record["path"]) for record in verified["artifacts"]}
+    assert paths >= {
+        "release-inputs/contracts/openapi/v1.json",
+        "release-inputs/pixi.lock",
+        "release-inputs/bun.lock",
+        "release-tools/tooling/__init__.py",
+        "release-tools/tooling/release/__init__.py",
+        "release-tools/tooling/release/cohort_manifest.py",
+        "release-tools/tooling/release/cohort_verify.py",
+        "release-tools/verify-cohort.py",
+    }
+    assert all(path.is_relative_to(output) for path in cohort_artifacts)
+    assert json.loads(manifest_path.read_text())["cohort_id"] == verified["cohort_id"]
+    assert verification_calls == [(output.resolve(), manifest_path)]
+
+
+def test_release_identity_rejects_tracked_and_untracked_dirty_source(
+    tmp_path: Path,
+) -> None:
+    git = shutil.which("git")
+    assert git is not None
+    subprocess.run([git, "init", "-q"], cwd=tmp_path, check=True)  # noqa: S603
+    subprocess.run(  # noqa: S603
+        [git, "config", "user.email", "test@example.com"],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(  # noqa: S603
+        [git, "config", "user.name", "Test"], cwd=tmp_path, check=True
+    )
+    contract = tmp_path / "contracts" / "openapi" / "v1.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text("{}\n")
+    (tmp_path / "package.json").write_text('{"version":"1.2.3"}\n')
+    (tmp_path / ".gitignore").write_text("ignored-output\n")
+    subprocess.run([git, "add", "."], cwd=tmp_path, check=True)  # noqa: S603
+    subprocess.run(  # noqa: S603
+        [git, "commit", "-qm", "fixture"], cwd=tmp_path, check=True
+    )
+    (tmp_path / "ignored-output").write_text("ignored\n")
+
+    version, git_sha, _ = artifact_gate._release_identity(tmp_path)
+
+    assert version == "1.2.3"
+    assert len(git_sha) == 40
+    (tmp_path / "untracked.txt").write_text("untracked\n")
+    with pytest.raises(artifact_gate.ArtifactGateError, match="dirty"):
+        artifact_gate._release_identity(tmp_path)
+    (tmp_path / "untracked.txt").unlink()
+    contract.write_text('{"changed":true}\n')
+    with pytest.raises(artifact_gate.ArtifactGateError, match="dirty"):
+        artifact_gate._release_identity(tmp_path)
+    subprocess.run([git, "add", str(contract)], cwd=tmp_path, check=True)  # noqa: S603
+    with pytest.raises(artifact_gate.ArtifactGateError, match="dirty"):
+        artifact_gate._release_identity(tmp_path)

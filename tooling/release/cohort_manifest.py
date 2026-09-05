@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import mimetypes
 import os
 import re
 import tempfile
@@ -16,8 +15,11 @@ from pathlib import Path
 from typing import TypedDict
 
 __all__ = [
+    "ArtifactRecord",
+    "CohortManifest",
     "CohortManifestError",
     "ReleaseCoordinates",
+    "artifact_media_type",
     "build_cohort_manifest",
     "main",
     "write_cohort_manifest",
@@ -222,7 +224,7 @@ def _artifact_record(root: Path, artifact_path: Path) -> ArtifactRecord:
         raise CohortManifestError(f"artifact must be a regular file: {artifact_path}")
     _reject_symlink_components(root, candidate)
     relative = resolved.relative_to(root).as_posix()
-    media_type = mimetypes.guess_type(relative)[0] or "application/octet-stream"
+    media_type = artifact_media_type(relative)
     return {
         "path": relative,
         "sha256": _sha256(resolved),
@@ -249,6 +251,15 @@ def _sha256(path: Path) -> str:
         while chunk := stream.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def artifact_media_type(path: str) -> str:
+    """Return the platform-independent media type used in cohort evidence."""
+    if path.endswith(".json"):
+        return "application/json"
+    if path.endswith(".tar"):
+        return "application/x-tar"
+    return "application/octet-stream"
 
 
 def _canonical_bytes_without_id(manifest: dict[str, object]) -> bytes:

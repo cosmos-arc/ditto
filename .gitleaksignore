@@ -1,5 +1,9 @@
 # Audited false positives from the preserved backend and imported Web histories.
 # Keep this list finding-specific: path-, rule-, or commit-wide exclusions are forbidden.
+# Synthetic alphabet-sequence detector sentinel and its assertion, introduced in
+# 41cf5aac; never an issued credential. Current probes construct their value.
+41cf5aac1e9261174930791b63fe2cd141198e5f:tooling/security/supply_chain.py:github-pat:30
+41cf5aac1e9261174930791b63fe2cd141198e5f:tooling/release/tests/test_repository_policy.py:github-pat:205
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/design/archive/05_observability.md:generic-api-key:278
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/evidence/personal-workstation/validation/frontend.json:generic-api-key:13
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/evidence/personal-workstation/validation/backend.json:generic-api-key:13
@@ -99,7 +103,7 @@ AGENTS.md:generic-api-key:27
 apps/backend/tests/integration/api/test_research_experiment_planning_api_integration.py:generic-api-key:524
 apps/backend/tests/integration/api/test_research_experiment_planning_api_integration.py:generic-api-key:669
 apps/backend/tests/integration/api/test_research_experiment_planning_api_integration.py:generic-api-key:742
-apps/backend/tests/integration/test_agent_campaign_api.py:generic-api-key:414
+apps/backend/tests/integration/test_agent_campaign_api.py:generic-api-key:466
 apps/web/src/mocks/fixtures/strategy-live.ts:generic-api-key:159
 apps/web/src/mocks/fixtures/strategy-live.ts:generic-api-key:237
 apps/web/src/mocks/fixtures/strategy-live.ts:generic-api-key:249

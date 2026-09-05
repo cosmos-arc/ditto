@@ -57,6 +57,43 @@ def test_ci_runs_parallel_semantic_jobs_and_has_fail_closed_gate() -> None:
     assert "skipped" not in gate_script
 
 
+def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
+    workflow = _workflow("ci.yml")
+    repository_steps = workflow["jobs"]["repository-policy"]["steps"]
+    checkout = repository_steps[0]
+    assert checkout["with"]["fetch-depth"] == 0
+    diff_hygiene = next(
+        step["run"] for step in repository_steps if step.get("name") == "Diff hygiene"
+    )
+    assert 'git diff --check "$base" "$GITHUB_SHA"' in diff_hygiene
+    assert 'git show --check --format= "$GITHUB_SHA"' in diff_hygiene
+
+    system_steps = workflow["jobs"]["system-e2e"]["steps"]
+    upload = next(
+        step
+        for step in system_steps
+        if step.get("name") == "Upload system browser evidence"
+    )
+    assert upload["if"] == "${{ always() }}"
+    assert upload["with"]["path"] == "build/system-e2e"
+    assert "github.event_name == 'pull_request'" in str(
+        upload["with"]["retention-days"]
+    )
+
+    for job_name, step_name in (
+        ("backend-tests", "Upload coverage evidence"),
+        ("web-quality", "Upload Web build"),
+    ):
+        step = next(
+            item
+            for item in workflow["jobs"][job_name]["steps"]
+            if item.get("name") == step_name
+        )
+        assert "github.event_name == 'pull_request'" in str(
+            step["with"]["retention-days"]
+        )
+
+
 def test_backend_coverage_fetches_history_and_selects_every_event_base() -> None:
     """Changed coverage must compare against an exact base on every CI event."""
     workflow = _workflow("ci.yml")
@@ -92,7 +129,59 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
     assert "pixi run -e dev check-web" in platform_steps
     assert "pixi run -e dev type-all" in platform_steps
     assert "pixi run -e dev web-type" in platform_steps
-    assert "platform-smoke-windows" in platform_steps
+
+
+def test_windows_gate_runs_representative_units_and_a_real_loopback_api() -> None:
+    """Windows support must execute behavior, not only compile both stacks."""
+    workflow = _workflow("ci.yml")
+    steps = workflow["jobs"]["platform-smoke"]["steps"]
+    windows_steps = {
+        step.get("name"): step
+        for step in steps
+        if "matrix.name == 'windows-x64'" in str(step.get("if", ""))
+    }
+    expected = {
+        "Windows backend core unit": "pixi run -e dev platform-backend-unit",
+        "Windows Web unit": "pixi run -e dev platform-web-unit",
+        "Windows loopback API smoke": "pixi run -e dev platform-api-smoke",
+    }
+    for name, command in expected.items():
+        assert windows_steps[name]["run"] == command
+
+    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    tasks = workspace["tasks"]
+    backend = tasks["platform-backend-unit"]
+    assert "packages/kernel/tests/unit/test_identity.py" in backend
+    assert "apps/backend/tests/unit/test_main_unit.py" in backend
+    assert "--no-cov" in backend
+
+    web = tasks["platform-web-unit"]
+    assert web["cwd"] == "apps/web"
+    assert "vitest run" in web["cmd"]
+    assert "src/api/compatibility.test.ts" in web["cmd"]
+
+    assert tasks["platform-api-smoke"] == "python -m tooling.dev.platform_smoke"
+
+
+def test_contract_job_uses_the_complete_root_contract_gate() -> None:
+    """Hosted CI must include conformance, not only the static snapshot checks."""
+    workflow = _workflow("ci.yml")
+    steps = workflow["jobs"]["api-contract"]["steps"]
+    contract_step = next(step for step in steps if step.get("name") == "Contract gate")
+    assert contract_step["run"] == "pixi run -e dev check-contract"
+    assert "DITTO_OASDIFF_DIST_DIR" in contract_step["env"]
+
+
+def test_required_ci_executes_all_release_and_supply_chain_policy_tests() -> None:
+    workflow = _workflow("ci.yml")
+    steps = workflow["jobs"]["release-cohort"]["steps"]
+    test_step = next(
+        step for step in steps if step.get("name") == "Test release and security policy"
+    )
+    command = test_step["run"]
+    assert "tooling/release/tests" in command
+    assert "tooling/security/tests" in command
+    assert "test_cohort_manifest.py" not in command
 
 
 def test_every_remote_action_is_pinned_to_a_full_commit_sha() -> None:
@@ -128,6 +217,32 @@ def test_bun_setup_reads_the_root_package_manager_contract() -> None:
         assert "oven-sh/setup-bun@" not in content
         if "bun install" in content or "bun run" in content:
             assert "uses: ./.github/actions/setup-bun" in content
+
+
+def test_bun_workspace_uses_one_isolated_registry_contract() -> None:
+    package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    assert package["private"] is True
+    assert package["packageManager"] == "bun@1.3.14"
+    assert package["workspaces"] == ["apps/web"]
+    assert package["trustedDependencies"] == []
+
+    bunfig = tomllib.loads((ROOT / "bunfig.toml").read_text(encoding="utf-8"))
+    install = bunfig["install"]
+    assert install["linker"] == "isolated"
+    assert install["registry"] == "https://registry.npmjs.org"
+    assert install["hoistPattern"] == []
+    assert install["publicHoistPattern"] == []
+    assert bunfig["install"]["lockfile"]["save"] is True
+
+    assert (ROOT / "bun.lock").is_file()
+    forbidden = (
+        "bun.lockb",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "yarn.lock",
+    )
+    assert [name for name in forbidden if (ROOT / name).exists()] == []
 
 
 def test_workflows_have_read_only_defaults_and_no_top_level_path_filters() -> None:
@@ -218,12 +333,33 @@ def test_mutation_gate_is_weekly_evidence_not_a_pr_required_dependency() -> None
 
 def test_release_workflow_attests_the_complete_cohort() -> None:
     workflow = _workflow("release.yml")
-    job = workflow["jobs"]["release-cohort"]
-    assert job["permissions"] == {
+    build = workflow["jobs"]["release-cohort"]
+    publish = workflow["jobs"]["publish-cohort"]
+    assert build["permissions"] == {
+        "actions": "read",
+        "contents": "read",
+    }
+    assert publish["needs"] == "release-cohort"
+    assert publish["permissions"] == {
+        "actions": "read",
+        "artifact-metadata": "write",
         "attestations": "write",
         "contents": "write",
         "id-token": "write",
     }
+    assert not any(
+        str(step.get("uses", "")).startswith("actions/checkout@")
+        for step in publish["steps"]
+    )
+    publish_scripts = "\n".join(str(step.get("run", "")) for step in publish["steps"])
+    for forbidden in ("bun ", "docker ", "pixi ", "python "):
+        assert forbidden not in publish_scripts
+    staging = next(
+        step
+        for step in build["steps"]
+        if step.get("name") == "Upload verified release staging"
+    )
+    assert staging["with"]["retention-days"] == 1
     content = (WORKFLOWS / "release.yml").read_text()
     for required in (
         "actions/attest-build-provenance@",
@@ -232,14 +368,266 @@ def test_release_workflow_attests_the_complete_cohort() -> None:
         "dist/ditto-backend.spdx.json",
         "dist/ditto-web.tar",
         "dist/ditto-web.spdx.json",
-        "--backend-artifact dist/ditto-image.tar",
-        "--web-artifact dist/ditto-web.tar",
+        "--backend-artifact ditto-image.tar",
+        "--web-artifact ditto-web.tar",
         "dist/release-cohort.json",
         "dist/SHA256SUMS",
+        "dist/ditto-release-cohort.attestation.json",
         "gh release create",
         "github.event_name == 'push'",
     ):
         assert required in content
+
+
+def test_release_cohort_is_self_contained_and_verified_before_distribution() -> None:
+    """Downloaded evidence must verify without the repository checkout."""
+    workflow = _workflow("release.yml")
+    steps = workflow["jobs"]["release-cohort"]["steps"]
+    stage = next(step for step in steps if step.get("name") == "Stage release inputs")
+    generation = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Generate and verify release cohort manifest"
+    )
+    required_inputs = (
+        "dist/release-inputs/contracts/openapi/v1.json",
+        "dist/release-inputs/pixi.lock",
+        "dist/release-inputs/bun.lock",
+    )
+    for source, destination in (
+        ("contracts/openapi/v1.json", required_inputs[0]),
+        ("pixi.lock", required_inputs[1]),
+        ("bun.lock", required_inputs[2]),
+    ):
+        assert source in stage["run"]
+        assert destination in stage["run"]
+
+    assert "--workspace-root dist" in generation
+    assert "cd dist" in generation
+    for relative in (
+        "release-inputs/contracts/openapi/v1.json",
+        "release-inputs/pixi.lock",
+        "release-inputs/bun.lock",
+    ):
+        assert f"--artifact {relative}" in generation
+    assert "--backend-artifact ditto-image.tar" in generation
+    assert "--web-artifact ditto-web.tar" in generation
+    assert "--output release-cohort.json" in generation
+    generator = generation.index("tooling.release.cohort_manifest")
+    verifier = generation.index("tooling.release.cohort_verify")
+    checksums = generation.index("sha256sum")
+    assert generator < verifier < checksums
+
+    publish_steps = workflow["jobs"]["publish-cohort"]["steps"]
+    attest = next(
+        step
+        for step in publish_steps
+        if step.get("name") == "Attest release provenance"
+    )
+    upload = next(
+        step
+        for step in publish_steps
+        if step.get("name") == "Upload immutable release cohort"
+    )
+    publish = next(
+        step
+        for step in publish_steps
+        if step.get("name") == "Publish long-lived release evidence"
+    )
+    for required in required_inputs:
+        assert required.removeprefix("dist/") in generation
+        assert required in attest["with"]["subject-path"]
+        assert required in upload["with"]["path"]
+        assert required in publish["run"]
+
+
+def test_release_ships_a_non_recursive_deterministic_offline_bundle() -> None:
+    workflow = _workflow("release.yml")
+    steps = workflow["jobs"]["release-cohort"]["steps"]
+    stage = next(step for step in steps if step.get("name") == "Stage release inputs")
+    generation = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Generate and verify release cohort manifest"
+    )
+    required_tools = (
+        "release-tools/tooling/__init__.py",
+        "release-tools/tooling/release/__init__.py",
+        "release-tools/tooling/release/cohort_manifest.py",
+        "release-tools/tooling/release/cohort_verify.py",
+        "release-tools/verify-cohort.py",
+    )
+    assert "tooling.release.cohort_bundle stage-tools" in stage["run"]
+    for relative in required_tools:
+        assert f"--artifact {relative}" in generation
+
+    bundle_command = "tooling.release.cohort_bundle create"
+    assert bundle_command in generation
+    assert "--output ditto-release-cohort.tar" in generation
+    assert "--source-date-epoch" in generation
+    assert generation.index(
+        "compatibility_policy register-previous"
+    ) < generation.index(bundle_command)
+    assert generation.index(bundle_command) < generation.index("sha256sum")
+    assert "--artifact ditto-release-cohort.tar" not in generation
+
+    publish_steps = workflow["jobs"]["publish-cohort"]["steps"]
+    attest = next(
+        step
+        for step in publish_steps
+        if step.get("name") == "Attest release provenance"
+    )
+    upload = next(
+        step
+        for step in publish_steps
+        if step.get("name") == "Upload immutable release cohort"
+    )
+    publish = next(
+        step["run"]
+        for step in publish_steps
+        if step.get("name") == "Publish long-lived release evidence"
+    )
+    bundle = "dist/ditto-release-cohort.tar"
+    assert "ditto-release-cohort.tar" in generation[generation.index("sha256sum") :]
+    assert bundle in attest["with"]["subject-path"]
+    assert bundle in upload["with"]["path"]
+    assert bundle in publish
+    assert "--workspace-root dist" in generation
+
+    documentation = (WORKFLOWS / "README.md").read_text(encoding="utf-8")
+    for required in (
+        "gh attestation verify ditto-release-cohort.tar",
+        "--bundle ditto-release-cohort.attestation.json",
+        "--custom-trusted-root /trusted/github-attestation-root.jsonl",
+        "--repo cosmos-arc/ditto",
+        "--signer-workflow github.com/cosmos-arc/ditto/.github/workflows/release.yml",
+        '--source-digest "$expected_git_sha"',
+        '--source-ref "refs/tags/$release_tag"',
+        "sha256sum --check --ignore-missing SHA256SUMS",
+        "tar -xf ditto-release-cohort.tar",
+        "python3 release-tools/verify-cohort.py",
+        "--workspace-root .",
+        "--manifest release-cohort.json",
+    ):
+        assert required in documentation
+    attestation = documentation.index("gh attestation verify ditto-release-cohort.tar")
+    checksums = documentation.index("sha256sum --check --ignore-missing SHA256SUMS")
+    extraction = documentation.index("tar -xf ditto-release-cohort.tar")
+    bundled_verifier = documentation.index("python3 release-tools/verify-cohort.py")
+    assert attestation < checksums < extraction < bundled_verifier
+
+    attestation_step = next(
+        step
+        for step in publish_steps
+        if step.get("name") == "Attest release provenance"
+    )
+    assert attestation_step["id"] == "attest"
+    export_step = next(
+        step
+        for step in publish_steps
+        if step.get("name") == "Export and verify attestation bundle"
+    )
+    assert (
+        "steps.attest.outputs.bundle-path" in export_step["env"]["ATTESTATION_BUNDLE"]
+    )
+    export_script = export_step["run"]
+    for required in (
+        "dist/ditto-release-cohort.attestation.json",
+        "gh attestation verify",
+        '--repo "$GITHUB_REPOSITORY"',
+        '--source-digest "$GITHUB_SHA"',
+        '--source-ref "$GITHUB_REF"',
+        "--deny-self-hosted-runners",
+    ):
+        assert required in export_script
+    assert "--signer-workflow" in export_script
+
+    for step in (upload,):
+        assert "dist/ditto-release-cohort.attestation.json" in step["with"]["path"]
+    assert "dist/ditto-release-cohort.attestation.json" in publish
+
+
+def test_contract_gate_validates_policy_and_release_emits_next_policy() -> None:
+    """Each release must validate today's allowlist and emit a real next one."""
+    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    tasks = workspace["tasks"]
+    assert tasks["cohort-compatibility-check"] == (
+        "python -m tooling.release.compatibility_policy validate"
+    )
+    assert "cohort-compatibility-check" in tasks["check-contract"]["depends-on"]
+
+    content = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
+    for required in (
+        "tooling.release.compatibility_policy register-previous",
+        "--release-manifest dist/release-cohort.json",
+        "dist/next-cohort-policy/compatibility-policy.json",
+        "dist/next-cohort-policy/compatibility-policy.sha256",
+    ):
+        assert required in content
+
+
+def test_release_requires_main_ci_and_verifies_the_exact_runtime_subject() -> None:
+    """A tag must not turn an unverified commit or unstarted image into a release."""
+    workflow = _workflow("release.yml")
+    steps = workflow["jobs"]["release-cohort"]["steps"]
+    provenance = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Verify release source provenance"
+    )
+    for required in (
+        "git merge-base --is-ancestor",
+        "origin/main",
+        "actions/workflows/ci.yml/runs",
+        "head_sha=$GITHUB_SHA",
+        '.event == "push"',
+        '.head_branch == "main"',
+        'latest_conclusion" = "success"',
+    ):
+        assert required in provenance
+    assert "status=success" not in provenance
+
+    image_build = next(
+        step for step in steps if step.get("name") == "Build OCI release artifact"
+    )
+    assert image_build["with"]["load"] is True
+    assert "ditto-release:${{ github.sha }}" in image_build["with"]["tags"]
+
+    verification = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Verify and export the release image"
+    )
+    for required in (
+        "docker image inspect",
+        "65532:65532",
+        "TUSHARE_TOKEN=ci-smoke-offline-credential",
+        "/readyz",
+        "/api/v1/status",
+        ".product_version == $version",
+        ".git_sha == $sha",
+        '.api_contract_version == "v1"',
+        ".api_contract_sha256 == $contract",
+        "docker save --output dist/ditto-image.tar",
+        "trivy:0.74.0@sha256:",
+        "--severity HIGH,CRITICAL",
+    ):
+        assert required in verification
+
+    sbom = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Generate SPDX SBOM from release subject"
+    )
+    for required in (
+        "_verify_web_artifact_metadata",
+        "_bind_and_verify_web_sbom",
+        "_canonicalize_spdx_sbom",
+        "apps/web/package.json",
+        "package.json bun.lock",
+    ):
+        assert required in sbom
+    assert "$PWD/apps/web/dist:/web:ro" not in sbom
 
 
 def test_release_injects_exact_research_code_and_environment_lock() -> None:
@@ -304,6 +692,19 @@ def test_container_readiness_smoke_uses_runtime_only_offline_credential() -> Non
     assert "TUSHARE_TOKEN" not in build_script
     assert "--env TUSHARE_TOKEN=ci-smoke-offline-credential" in smoke_script
 
+    # Production startup rejects placeholder cohort identity.  The smoke image
+    # must therefore receive the same complete identity as release/artifact
+    # builds instead of timing out at readiness with Dockerfile defaults.
+    for required in (
+        "product_version=",
+        "contract_sha256=",
+        "DITTO_PRODUCT_VERSION=$product_version",
+        "DITTO_GIT_SHA=${{ github.sha }}",
+        "DITTO_API_CONTRACT_VERSION=v1",
+        "DITTO_API_CONTRACT_SHA256=$contract_sha256",
+    ):
+        assert required in build_script
+
     dockerfile = (ROOT / "deploy" / "docker" / "Dockerfile").read_text()
     assert "ARG TUSHARE_TOKEN" not in dockerfile
     assert "ENV TUSHARE_TOKEN" not in dockerfile
@@ -362,6 +763,46 @@ def test_root_ci_includes_security_and_built_artifact_gates() -> None:
     assert "security-supply-chain" in ci_dependencies
     assert "artifact-gate" in ci_dependencies
     assert "web-ci" in tasks["artifact-gate"]["depends-on"]
+
+
+def test_web_ci_cannot_bypass_the_root_manifest_contract() -> None:
+    """Hosted and local full Web validation must use the canonical Pixi task."""
+    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    tasks = workspace["tasks"]
+    assert "web-manifest-check" in tasks["web-ci"]["depends-on"]
+
+    workflow = _workflow("ci.yml")
+    web_job = workflow["jobs"]["web-quality"]
+    uses = {step.get("uses") for step in web_job["steps"]}
+    assert any(
+        isinstance(reference, str) and reference.startswith("prefix-dev/setup-pixi@")
+        for reference in uses
+    )
+    commands = {step.get("run") for step in web_job["steps"]}
+    assert "pixi run -e dev web-ci" in commands
+    assert "bun --cwd apps/web run ci" not in commands
+
+
+def test_web_composite_validation_is_owned_only_by_pixi() -> None:
+    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    scripts = json.loads((ROOT / "apps/web/package.json").read_text())["scripts"]
+    assert "check" not in scripts
+    assert "ci" not in scripts
+    tasks = workspace["tasks"]
+    assert "cmd" not in tasks["check-web"]
+    assert "cmd" not in tasks["web-ci"]
+    assert {
+        "web-lint",
+        "web-type",
+        "web-test",
+        "web-architecture",
+        "web-product-check",
+        "web-token-check",
+        "web-manifest-check",
+    } <= set(tasks["check-web"]["depends-on"])
+    assert {"check-web", "web-coverage", "web-prototype", "web-build"} <= set(
+        tasks["web-ci"]["depends-on"]
+    )
 
 
 def test_repository_has_no_unapproved_large_files() -> None:

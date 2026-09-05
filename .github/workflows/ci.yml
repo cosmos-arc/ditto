@@ -25,7 +25,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Diff hygiene
+        env:
+          CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          base="$CHECK_BASE_SHA"
+          zero_sha="0000000000000000000000000000000000000000"
+          if test -n "$base" && test "$base" != "$zero_sha" && git cat-file -e "$base^{commit}"; then
+            git diff --check "$base" "$GITHUB_SHA"
+          else
+            git show --check --format= "$GITHUB_SHA"
+          fi
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
@@ -114,7 +126,7 @@ jobs:
             coverage.json
             coverage.xml
           if-no-files-found: error
-          retention-days: 14
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   architecture-harness:
     name: Architecture and agent harness
@@ -147,10 +159,16 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bun
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          frozen: true
+          environments: dev
       - name: Frozen Web install
         run: bun install --frozen-lockfile
       - name: Web CI
-        run: bun --cwd apps/web run ci
+        run: pixi run -e dev web-ci
       - name: Publish Web coverage
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
@@ -165,7 +183,7 @@ jobs:
           name: web-dist-${{ github.run_id }}
           path: apps/web/dist
           if-no-files-found: error
-          retention-days: 14
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   api-contract:
     name: OpenAPI compatibility and generated types
@@ -199,7 +217,7 @@ jobs:
       - name: Contract gate
         env:
           DITTO_OASDIFF_DIST_DIR: ${{ runner.temp }}/oasdiff
-        run: pixi run -e dev python -m tooling.contracts.check_contract --base-ref origin/main
+        run: pixi run -e dev check-contract
 
   system-e2e:
     name: Supervised backend-Web system test
@@ -220,6 +238,14 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Run supervised system test
         run: pixi run -e dev test-system
+      - name: Upload system browser evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: system-e2e-${{ github.run_id }}
+          path: build/system-e2e
+          if-no-files-found: warn
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   release-cohort:
     name: Release cohort policy
@@ -235,8 +261,8 @@ jobs:
           cache: true
           frozen: true
           environments: dev
-      - name: Test cohort generator
-        run: pixi run -e dev python -m pytest tooling/release/tests/test_cohort_manifest.py -q -n 0
+      - name: Test release and security policy
+        run: pixi run -e dev python -m pytest tooling/release/tests tooling/security/tests -q -n 0
 
   container-smoke:
     name: Container build and readiness smoke
@@ -250,13 +276,18 @@ jobs:
         env:
           IMAGE: ditto-ci:${{ github.sha }}
         run: |
+          product_version="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["version"])')"
+          contract_sha256="$(sha256sum contracts/openapi/v1.json | cut -d ' ' -f 1)"
           environment_lock_sha256="$(sha256sum pixi.lock | cut -d ' ' -f 1)"
           docker build \
             --pull \
             --file deploy/docker/Dockerfile \
             --tag "$IMAGE" \
+            --build-arg "DITTO_PRODUCT_VERSION=$product_version" \
             --build-arg "DITTO_GIT_SHA=${{ github.sha }}" \
             --build-arg "DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH=$environment_lock_sha256" \
+            --build-arg "DITTO_API_CONTRACT_VERSION=v1" \
+            --build-arg "DITTO_API_CONTRACT_SHA256=$contract_sha256" \
             .
       - name: Verify non-root runtime and readiness
         env:
@@ -311,9 +342,15 @@ jobs:
       - name: Windows Web type gate
         if: ${{ matrix.name == 'windows-x64' }}
         run: pixi run -e dev web-type
-      - name: Windows API and CLI smoke
+      - name: Windows backend core unit
         if: ${{ matrix.name == 'windows-x64' }}
-        run: pixi run -e dev platform-smoke-windows
+        run: pixi run -e dev platform-backend-unit
+      - name: Windows Web unit
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: pixi run -e dev platform-web-unit
+      - name: Windows loopback API smoke
+        if: ${{ matrix.name == 'windows-x64' }}
+        run: pixi run -e dev platform-api-smoke
 
   security-supply-chain:
     name: Security and supply chain
