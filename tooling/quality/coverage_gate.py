@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import re
@@ -74,12 +75,16 @@ def _branch_set(value: object) -> set[tuple[int, int]]:
 
 
 def _is_production_path(path: str) -> bool:
-    normalized = path.replace("\\", "/").removeprefix("./")
+    normalized = _normalize_path(path)
     return (
         (normalized.startswith("packages/") or normalized.startswith("apps/backend/"))
         and "/src/" in normalized
         and "/generated/" not in normalized
     )
+
+
+def _normalize_path(path: str) -> str:
+    return path.replace("\\", "/").removeprefix("./")
 
 
 def _stats(value: object, changed: set[int] | None = None) -> _Stats:
@@ -116,6 +121,123 @@ def _require(
         violations.append(f"{label} coverage {actual:.2f}% is below {minimum:.2f}%")
 
 
+def _require_measured_metric(
+    violations: list[str],
+    *,
+    label: str,
+    covered: int,
+    total: int,
+    minimum: float,
+    unmeasured: str,
+) -> None:
+    if total == 0:
+        violations.append(unmeasured)
+        return
+    _require(
+        violations,
+        label=label,
+        actual=_percentage(covered, total),
+        minimum=minimum,
+    )
+
+
+def _sensitive_package_violations(
+    production: Mapping[str, object], thresholds: CoverageThresholds
+) -> list[str]:
+    violations: list[str] = []
+    for package in _SENSITIVE_PACKAGES:
+        prefix = f"packages/{package}/src/"
+        package_files = tuple(
+            value for path, value in production.items() if path.startswith(prefix)
+        )
+        if not package_files:
+            violations.append(
+                "coverage report contains no source files for sensitive package "
+                + f"packages/{package}"
+            )
+            continue
+        package_stats = sum((_stats(value) for value in package_files), _Stats())
+        _require_measured_metric(
+            violations,
+            label=f"packages/{package} branch",
+            covered=package_stats.covered_branches,
+            total=package_stats.total_branches,
+            minimum=thresholds.sensitive_branches,
+            unmeasured=(
+                "coverage report contains no measured branches for sensitive package "
+                + f"packages/{package}"
+            ),
+        )
+    return violations
+
+
+def _production_changed_lines(
+    changed_lines: Mapping[str, set[int]],
+) -> dict[str, set[int]]:
+    production_changed: dict[str, set[int]] = {}
+    for path, lines in changed_lines.items():
+        normalized = _normalize_path(path)
+        if lines and _is_production_path(normalized):
+            production_changed.setdefault(normalized, set()).update(lines)
+    return production_changed
+
+
+def _changed_coverage_violations(
+    production: Mapping[str, object],
+    changed_lines: Mapping[str, set[int]],
+    thresholds: CoverageThresholds,
+) -> list[str]:
+    violations: list[str] = []
+    production_changed = _production_changed_lines(changed_lines)
+    for path in sorted(set(production_changed) - set(production)):
+        violations.append(
+            f"changed production path is absent from coverage report: {path}"
+        )
+
+    for path in sorted(set(production_changed) & set(production)):
+        details = _mapping(production[path])
+        excluded = (
+            _integer_set(details.get("excluded_lines")) & production_changed[path]
+        )
+        if excluded:
+            rendered_lines = ",".join(str(line) for line in sorted(excluded))
+            violations.append(
+                "changed production lines are excluded from coverage: "
+                + f"{path}:{rendered_lines}"
+            )
+
+    changed_stats = sum(
+        (
+            _stats(value, production_changed[path])
+            for path, value in production.items()
+            if path in production_changed
+        ),
+        _Stats(),
+    )
+    # A present coverage record proves the file was instrumented. If its changed
+    # lines intersect no measured or excluded statement, coverage.py has classified
+    # the edit as non-executable (for example a comment); changed coverage is N/A.
+    if changed_stats.total_lines > 0:
+        _require(
+            violations,
+            label="changed line",
+            actual=_percentage(changed_stats.covered_lines, changed_stats.total_lines),
+            minimum=thresholds.changed_lines,
+        )
+    # Linear executable changes still have a line denominator but legitimately no
+    # branch denominator. Enforce the branch threshold only when branches exist.
+    if changed_stats.total_branches > 0:
+        _require(
+            violations,
+            label="changed branch",
+            actual=_percentage(
+                changed_stats.covered_branches, changed_stats.total_branches
+            ),
+            minimum=thresholds.changed_branches,
+        )
+    return violations
+
+
 def evaluate_report(
     report: Mapping[str, object],
     *,
@@ -125,7 +247,7 @@ def evaluate_report(
     """Evaluate a coverage.py JSON report without trusting its aggregate totals."""
     files = _mapping(report.get("files"))
     production = {
-        path.replace("\\", "/").removeprefix("./"): details
+        _normalize_path(path): details
         for path, details in files.items()
         if _is_production_path(path)
     }
@@ -134,59 +256,25 @@ def evaluate_report(
 
     global_stats = sum((_stats(value) for value in production.values()), _Stats())
     violations: list[str] = []
-    _require(
+    _require_measured_metric(
         violations,
         label="global line",
-        actual=_percentage(global_stats.covered_lines, global_stats.total_lines),
+        covered=global_stats.covered_lines,
+        total=global_stats.total_lines,
         minimum=thresholds.global_lines,
+        unmeasured="coverage report contains no measured production lines",
     )
-    _require(
+    _require_measured_metric(
         violations,
         label="global branch",
-        actual=_percentage(global_stats.covered_branches, global_stats.total_branches),
+        covered=global_stats.covered_branches,
+        total=global_stats.total_branches,
         minimum=thresholds.global_branches,
+        unmeasured="coverage report contains no measured production branches",
     )
-
-    for package in _SENSITIVE_PACKAGES:
-        prefix = f"packages/{package}/src/"
-        package_stats = sum(
-            (
-                _stats(value)
-                for path, value in production.items()
-                if path.startswith(prefix)
-            ),
-            _Stats(),
-        )
-        _require(
-            violations,
-            label=f"packages/{package} branch",
-            actual=_percentage(
-                package_stats.covered_branches, package_stats.total_branches
-            ),
-            minimum=thresholds.sensitive_branches,
-        )
-
-    changed_stats = sum(
-        (
-            _stats(value, changed_lines.get(path, set()))
-            for path, value in production.items()
-            if path in changed_lines
-        ),
-        _Stats(),
-    )
-    _require(
-        violations,
-        label="changed line",
-        actual=_percentage(changed_stats.covered_lines, changed_stats.total_lines),
-        minimum=thresholds.changed_lines,
-    )
-    _require(
-        violations,
-        label="changed branch",
-        actual=_percentage(
-            changed_stats.covered_branches, changed_stats.total_branches
-        ),
-        minimum=thresholds.changed_branches,
+    violations.extend(_sensitive_package_violations(production, thresholds))
+    violations.extend(
+        _changed_coverage_violations(production, changed_lines, thresholds)
     )
     return sorted(violations)
 
@@ -207,6 +295,58 @@ def _run_git(root: Path, arguments: list[str]) -> str:
     return result.stdout
 
 
+def _declaration_statement(node: ast.stmt) -> bool:
+    if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
+        return isinstance(node.value.value, str) or node.value.value is Ellipsis
+    if isinstance(node, ast.Pass):
+        return True
+    if isinstance(node, ast.AnnAssign):
+        return node.value is None
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return (
+            not node.args.defaults
+            and not any(value is not None for value in node.args.kw_defaults)
+            and all(
+                isinstance(item, ast.Name) and item.id in {"property", "abstractmethod"}
+                for item in node.decorator_list
+            )
+            and all(_declaration_statement(item) for item in node.body)
+        )
+    return False
+
+
+def protocol_declaration_lines(source: str) -> set[int]:
+    """Recognize only pure typing.Protocol stubs, never default implementations."""
+    tree = ast.parse(source)
+    imported = any(
+        isinstance(node, ast.ImportFrom)
+        and node.module == "typing"
+        and any(
+            alias.name == "Protocol" and alias.asname is None for alias in node.names
+        )
+        for node in tree.body
+    )
+    if not imported:
+        return set()
+    declarations: set[int] = set()
+    for node in tree.body:
+        if (
+            isinstance(node, ast.ClassDef)
+            and not node.decorator_list
+            and not node.keywords
+            and all(isinstance(base, ast.Name) for base in node.bases)
+            and any(
+                isinstance(base, ast.Name) and base.id == "Protocol"
+                for base in node.bases
+            )
+            and all(_declaration_statement(item) for item in node.body)
+        ):
+            declarations.update(
+                range(node.lineno, (node.end_lineno or node.lineno) + 1)
+            )
+    return declarations
+
+
 def changed_executable_lines(root: Path, base_ref: str) -> dict[str, set[int]]:
     """Return added/modified line numbers since the merge base with ``base_ref``."""
     merge_base = _run_git(root, ["merge-base", base_ref, "HEAD"]).strip()
@@ -223,6 +363,12 @@ def changed_executable_lines(root: Path, base_ref: str) -> dict[str, set[int]]:
         start = int(match.group("start"))
         count = int(match.group("count") or "1")
         changed.setdefault(current_path, set()).update(range(start, start + count))
+    for name, lines in changed.items():
+        source = root / name
+        if source.suffix == ".py" and source.is_file():
+            lines.difference_update(
+                protocol_declaration_lines(source.read_text(encoding="utf-8"))
+            )
     return changed
 
 

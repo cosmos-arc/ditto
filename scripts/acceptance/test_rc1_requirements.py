@@ -98,9 +98,9 @@ def test_rc1_real_data_commands_include_full_real_data_coverage() -> None:
 
     assert "maturity-status" in commands
     real_data_command = " ".join(commands["real-data-e2e"])
-    assert "packages/apps/tests/e2e/test_real_data_pipeline.py" in real_data_command
+    assert "apps/backend/tests/e2e/test_real_data_pipeline.py" in real_data_command
     assert (
-        "packages/apps/tests/e2e/test_real_data_stock_selection_pipeline.py"
+        "apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py"
         in real_data_command
     )
 

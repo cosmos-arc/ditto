@@ -1,7 +1,8 @@
-"""Validate Python package metadata against the root Pixi workspace and lock."""
+"""Validate product package metadata against the root Pixi/Bun workspace."""
 
 from __future__ import annotations
 
+import json
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -46,6 +47,28 @@ def _strings(value: object) -> tuple[str, ...]:
 def _load_toml(path: Path) -> dict[str, object]:
     with path.open("rb") as file:
         return cast("dict[str, object]", tomllib.load(file))
+
+
+def _javascript_version_violations(root: Path, product_version: str) -> list[str]:
+    """Keep both Bun manifests in the same product-version cohort as Python."""
+    violations: list[str] = []
+    for relative in ("package.json", "apps/web/package.json"):
+        path = root / relative
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            violations.append(f"{relative}: cannot read a valid JSON manifest: {error}")
+            continue
+        if not isinstance(document, dict):
+            violations.append(f"{relative}: manifest must contain a JSON object")
+            continue
+        version = document.get("version")
+        if version != product_version:
+            violations.append(
+                f"{relative}: version {version!r} must equal product version "
+                f"{product_version!r}"
+            )
+    return violations
 
 
 def _relative(root: Path, path: Path) -> str:
@@ -231,6 +254,7 @@ def validate_workspace(root: Path, *, expected_local_count: int = 13) -> list[st
         violations.append(
             "pixi.toml: [workspace].version must equal pyproject.toml [project].version"
         )
+    violations.extend(_javascript_version_violations(root, product_version))
 
     leaves = _discover_leaves(root)
     if len(leaves) != expected_local_count:
@@ -284,10 +308,10 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     violations = validate_workspace(root)
     if violations:
-        sys.stderr.write("Python package contract violations:\n")
+        sys.stderr.write("Product package contract violations:\n")
         sys.stderr.write("\n".join(f"- {item}" for item in violations) + "\n")
         return 1
-    sys.stdout.write("Python package contracts are consistent.\n")
+    sys.stdout.write("Product package contracts are consistent.\n")
     return 0
 
 

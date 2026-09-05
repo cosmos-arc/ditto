@@ -43,10 +43,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 SRC_ROOTS = [
     ROOT / "packages",
+    ROOT / "apps" / "backend",
 ]
 
 MAX_FILE_LINES = 800
 MIN_PACKAGE_SOURCE_PATH_PARTS = 5
+MIN_BACKEND_SOURCE_PATH_PARTS = 4
 
 # Logger methods that should NOT use f-strings (lazy formatting is preferred).
 FORBIDDEN_FSTRING_LOG_PATTERNS = (
@@ -125,7 +127,7 @@ EXECUTION_SQLITE_LEGACY_STORAGE_PREFIX = (
     "packages/execution/src/ditto_execution/storage/sqlite/legacy/"
 )
 
-APPS_REGISTRY_SOURCE_PREFIX = "packages/apps/src/ditto_apps/registry/"
+APPS_REGISTRY_SOURCE_PREFIX = "apps/backend/src/ditto_apps/registry/"
 
 APPS_CAPABILITY_IMPORT_ROOTS = frozenset(
     {
@@ -183,7 +185,7 @@ SEMANTIC_SCAN_SKIP_PATH_PARTS = frozenset(
 
 APPS_HOST_COMPOSITION_ALLOWANCES = (
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/jobs/context.py",
+        path="apps/backend/src/ditto_apps/jobs/context.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.quality",
@@ -198,7 +200,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/jobs/tasks/monitoring.py",
+        path="apps/backend/src/ditto_apps/jobs/tasks/monitoring.py",
         allowed_modules=frozenset({"ditto_data.quality.quality_types"}),
         owner="apps ingestion monitoring task",
         reason=(
@@ -208,7 +210,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/infra/protocol_adapters.py",
+        path="apps/backend/src/ditto_apps/registry/infra/protocol_adapters.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.quality.protocols",
@@ -227,7 +229,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py"),
+        path=("apps/backend/src/ditto_apps/scripts/r5_sandbox_live_acceptance.py"),
         allowed_modules=frozenset(
             {
                 "ditto_analysis.experiments.generated_code",
@@ -242,7 +244,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/scripts/q2_live_market_context.py",
+        path="apps/backend/src/ditto_apps/scripts/q2_live_market_context.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog.certification",
@@ -258,7 +260,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/scripts/q3_live_discovery_support.py"),
+        path=("apps/backend/src/ditto_apps/scripts/q3_live_discovery_support.py"),
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog.certification",
@@ -273,7 +275,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/scripts/q3_live_discovery.py"),
+        path=("apps/backend/src/ditto_apps/scripts/q3_live_discovery.py"),
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog.certification",
@@ -288,7 +290,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/scripts/q5_live_agent_author_support.py"),
+        path=("apps/backend/src/ditto_apps/scripts/q5_live_agent_author_support.py"),
         allowed_modules=frozenset({"ditto_strategy.models"}),
         owner="apps isolated Q5 Author acceptance composition",
         reason=(
@@ -305,7 +307,7 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
 
 APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/research_case.py",
+        path="apps/backend/src/ditto_apps/registry/research_case.py",
         allowed_modules=frozenset({"ditto_analysis.research.cases"}),
         owner="apps ResearchCase composition adapter",
         reason=(
@@ -315,7 +317,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/fresh_runtime.py",
+        path="apps/backend/src/ditto_apps/registry/fresh_runtime.py",
         allowed_modules=frozenset(
             {
                 "ditto_analysis.storage.sqlite.experiments",
@@ -332,7 +334,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/infra/trading_storage.py",
+        path="apps/backend/src/ditto_apps/registry/infra/trading_storage.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.config.data_store",
@@ -347,7 +349,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/performance_probes.py",
+        path="apps/backend/src/ditto_apps/registry/performance_probes.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog.certification",
@@ -366,7 +368,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/agent/provider.py",
+        path="apps/backend/src/ditto_apps/registry/agent/provider.py",
         allowed_modules=frozenset({"ditto_analysis.experiments.campaign_persistence"}),
         owner="apps governed Agent provider",
         reason=(
@@ -376,7 +378,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/agent/campaign_runtime.py",
+        path="apps/backend/src/ditto_apps/registry/agent/campaign_runtime.py",
         allowed_modules=frozenset(
             {
                 "ditto_analysis.errors",
@@ -392,7 +394,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/agent/oci_sandbox.py",
+        path="apps/backend/src/ditto_apps/registry/agent/oci_sandbox.py",
         allowed_modules=frozenset(
             {
                 "ditto_analysis.experiments.generated_code",
@@ -409,7 +411,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/agent/oci_sandbox_runner.py",
+        path="apps/backend/src/ditto_apps/registry/agent/oci_sandbox_runner.py",
         allowed_modules=frozenset({"ditto_analysis.experiments.models"}),
         owner="apps generated-candidate OCI process runner",
         reason=(
@@ -418,7 +420,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/registry/agent/r5_sandbox_live_report.py"),
+        path=("apps/backend/src/ditto_apps/registry/agent/r5_sandbox_live_report.py"),
         allowed_modules=frozenset(
             {
                 "ditto_analysis.experiments.generated_code",
@@ -432,7 +434,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/container.py",
+        path="apps/backend/src/ditto_apps/registry/container.py",
         allowed_modules=frozenset(
             {
                 "ditto_analysis.di",
@@ -449,7 +451,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/contexts/bundle.py",
+        path="apps/backend/src/ditto_apps/registry/contexts/bundle.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.sources.exchange_transformers",
@@ -463,7 +465,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/contexts/ingestion.py",
+        path="apps/backend/src/ditto_apps/registry/contexts/ingestion.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog",
@@ -491,7 +493,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/contexts/query.py",
+        path="apps/backend/src/ditto_apps/registry/contexts/query.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.services.capital_store",
@@ -508,7 +510,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/contexts/strategy.py",
+        path="apps/backend/src/ditto_apps/registry/contexts/strategy.py",
         allowed_modules=frozenset(
             {
                 "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
@@ -525,7 +527,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/contexts/r3_recovery.py",
+        path="apps/backend/src/ditto_apps/registry/contexts/r3_recovery.py",
         allowed_modules=frozenset(
             {
                 "ditto_analysis.storage.sqlite.experiments",
@@ -544,7 +546,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/infra/protocol_adapters.py",
+        path="apps/backend/src/ditto_apps/registry/infra/protocol_adapters.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.quality.protocols",
@@ -563,7 +565,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/infra/config.py",
+        path="apps/backend/src/ditto_apps/registry/infra/config.py",
         allowed_modules=frozenset(
             {
                 "ditto_data.config",
@@ -580,7 +582,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/infra/observability.py",
+        path="apps/backend/src/ditto_apps/registry/infra/observability.py",
         allowed_modules=frozenset(
             {
                 "ditto_backtest.observability.metrics",
@@ -600,7 +602,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path="packages/apps/src/ditto_apps/registry/infra/risk_persistence.py",
+        path="apps/backend/src/ditto_apps/registry/infra/risk_persistence.py",
         allowed_modules=frozenset({"ditto_risk.continuous_gate"}),
         owner="apps R4 risk persistence composition adapter",
         reason=(
@@ -610,7 +612,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/registry/live/r2_live_certification.py"),
+        path=("apps/backend/src/ditto_apps/registry/live/r2_live_certification.py"),
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog",
@@ -626,7 +628,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/registry/live/r3_live_snapshot_builder.py"),
+        path=("apps/backend/src/ditto_apps/registry/live/r3_live_snapshot_builder.py"),
         allowed_modules=frozenset(
             {
                 "ditto_analysis.research.artifact_service",
@@ -643,7 +645,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=("packages/apps/src/ditto_apps/registry/live/r3_live_planning_builder.py"),
+        path=("apps/backend/src/ditto_apps/registry/live/r3_live_planning_builder.py"),
         allowed_modules=frozenset(
             {
                 "ditto_analysis.experiments",
@@ -666,9 +668,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
-        path=(
-            "packages/apps/src/ditto_apps/registry/live/r3_live_acceptance_driver.py"
-        ),
+        path=("apps/backend/src/ditto_apps/registry/live/r3_live_acceptance_driver.py"),
         allowed_modules=frozenset(
             {
                 "ditto_analysis.research.artifact_service",
@@ -686,7 +686,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     ),
     CompositionImportAllowance(
         path=(
-            "packages/apps/src/ditto_apps/registry/live/"
+            "apps/backend/src/ditto_apps/registry/live/"
             "q4_live_account_acceptance_runtime.py"
         ),
         allowed_modules=frozenset(
@@ -708,7 +708,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     ),
     CompositionImportAllowance(
         path=(
-            "packages/apps/src/ditto_apps/registry/live/"
+            "apps/backend/src/ditto_apps/registry/live/"
             "q4_accelerated_paper_acceptance_runtime.py"
         ),
         allowed_modules=frozenset({"ditto_execution.storage.sqlite.account_journal"}),
@@ -721,7 +721,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     ),
     CompositionImportAllowance(
         path=(
-            "packages/apps/src/ditto_apps/registry/live/"
+            "apps/backend/src/ditto_apps/registry/live/"
             "q5_live_portfolio_acceptance_runtime.py"
         ),
         allowed_modules=frozenset(
@@ -745,7 +745,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     ),
     CompositionImportAllowance(
         path=(
-            "packages/apps/src/ditto_apps/registry/live/q5_live_portfolio_proposal.py"
+            "apps/backend/src/ditto_apps/registry/live/q5_live_portfolio_proposal.py"
         ),
         allowed_modules=frozenset(
             {
@@ -762,7 +762,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     ),
     CompositionImportAllowance(
         path=(
-            "packages/apps/src/ditto_apps/registry/live/"
+            "apps/backend/src/ditto_apps/registry/live/"
             "q4_live_account_acceptance_store.py"
         ),
         allowed_modules=frozenset({"ditto_execution.storage.sqlite.account_journal"}),
@@ -1655,7 +1655,7 @@ GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
         ),
     ),
     GenericHelperNamespaceAllowance(
-        path="packages/apps/src/ditto_apps/api/utils/__init__.py",
+        path="apps/backend/src/ditto_apps/api/utils/__init__.py",
         owner="apps API adapter",
         reason=(
             "Existing transport adapter utility namespace; future growth needs "
@@ -1663,12 +1663,12 @@ GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
         ),
     ),
     GenericHelperNamespaceAllowance(
-        path="packages/apps/src/ditto_apps/api/utils/identifier.py",
+        path="apps/backend/src/ditto_apps/api/utils/identifier.py",
         owner="apps API adapter",
         reason="Existing identifier adapter helpers for API boundaries.",
     ),
     GenericHelperNamespaceAllowance(
-        path="packages/apps/src/ditto_apps/cli/utils/__init__.py",
+        path="apps/backend/src/ditto_apps/cli/utils/__init__.py",
         owner="apps CLI adapter",
         reason=(
             "Existing CLI adapter utility namespace; future growth needs "
@@ -1676,22 +1676,22 @@ GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
         ),
     ),
     GenericHelperNamespaceAllowance(
-        path="packages/apps/src/ditto_apps/cli/utils/identifier.py",
+        path="apps/backend/src/ditto_apps/cli/utils/identifier.py",
         owner="apps CLI adapter",
         reason="Existing identifier adapter helpers for CLI boundaries.",
     ),
     GenericHelperNamespaceAllowance(
-        path="packages/apps/src/ditto_apps/cli/utils/output.py",
+        path="apps/backend/src/ditto_apps/cli/utils/output.py",
         owner="apps CLI adapter",
         reason="Existing CLI output formatting adapter helpers.",
     ),
     GenericHelperNamespaceAllowance(
-        path="packages/apps/src/ditto_apps/cli/utils/params.py",
+        path="apps/backend/src/ditto_apps/cli/utils/params.py",
         owner="apps CLI adapter",
         reason="Existing CLI parameter adapter helpers.",
     ),
     GenericHelperNamespaceAllowance(
-        path="packages/apps/src/ditto_apps/cli/utils/validation.py",
+        path="apps/backend/src/ditto_apps/cli/utils/validation.py",
         owner="apps CLI adapter",
         reason="Existing CLI validation adapter helpers.",
     ),
@@ -1874,7 +1874,7 @@ ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
     "README.md",
     "docs/architecture/boundaries-and-abstraction-standards.md",
     "docs/architecture/agent-context-pack.md",
-    "packages/apps/README.md",
+    "apps/backend/README.md",
 )
 
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_GLOBS = ("packages/*/README.md",)
@@ -2475,11 +2475,17 @@ def check_process_provider_wiring_only(
 def is_generic_helper_namespace_path(rel_path: str) -> bool:
     """Return whether a production source path uses generic helpers/utils names."""
     parts = Path(rel_path).parts
-    if (
-        len(parts) < MIN_PACKAGE_SOURCE_PATH_PARTS
-        or parts[0] != "packages"
-        or parts[2] != "src"
-    ):
+    is_package_source = (
+        len(parts) >= MIN_PACKAGE_SOURCE_PATH_PARTS
+        and parts[0] == "packages"
+        and parts[2] == "src"
+    )
+    is_backend_source = len(parts) >= MIN_BACKEND_SOURCE_PATH_PARTS and parts[:3] == (
+        "apps",
+        "backend",
+        "src",
+    )
+    if not is_package_source and not is_backend_source:
         return False
     if not rel_path.endswith(".py"):
         return False
@@ -3376,7 +3382,7 @@ _ROUTE_MATURITY_EXPECTED: dict[str, str] = {
     "debug.py": "debug",
 }
 
-_ROUTES_DIR = "packages/apps/src/ditto_apps/api/routes"
+_ROUTES_DIR = "apps/backend/src/ditto_apps/api/routes"
 
 
 def check_route_maturity_annotations(root: Path = ROOT) -> list[str]:

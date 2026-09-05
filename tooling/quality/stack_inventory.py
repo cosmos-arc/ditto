@@ -40,9 +40,7 @@ def _load_json(path: Path) -> dict[str, object]:
         return _table(json.load(file), source=path.as_posix())
 
 
-def _dependency(
-    package: dict[str, object], name: str, *, source: str
-) -> str:
+def _dependency(package: dict[str, object], name: str, *, source: str) -> str:
     for group in ("dependencies", "devDependencies"):
         dependencies = package.get(group)
         if isinstance(dependencies, dict):
@@ -62,9 +60,7 @@ def render_inventory(root: Path) -> str:
 
     project = _table(pyproject.get("project"), source="pyproject.toml [project]")
     workspace = _table(pixi.get("workspace"), source="pixi.toml [workspace]")
-    dependencies = _table(
-        pixi.get("dependencies"), source="pixi.toml [dependencies]"
-    )
+    dependencies = _table(pixi.get("dependencies"), source="pixi.toml [dependencies]")
     package_manager = _required_str(
         root_package, "packageManager", source="package.json"
     )
@@ -98,9 +94,7 @@ def render_inventory(root: Path) -> str:
         (
             "FastAPI",
             "pixi.toml",
-            _required_str(
-                dependencies, "fastapi", source="pixi.toml [dependencies]"
-            ),
+            _required_str(dependencies, "fastapi", source="pixi.toml [dependencies]"),
         ),
         (
             "Polars",

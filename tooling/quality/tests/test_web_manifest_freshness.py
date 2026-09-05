@@ -23,8 +23,14 @@ def web_root(tmp_path: Path) -> Path:
         tmp_path / ".arch-manifest.json",
         json.dumps(
             {
-                "version": 1,
-                "status": "completed",
+                "schemaVersion": 1,
+                "kind": "architecture-inventory",
+                "facts": {
+                    "routeModuleCount": 999,
+                    "pageContractCount": 999,
+                    "featurePublicApiCount": 999,
+                    "workflowPublicApiCount": 999,
+                },
                 "freshness": {
                     "schemaVersion": 1,
                     "algorithm": "sha256",
@@ -43,6 +49,32 @@ def test_refresh_then_validate_is_zero_diff(web_root: Path) -> None:
     refresh_manifest(web_root, manifest)
 
     assert validate_manifest(web_root, manifest) == []
+
+
+def test_current_digest_cannot_mask_semantic_fact_drift(web_root: Path) -> None:
+    manifest = web_root / ".arch-manifest.json"
+    refresh_manifest(web_root, manifest)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["facts"]["routeModuleCount"] = 999
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    violations = validate_manifest(web_root, manifest)
+
+    assert any("routeModuleCount" in violation for violation in violations)
+
+
+def test_refresh_recomputes_semantic_facts(web_root: Path) -> None:
+    manifest = web_root / ".arch-manifest.json"
+
+    refresh_manifest(web_root, manifest)
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert payload["facts"] == {
+        "routeModuleCount": 1,
+        "pageContractCount": 0,
+        "featurePublicApiCount": 0,
+        "workflowPublicApiCount": 0,
+    }
 
 
 def test_content_change_invalidates_manifest(web_root: Path) -> None:

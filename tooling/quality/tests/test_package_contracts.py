@@ -39,6 +39,14 @@ ditto-apps = { path = "apps/backend", editable = true }
 """,
     )
     _write(
+        tmp_path / "package.json",
+        '{"name":"@ditto/workspace","version":"1.2.3","private":true}\n',
+    )
+    _write(
+        tmp_path / "apps/web/package.json",
+        '{"name":"@ditto/web","version":"1.2.3","private":true}\n',
+    )
+    _write(
         tmp_path / "packages/kernel/pyproject.toml",
         """\
 [project]
@@ -84,6 +92,19 @@ def test_reports_product_version_drift(workspace: Path) -> None:
     violations = validate_workspace(workspace, expected_local_count=2)
 
     assert any("packages/kernel" in item and "version" in item for item in violations)
+
+
+@pytest.mark.parametrize("manifest", ["package.json", "apps/web/package.json"])
+def test_reports_javascript_product_version_drift(
+    workspace: Path,
+    manifest: str,
+) -> None:
+    path = workspace / manifest
+    path.write_text(path.read_text().replace('"version":"1.2.3"', '"version":"9.9.9"'))
+
+    violations = validate_workspace(workspace, expected_local_count=2)
+
+    assert any(manifest in item and "product version" in item for item in violations)
 
 
 def test_reports_missing_root_and_lock_path(workspace: Path) -> None:
