@@ -73,3 +73,36 @@ def test_broker_gateway_descriptor_rejects_external_mode() -> None:
 
     with pytest.raises(ValueError, match="Unsupported BrokerGateway mode: external"):
         validate_broker_gateway_descriptor(descriptor)
+
+
+def test_broker_gateway_descriptor_requires_stable_identity_and_version() -> None:
+    blank_identity = BrokerGatewayDescriptor(
+        gateway_id=" ",
+        mode="paper",
+        capabilities=REQUIRED_BROKER_GATEWAY_CAPABILITIES,
+        supported_event_types=STANDARD_BROKER_EVENT_TYPES,
+    )
+    with pytest.raises(ValueError, match="gateway_id must be non-empty"):
+        validate_broker_gateway_descriptor(blank_identity)
+
+    wrong_version = BrokerGatewayDescriptor(
+        gateway_id="paper",
+        mode="paper",
+        capabilities=REQUIRED_BROKER_GATEWAY_CAPABILITIES,
+        supported_event_types=STANDARD_BROKER_EVENT_TYPES,
+        contract_version="broker-gateway-v0",
+    )
+    with pytest.raises(ValueError, match="Unsupported BrokerGateway contract version"):
+        validate_broker_gateway_descriptor(wrong_version)
+
+
+def test_broker_gateway_descriptor_requires_declared_event_surface() -> None:
+    descriptor = BrokerGatewayDescriptor(
+        gateway_id="paper",
+        mode="paper",
+        capabilities=REQUIRED_BROKER_GATEWAY_CAPABILITIES,
+        supported_event_types=(),
+    )
+
+    with pytest.raises(ValueError, match="supported_event_types must be non-empty"):
+        validate_broker_gateway_descriptor(descriptor)

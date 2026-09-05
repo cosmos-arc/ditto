@@ -219,6 +219,43 @@ class TestAccountMarkToMarket:
         assert account.get_view().nav == pytest.approx(2200.0)
 
 
+class TestAccountThawPosition:
+    """Settlement thaw updates only availability and tolerates closed positions."""
+
+    def test_thaw_increases_only_available_quantity(self) -> None:
+        original = Position(
+            instrument_id=_INSTRUMENT,
+            quantity=100,
+            available_quantity=25,
+            average_cost=10.0,
+            market_value=1100.0,
+            unrealized_pnl=100.0,
+            realized_pnl=20.0,
+            total_fees=5.0,
+        )
+        account = _make_account(positions={_INSTRUMENT: original})
+
+        account.thaw_position(_INSTRUMENT, 7)
+
+        assert account.positions[_INSTRUMENT] == Position(
+            instrument_id=_INSTRUMENT,
+            quantity=100,
+            available_quantity=32,
+            average_cost=10.0,
+            market_value=1100.0,
+            unrealized_pnl=100.0,
+            realized_pnl=20.0,
+            total_fees=5.0,
+        )
+
+    def test_thaw_closed_position_is_a_noop(self) -> None:
+        account = _make_account()
+
+        account.thaw_position(_INSTRUMENT, 7)
+
+        assert account.positions == {}
+
+
 # ---------------------------------------------------------------------------
 # TestAccountApplyFill
 # ---------------------------------------------------------------------------

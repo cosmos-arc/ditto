@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import cast
 
+import orjson
 import pytest
 from ditto_execution.storage.sqlite.account_journal import (
     AccountJournalConflictError,
+    AccountJournalIntegrityError,
     SqliteAccountEventJournal,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_platform.foundation import SQLiteClient
 from ditto_portfolio.account_ledger import (
     AccountDefinition,
     AccountEventDraft,
@@ -174,3 +179,106 @@ def test_control_event_zero_cash_roundtrips_with_identical_hash(tmp_path: Path) 
 
     assert recovered == reversal
     assert recovered.event_hash == reversal.event_hash
+
+
+def _stored_payload(client: SQLiteClient, event_id: str) -> dict[str, object]:
+    row = client.conn.execute(
+        "SELECT payload_json FROM account_journal_events WHERE event_id = ?",
+        (event_id,),
+    ).fetchone()
+    assert row is not None
+    return cast(dict[str, object], orjson.loads(cast(str, row["payload_json"])))
+
+
+def _replace_stored_payload(
+    client: SQLiteClient,
+    event_id: str,
+    payload: dict[str, object],
+) -> None:
+    client.conn.execute(
+        "UPDATE account_journal_events SET payload_json = ? WHERE event_id = ?",
+        (orjson.dumps(payload).decode(), event_id),
+    )
+    client.conn.commit()
+
+
+def test_empty_append_exact_account_replay_and_missing_account_fail_closed() -> None:
+    journal = SqliteAccountEventJournal(":memory:")
+    account = _account()
+
+    assert journal.get_account(account.account_id) is None
+    assert journal.append_many(()) == ()
+    assert journal.create_account(account) == account
+    assert journal.create_account(account) == account
+
+    missing_account = _account(account_id="missing")
+    with pytest.raises(AccountJournalConflictError, match="account not found"):
+        journal.append(_buy(missing_account))
+
+    journal.close()
+    journal.close()
+    with pytest.raises(AccountJournalIntegrityError, match="closed"):
+        journal.get_account(account.account_id)
+
+
+def test_recovery_requires_event_account_identity(sqlite_client: SQLiteClient) -> None:
+    journal = SqliteAccountEventJournal(sqlite_client)
+    account = journal.create_account(_account())
+    event = journal.append(_buy(account))
+
+    sqlite_client.conn.execute("PRAGMA foreign_keys = OFF")
+    sqlite_client.conn.execute(
+        "DELETE FROM account_journal_accounts WHERE account_id = ?",
+        (account.account_id,),
+    )
+    sqlite_client.conn.commit()
+
+    with pytest.raises(AccountJournalIntegrityError, match="identity missing"):
+        journal.get_event(account.account_id, event.event_id)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("attachment_refs", "not-a-sequence", "attachment_refs"),
+        ("event_type", 1, "event_type must be text"),
+        ("external_reference", 1, "external_reference must be text"),
+        ("instrument_id", "600519", "instrument_id must be an integer"),
+        ("event_hash", "tampered", "hash mismatch"),
+    ],
+)
+def test_recovery_rejects_tampered_event_payload(
+    sqlite_client: SQLiteClient,
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    journal = SqliteAccountEventJournal(sqlite_client)
+    account = journal.create_account(_account())
+    event = journal.append(_buy(account))
+    payload = _stored_payload(sqlite_client, event.event_id)
+    payload[field] = value
+    _replace_stored_payload(sqlite_client, event.event_id, payload)
+
+    with pytest.raises(
+        AccountJournalIntegrityError,
+        match="invalid persisted account event",
+    ) as exc_info:
+        journal.get_event(account.account_id, event.event_id)
+    assert isinstance(exc_info.value.__cause__, ValueError)
+    assert message in str(exc_info.value.__cause__)
+
+
+def test_recovery_rejects_non_text_account_columns(
+    sqlite_client: SQLiteClient,
+) -> None:
+    journal = SqliteAccountEventJournal(sqlite_client)
+    account = journal.create_account(_account())
+    sqlite_client.conn.execute(
+        "UPDATE account_journal_accounts SET account_name = ? WHERE account_id = ?",
+        (sqlite3.Binary(b"invalid"), account.account_id),
+    )
+    sqlite_client.conn.commit()
+
+    with pytest.raises(AccountJournalIntegrityError, match="account_name must be text"):
+        journal.get_account(account.account_id)
