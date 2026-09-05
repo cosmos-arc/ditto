@@ -71,7 +71,7 @@ class CreateManualAccountBody(BaseModel):
 
     account_id: str = Field(min_length=1, max_length=128)
     name: str = Field(min_length=1, max_length=128)
-    opened_at: datetime
+    opened_at: datetime = Field(strict=False)
     currency: Literal["CNY"] = "CNY"
 
 
@@ -81,19 +81,19 @@ class ManualEventBody(BaseModel):
     model_config = _REQUEST_CONFIG
 
     event_type: ManualBusinessEventType
-    trade_date: date
-    settlement_date: date
+    trade_date: date = Field(strict=False)
+    settlement_date: date = Field(strict=False)
     idempotency_key: str = Field(min_length=1, max_length=256)
     actor: str = Field(min_length=1, max_length=256)
     instrument_id: InstrumentId | None = Field(default=None, gt=0)
-    quantity: Decimal = Field(default=Decimal("0"), ge=0)
-    price: Decimal = Field(default=Decimal("0"), ge=0)
-    gross_amount: Decimal = Field(default=Decimal("0"), ge=0)
-    fees: Decimal = Field(default=Decimal("0"), ge=0)
-    tax: Decimal = Field(default=Decimal("0"), ge=0)
-    net_cash: Decimal | None = None
+    quantity: Decimal = Field(default=Decimal("0"), ge=0, strict=False)
+    price: Decimal = Field(default=Decimal("0"), ge=0, strict=False)
+    gross_amount: Decimal = Field(default=Decimal("0"), ge=0, strict=False)
+    fees: Decimal = Field(default=Decimal("0"), ge=0, strict=False)
+    tax: Decimal = Field(default=Decimal("0"), ge=0, strict=False)
+    net_cash: Decimal | None = Field(default=None, strict=False)
     note: str = Field(default="", max_length=4000)
-    attachment_refs: tuple[str, ...] = ()
+    attachment_refs: tuple[str, ...] = Field(default=(), strict=False)
     external_reference: str | None = Field(default=None, max_length=512)
 
 
@@ -112,8 +112,8 @@ class ReverseManualEventBody(BaseModel):
     model_config = _REQUEST_CONFIG
 
     reverses_event_id: str = Field(min_length=1, max_length=256)
-    trade_date: date
-    settlement_date: date
+    trade_date: date = Field(strict=False)
+    settlement_date: date = Field(strict=False)
     idempotency_key: str = Field(min_length=1, max_length=256)
     actor: str = Field(min_length=1, max_length=256)
     note: str = Field(default="", max_length=4000)

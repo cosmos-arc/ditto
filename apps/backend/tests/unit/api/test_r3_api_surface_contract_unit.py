@@ -871,7 +871,7 @@ def test_launch_is_closed_after_durable_idempotency(
 @pytest.mark.parametrize("model_name", ["research.py", "strategy.py"])
 def test_r3_public_dto_annotations_do_not_expose_any(model_name: str) -> None:
     """Public R3 transport models use the recursive project JSON value type."""
-    model_path = _REPO_ROOT / "packages/apps/src/ditto_apps/models" / model_name
+    model_path = _REPO_ROOT / "apps/backend/src/ditto_apps/models" / model_name
     tree = ast.parse(model_path.read_text(encoding="utf-8"))
     any_annotations = [
         node.lineno

@@ -366,7 +366,11 @@ def to_replay_evidence_summary_response(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/runs", response_model=APIResponse[list[RunResponse]])
+@router.get(
+    "/runs",
+    response_model=APIResponse[list[RunResponse]],
+    operation_id="backtests_list_runs",
+)
 @inject
 async def list_runs(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
@@ -387,7 +391,11 @@ async def list_runs(
     return paginate([to_run_response(s) for s in summaries], pagination)
 
 
-@router.get("/runs/{run_id}", response_model=APIResponse[RunResponse])
+@router.get(
+    "/runs/{run_id}",
+    response_model=APIResponse[RunResponse],
+    operation_id="backtests_get_run",
+)
 @inject
 async def get_run(
     run_id: str,
@@ -400,7 +408,11 @@ async def get_run(
     return APIResponse(data=to_run_response(summary))
 
 
-@router.get("/runs/{run_id}/trades", response_model=APIResponse[list[TradeResponse]])
+@router.get(
+    "/runs/{run_id}/trades",
+    response_model=APIResponse[list[TradeResponse]],
+    operation_id="backtests_get_trades",
+)
 @inject
 async def get_trades(
     run_id: str,
@@ -422,6 +434,7 @@ async def get_trades(
 @router.get(
     "/runs/{run_id}/audit",
     response_model=APIResponse[list[AuditRecordResponse]],
+    operation_id="backtests_get_audit",
 )
 @inject
 async def get_audit(
@@ -446,6 +459,7 @@ async def get_audit(
 @router.get(
     "/runs/{run_id}/report",
     response_model=APIResponse[BacktestReportResponse],
+    operation_id="backtests_get_report",
 )
 @inject
 async def get_report(
@@ -464,7 +478,11 @@ async def get_report(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/runs/{run_id}/lineage", response_model=APIResponse[LineageResponse])
+@router.get(
+    "/runs/{run_id}/lineage",
+    response_model=APIResponse[LineageResponse],
+    operation_id="backtests_get_lineage",
+)
 @inject
 async def get_lineage(
     run_id: str,
@@ -481,6 +499,7 @@ async def get_lineage(
 @router.get(
     "/lineage/events",
     response_model=APIResponse[list[DataLineageEventResponse]],
+    operation_id="backtests_get_data_lineage_events",
 )
 @inject
 async def get_data_lineage_events(
@@ -506,6 +525,7 @@ async def get_data_lineage_events(
 @router.get(
     "/lineage/graph",
     response_model=APIResponse[DataLineageGraphResponse],
+    operation_id="backtests_get_data_lineage_graph",
 )
 @inject
 async def get_data_lineage_graph(
@@ -535,6 +555,7 @@ async def get_data_lineage_graph(
 @router.get(
     "/runs/{run_id}/lineage/data",
     response_model=APIResponse[DataLineageRunResponse],
+    operation_id="backtests_get_run_data_lineage",
 )
 @inject
 async def get_run_data_lineage(
@@ -549,6 +570,7 @@ async def get_run_data_lineage(
 @router.get(
     "/runs/{run_id}/lineage/catalog-report",
     response_model=APIResponse[DataLineageCatalogRunReportResponse],
+    operation_id="backtests_get_run_data_lineage_catalog_report",
 )
 @inject
 async def get_run_data_lineage_catalog_report(
@@ -586,7 +608,11 @@ async def get_run_data_lineage_catalog_report(
     return APIResponse(data=to_data_lineage_catalog_run_report_response(report))
 
 
-@router.post("/runs/{run_id}/replay", response_model=APIResponse[ReplayResponse])
+@router.post(
+    "/runs/{run_id}/replay",
+    response_model=APIResponse[ReplayResponse],
+    operation_id="backtests_replay_run",
+)
 @inject
 async def replay_run(
     run_id: str,
@@ -622,6 +648,7 @@ async def replay_run(
 @router.get(
     "/runs/{run_id}/replay/proof",
     response_model=APIResponse[ReplayProofResponse],
+    operation_id="backtests_get_replay_proof",
 )
 @inject
 async def get_replay_proof(
@@ -638,6 +665,7 @@ async def get_replay_proof(
 @router.get(
     "/runs/{run_id}/replay/evidence",
     response_model=APIResponse[ReplayEvidenceSummaryResponse],
+    operation_id="backtests_get_replay_evidence_summary",
 )
 @inject
 async def get_replay_evidence_summary(
@@ -656,7 +684,11 @@ async def get_replay_evidence_summary(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/runs/{run_id}/nav", response_model=APIResponse[list[NavPointResponse]])
+@router.get(
+    "/runs/{run_id}/nav",
+    response_model=APIResponse[list[NavPointResponse]],
+    operation_id="backtests_get_nav_series",
+)
 @inject
 async def get_nav_series(
     run_id: str,
@@ -677,7 +709,11 @@ async def get_nav_series(
 _RESP_BENCHMARK = APIResponse[BenchmarkNavResponse]
 
 
-@router.get("/runs/{run_id}/benchmark", response_model=_RESP_BENCHMARK)
+@router.get(
+    "/runs/{run_id}/benchmark",
+    response_model=_RESP_BENCHMARK,
+    operation_id="backtests_get_benchmark",
+)
 @inject
 async def get_benchmark(
     run_id: str,

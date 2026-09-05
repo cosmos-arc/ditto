@@ -20,6 +20,7 @@ from ditto_application.commands.source_fallback_policy import (
 from ditto_application.source_fallback_policy_state import (
     CatalogSourceFallbackPolicy,
     CatalogSourceFallbackPolicyEvent,
+    CatalogSourceFallbackPolicyStatus,
 )
 from ditto_apps.api.routes import ingestion_source_fallback_policy
 from ditto_apps.models.common import APIResponse
@@ -69,7 +70,9 @@ def _inline_source_fallback_policy_route_thread_bridge(
     )
 
 
-def _policy(*, status: str = "draft") -> CatalogSourceFallbackPolicy:
+def _policy(
+    *, status: CatalogSourceFallbackPolicyStatus = "draft"
+) -> CatalogSourceFallbackPolicy:
     return CatalogSourceFallbackPolicy(
         policy_id="fallback-policy-001",
         dataset_id="stock_daily",

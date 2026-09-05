@@ -6,8 +6,11 @@ import importlib.util
 import stat
 from pathlib import Path
 from types import ModuleType
+from typing import Any, cast
 
+import httpx
 import pytest
+from ditto_apps.models.trade import DailyDecisionV2Response
 from ditto_apps.openapi_contract import (
     canonical_openapi_bytes,
     create_openapi_app,
@@ -16,12 +19,12 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
-_SNAPSHOT_PATH = _REPO_ROOT / "docs/openapi/v1.json"
+_SNAPSHOT_PATH = _REPO_ROOT / "contracts/openapi/v1.json"
 _DEBUG_PATH = "/api/v1/logs/test"
 
 
 def _load_exporter() -> ModuleType:
-    exporter_path = _REPO_ROOT / "scripts/export_openapi.py"
+    exporter_path = _REPO_ROOT / "tooling/contracts/export_openapi.py"
     spec = importlib.util.spec_from_file_location("ditto_export_openapi", exporter_path)
     assert spec is not None
     assert spec.loader is not None
@@ -41,6 +44,17 @@ def _operation_signatures(app: FastAPI) -> set[tuple[str, str, str]]:
         if isinstance(route, APIRoute) and route.path != _DEBUG_PATH
         for method in route.methods
     }
+
+
+def _public_operations(schema: dict[str, Any]) -> list[dict[str, Any]]:
+    methods = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+    paths = cast("dict[str, dict[str, Any]]", schema["paths"])
+    return [
+        operation
+        for path_item in paths.values()
+        for method, operation in path_item.items()
+        if method in methods
+    ]
 
 
 def test_static_openapi_matches_canonical_runtime_contract() -> None:
@@ -112,3 +126,80 @@ def test_runtime_and_pure_factory_share_non_debug_route_registration() -> None:
     contract_app = create_openapi_app(include_debug=False)
 
     assert _operation_signatures(runtime_app) == _operation_signatures(contract_app)
+
+
+def test_contract_metadata_declares_true_local_security_boundary() -> None:
+    """The contract says exactly how the unauthenticated local API is reached."""
+    schema = create_openapi_app(include_debug=False).openapi()
+
+    assert schema["security"] == []
+    assert schema["servers"] == [
+        {
+            "url": "/",
+            "description": "Current local Ditto API origin",
+        }
+    ]
+    assert schema["info"]["license"] == {
+        "name": "Proprietary - All rights reserved",
+        "identifier": "LicenseRef-Proprietary",
+    }
+
+
+def test_every_operation_preserves_error_envelope_for_contract_assertion() -> None:
+    """The optional version header must preserve the existing typed v1 envelope."""
+    schema = create_openapi_app(include_debug=False).openapi()
+
+    operations = _public_operations(schema)
+    assert operations
+    for operation in operations:
+        version_headers = [
+            parameter
+            for parameter in operation.get("parameters", [])
+            if parameter.get("in") == "header"
+            and parameter.get("name") == "X-Ditto-API-Contract-Version"
+        ]
+        assert len(version_headers) == 1
+        assert version_headers[0]["required"] is False
+        error_schema = operation["responses"]["422"]["content"]["application/json"][
+            "schema"
+        ]
+        assert error_schema == {"$ref": "#/components/schemas/ErrorResponse"}
+
+
+@pytest.mark.asyncio
+async def test_runtime_rejects_wrong_contract_version_with_v1_error_envelope() -> None:
+    """The documented 422 is observable at the real runtime boundary."""
+    from ditto_apps.main import app as runtime_app
+
+    transport = httpx.ASGITransport(app=runtime_app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test",
+    ) as client:
+        response = await client.get(
+            "/healthz",
+            headers={"X-Ditto-API-Contract-Version": "v2"},
+        )
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert set(payload) == {
+        "detail",
+        "error",
+        "request_id",
+        "status_code",
+        "success",
+        "timestamp",
+    }
+    assert payload["success"] is False
+    assert payload["status_code"] == 422
+    assert payload["error"] == "VALIDATION_ERROR"
+    assert payload["detail"] == "Invalid request parameters"
+    assert payload["request_id"] == response.headers["X-Request-ID"]
+
+
+def test_daily_decision_v2_openapi_example_validates_against_provider_model() -> None:
+    """Checked-in examples must remain executable provider-owned payloads."""
+    model_schema = DailyDecisionV2Response.model_json_schema()
+
+    DailyDecisionV2Response.model_validate(model_schema["example"])

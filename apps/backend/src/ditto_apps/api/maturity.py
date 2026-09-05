@@ -24,6 +24,7 @@ MATURITY_NOTE_BY_LEVEL: dict[ApiMaturity, str] = {
 ROUTE_MATURITY_BY_PREFIX: dict[str, ApiMaturity] = {
     "/": "infrastructure",
     "/healthz": "infrastructure",
+    "/readyz": "infrastructure",
     "/api/v1/status": "infrastructure",
     "/api/v1/agent": "experimental",
     "/api/v1/backtests": "initial-focus",
@@ -104,10 +105,22 @@ def build_maturity_openapi_schema(app: FastAPI) -> dict[str, Any]:
     schema = get_openapi(
         title=app.title,
         version=app.version,
+        openapi_version=app.openapi_version,
+        summary=app.summary,
         description=app.description,
         routes=app.routes,
-        tags=OPENAPI_TAGS,
+        webhooks=app.webhooks.routes,
+        tags=app.openapi_tags,
+        servers=app.servers,
+        terms_of_service=app.terms_of_service,
+        contact=app.contact,
+        license_info=app.license_info,
+        separate_input_output_schemas=app.separate_input_output_schemas,
+        external_docs=app.openapi_external_docs,
     )
+    # Ditto has no HTTP authentication layer. Its supported deployment boundary
+    # is the loopback-only server declared in ``servers``.
+    schema["security"] = []
     _annotate_openapi_operations(schema)
     app.openapi_schema = schema
     return schema

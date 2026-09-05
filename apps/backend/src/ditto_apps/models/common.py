@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Generic, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -86,6 +86,7 @@ class ErrorResponse(BaseModel):
     Used for external API responses, so using Pydantic BaseModel (not frozen dataclass).
     """
 
+    success: Literal[False] = False
     status_code: int
     error: str
     detail: str | None = None

@@ -138,7 +138,11 @@ class SourceDataResponse(APIResponse[list[dict[str, Any]]]):
     query_time_ms: float
 
 
-@router.get("/{source}/{dataset}", response_model=SourceDataResponse)
+@router.get(
+    "/{source}/{dataset}",
+    response_model=SourceDataResponse,
+    operation_id="source_get_source_data",
+)
 @inject
 async def get_source_data(
     # 依赖注入

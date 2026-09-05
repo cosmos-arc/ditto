@@ -20,7 +20,9 @@ from ditto_apps.models.fx import FxBar, FxQuery, to_fx_bar_list
 router = APIRouter(prefix="/fx", tags=["fx"])
 
 
-@router.post("/bars", response_model=APIResponse[list[FxBar]])
+@router.post(
+    "/bars", response_model=APIResponse[list[FxBar]], operation_id="fx_post_bars"
+)
 @inject
 async def post_bars(
     query: FxQuery,

@@ -63,7 +63,11 @@ def _fetch_valuation(
     )
 
 
-@router.get("/margin", response_model=APIResponse[list[Margin]])
+@router.get(
+    "/margin",
+    response_model=APIResponse[list[Margin]],
+    operation_id="capital_get_margin",
+)
 @inject
 async def get_margin(
     capital_facade: Annotated[CapitalQueryFacade, FromComponent()],
@@ -113,7 +117,11 @@ async def get_margin(
     return APIResponse(data=margins)
 
 
-@router.get("/valuation", response_model=APIResponse[list[Valuation]])
+@router.get(
+    "/valuation",
+    response_model=APIResponse[list[Valuation]],
+    operation_id="capital_get_valuation",
+)
 @inject
 async def get_valuation(
     capital_facade: Annotated[CapitalQueryFacade, FromComponent()],

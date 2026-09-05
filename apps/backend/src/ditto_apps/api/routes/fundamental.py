@@ -96,7 +96,11 @@ def _fetch_corporate_actions(
     )
 
 
-@router.get("/financials/{report_type}", response_model=APIResponse[list[Financial]])
+@router.get(
+    "/financials/{report_type}",
+    response_model=APIResponse[list[Financial]],
+    operation_id="fundamental_get_financials",
+)
 @inject
 async def get_financials(
     report_type: FinancialType,
@@ -149,7 +153,11 @@ async def get_financials(
     return APIResponse(data=financials)
 
 
-@router.get("/dividend", response_model=APIResponse[list[Dividend]])
+@router.get(
+    "/dividend",
+    response_model=APIResponse[list[Dividend]],
+    operation_id="fundamental_get_dividend",
+)
 @inject
 async def get_dividend(
     fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],
@@ -200,7 +208,11 @@ async def get_dividend(
     return APIResponse(data=dividends)
 
 
-@router.get("/corporate-actions", response_model=APIResponse[list[CorporateAction]])
+@router.get(
+    "/corporate-actions",
+    response_model=APIResponse[list[CorporateAction]],
+    operation_id="fundamental_list_corporate_actions",
+)
 @inject
 async def list_corporate_actions(
     fundamental_facade: Annotated[FundamentalQueryFacade, FromComponent()],

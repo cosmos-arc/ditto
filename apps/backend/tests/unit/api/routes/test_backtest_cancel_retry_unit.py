@@ -609,7 +609,9 @@ class TestGetReport:
         }
         response = await _call_report("run-001", mock_query_facade)
         assert response.data.run_id == "run-001"
-        assert response.data.alpha_stats.annualized_return == 12.5
+        alpha_stats = response.data.alpha_stats
+        assert alpha_stats is not None
+        assert alpha_stats.annualized_return == 12.5
 
     async def test_report_not_found(
         self,
@@ -712,7 +714,7 @@ class TestGetReplayEvidenceSummary:
         mock_query_facade: MagicMock,
     ) -> None:
         """summary 存在时返回 restored-report + replay-proof 汇总."""
-        resume_provenance = {
+        resume_provenance: dict[str, object] = {
             "from_run_id": "run-root",
             "checkpoint_trade_date": "2026-01-31",
             "account_state_hash": "sha256:account",

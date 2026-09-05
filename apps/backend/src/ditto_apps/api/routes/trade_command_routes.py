@@ -55,6 +55,7 @@ router = APIRouter()
 @router.post(
     "/account-baseline",
     response_model=APIResponse[AccountBaselineImportResponse],
+    operation_id="manual_import_account_baseline",
 )
 @inject
 async def import_account_baseline(
@@ -125,7 +126,11 @@ def _raise_trade_command_error(exc: Exception) -> Never:
 # ---------------------------------------------------------------------------
 
 
-@router.put("/intents/{intent_id}/status", response_model=APIResponse[bool])
+@router.put(
+    "/intents/{intent_id}/status",
+    response_model=APIResponse[bool],
+    operation_id="manual_update_intent_status",
+)
 @inject
 async def update_intent_status(
     intent_id: str,
@@ -151,7 +156,11 @@ async def update_intent_status(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/fills", response_model=APIResponse[FillResponse])
+@router.post(
+    "/fills",
+    response_model=APIResponse[FillResponse],
+    operation_id="manual_record_fill",
+)
 @inject
 async def record_fill(
     request: RecordFillRequest,
@@ -181,6 +190,7 @@ async def record_fill(
 @router.post(
     "/fills/{fill_id}/void",
     response_model=APIResponse[FillAdjustmentResponse],
+    operation_id="manual_void_fill",
 )
 @inject
 async def void_fill(
@@ -204,6 +214,7 @@ async def void_fill(
 @router.post(
     "/fills/{fill_id}/replace",
     response_model=APIResponse[FillAdjustmentResponse],
+    operation_id="manual_replace_fill",
 )
 @inject
 async def replace_fill(

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime, timedelta
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from ditto_application.queries.technical_analysis import (
@@ -13,8 +13,10 @@ from ditto_application.queries.technical_analysis import (
     TechnicalAnalysisQueryService,
 )
 from ditto_apps.api.routes.technical_analysis import query_technical_analysis
+from ditto_apps.models.common import APIResponse
 from ditto_apps.models.technical_analysis import (
     TechnicalAnalysisQueryBody,
+    TechnicalAnalysisSnapshotResponse,
     TechnicalAnalysisSpecRequest,
 )
 from ditto_data.catalog.contracts import DataAssetRef
@@ -121,7 +123,10 @@ def test_route_returns_exact_snapshot_with_indicator_and_level_evidence() -> Non
         query=TechnicalAnalysisQueryService(_Source(), TechnicalAnalysisService()),
     )
     handler = cast(
-        Callable[..., object],
+        Callable[
+            ...,
+            Coroutine[Any, Any, APIResponse[TechnicalAnalysisSnapshotResponse]],
+        ],
         query_technical_analysis.__dict__["__dishka_orig_func__"],
     )
 

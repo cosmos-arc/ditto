@@ -74,6 +74,7 @@ def _to_factor_response(info: FactorDescriptorInfo) -> FactorDescriptorResponse:
 @router.get(
     "/node-descriptors",
     response_model=APIResponse[list[NodeDescriptorResponse]],
+    operation_id="research_list_research_node_descriptors",
 )
 @inject
 async def list_research_node_descriptors(
@@ -87,6 +88,7 @@ async def list_research_node_descriptors(
 @router.get(
     "/factors",
     response_model=APIResponse[list[FactorDescriptorResponse]],
+    operation_id="research_list_research_factors",
 )
 @inject
 async def list_research_factors(

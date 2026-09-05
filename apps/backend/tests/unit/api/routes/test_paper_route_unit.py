@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 from unittest.mock import patch
 
 from ditto_application.commands.paper_account import CreatePaperAccountHandler
@@ -52,8 +52,13 @@ async def _inline(function: Callable[..., object], /, *args, **kwargs):
     return function(*args, **kwargs)
 
 
-def _original(function: Callable[..., object]) -> Callable[..., object]:
-    return cast(Callable[..., object], function.__dict__["__dishka_orig_func__"])
+def _original[T](
+    function: Callable[..., Awaitable[T]],
+) -> Callable[..., Coroutine[Any, Any, T]]:
+    return cast(
+        Callable[..., Coroutine[Any, Any, T]],
+        function.__dict__["__dishka_orig_func__"],
+    )
 
 
 def _operate_body() -> OperatePaperOrderBody:

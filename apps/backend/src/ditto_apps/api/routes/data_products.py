@@ -39,7 +39,11 @@ Profile = Annotated[
 ]
 
 
-@router.get("", response_model=APIResponse[list[DataProductViewResponse]])
+@router.get(
+    "",
+    response_model=APIResponse[list[DataProductViewResponse]],
+    operation_id="data_products_list_data_products",
+)
 @inject
 async def list_data_products(
     facade: Annotated[DataProductsQueryFacade, FromComponent()],
@@ -53,6 +57,7 @@ async def list_data_products(
 @router.get(
     "/{dataset_id}/coverage",
     response_model=APIResponse[DataProductCoverageResponse],
+    operation_id="data_products_get_data_product_coverage",
 )
 @inject
 async def get_data_product_coverage(
@@ -74,6 +79,7 @@ async def get_data_product_coverage(
 @router.get(
     "/{dataset_id}/quality",
     response_model=APIResponse[DataProductQualityResponse],
+    operation_id="data_products_get_data_product_quality",
 )
 @inject
 async def get_data_product_quality(
@@ -95,6 +101,7 @@ async def get_data_product_quality(
 @router.get(
     "/{dataset_id}/runs",
     response_model=APIResponse[list[DataProductRunResponse]],
+    operation_id="data_products_list_data_product_runs",
 )
 @inject
 async def list_data_product_runs(
@@ -114,6 +121,7 @@ async def list_data_product_runs(
 @router.get(
     "/{dataset_id}/evidence",
     response_model=APIResponse[DataProductEvidenceResponse],
+    operation_id="data_products_get_data_product_evidence",
 )
 @inject
 async def get_data_product_evidence(
@@ -135,6 +143,7 @@ async def get_data_product_evidence(
 @router.get(
     "/{dataset_id}/license",
     response_model=APIResponse[DataProductLicenseResponse],
+    operation_id="data_products_get_data_product_license",
 )
 @inject
 async def get_data_product_license(

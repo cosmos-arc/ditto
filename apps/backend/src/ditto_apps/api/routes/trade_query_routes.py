@@ -90,6 +90,7 @@ router = APIRouter()
 @router.get(
     "/account-baseline",
     response_model=APIResponse[AccountBaselineResponse | None],
+    operation_id="manual_get_account_baseline",
 )
 @inject
 async def get_account_baseline(
@@ -411,6 +412,7 @@ def to_daily_decision_v3_response(
 @router.get(
     "/daily-decision",
     response_model=APIResponse[DailyDecisionReportResponse],
+    operation_id="manual_get_daily_decision",
 )
 @inject
 async def get_daily_decision(
@@ -430,6 +432,7 @@ async def get_daily_decision(
 @router.get(
     "/daily-decision/v2",
     response_model=APIResponse[DailyDecisionV2Response],
+    operation_id="manual_get_daily_decision_v2",
 )
 @inject
 async def get_daily_decision_v2(
@@ -454,6 +457,7 @@ async def get_daily_decision_v2(
 @router.get(
     "/daily-decision/v3",
     response_model=APIResponse[DailyDecisionV3Response],
+    operation_id="manual_get_daily_decision_v3",
 )
 @inject
 async def get_daily_decision_v3(
@@ -477,7 +481,11 @@ async def get_daily_decision_v3(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/intents", response_model=APIResponse[list[TradeIntentResponse]])
+@router.get(
+    "/intents",
+    response_model=APIResponse[list[TradeIntentResponse]],
+    operation_id="manual_list_intents",
+)
 @inject
 async def list_intents(
     facade: Annotated[TradeQueryFacade, FromComponent()],
@@ -501,7 +509,11 @@ async def list_intents(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/fills", response_model=APIResponse[list[FillResponse]])
+@router.get(
+    "/fills",
+    response_model=APIResponse[list[FillResponse]],
+    operation_id="manual_list_fills",
+)
 @inject
 async def list_fills(
     facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
@@ -520,7 +532,11 @@ async def list_fills(
     return paginate([to_fill_response(f) for f in fills], pagination)
 
 
-@router.get("/fills/effective", response_model=APIResponse[list[FillResponse]])
+@router.get(
+    "/fills/effective",
+    response_model=APIResponse[list[FillResponse]],
+    operation_id="manual_list_effective_fills",
+)
 @inject
 async def list_effective_fills(
     facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
@@ -542,6 +558,7 @@ async def list_effective_fills(
 @router.get(
     "/fill-adjustments",
     response_model=APIResponse[list[FillAdjustmentResponse]],
+    operation_id="manual_list_fill_adjustments",
 )
 @inject
 async def list_fill_adjustments(
@@ -569,7 +586,11 @@ async def list_fill_adjustments(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/positions", response_model=APIResponse[list[PositionSnapshotResponse]])
+@router.get(
+    "/positions",
+    response_model=APIResponse[list[PositionSnapshotResponse]],
+    operation_id="manual_list_positions",
+)
 @inject
 async def list_positions(
     facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
@@ -591,7 +612,11 @@ async def list_positions(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/pnl", response_model=APIResponse[PnlSummaryResponse])
+@router.get(
+    "/pnl",
+    response_model=APIResponse[PnlSummaryResponse],
+    operation_id="manual_compute_pnl",
+)
 @inject
 async def compute_pnl(
     facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
@@ -612,7 +637,11 @@ async def compute_pnl(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/signals/latest", response_model=APIResponse[list[TradeIntentResponse]])
+@router.get(
+    "/signals/latest",
+    response_model=APIResponse[list[TradeIntentResponse]],
+    operation_id="manual_get_latest_signals",
+)
 @inject
 async def get_latest_signals(
     facade: Annotated[SignalQueryFacade, FromComponent()],
@@ -630,6 +659,7 @@ async def get_latest_signals(
 @router.get(
     "/signals/{signal_date}/intents",
     response_model=APIResponse[list[TradeIntentResponse]],
+    operation_id="manual_get_signal_intents",
 )
 @inject
 async def get_signal_intents(
@@ -652,7 +682,11 @@ async def get_signal_intents(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/deviation", response_model=APIResponse[DeviationResponse])
+@router.get(
+    "/deviation",
+    response_model=APIResponse[DeviationResponse],
+    operation_id="manual_get_deviation",
+)
 @inject
 async def get_deviation(
     facade: Annotated[SignalDeviationQueryFacade, FromComponent()],
@@ -675,7 +709,11 @@ async def get_deviation(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/comparison", response_model=APIResponse[ComparisonMetricsResponse])
+@router.get(
+    "/comparison",
+    response_model=APIResponse[ComparisonMetricsResponse],
+    operation_id="manual_get_comparison",
+)
 @inject
 async def get_comparison(
     facade: Annotated[ComparisonQueryFacade, FromComponent()],

@@ -351,7 +351,11 @@ def to_maturity_governance_report_response(
     )
 
 
-@router.get("/status", response_model=APIResponse[IngestionStatusResponse])
+@router.get(
+    "/status",
+    response_model=APIResponse[IngestionStatusResponse],
+    operation_id="ingestion_get_ingestion_status",
+)
 @inject
 async def get_ingestion_status(
     facade: Annotated[IngestionStatusQueryFacade, FromComponent()],
@@ -417,7 +421,11 @@ async def get_ingestion_status(
     )
 
 
-@router.get("/history", response_model=APIResponse[list[IngestionHistoryItem]])
+@router.get(
+    "/history",
+    response_model=APIResponse[list[IngestionHistoryItem]],
+    operation_id="ingestion_get_ingestion_history",
+)
 @inject
 async def get_ingestion_history(
     facade: Annotated[IngestionStatusQueryFacade, FromComponent()],
@@ -442,7 +450,11 @@ async def get_ingestion_history(
     )
 
 
-@router.get("/dq-summary", response_model=APIResponse[DQSummaryResponse])
+@router.get(
+    "/dq-summary",
+    response_model=APIResponse[DQSummaryResponse],
+    operation_id="ingestion_get_dq_summary",
+)
 @inject
 async def get_dq_summary() -> APIResponse[DQSummaryResponse]:
     """
@@ -456,6 +468,7 @@ async def get_dq_summary() -> APIResponse[DQSummaryResponse]:
 @router.post(
     "/catalog/promotion/evidence",
     response_model=APIResponse[PromotionEvidenceReviewResponse],
+    operation_id="ingestion_review_dataset_promotion_evidence",
 )
 @inject
 async def review_dataset_promotion_evidence(
@@ -496,6 +509,7 @@ async def review_dataset_promotion_evidence(
 @router.get(
     "/catalog/promotion/readiness",
     response_model=APIResponse[PromotionReadinessReportResponse],
+    operation_id="ingestion_get_catalog_promotion_readiness_report",
 )
 @inject
 async def get_catalog_promotion_readiness_report(
@@ -533,6 +547,7 @@ async def get_catalog_promotion_readiness_report(
 @router.get(
     "/catalog/maturity/governance",
     response_model=APIResponse[MaturityGovernanceReportResponse],
+    operation_id="ingestion_get_catalog_maturity_governance_report",
 )
 @inject
 async def get_catalog_maturity_governance_report(
@@ -570,6 +585,7 @@ async def get_catalog_maturity_governance_report(
 @router.get(
     "/catalog/promotion/history",
     response_model=APIResponse[list[MaturityPromotionHistoryItem]],
+    operation_id="ingestion_list_dataset_maturity_promotion_history",
 )
 @inject
 async def list_dataset_maturity_promotion_history(
@@ -586,6 +602,7 @@ async def list_dataset_maturity_promotion_history(
 @router.post(
     "/catalog/promotion/revoke",
     response_model=APIResponse[MaturityPromotionRevokeResponse],
+    operation_id="ingestion_revoke_dataset_maturity_promotion",
 )
 @inject
 async def revoke_dataset_maturity_promotion(
@@ -619,6 +636,7 @@ async def revoke_dataset_maturity_promotion(
 @router.get(
     "/catalog/assets",
     response_model=APIResponse[list[CatalogAssetResponse]],
+    operation_id="ingestion_list_catalog_assets",
 )
 @inject
 async def list_catalog_assets(
@@ -642,6 +660,7 @@ async def list_catalog_assets(
 @router.get(
     "/catalog/asset",
     response_model=APIResponse[CatalogAssetResponse],
+    operation_id="ingestion_get_catalog_asset",
 )
 @inject
 async def get_catalog_asset(
@@ -665,6 +684,7 @@ async def get_catalog_asset(
 @router.get(
     "/catalog/source-health",
     response_model=APIResponse[CatalogSourceHealthReportResponse],
+    operation_id="ingestion_get_catalog_source_health_report",
 )
 @inject
 async def get_catalog_source_health_report(
@@ -689,6 +709,7 @@ async def get_catalog_source_health_report(
 @router.get(
     "/catalog/source-fallback/preview",
     response_model=APIResponse[CatalogSourceFallbackPolicyPreviewResponse],
+    operation_id="ingestion_get_catalog_source_fallback_policy_preview",
 )
 @inject
 async def get_catalog_source_fallback_policy_preview(
@@ -713,6 +734,7 @@ async def get_catalog_source_fallback_policy_preview(
 @router.get(
     "/catalog/source-fallback/summary",
     response_model=APIResponse[CatalogSourceFallbackPolicySummaryResponse],
+    operation_id="ingestion_get_catalog_source_fallback_policy_summary",
 )
 @inject
 async def get_catalog_source_fallback_policy_summary(
@@ -737,6 +759,7 @@ async def get_catalog_source_fallback_policy_summary(
 @router.get(
     "/catalog/source-health/summary",
     response_model=APIResponse[CatalogSourceHealthSummaryReportResponse],
+    operation_id="ingestion_get_catalog_source_health_summary_report",
 )
 @inject
 async def get_catalog_source_health_summary_report(

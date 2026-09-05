@@ -184,7 +184,10 @@ def submit_backtest_flow(
 
 
 @router.post(
-    "/runs", status_code=202, response_model=APIResponse[BacktestRunTriggerResponse]
+    "/runs",
+    status_code=202,
+    response_model=APIResponse[BacktestRunTriggerResponse],
+    operation_id="backtests_trigger_backtest",
 )
 @inject
 async def trigger_backtest(
@@ -227,7 +230,11 @@ async def trigger_backtest(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/runs/{run_id}/cancel", response_model=APIResponse[CancelRunResponse])
+@router.post(
+    "/runs/{run_id}/cancel",
+    response_model=APIResponse[CancelRunResponse],
+    operation_id="backtests_cancel_run",
+)
 @inject
 async def cancel_run(
     run_id: str,
@@ -248,6 +255,7 @@ async def cancel_run(
     "/runs/{run_id}/retry",
     status_code=202,
     response_model=APIResponse[RetryRunResponse],
+    operation_id="backtests_retry_run",
 )
 @inject
 async def retry_run(
@@ -299,6 +307,7 @@ async def retry_run(
     "/runs/{run_id}/resume",
     status_code=202,
     response_model=APIResponse[ResumeRunResponse],
+    operation_id="backtests_resume_run",
 )
 @inject
 async def resume_run(

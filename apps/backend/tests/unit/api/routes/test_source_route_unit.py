@@ -76,6 +76,8 @@ class TestSourceDataQueryParams:
     def test_default_maturity_opt_in_is_false(self) -> None:
         params = SourceDataQueryParams(
             ticker="000001",
+            standard_ticker=None,
+            instrument_id=None,
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
@@ -85,6 +87,8 @@ class TestSourceDataQueryParams:
     def test_accepts_explicit_maturity_opt_in(self) -> None:
         params = SourceDataQueryParams(
             ticker="000001",
+            standard_ticker=None,
+            instrument_id=None,
             start_date="2024-01-01",
             end_date="2024-01-31",
             allow_experimental_data=True,

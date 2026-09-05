@@ -301,6 +301,7 @@ def to_catalog_remediation_backlog_response(
 @router.post(
     "/catalog/remediation/approvals",
     response_model=APIResponse[CatalogRemediationApprovalResponse],
+    operation_id="ingestion_request_catalog_remediation_approval",
 )
 @inject
 async def request_catalog_remediation_approval(
@@ -327,6 +328,7 @@ async def request_catalog_remediation_approval(
 @router.post(
     "/catalog/remediation/approvals/{approval_id}/decision",
     response_model=APIResponse[CatalogRemediationApprovalResponse],
+    operation_id="ingestion_decide_catalog_remediation_approval",
 )
 @inject
 async def decide_catalog_remediation_approval(
@@ -351,6 +353,7 @@ async def decide_catalog_remediation_approval(
 @router.post(
     "/catalog/remediation/approvals/{approval_id}/execute",
     response_model=APIResponse[CatalogRemediationApprovalExecutionResponse],
+    operation_id="ingestion_execute_catalog_remediation_approval",
 )
 @inject
 async def execute_catalog_remediation_approval(
@@ -381,6 +384,7 @@ async def execute_catalog_remediation_approval(
 @router.get(
     "/catalog/remediation/approvals/{approval_id}/events",
     response_model=APIResponse[list[CatalogRemediationApprovalEventResponse]],
+    operation_id="ingestion_list_catalog_remediation_approval_events",
 )
 @inject
 async def list_catalog_remediation_approval_events(
@@ -400,6 +404,7 @@ async def list_catalog_remediation_approval_events(
 @router.get(
     "/catalog/remediation/approvals/{approval_id}",
     response_model=APIResponse[CatalogRemediationApprovalResponse],
+    operation_id="ingestion_get_catalog_remediation_approval",
 )
 @inject
 async def get_catalog_remediation_approval(
@@ -417,6 +422,7 @@ async def get_catalog_remediation_approval(
 @router.get(
     "/catalog/remediation/approvals",
     response_model=APIResponse[list[CatalogRemediationApprovalResponse]],
+    operation_id="ingestion_list_catalog_remediation_approvals",
 )
 @inject
 async def list_catalog_remediation_approvals(
@@ -441,6 +447,7 @@ async def list_catalog_remediation_approvals(
 @router.get(
     "/catalog/remediation/backlog",
     response_model=APIResponse[CatalogRemediationBacklogResponse],
+    operation_id="ingestion_get_catalog_remediation_backlog",
 )
 @inject
 async def get_catalog_remediation_backlog(
@@ -475,6 +482,7 @@ async def get_catalog_remediation_backlog(
 @router.get(
     "/catalog/remediation/items/{item_id}",
     response_model=APIResponse[CatalogRemediationItemDetailResponse],
+    operation_id="ingestion_get_catalog_remediation_item_detail",
 )
 @inject
 async def get_catalog_remediation_item_detail(

@@ -27,12 +27,22 @@ from ditto_application.queries.lineage import (
 )
 from ditto_apps.api.routes import backtest_query_routes
 from ditto_apps.models.common import APIResponse, PaginationRequest
+from ditto_apps.models.lineage import (
+    DataLineageCatalogRunReportResponse,
+    DataLineageEventResponse,
+    DataLineageGraphResponse,
+    DataLineageRunResponse,
+)
 
 pytestmark = pytest.mark.asyncio
 
-_Route = Callable[..., Awaitable[APIResponse[list[object]]]]
-_RunSummaryRoute = Callable[..., Awaitable[APIResponse[object]]]
-_GraphRoute = Callable[..., Awaitable[APIResponse[object]]]
+_Route = Callable[..., Awaitable[APIResponse[list[DataLineageEventResponse]]]]
+_RunSummaryRoute = Callable[..., Awaitable[APIResponse[DataLineageRunResponse]]]
+_CatalogRoute = Callable[
+    ...,
+    Awaitable[APIResponse[DataLineageCatalogRunReportResponse]],
+]
+_GraphRoute = Callable[..., Awaitable[APIResponse[DataLineageGraphResponse]]]
 
 
 async def test_data_lineage_events_route_returns_asset_events(
@@ -170,7 +180,7 @@ async def test_run_data_lineage_catalog_report_route_returns_catalog_metadata(
     )
     assert route_func is not None
     route = cast(
-        _RunSummaryRoute,
+        _CatalogRoute,
         getattr(route_func, "__dishka_orig_func__", route_func),
     )
     input_asset = DataLineageAsset(
@@ -327,7 +337,7 @@ async def test_run_data_lineage_catalog_report_route_returns_policy_effect_count
     )
     assert route_func is not None
     route = cast(
-        _RunSummaryRoute,
+        _CatalogRoute,
         getattr(route_func, "__dishka_orig_func__", route_func),
     )
     input_asset = DataLineageAsset(

@@ -24,7 +24,11 @@ from ditto_apps.models.common import APIResponse
 router = APIRouter(prefix="/commodity", tags=["commodity"])
 
 
-@router.post("/bars", response_model=APIResponse[list[CommodityBar]])
+@router.post(
+    "/bars",
+    response_model=APIResponse[list[CommodityBar]],
+    operation_id="commodity_post_bars",
+)
 @inject
 async def post_bars(
     query: CommodityQuery,

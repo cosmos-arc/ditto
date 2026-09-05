@@ -459,12 +459,42 @@ class DailyDecisionV2Response(BaseModel):
         json_schema_extra={
             "example": {
                 "identity": {"strategy_id": "seed_etf_industry_rotation"},
-                "readiness": {"status": "ready", "reason_codes": []},
-                "data": {"required_datasets": ["etf_daily"]},
-                "run_package": {"outcome": "completed"},
-                "account_positions": {"as_of": "2026-07-16"},
+                "readiness": {
+                    "status": "ready",
+                    "reason_codes": [],
+                    "details": [],
+                },
+                "data": {
+                    "required_datasets": ["etf_daily"],
+                    "snapshot_ids": {"etf_daily": "snapshot-etf-daily-20260716"},
+                    "dataset_states": [
+                        {
+                            "dataset": "etf_daily",
+                            "status": "ready",
+                            "snapshot_id": "snapshot-etf-daily-20260716",
+                            "reason": "",
+                        }
+                    ],
+                    "freshness": "ready",
+                    "dq_state": "passed",
+                },
+                "run_package": {
+                    "outcome": "completed",
+                    "checksum_valid": True,
+                    "no_rebalance": False,
+                    "factor_evidence": {},
+                    "risk_evidence": [],
+                },
+                "account_positions": {
+                    "as_of": "2026-07-16",
+                    "positions": [],
+                },
                 "actions": [],
-                "execution_review": {"unresolved_conflicts": []},
+                "execution_review": {
+                    "effective_fills": [],
+                    "exceptions": [],
+                    "unresolved_conflicts": [],
+                },
             }
         },
     )

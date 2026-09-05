@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import cast
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -41,8 +41,13 @@ async def _inline(function: Callable[..., object], /, *args, **kwargs):
     return function(*args, **kwargs)
 
 
-def _original(function: Callable[..., object]) -> Callable[..., object]:
-    return cast(Callable[..., object], function.__dict__["__dishka_orig_func__"])
+def _original[T](
+    function: Callable[..., Awaitable[T]],
+) -> Callable[..., Coroutine[Any, Any, T]]:
+    return cast(
+        Callable[..., Coroutine[Any, Any, T]],
+        function.__dict__["__dishka_orig_func__"],
+    )
 
 
 def _opening_body(*, idempotency_key: str = "opening") -> ManualEventBody:
@@ -107,11 +112,13 @@ def test_manual_routes_create_append_correct_reverse_and_rebuild(tmp_path) -> No
                 handler=manual_handler,
             )
         )
+        buy_event = buy.data.event
+        assert buy_event is not None
         correction = asyncio.run(
             _original(correct_manual_event)(
                 account_id="manual-main",
                 body=CorrectManualEventBody(
-                    corrects_event_id=buy.data.event.event_id,
+                    corrects_event_id=buy_event.event_id,
                     replacement=ManualEventBody(
                         event_type="buy",
                         trade_date=date(2026, 8, 31),
@@ -127,11 +134,13 @@ def test_manual_routes_create_append_correct_reverse_and_rebuild(tmp_path) -> No
                 handler=manual_handler,
             )
         )
+        correction_event = correction.data.event
+        assert correction_event is not None
         reversal = asyncio.run(
             _original(reverse_manual_event)(
                 account_id="manual-main",
                 body=ReverseManualEventBody(
-                    reverses_event_id=correction.data.event.event_id,
+                    reverses_event_id=correction_event.event_id,
                     trade_date=date(2026, 8, 31),
                     settlement_date=date(2026, 8, 31),
                     idempotency_key="reverse-correction",
@@ -140,6 +149,8 @@ def test_manual_routes_create_append_correct_reverse_and_rebuild(tmp_path) -> No
                 handler=manual_handler,
             )
         )
+        reversal_event = reversal.data.event
+        assert reversal_event is not None
         ledger = asyncio.run(
             _original(get_manual_account_ledger)(
                 account_id="manual-main",
@@ -152,8 +163,8 @@ def test_manual_routes_create_append_correct_reverse_and_rebuild(tmp_path) -> No
     assert created.data.event is None
     assert opening.data.status == "created"
     assert replayed.data.status == "replayed"
-    assert correction.data.event.corrects_event_id == buy.data.event.event_id
-    assert reversal.data.event.reverses_event_id == correction.data.event.event_id
+    assert correction_event.corrects_event_id == buy_event.event_id
+    assert reversal_event.reverses_event_id == correction_event.event_id
     assert ledger.data.account.kind == "manual"
     assert ledger.data.snapshot.cash.available == Decimal("89995.00")
     assert ledger.data.snapshot.cash.settled == Decimal("100000.00")
@@ -202,6 +213,34 @@ def test_manual_request_models_are_strict_and_exclude_control_events() -> None:
                 "unexpected": True,
             }
         )
+
+
+def test_manual_request_models_accept_canonical_json_scalars() -> None:
+    """HTTP JSON strings and arrays must survive the strict request boundary."""
+    account = CreateManualAccountBody.model_validate(
+        {
+            "account_id": "manual-main",
+            "name": "我的账户",
+            "opened_at": "2026-08-31T09:30:00+08:00",
+        }
+    )
+    event = ManualEventBody.model_validate(
+        {
+            "event_type": "opening_cash",
+            "trade_date": "2026-08-31",
+            "settlement_date": "2026-08-31",
+            "idempotency_key": "opening",
+            "actor": "user:chevy",
+            "gross_amount": "100000.00",
+            "net_cash": "100000.00",
+            "attachment_refs": ["receipt:1"],
+        }
+    )
+
+    assert account.opened_at == datetime.fromisoformat("2026-08-31T09:30:00+08:00")
+    assert event.trade_date == date(2026, 8, 31)
+    assert event.gross_amount == Decimal("100000.00")
+    assert event.attachment_refs == ("receipt:1",)
 
 
 def test_manual_openapi_surface_has_stable_operation_ids() -> None:

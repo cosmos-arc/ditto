@@ -63,7 +63,11 @@ def _list_indicators(
     )
 
 
-@router.post("/indicators", response_model=APIResponse[list[Indicator]])
+@router.post(
+    "/indicators",
+    response_model=APIResponse[list[Indicator]],
+    operation_id="macro_post_indicators",
+)
 @inject
 async def post_indicators(
     query: IndicatorQuery,
@@ -94,7 +98,11 @@ async def post_indicators(
     return APIResponse(data=indicators)
 
 
-@router.get("/indicators/metadata", response_model=APIResponse[list[Indicator]])
+@router.get(
+    "/indicators/metadata",
+    response_model=APIResponse[list[Indicator]],
+    operation_id="macro_get_indicators_metadata",
+)
 @inject
 async def get_indicators_metadata(
     facade: Annotated[MacroQueryFacade, FromComponent()],

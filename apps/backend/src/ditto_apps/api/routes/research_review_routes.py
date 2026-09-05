@@ -38,6 +38,7 @@ async def run_blocking[**P, R](
 @router.get(
     "/reviews",
     response_model=APIResponse[list[StrategyVersionResponse]],
+    operation_id="research_list_research_reviews",
 )
 @inject
 async def list_research_reviews(

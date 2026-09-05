@@ -68,6 +68,7 @@ from ditto_apps.models.strategy import (
     UpdateStrategyRequest,
 )
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
 from pydantic import ValidationError
 
 pytestmark = pytest.mark.asyncio
@@ -78,7 +79,8 @@ async def test_router_registers_only_evidence_gated_publish() -> None:
     publish_paths = {
         route.path
         for route in router.routes
-        if "POST" in getattr(route, "methods", set())
+        if isinstance(route, APIRoute)
+        and "POST" in route.methods
         and route.path.endswith("/publish")
     }
 
@@ -90,9 +92,9 @@ async def test_router_registers_exact_version_detail_operation() -> None:
     matches = [
         route
         for route in router.routes
-        if getattr(route, "path", None)
-        == "/strategies/{strategy_id}/versions/{version}"
-        and "GET" in getattr(route, "methods", set())
+        if isinstance(route, APIRoute)
+        and route.path == "/strategies/{strategy_id}/versions/{version}"
+        and "GET" in route.methods
     ]
 
     assert len(matches) == 1
@@ -104,8 +106,9 @@ async def test_router_registers_exact_governance_events_operation() -> None:
     matches = [
         route
         for route in router.routes
-        if getattr(route, "path", None) == "/strategies/{strategy_id}/events"
-        and "GET" in getattr(route, "methods", set())
+        if isinstance(route, APIRoute)
+        and route.path == "/strategies/{strategy_id}/events"
+        and "GET" in route.methods
     ]
 
     assert len(matches) == 1

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 from unittest.mock import patch
 
 from ditto_application.processes.selection.create_research_case import (
@@ -66,6 +66,15 @@ class _Store:
 
 async def _inline_to_thread(function: Callable[..., object], /, *args, **kwargs):
     return function(*args, **kwargs)
+
+
+def _original[T](
+    function: Callable[..., Awaitable[T]],
+) -> Callable[..., Coroutine[Any, Any, T]]:
+    return cast(
+        Callable[..., Coroutine[Any, Any, T]],
+        function.__dict__["__dishka_orig_func__"],
+    )
 
 
 def _body(*, seed: int = 17) -> CreateSelectionRunBody:
@@ -135,9 +144,7 @@ def _facade(store: _Store) -> SelectionWorkspaceFacade:
 
 def test_create_handler_is_content_idempotent_and_preserves_evidence() -> None:
     store = _Store()
-    handler = cast(
-        Callable[..., object], create_selection_run.__dict__["__dishka_orig_func__"]
-    )
+    handler = _original(create_selection_run)
 
     with patch(
         "ditto_apps.api.routes.selection.asyncio.to_thread",
@@ -155,10 +162,7 @@ def test_create_handler_is_content_idempotent_and_preserves_evidence() -> None:
 def test_get_and_compare_handlers_read_exact_saved_runs() -> None:
     store = _Store()
     facade = _facade(store)
-    create_handler = cast(
-        Callable[..., object],
-        create_selection_run.__dict__["__dishka_orig_func__"],
-    )
+    create_handler = _original(create_selection_run)
     with patch(
         "ditto_apps.api.routes.selection.asyncio.to_thread",
         side_effect=_inline_to_thread,
@@ -168,30 +172,21 @@ def test_get_and_compare_handlers_read_exact_saved_runs() -> None:
             create_handler(body=_body(seed=18), facade=facade)
         )
         query = SelectionRunQueryService(store)
-        get_handler = cast(
-            Callable[..., object],
-            get_selection_run.__dict__["__dishka_orig_func__"],
-        )
+        get_handler = _original(get_selection_run)
         exact = asyncio.run(
             get_handler(
                 query=query,
                 run_id=first_response.data.selection_run.run_id,
             )
         )
-        rotation_handler = cast(
-            Callable[..., object],
-            get_industry_rotation.__dict__["__dishka_orig_func__"],
-        )
+        rotation_handler = _original(get_industry_rotation)
         exact_rotation = asyncio.run(
             rotation_handler(
                 query=IndustryRotationQueryService(store),
                 snapshot_id=first_response.data.industry_rotation.snapshot_id,
             )
         )
-        compare_handler = cast(
-            Callable[..., object],
-            compare_selection_runs.__dict__["__dishka_orig_func__"],
-        )
+        compare_handler = _original(compare_selection_runs)
         compared = asyncio.run(
             compare_handler(
                 query=query,
@@ -208,14 +203,8 @@ def test_get_and_compare_handlers_read_exact_saved_runs() -> None:
 def test_create_research_case_handler_returns_exact_selection_lineage() -> None:
     store = _Store()
     facade = _facade(store)
-    create_run_handler = cast(
-        Callable[..., object],
-        create_selection_run.__dict__["__dishka_orig_func__"],
-    )
-    create_case_handler = cast(
-        Callable[..., object],
-        create_research_case.__dict__["__dishka_orig_func__"],
-    )
+    create_run_handler = _original(create_selection_run)
+    create_case_handler = _original(create_research_case)
 
     with patch(
         "ditto_apps.api.routes.selection.asyncio.to_thread",

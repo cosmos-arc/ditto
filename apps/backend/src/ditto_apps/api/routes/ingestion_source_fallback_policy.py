@@ -93,6 +93,7 @@ def to_catalog_source_fallback_policy_event_response(
 @router.post(
     "/catalog/source-fallback/policies",
     response_model=APIResponse[CatalogSourceFallbackPolicyStateResponse],
+    operation_id="ingestion_draft_catalog_source_fallback_policy",
 )
 @inject
 async def draft_catalog_source_fallback_policy(
@@ -129,6 +130,7 @@ async def draft_catalog_source_fallback_policy(
 @router.get(
     "/catalog/source-fallback/policies",
     response_model=APIResponse[list[CatalogSourceFallbackPolicyStateResponse]],
+    operation_id="ingestion_list_catalog_source_fallback_policies",
 )
 @inject
 async def list_catalog_source_fallback_policies(
@@ -155,6 +157,7 @@ async def list_catalog_source_fallback_policies(
 @router.get(
     "/catalog/source-fallback/policies/{policy_id}",
     response_model=APIResponse[CatalogSourceFallbackPolicyStateResponse],
+    operation_id="ingestion_get_catalog_source_fallback_policy",
 )
 @inject
 async def get_catalog_source_fallback_policy(
@@ -172,6 +175,7 @@ async def get_catalog_source_fallback_policy(
 @router.get(
     "/catalog/source-fallback/policies/{policy_id}/events",
     response_model=APIResponse[list[CatalogSourceFallbackPolicyEventResponse]],
+    operation_id="ingestion_list_catalog_source_fallback_policy_events",
 )
 @inject
 async def list_catalog_source_fallback_policy_events(
@@ -191,6 +195,7 @@ async def list_catalog_source_fallback_policy_events(
 @router.post(
     "/catalog/source-fallback/policies/{policy_id}/approval",
     response_model=APIResponse[CatalogSourceFallbackPolicyStateResponse],
+    operation_id="ingestion_approve_catalog_source_fallback_policy",
 )
 @inject
 async def approve_catalog_source_fallback_policy(
@@ -216,6 +221,7 @@ async def approve_catalog_source_fallback_policy(
 @router.post(
     "/catalog/source-fallback/policies/{policy_id}/activation",
     response_model=APIResponse[CatalogSourceFallbackPolicyStateResponse],
+    operation_id="ingestion_activate_catalog_source_fallback_policy",
 )
 @inject
 async def activate_catalog_source_fallback_policy(
@@ -241,6 +247,7 @@ async def activate_catalog_source_fallback_policy(
 @router.post(
     "/catalog/source-fallback/policies/{policy_id}/retirement",
     response_model=APIResponse[CatalogSourceFallbackPolicyStateResponse],
+    operation_id="ingestion_retire_catalog_source_fallback_policy",
 )
 @inject
 async def retire_catalog_source_fallback_policy(

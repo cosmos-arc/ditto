@@ -26,7 +26,11 @@ from ditto_apps.models.metadata import (
 router = APIRouter(prefix="/metadata", tags=["metadata"])
 
 
-@router.get("/instruments/{instrument_id}", response_model=APIResponse[Instrument])
+@router.get(
+    "/instruments/{instrument_id}",
+    response_model=APIResponse[Instrument],
+    operation_id="metadata_get_instrument",
+)
 @inject
 async def get_instrument(
     instrument_id: int,
@@ -53,7 +57,11 @@ async def get_instrument(
     return APIResponse(data=to_instrument(row))
 
 
-@router.get("/instruments", response_model=APIResponse[list[Instrument]])
+@router.get(
+    "/instruments",
+    response_model=APIResponse[list[Instrument]],
+    operation_id="metadata_list_instruments",
+)
 @inject
 async def list_instruments(
     facade: Annotated[MetadataQueryFacade, FromComponent()],

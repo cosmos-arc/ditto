@@ -29,6 +29,7 @@ _RouteResult = (
     | CandidateExclusionPageResponse
     | CandidateFactorContributionPageResponse
 )
+_CandidateRouteError = ConflictError | UnprocessableEntityError
 _Route = Callable[..., Awaitable[APIResponse[_RouteResult]]]
 
 
@@ -148,7 +149,7 @@ async def test_candidate_routes_preserve_bundle_identity_and_typed_items(
 )
 async def test_candidate_route_maps_cursor_failures_exactly(
     code: str,
-    expected_error: type[Exception],
+    expected_error: type[_CandidateRouteError],
 ) -> None:
     reader = MagicMock(spec=CandidateEvidenceReader)
     reader.read_page.side_effect = AppProcessError(

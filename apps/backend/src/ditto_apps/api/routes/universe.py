@@ -62,7 +62,11 @@ def _is_preset_command_error(exc: AppCommandError) -> bool:
     return "preset" in str(exc).lower()
 
 
-@router.get("", response_model=APIResponse[list[UniverseResponse]])
+@router.get(
+    "",
+    response_model=APIResponse[list[UniverseResponse]],
+    operation_id="universes_list_universes",
+)
 @inject
 async def list_universes(
     facade: Annotated[UniverseQueryFacade, FromComponent()],
@@ -74,7 +78,11 @@ async def list_universes(
     return paginate([to_universe_response(r) for r in rows], pagination)
 
 
-@router.get("/{universe_id}", response_model=APIResponse[UniverseResponse])
+@router.get(
+    "/{universe_id}",
+    response_model=APIResponse[UniverseResponse],
+    operation_id="universes_get_universe",
+)
 @inject
 async def get_universe(
     universe_id: str,
@@ -87,7 +95,11 @@ async def get_universe(
     return APIResponse(data=to_universe_response(row))
 
 
-@router.get("/{universe_id}/members", response_model=APIResponse[list[MemberResponse]])
+@router.get(
+    "/{universe_id}/members",
+    response_model=APIResponse[list[MemberResponse]],
+    operation_id="universes_get_members",
+)
 @inject
 async def get_members(
     universe_id: str,
@@ -99,7 +111,12 @@ async def get_members(
     return APIResponse(data=[MemberResponse(instrument_id=iid) for iid in ids])
 
 
-@router.post("", status_code=201, response_model=APIResponse[UniverseResponse])
+@router.post(
+    "",
+    status_code=201,
+    response_model=APIResponse[UniverseResponse],
+    operation_id="universes_create_universe",
+)
 @inject
 async def create_universe(
     body: CreateUniverseRequest,
@@ -118,7 +135,11 @@ async def create_universe(
     return APIResponse(data=to_universe_response(row))
 
 
-@router.put("/{universe_id}", response_model=APIResponse[UniverseResponse])
+@router.put(
+    "/{universe_id}",
+    response_model=APIResponse[UniverseResponse],
+    operation_id="universes_update_universe",
+)
 @inject
 async def update_universe(
     universe_id: str,
@@ -151,7 +172,11 @@ async def update_universe(
     return APIResponse(data=to_universe_response(row))
 
 
-@router.delete("/{universe_id}", response_model=APIResponse[bool])
+@router.delete(
+    "/{universe_id}",
+    response_model=APIResponse[bool],
+    operation_id="universes_delete_universe",
+)
 @inject
 async def delete_universe(
     universe_id: str,

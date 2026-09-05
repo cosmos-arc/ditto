@@ -208,7 +208,9 @@ async def get_regime_diagnostics(
     return APIResponse(data=_regime_response(view))
 
 
-@router.post("/bars", response_model=APIResponse[list[Bar]])
+@router.post(
+    "/bars", response_model=APIResponse[list[Bar]], operation_id="market_post_bars"
+)
 @inject
 async def post_bars(
     query: BarsQuery,

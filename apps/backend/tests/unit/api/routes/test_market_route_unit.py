@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from datetime import UTC, date, datetime
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import polars as pl
@@ -58,7 +58,7 @@ class TestPostBarsHandler:
             allow_experimental_data=True,
         )
         handler = cast(
-            Callable[..., Awaitable[APIResponse[list[Bar]]]],
+            Callable[..., Coroutine[Any, Any, APIResponse[list[Bar]]]],
             post_bars.__dict__["__dishka_orig_func__"],
         )
 
@@ -109,7 +109,10 @@ class TestGetRegimeDiagnosticsHandler:
             transitions=(),
         )
         handler = cast(
-            Callable[..., Awaitable[APIResponse[RegimeDiagnosticsResponse]]],
+            Callable[
+                ...,
+                Coroutine[Any, Any, APIResponse[RegimeDiagnosticsResponse]],
+            ],
             get_regime_diagnostics.__dict__["__dishka_orig_func__"],
         )
 
@@ -194,7 +197,7 @@ class TestGetMarketContextHandler:
             evidence_refs=("dataset://stock_daily/csi300@2026-08-31",),
         )
         handler = cast(
-            Callable[..., Awaitable[APIResponse[MarketContextResponse]]],
+            Callable[..., Coroutine[Any, Any, APIResponse[MarketContextResponse]]],
             get_market_context.__dict__["__dishka_orig_func__"],
         )
 
@@ -225,7 +228,7 @@ class TestGetMarketContextHandler:
         facade = MagicMock(spec=MarketContextFacade)
         facade.get_context.side_effect = ValueError("timezone-aware required")
         handler = cast(
-            Callable[..., Awaitable[APIResponse[MarketContextResponse]]],
+            Callable[..., Coroutine[Any, Any, APIResponse[MarketContextResponse]]],
             get_market_context.__dict__["__dishka_orig_func__"],
         )
 

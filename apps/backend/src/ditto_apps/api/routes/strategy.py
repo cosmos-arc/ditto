@@ -304,7 +304,11 @@ async def create_strategy(
     return APIResponse(data=to_strategy_response(info))
 
 
-@router.get("", response_model=APIResponse[list[StrategyResponse]])
+@router.get(
+    "",
+    response_model=APIResponse[list[StrategyResponse]],
+    operation_id="strategies_list_strategies",
+)
 @inject
 async def list_strategies(
     facade: Annotated[StrategyQueryFacade, FromComponent()],
@@ -315,7 +319,11 @@ async def list_strategies(
     return paginate([to_strategy_response(s) for s in specs], pagination)
 
 
-@router.get("/{strategy_id}", response_model=APIResponse[StrategyResponse])
+@router.get(
+    "/{strategy_id}",
+    response_model=APIResponse[StrategyResponse],
+    operation_id="strategies_get_strategy",
+)
 @inject
 async def get_strategy(
     strategy_id: str,
@@ -369,6 +377,7 @@ async def update_strategy(
 @router.get(
     "/{strategy_id}/versions",
     response_model=APIResponse[list[StrategyVersionResponse]],
+    operation_id="strategies_list_strategy_versions",
 )
 @inject
 async def list_strategy_versions(
@@ -445,6 +454,7 @@ async def list_strategy_governance_events(
 @router.get(
     "/{strategy_id}/active",
     response_model=APIResponse[StrategyActiveResponse],
+    operation_id="strategies_get_active_strategy",
 )
 @inject
 async def get_active_strategy(
@@ -730,6 +740,7 @@ def to_diff_response(
 @router.post(
     "/{strategy_id}/versions/{version}/validate",
     response_model=APIResponse[StrategySpecValidationResponse],
+    operation_id="strategies_validate_strategy_version",
 )
 @inject
 async def validate_strategy_version(
@@ -753,6 +764,7 @@ async def validate_strategy_version(
 @router.get(
     "/{strategy_id}/versions/{version}/diff",
     response_model=APIResponse[StrategyVersionDiffResponse],
+    operation_id="strategies_diff_strategy_version",
 )
 @inject
 async def diff_strategy_version(
