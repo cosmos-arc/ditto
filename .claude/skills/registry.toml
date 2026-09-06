@@ -1,45 +1,5 @@
 schema_version = 1
 
 [[skills]]
-name = "ditto-api-contract-change"
-owner = "cross-stack"
-
-[[skills]]
-name = "ditto-app-dev"
-owner = "web"
-
-[[skills]]
-name = "ditto-architecture-change"
-owner = "backend"
-
-[[skills]]
-name = "ditto-change-review"
-owner = "cross-stack"
-
-[[skills]]
-name = "ditto-design-cycle"
-owner = "web"
-
-[[skills]]
-name = "ditto-page-contract"
-owner = "web"
-
-[[skills]]
 name = "ditto-pit-safety"
 owner = "backend"
-
-[[skills]]
-name = "ditto-product-arch"
-owner = "web"
-
-[[skills]]
-name = "ditto-product-discovery"
-owner = "web"
-
-[[skills]]
-name = "ditto-quality-eval"
-owner = "cross-stack"
-
-[[skills]]
-name = "ditto-test-first"
-owner = "cross-stack"

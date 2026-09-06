@@ -1,85 +1,24 @@
-# Ditto App Agent Guide
+# Ditto Web Agent Guide
 
-Ditto App 是同一 monorepo 中的 React SPA，负责 Today、Markets、Research、Portfolio 和 System 五个产品域。后端 API 与领域规则位于 `../backend` 和 `../../packages`；Web 只能经根 OpenAPI 契约与类型化 transport 消费它们。
+React SPA 消费同仓 FastAPI 的本地 OpenAPI 契约。Web 依赖和叶子任务由 Bun 管理，跨栈验证从根 Pixi 入口执行。
 
-## 事实优先级
+## 按任务读取
 
-冲突时按以下顺序处理，并显式报告不能自行化解的冲突：
+- 产品方向或范围：[PRODUCT.md](PRODUCT.md)、[产品 brief](docs/brief/product-brief.md) 与 [约束](docs/brief/constitution.md)。
+- 页面、导航、状态或原型：[设计入口](DESIGN.md)、[产品 IA](docs/designs/specs/01_product_information_architecture.md)、[页面蓝图](docs/designs/specs/02_core_page_blueprints.md) 与 [交互状态](docs/designs/specs/04_interaction_state_spec.md)。
+- 布局、selector 或合同生成：[页面合同](docs/contracts/README.md) 与目标页面 JSON。
+- 组件归属或依赖：[前端架构](docs/engineering/frontend-architecture.md)。
+- 行为与视觉验证：[Web 测试说明](docs/engineering/testing.md)；跨栈/API 变化另读 [契约指南](../../contracts/AGENTS.md)。
+- 宿主配置：[根 Harness](../../docs/engineering/agent-harness.md)。
 
-1. 源码与机器配置：`src/`、`package.json`、`biome.json`、`tsconfig*.json`、`vitest.config.ts`。
-2. 机器合同：`docs/contracts/pages/`、`.arch-manifest.json`、`.discovery-manifest.json`。
-3. 产品与设计事实：`PRODUCT.md`、`DESIGN.md`、`src/styles/design-tokens/`。
-4. 设计规格与工程文档：`docs/designs/specs/`、`docs/engineering/`。
-5. 历史计划和评审仅提供背景，不能覆盖当前源码或合同。
+## 不变量
 
-## 架构地图
+- 当前源码、类型与机器依赖图定义行为；历史计划、manifest 和原型不能覆盖当前实现。
+- 生产 TypeScript strict；API path/method/params/body/response 由 generated paths 推导，generated DTO 经 feature adapter 转为 view model。
+- 服务端状态用 TanStack Query，跨页面客户端偏好用 Zustand，局部 UI 状态保持局部。
+- 跨 feature 工作流归 workflows，消费 feature public API；components/ui 与 lib 不依赖 feature，深层依赖须遵守机器边界。
+- 静态视觉值来自 Design Token；inline style 限数据驱动几何。原型字面值低于设计系统事实。
+- 数据界面覆盖 loading、empty、error、stale；键盘操作、focus、风险表达与破坏性操作确认必须有效。
+- route tree 与合同产物通过既有 generator 更新。Biome 和类型配置是静态规则事实源，不扩大 ignore 或放宽类型绕过失败。
 
-- `src/routes/`：TanStack Router 文件路由；`src/routeTree.gen.ts` 自动生成且不提交。
-- `src/workflows/`：跨 feature 用户流程与 app composition；只消费 feature public API。
-- `src/features/`：业务能力；页面、hooks、API adapter 和 feature 状态在各自能力内聚，feature 间默认禁止直接 import。
-- `src/features/shell/`、`src/features/navigation/`：跨页面 shell/navigation 提供者。
-- `src/components/ui/`：无业务语义的基础组件；不得依赖 feature。
-- `src/components/{data,domain,indicator,status,chart}/`：跨 feature 展示能力。
-- `src/api/`：OpenAPI generated types、typed transport、runtime config 与错误归一化。
-- `src/lib/`：错误边界和纯工具；不得依赖 feature。
-- `src/styles/design-tokens/`：颜色、密度、交互、组件 token 的唯一值源。
-- `src/api/generated/schema.d.ts`：由根 `contracts/openapi/v1.json` 生成，禁止手工编辑。
-
-## 项目 Skills
-
-- `ditto-product-discovery`：新产品方向、新页面定位、竞品/领域调研、假设注册。
-- `ditto-product-arch`：信息架构、页面蓝图、用户流程、状态矩阵和产品架构审计。
-- `ditto-design-cycle`：HTML prototype 创建、设计评审、跨视口迭代和 edition 管理。
-- `ditto-page-contract`：页面合同创建、验证、提升、度量刷新和生成物同步。
-- `ditto-app-dev`：合同驱动的 React 页面/组件实现、交互打磨和视觉验证。
-
-通用 planning、debugging、review、worktree 和并行编排使用宿主原生能力，不包装成项目 skill。
-
-## 风险与测试
-
-| 等级 | 示例 | 要求 |
-|---|---|---|
-| 普通 | 文档、格式、机械重命名 | 保持链接和格式有效；可豁免 RED |
-| 行为 | 组件交互、hook、store、API adapter、路由 | 先观察相关测试 RED，再做最小 GREEN |
-| 高风险 | 交易确认、风控展示、可访问性、公共组件契约、页面合同 | RED 必须覆盖用户可见行为或合同失败 |
-| 发布/真实系统 | 依赖、环境、部署、真实后端写操作 | 先取得批准，保留发布证据和恢复方式 |
-
-测试优先适用于 bug、行为变化、公共契约、可访问性、交易/风控语义和页面合同。纯文档、格式化、纯移动与机械重命名豁免。不要用只验证实现细节的 mock 替代可观察失败。
-
-## 验证矩阵
-
-| 变更 | 最低验证 |
-|---|---|
-| Harness/agent 配置 | 从仓库根运行 `pixi run -e dev harness-check` |
-| 测试文件 | 目标 `vitest run <files>` + `bun run type` |
-| TS/TSX/路由/API | 从根运行 `pixi run -e dev check-web` |
-| Design Token/主题/CSS | 根 `pixi run -e dev check-web` + Web `bun run audit:tokens && bun run build:tokens:check` |
-| 页面合同 | 合同 validator/generator + 消费方目标测试 |
-| 发布候选 | 从根运行 `pixi run -e dev ci`；prototype/system 测试需要 Chromium |
-
-根 Pixi `check-web` 是快速、可重复、无浏览器门；`web-ci` 包含 coverage、prototype 和构建，根 `ci` 还包含跨栈 Playwright。Bun 不定义平行的 `check/ci` 编排。
-
-## 不可妥协项
-
-- 只使用 Bun；不要引入 npm/yarn/pnpm lockfile。
-- 生产 TypeScript 保持 strict；禁止 `any`、`@ts-ignore` 和 `@ts-expect-error`。
-- API path/method/params/body/response 必须由 generated `paths` 推导；禁止任意 URL + 调用方自选 `<T>`。
-- 服务端状态使用 TanStack Query；跨页面客户端偏好使用 Zustand；局部 UI 状态保持局部。
-- 基础 UI 与 `src/lib` 不得导入 feature。跨 feature 依赖优先公共 barrel；深层依赖需有明确能力契约。
-- 静态视觉值使用 Tailwind/Design Token。仅数据驱动几何可使用 inline style，且不得嵌入静态品牌色。
-- 数据界面覆盖 loading、empty、error、stale；破坏性操作必须显式确认。
-- 页面路由必须先运行 `bun run routes:generate`，不要编辑生成的 route tree。
-- Biome 是格式与 lint 事实源；不要通过扩大 ignore 绕过失败。
-
-## 审批边界
-
-修改依赖/锁文件、环境变量契约、CI/部署、Design Token 文件架构、页面合同 schema、生成 API 流程、真实后端写操作或发布前必须取得用户批准。读取、搜索、目标测试、静态检查和仓库内可恢复编辑无需额外批准。禁止直接在 `main` commit/push、force push、hard reset、`--no-verify` 和递归强制删除。
-
-## 常用入口
-
-```bash
-pixi run -e dev bootstrap
-pixi run -e dev check-web
-pixi run -e dev check-contract
-pixi run -e dev test-system
-```
+验证按实际影响选择目标测试、类型、合同及浏览器证据；普通 UI 调整无需重建整套原型/合同生命周期。授权与工作树边界沿用根指南。

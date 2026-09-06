@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
+import sys
 import tempfile
 import tomllib
 import unittest
@@ -70,13 +72,97 @@ class SkillRegistryTests(unittest.TestCase):
     def test_registry_is_the_skill_inventory_source_of_truth(self) -> None:
         registry = load_skill_registry(ROOT / ".agents" / "skills" / "registry.toml")
 
-        assert registry["ditto-api-contract-change"] == "cross-stack"
-        assert registry["ditto-app-dev"] == "web"
+        discovered = {
+            path.parent.name for path in (ROOT / ".agents/skills").glob("*/SKILL.md")
+        }
+        assert set(registry) == discovered
         assert registry["ditto-pit-safety"] == "backend"
-        assert len(registry) == 11
 
 
 class FormatFixtureTests(unittest.TestCase):
+    def test_cli_accepts_supported_skill_and_host_extensions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in (
+                "AGENTS.md",
+                "CLAUDE.md",
+                "pixi.toml",
+                "pyproject.toml",
+                "bunfig.toml",
+                "package.json",
+                "apps/web/package.json",
+                ".claude/settings.json",
+                ".codex/hooks.json",
+            ):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / relative, target)
+            for relative in (
+                "tooling/agent_harness",
+                ".agents/skills",
+                ".claude/skills",
+            ):
+                shutil.copytree(ROOT / relative, root / relative)
+            for path in [
+                *(ROOT / "packages").glob("*/AGENTS.md"),
+                ROOT / "apps/backend/AGENTS.md",
+                ROOT / "apps/web/AGENTS.md",
+                ROOT / "contracts/AGENTS.md",
+            ]:
+                target = root / path.relative_to(ROOT)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, target)
+                shutil.copyfile(
+                    path.with_name("CLAUDE.md"), target.with_name("CLAUDE.md")
+                )
+            for tree in (".agents", ".claude"):
+                skill = root / tree / "skills/ditto-pit-safety/SKILL.md"
+                skill.write_text(
+                    skill.read_text().replace(
+                        "name: ditto-pit-safety",
+                        "name: ditto-pit-safety\nlicense: MIT\n"
+                        "metadata:\n  revision: 1\n  tags:\n    - pit",
+                    )
+                )
+            for tree in (".agents", ".claude"):
+                (root / tree / "skills/ditto-pit-safety/agents/openai.yaml").unlink()
+            settings = root / ".claude/settings.json"
+            config = json.loads(settings.read_text())
+            config["enabledPlugins"]["another-supported-plugin@example"] = True
+            # Splitting the same required event coverage is a valid host composition.
+            entries = config["hooks"]["PreToolUse"]
+            original = entries.pop()
+            for matcher in original["matcher"].split("|"):
+                entries.append({**original, "matcher": matcher})
+            settings.write_text(json.dumps(config))
+            result = subprocess.run(
+                [sys.executable, str(root / "tooling/agent_harness/validate.py")],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert result.returncode == 0, result.stdout + result.stderr
+            for relative in (".codex/hooks.json", ".claude/settings.json"):
+                config_path = root / relative
+                original_text = config_path.read_text()
+                broken = json.loads(original_text)
+                for entry in broken["hooks"]["PreToolUse"]:
+                    for hook in entry["hooks"]:
+                        hook["command"] = hook["command"].replace('"', "'")
+                config_path.write_text(json.dumps(broken))
+                rejected = subprocess.run(
+                    [sys.executable, str(root / "tooling/agent_harness/validate.py")],
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                assert rejected.returncode != 0, (
+                    "single quotes disable required shell expansion"
+                )
+                config_path.write_text(original_text)
+
     def test_root_workspace_manifest_is_not_ignored(self) -> None:
         result = subprocess.run(
             ["git", "check-ignore", "--no-index", "package.json"],
@@ -159,10 +245,16 @@ class FormatFixtureTests(unittest.TestCase):
             with self.subTest(host=host):
                 config = json.loads(path.read_text(encoding="utf-8"))
                 entries = config["hooks"]["PreToolUse"]
-                assert len(entries) == 1
-                assert set(entries[0]["matcher"].split("|")) == expected[host]
-                command = entries[0]["hooks"][0]["command"]
-                assert f"--host {host} --event pre-tool" in command
+                covered = {
+                    tool
+                    for entry in entries
+                    if any(
+                        f"--host {host} --event pre-tool" in hook["command"]
+                        for hook in entry["hooks"]
+                    )
+                    for tool in entry["matcher"].split("|")
+                }
+                assert expected[host] <= covered
 
     def test_inert_host_hook_entries_are_rejected(self) -> None:
         config: dict[str, object] = {

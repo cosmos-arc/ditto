@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -741,6 +742,48 @@ def _smoke_container(
             )
 
 
+def _archive_image_config(path: Path) -> str:
+    """Resolve Docker's exported config digest (distinct from OCI index IDs)."""
+    with tarfile.open(path) as archive:
+        manifest_file = archive.extractfile("manifest.json")
+        if manifest_file is None:
+            raise ArtifactGateError("image archive has no manifest")
+        manifests = json.load(manifest_file)
+        if (
+            not isinstance(manifests, list)
+            or len(manifests) != 1
+            or not isinstance(manifests[0], dict)
+        ):
+            raise ArtifactGateError("image archive must contain one image subject")
+        config = manifests[0].get("Config")
+        if not isinstance(config, str):
+            raise ArtifactGateError("image archive has no config subject")
+        config_file = archive.extractfile(config)
+        if config_file is None:
+            raise ArtifactGateError("image archive config is not a file")
+        return "sha256:" + hashlib.sha256(config_file.read()).hexdigest()
+
+
+def _verify_scanner_subject(path: Path, *, image: str, scanner: str) -> None:
+    report = _json_object(path.read_bytes(), label=f"{scanner} report")
+    source = report.get("source") if scanner == "syft" else report
+    metadata = (
+        source.get("metadata" if scanner == "syft" else "Metadata")
+        if isinstance(source, dict)
+        else None
+    )
+    actual = (
+        metadata.get("imageID" if scanner == "syft" else "ImageID")
+        if isinstance(metadata, dict)
+        else None
+    )
+    if actual != image:
+        raise ArtifactGateError(
+            f"{scanner} subject does not match build output: {actual!r} != {image}"
+        )
+    sys.stdout.write(f"{scanner} subject verified: {image}\n")
+
+
 def run_artifact_gate(root: Path) -> None:
     """Build both artifacts, generate SBOMs, scan the image, and prove readiness."""
     workspace = root.expanduser().resolve(strict=True)
@@ -757,11 +800,15 @@ def run_artifact_gate(root: Path) -> None:
     output = workspace / "dist"
     output.mkdir(parents=True, exist_ok=True)
     image = f"ditto-ci:{git_sha[:12]}"
+    image_id_file = output / "image-id.txt"
+    image_id_file.unlink(missing_ok=True)
     _run(
         [
             docker,
             "build",
             "--pull",
+            "--iidfile",
+            str(image_id_file),
             "--file",
             "deploy/docker/Dockerfile",
             "--tag",
@@ -781,6 +828,11 @@ def run_artifact_gate(root: Path) -> None:
         cwd=workspace,
         timeout_seconds=_DOCKER_BUILD_TIMEOUT_SECONDS,
     )
+    image = image_id_file.read_text(encoding="utf-8").strip()
+    if re.fullmatch(r"sha256:[0-9a-f]{64}", image) is None:
+        raise ValueError("Docker build did not produce an immutable image ID")
+    sys.stdout.write(f"Artifact subject: {image}\n")
+    sys.stdout.flush()
     image_tar = output / "ditto-image.tar"
     web_tar = output / "ditto-web.tar"
     _run(
@@ -788,6 +840,8 @@ def run_artifact_gate(root: Path) -> None:
         cwd=workspace,
         timeout_seconds=_DOCKER_EXPORT_TIMEOUT_SECONDS,
     )
+    config_digest = _archive_image_config(image_tar)
+    sys.stdout.write(f"Exported config subject: {config_digest}\n")
     git = _executable("git")
     commit_timestamp = int(
         _run(
@@ -822,8 +876,13 @@ def run_artifact_gate(root: Path) -> None:
             "docker-archive:/work/ditto-image.tar",
             "--output",
             "spdx-json=/work/ditto-backend.spdx.json",
+            "--output",
+            "syft-json=/work/ditto-backend.syft.json",
         ],
         timeout_seconds=_SCANNER_TIMEOUT_SECONDS,
+    )
+    _verify_scanner_subject(
+        output / "ditto-backend.syft.json", image=config_digest, scanner="syft"
     )
     _canonicalize_spdx_sbom(
         output / "ditto-backend.spdx.json",
@@ -854,17 +913,22 @@ def run_artifact_gate(root: Path) -> None:
         web_tar=web_tar,
         package_manifest=workspace / "apps" / "web" / "package.json",
     )
+    _smoke_container(docker, workspace, image, release=release)
     _run_ephemeral_container(
         docker,
         workspace,
         purpose="trivy-backend",
         arguments=[
             "--volume",
-            f"{output}:/work:ro",
+            f"{output}:/work",
             _TRIVY,
             "image",
             "--input",
             "/work/ditto-image.tar",
+            "--format",
+            "json",
+            "--output",
+            "/work/trivy-backend.json",
             "--exit-code",
             "1",
             "--severity",
@@ -872,7 +936,9 @@ def run_artifact_gate(root: Path) -> None:
         ],
         timeout_seconds=_SCANNER_TIMEOUT_SECONDS,
     )
-    _smoke_container(docker, workspace, image, release=release)
+    _verify_scanner_subject(
+        output / "trivy-backend.json", image=config_digest, scanner="trivy"
+    )
 
     manifest_path, cohort_artifacts = _materialize_portable_cohort(
         workspace=workspace,

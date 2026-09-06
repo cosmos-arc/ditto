@@ -478,7 +478,7 @@ def test_breaking_check_compares_the_erratum_normalized_baseline(
         ("Darwin", "x86_64", "oasdiff_1.28.0_darwin_all.tar.gz"),
         ("Linux", "x86_64", "oasdiff_1.28.0_linux_amd64.tar.gz"),
         ("Linux", "aarch64", "oasdiff_1.28.0_linux_arm64.tar.gz"),
-        ("Windows", "AMD64", "oasdiff_1.28.0_windows_amd64.zip"),
+        ("Windows", "AMD64", "oasdiff_1.28.0_windows_amd64.tar.gz"),
     ],
 )
 def test_release_asset_selection_is_platform_specific(

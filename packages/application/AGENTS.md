@@ -9,7 +9,7 @@ CQRS 应用编排层，协调 data 与各 capability package。允许依赖 kern
 - 只做用例与流程编排，不放核心领域逻辑。
 - queries 只读，commands 写入，processes 可协调读写；互斥边界由 import-linter 强制。
 - builders/providers 负责运行时组装，但配置加载仍在 `apps`。
-- 公共 facade 或契约变化使用 `ditto-architecture-change` 与 `ditto-test-first`。
+- 公共 facade 或契约变化需验证受影响消费者；行为证据见 [测试指南](../../docs/engineering/testing.md)。
 
 ## 验证与参考
 

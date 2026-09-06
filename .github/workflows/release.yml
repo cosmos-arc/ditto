@@ -124,6 +124,7 @@ jobs:
             --directory apps/web/dist \
             .
       - name: Build OCI release artifact
+        id: image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
@@ -141,7 +142,7 @@ jobs:
           sbom: false
       - name: Verify and export the release image
         env:
-          IMAGE: ditto-release:${{ github.sha }}
+          IMAGE: ${{ steps.image.outputs.imageid }}
           PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
           CONTRACT_SHA256: ${{ steps.identity.outputs.contract_sha256 }}
         run: |
@@ -166,9 +167,9 @@ jobs:
           trap - EXIT
           docker save --output dist/ditto-image.tar "$IMAGE"
           docker run --rm \
-            --volume "$PWD/dist:/work:ro" \
+            --volume "$PWD/dist:/work" \
             ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
-            image --input /work/ditto-image.tar --exit-code 1 --severity HIGH,CRITICAL
+            image --input /work/ditto-image.tar --format json --output /work/trivy-backend.json --exit-code 1 --severity HIGH,CRITICAL
       - name: Generate SPDX SBOM from release subject
         env:
           PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
@@ -183,7 +184,8 @@ jobs:
             --volume "$PWD/dist:/work" \
             ghcr.io/anchore/syft:v1.51.1@sha256:95fe0835e5bebc6f8b1f8acef68d47d63d594ef4c0f25c097ff853b23cbac74c \
             docker-archive:/work/ditto-image.tar \
-            --output spdx-json=/work/ditto-backend.spdx.json
+            --output spdx-json=/work/ditto-backend.spdx.json \
+            --output syft-json=/work/ditto-backend.syft.json
           docker run --rm \
             --network none \
             --volume "$RUNNER_TEMP/web-sbom:/web:ro" \
@@ -195,6 +197,8 @@ jobs:
           import os
           from pathlib import Path
           from tooling.release.artifact_gate import (
+              _archive_image_config,
+              _verify_scanner_subject,
               _bind_and_verify_web_sbom,
               _canonicalize_spdx_sbom,
               _verify_web_artifact_metadata,
@@ -208,6 +212,9 @@ jobs:
               api_contract_sha256=os.environ["CONTRACT_SHA256"],
               generated_at=os.environ["GENERATED_AT"],
           )
+          config_digest = _archive_image_config(Path("dist/ditto-image.tar"))
+          _verify_scanner_subject(Path("dist/ditto-backend.syft.json"), image=config_digest, scanner="syft")
+          _verify_scanner_subject(Path("dist/trivy-backend.json"), image=config_digest, scanner="trivy")
           _verify_web_artifact_metadata(Path("dist/ditto-web.tar"), release=release)
           _canonicalize_spdx_sbom(Path("dist/ditto-backend.spdx.json"), label="backend SPDX SBOM")
           _bind_and_verify_web_sbom(

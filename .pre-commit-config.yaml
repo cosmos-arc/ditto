@@ -44,7 +44,7 @@ repos:
       # Ruff Lint Fix（先修复）
       - id: ruff-lint-fix
         name: ruff lint (fix)
-        entry: pixi run -e dev lint --fix
+        entry: pixi run -e dev ruff check --fix
         language: system
         types: [python]
         require_serial: false
@@ -52,25 +52,10 @@ repos:
       # Ruff Format（再格式化）
       - id: ruff-format
         name: ruff format
-        entry: pixi run -e dev fmt
+        entry: pixi run -e dev ruff format
         language: system
         types: [python]
         require_serial: false
-
-      - id: pyright
-        name: pyright (src, warnings=fail)
-        entry: pixi run -e dev type
-        language: system
-        pass_filenames: false
-        require_serial: true
-
-      - id: agent-harness
-        name: agent harness
-        entry: pixi run -e dev harness-check
-        language: system
-        pass_filenames: false
-        require_serial: true
-        files: '^(?:AGENTS\.md|CLAUDE\.md|packages/[^/]+/(?:AGENTS|CLAUDE)\.md|\.agents/|\.claude/|\.codex/|tooling/agent_harness/|docs/engineering/(?:agent-harness|testing)\.md|\.github/workflows/(?:ci|e2e-validation)\.yml|pixi\.toml|\.pre-commit-config\.yaml)'
 
       # --------------------------------------------------------
       # pytest (pre-push 阶段)
@@ -137,10 +122,8 @@ exclude: |
 ci:
   skip:
     # CI 中跳过这些（由 GitHub Actions 单独运行）
-    - ruff-lint
+    - ruff-lint-fix
     - ruff-format
-    - pyright
-    - agent-harness
     - pytest-fast
     - gitleaks
   autoupdate_schedule: monthly

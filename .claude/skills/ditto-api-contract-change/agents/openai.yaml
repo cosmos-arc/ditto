@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ditto API Contract Change"
-  short_description: "Safely evolve Ditto cross-stack OpenAPI contracts"
-  default_prompt: "Use $ditto-api-contract-change to evolve a Ditto API across backend, OpenAPI, generated types, and Web consumers."

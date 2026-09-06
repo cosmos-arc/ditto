@@ -7,7 +7,7 @@ const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const verifier = resolve(
 	import.meta.dirname,
 	"../../..",
-	".agents/skills/ditto-design-cycle/scripts/verify-gates.mjs",
+	"apps/web/scripts/prototype/verify-gates.mjs",
 );
 export const gateViewports = [
 	{ name: "VP-STANDARD", width: 1536, height: 1080 },

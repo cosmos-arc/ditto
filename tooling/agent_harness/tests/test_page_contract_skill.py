@@ -10,14 +10,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 CANONICAL_GENERATOR = (
-    ROOT / ".agents" / "skills" / "ditto-page-contract" / "scripts" / "generate.mjs"
+    ROOT / "apps" / "web" / "scripts" / "page-contract" / "generate.mjs"
 )
 CANONICAL_VALIDATOR = (
     ROOT
-    / ".agents"
-    / "skills"
-    / "ditto-page-contract"
+    / "apps"
+    / "web"
     / "scripts"
+    / "page-contract"
     / "validators"
     / "contract-validator.mjs"
 )
@@ -33,18 +33,24 @@ SYSTEM_AGENT_OPS_CONTRACT = (
 
 
 class PageContractGeneratorPathTests(unittest.TestCase):
+    def test_visual_audit_public_cli_can_load_its_generated_configuration(self) -> None:
+        result = subprocess.run(
+            ["bun", "run", "visual:audit:cli", "--help"],
+            cwd=ROOT / "apps/web",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "--route" in result.stdout
+
     def test_generator_targets_web_workspace_from_either_working_directory(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             script = (
-                root
-                / ".agents"
-                / "skills"
-                / "ditto-page-contract"
-                / "scripts"
-                / "generate.mjs"
+                root / "apps" / "web" / "scripts" / "page-contract" / "generate.mjs"
             )
             script.parent.mkdir(parents=True)
             shutil.copy2(CANONICAL_GENERATOR, script)
@@ -112,6 +118,23 @@ class PageContractGeneratorPathTests(unittest.TestCase):
             assert not (root / "docs" / "contracts" / "pages").exists()
             assert not (root / "src" / "features" / "shell").exists()
             assert not (root / "scripts" / "visual-audit.config.generated.mjs").exists()
+            fixture = contracts / "fixture.contract.json"
+            original = fixture.read_text()
+            for missing in ("prototypeRef", "visualThresholds"):
+                invalid = json.loads(original)
+                invalid["id"] = "must-not-persist"
+                del invalid[missing]
+                fixture.write_text(json.dumps(invalid))
+                rejected = subprocess.run(
+                    ["bun", str(script)],
+                    cwd=root,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                assert rejected.returncode != 0
+                assert tuple(path.read_bytes() for path in generated) == first_contents
+                fixture.write_text(original)
 
     def test_validator_loads_isolated_web_dependencies_without_node_path(self) -> None:
         environment = dict(os.environ)

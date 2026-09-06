@@ -31,16 +31,8 @@ If any required dimension is absent or ambiguous, fail closed. Do not substitute
 
 ## Prove absence of leakage
 
-1. Add a future sentinel or late revision that would materially change the output if leaked.
-2. First show the test fails for the unsafe behavior or missing guard.
-3. Implement the smallest fail-closed correction.
-4. Assert both the boundary instant and a nearby allowed instant.
-5. Run the target tests and:
+Use a future sentinel or late revision that would change the result if leaked. Verify exclusion beyond the cutoff and inclusion at a nearby allowed instant through the affected query, computation or replay entry point. For unsafe behavior, first reproduce the failure.
 
-```bash
-pixi run -e dev pytest -m pit
-```
+Run the affected tests and the existing PIT suite (`pixi run -e dev pit`). Cross-package boundaries also require `pixi run -e dev arch-check`; broader verification follows [the testing guide](../../../docs/engineering/testing.md).
 
-For cross-package changes also run `pixi run -e dev arch-check`; for production Python finish with `pixi run -e dev check`.
-
-Report the decision time, knowledge cutoff, snapshot identity, window/join semantics, sentinel used, and commands run.
+Report the decision time, knowledge cutoff, snapshot identity, window/join semantics and actual verification results.

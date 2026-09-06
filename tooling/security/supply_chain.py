@@ -168,6 +168,45 @@ def run_supply_chain_gate(root: Path) -> None:
     docker = _require_docker(workspace)
     mount = f"{workspace}:/repo:ro"
     user = _docker_user_arguments()
+    history_mounts = ["--volume", mount]
+    if (workspace / ".git").is_file():
+        result = subprocess.run(  # noqa: S603
+            [
+                _executable("git"),
+                "rev-parse",
+                "--path-format=absolute",
+                "--git-common-dir",
+            ],
+            cwd=workspace,
+            check=True,
+            capture_output=True,
+            timeout=_REPOSITORY_ENUMERATION_TIMEOUT_SECONDS,
+        )
+        common = Path(os.fsdecode(result.stdout).strip()).resolve(strict=True)
+        history_mounts.extend(["--volume", f"{common}:{common}:ro"])
+
+    # Some scanner versions return success after a Git subprocess error.
+    _run(
+        [
+            docker,
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            *user,
+            *history_mounts,
+            "--workdir",
+            "/repo",
+            "--entrypoint",
+            "git",
+            _GITLEAKS_CURRENT,
+            "rev-parse",
+            "--verify",
+            "HEAD",
+        ],
+        cwd=workspace,
+        timeout_seconds=_DOCKER_PROBE_TIMEOUT_SECONDS,
+    )
 
     _run(
         [
@@ -177,8 +216,7 @@ def run_supply_chain_gate(root: Path) -> None:
             "--network",
             "none",
             *user,
-            "--volume",
-            mount,
+            *history_mounts,
             "--workdir",
             "/repo",
             _GITLEAKS_CURRENT,
@@ -201,8 +239,7 @@ def run_supply_chain_gate(root: Path) -> None:
             "--network",
             "none",
             *user,
-            "--volume",
-            mount,
+            *history_mounts,
             "--workdir",
             "/repo",
             _GITLEAKS_KNOWN_GOOD,
@@ -349,7 +386,7 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     try:
         run_supply_chain_gate(root)
-    except SupplyChainGateError as error:
+    except (SupplyChainGateError, OSError, subprocess.SubprocessError) as error:
         sys.stderr.write(f"security-supply-chain: FAIL: {error}\n")
         return 1
     sys.stdout.write("security-supply-chain: PASS\n")

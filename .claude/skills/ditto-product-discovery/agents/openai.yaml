@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ditto Product Discovery"
-  short_description: "Define product scope, evidence, and assumptions"
-  default_prompt: "Use $ditto-product-discovery to turn this product idea into evidence-backed discovery artifacts."

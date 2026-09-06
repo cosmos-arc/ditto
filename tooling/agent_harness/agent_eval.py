@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic, versioned adversarial evaluation for coding-agent evidence."""
+"""Policy/grader regression over prefilled attempts; not a model benchmark."""
 
 from __future__ import annotations
 
@@ -27,7 +27,6 @@ RuntimeKind = Literal["none", "live", "mock"]
 WriteOrigin = Literal["agent", "generator", "preexisting"]
 
 _PIXI_DEV_PREFIX = ("pixi", "run", "-e", "dev")
-_HOST_PREWRITE_TIMEOUT_SECONDS = 10
 
 REQUIRED_ADVERSARIAL_CATEGORIES = frozenset(
     {
@@ -140,35 +139,6 @@ class EvalRegistry:
     suite_id: str
     suite_version: str
     cases: tuple[EvalCase, ...]
-
-
-@dataclass(frozen=True)
-class HostPrewriteAdapter:
-    """Independent eval expectation for one host's real pre-write adapter."""
-
-    config_path: str
-    matchers: frozenset[str]
-    command: str
-
-
-_HOST_PREWRITE_ADAPTERS = {
-    "claude": HostPrewriteAdapter(
-        config_path=".claude/settings.json",
-        matchers=frozenset({"Bash", "Edit", "Write"}),
-        command=(
-            'python3 "$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py" '
-            + "--host claude --event pre-tool"
-        ),
-    ),
-    "codex": HostPrewriteAdapter(
-        config_path=".codex/hooks.json",
-        matchers=frozenset({"Bash", "Edit", "Write", "apply_patch"}),
-        command=(
-            '/usr/bin/env python3 "$(git rev-parse --show-toplevel)/'
-            + 'tooling/agent_harness/hook.py" --host codex --event pre-tool'
-        ),
-    ),
-}
 
 
 def _mapping(value: object, context: str) -> dict[str, object]:
@@ -466,45 +436,6 @@ def load_registry(path: Path = DEFAULT_REGISTRY) -> EvalRegistry:
     )
 
 
-def evaluate_host_prewrite_adapters(root: Path = ROOT) -> tuple[str, ...]:
-    """Independently verify that both hosts invoke the real pre-write hook."""
-    mismatches: list[str] = []
-    for host, expected in _HOST_PREWRITE_ADAPTERS.items():
-        try:
-            raw: object = json.loads(
-                (root / expected.config_path).read_text(encoding="utf-8")
-            )
-            config = _mapping(raw, f"{host} config")
-            hooks = _mapping(config.get("hooks"), f"{host}.hooks")
-            entries = _sequence(hooks.get("PreToolUse"), f"{host}.PreToolUse")
-            if len(entries) != 1:
-                raise ValueError("PreToolUse must contain exactly one entry")
-            entry = _mapping(entries[0], f"{host}.PreToolUse[0]")
-            matcher = _string(entry.get("matcher"), f"{host}.matcher")
-            commands = _sequence(entry.get("hooks"), f"{host}.hooks")
-            if len(commands) != 1:
-                raise ValueError("PreToolUse must contain exactly one command")
-            command_hook = _mapping(commands[0], f"{host}.command")
-        except (FileNotFoundError, json.JSONDecodeError, ValueError) as error:
-            mismatches.append(f"host-adapter/{host}: invalid config: {error}")
-            continue
-        actual_matchers = frozenset(matcher.split("|"))
-        if actual_matchers != expected.matchers:
-            mismatches.append(
-                f"host-adapter/{host}: matcher expected "
-                + f"{sorted(expected.matchers)}, got {sorted(actual_matchers)}"
-            )
-        if (
-            command_hook.get("type") != "command"
-            or command_hook.get("command") != expected.command
-            or command_hook.get("timeout") != _HOST_PREWRITE_TIMEOUT_SECONDS
-        ):
-            mismatches.append(
-                f"host-adapter/{host}: pre-write command contract drifted"
-            )
-    return tuple(mismatches)
-
-
 def _instruction_chains(
     root: Path, paths: tuple[str, ...]
 ) -> tuple[tuple[str, ...], ...]:
@@ -695,7 +626,7 @@ def grade_attempt(attempt: AgentAttempt, root: Path = ROOT) -> Grade:
 
 def evaluate_registry(registry: EvalRegistry, root: Path = ROOT) -> tuple[str, ...]:
     """Return deterministic expectation mismatches for the full case registry."""
-    mismatches = list(evaluate_host_prewrite_adapters(root))
+    mismatches: list[str] = []
     for case in registry.cases:
         actual = grade_attempt(case.attempt, root)
         if (

@@ -47,7 +47,7 @@ _GENERATOR_PATH_REGISTRY = (
                 "apps/web/src/features/shell/page-contracts.generated.ts",
             }
         ),
-        "prefixes": (".agents/skills/ditto-page-contract/scripts/",),
+        "prefixes": ("apps/web/scripts/page-contract/",),
     },
     {
         "name": "route-tree",
@@ -95,7 +95,7 @@ _GENERATOR_COMMAND_REGISTRY = (
         "markers": frozenset(
             {
                 "generate-contracts",
-                ".agents/skills/ditto-page-contract/scripts/generate.mjs",
+                "apps/web/scripts/page-contract/generate.mjs",
             }
         ),
         "requires_write_flag": False,

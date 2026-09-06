@@ -1,37 +1,19 @@
-# Testing
+# Web 测试
 
-Ditto App 将可重复的单元门与需要浏览器的 prototype 门分开。新 checkout 不依赖已存在的 `src/routeTree.gen.ts`：类型检查、覆盖率和构建都会先执行 `bun run routes:generate`。
+风险和证据原则见 [根测试指南](../../../../docs/engineering/testing.md)。React Testing Library 通过角色、标签、可见文案与用户事件观察行为；MSW 表达网络边界，避免仅断言内部调用次数。
 
-## 分层
+## 入口与环境
 
-| 命令 | 范围 | 浏览器 |
-|---|---|---|
-| `bun run test:unit` | `src/` 与 canonical skill tests | 不需要 |
-| `bun run test:prototype` | `scripts/**/*.test.*` 的原型、视觉和交互合同 | 需要 Chromium |
-| `bun run test:coverage` | `src/` 单元测试与覆盖率阈值 | 不需要 |
-| `bun run check` | lint、type、unit、architecture、harness | 不需要 |
-| `bun run ci` | check、coverage、prototype、build | 需要 Chromium |
+从 Web workspace 执行 `bun run test:unit` 验证 src 单元行为，`bun run test:coverage` 同时生成覆盖证据，`bun run test:prototype` 验证 scripts 下的原型、视觉和工具合同。覆盖阈值以 `vitest.config.ts` 为准，保留独立的高风险分支阈值。
 
-本地第一次运行完整门前安装浏览器：
+从仓库根执行 `pixi run -e dev check-web` 做日常 Web 验证，`pixi run -e dev web-ci` 做 Web 完整验证，`pixi run -e dev test-system` 验证 production Web 与隔离 API。Bun 不再有独立 check/ci 编排。
 
-```bash
-bunx playwright install chromium
-bun run ci
-```
+首次运行浏览器测试时，在实际调用 Playwright 的 workspace 用锁定依赖执行 `bunx playwright install chromium`。浏览器缓存可通过 PLAYWRIGHT_BROWSERS_PATH 隔离；环境准备失败不代表产品断言失败。类型、coverage 和 build 的现有入口会生成 route tree，不手写生成文件。
 
-## 测试优先
+## 视觉与合同
 
-Bug、交互行为、公共组件契约、可访问性、交易/风控语义和页面合同先写能观察目标行为的失败测试。确认失败原因是缺失行为而不是环境、路由生成或错误断言，再做最小实现。文档、格式化、纯移动和机械重命名可豁免 RED。
+工具和操作说明见 [页面合同](../contracts/README.md)。按实际影响检查对应路由、交互、可访问性、主题/密度与视口；普通局部改动不运行完整原型生命周期。
 
-优先用 React Testing Library 通过角色、标签、可见文案和用户事件验证；不要把内部 state、组件私有结构或 mock 调用次数当作主要合同。网络测试用 MSW 表达服务端行为。
+视觉不稳定先核对服务、字体、数据、viewport 和 selector；集中超时先排查资源争用，不直接增加 timeout 或重试。测试只收集真实工程工具，Claude skill 镜像不重复运行。
 
-## Coverage
-
-V8 全局最低阈值是 statements 80%、branches 75%、functions 80%、lines 80%。阈值是回归底线，不替代高风险路径的行为断言。覆盖率命令只采集 `src/`，原型浏览器合同独立运行，避免环境失败污染快速反馈。
-
-## 失败诊断
-
-- 类型检查找不到 route tree：先运行 `bun run routes:generate`，不要手写生成文件。
-- Prototype 报找不到 browser executable：运行 `bunx playwright install chromium`。
-- 视觉测量不稳定：确认 viewport、字体加载、服务地址和 contract selector 一致，再判断是否重试。
-- Skill 测试只从 `.agents/skills` 运行；`.claude/skills` 是镜像，不能重复收集。
+普通 `web-product-check` 只执行实际路由覆盖检查。原型 freeze、完成看板和 `audit:product-recovery` 保留为显式历史审计，不进入普通 UI 的必经验证。
