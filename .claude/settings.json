@@ -52,7 +52,7 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py\" --host claude --event post-tool",
-            "timeout": 120
+            "timeout": 10
           }
         ]
       }
@@ -63,7 +63,7 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py\" --host claude --event stop",
-            "timeout": 900
+            "timeout": 3
           }
         ]
       }

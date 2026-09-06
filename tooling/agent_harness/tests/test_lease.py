@@ -16,7 +16,7 @@ import pytest
 from tooling.agent_harness.hook import (
     extract_edited_paths,
     pre_tool_decision,
-    stop_decision,
+    verification_decision,
 )
 from tooling.agent_harness.lease import (
     LeaseConflict,
@@ -383,7 +383,7 @@ class HookLeaseTests(unittest.TestCase):
                 "tools": {"project_python": "Python fixture"},
             }
 
-            result = stop_decision({}, root, manifest, verifier=verifier, now=now)
+            result = verification_decision(root, manifest, verifier=verifier, now=now)
 
             assert result["decision"] == "block"
             assert "lease" in result["reason"].lower()

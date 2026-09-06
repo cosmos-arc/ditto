@@ -13,6 +13,7 @@ pixi test 命令包装脚本
 - pixi run -e dev pytest -m sandbox_live  # 物理容器安全验收（显式运行）
 """
 
+import os
 import subprocess
 import sys
 
@@ -94,7 +95,12 @@ def main() -> int:
     """主函数"""
     cmd = build_pytest_command()
     print(f"Running: {' '.join(cmd)}", file=sys.stderr)
-    return subprocess.run(cmd, check=False).returncode
+    # Apply before collection; xdist workers and test subprocesses inherit it.
+    environment = {
+        **os.environ,
+        "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
+    }
+    return subprocess.run(cmd, env=environment, check=False).returncode
 
 
 if __name__ == "__main__":

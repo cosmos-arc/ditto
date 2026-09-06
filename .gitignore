@@ -98,6 +98,7 @@ pixi.lock.backup
 # CSV/JSON 精确忽略
 /*.csv
 /*.json
+!/package.json
 config/**/*.json
 !config/**/*.example.json
 

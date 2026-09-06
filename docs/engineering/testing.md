@@ -19,6 +19,17 @@ Bug、行为变化、公共契约、PIT、风控、交易、执行、组合会�
 
 测试应确定、隔离且可并行。时间、随机数、外部 I/O 与 source snapshot 必须显式控制；失败后清理临时状态。
 
+`scripts/test.py` 在启动 pytest 前为子进程固定 `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`，
+覆盖收集阶段、xdist worker 和测试创建的子进程。显式真实数据验收通过独立入口运行，
+不得依赖默认自动化测试读取个人钥匙串。
+
+Registry 配置测试通过近端 `conftest.py` 临时安装现有 keyring 包的 null backend，
+保留真实 ConfigProvider 装配，但不读取宿主钥匙串；每项测试结束恢复原 backend。
+测试具体密钥行为时显式注入固定值，生产密钥读取和显式真实数据 E2E 不受此 fixture 影响。
+
+本机完整验收通过根 `pixi run -e dev check` 编排；不要另起同一套后端和 Web 门禁并行抢占
+资源。集中出现交互测试超时时，先单独复现并排查资源争用，不直接增加超时或重试次数。
+
 ## 常用命令
 
 ```bash
