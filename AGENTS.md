@@ -114,5 +114,6 @@ TDD 强制适用于 Bug、行为、公共契约、PIT、交易、风控和回测
 - 不用 `TYPE_CHECKING` 或延迟导入掩盖循环依赖；修正边界或抽取契约。
 - 不以 `# type: ignore`、宽泛 `# noqa`、跳过 hooks 或 `--no-verify` 规避质量门。
 - PIT 查询 fail closed；rolling 窗口左闭，knowledge date、publication cutoff 与 source snapshot 必须传播。
-- 一任务一分支一 worktree；contract、lockfile、migration 和 generator 配置只允许 integrator 同时写入。每个 worktree 使用独立端口、state/cache/log/browser 输出。
+- 日常调研、小修复和文档调整默认在当前工作目录处理；仅大型需求迭代使用独立分支和 worktree。
+- contract、lockfile、migration 和 generator 配置只允许 integrator 同时写入。每个 worktree 使用独立端口、state/cache/log/browser 输出。
 - 不在 `main` 直接 commit/push，不 force push，不提交 secrets。
