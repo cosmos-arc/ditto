@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
   merge_group:
+  schedule:
+    - cron: "11 1 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,6 +23,9 @@ env:
 jobs:
   repository-policy:
     name: Repository policy
+    outputs:
+      required: ${{ steps.scope.outputs.required }}
+      analysis: ${{ steps.scope.outputs.analysis }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,6 +33,11 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Select checks from changed scope
+        id: scope
+        env:
+          CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 -m tooling.agent_harness.ci select
       - name: Diff hygiene
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
@@ -48,6 +59,8 @@ jobs:
         run: pixi run -e dev python -m pytest tooling/release/tests/test_repository_policy.py -q -n 0
 
   backend-quality:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-quality') }}
     name: Backend format and lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -69,6 +82,8 @@ jobs:
         run: pixi run -e dev lint
 
   backend-types:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-types') }}
     name: Backend types
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -86,6 +101,8 @@ jobs:
         run: pixi run -e dev type --all --clean
 
   backend-tests:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-tests') }}
     name: Backend tests and coverage
     permissions:
       contents: read
@@ -129,6 +146,8 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   architecture-harness:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'architecture-harness') }}
     name: Architecture and agent harness
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -142,12 +161,17 @@ jobs:
           cache: true
           frozen: true
           environments: dev
+      - uses: ./.github/actions/setup-bun
+      - name: Frozen Web install
+        run: bun install --frozen-lockfile
       - name: Architecture boundaries
         run: pixi run -e dev arch-check
       - name: Agent harness
         run: pixi run -e dev harness-check
 
   web-quality:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'web-quality') }}
     name: Web lint, types, tests and build
     permissions:
       contents: read
@@ -167,6 +191,9 @@ jobs:
           environments: dev
       - name: Frozen Web install
         run: bun install --frozen-lockfile
+      - name: Prepare Web browser
+        working-directory: apps/web
+        run: bunx playwright install --with-deps chromium
       - name: Web CI
         run: pixi run -e dev web-ci
       - name: Publish Web coverage
@@ -186,6 +213,8 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   api-contract:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'api-contract') }}
     name: OpenAPI compatibility and generated types
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -203,23 +232,14 @@ jobs:
       - uses: ./.github/actions/setup-bun
       - name: Frozen Web install
         run: bun install --frozen-lockfile
-      - name: Fetch pinned oasdiff distribution
-        env:
-          OASDIFF_VERSION: 1.28.0
-        run: |
-          mkdir -p "$RUNNER_TEMP/oasdiff"
-          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/checksums.txt" \
-            --output "$RUNNER_TEMP/oasdiff/checksums.txt"
-          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
-            "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
-            --output "$RUNNER_TEMP/oasdiff/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+      - name: Prepare contract toolchain
+        run: pixi run -e dev contract-toolchain-bootstrap
       - name: Contract gate
-        env:
-          DITTO_OASDIFF_DIST_DIR: ${{ runner.temp }}/oasdiff
         run: pixi run -e dev check-contract
 
   system-e2e:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'system-e2e') }}
     name: Supervised backend-Web system test
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -236,6 +256,8 @@ jobs:
       - uses: ./.github/actions/setup-bun
       - name: Frozen Web install
         run: bun install --frozen-lockfile
+      - name: Prepare system browser
+        run: bunx playwright install --with-deps chromium
       - name: Run supervised system test
         run: pixi run -e dev test-system
       - name: Upload system browser evidence
@@ -248,6 +270,8 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   release-cohort:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'release-cohort') }}
     name: Release cohort policy
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -265,6 +289,8 @@ jobs:
         run: pixi run -e dev python -m pytest tooling/release/tests tooling/security/tests -q -n 0
 
   container-smoke:
+    needs: [repository-policy, web-quality]
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'container-smoke') }}
     name: Container build and readiness smoke
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -272,40 +298,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Build immutable runtime image
-        env:
-          IMAGE: ditto-ci:${{ github.sha }}
-        run: |
-          product_version="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["version"])')"
-          contract_sha256="$(sha256sum contracts/openapi/v1.json | cut -d ' ' -f 1)"
-          environment_lock_sha256="$(sha256sum pixi.lock | cut -d ' ' -f 1)"
-          docker build \
-            --pull \
-            --file deploy/docker/Dockerfile \
-            --tag "$IMAGE" \
-            --build-arg "DITTO_PRODUCT_VERSION=$product_version" \
-            --build-arg "DITTO_GIT_SHA=${{ github.sha }}" \
-            --build-arg "DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH=$environment_lock_sha256" \
-            --build-arg "DITTO_API_CONTRACT_VERSION=v1" \
-            --build-arg "DITTO_API_CONTRACT_SHA256=$contract_sha256" \
-            .
-      - name: Verify non-root runtime and readiness
-        env:
-          IMAGE: ditto-ci:${{ github.sha }}
-        run: |
-          test "$(docker image inspect --format '{{.Config.User}}' "$IMAGE")" = "65532:65532"
-          container_id="$(docker run --detach --rm --env TUSHARE_TOKEN=ci-smoke-offline-credential --publish 127.0.0.1:18000:8000 "$IMAGE")"
-          trap 'docker logs "$container_id"; docker stop "$container_id"' EXIT
-          for attempt in $(seq 1 60); do
-            echo "readiness attempt $attempt/60"
-            if curl --fail --silent --show-error http://127.0.0.1:18000/readyz; then
-              exit 0
-            fi
-            sleep 1
-          done
-          exit 1
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          frozen: true
+          environments: dev
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: apps/web/dist
+      - name: Build once, scan, attest subject and smoke
+        run: pixi run -e dev python -m tooling.release.artifact_gate
+      - name: Upload artifact evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cohort-${{ github.run_id }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
 
   platform-smoke:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'platform-smoke') }}
     name: Platform smoke (${{ matrix.name }})
     strategy:
       fail-fast: false
@@ -353,12 +369,16 @@ jobs:
         run: pixi run -e dev platform-api-smoke
 
   security-supply-chain:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'security-supply-chain') }}
     name: Security and supply chain
     permissions:
       actions: read
       contents: read
       security-events: write
     uses: ./.github/workflows/security.yml
+    with:
+      full-analysis: ${{ needs.repository-policy.outputs.analysis == 'true' }}
 
   ci-gate:
     name: CI gate
@@ -379,20 +399,25 @@ jobs:
     permissions: {}
     runs-on: ubuntu-latest
     steps:
-      - name: Require every semantic job to succeed
+      - name: Require every selected job to succeed
         env:
+          REQUIRED_JOBS: ${{ needs.repository-policy.outputs.required }}
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          python3 - <<'PY'
+          python3 - <<'PYTHON'
           import json
           import os
 
+          required = json.loads(os.environ["REQUIRED_JOBS"])
           needs = json.loads(os.environ["NEEDS_JSON"])
+          if not isinstance(required, list) or not {"repository-policy", "security-supply-chain"} <= set(required):
+              raise SystemExit("CI fail-closed: invalid selection")
           failures = {
-              name: value["result"]
-              for name, value in needs.items()
-              if value["result"] != "success"
+              name: needs.get(name, {}).get("result", "missing")
+              for name in set(required) | set(needs)
+              if needs.get(name, {}).get("result") != "success"
+              and not (name not in required and needs.get(name, {}).get("result") == "skipped")
           }
-          if len(needs) != 12 or failures:
-              raise SystemExit(f"CI fail-closed: expected 12 successes, failures={failures}")
-          PY
+          if failures:
+              raise SystemExit(f"CI fail-closed: {failures}")
+          PYTHON

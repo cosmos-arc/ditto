@@ -5,9 +5,12 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import sys
 import tomllib
 from pathlib import Path
+
+import yaml
 
 try:
     from .repository_policy import forbidden_package_manager_paths, repository_paths
@@ -35,8 +38,6 @@ BANNED_WORKFLOW = re.compile(
     )
 )
 MAX_TEXT_BYTES = 2_000_000
-ROOT_AGENTS_MAX_LINES = 150
-ROOT_CLAUDE_MAX_LINES = 10
 EXPECTED_CAPABILITIES = frozenset(
     {
         "agent",
@@ -53,17 +54,12 @@ EXPECTED_CAPABILITIES = frozenset(
         "strategy",
     }
 )
-PACKAGE_AGENTS_MAX_LINES = 60
-WEB_AGENTS_MAX_LINES = 100
-PACKAGE_CLAUDE_MAX_LINES = 3
-SKILL_MAX_LINES = 120
 HOOK_EVENTS = {"PreToolUse", "PostToolUse", "Stop"}
 _HOOK_EVENT_ARGUMENTS = {
     "PreToolUse": "pre-tool",
     "PostToolUse": "post-tool",
     "Stop": "stop",
 }
-_HOOK_TIMEOUTS = {"PreToolUse": 10, "PostToolUse": 10, "Stop": 3}
 _HOST_MATCHERS = {
     "claude": {
         "PreToolUse": {"Bash", "Edit", "Write"},
@@ -85,7 +81,7 @@ _HOST_COMMAND_BASE = {
 }
 
 
-def parse_frontmatter(path: Path) -> dict[str, str]:
+def parse_frontmatter(path: Path) -> dict[str, object]:
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
     if not lines or lines[0] != "---":
@@ -94,30 +90,20 @@ def parse_frontmatter(path: Path) -> dict[str, str]:
         end = lines.index("---", 1)
     except ValueError as error:
         raise ValueError("missing closing frontmatter delimiter") from error
-    values: dict[str, str] = {}
-    for line in lines[1:end]:
-        if not line.strip():
-            continue
-        if ":" not in line:
-            raise ValueError(f"invalid frontmatter line: {line}")
-        key, value = line.split(":", 1)
-        values[key.strip()] = value.strip().strip('"')
+    try:
+        values = yaml.safe_load("\n".join(lines[1:end]))
+    except yaml.YAMLError as error:
+        raise ValueError(f"invalid YAML frontmatter: {error}") from error
+    if not isinstance(values, dict):
+        raise ValueError("frontmatter must be a mapping")
     return values
 
 
-def _line_count(path: Path) -> int:
-    return len(path.read_text(encoding="utf-8").splitlines())
-
-
-def _validate_local_instruction(
-    directory: Path, max_lines: int, errors: list[str]
-) -> None:
+def _validate_local_instruction(directory: Path, errors: list[str]) -> None:
     agents = directory / "AGENTS.md"
     wrapper = directory / "CLAUDE.md"
     if not agents.is_file():
         errors.append(f"missing local instructions: {agents.relative_to(ROOT)}")
-    elif _line_count(agents) > max_lines:
-        errors.append(f"{agents.relative_to(ROOT)} exceeds {max_lines} lines")
     if (
         not wrapper.is_file()
         or wrapper.read_text(encoding="utf-8").strip() != "@AGENTS.md"
@@ -143,13 +129,8 @@ def _text_files() -> list[Path]:
 
 
 def _validate_instruction_files(errors: list[str]) -> None:
-    if _line_count(ROOT / "AGENTS.md") > ROOT_AGENTS_MAX_LINES:
-        errors.append("root AGENTS.md exceeds 150 lines")
     root_wrapper = (ROOT / "CLAUDE.md").read_text(encoding="utf-8").strip()
-    if (
-        root_wrapper != "@AGENTS.md"
-        or _line_count(ROOT / "CLAUDE.md") > ROOT_CLAUDE_MAX_LINES
-    ):
+    if root_wrapper != "@AGENTS.md":
         errors.append("root CLAUDE.md must be a thin @AGENTS.md wrapper")
 
     _validate_capability_inventory(ROOT, errors)
@@ -159,25 +140,20 @@ def _validate_instruction_files(errors: list[str]) -> None:
         if (ROOT / "packages" / name / "AGENTS.md").is_file()
     ]
     for package in packages:
-        agents = package / "AGENTS.md"
         wrapper = package / "CLAUDE.md"
-        if _line_count(agents) > PACKAGE_AGENTS_MAX_LINES:
-            errors.append(f"{agents.relative_to(ROOT)} exceeds 60 lines")
         if (
             not wrapper.is_file()
             or wrapper.read_text(encoding="utf-8").strip() != "@AGENTS.md"
         ):
             errors.append(f"{wrapper.relative_to(ROOT)} is not an @AGENTS.md wrapper")
-        elif _line_count(wrapper) > PACKAGE_CLAUDE_MAX_LINES:
-            errors.append(f"{wrapper.relative_to(ROOT)} exceeds 3 lines")
 
     local_rules = (
-        (ROOT / "apps" / "backend", PACKAGE_AGENTS_MAX_LINES),
-        (ROOT / "apps" / "web", WEB_AGENTS_MAX_LINES),
-        (ROOT / "contracts", PACKAGE_AGENTS_MAX_LINES),
+        ROOT / "apps" / "backend",
+        ROOT / "apps" / "web",
+        ROOT / "contracts",
     )
-    for directory, max_lines in local_rules:
-        _validate_local_instruction(directory, max_lines, errors)
+    for directory in local_rules:
+        _validate_local_instruction(directory, errors)
 
 
 def _validate_capability_inventory(root: Path, errors: list[str]) -> None:
@@ -245,20 +221,18 @@ def _validate_skill(name: str, source: Path, errors: list[str]) -> None:
     except ValueError as error:
         errors.append(f"{name}: {error}")
         return
-    if set(frontmatter) != {"name", "description"}:
-        errors.append(f"{name}: frontmatter must contain only name and description")
     if frontmatter.get("name") != name:
         errors.append(f"{name}: frontmatter name does not match directory")
-    if not frontmatter.get("description"):
-        errors.append(f"{name}: description is empty")
-    if _line_count(skill_file) > SKILL_MAX_LINES:
-        errors.append(f"{name}: SKILL.md exceeds 120 lines")
-    if not metadata_file.is_file():
-        errors.append(f"{name}: missing agents/openai.yaml")
-        return
-    metadata = metadata_file.read_text(encoding="utf-8")
-    if "$" + name not in metadata:
-        errors.append(f"{name}: openai.yaml default prompt must mention $" + name)
+    description = frontmatter.get("description")
+    if not isinstance(description, str) or not description.strip():
+        errors.append(f"{name}: description must be non-empty text")
+    if metadata_file.is_file():
+        try:
+            metadata = yaml.safe_load(metadata_file.read_text(encoding="utf-8"))
+            if not isinstance(metadata, dict):
+                errors.append(f"{name}: openai.yaml must be a mapping")
+        except yaml.YAMLError as error:
+            errors.append(f"{name}: invalid openai.yaml: {error}")
 
 
 def _validate_skills(errors: list[str]) -> None:
@@ -327,46 +301,62 @@ def _event_matchers(config: dict[str, object], event: str) -> set[str]:
     }
 
 
+def _hook_command_tokens(
+    command: str, host: str, event: str, errors: list[str]
+) -> list[str]:
+    try:
+        return shlex.split(command)
+    except ValueError:
+        errors.append(f"{host} {event} command is malformed")
+        return []
+
+
 def _validate_host_event(
     hooks: dict[object, object], host: str, event: str, errors: list[str]
 ) -> None:
-    expected_matchers = _HOST_MATCHERS[host]
     entries = hooks.get(event)
-    if not isinstance(entries, list) or len(entries) != 1:
-        errors.append(f"{host} {event} must contain exactly one hook entry")
+    if not isinstance(entries, list) or not entries:
+        errors.append(f"{host} {event} requires an active shared hook")
         return
-    entry = entries[0]
-    if not isinstance(entry, dict):
-        errors.append(f"{host} {event} hook entry must be an object")
-        return
-    matcher = entry.get("matcher", "")
-    matcher_tokens = (
-        set(matcher.split("|")) if isinstance(matcher, str) and matcher else set()
-    )
-    if matcher_tokens != expected_matchers[event]:
-        expected = sorted(expected_matchers[event])
-        errors.append(f"{host} {event} matcher must be {expected}")
-    commands = entry.get("hooks")
-    if not isinstance(commands, list) or len(commands) != 1:
-        errors.append(f"{host} {event} must contain exactly one command hook")
-        return
-    command_hook = commands[0]
-    if not isinstance(command_hook, dict):
-        errors.append(f"{host} {event} command hook must be an object")
-        return
-    command = command_hook.get("command")
-    expected_command = (
+    expected_command = shlex.split(
         _HOST_COMMAND_BASE[host]
         + f" --host {host} --event {_HOOK_EVENT_ARGUMENTS[event]}"
     )
-    if (
-        command_hook.get("type") != "command"
-        or not isinstance(command, str)
-        or command != expected_command
-    ):
-        errors.append(f"{host} {event} must invoke the shared hook with host and event")
-    if command_hook.get("timeout") != _HOOK_TIMEOUTS[event]:
-        errors.append(f"{host} {event} timeout must be {_HOOK_TIMEOUTS[event]} seconds")
+    covered: set[str] = set()
+    active = False
+    for entry in entries:
+        if not isinstance(entry, dict):
+            errors.append(f"{host} {event} hook entry must be an object")
+            continue
+        matcher = entry.get("matcher", "")
+        commands = entry.get("hooks")
+        if not isinstance(matcher, str) or not isinstance(commands, list):
+            errors.append(f"{host} {event} has invalid matcher or hooks")
+            continue
+        for command_hook in commands:
+            if not isinstance(command_hook, dict):
+                errors.append(f"{host} {event} hook must be an object")
+                continue
+            command = command_hook.get("command")
+            if (
+                command_hook.get("type") != "command"
+                or not isinstance(command, str)
+                or _hook_command_tokens(command, host, event, errors)
+                != expected_command
+            ):
+                continue
+            timeout = command_hook.get("timeout")
+            if (
+                not isinstance(timeout, (int, float))
+                or isinstance(timeout, bool)
+                or timeout <= 0
+            ):
+                errors.append(f"{host} {event} shared hook needs a positive timeout")
+                continue
+            active = True
+            covered.update(matcher.split("|"))
+    if not active or not _HOST_MATCHERS[host][event].issubset(covered):
+        errors.append(f"{host} {event} must invoke the shared hook for required tools")
 
 
 def _validate_host_hook_contract(
@@ -376,8 +366,6 @@ def _validate_host_hook_contract(
     if not isinstance(hooks, dict):
         errors.append(f"{host} hooks must be an object")
         return
-    if set(hooks) != HOOK_EVENTS:
-        errors.append(f"{host} hooks must define PreToolUse, PostToolUse, and Stop")
     for event in sorted(HOOK_EVENTS):
         _validate_host_event(hooks, host, event, errors)
 
@@ -390,15 +378,11 @@ def _validate_host_configs(errors: list[str]) -> None:
 
     if settings is not None:
         plugins = settings.get("enabledPlugins")
-        enabled = (
-            {name for name, value in plugins.items() if value}
-            if isinstance(plugins, dict)
-            else set()
-        )
-        if enabled != {"pyright-lsp@claude-plugins-official"}:
-            errors.append(
-                f"Claude must enable only pyright-lsp, found {sorted(enabled)}"
-            )
+        if plugins is not None and (
+            not isinstance(plugins, dict)
+            or any(not isinstance(value, bool) for value in plugins.values())
+        ):
+            errors.append("Claude enabledPlugins must map names to booleans")
         permissions = settings.get("permissions")
         if (
             not isinstance(permissions, dict)

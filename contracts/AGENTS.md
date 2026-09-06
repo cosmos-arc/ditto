@@ -14,8 +14,8 @@ release cohort manifest. Same-major inference is forbidden.
 
 ## Required flow
 
-1. Apply `$ditto-api-contract-change` and test-first rules for route, DTO,
-   status, content-type or compatibility changes.
+1. For route, DTO, status, content-type or compatibility changes, read
+   [OpenAPI compatibility](openapi/README.md) and verify affected consumers.
 2. Keep `operationId` explicit, unique and stable.
 3. Export from the side-effect-free app factory to a temporary file and compare
    canonical bytes.

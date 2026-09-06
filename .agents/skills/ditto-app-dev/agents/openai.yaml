@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ditto App Development"
-  short_description: "Implement tested React pages from approved contracts"
-  default_prompt: "Use $ditto-app-dev to implement this approved Ditto page or interaction as tested React behavior."

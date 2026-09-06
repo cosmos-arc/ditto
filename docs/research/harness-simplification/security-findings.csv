@@ -1,0 +1,155 @@
+scanner,advisory,dependency,installed,fixed_reported,subject,applicability_evidence,risk_decision,next_action,advisory_url
+OSV,PYSEC-2026-3721,pip,26.1.2,26.2,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/PYSEC-2026-3721
+OSV,GHSA-qwm4-qh6w-59xr,,,,,扫描器 source package；需映射二进制包,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/GHSA-qwm4-qh6w-59xr
+OSV,DEBIAN-CVE-2016-2781,coreutils,9.1-1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2016-2781
+OSV,DEBIAN-CVE-2024-0684,coreutils,9.1-1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-0684
+OSV,DEBIAN-CVE-2025-6297,dpkg,1.21.23,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-6297
+OSV,DEBIAN-CVE-2026-2219,dpkg,1.21.23,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-2219
+OSV,DEBIAN-CVE-2026-41991,gzip,1.12-1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-41991
+OSV,DEBIAN-CVE-2026-41992,gzip,1.12-1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-41992
+OSV,DEBIAN-CVE-2025-1390,libcap2,1:2.66-4+deb12u3+b1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-1390
+OSV,DEBIAN-CVE-2026-4878,libcap2,1:2.66-4+deb12u3+b1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-4878
+OSV,DEBIAN-CVE-2026-41989,libgcrypt20,1.10.1-3+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-41989
+OSV,DEBIAN-CVE-2026-41990,libgcrypt20,1.10.1-3+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-41990
+OSV,DEBIAN-CVE-2024-12133,libtasn1-6,4.19.0-2+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-12133
+OSV,DEBIAN-CVE-2025-13151,libtasn1-6,4.19.0-2+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-13151
+OSV,DSA-6015-1,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DSA-6015-1
+OSV,DSA-6113-1,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DSA-6113-1
+OSV,DEBIAN-CVE-2023-6129,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2023-6129
+OSV,DEBIAN-CVE-2023-6237,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2023-6237
+OSV,DEBIAN-CVE-2024-0727,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-0727
+OSV,DEBIAN-CVE-2024-12797,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-12797
+OSV,DEBIAN-CVE-2024-13176,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-13176
+OSV,DEBIAN-CVE-2024-2511,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-2511
+OSV,DEBIAN-CVE-2024-4603,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-4603
+OSV,DEBIAN-CVE-2024-4741,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-4741
+OSV,DEBIAN-CVE-2024-5535,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-5535
+OSV,DEBIAN-CVE-2024-6119,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-6119
+OSV,DEBIAN-CVE-2024-9143,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-9143
+OSV,DEBIAN-CVE-2025-11187,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-11187
+OSV,DEBIAN-CVE-2025-15468,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-15468
+OSV,DEBIAN-CVE-2025-15469,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-15469
+OSV,DEBIAN-CVE-2025-4575,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-4575
+OSV,DEBIAN-CVE-2025-66199,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-66199
+OSV,DEBIAN-CVE-2025-9231,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2025-9231
+OSV,DEBIAN-CVE-2026-14456,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-14456
+OSV,DEBIAN-CVE-2026-14457,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-14457
+OSV,DEBIAN-CVE-2026-18798,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-18798
+OSV,DEBIAN-CVE-2026-2673,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-2673
+OSV,DEBIAN-CVE-2026-28386,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-28386
+OSV,DEBIAN-CVE-2026-28387,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-28387
+OSV,DEBIAN-CVE-2026-28388,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-28388
+OSV,DEBIAN-CVE-2026-28389,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-28389
+OSV,DEBIAN-CVE-2026-28390,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-28390
+OSV,DEBIAN-CVE-2026-31789,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-31789
+OSV,DEBIAN-CVE-2026-31790,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-31790
+OSV,DEBIAN-CVE-2026-34180,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-34180
+OSV,DEBIAN-CVE-2026-34181,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-34181
+OSV,DEBIAN-CVE-2026-34182,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-34182
+OSV,DEBIAN-CVE-2026-34183,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-34183
+OSV,DEBIAN-CVE-2026-35188,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-35188
+OSV,DEBIAN-CVE-2026-42764,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-42764
+OSV,DEBIAN-CVE-2026-42765,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-42765
+OSV,DEBIAN-CVE-2026-42766,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-42766
+OSV,DEBIAN-CVE-2026-42767,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-42767
+OSV,DEBIAN-CVE-2026-42768,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-42768
+OSV,DEBIAN-CVE-2026-42769,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-42769
+OSV,DEBIAN-CVE-2026-42770,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-42770
+OSV,DEBIAN-CVE-2026-45445,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-45445
+OSV,DEBIAN-CVE-2026-45446,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-45446
+OSV,DEBIAN-CVE-2026-45447,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-45447
+OSV,DEBIAN-CVE-2026-54874,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-54874
+OSV,DEBIAN-CVE-2026-54876,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-54876
+OSV,DEBIAN-CVE-2026-63072,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-63072
+OSV,DEBIAN-CVE-2026-63073,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-63073
+OSV,DEBIAN-CVE-2026-63074,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-63074
+OSV,DEBIAN-CVE-2026-63075,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-63075
+OSV,DEBIAN-CVE-2026-63076,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-63076
+OSV,DEBIAN-CVE-2026-7383,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-7383
+OSV,DEBIAN-CVE-2026-75803,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-75803
+OSV,DEBIAN-CVE-2026-9076,openssl,3.0.20-1~deb12u2,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-9076
+OSV,DEBIAN-CVE-2026-5958,sed,4.9-1+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-5958
+OSV,DEBIAN-CVE-2023-39804,tar,1.34+dfsg-1.2+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2023-39804
+OSV,DEBIAN-CVE-2026-18477,tar,1.34+dfsg-1.2+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-18477
+OSV,DEBIAN-CVE-2026-18508,tar,1.34+dfsg-1.2+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-18508
+OSV,DEBIAN-CVE-2026-5704,tar,1.34+dfsg-1.2+deb12u1,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-5704
+OSV,DEBIAN-CVE-2024-28085,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2024-28085
+OSV,DEBIAN-CVE-2026-13595,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-13595
+OSV,DEBIAN-CVE-2026-27456,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-27456
+OSV,DEBIAN-CVE-2026-3184,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-3184
+OSV,DEBIAN-CVE-2026-53612,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-53612
+OSV,DEBIAN-CVE-2026-53613,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-53613
+OSV,DEBIAN-CVE-2026-53614,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-53614
+OSV,DEBIAN-CVE-2026-53615,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-53615
+OSV,DEBIAN-CVE-2026-76642,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-76642
+OSV,DEBIAN-CVE-2026-78408,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-78408
+OSV,DEBIAN-CVE-2026-78409,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-78409
+OSV,DEBIAN-CVE-2026-78410,util-linux,2.38.1-5+deb12u3,--,deploy/agent-sandbox/sbom.spdx.json,SBOM 已核对版本,镜像含该组件；可利用路径未逐条证实，不豁免,核对 Debian backport；重建并重新验收 sandbox 镜像,https://osv.dev/DEBIAN-CVE-2026-78410
+Trivy,CVE-2026-53613,bsdutils,1:2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,bsdutils,1:2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,bsdutils,1:2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,bsdutils,1:2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,bsdutils,1:2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2026-41992,gzip,1.12-1,扫描表未显示,CI 后端镜像,扫描镜像安装清单；fix_deferred,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-41992
+Trivy,CVE-2026-54369,libacl1,2.3.1-3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-54369
+Trivy,CVE-2026-53613,libblkid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,libblkid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,libblkid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,libblkid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,libblkid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2026-53613,libmount1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,libmount1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,libmount1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,libmount1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,libmount1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2026-53613,libsmartcols1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,libsmartcols1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,libsmartcols1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,libsmartcols1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,libsmartcols1,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2026-16742,libsystemd0,252.39-1~deb12u2,扫描表未显示,CI 后端镜像,扫描镜像安装清单；fix_deferred,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-16742
+Trivy,CVE-2025-69720,libtinfo6,6.4-4,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2025-69720
+Trivy,CVE-2026-16742,libudev1,252.39-1~deb12u2,扫描表未显示,CI 后端镜像,扫描镜像安装清单；fix_deferred,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-16742
+Trivy,CVE-2026-53613,libuuid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,libuuid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,libuuid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,libuuid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,libuuid1,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2026-53613,mount,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,mount,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,mount,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,mount,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,mount,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2025-69720,ncurses-base,6.4-4,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2025-69720
+Trivy,CVE-2026-13221,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-13221
+Trivy,CVE-2026-42496,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；fix_deferred,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-42496
+Trivy,CVE-2026-8376,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-8376
+Trivy,CVE-2026-42497,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；fix_deferred,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-42497
+Trivy,CVE-2026-48962,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-48962
+Trivy,CVE-2026-57432,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-57432
+Trivy,CVE-2026-57433,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-57433
+Trivy,CVE-2026-9538,perl-base,5.36.0-7+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；fix_deferred,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-9538
+Trivy,CVE-2026-53613,util-linux,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,util-linux,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,util-linux,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,util-linux,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,util-linux,2.38.1-5+deb12u3,扫描表未显示,CI 后端镜像,扫描镜像安装清单；affected,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2026-53613,util-linux-extra,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-53613
+Trivy,CVE-2026-76642,util-linux-extra,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-76642
+Trivy,CVE-2026-78408,util-linux-extra,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78408
+Trivy,CVE-2026-78409,util-linux-extra,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78409
+Trivy,CVE-2026-78410,util-linux-extra,,扫描表未显示,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2026-78410
+Trivy,CVE-2023-45853,zlib1g,1:1.2.13.dfsg-1,扫描表未显示,CI 后端镜像,扫描镜像安装清单；will_not_fix,组件命中；可利用路径未逐条证实，不豁免,核对 Debian backport 与基础镜像修复，重建扫描,https://nvd.nist.gov/vuln/detail/CVE-2023-45853
+Trivy,CVE-2026-44307,Mako (METADATA),1.3.11,1.3.12,CI 后端镜像,扫描镜像安装清单；fixed,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-44307
+Trivy,CVE-2026-48526,PyJWT (METADATA),2.12.1,2.13.0,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-48526
+Trivy,CVE-2026-69247,cryptography (METADATA),47.0.0,50.0.0,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-69247
+Trivy,CVE-2026-69249,cryptography (METADATA),47.0.0,49.0.0,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-69249
+Trivy,GHSA-537c-gmf6-5ccf,cryptography (METADATA),47.0.0,48.0.1,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://github.com/advisories/GHSA-537c-gmf6-5ccf
+Trivy,CVE-2026-53539,python-multipart (METADATA),0.0.27,0.0.30,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-53539
+Trivy,CVE-2026-48818,starlette (METADATA),1.0.0,1.1.0,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-48818
+Trivy,CVE-2026-54283,starlette (METADATA),1.0.0,1.3.1,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-54283
+Trivy,CVE-2026-44431,urllib3 (METADATA),2.6.3,2.7.0,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-44431
+Trivy,CVE-2026-44432,urllib3 (METADATA),2.6.3,2.7.0,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,核对 PyPI 上游修复并单独升级 Pixi 生产锁；运行相关回归,https://nvd.nist.gov/vuln/detail/CVE-2026-44432
+Trivy,GHSA-36hh-v3qg-5jq4,pyo3,0.28.2,0.29.0,CI 后端镜像,扫描镜像安装清单；fixed,组件命中；可利用路径未逐条证实，不豁免,定位 SBOM 中嵌入该 crate 的发行包；升级其上游构建后复扫,https://github.com/advisories/GHSA-36hh-v3qg-5jq4
+Trivy,GHSA-4w2j-m93h-cj5j,quinn-proto,0.11.14,0.11.15,CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,定位 SBOM 中嵌入该 crate 的发行包；升级其上游构建后复扫,https://github.com/advisories/GHSA-4w2j-m93h-cj5j
+Trivy,GHSA-82j2-j2ch-gfr8,rustls-webpki,0.103.9,"0.103.13, 0.104.0-alpha.7",CI 后端镜像,扫描镜像安装清单；状态见原日志,组件命中；可利用路径未逐条证实，不豁免,定位 SBOM 中嵌入该 crate 的发行包；升级其上游构建后复扫,https://github.com/advisories/GHSA-82j2-j2ch-gfr8

@@ -70,10 +70,8 @@ class ProtectedPathTests(unittest.TestCase):
             "apps/web/scripts/generate-route-tree.mjs": ("generator-config",),
             "apps/web/scripts/export-tokens.ts": ("generator-config",),
             "apps/web/scripts/export-tokens/dtcg-writer.ts": ("generator-config",),
-            ".agents/skills/ditto-page-contract/scripts/generate.mjs": (
-                "generator-config",
-            ),
-            ".agents/skills/ditto-page-contract/scripts/schema/contract.schema.json": (
+            "apps/web/scripts/page-contract/generate.mjs": ("generator-config",),
+            "apps/web/scripts/page-contract/schema/contract.schema.json": (
                 "generator-config",
             ),
             "apps/web/src/features/shell/page-contracts.generated.ts": (
@@ -315,7 +313,7 @@ class HookLeaseTests(unittest.TestCase):
             "pixi run -e dev python -m tooling.contracts.export_openapi --write",
             "bun run contract:codegen -- --write",
             "bun run --cwd apps/web generate-contracts",
-            "bun .agents/skills/ditto-page-contract/scripts/generate.mjs",
+            "bun apps/web/scripts/page-contract/generate.mjs",
             "bun install",
             "pixi update",
             "printf changed > bun.lock",

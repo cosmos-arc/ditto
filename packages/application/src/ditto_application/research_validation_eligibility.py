@@ -340,6 +340,11 @@ def validate_instrument_eligibility(  # noqa: C901, PLR0912 - fail-closed eviden
         fail_validation(
             "SPEC_INVALID", "instrument_eligibility_must_be_non_empty_tuple"
         )
+    sessions_by_month: dict[CalendarMonth, list[date]] = {}
+    for session in sessions:
+        sessions_by_month.setdefault(CalendarMonth.from_date(session), []).append(
+            session
+        )
     evidence: list[InstrumentEligibilityEvidence] = []
     total_intervals = 0
     for raw_item in cast("tuple[object, ...]", raw_evidence):
@@ -380,11 +385,7 @@ def validate_instrument_eligibility(  # noqa: C901, PLR0912 - fail-closed eviden
         if listing_month > calendar_last_month:
             fail_validation("SPEC_INVALID", "listing_date_after_calendar_evidence")
         if calendar_first_month <= listing_month:
-            listing_month_sessions = tuple(
-                session
-                for session in sessions
-                if CalendarMonth.from_date(session) == listing_month
-            )
+            listing_month_sessions = sessions_by_month.get(listing_month, [])
             if listing_date not in listing_month_sessions:
                 fail_validation("SPEC_INVALID", "listing_date_is_not_an_open_session")
             if listing_date != listing_month_sessions[0] and any(

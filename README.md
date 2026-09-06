@@ -9,21 +9,9 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股个股与 ETF 决
 
 ## 技术栈
 
-下表由 `tooling/quality/stack_inventory.py` 从 manifests 生成并做 zero-diff 校验。
-
-<!-- stack-inventory:start -->
-| 范围 | 事实源 | 声明 |
-| --- | --- | --- |
-| 产品版本 | `pyproject.toml` | `0.1.0` |
-| Python | `pixi.toml` | `3.13.*` |
-| Pixi | `pixi.toml` | `>=0.73,<0.74` |
-| Bun | `package.json` | `1.3.14` |
-| FastAPI | `pixi.toml` | `>=0.115,<0.137` |
-| Polars | `pixi.toml` | `>=1.9,<2` |
-| React | `apps/web/package.json` | `^19.2.4` |
-| TypeScript | `apps/web/package.json` | `~6.0.2` |
-| Vite | `apps/web/package.json` | `^8.0.2` |
-<!-- stack-inventory:end -->
+Python、Pixi、FastAPI 与 Polars 版本见 [pixi.toml](pixi.toml)；Bun 版本见
+[根 package.json](package.json)，React、TypeScript 与 Vite 见
+[Web package.json](apps/web/package.json)。实际解析版本由根 lockfiles 固定。
 
 根 `pixi.toml` 是唯一跨栈任务编排事实源。Pixi 管理 Python、质量工具和任务 DAG；
 Bun 只管理 Web workspace 依赖及 lint/type/test/build/codegen 叶子任务。
@@ -90,7 +78,7 @@ readiness，并在 Ctrl-C、异常退出或超时后回收子进程。默认 pro
 | `pixi run -e dev check-web` | Web lint、全部 TS project、unit、graph 与产品合同 |
 | `pixi run -e dev check-contract` | OpenAPI export/lint/breaking/codegen zero-diff |
 | `pixi run -e dev test-system` | production Web + 隔离真实 API 的 Playwright |
-| `pixi run -e dev harness-check` | 根 Agent/Skill/hook/eval 静态验证 |
+| `pixi run -e dev harness-check` | 根 Agent/Skill/hook 与工具回归 |
 | `pixi run -e dev check` | 唯一跨栈快速门 |
 | `pixi run -e dev ci` | 覆盖率、PIT、prototype、E2E、安全与制品全门 |
 | `pixi run -e dev check-changed` | Agent 本地反馈；未知路径 fail closed |

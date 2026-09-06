@@ -50,13 +50,22 @@ def test_owned_temporary_directory_resolves_system_symlink_before_staging(
         artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
     )
     monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
-    monkeypatch.setattr(artifact_gate, "_run", lambda *_args, **_kwargs: "0")
+
+    def run(command: list[str], **_kwargs: object) -> str:
+        if command[1] == "build":
+            Path(command[command.index("--iidfile") + 1]).write_text(
+                "sha256:" + "d" * 64
+            )
+        return "0"
+
+    monkeypatch.setattr(artifact_gate, "_run", run)
     for name in (
         "_verify_live_runtime_config",
         "_normalized_web_tar",
         "_verify_web_artifact_metadata",
         "_run_ephemeral_container",
         "_canonicalize_spdx_sbom",
+        "_verify_scanner_subject",
     ):
         monkeypatch.setattr(artifact_gate, name, noop)
     monkeypatch.setattr(
@@ -546,3 +555,71 @@ def test_release_identity_rejects_tracked_and_untracked_dirty_source(
     subprocess.run([git, "add", str(contract)], cwd=tmp_path, check=True)  # noqa: S603
     with pytest.raises(artifact_gate.ArtifactGateError, match="dirty"):
         artifact_gate._release_identity(tmp_path)
+
+
+def test_build_export_and_smoke_use_the_build_output_id(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A mutable tag must not be resolved again by export or readiness checks."""
+    commands: list[list[str]] = []
+    image_id = "sha256:" + "d" * 64
+
+    def run(command: list[str], **_kwargs: object) -> str:
+        commands.append(command)
+        if command[1] == "build":
+            assert "--iidfile" in command
+            Path(command[command.index("--iidfile") + 1]).write_text(image_id)
+        return "0"
+
+    def noop(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    class SmokeObserved(Exception):
+        pass
+
+    def smoke(_docker: str, _root: Path, image: str, **_kwargs: object) -> None:
+        assert image == image_id
+        assert (
+            next(command for command in commands if command[1] == "save")[-1]
+            == image_id
+        )
+        assert sum(command[1] == "build" for command in commands) == 1
+        raise SmokeObserved
+
+    monkeypatch.setattr(artifact_gate, "_executable", str)
+    monkeypatch.setattr(
+        artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
+    )
+    monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(artifact_gate, "_run", run)
+    for name in (
+        "_verify_live_runtime_config",
+        "_normalized_web_tar",
+        "_verify_web_artifact_metadata",
+        "_run_ephemeral_container",
+        "_canonicalize_spdx_sbom",
+        "_verify_scanner_subject",
+        "_stage_web_dependency_metadata",
+        "_bind_and_verify_web_sbom",
+    ):
+        monkeypatch.setattr(artifact_gate, name, noop)
+    monkeypatch.setattr(artifact_gate, "_smoke_container", smoke)
+    with pytest.raises(SmokeObserved):
+        artifact_gate.run_artifact_gate(tmp_path)
+
+
+@pytest.mark.parametrize("scanner", ["syft", "trivy"])
+def test_scanner_subject_mismatch_cannot_pass(tmp_path: Path, scanner: str) -> None:
+    report = tmp_path / "report.json"
+    report.write_text(
+        json.dumps(
+            {
+                "source": {"metadata": {"imageID": "sha256:wrong"}},
+                "Metadata": {"ImageID": "sha256:wrong"},
+            }
+        )
+    )
+    with pytest.raises(artifact_gate.ArtifactGateError, match="subject"):
+        artifact_gate._verify_scanner_subject(
+            report, image="sha256:" + "d" * 64, scanner=scanner
+        )

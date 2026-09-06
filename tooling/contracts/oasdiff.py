@@ -327,7 +327,7 @@ def release_asset_name(*, system: str, machine: str) -> str:
     elif system == "Linux":
         platform_name, suffix = f"linux_{architecture}", "tar.gz"
     elif system == "Windows":
-        platform_name, suffix = f"windows_{architecture}", "zip"
+        platform_name, suffix = f"windows_{architecture}", "tar.gz"
     else:
         raise OasdiffError(f"unsupported oasdiff operating system: {system}")
     return f"oasdiff_{OASDIFF_VERSION}_{platform_name}.{suffix}"

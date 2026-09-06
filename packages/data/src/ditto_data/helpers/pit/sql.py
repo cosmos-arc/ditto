@@ -24,7 +24,7 @@ class PitHelper:
     注意：
     - 这是辅助函数，不是全自动解决方案
     - 开发者仍需理解 PIT 概念和规则
-    - 参考 .claude/skills/pit-guide/SKILL.md 了解详情
+    - 参考 .agents/skills/ditto-pit-safety/SKILL.md 了解详情
     """
 
     @staticmethod

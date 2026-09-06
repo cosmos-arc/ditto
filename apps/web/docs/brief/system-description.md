@@ -1,6 +1,6 @@
 # Ditto System Description
 
-> Spec-grade YAML — 供 `/ditto-product-arch` 消费的结构化系统描述。
+> Spec-grade YAML — 供产品规格与实现参考的结构化系统描述。
 > 初版生成：2026-04-17 | 产品边界复核：2026-08-30
 > 状态：产品级系统描述；实现状态仍以源码、OpenAPI 与验证证据为准
 

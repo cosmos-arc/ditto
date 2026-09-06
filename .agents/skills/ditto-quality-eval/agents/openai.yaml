@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ditto Quality Evaluation"
-  short_description: "Evaluate repository quality with deterministic scoring"
-  default_prompt: "Use $ditto-quality-eval to run a full repository quality evaluation."

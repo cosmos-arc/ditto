@@ -201,21 +201,19 @@ test-fast = "python scripts/test.py --fast"
 # PIT correctness suite must remain explicit and cannot skip for local fixtures.
 pit = "pytest -m pit -q -n0 --no-cov"
 
-# Agent Harness：标准库验证与 fixture 驱动测试
+# Agent Harness：宿主配置验证与 policy/工具回归
 sync-agent-skills = "python tooling/agent_harness/sync_skills.py"
 harness-validate = "python tooling/agent_harness/validate.py"
-agent-eval = "python -m tooling.agent_harness.agent_eval"
 integrator-lease = "python -m tooling.agent_harness.lease"
 harness-test = "python -m unittest discover -s tooling/agent_harness/tests -v"
+tooling-test = "pytest tooling/dev/tests tooling/contracts/tests tooling/quality/tests -q -n0 --no-cov"
 harness-type = "basedpyright tooling/agent_harness"
-stack-inventory-check = "python tooling/quality/stack_inventory.py"
 large-file-check = "python -m tooling.quality.large_files"
 harness-check = { depends-on = [
     "harness-validate",
-    "agent-eval",
     "harness-test",
+    "tooling-test",
     "harness-type",
-    "stack-inventory-check",
     "large-file-check",
 ] }
 check-changed = "python tooling/agent_harness/hook.py --event check-changed"
@@ -242,8 +240,9 @@ web-architecture = { cmd = "bun run arch:check", cwd = "apps/web" }
 web-coverage = { cmd = "bun run test:coverage", cwd = "apps/web" }
 web-prototype = { cmd = "bun run test:prototype", cwd = "apps/web" }
 web-manifest-check = "python tooling/quality/web_manifest_freshness.py"
-check-web = { depends-on = ["web-lint", "web-type", "web-test", "web-product-check", "web-token-check", "web-architecture", "web-manifest-check"] }
-web-ci = { depends-on = ["check-web", "web-coverage", "web-prototype", "web-build", "web-manifest-check"] }
+web-static = { depends-on = ["web-lint", "web-type", "web-product-check", "web-token-check", "web-architecture"] }
+check-web = { depends-on = ["web-static", "web-test"] }
+web-ci = { depends-on = ["web-static", "web-coverage", "web-prototype", "web-build"] }
 
 # OpenAPI 与真实双栈验收
 contract-static = "python -m tooling.contracts.check_contract"

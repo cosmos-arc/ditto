@@ -22,19 +22,10 @@ tooling/agent_harness/       同步、验证、hooks、确定性 eval 和测试
 
 ## Skills
 
-| Skill | 触发范围 |
-|---|---|
-| `ditto-architecture-change` | 跨包、公共 API、DI、依赖和架构重构 |
-| `ditto-api-contract-change` | FastAPI/OpenAPI、兼容性、codegen 与类型化消费者 |
-| `ditto-app-dev` | React/Web 行为实现与前端质量门 |
-| `ditto-pit-safety` | 查询、窗口、join、因子、回测和时间可见性 |
-| `ditto-test-first` | Bug、行为、契约、PIT、风控和交易语义 |
-| `ditto-change-review` | 用户 review、PR 前或高风险 diff 审查 |
-| `ditto-quality-eval` | 用户明确要求的 backend/web/system 质量评估 |
-| `ditto-design-cycle` | 原型与实现之间的设计迭代 |
-| `ditto-page-contract` | 页面合同的生成和验证 |
-| `ditto-product-arch` | 产品信息架构与跨 feature workflow |
-| `ditto-product-discovery` | 产品需求发现与证据整理 |
+项目只保留 `ditto-pit-safety`，承载时间可见性与未来哨兵知识。API 兼容规则见
+[OpenAPI 文档](../../contracts/openapi/README.md)，架构和测试规则由根 AGENTS 路由；
+产品、设计和页面合同由 [Web AGENTS](../../apps/web/AGENTS.md) 按任务路由。
+Web 工具位于 `apps/web/scripts/{page-contract,prototype,visual-audit}`，与 Bun 依赖一起运行。
 
 编辑 `.agents/skills` 后运行：
 
@@ -116,41 +107,32 @@ pixi run -e dev integrator-lease release
 持有者应覆盖生成、验证和最终 diff 检查的完整期间，完成后主动 release。PreToolUse
 在 Edit/Write/apply_patch 前阻断非持有者，也识别 OpenAPI `--write`、Bun/Pixi lock
 更新和直接重定向到受保护文件等已知 Bash writer；任意 shell 语义无法被完全可靠解析，
-因此显式 `check-changed` 还会对完整 Git changed set 再做同一 lease 检查。两个宿主
-的 matcher 和精确命令同时由 validator 与 deterministic Agent Eval 校验。
+因此显式 `check-changed` 还会对完整 Git changed set 再做同一 lease 检查。validator 检查两个宿主必要事件的 matcher 覆盖与共享命令；允许合法附加配置。
 
-## Deterministic Agent Eval
+## Policy 回归
 
-`tooling/agent_harness/evals/v1/cases.json` 是版本化用例事实源，
-`tooling.agent_harness.agent_eval` 使用严格 schema 解析并从 changed set、逐层
-`AGENTS.md`、实际工具结果、生成物 provenance 与运行 profile 做确定性评分。
+`tooling/agent_harness/evals/v1/cases.json` 的预填 attempt/expected 是普通 policy/grader
+测试数据，由 `harness-test` 执行。它覆盖漏报 changed set、非法依赖、契约漂移、
+伪造 live 证据、PIT 哨兵缺失及验证范围不足等反例，不代表模型实测能力。
+不再作为独立门重复执行；真实 agent 效果应以实际任务结果和工具日志判断。
 
-v1 至少覆盖：
+## 本地与 CI 的验证分工
 
-- 未读取根到近端的完整 `AGENTS.md` 层级；
-- 非法 Python/Web import；
-- OpenAPI 与 generated types 漂移，以及手工编辑生成物；
-- 漏报未跟踪文件；
-- 用 mock 证据冒充 live 行为；
-- PIT future sentinel 缺失或失败；
-- 声称通过但没有成功工具证据的测试；
-- changed-scope 验证范围小于 Harness 分类要求。
+普通提交只检查 staged 文件，Ruff 不展开到全库；部分暂存由 pre-commit 的 stash
+机制保护。重检查由显式 `check-changed` 和 CI 承担。
+普通 Markdown/RST（包含近端 AGENTS）走文档范围；可执行文件、符号链接、模式变化、
+schema、脚本和配置仍保守分类。页面设计源 `apps/web/DESIGN.md` 保留生成物检查。
+`web-manifest-check` 作为明确要求的文档 freshness 审计保留，不阻断普通 UI 修改。
 
-运行：
-
-```bash
-pixi run -e dev agent-eval
-```
-
-该任务是 `harness-check` 的强制依赖。用例只接受确定性 fact/receipt；LLM judge
-可用于设计质量讨论，但不能决定这些治理门的 pass/fail。registry、grader 或分类规则
-变化会进入 receipt fingerprint，使旧验证证据失效；Eval 还独立检查 Claude/Codex
-的 PreToolUse 写工具 matcher、命令和 timeout，避免 validator 自身成为单点。
+PR 复用 changed-scope 选择检查；根配置、共享工具和未知范围选择完整检查。
+主分支、merge queue 和定期 CI 执行全套类型、行为、边界、平台、安全与制品验证。
+关键 mutation 在每周安全流程执行；发布仍要求对应提交完整 CI 与 cohort 验证。
+稳定 CI gate 始终运行，显式区分不适用与失败导致的跳过，缺失结果不会通过。
 
 ## 维护规则
 
 - 不新增通用 planning/debugging/review/worktree/subagent skill；使用宿主原生能力。
-- 新 skill 必须解决 Ditto 特有知识或可复用流程，使用标准 `name`/`description`、正文不超过 120 行，详细资料放一层 `references/`。
+- 新 skill 必须解决 Ditto 特有知识或可复用流程，保留标准 `name`/`description`；可选 metadata 与正文长度不设仓库私有格式门。
 - Hook 保持标准库实现和窄策略，不做宽泛 shell 语义判断。
 - 自动修复只发生在 PostToolUse 的明确 Python 文件；Stop、`check` 和 `ci` 必须只读。
 - `docs/archive`、`docs/plans/archive` 等历史目录不参加活跃 workflow 依赖扫描。
@@ -165,10 +147,9 @@ git diff --check
 pixi run -e dev pre-commit-run
 ```
 
-`harness-check` 同时运行静态 validator、版本化 adversarial Agent Eval、Harness 单测
-与类型检查。validator 从 registry 检查 11 个 skills、指令行数、wrapper、镜像一致性、
-JSON/TOML/frontmatter、hook 目标、插件集合、遗留目录和非归档 workflow 依赖。
+`harness-check` 执行 validator、policy/Harness 回归、开发/契约/质量工具测试和类型检查。
+validator 检查可发现 skill 与 registry、完整镜像、wrapper 和必要 hook 覆盖，
+不锁死 skill 数量、插件集合或合法 hook 组合。
 
-发现验证需分别从仓库根、`apps/web` 和目标 capability package 启动宿主：Claude
-`/memory`、`/skills`、`/hooks` 与 Codex `/skills`、`/hooks` 应显示相同共享约束、
-registry 中的 11 个 skills 和三类 hooks，且无 AGENTS 32 KiB 截断告警。
+从仓库根、`apps/web` 和目标 capability package 检查宿主发现：项目只应出现 PIT skill，
+用户全局技能和本地 hook trust 不由仓库脚本修改。宿主实际发现与 CLI 验证分别报告。

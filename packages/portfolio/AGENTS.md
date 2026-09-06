@@ -9,7 +9,6 @@
 - 会计系统是显式状态机，所有状态变化通过领域方法发生。
 - 调仓只计算目标权重和约束结果，不执行交易。
 - 不反向依赖 risk 或 execution；交互由 application/backtest 编排。
-- 现金、持仓和调仓语义变化使用 `ditto-test-first`。
 
 ## 验证与参考
 

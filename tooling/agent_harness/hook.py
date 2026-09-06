@@ -565,8 +565,33 @@ _CONTRACT_PREFIXES = (
 _BACKEND_TEST_PREFIX = ("apps", "backend", "tests")
 
 
-def _path_classes(paths: Sequence[str]) -> set[str]:
-    return {category for path in paths for category in _path_categories(path)}
+def _path_classes(paths: Sequence[str], *, root: Path | None = None) -> set[str]:
+    classes = {category for path in paths for category in _path_categories(path)}
+    prose = [path for path in paths if _path_categories(path) == {"docs"}]
+    if root is not None and prose:
+        # Executable/symlink prose is an execution change, including deletions
+        # and staged mode changes whose old form only survives in HEAD/index.
+        for path in prose:
+            candidate = root / path
+            if candidate.is_symlink() or (
+                candidate.is_file() and candidate.stat().st_mode & 0o111
+            ):
+                classes.add("root")
+        for args in (("ls-files", "--stage", "-z"), ("ls-tree", "-rz", "HEAD")):
+            result = subprocess.run(
+                ["git", *args, "--", *prose],
+                cwd=root,
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode:
+                classes.add("unknown")
+            elif any(
+                record and not record.startswith(b"100644 ")
+                for record in result.stdout.split(b"\0")
+            ):
+                classes.add("root")
+    return classes
 
 
 def _is_high_risk_path(path: str) -> bool:
@@ -586,6 +611,11 @@ def _is_high_risk_path(path: str) -> bool:
 def _path_categories(path: str) -> set[str]:
     if path in _ROOT_GATE_PATHS or path.startswith(".github/"):
         return {"root"}
+    if path != "apps/web/DESIGN.md" and (
+        path.endswith((".md", ".rst"))
+        or (path.startswith("docs/") and path.endswith(".txt"))
+    ):
+        return {"docs"}
     if _is_harness(path):
         return {"harness"}
 
@@ -641,11 +671,11 @@ def _collapse_diff_classes(classes: set[str]) -> str:
     return level
 
 
-def classify_diff(paths: Sequence[str]) -> str:
+def classify_diff(paths: Sequence[str], *, root: Path | None = None) -> str:
     """Map the full changed set to a fail-closed monorepo verification class."""
     if not paths:
         return "none"
-    return _collapse_diff_classes(_path_classes(paths))
+    return _collapse_diff_classes(_path_classes(paths, root=root))
 
 
 def _test_owner(path: str) -> str | None:
@@ -728,7 +758,7 @@ def verification_commands(
 ) -> list[list[str]]:
     """Build a monotonic, non-destructive validation plan for all path classes."""
     if paths:
-        classes = _path_classes(paths)
+        classes = _path_classes(paths, root=root)
     elif level == "contract-high-risk":
         classes = {"contract", "high-risk"}
     else:
@@ -917,7 +947,7 @@ def verification_decision(
         }
     digest = manifest_digest(manifest)
 
-    level = classify_diff(paths)
+    level = classify_diff(paths, root=root)
     cached = receipt_path(root, digest)
     if _receipt_is_valid(
         cached,
@@ -973,7 +1003,7 @@ def _run_check_changed(
         print(response["reason"])
         return 1
     print(
-        f"Changed-scope verification ({classify_diff(paths)}) passed"
+        f"Changed-scope verification ({classify_diff(paths, root=root)}) passed"
         + (
             "; exact evidence receipt recorded or reused."
             if paths
@@ -999,7 +1029,8 @@ def stop_feedback(payload: dict[str, Any], root: Path) -> dict[str, Any]:
         return {}
     return {
         "systemMessage": (
-            f"Worktree has {len(paths)} pending paths ({classify_diff(paths)}); "
+            f"Worktree has {len(paths)} pending paths "
+            f"({classify_diff(paths, root=root)}); "
             "these may predate this task. Stop does not run or certify quality gates. "
             "For code changes, run pixi run -e dev check-changed explicitly "
             "and report actual results."

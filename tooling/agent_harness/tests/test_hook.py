@@ -365,6 +365,44 @@ class CommandPolicyTests(unittest.TestCase):
 
 
 class DiffClassificationTests(unittest.TestCase):
+    def test_executable_prose_is_not_downgraded_after_mode_change_or_delete(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _initialize_repository(root)
+            document = _commit_file(root, "packages/data/README.md", "ordinary prose\n")
+            document.write_text("updated prose\n")
+            assert classify_diff(changed_paths(root), root=root) == "docs"
+            document.chmod(0o755)
+            assert classify_diff(changed_paths(root), root=root) == "root"
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            document.chmod(0o644)
+            assert classify_diff(changed_paths(root), root=root) == "root"
+            document.unlink()
+            assert classify_diff(changed_paths(root), root=root) == "root"
+
+    def test_prose_is_lightweight_but_executable_and_contract_inputs_are_not(
+        self,
+    ) -> None:
+        prose = [
+            "README.md",
+            "packages/data/README.md",
+            "AGENTS.md",
+            ".agents/skills/ditto-pit-safety/SKILL.md",
+        ]
+        assert classify_diff(prose) == "docs"
+        assert verification_commands(classify_diff(prose), prose) == []
+        for path in (
+            ".codex/hooks.json",
+            "tooling/contracts/check_contract.py",
+            "apps/web/scripts/page-contract/schema/contract.schema.json",
+            "unknown/input.yaml",
+        ):
+            with self.subTest(path=path):
+                selected = [*prose, path]
+                assert verification_commands(classify_diff(selected), selected)
+
     def test_monorepo_diff_classes(self) -> None:
         fixtures = {
             "docs": ["docs/architecture/overview.md"],
@@ -374,7 +412,7 @@ class DiffClassificationTests(unittest.TestCase):
             "contract": ["contracts/openapi/v1.json"],
             "high-risk": ["packages/risk/src/ditto_risk/checks.py"],
             "root": ["pyproject.toml"],
-            "harness": ["AGENTS.md", ".agents/skills/ditto-test-first/SKILL.md"],
+            "harness": [".codex/hooks.json", "tooling/agent_harness/hook.py"],
             "unknown": ["unexpected/new-tool.conf"],
         }
         for name, paths in fixtures.items():
@@ -393,7 +431,7 @@ class DiffClassificationTests(unittest.TestCase):
         )
         assert (
             classify_diff(["AGENTS.md", "apps/web/src/features/system/api/status.ts"])
-            == "root"
+            == "web"
         )
 
     def test_root_toolchain_paths_are_not_reduced_to_harness_only(self) -> None:
@@ -563,7 +601,10 @@ class DiffClassificationTests(unittest.TestCase):
     def test_docs_or_harness_paths_cannot_remove_an_owning_gate(self) -> None:
         test_path = "packages/data/tests/unit/test_data_import_boundary_unit.py"
         test_and_docs = [test_path, "docs/architecture/overview.md"]
-        harness_and_web = ["AGENTS.md", "apps/web/src/features/markets/index.ts"]
+        harness_and_web = [
+            ".codex/hooks.json",
+            "apps/web/src/features/markets/index.ts",
+        ]
 
         test_commands = verification_commands(
             classify_diff(test_and_docs), test_and_docs

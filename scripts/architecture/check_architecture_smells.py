@@ -1,28 +1,8 @@
 #!/usr/bin/env python3
 """Read-only architecture smell checks for Ditto.
 
-Checks only stable, low-noise smells that are already agreed upon and cleaned up:
-
-1. f-string logging calls in source code (use lazy formatting instead)
-2. Missing __init__.py in Python package directories
-3. Oversized source files (>800 lines)
-4. Platform must not contain business table prefixes
-5. Production packages must not import ditto_analysis
-6. Kernel must not import ditto_platform
-7. Packages must not re-export symbols imported from other Ditto packages
-8. Execution sqlite legacy storage must not grow permanent modules
-9. Apps non-registry modules must not import capability package internals
-10. Runtime package __version__ constants must not be reintroduced
-11. Data must not own derived feature/factor publication semantics
-12. Platform must not contain domain/business vocabulary
-13. Active source docstrings/comments must not use stale architecture terms
-14. Empty analysis placeholder namespaces must not imply available capability
-15. Active architecture docs must not imply reserved analysis capabilities exist
-16. Application providers must not read environment variables directly
-17. Generic helpers/utils source paths must have owned architecture allowances
-18. Every src __init__.py must declare an explicit __all__
-19. Experiment sources must not use TYPE_CHECKING to hide import cycles
-20. The process provider must declare wiring classes only
+Enforces dependency, package metadata and runtime ownership boundaries.
+Naming, line counts and wording belong in review, not the machine gate.
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -31,10 +11,8 @@ Usage:
 
 import argparse
 import ast
-import io
 import re
 import sys
-import tokenize
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,36 +24,14 @@ SRC_ROOTS = [
     ROOT / "apps" / "backend",
 ]
 
-MAX_FILE_LINES = 800
 MIN_PACKAGE_SOURCE_PATH_PARTS = 5
 MIN_BACKEND_SOURCE_PATH_PARTS = 4
 
 # Logger methods that should NOT use f-strings (lazy formatting is preferred).
-FORBIDDEN_FSTRING_LOG_PATTERNS = (
-    "logger.debug(f",
-    "logger.info(f",
-    "logger.warning(f",
-    "logger.error(f",
-    "logger.critical(f",
-)
 
 # Business table prefixes that must not appear in platform source files.
-BUSINESS_TABLE_PREFIXES = (
-    "execution_",
-    "strategy_",
-    "portfolio_",
-    "risk_",
-    "features_",
-)
 
 # Known safe metric/config names in platform that contain business prefixes.
-PLATFORM_PREFIX_ALLOWLIST = frozenset(
-    {
-        "portfolio_value",
-        "portfolio_drawdown",
-        "portfolio_drawdown_3d",
-    }
-)
 
 PRODUCTION_PACKAGES = (
     "ditto_data",
@@ -99,13 +55,6 @@ class CompositionImportAllowance:
 
 @dataclass(frozen=True)
 class ProductionAnalysisWiringAllowance:
-    path: str
-    owner: str
-    reason: str
-
-
-@dataclass(frozen=True)
-class GenericHelperNamespaceAllowance:
     path: str
     owner: str
     reason: str
@@ -142,46 +91,10 @@ APPS_CAPABILITY_IMPORT_ROOTS = frozenset(
     }
 )
 
-DATA_FORBIDDEN_SEMANTIC_TERMS = frozenset(
-    {
-        "features/",
-        "factors/",
-        "publication_safety",
-        "publication_shadow",
-        "ditto_data.storage.runtime.publication_safety",
-        "ditto_data.storage.runtime.publication_shadow_sqlite",
-    }
-)
-
-PLATFORM_FORBIDDEN_DOMAIN_TERMS = frozenset(
-    {
-        "instrument_id",
-        "trade_date",
-        "factor_",
-        "portfolio_",
-        "risk.",
-        "dq_",
-        "golden_dataset",
-        "ticker",
-    }
-)
 
 # Exact semantic ownership exceptions only. Each entry must be tied to a
 # design-boundary reason before being added here.
-DATA_FORBIDDEN_SEMANTIC_ALLOWLIST: dict[str, frozenset[str]] = {}
-PLATFORM_FORBIDDEN_DOMAIN_ALLOWLIST: dict[str, frozenset[str]] = {}
 
-SEMANTIC_SCAN_SKIP_PATH_PARTS = frozenset(
-    {
-        "tests",
-        "docs",
-        "migrations",
-        "changelog",
-        "changelogs",
-        "archive",
-        "archives",
-    }
-)
 
 APPS_HOST_COMPOSITION_ALLOWANCES = (
     CompositionImportAllowance(
@@ -1638,197 +1551,16 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ),
 )
 
-GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
-    GenericHelperNamespaceAllowance(
-        path="packages/application/src/ditto_application/config/helpers.py",
-        owner="application config",
-        reason=(
-            "Extracted now_iso() helper; pure utility re-exported by config barrel."
-        ),
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/application/src/ditto_application/processes/materialization/helpers.py",
-        owner="application materialization process",
-        reason=(
-            "Existing local process helper module; future growth needs "
-            "semantic naming review."
-        ),
-    ),
-    GenericHelperNamespaceAllowance(
-        path="apps/backend/src/ditto_apps/api/utils/__init__.py",
-        owner="apps API adapter",
-        reason=(
-            "Existing transport adapter utility namespace; future growth needs "
-            "semantic naming review."
-        ),
-    ),
-    GenericHelperNamespaceAllowance(
-        path="apps/backend/src/ditto_apps/api/utils/identifier.py",
-        owner="apps API adapter",
-        reason="Existing identifier adapter helpers for API boundaries.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="apps/backend/src/ditto_apps/cli/utils/__init__.py",
-        owner="apps CLI adapter",
-        reason=(
-            "Existing CLI adapter utility namespace; future growth needs "
-            "semantic naming review."
-        ),
-    ),
-    GenericHelperNamespaceAllowance(
-        path="apps/backend/src/ditto_apps/cli/utils/identifier.py",
-        owner="apps CLI adapter",
-        reason="Existing identifier adapter helpers for CLI boundaries.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="apps/backend/src/ditto_apps/cli/utils/output.py",
-        owner="apps CLI adapter",
-        reason="Existing CLI output formatting adapter helpers.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="apps/backend/src/ditto_apps/cli/utils/params.py",
-        owner="apps CLI adapter",
-        reason="Existing CLI parameter adapter helpers.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="apps/backend/src/ditto_apps/cli/utils/validation.py",
-        owner="apps CLI adapter",
-        reason="Existing CLI validation adapter helpers.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/helpers/__init__.py",
-        owner="data compatibility helpers",
-        reason=(
-            "Existing data helper namespace; future growth needs semantic "
-            "naming review."
-        ),
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/helpers/adjustment.py",
-        owner="data adjustment helpers",
-        reason="Existing data adjustment helper module.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/helpers/pit/__init__.py",
-        owner="data point-in-time helpers",
-        reason="Existing point-in-time helper namespace.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/helpers/pit/dataframe.py",
-        owner="data point-in-time helpers",
-        reason="Existing point-in-time dataframe helper module.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/helpers/pit/policy.py",
-        owner="data point-in-time helpers",
-        reason="Existing point-in-time policy helper module.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/helpers/pit/sql.py",
-        owner="data point-in-time helpers",
-        reason="Existing point-in-time SQL helper module.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/sources/tushare/utils/__init__.py",
-        owner="data Tushare source adapter",
-        reason="Existing source adapter utility namespace.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/sources/tushare/utils/http_utils.py",
-        owner="data Tushare source adapter",
-        reason="Existing source adapter HTTP utility module.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/sources/tushare/utils/rate_limiter.py",
-        owner="data Tushare source adapter",
-        reason="Existing source adapter rate limiting utility module.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/utils/__init__.py",
-        owner="data compatibility utilities",
-        reason=(
-            "Existing data utility namespace; future growth needs semantic "
-            "naming review."
-        ),
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/utils/ticker_utils.py",
-        owner="data ticker utilities",
-        reason="Existing ticker normalization utility module.",
-    ),
-    GenericHelperNamespaceAllowance(
-        path="packages/data/src/ditto_data/utils/timezone_utils.py",
-        owner="data timezone utilities",
-        reason="Existing timezone utility module.",
-    ),
-)
-
-GENERIC_HELPER_NAMESPACE_ALLOWLIST = frozenset(
-    allowance.path for allowance in GENERIC_HELPER_NAMESPACE_ALLOWANCES
-)
 
 # AI rule files that should use current package names.
-AI_RULE_ROOTS = [
-    ROOT / "CLAUDE.md",
-    ROOT / "AGENTS.md",
-    ROOT / ".claude" / "rules",
-    ROOT / ".claude" / "commands",
-    ROOT / ".claude" / "checklists",
-    ROOT / ".factory" / "commands",
-]
 
 # Active package docs (CLAUDE.md, README.md under packages/) roots.
-PACKAGE_DOC_ROOTS = [
-    ROOT / "packages",
-]
 
 # Stale package references that should not appear in active AI rules.
-STALE_AI_RULE_REFERENCES = (
-    "ditto_infra",
-    "ditto_interfaces",
-    "ditto_app.",  # ditto_application is OK, ditto_app. is stale
-    "ditto_analytics",
-    "ditto_engine",
-    "packages/infra",
-    "packages/app/",  # packages/application is OK
-    "packages/analytics",
-    "packages/engine",
-    "interfaces/src",
-    "interfaces/tests",
-)
 
 # Stale package references that should not appear in active package docs
 # (CLAUDE.md, README.md under packages/).
-STALE_ACTIVE_PACKAGE_REFERENCES = (
-    "ditto_app.",  # ditto_application / ditto_apps are OK
-    "ditto_analytics",
-    "ditto_engine",
-    "ditto_interfaces",
-    "ditto_infra",
-    "packages/app/",
-    "packages/analytics",
-    "packages/engine",
-    "packages/infra",
-    "interfaces/",
-    "interfaces/tests",
-    "interfaces/src",
-    "apps → analytics",
-    "analytics →",
-    "→ analytics",
-    "Analytics",
-)
 
-STALE_SOURCE_ARCHITECTURE_TERMS = (
-    "Interfaces 层",
-    "interfaces/",
-    "infra/",
-    "analytics layer",
-    "engine 层",
-)
-
-ANALYSIS_PLACEHOLDER_INIT_PATHS = (
-    "packages/analysis/src/ditto_analysis/experiments/__init__.py",
-)
 
 EXPERIMENT_APPLICATION_SOURCE_PREFIX = (
     "packages/application/src/ditto_application/processes/experiments/"
@@ -1868,54 +1600,6 @@ PROCESS_PROVIDER_SOURCE_PATH = (
     "packages/application/src/ditto_application/providers_process.py"
 )
 
-ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
-    ".claude/rules/architecture.md",
-    "CLAUDE.md",
-    "README.md",
-    "docs/architecture/boundaries-and-abstraction-standards.md",
-    "docs/architecture/agent-context-pack.md",
-    "apps/backend/README.md",
-)
-
-ANALYSIS_PLACEHOLDER_ACTIVE_DOC_GLOBS = ("packages/*/README.md",)
-
-ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS = (
-    "纯研究分析（报告、诊断、实验）",  # noqa: RUF001 - exact stale doc phrase
-    "报告、诊断、实验、研究数据集",
-    "报告、诊断、实验、筛选",
-    "研究报告",
-    "诊断工具",
-    "实验与筛选",
-    "研究/报告/诊断",
-    "研究/评估",
-    "纯研究分析",
-    "它描述”报告、诊断、实验、研究”",
-    "是否处理报告、诊断、实验、研究",
-    "Reports, diagnostics, experiments, research",
-    "research / reporting 编排",
-)
-
-ANALYSIS_DOC_CONTEXT_ANCHORS = (
-    "analysis/",
-    "ditto_analysis",
-    "packages/analysis",
-)
-
-ANALYSIS_DOC_RESERVED_NAMESPACE_CLAIMS = (
-    "evaluation/",
-    "experiments/",
-)
-
-ANALYSIS_DOC_RESERVED_CONTEXT_MARKERS = (
-    "reserved",
-    "future",
-    "not current",
-    "no public runtime",
-    "保留",
-    "未来",
-    "不是现有",
-    "当前只是",
-)
 
 PLACEHOLDER_MISLEADING_AVAILABILITY_PHRASES = (
     "提供",
@@ -1966,23 +1650,11 @@ def _is_package_source(rel_path: str, *packages: str) -> bool:
     return any(pkg in rel_path for pkg in packages)
 
 
-def _is_semantic_scan_target(rel_path: str) -> bool:
-    return not any(
-        part in SEMANTIC_SCAN_SKIP_PATH_PARTS for part in Path(rel_path).parts
-    )
-
-
 def _has_import(source: str, module: str) -> bool:
-    return f"from {module}" in source or f"import {module}" in source
-
-
-def check_fstring_logging(source: str, rel_path: str) -> list[str]:
-    """Check for f-string usage in logger calls."""
-    errors: list[str] = []
-    for pattern in FORBIDDEN_FSTRING_LOG_PATTERNS:
-        if pattern in source:
-            errors.append(f"{rel_path}: contains {pattern!r}")
-    return errors
+    return any(
+        imported == module or imported.startswith(f"{module}.")
+        for imported in _imported_modules_from_source(source)
+    )
 
 
 def check_missing_init_py() -> list[str]:
@@ -2029,42 +1701,6 @@ def check_missing_dunder_all(root: Path = ROOT) -> list[str]:
                 errors.append(
                     f"{init_file.relative_to(root)}: missing __all__ declaration"
                 )
-    return errors
-
-
-def check_oversized_files(line_count: int, rel_path: str) -> list[str]:
-    """Check for source files exceeding the line limit."""
-    if line_count > MAX_FILE_LINES:
-        return [f"{rel_path}: {line_count} lines (max {MAX_FILE_LINES})"]
-    return []
-
-
-def check_platform_business_tables(source: str, rel_path: str) -> list[str]:
-    """Check for business table prefixes in platform source files."""
-    if not _is_package_source(rel_path, "ditto_platform"):
-        return []
-    errors: list[str] = []
-    for prefix in BUSINESS_TABLE_PREFIXES:
-        for quote in ('"', "'"):
-            idx = 0
-            search_key = f"{quote}{prefix}"
-            while True:
-                idx = source.find(search_key, idx)
-                if idx == -1:
-                    break
-                end_idx = source.find(quote, idx + 1)
-                if end_idx == -1:
-                    idx += 1
-                    continue
-                full_name = source[idx + 1 : end_idx]
-                if full_name not in PLATFORM_PREFIX_ALLOWLIST:
-                    msg = (
-                        f"{rel_path}: platform has business "
-                        f"prefix {quote}{prefix}...{quote} "
-                        f"({full_name!r})"
-                    )
-                    errors.append(msg)
-                idx = end_idx + 1
     return errors
 
 
@@ -2472,114 +2108,9 @@ def check_process_provider_wiring_only(
     ]
 
 
-def is_generic_helper_namespace_path(rel_path: str) -> bool:
-    """Return whether a production source path uses generic helpers/utils names."""
-    parts = Path(rel_path).parts
-    is_package_source = (
-        len(parts) >= MIN_PACKAGE_SOURCE_PATH_PARTS
-        and parts[0] == "packages"
-        and parts[2] == "src"
-    )
-    is_backend_source = len(parts) >= MIN_BACKEND_SOURCE_PATH_PARTS and parts[:3] == (
-        "apps",
-        "backend",
-        "src",
-    )
-    if not is_package_source and not is_backend_source:
-        return False
-    if not rel_path.endswith(".py"):
-        return False
-    if "tests" in parts:
-        return False
-
-    return (
-        Path(rel_path).stem in {"helper", "helpers", "util", "utils"}
-        or "helpers" in parts
-        or "utils" in parts
-    )
-
-
-def check_generic_helper_namespace_allowance(rel_path: str) -> list[str]:
-    """Check generic helpers/utils source paths are explicitly allowed."""
-    if not is_generic_helper_namespace_path(rel_path):
-        return []
-    if rel_path in GENERIC_HELPER_NAMESPACE_ALLOWLIST:
-        return []
-    return [
-        f"{rel_path}: generic helpers/utils namespace requires architecture "
-        "review; rename to a semantic module or add an owned, reasoned allowance"
-    ]
-
-
-def check_data_no_derived_feature_ownership(source: str, rel_path: str) -> list[str]:
-    """Check data source does not own derived feature/factor semantics."""
-    if not _is_package_source(rel_path, "ditto_data"):
-        return []
-
-    allowed_terms = DATA_FORBIDDEN_SEMANTIC_ALLOWLIST.get(rel_path, frozenset())
-    return [
-        f"{rel_path}: data owns derived feature semantic term {term!r}; "
-        "move ownership to ditto_features/application boundary"
-        for term in sorted(DATA_FORBIDDEN_SEMANTIC_TERMS)
-        if term in source and term not in allowed_terms
-    ]
-
-
-def check_platform_no_domain_semantics(source: str, rel_path: str) -> list[str]:
-    """Check platform source stays free of domain/business semantics."""
-    if not _is_package_source(rel_path, "ditto_platform"):
-        return []
-
-    allowed_terms = PLATFORM_FORBIDDEN_DOMAIN_ALLOWLIST.get(rel_path, frozenset())
-    return [
-        f"{rel_path}: platform owns domain semantic term {term!r}; "
-        "keep platform as technical infrastructure"
-        for term in sorted(PLATFORM_FORBIDDEN_DOMAIN_TERMS)
-        if term in source and term not in allowed_terms
-    ]
-
-
-def _iter_source_comment_and_docstring_text(source: str) -> list[str]:
-    texts: list[str] = []
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        tree = None
-    if tree is not None:
-        for node in ast.walk(tree):
-            if isinstance(
-                node,
-                ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-            ):
-                docstring = ast.get_docstring(node, clean=False)
-                if docstring is not None:
-                    texts.append(docstring)
-
-    try:
-        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
-        for token in tokens:
-            if token.type == tokenize.COMMENT:
-                texts.append(token.string)
-    except tokenize.TokenError:
-        pass
-    return texts
-
-
-def check_source_architecture_terms(source: str, rel_path: str) -> list[str]:
-    """Check active source docstrings/comments for stale architecture terms."""
-    text = "\n".join(_iter_source_comment_and_docstring_text(source))
-    return [
-        f"{rel_path}: contains stale source architecture term {term!r}"
-        for term in STALE_SOURCE_ARCHITECTURE_TERMS
-        if term in text
-    ]
-
-
-def _check_per_file(verbose: bool) -> list[str]:
-    """Run per-file checks (f-string logging, oversized files, boundary checks)."""
+def _check_per_file() -> list[str]:
+    """Run executable source and runtime boundary checks."""
     errors: list[str] = []
-    fstring_count = 0
-    oversized_count = 0
 
     for path in iter_source_files():
         if "__pycache__" in path.parts or ".pixi" in path.parts:
@@ -2591,19 +2122,6 @@ def _check_per_file(verbose: bool) -> list[str]:
             continue
 
         rel_path = str(path.relative_to(ROOT))
-        line_count = len(source.splitlines())
-
-        fstring_errors = check_fstring_logging(source, rel_path)
-        if fstring_errors:
-            fstring_count += len(fstring_errors)
-            errors.extend(fstring_errors)
-
-        oversized_errors = check_oversized_files(line_count, rel_path)
-        if oversized_errors:
-            oversized_count += len(oversized_errors)
-            errors.extend(oversized_errors)
-
-        errors.extend(check_platform_business_tables(source, rel_path))
         errors.extend(check_production_no_analysis(source, rel_path))
         errors.extend(check_kernel_no_platform(source, rel_path))
         errors.extend(check_execution_no_simulation_ownership(source, rel_path))
@@ -2612,63 +2130,7 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_application_provider_no_environment_reads(source, rel_path))
         errors.extend(check_experiment_source_no_type_checking(source, rel_path))
         errors.extend(check_process_provider_wiring_only(source, rel_path))
-        errors.extend(check_generic_helper_namespace_allowance(rel_path))
-        errors.extend(check_source_architecture_terms(source, rel_path))
-        if _is_semantic_scan_target(rel_path):
-            errors.extend(check_data_no_derived_feature_ownership(source, rel_path))
-            errors.extend(check_platform_no_domain_semantics(source, rel_path))
 
-    if verbose:
-        if fstring_count == 0:
-            print("[OK] No f-string logging calls found")
-        if oversized_count == 0:
-            print("[OK] No oversized files found")
-
-    return errors
-
-
-def check_ai_rule_stale_references() -> list[str]:
-    """Check active AI rule files for stale package references."""
-    errors: list[str] = []
-    for root in AI_RULE_ROOTS:
-        if root.is_file():
-            files_to_check = [root]
-        elif root.is_dir():
-            files_to_check = sorted(root.rglob("*.md"))
-            files_to_check.extend(sorted(root.rglob("*.py")))
-        else:
-            continue
-
-        for path in files_to_check:
-            try:
-                content = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
-            rel = str(path.relative_to(ROOT))
-            for stale in STALE_AI_RULE_REFERENCES:
-                if stale in content:
-                    errors.append(f"{rel}: contains stale AI rule reference {stale!r}")
-    return errors
-
-
-def check_package_doc_stale_references() -> list[str]:
-    """Check active package docs (CLAUDE.md, README.md) for stale references."""
-    errors: list[str] = []
-    for root in PACKAGE_DOC_ROOTS:
-        if not root.is_dir():
-            continue
-        files_to_check: list[Path] = []
-        for name in ("CLAUDE.md", "README.md"):
-            files_to_check.extend(sorted(root.rglob(name)))
-        for path in files_to_check:
-            try:
-                content = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
-            rel = str(path.relative_to(ROOT))
-            for stale in STALE_ACTIVE_PACKAGE_REFERENCES:
-                if stale in content:
-                    errors.append(f"{rel}: contains stale package reference {stale!r}")
     return errors
 
 
@@ -2953,134 +2415,6 @@ def check_cross_package_exports(root: Path = ROOT) -> list[str]:
         )
         for export in find_cross_package_exports(root)
     ]
-
-
-def _has_non_empty_literal_all(tree: ast.Module) -> bool:
-    return bool(_collect_literal_all_names(tree))
-
-
-def check_analysis_placeholder_honesty(root: Path = ROOT) -> list[str]:
-    """Check empty analysis placeholders do not imply available capability."""
-    errors: list[str] = []
-    for rel_path in ANALYSIS_PLACEHOLDER_INIT_PATHS:
-        path = root / rel_path
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
-            errors.append(f"{rel_path}: cannot inspect placeholder docstring ({exc})")
-            continue
-
-        if _has_non_empty_literal_all(tree):
-            continue
-
-        docstring = ast.get_docstring(tree, clean=False) or ""
-        folded_docstring = docstring.casefold()
-        for phrase in PLACEHOLDER_REQUIRED_RESERVED_PHRASES:
-            if phrase.casefold() not in folded_docstring:
-                errors.append(
-                    f"{rel_path}: empty analysis placeholder docstring is "
-                    f"missing required reserved placeholder phrase {phrase!r}; "
-                    "empty placeholders must advertise reservation, no public "
-                    "runtime API, and no production behavior dependency"
-                )
-        for phrase in PLACEHOLDER_MISLEADING_AVAILABILITY_PHRASES:
-            if phrase in folded_docstring:
-                errors.append(
-                    f"{rel_path}: empty analysis placeholder docstring contains "
-                    f"misleading availability phrase {phrase!r}; mark it reserved "
-                    "until a public __all__ contract exists"
-                )
-    return errors
-
-
-def _analysis_placeholder_active_doc_paths(root: Path) -> tuple[str, ...]:
-    rel_paths = set(ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS)
-    for pattern in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_GLOBS:
-        for path in root.glob(pattern):
-            if path.is_file():
-                rel_paths.add(path.relative_to(root).as_posix())
-    return tuple(sorted(rel_paths))
-
-
-def _is_reserved_analysis_doc_context(text: str) -> bool:
-    folded = text.casefold()
-    return any(
-        marker.casefold() in folded for marker in ANALYSIS_DOC_RESERVED_CONTEXT_MARKERS
-    )
-
-
-def _has_analysis_doc_anchor(text: str) -> bool:
-    folded = text.casefold()
-    return any(anchor.casefold() in folded for anchor in ANALYSIS_DOC_CONTEXT_ANCHORS)
-
-
-def _analysis_placeholder_stale_claim_errors(
-    rel_path: str,
-    line_no: int,
-    line: str,
-) -> list[str]:
-    errors: list[str] = []
-    if _is_reserved_analysis_doc_context(line):
-        return errors
-    folded_line = line.casefold()
-    for phrase in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS:
-        if phrase.casefold() not in folded_line:
-            continue
-        errors.append(
-            f"{rel_path}:{line_no}: active docs imply reserved "
-            f"analysis capability "
-            f"{phrase!r}; describe research control-plane as current and "
-            "reports/diagnostics/experiments/screeners as reserved/future"
-        )
-    return errors
-
-
-def _analysis_placeholder_namespace_claim_errors(
-    rel_path: str,
-    line_no: int,
-    lines: list[str],
-) -> list[str]:
-    line = lines[line_no - 1]
-    errors: list[str] = []
-    for namespace in ANALYSIS_DOC_RESERVED_NAMESPACE_CLAIMS:
-        if namespace.casefold() not in line.casefold():
-            continue
-        context = "\n".join(lines[max(0, line_no - 4) : min(len(lines), line_no + 1)])
-        if not _has_analysis_doc_anchor(context):
-            continue
-        if _is_reserved_analysis_doc_context(context):
-            continue
-        errors.append(
-            f"{rel_path}:{line_no}: active docs list reserved or "
-            f"absent analysis namespace {namespace!r}; describe "
-            "research control-plane as current and "
-            "reports/diagnostics/experiments/screeners as reserved/future"
-        )
-    return errors
-
-
-def check_analysis_placeholder_active_docs(root: Path = ROOT) -> list[str]:
-    """Check active docs do not claim reserved analysis capabilities exist."""
-    errors: list[str] = []
-    for rel_path in _analysis_placeholder_active_doc_paths(root):
-        path = root / rel_path
-        try:
-            content = path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            continue
-        except (OSError, UnicodeDecodeError) as exc:
-            errors.append(f"{rel_path}: cannot inspect active analysis docs ({exc})")
-            continue
-
-        lines = content.splitlines()
-        for line_no, line in enumerate(lines, start=1):
-            errors.extend(
-                _analysis_placeholder_stale_claim_errors(rel_path, line_no, line)
-            )
-            errors.extend(
-                _analysis_placeholder_namespace_claim_errors(rel_path, line_no, lines)
-            )
-    return errors
 
 
 def _scan_pkg_imports(src_dir: Path, pkg_name: str) -> set[str]:
@@ -3370,42 +2704,8 @@ def _collect(errors: list[str], new: list[str], ok_msg: str, verbose: bool) -> N
 
 # ============ Route Maturity Annotations ============
 
+
 # Non-initial-focus routes must declare maturity in their module docstring.
-_ROUTE_MATURITY_EXPECTED: dict[str, str] = {
-    "capital.py": "experimental",
-    "commodity.py": "experimental",
-    "fundamental.py": "experimental",
-    "fx.py": "experimental",
-    "macro.py": "experimental",
-    "ingestion.py": "infrastructure",
-    "source.py": "infrastructure",
-    "debug.py": "debug",
-}
-
-_ROUTES_DIR = "apps/backend/src/ditto_apps/api/routes"
-
-
-def check_route_maturity_annotations(root: Path = ROOT) -> list[str]:
-    """Check non-initial-focus route modules declare maturity in docstring."""
-    errors: list[str] = []
-    for filename, expected_level in _ROUTE_MATURITY_EXPECTED.items():
-        path = root / _ROUTES_DIR / filename
-        if not path.exists():
-            continue
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
-            errors.append(f"{_ROUTES_DIR}/{filename}: cannot parse ({exc})")
-            continue
-        docstring = ast.get_docstring(tree, clean=False) or ""
-        if f"maturity: {expected_level}" not in docstring:
-            errors.append(
-                f"{_ROUTES_DIR}/{filename}: module docstring must declare "
-                + f"'maturity: {expected_level}' (capability-maturity.md)",
-            )
-    return errors
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Architecture smell checks for Ditto")
     parser.add_argument(
@@ -3435,45 +2735,13 @@ def main() -> int:
     )
 
     # Check 2: Per-file checks
-    errors.extend(_check_per_file(args.verbose))
-
-    # Check: AI rule stale references
-    _collect(
-        errors,
-        check_ai_rule_stale_references(),
-        "[OK] No stale AI rule references found",
-        args.verbose,
-    )
-
-    # Check: Package doc stale references
-    _collect(
-        errors,
-        check_package_doc_stale_references(),
-        "[OK] No stale package doc references found",
-        args.verbose,
-    )
+    errors.extend(_check_per_file())
 
     # Check: Cross-package re-exports
     _collect(
         errors,
         check_cross_package_exports(ROOT),
         "[OK] No cross-package re-exports found",
-        args.verbose,
-    )
-
-    # Check: Empty analysis placeholders do not imply available capability
-    _collect(
-        errors,
-        check_analysis_placeholder_honesty(ROOT),
-        "[OK] Empty analysis placeholders are explicit reservations",
-        args.verbose,
-    )
-
-    # Check: Active architecture docs do not imply reserved analysis capability
-    _collect(
-        errors,
-        check_analysis_placeholder_active_docs(ROOT),
-        "[OK] Active architecture docs treat analysis placeholders as reserved",
         args.verbose,
     )
 
@@ -3496,14 +2764,6 @@ def main() -> int:
         errors,
         check_external_package_metadata(ROOT),
         "[OK] Package metadata declares external runtime imports",
-        args.verbose,
-    )
-
-    # Check: Route maturity annotations
-    _collect(
-        errors,
-        check_route_maturity_annotations(ROOT),
-        "[OK] API route maturity annotations are present and consistent",
         args.verbose,
     )
 

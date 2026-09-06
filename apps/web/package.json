@@ -20,8 +20,8 @@
     "deps:check": "bun scripts/check-leaf-dependencies.ts",
 		"arch:check": "bun run deps:check && bun test ../../tooling/quality/tests/*.test.mjs && bun ../../tooling/quality/frontend_architecture.mjs",
     "gen:api": "bash scripts/gen-api.sh",
-    "visual:audit": "bun ../../.agents/skills/ditto-app-dev/scripts/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
-    "visual:audit:cli": "bun ../../.agents/skills/ditto-app-dev/scripts/visual-audit.mjs",
+    "visual:audit": "bun scripts/visual-audit/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
+    "visual:audit:cli": "bun scripts/visual-audit/visual-audit.mjs",
     "acceptance:r1-trading": "bun scripts/r1-trading-acceptance.ts",
     "acceptance:r3-research": "bun scripts/r3-research-acceptance.ts",
     "prototype:gates": "bun scripts/run-prototype-gates.ts",
@@ -38,7 +38,7 @@
     "build:tokens": "bun scripts/export-tokens.ts",
     "build:tokens:check": "bun scripts/export-tokens.ts --check",
     "audit:tokens:diff": "bun scripts/audit-token-diff.mjs",
-    "generate-contracts": "bun ../../.agents/skills/ditto-page-contract/scripts/generate.mjs"
+    "generate-contracts": "bun scripts/page-contract/generate.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",

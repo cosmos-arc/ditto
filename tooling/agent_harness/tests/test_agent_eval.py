@@ -9,7 +9,6 @@ from tooling.agent_harness.agent_eval import (
     AgentAttempt,
     ChangeEvidence,
     ToolEvidence,
-    evaluate_host_prewrite_adapters,
     evaluate_registry,
     grade_attempt,
     load_registry,
@@ -36,37 +35,6 @@ class AgentEvalRegistryTests(unittest.TestCase):
         )
         assert len({case.case_id for case in registry.cases}) == len(registry.cases)
         assert evaluate_registry(registry, root=ROOT) == ()
-
-    def test_host_prewrite_adapter_drift_is_a_deterministic_eval_failure(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            claude = root / ".claude" / "settings.json"
-            codex = root / ".codex" / "hooks.json"
-            claude.parent.mkdir()
-            codex.parent.mkdir()
-            claude.write_text(
-                (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"),
-                encoding="utf-8",
-            )
-            codex.write_text(
-                (ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"),
-                encoding="utf-8",
-            )
-            assert evaluate_host_prewrite_adapters(root) == ()
-            drifted = codex.read_text(encoding="utf-8").replace(
-                '"matcher": "Bash|Edit|Write|apply_patch"',
-                '"matcher": "Bash"',
-                1,
-            )
-            codex.write_text(drifted, encoding="utf-8")
-
-            mismatches = evaluate_host_prewrite_adapters(root)
-
-        assert len(mismatches) == 1
-        assert "codex" in mismatches[0]
-        assert "matcher" in mismatches[0]
 
     def test_nearest_agents_instruction_is_required_in_root_to_leaf_order(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

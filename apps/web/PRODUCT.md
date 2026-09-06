@@ -96,3 +96,11 @@ Ditto 明确不应看起来像：
 - 键盘可达：表格、队列、抽屉、侧栏、命令入口、审批动作都应可通过键盘定位和操作。
 - 金融风险清晰：危险操作、交易确认、Agent 审批、数据 stale、系统故障必须使用明确文案和稳定位置表达。
 - 中文优先，英文术语克制使用：金融与量化术语可以保留英文缩写，但界面判断语句应优先清楚可读。
+
+## 产品知识维护
+
+新方向或范围变化从现有 brief、constitution、system description 与 assumptions 读取已作决定；研究结论、推断和未验证假设分开记录。更新受影响事实即可，无需固定阶段、六类新产物或 discovery manifest 仪式。
+
+信息架构、页面蓝图及交互状态分别以 [IA](docs/designs/specs/01_product_information_architecture.md)、[页面蓝图](docs/designs/specs/02_core_page_blueprints.md)、[状态规范](docs/designs/specs/04_interaction_state_spec.md) 为准。shellFamily、pagePattern 和 slot 使用现有合同 schema/生成配置的词汇，避免另存枚举计数副本。导航保留选中资产上下文，数据界面覆盖 loading、empty、error、stale，破坏性动作显式确认。
+
+页面变化按实际路由、状态、可访问性和消费者验证；旧 manifest 可作为已有记录读取，不能仅凭摘要或阶段状态声称用户路径可用。
