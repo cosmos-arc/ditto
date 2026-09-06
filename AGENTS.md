@@ -59,6 +59,20 @@ Web 不导入 Python DTO/源码/存储模型；后端不读取 Web 状态或生�
 - `ditto-change-review`：用户要求 review、PR 前审查，或高风险 diff 完成后的只读审查。
 - `ditto-quality-eval`：仅当用户明确要求全库质量评估时使用。
 
+## Agent skills
+
+### Issue tracker
+
+处理 issue、spec 或 review 的需求来源时，使用 GitHub Issues（`cosmos-arc/ditto`）；先读 [issue tracker 配置](docs/agents/issue-tracker.md)。
+
+### Triage labels
+
+执行 triage 或设置 ticket 状态时，使用五个默认标签；映射见 [triage labels 配置](docs/agents/triage-labels.md)。
+
+### Domain docs
+
+探索领域概念、命名或架构决策前，按 single-context 布局读取文档；规则见 [domain docs 配置](docs/agents/domain.md)。
+
 ## 风险与执行合同
 
 - 普通：局部、可逆、不改变外部行为。完成目标测试与 changed-scope 门禁。
