@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import re
-import shlex
 import sys
 import tomllib
 from pathlib import Path
@@ -301,16 +300,6 @@ def _event_matchers(config: dict[str, object], event: str) -> set[str]:
     }
 
 
-def _hook_command_tokens(
-    command: str, host: str, event: str, errors: list[str]
-) -> list[str]:
-    try:
-        return shlex.split(command)
-    except ValueError:
-        errors.append(f"{host} {event} command is malformed")
-        return []
-
-
 def _validate_host_event(
     hooks: dict[object, object], host: str, event: str, errors: list[str]
 ) -> None:
@@ -318,7 +307,7 @@ def _validate_host_event(
     if not isinstance(entries, list) or not entries:
         errors.append(f"{host} {event} requires an active shared hook")
         return
-    expected_command = shlex.split(
+    expected_command = (
         _HOST_COMMAND_BASE[host]
         + f" --host {host} --event {_HOOK_EVENT_ARGUMENTS[event]}"
     )
@@ -341,8 +330,7 @@ def _validate_host_event(
             if (
                 command_hook.get("type") != "command"
                 or not isinstance(command, str)
-                or _hook_command_tokens(command, host, event, errors)
-                != expected_command
+                or command != expected_command
             ):
                 continue
             timeout = command_hook.get("timeout")

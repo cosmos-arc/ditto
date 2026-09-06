@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import shutil
 import subprocess
@@ -50,6 +51,9 @@ def test_owned_temporary_directory_resolves_system_symlink_before_staging(
         artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
     )
     monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(
+        artifact_gate, "_archive_image_config", lambda _path: "sha256:" + "d" * 64
+    )
 
     def run(command: list[str], **_kwargs: object) -> str:
         if command[1] == "build":
@@ -591,6 +595,9 @@ def test_build_export_and_smoke_use_the_build_output_id(
         artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
     )
     monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(
+        artifact_gate, "_archive_image_config", lambda _path: "sha256:" + "d" * 64
+    )
     monkeypatch.setattr(artifact_gate, "_run", run)
     for name in (
         "_verify_live_runtime_config",
@@ -623,3 +630,20 @@ def test_scanner_subject_mismatch_cannot_pass(tmp_path: Path, scanner: str) -> N
         artifact_gate._verify_scanner_subject(
             report, image="sha256:" + "d" * 64, scanner=scanner
         )
+
+
+def test_exported_config_digest_is_not_the_oci_index_id(tmp_path: Path) -> None:
+    path = tmp_path / "image.tar"
+    config = b'{"architecture":"arm64"}'
+    with tarfile.open(path, "w") as archive:
+        for name, data in (
+            ("manifest.json", b'[{"Config":"config.json"}]'),
+            ("config.json", config),
+        ):
+            member = tarfile.TarInfo(name)
+            member.size = len(data)
+            archive.addfile(member, io.BytesIO(data))
+    assert (
+        artifact_gate._archive_image_config(path)
+        == "sha256:" + hashlib.sha256(config).hexdigest()
+    )

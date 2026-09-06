@@ -118,6 +118,23 @@ class PageContractGeneratorPathTests(unittest.TestCase):
             assert not (root / "docs" / "contracts" / "pages").exists()
             assert not (root / "src" / "features" / "shell").exists()
             assert not (root / "scripts" / "visual-audit.config.generated.mjs").exists()
+            fixture = contracts / "fixture.contract.json"
+            original = fixture.read_text()
+            for missing in ("prototypeRef", "visualThresholds"):
+                invalid = json.loads(original)
+                invalid["id"] = "must-not-persist"
+                del invalid[missing]
+                fixture.write_text(json.dumps(invalid))
+                rejected = subprocess.run(
+                    ["bun", str(script)],
+                    cwd=root,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                assert rejected.returncode != 0
+                assert tuple(path.read_bytes() for path in generated) == first_contents
+                fixture.write_text(original)
 
     def test_validator_loads_isolated_web_dependencies_without_node_path(self) -> None:
         environment = dict(os.environ)

@@ -742,6 +742,28 @@ def _smoke_container(
             )
 
 
+def _archive_image_config(path: Path) -> str:
+    """Resolve Docker's exported config digest (distinct from OCI index IDs)."""
+    with tarfile.open(path) as archive:
+        manifest_file = archive.extractfile("manifest.json")
+        if manifest_file is None:
+            raise ArtifactGateError("image archive has no manifest")
+        manifests = json.load(manifest_file)
+        if (
+            not isinstance(manifests, list)
+            or len(manifests) != 1
+            or not isinstance(manifests[0], dict)
+        ):
+            raise ArtifactGateError("image archive must contain one image subject")
+        config = manifests[0].get("Config")
+        if not isinstance(config, str):
+            raise ArtifactGateError("image archive has no config subject")
+        config_file = archive.extractfile(config)
+        if config_file is None:
+            raise ArtifactGateError("image archive config is not a file")
+        return "sha256:" + hashlib.sha256(config_file.read()).hexdigest()
+
+
 def _verify_scanner_subject(path: Path, *, image: str, scanner: str) -> None:
     report = _json_object(path.read_bytes(), label=f"{scanner} report")
     source = report.get("source") if scanner == "syft" else report
@@ -818,6 +840,8 @@ def run_artifact_gate(root: Path) -> None:
         cwd=workspace,
         timeout_seconds=_DOCKER_EXPORT_TIMEOUT_SECONDS,
     )
+    config_digest = _archive_image_config(image_tar)
+    sys.stdout.write(f"Exported config subject: {config_digest}\n")
     git = _executable("git")
     commit_timestamp = int(
         _run(
@@ -858,7 +882,7 @@ def run_artifact_gate(root: Path) -> None:
         timeout_seconds=_SCANNER_TIMEOUT_SECONDS,
     )
     _verify_scanner_subject(
-        output / "ditto-backend.syft.json", image=image, scanner="syft"
+        output / "ditto-backend.syft.json", image=config_digest, scanner="syft"
     )
     _canonicalize_spdx_sbom(
         output / "ditto-backend.spdx.json",
@@ -912,7 +936,9 @@ def run_artifact_gate(root: Path) -> None:
         ],
         timeout_seconds=_SCANNER_TIMEOUT_SECONDS,
     )
-    _verify_scanner_subject(output / "trivy-backend.json", image=image, scanner="trivy")
+    _verify_scanner_subject(
+        output / "trivy-backend.json", image=config_digest, scanner="trivy"
+    )
 
     manifest_path, cohort_artifacts = _materialize_portable_cohort(
         workspace=workspace,

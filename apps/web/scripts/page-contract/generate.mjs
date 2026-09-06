@@ -463,14 +463,14 @@ async function main() {
 
   console.log(`[generate] Found ${contracts.length} contract(s)`);
 
-  // Generate TS
+  // Complete both transformations before touching either generated file.
   const tsContent = generateTS(contracts);
+  const mjsContent = generateMJS(contracts);
   await mkdir(dirname(OUTPUT_TS), { recursive: true });
   await writeFile(OUTPUT_TS, tsContent, "utf-8");
   console.log("[generate] Wrote", OUTPUT_TS);
 
-  // Generate MJS
-  const mjsContent = generateMJS(contracts);
+  // Write the already validated MJS content.
   await mkdir(dirname(OUTPUT_MJS), { recursive: true });
   await writeFile(OUTPUT_MJS, mjsContent, "utf-8");
   console.log("[generate] Wrote", OUTPUT_MJS);

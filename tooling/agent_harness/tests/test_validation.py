@@ -143,6 +143,25 @@ class FormatFixtureTests(unittest.TestCase):
                 check=False,
             )
             assert result.returncode == 0, result.stdout + result.stderr
+            for relative in (".codex/hooks.json", ".claude/settings.json"):
+                config_path = root / relative
+                original_text = config_path.read_text()
+                broken = json.loads(original_text)
+                for entry in broken["hooks"]["PreToolUse"]:
+                    for hook in entry["hooks"]:
+                        hook["command"] = hook["command"].replace('"', "'")
+                config_path.write_text(json.dumps(broken))
+                rejected = subprocess.run(
+                    [sys.executable, str(root / "tooling/agent_harness/validate.py")],
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                assert rejected.returncode != 0, (
+                    "single quotes disable required shell expansion"
+                )
+                config_path.write_text(original_text)
 
     def test_root_workspace_manifest_is_not_ignored(self) -> None:
         result = subprocess.run(
@@ -226,10 +245,16 @@ class FormatFixtureTests(unittest.TestCase):
             with self.subTest(host=host):
                 config = json.loads(path.read_text(encoding="utf-8"))
                 entries = config["hooks"]["PreToolUse"]
-                assert len(entries) == 1
-                assert set(entries[0]["matcher"].split("|")) == expected[host]
-                command = entries[0]["hooks"][0]["command"]
-                assert f"--host {host} --event pre-tool" in command
+                covered = {
+                    tool
+                    for entry in entries
+                    if any(
+                        f"--host {host} --event pre-tool" in hook["command"]
+                        for hook in entry["hooks"]
+                    )
+                    for tool in entry["matcher"].split("|")
+                }
+                assert expected[host] <= covered
 
     def test_inert_host_hook_entries_are_rejected(self) -> None:
         config: dict[str, object] = {

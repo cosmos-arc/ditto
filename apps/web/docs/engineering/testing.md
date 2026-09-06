@@ -15,3 +15,5 @@
 工具和操作说明见 [页面合同](../contracts/README.md)。按实际影响检查对应路由、交互、可访问性、主题/密度与视口；普通局部改动不运行完整原型生命周期。
 
 视觉不稳定先核对服务、字体、数据、viewport 和 selector；集中超时先排查资源争用，不直接增加 timeout 或重试。测试只收集真实工程工具，Claude skill 镜像不重复运行。
+
+普通 `web-product-check` 只执行实际路由覆盖检查。原型 freeze、完成看板和 `audit:product-recovery` 保留为显式历史审计，不进入普通 UI 的必经验证。

@@ -234,7 +234,7 @@ web-lint = { cmd = "bun run lint", cwd = "apps/web" }
 web-type = { cmd = "bun run type", cwd = "apps/web" }
 web-test = { cmd = "bun run test:unit", cwd = "apps/web" }
 web-build = { cmd = "bun run build", cwd = "apps/web" }
-web-product-check = { cmd = "bun run audit:product-recovery", cwd = "apps/web" }
+web-product-check = { cmd = "bun run audit:routes", cwd = "apps/web" }
 web-token-check = { cmd = "bun run audit:tokens:dead-links --ci", cwd = "apps/web" }
 web-architecture = { cmd = "bun run arch:check", cwd = "apps/web" }
 web-coverage = { cmd = "bun run test:coverage", cwd = "apps/web" }
