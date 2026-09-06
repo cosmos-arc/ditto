@@ -29,14 +29,14 @@ Python 已改为 uv workspace 与单一 uv.lock；根任务改为 Task；Bun 版
 
 ## 原生 CI 与未完成项
 
-[第一轮 CI](https://github.com/cosmos-arc/ditto/actions/runs/34037542007) 和 [第二轮 CI](https://github.com/cosmos-arc/ditto/actions/runs/34038391277) 提供真实平台证据。第二轮已经通过工具链安装、后端类型/格式、架构/Harness、契约、release policy 及 Linux 真实双栈系统验收。macOS 原生平台门全部通过；Windows 原生库行为与双栈类型检查通过。
+[第一轮 CI](https://github.com/cosmos-arc/ditto/actions/runs/34037542007) 和 [第二轮 CI](https://github.com/cosmos-arc/ditto/actions/runs/34038391277) 提供真实平台证据。第二轮已经通过工具链安装、后端类型/格式、架构/Harness、契约、release policy 及 Linux 真实双栈系统验收、Web CI。macOS 原生平台门全部通过；Windows 原生库行为与双栈类型检查通过。
 
 以下阻断仍不能宣称完成：
 
 1. **Windows 后端启动**：原基线的 `ditto_analysis/research/_artifact_file_primitives.py` 与 `_indexed_artifacts.py` 在导入时使用 POSIX 专用 `os.O_NOFOLLOW` / `os.O_DIRECTORY`。Windows 普通 API/CLI 导入因此失败。需要保持防符号链接与目录句柄安全语义的 Windows 实现，不能把安全标志设为零或跳过平台门。
 2. **OSV**：第一轮扫描报告 30 个包、161 条漏洞。报告列出的 uv.lock Python 包版本均已在原锁存在；Bun 的包版本未改动，沙箱 SBOM 也未改动。本次不扩展成无关依赖升级，不豁免漏洞门。
 3. **CodeQL 上传**：本地分析可运行，但 GitHub 拒绝上传，明确要求为该仓库启用 Advanced Security；未修改权限或把服务拒绝改为成功。
-4. **Linux 生产制品及最终整仓绿灯**：以分支最新 CI 为准；本机 x86 模拟运行、解析成功和单元 fixture 不能替代原生生产镜像 readiness、扫描及 cohort 验收。
+4. **Linux 生产制品及最终整仓绿灯**：[原生镜像任务](https://github.com/cosmos-arc/ditto/actions/runs/34038391277/job/101502704807) 已完成构建、SBOM subject 校验、非 root readiness 与 release identity 检查；随后 Trivy 扫描退出 1，因此未进入 cohort 打包成功路径。镜像 subject 为 `sha256:0923aa86bcafe6e1e34b0ffebe4f7095a2ff6cbb8e83e2bc0dc6a9c95da229c6`。[保留的扫描证据](https://github.com/cosmos-arc/ditto/actions/runs/34038391277/artifacts/9991178122) 可供追查。最新 PR CI 仍应核对，不能把这个原生运行证明扩大为完整发布通过。
 
 旧 Gitleaks 8.18.4 将 `parso==0.8.7` sdist 的公开 SHA-256 误识别为 Square token。已对照 [PyPI 发布元数据](https://pypi.org/pypi/parso/0.8.7/json)，仅按仓库既有模式登记准确的历史/当前树 finding 指纹；迁移提交范围复扫无泄漏，未放宽路径或规则。
 
