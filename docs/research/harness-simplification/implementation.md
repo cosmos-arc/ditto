@@ -22,7 +22,7 @@
 | 固定上下文 | 根 AGENTS 119 行、Web 85 行 | 根 35 行、Web 24 行 | 文本体积，不能换算为准确率或 token 收益 |
 | 大型研究请求：500 标的 × 96 月，同一覆盖率测试 | call 157.60 秒 | call 22.41 秒 | 同机单次测量，约下降 86%；不是全 CI 加速比例。按月索引替代重复扫描，50 项相关反例同时通过 |
 | 全量后端覆盖率 | 历史 CI 44 分 35 秒超时，未完成 | 本地 pytest 886.44 秒；16,467 通过、73 跳过、2 超时；覆盖率 89.41% | 宿主和 worker 数不同，不作直接性能对比；全量仍未绿 |
-| 重复测试 | backend unit 后再 coverage；Web unit 后再 coverage | CI DAG 使用单次 coverage；日常局部测试入口保留 | DAG 与实际日志核对；未测长期 CI 分钟费用 |
+| 重复测试 | Web unit 后再 coverage；后端已单次 coverage 加独立 PIT | Web CI DAG 改为单次 coverage；后端安排与日常局部入口保留 | DAG 与实际日志核对；未测长期 CI 分钟费用 |
 | 暂存文件反馈 | Ruff 命令带全库路径、提交运行全库门 | 实际部分暂存探针通过：暂存、未暂存及无关文件均按预期保留 | 保留秘密、冲突、文件安全检查；全量 pre-commit 最终通过 |
 | 人工中断 | 没有可比日志 | 实施中审查基点确认 1 次；没有重复请求同类操作批准 | 不是受控前后对照，不宣称降低了多少中断 |
 | 返工 / 质量 | 没有同任务同模型基线 | 两轴审查发现并修复 4 个具体问题；完整 Web 入口另发现 Node 24 解析问题 | 发现与修复记录，不构成模型质量分数 |
@@ -50,7 +50,13 @@
 | Node 22 / 24 dependency graph | 实际图检查通过；Node 22 扫描 784 模块；ESM 与 CommonJS 解析回归通过 |
 | Windows oasdiff | 官方 tar.gz 资产下载并经校验；原生 Windows 执行未测 |
 
-其余工程门的最终结果见后续验收补充。
+| `pixi run -e dev web-ci` | 1,757 项前端测试、719 项原型/工具测试全部通过；覆盖率及生产构建预算通过 |
+| `pixi run -e dev pit` | 401 项通过 |
+| `pixi run -e dev arch-check` / `check-contract` | 全部通过 |
+| `pixi run -e dev test-system` | 默认 cohort 与六项专项跨栈场景通过，命令退出 0 |
+| `pixi run -e dev harness-check` | 工具测试、Harness 测试、类型、宿主配置与大文件检查通过 |
+
+制品及安全门的最终结果见后续验收补充。
 
 ## 两轴代码审查
 

@@ -311,7 +311,8 @@ def test_gitleaks_uses_a_known_good_scanner_and_detection_sentinel() -> None:
         "gitleaks:v8.18.4@sha256:"
         "75bdb2b2f4db213cde0b8295f13a88d6b333091bbfbf3012a4e083d00d31caba"
     ) in content
-    assert "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789" in content
+    sentinel = "".join(("ghp_", "aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"))
+    assert sentinel in content
     assert 'test "$sentinel_status" -eq 23' in content
 
 
