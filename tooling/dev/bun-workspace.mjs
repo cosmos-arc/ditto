@@ -1,12 +1,19 @@
 import { existsSync, realpathSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-function installedPackage(directory, name) {
+function installedPackage(directory, name, root) {
 	for (let current = directory; ; current = dirname(current)) {
 		const path = resolve(current, "node_modules", name, "package.json");
-		if (existsSync(path)) return realpathSync(path);
-		if (dirname(current) === current) throw new Error(`Missing installed dependency: ${name}`);
+		if (existsSync(path)) {
+			const installed = realpathSync(path);
+			const local = relative(root, installed);
+			if (local === ".." || local.startsWith(`..${sep}`) || isAbsolute(local)) {
+				throw new Error(`Dependency ${name} escapes the current workspace`);
+			}
+			return installed;
+		}
+		if (current === root || dirname(current) === current) throw new Error(`Missing installed dependency: ${name}`);
 	}
 }
 
@@ -19,6 +26,7 @@ function supportsPlatform(metadata) {
 
 /** Verify the prepared workspace without resolving, installing or writing locks. */
 export function checkWorkspace(root) {
+	root = realpathSync(root);
 	const manifest = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
 	if (`bun@${Bun.version}` !== manifest.packageManager) {
 		throw new Error(`Bun mismatch: expected ${manifest.packageManager}, got bun@${Bun.version}`);
@@ -36,7 +44,7 @@ export function checkWorkspace(root) {
 		const entry = lock.packages[key];
 		if (!entry) throw new Error(`Missing bun.lock dependency: ${name}`);
 		if (!supportsPlatform(entry[2] ?? {})) return;
-		const path = installedPackage(directory, name);
+		const path = installedPackage(directory, name, root);
 		const installed = JSON.parse(readFileSync(path, "utf8"));
 		if (entry[0] !== `${name}@${installed.version}`) {
 			throw new Error(`Installed ${name} differs from bun.lock; run the explicit bootstrap`);

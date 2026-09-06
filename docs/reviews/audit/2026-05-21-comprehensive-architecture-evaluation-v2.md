@@ -681,8 +681,8 @@
 ## 验证命令
 
 ```bash
-task check --           # lint + fmt + type + test --fast
-task arch-check --      # 37 合约全部 kept, 0 broken
+pixi run -e dev check           # lint + fmt + type + test --fast
+pixi run -e dev arch-check      # 37 合约全部 kept, 0 broken
 ```
 
 当前基线：37 contracts kept, 0 broken. Architecture smell check passed.
@@ -720,7 +720,7 @@ find packages/*/tests -name '*.py' | wc -l                  # 测试文件数
 find packages/*/tests -name '*.py' -exec cat {} + | wc -l   # 测试 LOC
 
 # 边界守卫
-task arch-check --                                  # 37 合约
+pixi run -e dev arch-check                                  # 37 合约
 
 # 类型纪律
 rg "class \w+\(Protocol\)" packages/*/src -c --glob '*.py'  # Protocol 计数
@@ -734,7 +734,7 @@ python scripts/check_code_size.py                            # 类级 method 检
 find packages/*/src -name '*.py' -exec wc -l {} + | sort -rn | head -15  # Top 文件
 
 # 架构合约
-task lint-imports --                                 # import-linter
+pixi run -e dev lint-imports                                 # import-linter
 ```
 
 ---

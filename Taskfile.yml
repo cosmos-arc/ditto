@@ -2,6 +2,7 @@ version: '3'
 vars:
   VENV_PYTHON: '{{.ROOT_DIR}}/.venv/{{if eq OS "windows"}}Scripts/python.exe{{else}}bin/python{{end}}'
 env:
+  UV_PROJECT_ENVIRONMENT: '{{.ROOT_DIR}}/.venv'
   UV_PYTHON_DOWNLOADS: never
 tasks:
   lint:

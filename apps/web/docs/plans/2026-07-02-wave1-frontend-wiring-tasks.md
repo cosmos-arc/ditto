@@ -123,7 +123,7 @@ git -C /home/chevy/projects/ditto-app exec bun run check
 # 或在 /home/chevy/projects/ditto-app 目录直接 bun run check
 
 # 后端联调检查（ditto，前端不改后端代码，仅 Phase 4 联调后跑）
-task check
+pixi run -e dev check
 ```
 
 - **契约同步：** 后端 trade API 变更 → ditto 提交 → ditto-app 跑 `bun run gen:api` 刷新 snapshot → 提交 snapshot

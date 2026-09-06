@@ -70,7 +70,7 @@ def _portable_cohort(root: Path) -> tuple[Path, dict[str, object]]:
     policy_digest = policy.with_suffix(".sha256")
     contract.parent.mkdir(parents=True)
     contract.write_bytes(b'{"openapi":"3.1.0"}\n')
-    uv_lock.write_bytes(b"pixi-lock\n")
+    uv_lock.write_bytes(b"uv-lock\n")
     interpreter.write_text("cpython-3.13.14")
     source.write_text("FROM python@sha256:fixture")
     bun_lock.write_bytes(b"bun-lock\n")

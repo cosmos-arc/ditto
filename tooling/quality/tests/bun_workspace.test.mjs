@@ -29,3 +29,19 @@ test("workspace checks reject stale locks and missing installed dependencies wit
 		rmSync(root, { recursive: true, force: true });
 	}
 });
+
+
+test("parent node_modules cannot supply an unprepared worktree", () => {
+	const parent = mkdtempSync(join(tmpdir(), "ditto-bun-parent-"));
+	try {
+		const root = join(parent, "worktree");
+		mkdirSync(root);
+		writeFileSync(join(root, "package.json"), JSON.stringify({ name: "fixture", packageManager: `bun@${Bun.version}`, workspaces: [], dependencies: { tool: "1.0.0" } }));
+		writeFileSync(join(root, "bun.lock"), JSON.stringify({ workspaces: { "": { dependencies: { tool: "1.0.0" } } }, packages: { tool: ["tool@1.0.0"] } }));
+		mkdirSync(join(parent, "node_modules/tool"), { recursive: true });
+		writeFileSync(join(parent, "node_modules/tool/package.json"), '{"version":"1.0.0"}');
+		expect(() => checkWorkspace(root)).toThrow("Missing installed dependency: tool");
+	} finally {
+		rmSync(parent, { recursive: true, force: true });
+	}
+});

@@ -30,8 +30,8 @@ data write, or deployment was performed.
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Backend full gate | PASS: 13,920 passed, 73 skipped, 11 expected xfail, 11 xpass; 92.64% coverage; 43 import contracts kept; architecture and Harness passed | `task ci` |
-| Backend PIT | PASS: 33 passed, 1 skipped because the optional TDX sample is absent | `uv run --no-sync pytest -m pit` |
+| Backend full gate | PASS: 13,920 passed, 73 skipped, 11 expected xfail, 11 xpass; 92.64% coverage; 43 import contracts kept; architecture and Harness passed | `pixi run -e dev ci` |
+| Backend PIT | PASS: 33 passed, 1 skipped because the optional TDX sample is absent | `pixi run -e dev pytest -m pit` |
 | R5 release preflight | PASS: 6/6 checks, no blockers/failures; report hash `c08e7fc628ba3c7694cdd3af50c402d4231efbdc41bc1e742a68d43dcb8cc12a`; file SHA-256 `156ac38fa2dd945e51a24f96a554f66233522197d93991d532f51c0d7c558ba0` | [`release-preflight.json`](../evidence/r5/release/release-preflight.json) |
 | Certified research flow | PASS: 8/8 commands; report SHA-256 `28a1bd55c7900f89a9afd43ba6063f06ad51d6e838d7b069a0f76f0497e93267`; manifest SHA-256 `b82ca576e1fc0eb5717db2d2defb5b7c0fef27e228d7ea4212a10e5ba107d1d6` | [`r3-certified-research-flow.json`](../evidence/product-beta/20260830/r3-certified-research-flow.json), [`manifest`](../evidence/product-beta/20260830/r3-certified-research-flow.manifest.json) |
 | Persisted GLM flow | PASS: completed revision 2, 6 durable events, 1 model attempt, 2 turns, 1 tool call, 0 retries, cited evidence and verified Episode; report hash `8162935dc058790bc288b6634f12711b8aa015a95d9ae051d121a0da7cbea050`; file SHA-256 `fd63b0dcd90a9a24ac6a01c471d26228e8afdfbd83480bbeb53ee528321d2ac4` | [`glm-persisted-run.json`](../evidence/product-beta/20260830/glm-persisted-run.json) |

@@ -73,7 +73,7 @@ def _write_portable_manifest(root: Path) -> tuple[Path, dict[str, str]]:
         root / "release-inputs" / "uv.lock",
         root / "release-inputs" / "bun.lock",
     ]
-    inputs[1].write_text("pixi\n")
+    inputs[1].write_text("uv\n")
     inputs[2].write_text("bun\n")
     for name in (".python-version", "Dockerfile"):
         path = root / "release-inputs" / name

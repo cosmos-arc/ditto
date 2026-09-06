@@ -123,3 +123,8 @@ docs/evidence/r3/20260803T142442Z-live/manifest.json:generic-api-key:282
 docs/evidence/r3/20260803T142442Z-live/manifest.json:generic-api-key:296
 docs/evidence/r3/20260803T142442Z-live/manifest.json:generic-api-key:308
 docs/evidence/workstation-baseline-20260831.json:generic-api-key:48
+
+# Gitleaks 8.18.4 square-access-token false positive: public parso 0.8.7 sdist SHA-256.
+# Verified against https://pypi.org/pypi/parso/0.8.7/json; no credential or rule-wide exception.
+10432325fe30d1c00a2bc24bb82987819b8c794e:uv.lock:square-access-token:4111
+uv.lock:square-access-token:4113
