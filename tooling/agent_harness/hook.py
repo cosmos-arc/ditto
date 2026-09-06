@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import tempfile
@@ -18,18 +19,24 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .evidence import change_manifest, manifest_digest, manifest_paths
+    from .evidence import (
+        change_manifest,
+        changed_paths,
+        manifest_digest,
+        manifest_paths,
+    )
     from .lease import authorize_paths, generator_write_targets, protected_resources
 except ImportError:  # Direct script execution.
     from lease import authorize_paths, generator_write_targets, protected_resources
 
-    from evidence import change_manifest, manifest_digest, manifest_paths
+    from evidence import change_manifest, changed_paths, manifest_digest, manifest_paths
 
 CACHE_DIR = Path(".cache/ditto-agent-harness")
 MAX_FEEDBACK = 6_000
 PACKAGE_TEST_PARTS = 3
 RECEIPT_SCHEMA_VERSION = 1
 APPEND_REDIRECT_PREFIX_LENGTH = len(">>")
+FORMAT_TIMEOUT_SECONDS = 5
 
 try:
     from datetime import UTC as _UTC
@@ -395,28 +402,60 @@ def pre_tool_decision(
     return {}
 
 
+def _terminate_formatter(process: subprocess.Popen[str]) -> None:
+    """Reap this formatter and its POSIX descendants before returning to the host."""
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGTERM)
+        else:
+            process.terminate()
+        process.communicate(timeout=0.5)
+    except subprocess.TimeoutExpired:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGKILL)
+        else:
+            process.kill()
+        process.communicate()
+    except ProcessLookupError:
+        process.communicate()
+
+
 def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
-    """Apply file-scoped Ruff fixes only when edited paths are unambiguous."""
+    """Format exact edited files without installing or solving an environment."""
     paths = [path for path in extract_python_paths(payload, root) if path.exists()]
     if not paths:
         return VerificationResult(
-            True, "No reliably parsed Python file; Stop gate will verify the diff."
+            True, "No reliably parsed Python file; automatic formatting skipped."
         )
 
     relative = [path.relative_to(root).as_posix() for path in paths]
-    commands = [
-        ["pixi", "run", "-e", "dev", "ruff", "check", "--fix", *relative],
-        ["pixi", "run", "-e", "dev", "ruff", "format", *relative],
-    ]
-    output: list[str] = []
-    for command in commands:
-        result = subprocess.run(
-            command, cwd=root, capture_output=True, text=True, check=False
+    command = ["pixi", "run", "--as-is", "-e", "dev", "ruff", "format", *relative]
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            start_new_session=True,
         )
-        output.append(f"$ {' '.join(command)}\n{result.stdout}{result.stderr}".strip())
-        if result.returncode != 0:
-            return VerificationResult(False, "\n\n".join(output)[-MAX_FEEDBACK:])
-    return VerificationResult(True, "\n\n".join(output)[-MAX_FEEDBACK:])
+    except OSError as error:
+        return VerificationResult(False, f"Automatic formatting unavailable: {error}")
+    try:
+        output, _ = process.communicate(timeout=FORMAT_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        _terminate_formatter(process)
+        return VerificationResult(
+            False,
+            "Formatting exceeded time budget; run pixi run -e dev fmt explicitly.",
+        )
+    except BaseException:
+        _terminate_formatter(process)
+        raise
+    return VerificationResult(
+        process.returncode == 0,
+        f"$ {shlex.join(command)}\n{output}"[-MAX_FEEDBACK:],
+    )
 
 
 def _is_harness(path: str) -> bool:
@@ -734,10 +773,9 @@ def run_verification(
 
     transcripts: list[str] = []
     for command in commands:
-        result = subprocess.run(
-            command, cwd=root, capture_output=True, text=True, check=False
-        )
-        transcript = f"$ {' '.join(command)}\n{result.stdout}{result.stderr}".strip()
+        print(f"$ {shlex.join(command)}", flush=True)
+        result = subprocess.run(command, cwd=root, check=False)
+        transcript = f"$ {shlex.join(command)}\nexit code: {result.returncode}"
         transcripts.append(transcript)
         if result.returncode != 0:
             return VerificationResult(False, "\n\n".join(transcripts)[-MAX_FEEDBACK:])
@@ -847,8 +885,7 @@ def _manifest_policy_violations(manifest: dict[str, object]) -> tuple[str, ...]:
     return tuple(path for path in raw_paths if isinstance(path, str))
 
 
-def stop_decision(
-    payload: dict[str, Any],
+def verification_decision(
     root: Path,
     manifest: dict[str, object],
     verifier: Callable[
@@ -857,7 +894,7 @@ def stop_decision(
     *,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Verify once per exact diff and return a host-compatible Stop result."""
+    """Verify explicit requests once per exact diff, preserving failure evidence."""
     try:
         paths = manifest_paths(manifest)
         violations = _manifest_policy_violations(manifest)
@@ -906,14 +943,6 @@ def stop_decision(
             },
         )
         response: dict[str, Any] = {}
-    elif payload.get("stop_hook_active") is True:
-        response = {
-            "systemMessage": (
-                "Verification still fails after the Stop retry. You may finish, "
-                f"but the final response must report this failure explicitly.\n\n"
-                f"{result.summary}"
-            )[-MAX_FEEDBACK:]
-        }
     else:
         reason = (
             f"Changed-scope verification ({level}) failed. Fix it and retry.\n\n"
@@ -939,22 +968,43 @@ def _evidence_capture_failure(event: str, error: Exception) -> int:
 def _run_check_changed(
     root: Path, manifest: dict[str, object], paths: Sequence[str]
 ) -> int:
-    violations = _manifest_policy_violations(manifest)
-    if violations:
-        violation_list = ", ".join(violations)
-        print(
-            "Bun-only repository policy failed; remove forbidden "
-            + f"package-manager files: {violation_list}"
+    response = verification_decision(root, manifest, verifier=run_verification)
+    if response.get("decision") == "block":
+        print(response["reason"])
+        return 1
+    print(
+        f"Changed-scope verification ({classify_diff(paths)}) passed"
+        + (
+            "; exact evidence receipt recorded or reused."
+            if paths
+            else "; no pending changes."
         )
-        return 1
-    lease_decision = authorize_paths(root, paths)
-    if not lease_decision.allowed:
-        print(lease_decision.reason)
-        return 1
-    level = classify_diff(paths)
-    result = run_verification(root, level, paths)
-    print(result.summary)
-    return 0 if result.ok else 1
+    )
+    return 0
+
+
+def stop_feedback(payload: dict[str, Any], root: Path) -> dict[str, Any]:
+    """Keep conversation completion independent of project tooling and CI."""
+    if payload.get("stop_hook_active") is True:
+        return {}
+    try:
+        paths = changed_paths(root)
+    except (OSError, RuntimeError) as error:
+        return {
+            "systemMessage": f"Unable to inspect pending changes: {error}"[
+                -MAX_FEEDBACK:
+            ]
+        }
+    if not paths:
+        return {}
+    return {
+        "systemMessage": (
+            f"Worktree has {len(paths)} pending paths ({classify_diff(paths)}); "
+            "these may predate this task. Stop does not run or certify quality gates. "
+            "For code changes, run pixi run -e dev check-changed explicitly "
+            "and report actual results."
+        )
+    }
 
 
 def main() -> int:
@@ -988,10 +1038,18 @@ def main() -> int:
         else:
             emit(
                 {
-                    "decision": "block",
-                    "reason": f"File-scoped Ruff failed:\n{result.summary}",
+                    "hookSpecificOutput": {
+                        "hookEventName": "PostToolUse",
+                        "additionalContext": (
+                            f"Automatic formatting did not complete:\n{result.summary}"
+                        ),
+                    },
                 }
             )
+        return 0
+
+    if args.event == "stop":
+        emit(stop_feedback(payload, root))
         return 0
 
     try:
@@ -999,11 +1057,7 @@ def main() -> int:
         paths = manifest_paths(manifest)
     except (OSError, RuntimeError) as error:
         return _evidence_capture_failure(args.event, error)
-    if args.event == "check-changed":
-        return _run_check_changed(root, manifest, paths)
-
-    emit(stop_decision(payload, root, manifest))
-    return 0
+    return _run_check_changed(root, manifest, paths)
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ _HOOK_EVENT_ARGUMENTS = {
     "PostToolUse": "post-tool",
     "Stop": "stop",
 }
-_HOOK_TIMEOUTS = {"PreToolUse": 10, "PostToolUse": 120, "Stop": 900}
+_HOOK_TIMEOUTS = {"PreToolUse": 10, "PostToolUse": 10, "Stop": 3}
 _HOST_MATCHERS = {
     "claude": {
         "PreToolUse": {"Bash", "Edit", "Write"},

@@ -1,6 +1,9 @@
 """Pytest collection must use importlib mode for duplicate test basenames."""
 
+import os
 import runpy
+import subprocess
+import sys
 import tomllib
 from collections.abc import Callable
 from pathlib import Path
@@ -46,3 +49,34 @@ def test_default_test_wrapper_excludes_physical_sandbox_acceptance(
 
         marker_expression = command[command.index("-m") + 1]
         assert "not sandbox_live" in marker_expression
+
+
+def test_wrapper_isolates_keyring_before_collection_and_in_workers(
+    tmp_path: Path,
+) -> None:
+    probe = tmp_path / "pytest"
+    probe.write_text(
+        f"#!{sys.executable}\n"
+        "import os, subprocess, sys\n"
+        "assert os.environ['PYTHON_KEYRING_BACKEND'] "
+        "== 'keyring.backends.null.Keyring'\n"
+        "subprocess.run([sys.executable, '-c', "
+        "\"import keyring; assert keyring.get_password('test', 'user') is None\"], "
+        "check=True)\n"
+        "sys.exit(23)\n"
+    )
+    probe.chmod(0o755)
+    environment = {
+        **os.environ,
+        "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+        "PYTHON_KEYRING_BACKEND": "unexpected.host.Backend",
+    }
+    result = subprocess.run(
+        [sys.executable, "scripts/test.py", "--fast"],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 23, result.stderr

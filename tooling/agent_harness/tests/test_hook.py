@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import io
 import json
+import os
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -22,8 +25,8 @@ from tooling.agent_harness.hook import (
     extract_python_paths,
     policy_violation,
     receipt_path,
-    stop_decision,
     verification_commands,
+    verification_decision,
 )
 
 
@@ -590,7 +593,7 @@ class StopGateTests(unittest.TestCase):
                 calls += 1
                 return VerificationResult(True, "ok")
 
-            result = stop_decision({}, root, manifest, succeed)
+            result = verification_decision(root, manifest, succeed)
 
             assert result["decision"] == "block"
             assert "manifest" in result["reason"].lower()
@@ -608,7 +611,7 @@ class StopGateTests(unittest.TestCase):
                 calls += 1
                 return VerificationResult(True, "ok")
 
-            result = stop_decision({}, root, manifest, succeed)
+            result = verification_decision(root, manifest, succeed)
 
             assert result["decision"] == "block"
             assert "manifest" in result["reason"].lower()
@@ -622,11 +625,11 @@ class StopGateTests(unittest.TestCase):
             def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
                 return VerificationResult(True, "ok")
 
-            assert stop_decision({}, root, manifest, succeed) == {}
+            assert verification_decision(root, manifest, succeed) == {}
             digest = evidence_module.manifest_digest(manifest)
             assert receipt_path(root, digest).is_file()
 
-    def test_first_failure_blocks_and_second_failure_reports(self) -> None:
+    def test_failed_explicit_verification_is_not_cached_as_success(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest = _fixture_manifest(("AGENTS.md",))
@@ -634,13 +637,15 @@ class StopGateTests(unittest.TestCase):
             def fail(_root: Path, _level: str, _paths: object) -> VerificationResult:
                 return VerificationResult(False, "expected fixture failure")
 
-            first = stop_decision({}, root, manifest, fail)
-            second = stop_decision({"stop_hook_active": True}, root, manifest, fail)
+            first = verification_decision(root, manifest, fail)
+            second = verification_decision(root, manifest, fail)
 
             assert first["decision"] == "block"
             assert "expected fixture failure" in first["reason"]
-            assert "decision" not in second
-            assert "must report this failure" in second["systemMessage"]
+            assert second["decision"] == "block"
+            assert not receipt_path(
+                root, evidence_module.manifest_digest(manifest)
+            ).exists()
 
     def test_success_writes_receipt_and_skips_identical_diff(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -653,8 +658,8 @@ class StopGateTests(unittest.TestCase):
                 calls += 1
                 return VerificationResult(True, "ok")
 
-            first = stop_decision({}, root, manifest, succeed)
-            second = stop_decision({}, root, manifest, succeed)
+            first = verification_decision(root, manifest, succeed)
+            second = verification_decision(root, manifest, succeed)
 
             assert first == {}
             assert second == {}
@@ -674,10 +679,10 @@ class StopGateTests(unittest.TestCase):
                 calls += 1
                 return VerificationResult(True, "ok")
 
-            stop_decision({}, root, manifest, succeed)
+            verification_decision(root, manifest, succeed)
             receipt_path(root, digest).write_text("{}\n", encoding="utf-8")
 
-            assert stop_decision({}, root, manifest, succeed) == {}
+            assert verification_decision(root, manifest, succeed) == {}
             assert calls == 2
 
     def test_receipt_evidence_must_match_its_digest(self) -> None:
@@ -699,13 +704,13 @@ class StopGateTests(unittest.TestCase):
             ):
                 manifest = change_manifest(root)
             digest = evidence_module.manifest_digest(manifest)
-            stop_decision({}, root, manifest, succeed)
+            verification_decision(root, manifest, succeed)
             cached = receipt_path(root, digest)
             receipt = json.loads(cached.read_text(encoding="utf-8"))
             receipt["evidence"]["tools"] = {"project_python": "tampered"}
             cached.write_text(json.dumps(receipt), encoding="utf-8")
 
-            stop_decision({}, root, manifest, succeed)
+            verification_decision(root, manifest, succeed)
 
             assert calls == 2
 
@@ -723,7 +728,7 @@ class StopGateTests(unittest.TestCase):
             cached.write_text("{}\n", encoding="utf-8")
             previous_inode = cached.stat().st_ino
 
-            stop_decision({}, root, manifest, succeed)
+            verification_decision(root, manifest, succeed)
 
             assert cached.stat().st_ino != previous_inode
             loaded = json.loads(cached.read_text(encoding="utf-8"))
@@ -749,7 +754,7 @@ class StopGateTests(unittest.TestCase):
                 return_value={"project_python": "Python fixture"},
             ):
                 manifest = change_manifest(root)
-            result = stop_decision({}, root, manifest, succeed)
+            result = verification_decision(root, manifest, succeed)
 
             assert result["decision"] == "block"
             assert "pnpm-workspace.yaml" in result["reason"]
@@ -759,33 +764,203 @@ class StopGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest = _fixture_manifest(())
-            result = stop_decision({}, root, manifest)
+            result = verification_decision(root, manifest)
             assert result == {}
             digest = evidence_module.manifest_digest(manifest)
             assert not receipt_path(root, digest).exists()
 
 
 class HostEntryPointTests(unittest.TestCase):
-    def test_stop_blocks_when_repository_evidence_cannot_be_captured(self) -> None:
+    def test_explicit_check_fails_when_repository_evidence_cannot_be_captured(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             with (
-                patch.object(sys, "argv", ["hook.py", "--event", "stop"]),
-                patch.object(sys, "stdin", io.StringIO("{}")),
+                patch.object(sys, "argv", ["hook.py", "--event", "check-changed"]),
+                patch.object(sys, "stdout", io.StringIO()) as output,
                 patch.object(hook_module, "git_root", return_value=root),
                 patch.object(
                     hook_module,
                     "change_manifest",
                     side_effect=RuntimeError("git status failed"),
                 ),
-                patch.object(hook_module, "emit") as emit_mock,
             ):
                 exit_code = hook_module.main()
 
-        assert exit_code == 0
-        response = emit_mock.call_args.args[0]
-        assert response["decision"] == "block"
-        assert "git status failed" in response["reason"]
+        assert exit_code == 1
+        assert "git status failed" in output.getvalue()
+
+
+class LifecycleLatencyTests(unittest.TestCase):
+    def test_pre_tool_entrypoint_preserves_command_and_lease_denials(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _initialize_repository(root)
+            fixtures = (
+                (
+                    {
+                        "tool_name": "Bash",
+                        "tool_input": {"command": "git status --short"},
+                    },
+                    False,
+                ),
+                (
+                    {
+                        "tool_name": "Bash",
+                        "tool_input": {"command": "git reset --hard"},
+                    },
+                    True,
+                ),
+                (
+                    {
+                        "tool_name": "Write",
+                        "tool_input": {"file_path": "contracts/openapi/v1.json"},
+                    },
+                    True,
+                ),
+            )
+            for payload, blocked in fixtures:
+                with self.subTest(payload=payload):
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            str(Path(hook_module.__file__).resolve()),
+                            "--event",
+                            "pre-tool",
+                        ],
+                        input=json.dumps(payload),
+                        cwd=root,
+                        capture_output=True,
+                        text=True,
+                        timeout=2,
+                        check=False,
+                    )
+                    assert result.returncode == 0
+                    assert (
+                        json.loads(result.stdout).get("decision") == "block"
+                    ) is blocked
+
+    def test_stop_never_starts_project_tools_even_with_existing_changes(self) -> None:
+        script = Path(hook_module.__file__).resolve()
+        for dirty, retry in ((False, False), (True, False), (True, True)):
+            with (
+                self.subTest(dirty=dirty, retry=retry),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                _initialize_repository(root)
+                if dirty:
+                    (root / "AGENTS.md").write_text("Existing user edit\n")
+                executable = root / "bin" / "pixi"
+                executable.parent.mkdir()
+                executable.write_text(
+                    f"#!{sys.executable}\nimport time\ntime.sleep(30)\n"
+                )
+                executable.chmod(0o755)
+                environment = {
+                    **os.environ,
+                    "PATH": f"{executable.parent}:{os.environ['PATH']}",
+                }
+                process = subprocess.Popen(
+                    [sys.executable, str(script), "--event", "stop"],
+                    cwd=root,
+                    env=environment,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    start_new_session=True,
+                )
+                try:
+                    output, errors = process.communicate(
+                        json.dumps({"stop_hook_active": retry}),
+                        timeout=2,
+                    )
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.communicate()
+                    self.fail(
+                        "Stop waited for project tooling instead of returning promptly"
+                    )
+                assert process.returncode == 0, errors
+                assert "decision" not in json.loads(output)
+                assert not (root / ".git/ditto-agent-harness/receipts").exists()
+
+    def test_explicit_check_records_and_reuses_successful_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = _fixture_manifest(("AGENTS.md",))
+            with (
+                patch.object(sys, "argv", ["hook.py", "--event", "check-changed"]),
+                patch.object(sys, "stdout", io.StringIO()),
+                patch.object(hook_module, "git_root", return_value=root),
+                patch.object(hook_module, "change_manifest", return_value=manifest),
+                patch.object(
+                    hook_module,
+                    "run_verification",
+                    return_value=VerificationResult(True, "passed"),
+                ) as verify,
+            ):
+                assert hook_module.main() == 0
+                assert hook_module.main() == 0
+            assert verify.call_count == 1
+            assert receipt_path(
+                root, evidence_module.manifest_digest(manifest)
+            ).is_file()
+
+    def test_post_edit_does_not_solve_or_install_an_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "example.py").write_text("value=1\n")
+            executable = root / "bin" / "pixi"
+            executable.parent.mkdir()
+            executable.write_text(
+                f"#!{sys.executable}\nimport sys\n"
+                "sys.exit(0 if '--as-is' in sys.argv "
+                "and '--fix' not in sys.argv else 42)\n"
+            )
+            executable.chmod(0o755)
+            with patch.dict(
+                os.environ, {"PATH": f"{executable.parent}:{os.environ['PATH']}"}
+            ):
+                result = hook_module.post_edit(
+                    {"tool_input": {"file_path": "example.py"}}, root
+                )
+            assert result.ok
+
+    def test_formatter_timeout_cleans_up_descendants(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "example.py").write_text("value=1\n")
+            marker = root / "unexpected-child-write"
+            child = (
+                "import time; from pathlib import Path; time.sleep(1); "
+                f"Path({str(marker)!r}).touch()"
+            )
+            executable = root / "bin" / "pixi"
+            executable.parent.mkdir()
+            executable.write_text(
+                f"#!{sys.executable}\nimport subprocess,sys,time\n"
+                f"subprocess.Popen([sys.executable, '-c', {child!r}])\n"
+                "time.sleep(30)\n"
+            )
+            executable.chmod(0o755)
+            with (
+                patch.dict(
+                    os.environ, {"PATH": f"{executable.parent}:{os.environ['PATH']}"}
+                ),
+                patch.object(hook_module, "FORMAT_TIMEOUT_SECONDS", 0.2),
+            ):
+                result = hook_module.post_edit(
+                    {"tool_input": {"file_path": "example.py"}}, root
+                )
+            assert not result.ok
+            assert "time budget" in result.summary
+            time.sleep(1.1)
+            assert not marker.exists(), (
+                "Formatter child kept running after hook timeout"
+            )
 
 
 if __name__ == "__main__":

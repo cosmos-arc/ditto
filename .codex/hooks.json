@@ -1,5 +1,5 @@
 {
-  "description": "Ditto shared repository policy and changed-scope quality gates",
+  "description": "Ditto fast interactive guardrails; quality gates run via explicit check-changed and CI",
   "hooks": {
     "PreToolUse": [
       {
@@ -21,7 +21,7 @@
           {
             "type": "command",
             "command": "/usr/bin/env python3 \"$(git rev-parse --show-toplevel)/tooling/agent_harness/hook.py\" --host codex --event post-tool",
-            "timeout": 120,
+            "timeout": 10,
             "statusMessage": "Formatting edited Python files"
           }
         ]
@@ -33,8 +33,8 @@
           {
             "type": "command",
             "command": "/usr/bin/env python3 \"$(git rev-parse --show-toplevel)/tooling/agent_harness/hook.py\" --host codex --event stop",
-            "timeout": 900,
-            "statusMessage": "Verifying changed scope"
+            "timeout": 3,
+            "statusMessage": "Checking pending changes"
           }
         ]
       }

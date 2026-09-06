@@ -77,6 +77,16 @@ class SkillRegistryTests(unittest.TestCase):
 
 
 class FormatFixtureTests(unittest.TestCase):
+    def test_root_workspace_manifest_is_not_ignored(self) -> None:
+        result = subprocess.run(
+            ["git", "check-ignore", "--no-index", "package.json"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 1, result.stdout
+
     def test_legacy_scan_uses_tracked_and_nonignored_untracked_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -1,0 +1,26 @@
+{
+  "name": "@ditto/workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/web"
+  ],
+  "trustedDependencies": [],
+  "scripts": {
+    "web:lint": "bun run --cwd apps/web lint",
+    "web:type": "bun run --cwd apps/web type",
+    "web:test": "bun run --cwd apps/web test:unit",
+    "web:build": "bun run --cwd apps/web build",
+    "contract:codegen": "bun run --cwd apps/web gen:api"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.62.1",
+    "@redocly/cli": "2.51.1",
+    "openapi-typescript": "7.13.0",
+    "playwright": "1.62.1",
+    "typescript": "5.9.3"
+  }
+}

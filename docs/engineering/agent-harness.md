@@ -50,14 +50,28 @@ pixi run -e dev harness-check
 | 事件 | 匹配 | 共享策略 |
 |---|---|---|
 | PreToolUse | Bash/Edit/Write/apply_patch（按宿主能力） | 阻止危险命令，并在结构化写工具执行前检查受保护路径 lease |
-| PostToolUse | Edit/Write/apply_patch | 只对能精确解析出的 Python 文件运行 file-scoped Ruff fix/format |
-| Stop | 全部 | 按完整 changed set 分级运行 changed-scope 验证 |
+| PostToolUse | Edit/Write/apply_patch | 只对能精确解析出的 Python 文件限时运行 Ruff format；不安装环境、不执行 lint fix |
+| Stop | 全部 | 快速提示工作区仍有改动；不执行测试、查询工具版本或宣称验证通过 |
 
-Stop 分级：
+同步 hooks 的职责是快速反馈，不是每次回复后的 CI。Codex 与 Claude 的预算一致：
+PreToolUse 10 秒；PostToolUse 10 秒（格式化内部 5 秒，超时清理本次进程组）；
+Stop 3 秒。格式化使用 `pixi run --as-is -e dev ruff format <files>`，仅消费已准备好的
+环境。环境缺失、超时或格式化失败会提供非阻断反馈，不掩盖问题，也不替换已完成工具
+的原始结果。命令策略和受保护写入仍在 PreToolUse 阻断。
+
+Stop 不把已有脏文件推断为本任务编辑，不返回 `decision: block` 续跑；遇到
+`stop_hook_active=true` 直接结束。它不读取或写入验证收据，因此没有收据不等于失败，
+Stop 成功也不等于质量门通过。以下显式命令和根 CI 仍负责验证：
+
+```bash
+pixi run -e dev check-changed
+```
+
+`check-changed` 按完整 changed set 分级，实时输出正在执行的命令和检查进度：
 
 - 无 staged、unstaged、rename/delete、mode change 或未 ignore 的 untracked：直接通过。
 - 普通文档：不运行 Python 套件。
-- Harness：运行 `harness-check`。
+- Harness：运行包含 `harness-check` 的根 `check`。
 - 仅测试：目标测试、Ruff format-check/lint、测试类型检查。
 - 普通后端/Web 生产代码：分别运行 `check-backend`/`check-web`。
 - 契约或跨栈路径：运行 `check` 与 `test-system`。
@@ -66,12 +80,17 @@ Stop 分级：
   同时属于 API 契约的路径保留契约、system 与 PIT 三类证据。
 - 根 toolchain、未知路径或混合 Harness 变更：fail closed 到只读 `check`。
 
-首次失败返回阻断反馈。若宿主以 `stop_hook_active=true` 再次调用且仍失败，允许结束，但向模型注入必须在最终答复报告失败的消息。
+显式验证失败返回非零退出码，不写成功收据。最终答复必须报告实际执行的检查和失败；
+不能以 Stop 没有阻断作为通过证据。普通讨论和只读任务不应因已有改动自动运行全库门禁。
 
 摘要包含 base/HEAD SHA、每个路径的 mode 与内容 hash、未跟踪文件内容，以及相关
 tool/config/lockfile 和实际工具版本。成功 receipt 写入当前 worktree 自己的 Git metadata
 `<git-dir>/ditto-agent-harness/receipts/`；不同 worktree 不共享 mutable receipt。完全相同
-的证据不重复验证，任一字节或工具事实变化都会失效。
+的证据通过显式 `check-changed` 不重复验证，任一字节或工具事实变化都会失效。
+
+hooks 定义或 timeout 修改后，Codex 会要求重新审阅相应定义。代码更新不改写用户的
+enabled/trust 状态；不要使用 bypass 参数代替审阅。官方事件语义和设计依据见
+[Hooks 最佳实践调研](../research/agent-hooks-best-practices.md)。
 
 ## Integrator 单写者 Lease
 
@@ -97,7 +116,7 @@ pixi run -e dev integrator-lease release
 持有者应覆盖生成、验证和最终 diff 检查的完整期间，完成后主动 release。PreToolUse
 在 Edit/Write/apply_patch 前阻断非持有者，也识别 OpenAPI `--write`、Bun/Pixi lock
 更新和直接重定向到受保护文件等已知 Bash writer；任意 shell 语义无法被完全可靠解析，
-因此 Stop 和 `check-changed` 还会对完整 Git changed set 再做同一 lease 检查。两个宿主
+因此显式 `check-changed` 还会对完整 Git changed set 再做同一 lease 检查。两个宿主
 的 matcher 和精确命令同时由 validator 与 deterministic Agent Eval 校验。
 
 ## Deterministic Agent Eval
