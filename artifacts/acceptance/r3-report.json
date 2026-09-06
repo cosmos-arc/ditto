@@ -5,7 +5,10 @@
         "command_transcript": "02ae1450063e63981fcf274340523c7c2cb1f4ccff8984337e9134a849344735"
       },
       "command": [
-        "uv", "run", "--no-sync",
+        "pixi",
+        "run",
+        "-e",
+        "dev",
         "pytest",
         "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_stock_live_golden_lane",
         "-q",
@@ -22,7 +25,10 @@
         "command_transcript": "32ce44f572a4c08ded2f54109e396b5875cb49cb642b80acf6b106d1f5025ad2"
       },
       "command": [
-        "uv", "run", "--no-sync",
+        "pixi",
+        "run",
+        "-e",
+        "dev",
         "pytest",
         "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_etf_live_golden_lane",
         "-q",
@@ -39,7 +45,10 @@
         "command_transcript": "9c05dbea8fb22e0720831e6360c0457edc33744a7d5023da8283c4275604f287"
       },
       "command": [
-        "uv", "run", "--no-sync",
+        "pixi",
+        "run",
+        "-e",
+        "dev",
         "pytest",
         "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_live_publish_r1_and_reactivate",
         "-q",
@@ -56,7 +65,10 @@
         "command_transcript": "3aad59f7e0d69554b6f64c1eb4b8148b1beeea2db22a7063719d7dd45cd6eeda"
       },
       "command": [
-        "uv", "run", "--no-sync",
+        "pixi",
+        "run",
+        "-e",
+        "dev",
         "pytest",
         "packages/apps/tests/e2e/test_r3_live_acceptance.py::test_isolated_live_backup_restore",
         "-q",

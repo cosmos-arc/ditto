@@ -26,8 +26,8 @@
 | `bun run prototype:gates` | PASS | 28 个原型门全绿 |
 | `bun run prototype:visual-matrix` | PASS | 28 个视觉矩阵产物重新生成 |
 | `bun run visual:audit` | PASS | 0 warnings |
-| `task check` | PASS | Ruff、format、basedpyright 0 errors；12,927 passed、1 expected xfail；imports 43 kept / 0 broken；architecture smell 与 harness 全绿 |
-| `task arch-check` | PASS | 后端架构门全绿 |
+| `pixi run -e dev check` | PASS | Ruff、format、basedpyright 0 errors；12,927 passed、1 expected xfail；imports 43 kept / 0 broken；architecture smell 与 harness 全绿 |
+| `pixi run -e dev arch-check` | PASS | 后端架构门全绿 |
 | 两仓库 `git diff --check` | PASS | 无 whitespace error |
 
 OpenAPI 从后端重新导出并在前端连续生成两次，生成物哈希一致：

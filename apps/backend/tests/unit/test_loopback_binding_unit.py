@@ -18,7 +18,7 @@ def test_all_bundled_server_entrypoints_are_loopback_only() -> None:
     task_config = (PROJECT_ROOT / "Taskfile.yml").read_text(encoding="utf-8")
 
     assert 'address="127.0.0.1:8000"' in source
-    assert "--host 127.0.0.1 --port 8000" in task_config
+    assert "--host 127.0.0.1 --port 8000" in " ".join(task_config.split())
     assert "0.0.0.0" not in source  # noqa: S104 - forbidden bind assertion
     assert "0.0.0.0" not in task_config  # noqa: S104 - forbidden bind assertion
 

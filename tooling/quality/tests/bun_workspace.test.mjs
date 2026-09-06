@@ -9,7 +9,7 @@ test("workspace checks reject stale locks and missing installed dependencies wit
 	try {
 		const manifest = { name: "fixture", packageManager: `bun@${Bun.version}`, workspaces: [], devDependencies: { tool: "1.0.0" } };
 		writeFileSync(join(root, "package.json"), JSON.stringify(manifest));
-		const lock = { workspaces: { "": { devDependencies: {} } }, packages: { tool: ["tool@1.0.0"] } };
+		const lock = { workspaces: { "": { devDependencies: {} } }, packages: { tool: ["tool@1.0.0", "", { dependencies: { child: "1.0.0" } }], child: ["child@1.0.0"] } };
 		writeFileSync(join(root, "bun.lock"), JSON.stringify(lock));
 		const before = readFileSync(join(root, "bun.lock"), "utf8");
 		expect(() => checkWorkspace(root)).toThrow("bun.lock is stale");
@@ -19,6 +19,9 @@ test("workspace checks reject stale locks and missing installed dependencies wit
 		expect(() => checkWorkspace(root)).toThrow();
 		mkdirSync(join(root, "node_modules/tool"), { recursive: true });
 		writeFileSync(join(root, "node_modules/tool/package.json"), '{"version":"1.0.0"}');
+		expect(() => checkWorkspace(root)).toThrow("Missing installed dependency: child");
+		mkdirSync(join(root, "node_modules/child"), { recursive: true });
+		writeFileSync(join(root, "node_modules/child/package.json"), '{"version":"1.0.0"}');
 		expect(() => checkWorkspace(root)).not.toThrow();
 		rmSync(join(root, "bun.lock"));
 		expect(() => checkWorkspace(root)).toThrow();

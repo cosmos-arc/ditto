@@ -244,6 +244,7 @@ jobs:
             --artifact release-tools/tooling/release/__init__.py \
             --artifact release-tools/tooling/release/cohort_manifest.py \
             --artifact release-tools/tooling/release/cohort_verify.py \
+            --artifact release-tools/tooling/release/environment_identity.py \
             --artifact release-tools/verify-cohort.py \
             --artifact ditto-image.tar \
             --artifact ditto-backend.spdx.json \

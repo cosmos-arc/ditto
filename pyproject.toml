@@ -59,6 +59,7 @@ dev = [
     "pytest-mock>=3.14,<4",
     "pytest-xdist>=3.6,<4",
     "pytest-timeout>=2.3,<3",
+    "time-machine==2.19.0",
     "inline-snapshot>=0.10,<1",
     "hypothesis>=6.100,<7",
     "respx>=0.21,<1",

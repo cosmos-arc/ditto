@@ -16,6 +16,7 @@ import pytest
 from tooling.release import artifact_gate
 from tooling.release.cohort_manifest import CohortManifest, ReleaseCoordinates
 from tooling.release.cohort_verify import verify_cohort_manifest
+from tooling.release.tests.image_fixture import write_image
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -397,7 +398,7 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
     web = output / "ditto-web.tar"
     backend_sbom = output / "ditto-backend.spdx.json"
     web_sbom = output / "ditto-web.spdx.json"
-    backend.write_bytes(b"backend")
+    write_image(backend, tmp_path, staged=False)
     web.write_bytes(b"web")
     backend_sbom.write_text(
         json.dumps(
@@ -466,6 +467,7 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
         "tooling/release/__init__.py",
         "tooling/release/cohort_manifest.py",
         "tooling/release/cohort_verify.py",
+        "tooling/release/environment_identity.py",
         "tooling/release/offline_verify.py",
     ):
         source = ROOT / relative
@@ -517,6 +519,7 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
         "release-tools/tooling/release/__init__.py",
         "release-tools/tooling/release/cohort_manifest.py",
         "release-tools/tooling/release/cohort_verify.py",
+        "release-tools/tooling/release/environment_identity.py",
         "release-tools/verify-cohort.py",
     }
     assert all(path.is_relative_to(output) for path in cohort_artifacts)

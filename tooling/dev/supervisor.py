@@ -328,14 +328,19 @@ def _process_group_exists(process_group: int) -> bool:
     return True
 
 
-def _wait_for_process_group_exit(process_group: int, timeout: float) -> bool:
+def _wait_for_process_group_exit(
+    process: subprocess.Popen[bytes], timeout: float
+) -> bool:
     deadline = time.monotonic() + timeout
-    while _process_group_exists(process_group):
+    while True:
+        # Linux counts an unreaped leader as a member of its process group.
+        process.poll()
+        if not _process_group_exists(process.pid):
+            return True
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return False
         time.sleep(min(_PROCESS_GROUP_POLL_SECONDS, remaining))
-    return True
 
 
 def _resolve_windows_taskkill(environment: Mapping[str, str]) -> Path:
@@ -405,14 +410,12 @@ def terminate_managed(process: subprocess.Popen[bytes]) -> None:
         os.killpg(process_group, signal.SIGTERM)
     except ProcessLookupError:
         return
-    if not _wait_for_process_group_exit(process_group, _PROCESS_GROUP_GRACE_SECONDS):
+    if not _wait_for_process_group_exit(process, _PROCESS_GROUP_GRACE_SECONDS):
         try:
             os.killpg(process_group, signal.SIGKILL)
         except ProcessLookupError:
             pass
-        if not _wait_for_process_group_exit(
-            process_group, _PROCESS_GROUP_KILL_WAIT_SECONDS
-        ):
+        if not _wait_for_process_group_exit(process, _PROCESS_GROUP_KILL_WAIT_SECONDS):
             raise RuntimeError(
                 f"process group {process_group} survived SIGKILL during cleanup"
             )

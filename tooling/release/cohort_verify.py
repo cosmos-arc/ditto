@@ -9,6 +9,7 @@ import os
 import re
 import stat
 import sys
+import tarfile
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path, PurePosixPath
@@ -19,6 +20,7 @@ from tooling.release.cohort_manifest import (
     CohortManifest,
     artifact_media_type,
 )
+from tooling.release.environment_identity import identity_from_hashes
 
 __all__ = [
     "CohortVerificationError",
@@ -73,6 +75,7 @@ _OFFLINE_VERIFIER_PATHS = frozenset(
         "release-tools/tooling/release/__init__.py",
         "release-tools/tooling/release/cohort_manifest.py",
         "release-tools/tooling/release/cohort_verify.py",
+        "release-tools/tooling/release/environment_identity.py",
         "release-tools/verify-cohort.py",
     }
 )
@@ -167,7 +170,74 @@ def verify_cohort_manifest(
         web_artifact=web,
     )
 
+    _verify_backend_environment(root, backend, artifacts_by_path)
     return cast(CohortManifest, document)
+
+
+def _verify_backend_environment(
+    root: Path, backend: ArtifactRecord, artifacts: Mapping[str, ArtifactRecord]
+) -> None:
+    """Bind image config facts to the cohort inputs without Docker or extraction."""
+    try:
+        with tarfile.open(root / backend["path"], mode="r:*") as archive:
+
+            def read_json(name: str) -> object:
+                members = [
+                    member for member in archive.getmembers() if member.name == name
+                ]
+                if (
+                    len(members) != 1
+                    or not members[0].isfile()
+                    or members[0].size > 4 * 1024 * 1024
+                ):
+                    raise CohortVerificationError("invalid image config member")
+                stream = archive.extractfile(members[0])
+                if stream is None:
+                    raise CohortVerificationError("missing image config member")
+                return cast(object, json.load(stream))
+
+            manifest = read_json("manifest.json")
+            if not isinstance(manifest, list) or len(manifest) != 1:
+                raise CohortVerificationError("backend archive must contain one image")
+            subject = _object(manifest[0], label="image subject")
+            config = _object(
+                read_json(_string(subject, "Config", label="image subject")),
+                label="image config",
+            )
+    except (OSError, tarfile.TarError, ValueError, KeyError) as error:
+        raise CohortVerificationError(
+            f"backend environment is unreadable: {error}"
+        ) from error
+    if config.get("os") != "linux" or config.get("architecture") != "amd64":
+        raise CohortVerificationError(
+            "backend environment platform must be linux/amd64"
+        )
+    image_config = _object(config.get("config"), label="image runtime config")
+    raw_env = image_config.get("Env")
+    if not isinstance(raw_env, list) or not all(
+        isinstance(item, str) and "=" in item for item in raw_env
+    ):
+        raise CohortVerificationError("backend environment facts are missing")
+    environment = dict(item.split("=", 1) for item in cast(list[str], raw_env))
+    inputs = {
+        name: artifacts[f"release-inputs/{Path(name).name}"]["sha256"]
+        for name in ("uv.lock", ".python-version", "deploy/docker/Dockerfile")
+    }
+    expected = identity_from_hashes(inputs, platform="linux/amd64")
+    if environment.get("DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH") != expected:
+        raise CohortVerificationError(
+            "backend environment identity differs from release inputs"
+        )
+    python_version = (
+        (root / "release-inputs/.python-version")
+        .read_text()
+        .strip()
+        .removeprefix("cpython-")
+    )
+    if environment.get("PYTHON_VERSION") != python_version:
+        raise CohortVerificationError(
+            "backend Python version differs from release inputs"
+        )
 
 
 def _verify_bound_release_runtime(

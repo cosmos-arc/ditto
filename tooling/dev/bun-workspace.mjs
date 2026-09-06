@@ -1,6 +1,21 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, realpathSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
+
+function installedPackage(directory, name) {
+	for (let current = directory; ; current = dirname(current)) {
+		const path = resolve(current, "node_modules", name, "package.json");
+		if (existsSync(path)) return realpathSync(path);
+		if (dirname(current) === current) throw new Error(`Missing installed dependency: ${name}`);
+	}
+}
+
+function supportsPlatform(metadata) {
+	return [[metadata.os, process.platform], [metadata.cpu, process.arch]].every(([value, actual]) => {
+		const values = value === undefined ? [] : Array.isArray(value) ? value : [value];
+		return !values.includes(`!${actual}`) && (!values.some((item) => !item.startsWith("!")) || values.includes(actual));
+	});
+}
 
 /** Verify the prepared workspace without resolving, installing or writing locks. */
 export function checkWorkspace(root) {
@@ -13,6 +28,27 @@ export function checkWorkspace(root) {
 	if (!isDeepStrictEqual(Object.keys(lock.workspaces).sort(), workspaces.toSorted())) {
 		throw new Error("bun.lock workspace list differs from package.json");
 	}
+	const visited = new Set();
+	function verifyDependency(directory, name, parentKey) {
+		let scope = parentKey;
+		while (scope && !lock.packages[`${scope}/${name}`]) scope = scope.replace(/(?:^|\/)(?:@[^/]+\/)?[^/]+$/, "");
+		const key = scope ? `${scope}/${name}` : name;
+		const entry = lock.packages[key];
+		if (!entry) throw new Error(`Missing bun.lock dependency: ${name}`);
+		if (!supportsPlatform(entry[2] ?? {})) return;
+		const path = installedPackage(directory, name);
+		const installed = JSON.parse(readFileSync(path, "utf8"));
+		if (entry[0] !== `${name}@${installed.version}`) {
+			throw new Error(`Installed ${name} differs from bun.lock; run the explicit bootstrap`);
+		}
+		if (visited.has(path)) return;
+		visited.add(path);
+		const metadata = entry[2] ?? {};
+		const requiredPeers = Object.fromEntries(Object.entries(metadata.peerDependencies ?? {}).filter(([name]) => !(metadata.optionalPeers ?? []).includes(name)));
+		for (const dependency of Object.keys({ ...requiredPeers, ...metadata.dependencies, ...metadata.optionalDependencies })) {
+			verifyDependency(dirname(path), dependency, key);
+		}
+	}
 	for (const workspace of workspaces) {
 		const directory = resolve(root, workspace);
 		const pkg = JSON.parse(readFileSync(resolve(directory, "package.json"), "utf8"));
@@ -22,11 +58,7 @@ export function checkWorkspace(root) {
 			}
 		}
 		for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
-			const installed = JSON.parse(readFileSync(resolve(directory, "node_modules", name, "package.json"), "utf8"));
-			const entry = lock.packages[`${pkg.name}/${name}`] ?? lock.packages[name];
-			if (!entry || entry[0] !== `${name}@${installed.version}`) {
-				throw new Error(`Installed ${name} differs from bun.lock; run the explicit bootstrap`);
-			}
+			verifyDependency(directory, name, pkg.name);
 		}
 	}
 }

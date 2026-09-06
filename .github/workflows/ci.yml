@@ -133,6 +133,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: ./.github/actions/setup-toolchain
       - uses: ./.github/actions/setup-bun
       - name: Frozen Web install
@@ -160,8 +161,7 @@ jobs:
       - name: Frozen Web install
         run: bun install --frozen-lockfile --registry=https://registry.npmjs.org
       - name: Prepare Web browser
-        working-directory: apps/web
-        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+        run: task browser-install -- --with-deps
       - name: Web CI
         run: task web-ci
       - name: Publish Web coverage

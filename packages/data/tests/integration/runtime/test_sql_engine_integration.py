@@ -1,9 +1,11 @@
 """Tests for SqlEngine."""
 
+import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
+import pytest
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.runtime.sql_engine import SqlEngine
 from ditto_platform.foundation import SQLitePool
@@ -137,3 +139,17 @@ class TestSqlEngine:
         """Test refresh_views re-registers Parquet views."""
         # Should not raise
         self.engine.refresh_views()
+
+    def test_fallback_closes_sqlite_handle(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        connection = sqlite3.connect(self.data_root / "metadata/metadata.sqlite")
+        monkeypatch.setattr(sqlite3, "connect", lambda _path: connection)
+        try:
+            self.engine._attach_sqlite_fallback(
+                self.data_root / "metadata/metadata.sqlite"
+            )
+            with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+                connection.execute("SELECT 1")
+        finally:
+            connection.close()

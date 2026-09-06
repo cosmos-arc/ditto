@@ -327,14 +327,27 @@ def _known_command_write_targets(command: str, root: Path) -> tuple[str, ...]:
         targets.update(_direct_write_targets(tokens, root))
         if _mutates_bun_lock(tokens):
             targets.add("bun.lock")
-        if _command_after_executable(tokens, "uv") in {
-            "add",
-            "remove",
-            "lock",
-            "sync",
-            "run",
-        } and not {"--locked", "--frozen", "--no-sync", "--check"}.intersection(tokens):
-            targets.add("uv.lock")
+        uv_command = _command_after_executable(tokens, "uv")
+        if uv_command in {"add", "remove", "lock", "sync", "run"}:
+            options = tokens[tokens.index(uv_command) + 1 :]
+            if uv_command == "run":
+                # Application arguments must never exempt uv's implicit lock write.
+                end = next(
+                    (
+                        i
+                        for i, value in enumerate(options)
+                        if not value.startswith("-") or value == "--"
+                    ),
+                    len(options),
+                )
+                options = options[:end]
+            readonly = {"--locked", "--frozen"}
+            if uv_command == "run":
+                readonly.add("--no-sync")
+            if uv_command == "lock":
+                readonly.add("--check")
+            if not readonly.intersection(options):
+                targets.add("uv.lock")
     return tuple(sorted(targets))
 
 

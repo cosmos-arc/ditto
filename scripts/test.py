@@ -99,6 +99,7 @@ def main() -> int:
     environment = {
         **os.environ,
         "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
+        "_TYPER_FORCE_DISABLE_TERMINAL": "1",
     }
     return subprocess.run(cmd, env=environment, check=False).returncode
 

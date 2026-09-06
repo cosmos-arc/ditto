@@ -27,6 +27,7 @@ def test_artifact_dag_builds_before_consumption_and_propagates_failure(
     )
     for name, definition in document["tasks"].items():
         definition.pop("dir", None)
+        definition.pop("preconditions", None)
         definition["cmds"] = [
             command
             if isinstance(command, dict)
@@ -51,3 +52,17 @@ def test_artifact_dag_builds_before_consumption_and_propagates_failure(
         else:
             assert result.returncode == 0, result.stderr
             assert order.index("web-build") < order.index("artifact-gate")
+
+
+def test_readonly_tasks_reject_an_unprepared_environment(tmp_path: Path) -> None:
+    task = shutil.which("task")
+    assert task is not None
+    root = Path(__file__).resolve().parents[3]
+    shutil.copyfile(root / "Taskfile.yml", tmp_path / "Taskfile.yml")
+    for name in ("check", "toolchain-check", "lint", "python-environment-check"):
+        result = subprocess.run(
+            [task, name], cwd=tmp_path, capture_output=True, text=True, check=False
+        )
+        assert result.returncode != 0
+        assert "Python environment is missing" in result.stderr
+        assert not (tmp_path / ".venv").exists()
