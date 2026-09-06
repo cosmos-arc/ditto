@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkWorkspace } from "../../dev/bun-workspace.mjs";
@@ -41,6 +41,8 @@ test("parent node_modules cannot supply an unprepared worktree", () => {
 		mkdirSync(join(parent, "node_modules/tool"), { recursive: true });
 		writeFileSync(join(parent, "node_modules/tool/package.json"), '{"version":"1.0.0"}');
 		expect(() => checkWorkspace(root)).toThrow("Missing installed dependency: tool");
+		symlinkSync(join(parent, "node_modules"), join(root, "node_modules"), "junction");
+		expect(() => checkWorkspace(root)).toThrow("escapes the current workspace");
 	} finally {
 		rmSync(parent, { recursive: true, force: true });
 	}

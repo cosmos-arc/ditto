@@ -469,7 +469,7 @@ class DiffClassificationTests(unittest.TestCase):
         assert level == "high-risk"
         assert commands == [
             "task check-backend",
-            "uv run --no-sync pytest -m pit",
+            "task pit",
         ]
 
     def test_application_and_backend_risk_entrypoints_keep_specialized_gates(
@@ -478,19 +478,19 @@ class DiffClassificationTests(unittest.TestCase):
         fixtures = {
             "packages/application/src/ditto_application/commands/trade.py": (
                 "high-risk",
-                ("check-backend", "pytest -m pit"),
+                ("check-backend", "task pit"),
             ),
             "packages/application/src/ditto_application/queries/factor_ic_report.py": (
                 "high-risk",
-                ("check-backend", "pytest -m pit"),
+                ("check-backend", "task pit"),
             ),
             "apps/backend/src/ditto_apps/jobs/flows/backtest.py": (
                 "high-risk",
-                ("check-backend", "pytest -m pit"),
+                ("check-backend", "task pit"),
             ),
             "apps/backend/src/ditto_apps/api/routes/trade_command_routes.py": (
                 "contract-high-risk",
-                ("check", "test-system", "pytest -m pit"),
+                ("check", "test-system", "task pit"),
             ),
         }
         for path, (expected_level, fragments) in fixtures.items():
@@ -550,8 +550,8 @@ class DiffClassificationTests(unittest.TestCase):
             "backend": ["check-backend"],
             "web": ["check-web"],
             "contract": ["check", "test-system"],
-            "contract-high-risk": ["check", "test-system", "pytest -m pit"],
-            "high-risk": ["check-backend", "pytest -m pit"],
+            "contract-high-risk": ["check", "test-system", "task pit"],
+            "high-risk": ["check-backend", "task pit"],
             "cross-stack": ["check", "test-system"],
             "root": ["check"],
             "unknown": ["check"],
@@ -589,7 +589,7 @@ class DiffClassificationTests(unittest.TestCase):
         risk_commands = verification_commands(classify_diff(high_risk), high_risk)
 
         assert "task test-system" in [" ".join(command) for command in cross_commands]
-        assert any("pytest -m pit" in " ".join(command) for command in risk_commands)
+        assert any("task pit" in " ".join(command) for command in risk_commands)
 
     def test_docs_or_harness_paths_cannot_remove_an_owning_gate(self) -> None:
         test_path = "packages/data/tests/unit/test_data_import_boundary_unit.py"

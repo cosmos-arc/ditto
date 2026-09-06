@@ -77,6 +77,8 @@ tasks:
     cmds:
     - uv run --no-sync python scripts/test.py --fast {{.CLI_ARGS}}
   pit:
+    env:
+      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
       msg: Python environment is missing; run task python-install explicitly.
@@ -113,6 +115,7 @@ tasks:
     cmds:
     - uv run --no-sync pytest tooling/dev/tests tooling/contracts/tests tooling/quality/tests -q -n0 --no-cov
       {{.CLI_ARGS}}
+    - bun test tooling/quality/tests/bun_workspace.test.mjs
   harness-type:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'

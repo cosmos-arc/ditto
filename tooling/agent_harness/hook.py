@@ -798,7 +798,7 @@ def verification_commands(
     if needs_system:
         commands.append(["task", "test-system"])
     if "high-risk" in active_classes:
-        commands.append(["uv", "run", "--no-sync", "pytest", "-m", "pit"])
+        commands.append(["task", "pit"])
     if needs_full_check or active_classes != {"backend-tests"}:
         return commands
     return _backend_test_commands(paths, root=root)
