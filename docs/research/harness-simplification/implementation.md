@@ -43,20 +43,37 @@
 | `pixi run -e dev ci` | 失败于上述两项后端子进程超时；不宣称完整通过 |
 | `coverage_gate.py --report coverage.json`，base 为实施前提交 | 全部原有覆盖率阈值满足 |
 | `pixi run -e dev type-all` | 源码和测试均 0 errors / warnings |
+| `pixi run -e dev check` | 完整通过：15,448 项后端测试、1,757 项 Web 测试及所有依赖门通过 |
 | `pixi run -e dev pre-commit-run` | 全部通过；首次修正一处格式后重跑 |
 | Hook / frontmatter 公共 CLI 回归 | 19 项通过；错误引号拒绝、扩展 metadata 和多个 hook 合法 |
 | 页面合同 CLI | 5 项通过；生成失败时两份既有输出均保持不变 |
 | Artifact / repository policy | 44 项通过，包含扫描 subject 不匹配反例 |
 | Node 22 / 24 dependency graph | 实际图检查通过；Node 22 扫描 784 模块；ESM 与 CommonJS 解析回归通过 |
 | Windows oasdiff | 官方 tar.gz 资产下载并经校验；原生 Windows 执行未测 |
-
 | `pixi run -e dev web-ci` | 1,757 项前端测试、719 项原型/工具测试全部通过；覆盖率及生产构建预算通过 |
 | `pixi run -e dev pit` | 401 项通过 |
 | `pixi run -e dev arch-check` / `check-contract` | 全部通过 |
 | `pixi run -e dev test-system` | 默认 cohort 与六项专项跨栈场景通过，命令退出 0 |
 | `pixi run -e dev harness-check` | 工具测试、Harness 测试、类型、宿主配置与大文件检查通过 |
 
-制品及安全门的最终结果见后续验收补充。
+| `security-supply-chain` | 两版历史/当前树秘密扫描及检测哨兵通过；OSV 返回非零，11 个包受影响，摘要 85 条漏洞 |
+
+实际 PR selector 对整个 `688386be…517eeb12` 差异选择全部 12 个 job，`analysis=true`。
+这使用实际 CLI 和既有环境变量接口，仍不是远程 Actions 执行记录。
+
+镜像链路以源码提交 `517eeb12345c4218d403c2a1f99b96736e859ac4` 验证。
+Mac 默认 ARM Linux 构建被现有平台锁拒绝；设置原生 Docker 的 `DOCKER_DEFAULT_PLATFORM=linux/amd64`
+后构建成功，未修改 lock 或平台集合。构建输出为
+`sha256:8991c571e935b2be6e9e1db77775d77efe18677d121154bdfbd853517a94e74d`，
+从同一导出 tar 计算的 config digest 为
+`sha256:03035637c5aabcb44caceb19f38a9dc6ad25b4bdfbd311e8a0e99710cf6dc4ef`。
+smoke 和 Syft subject 校验通过。Trivy 首次因 `mirror.gcr.io` 下载数据库 EOF 失败；
+复用该 tar 并显式选择其自带的另一官方源 `ghcr.io/aquasecurity/trivy-db:2` 重试。
+原 artifact gate 的非零结果保留，不将分步重试冒充完整 gate 成功。
+重试扫描完成，返回 1：69 条 HIGH/CRITICAL 组件发现（65 HIGH、4 CRITICAL，31 个不同 advisory），
+秘密发现为 0。Trivy JSON 的 ImageID 与上述 config digest 校验通过，因此实际 build、smoke、SBOM、
+扫描的同一 subject 链路已有证据，但漏洞仍阻断制品门与发布资格。明细见 [当前镜像台账](trivy-current.csv)。
+Trivy 同时提示 Conda 包仅支持 SBOM、不能进行漏洞扫描；不能将扫描范围误写成全部锁定依赖。
 
 ## 两轴代码审查
 
@@ -69,7 +86,9 @@
 
 首轮发现普通 Web 门仍隐式检查冻结基线/看板、生成器第二份内容失败会留下第一份修改、release 调用者
 仍使用可变标签。三项均修复，复审未发现新的具体实现遗漏。原生 Windows、远程 CI、外部服务与最终验收
-证据不由代码审查替代。Standards 1 项、Spec 3 项，均已关闭；两个轴分别报告。
+证据不由代码审查替代。初轮 Standards 1 项、Spec 3 项，均已关闭；两个轴分别报告。
+最终验证新增的 worktree 扫描修复也经两轴只读审查，无新增代码问题；复审指出报告误述后端去重，
+已更正为仅 Web 去重、后端既有单次 coverage/PIT 分工保持不变。
 
 ## 保留机制与后续边界
 
