@@ -58,7 +58,7 @@ class CheckDataQualityHandler:
 
         return cmd.df, result.has_errors
 
-    # -- Private helpers (absorbed from QualityService) --
+    # -- Private helpers (absorbed from QualityService)
 
     def _log_check_result(self, result: DQResult, dataset: str) -> None:
         """记录 DQ 检查结果."""

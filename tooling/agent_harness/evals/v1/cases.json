@@ -19,7 +19,7 @@
         "read_instructions": ["AGENTS.md", "apps/web/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check-web"],
+            "command": ["task", "check-web"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
@@ -27,7 +27,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check-web"]
+          ["task", "check-web"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -50,7 +50,7 @@
         "read_instructions": ["AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check-web"],
+            "command": ["task", "check-web"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
@@ -58,7 +58,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check-web"]
+          ["task", "check-web"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -84,7 +84,7 @@
         "read_instructions": ["AGENTS.md", "packages/application/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check-backend"],
+            "command": ["task", "check-backend"],
             "exit_code": 1,
             "findings": ["python_import_boundary"],
             "runtime": "none",
@@ -116,7 +116,7 @@
         "read_instructions": ["AGENTS.md", "apps/web/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check-web"],
+            "command": ["task", "check-web"],
             "exit_code": 1,
             "findings": ["web_import_boundary"],
             "runtime": "none",
@@ -148,14 +148,14 @@
         "read_instructions": ["AGENTS.md", "contracts/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check"],
+            "command": ["task", "check"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
             "assertions": []
           },
           {
-            "command": ["pixi", "run", "-e", "dev", "test-system"],
+            "command": ["task", "test-system"],
             "exit_code": 0,
             "findings": [],
             "runtime": "live",
@@ -163,8 +163,8 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check"],
-          ["pixi", "run", "-e", "dev", "test-system"]
+          ["task", "check"],
+          ["task", "test-system"]
         ],
         "generated_artifacts": [
           {
@@ -198,14 +198,14 @@
         "read_instructions": ["AGENTS.md", "apps/web/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check"],
+            "command": ["task", "check"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
             "assertions": []
           },
           {
-            "command": ["pixi", "run", "-e", "dev", "test-system"],
+            "command": ["task", "test-system"],
             "exit_code": 0,
             "findings": [],
             "runtime": "live",
@@ -213,8 +213,8 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check"],
-          ["pixi", "run", "-e", "dev", "test-system"]
+          ["task", "check"],
+          ["task", "test-system"]
         ],
         "generated_artifacts": [
           {
@@ -277,7 +277,7 @@
         "read_instructions": ["AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "test-system"],
+            "command": ["task", "test-system"],
             "exit_code": 0,
             "findings": [],
             "runtime": "mock",
@@ -285,7 +285,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "test-system"]
+          ["task", "test-system"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": true
@@ -311,14 +311,14 @@
         "read_instructions": ["AGENTS.md", "packages/features/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check-backend"],
+            "command": ["task", "check-backend"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
             "assertions": []
           },
           {
-            "command": ["pixi", "run", "-e", "dev", "pytest", "-m", "pit"],
+            "command": ["uv", "run", "--no-sync", "pytest", "-m", "pit"],
             "exit_code": 1,
             "findings": ["pit_future_sentinel_failed"],
             "runtime": "none",
@@ -326,7 +326,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check-backend"]
+          ["task", "check-backend"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -352,7 +352,7 @@
         "read_instructions": ["AGENTS.md"],
         "tool_evidence": [],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "pytest", "packages/data/tests"]
+          ["uv", "run", "--no-sync", "pytest", "packages/data/tests"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -415,7 +415,7 @@
         ],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check-backend"],
+            "command": ["task", "check-backend"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
@@ -423,7 +423,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check-backend"]
+          ["task", "check-backend"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -464,14 +464,14 @@
         ],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check"],
+            "command": ["task", "check"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
             "assertions": []
           },
           {
-            "command": ["pixi", "run", "-e", "dev", "test-system"],
+            "command": ["task", "test-system"],
             "exit_code": 0,
             "findings": [],
             "runtime": "live",
@@ -479,8 +479,8 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check"],
-          ["pixi", "run", "-e", "dev", "test-system"]
+          ["task", "check"],
+          ["task", "test-system"]
         ],
         "generated_artifacts": [
           {
@@ -511,7 +511,7 @@
         "read_instructions": ["AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "test-system"],
+            "command": ["task", "test-system"],
             "exit_code": 0,
             "findings": [],
             "runtime": "live",
@@ -519,7 +519,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "test-system"]
+          ["task", "test-system"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": true
@@ -542,14 +542,14 @@
         "read_instructions": ["AGENTS.md", "packages/data/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["pixi", "run", "-e", "dev", "check-backend"],
+            "command": ["task", "check-backend"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
             "assertions": []
           },
           {
-            "command": ["pixi", "run", "-e", "dev", "pit"],
+            "command": ["task", "pit"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
@@ -557,8 +557,8 @@
           }
         ],
         "reported_successful_commands": [
-          ["pixi", "run", "-e", "dev", "check-backend"],
-          ["pixi", "run", "-e", "dev", "pit"]
+          ["task", "check-backend"],
+          ["task", "pit"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false

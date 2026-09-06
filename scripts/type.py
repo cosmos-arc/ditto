@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-pixi type 命令包装脚本
+task type 命令包装脚本
 
 简化类型检查命令，支持参数驱动：
-- pixi run type              # 默认：源码增量类型检查（strict + warnings）
-- pixi run type --clean      # 源码全量检查（清除缓存后 strict + warnings）
-- pixi run type --tests      # 测试代码类型检查（basic 模式）
-- pixi run type --all        # 源码 + 测试全部检查
-- pixi run type --all --clean # 全量清除缓存后检查所有
+- task type --              # 默认：源码增量类型检查（strict + warnings）
+- task type -- --clean      # 源码全量检查（清除缓存后 strict + warnings）
+- task type -- --tests      # 测试代码类型检查（basic 模式）
+- task type -- --all        # 源码 + 测试全部检查
+- task type -- --all --clean # 全量清除缓存后检查所有
 """
 
 import shutil

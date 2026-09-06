@@ -34,7 +34,7 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 | **state_root** | SQLite、账本、市场数据和 durable state | `DITTO_STATE_ROOT` |
 | **cache_root** | 可删除缓存 | `DITTO_CACHE_ROOT` |
 
-生产运行时不发现 Git checkout，也不读取 `.git`、`pixi.toml` 或当前工作目录来推断
+生产运行时不发现 Git checkout，也不读取 `.git`、`Taskfile.yml` 或当前工作目录来推断
 路径。三个根必须是显式绝对路径；开发默认使用 XDG 用户目录，测试默认使用隔离临时
 目录。`workspace_root` 和 `contract_root` 只属于开发工具、生成器与测试。
 
@@ -88,19 +88,19 @@ Tushare API Token 和 FRED API Key 通过系统密钥管理（keyring），**不
 
 ```bash
 # 设置 Tushare Token
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 keyring.set_password('tushare', 'token', 'YOUR_TOKEN_HERE')
 "
 
 # 设置 FRED API Key（美国宏观数据）
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 keyring.set_password('fred', 'api_key', 'YOUR_API_KEY_HERE')
 "
 
 # 验证配置
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 token = keyring.get_password('tushare', 'token')
 api_key = keyring.get_password('fred', 'api_key')
@@ -113,20 +113,20 @@ print(f'FRED: {\"已配置\" if api_key else \"未配置\"}')
 
 ```bash
 # 临时使用（环境变量方式）
-TUSHARE_TOKEN=your_token pixi run -e dev test
+TUSHARE_TOKEN=your_token task test
 ```
 
 ### 3. 查看当前配置
 
 ```bash
 # 查看环境
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 from ditto_platform.foundation.config import get_environment
 print(f'当前环境: {get_environment().value}')
 "
 
 # 查看数据目录
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 from dishka import make_container
 from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config.data_store import DataStoreSettings
@@ -153,10 +153,10 @@ vim config/development/data_store.env
 
 ## 环境配置详解
 
-### Pixi 主机平台
+### uv 主机平台
 
-`pixi.toml` 当前声明 `linux-64`、`win-64` 和 `osx-arm64`。三个平台都必须使用
-同一 `pixi.lock`，不得为了本地验证绕过 lockfile 或用 pip/poetry/conda 重建环境。
+`Taskfile.yml` 当前声明 `linux-64`、`win-64` 和 `osx-arm64`。三个平台都必须使用
+同一 `uv.lock`，不得为了本地验证绕过 lockfile 或用 pip/poetry/conda 重建环境。
 
 ### 配置文件目录结构
 
@@ -397,23 +397,23 @@ vim config/production/data_store.env
 
 ```bash
 # CLI 临时指定隔离 state 目录
-DITTO_STATE_ROOT=/tmp/test_state pixi run -e dev test
+DITTO_STATE_ROOT=/tmp/test_state task test
 
 # 覆盖 SQLite 路径
-SQLITE_PATH=/tmp/test.db pixi run -e dev python -c "..."
+SQLITE_PATH=/tmp/test.db uv run --no-sync python -c "..."
 
 # 仅覆盖 execution-owned Paper/Manual 交易 SQLite（验收/恢复场景）
-DITTO_TRADING_SQLITE_PATH=/tmp/trading-acceptance.sqlite pixi run -e dev python -m ditto_apps.server
+DITTO_TRADING_SQLITE_PATH=/tmp/trading-acceptance.sqlite uv run --no-sync python -m ditto_apps.server
 
 # 迁移期覆盖日志目录
-LOG_DIR=/app/logs pixi run server
+LOG_DIR=/app/logs task server
 ```
 
 ### 切换运行环境
 
 ```bash
 # 临时切换
-ENVIRONMENT=testing pixi run -e dev test
+ENVIRONMENT=testing task test
 
 # 持久设置（添加到 ~/.bashrc 或 .env）
 export ENVIRONMENT=production
@@ -423,13 +423,13 @@ export ENVIRONMENT=production
 
 ```bash
 # 查看环境
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 from ditto_platform.foundation.config import get_environment
 print(get_environment())
 "
 
 # 查看完整配置（需要 DI 容器）
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 from dishka import make_container
 from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config.data_store import DataStoreSettings
@@ -484,7 +484,7 @@ echo $ENVIRONMENT
 ls -la config/$ENVIRONMENT/
 
 # 3. 检查配置加载
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 from ditto_platform.foundation.config import get_environment, ConfigLoader
 env = get_environment()
 loader = ConfigLoader(env)
@@ -546,7 +546,7 @@ chmod 755 data/
 
 ```bash
 # 检查 keyring 配置
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 token = keyring.get_password('tushare', 'token')
 print('Token 已配置' if token else 'Token 未配置')
@@ -564,7 +564,7 @@ echo $TUSHARE_TOKEN
 
 ```bash
 # 打印所有配置
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import os
 os.environ['ENVIRONMENT'] = 'development'
 from dishka import make_container

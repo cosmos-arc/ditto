@@ -13,6 +13,6 @@ HTTP API、CLI、Prefect Jobs 与 DI composition root。常规入口依赖 `appl
 
 ## 验证与参考
 
-- `pixi run -e dev pytest apps/backend/tests`
-- `pixi run -e dev arch-check`
+- `uv run --no-sync pytest apps/backend/tests`
+- `task arch-check`
 - [配置指南](../../docs/configuration.md) · [架构快速参考](../../docs/architecture/agent-context-pack.md)

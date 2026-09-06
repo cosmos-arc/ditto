@@ -114,6 +114,17 @@ def _default_cache_root() -> Path:
     return base / "ditto" / "tools" / "oasdiff"
 
 
+def prepared_distribution(*, system: str, machine: str) -> Path:
+    """Require previously bootstrapped release bytes without downloading anything."""
+    target = _default_cache_root() / f"v{oasdiff.OASDIFF_VERSION}" / _CHECKSUMS_SHA256
+    oasdiff.verify_release_archive(
+        dist_dir=target,
+        asset_name=oasdiff.release_asset_name(system=system, machine=machine),
+        expected_manifest_sha256=_CHECKSUMS_SHA256,
+    )
+    return target
+
+
 def ensure_distribution(
     *,
     cache_root: Path | None = None,

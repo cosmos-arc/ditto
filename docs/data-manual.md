@@ -122,7 +122,7 @@
 
 ```bash
 # 设置 FRED API Key
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 keyring.set_password('fred', 'api_key', 'YOUR_API_KEY')
 "

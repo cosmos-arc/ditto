@@ -2,7 +2,7 @@
 # 用于强制执行分层架构规则
 #
 # 运行检查：
-#   pixi run -e dev arch-check
+#   task arch-check
 #   lint-imports
 #   lint-imports --contract layered-architecture
 

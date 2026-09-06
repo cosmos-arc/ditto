@@ -9,7 +9,7 @@ This runbook is for the local internal operator. The recorded A3 authorizes only
 Run from the repository root:
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r5_agent_release_preflight \
+uv run --no-sync python -m ditto_apps.scripts.r5_agent_release_preflight \
   --repo-root "$PWD" \
   --output docs/evidence/r5/release/release-preflight.json
 ```
@@ -23,7 +23,7 @@ The command is read-only except for the requested report path. It does not read 
 OrbStack must already be running on the approved `orbstack` context. The command below performs the marked physical suite and writes content-addressed A3 evidence:
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r5_sandbox_live_acceptance \
+uv run --no-sync python -m ditto_apps.scripts.r5_sandbox_live_acceptance \
   --repo-root "$PWD" \
   --output docs/evidence/r5/release/sandbox-live-status.json
 ```
@@ -37,7 +37,7 @@ This lane validates Apps composition, the fixed GLM Responses endpoint, one func
 ```bash
 DITTO_AGENT_GLM_VALIDATION_API_KEY="$(security find-generic-password \
   -s codex-zai-api-key -a chevy -w)" \
-pixi run -e dev python -m ditto_apps.scripts.r5_glm_validation \
+uv run --no-sync python -m ditto_apps.scripts.r5_glm_validation \
   --model glm-5.3 \
   --approval-a4 \
   --output docs/evidence/r5/release/glm-validation-smoke.json
@@ -63,7 +63,7 @@ The output intentionally remains `production_eligible=false`.
 ```bash
 DITTO_AGENT_GLM_VALIDATION_API_KEY="$(security find-generic-password \
   -s codex-zai-api-key -a chevy -w)" \
-pixi run -e dev python -m ditto_apps.scripts.r5_product_beta_glm \
+uv run --no-sync python -m ditto_apps.scripts.r5_product_beta_glm \
   --model glm-5.3 \
   --approval-a4 \
   --data-root /absolute/new/path/ditto-product-beta-agent \
@@ -92,7 +92,7 @@ For this single-user deployment, code does not calculate provider prices, exchan
 The frozen runnable dataset manifest is `6cd838cc190354e70c31aa6af94786578073beb1c17f8d98bea7f0ec55335114`. Derive the current prompt/tool manifest from code instead of typing or inventing it:
 
 ```bash
-DITTO_R5_PROMPT_TOOL_MANIFEST_HASH="$(pixi run -e dev python -c \
+DITTO_R5_PROMPT_TOOL_MANIFEST_HASH="$(uv run --no-sync python -c \
   'from ditto_apps.registry.agent.release_eval_provider import formal_prompt_tool_manifest_hash; print(formal_prompt_tool_manifest_hash())')"
 export DITTO_R5_PROMPT_TOOL_MANIFEST_HASH
 ```
@@ -102,13 +102,13 @@ The accepted value is `f6095c0c9a6832ff332742c9cfb0612e47080df456038d403c044c190
 For a deliberate rerun of the accepted scope, inject `DITTO_AGENT_GLM_VALIDATION_API_KEY` through the local secret mechanism and run both profiles through the Apps-owned entry point. Do not rerun merely to refresh a timestamp; model/profile/prompt/tool/dataset changes require a new approval identity.
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r5_release_eval \
+uv run --no-sync python -m ditto_apps.scripts.r5_release_eval \
   --profile balanced --approval-a4 \
   --scope "$DITTO_R5_A4_SCOPE" \
   --prompt-tool-manifest-hash "$DITTO_R5_PROMPT_TOOL_MANIFEST_HASH" \
   --output docs/evidence/r5/release/eval-report-balanced.json
 
-pixi run -e dev python -m ditto_apps.scripts.r5_release_eval \
+uv run --no-sync python -m ditto_apps.scripts.r5_release_eval \
   --profile quality --approval-a4 \
   --scope "$DITTO_R5_A4_SCOPE" \
   --prompt-tool-manifest-hash "$DITTO_R5_PROMPT_TOOL_MANIFEST_HASH" \
@@ -143,7 +143,7 @@ These commands use test-owned temporary directories, Fake providers, and injecte
 Backup and restore (both Agent SQLite stores plus migrated Research v2 identity and R3 governance/holdout artifacts):
 
 ```bash
-pixi run -e dev pytest \
+uv run --no-sync pytest \
   apps/backend/tests/integration/test_agent_database_lifecycle.py::test_agent_bundle_backup_and_restore_preserve_readable_projection \
   apps/backend/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet \
   -q --no-cov -n 0
@@ -152,7 +152,7 @@ pixi run -e dev pytest \
 Crash and restart resume (Campaign idempotency plus approval continuation):
 
 ```bash
-pixi run -e dev pytest \
+uv run --no-sync pytest \
   apps/backend/tests/integration/test_agent_campaign_api.py::test_pending_create_recovers_after_completion_crash_without_duplicate_event \
   apps/backend/tests/integration/test_agent_approval_resume.py::test_api_decision_resumes_persisted_interruption_after_restart \
   -q --no-cov -n 0
@@ -161,7 +161,7 @@ pixi run -e dev pytest \
 Retention dry-run (30-day boundary and CLI preview only):
 
 ```bash
-pixi run -e dev pytest \
+uv run --no-sync pytest \
   packages/agent/tests/unit/test_retention.py::test_dry_run_uses_closed_30_day_boundary_and_is_content_addressed \
   apps/backend/tests/unit/test_agent_retention_cli.py::test_retention_cleanup_defaults_to_auditable_dry_run \
   -q --no-cov -n 0
@@ -170,9 +170,9 @@ pixi run -e dev pytest \
 Provider and sandbox outages plus feature rollback:
 
 ```bash
-pixi run -e dev pytest apps/backend/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k model_provider -q --no-cov -n 0
-pixi run -e dev pytest apps/backend/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k sandbox -q --no-cov -n 0
-pixi run -e dev pytest apps/backend/tests/unit/test_agent_settings.py apps/backend/tests/integration/test_agent_degradation.py::test_disabled_agent_does_not_probe_optional_dependencies -q --no-cov -n 0
+uv run --no-sync pytest apps/backend/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k model_provider -q --no-cov -n 0
+uv run --no-sync pytest apps/backend/tests/integration/test_agent_degradation.py::test_agent_dependency_outage_is_isolated_from_core_ditto -k sandbox -q --no-cov -n 0
+uv run --no-sync pytest apps/backend/tests/unit/test_agent_settings.py apps/backend/tests/integration/test_agent_degradation.py::test_disabled_agent_does_not_probe_optional_dependencies -q --no-cov -n 0
 ```
 
 Real cleanup always requires an exact current plan hash plus external approval ID and is outside this runbook's deterministic exercise. Never reuse a dry-run approval or execute against an unresolved/broad data root.

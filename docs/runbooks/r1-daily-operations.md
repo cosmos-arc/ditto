@@ -82,7 +82,7 @@ effective fills；在此之前不得以手工覆盖模拟该能力。
 已批准范围的确定性回归（包含同输入重跑、已有单笔 fill 的变更冲突和 finalize 中断恢复）可用下列命令复跑；它不覆盖尚未批准的 Task 6 adjustment ledger：
 
 ```bash
-pixi run -e dev pytest --no-cov \
+uv run --no-sync pytest --no-cov \
   apps/backend/tests/e2e/test_r1_daily_manual_trading.py -q
 ```
 
@@ -108,7 +108,7 @@ SUCCESS ingestion log 不匹配，或出现 `INGESTION_COMPONENT_QUALITY_EVIDENC
 验证活动 SQLite。随后使用具体 provider（不能使用 `auto`）执行全历史重摄取：
 
 ```bash
-pixi run -e dev python -m ditto_apps.cli.main ops reattest-sparse-pit \
+uv run --no-sync python -m ditto_apps.cli.main ops reattest-sparse-pit \
   --dataset balance_sheet \
   --signal-date YYYY-MM-DD \
   --source tushare
@@ -176,7 +176,7 @@ ditto ops verify-sqlite \
 
 ```bash
 DITTO_RUN_REAL_DATA_ACCEPTANCE=1 \
-  pixi run -e dev pytest --no-cov \
+  uv run --no-sync pytest --no-cov \
   apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py \
   -m e2e -q
 ```

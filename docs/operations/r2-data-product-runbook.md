@@ -38,7 +38,7 @@ Fixture 验证 19 项静态 contract、预检计算、联合 SQLite/payload 恢�
 幂等性，不访问真实 provider：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode fixture
+uv run --no-sync python -m ditto_apps.scripts.r2_data_acceptance --mode fixture
 ```
 
 通过条件：进程退出码为 0，顶层 `status` 为 `ready`，`preflight.contract_count`
@@ -96,17 +96,17 @@ ledger 读取 reviewed records；输入 JSON 不能替代这两类事实。
 
 ```bash
 # preview
-pixi run -e dev ditto data-products bootstrap stock_daily \
+uv run --no-sync ditto data-products bootstrap stock_daily \
   --start-date 2015-01-01 --end-date 2026-07-17 --source tushare
 
 # explicit confirm
-pixi run -e dev ditto data-products bootstrap stock_daily \
+uv run --no-sync ditto data-products bootstrap stock_daily \
   --start-date 2015-01-01 --end-date 2026-07-17 --source tushare \
   --confirm data-product:bootstrap:stock_daily:confirm
 
 # schedule-aware missing repair
-pixi run -e dev ditto data-products repair stock_daily
-pixi run -e dev ditto data-products repair stock_daily \
+uv run --no-sync ditto data-products repair stock_daily
+uv run --no-sync ditto data-products repair stock_daily \
   --confirm data-product:repair:stock_daily:confirm
 ```
 
@@ -120,18 +120,18 @@ chunk。完成态要求 payload、catalog、lineage 与 success evidence 同时�
 DQ、PIT 或 license 内容：
 
 ```bash
-pixi run -e dev ditto data-products certify stock_daily
-pixi run -e dev ditto data-products certify stock_daily \
+uv run --no-sync ditto data-products certify stock_daily
+uv run --no-sync ditto data-products certify stock_daily \
   --report-id <REPORT_ID> --actor <ACTOR> \
   --confirm data-product:certify:stock_daily:confirm
 
-pixi run -e dev ditto data-products promotion stock_daily
-pixi run -e dev ditto data-products promotion stock_daily \
+uv run --no-sync ditto data-products promotion stock_daily
+uv run --no-sync ditto data-products promotion stock_daily \
   --criterion <CRITERION> --evidence-uri <EVIDENCE_URI> --actor <ACTOR> \
   --confirm data-product:promotion:stock_daily:confirm
 
-pixi run -e dev ditto data-products revoke stock_daily
-pixi run -e dev ditto data-products revoke stock_daily \
+uv run --no-sync ditto data-products revoke stock_daily
+uv run --no-sync ditto data-products revoke stock_daily \
   --report-id <REPORT_ID> --actor <ACTOR> --reason <REASON> \
   --confirm data-product:revoke:stock_daily:confirm
 ```
@@ -146,7 +146,7 @@ recertify。
 未解析 glob 作为目标：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance \
+uv run --no-sync python -m ditto_apps.scripts.r2_data_acceptance \
   --mode live \
   --evidence /absolute/path/r2-live-evidence.json \
   --sqlite-path /absolute/path/runtime.db \
@@ -163,7 +163,7 @@ Runner 会验证 manifest、SQLite 逻辑行数和 payload tree hash，并在独
 
 ```bash
 # API + production Web build, loopback only
-pixi run -e dev dev
+task dev
 ```
 
 工作台路径为 `/platform/data-products`，只调用 `/api/v1/data-products/*`。Overview、
@@ -186,11 +186,11 @@ Loading、empty、error 或缺认证报告时不得回退到硬编码数据。
 ## 10. 发布门禁
 
 ```bash
-pixi run -e dev check
-pixi run -e dev pit
-pixi run -e dev check-contract
-pixi run -e dev test-system
-pixi run -e dev ci
+task check
+task pit
+task check-contract
+task test-system
+task ci
 ```
 
 完整 DoD 和本次证据映射见

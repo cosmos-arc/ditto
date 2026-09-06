@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from tooling.contracts.generate_web_schema import load_local_schema
+from tooling.dev.toolchain import node_executable
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_SNAPSHOT = _REPO_ROOT / "contracts/openapi/v1.json"
@@ -46,9 +46,7 @@ def run_lint(*, snapshot_path: Path, config_path: Path) -> None:
             "Redocly version mismatch: "
             + f"expected {EXPECTED_REDOCLY_VERSION}, found {version!r}"
         )
-    bun = shutil.which("bun")
-    if bun is None:
-        raise RedoclyError("Bun is required to execute the local Redocly CLI")
+    node = node_executable(_REPO_ROOT)
     environment = os.environ.copy()
     environment.update(
         {
@@ -58,9 +56,9 @@ def run_lint(*, snapshot_path: Path, config_path: Path) -> None:
             "REDOCLY_TELEMETRY": "off",
         }
     )
-    subprocess.run(  # noqa: S603 -- exact Bun and local pinned CLI paths
+    subprocess.run(  # noqa: S603 -- exact Node and local pinned CLI paths
         [
-            bun,
+            node,
             str(_REDOCLY_CLI),
             "lint",
             str(snapshot_path.resolve(strict=True)),

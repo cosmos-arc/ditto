@@ -54,7 +54,7 @@ function eodCommand(report: DailyDecisionV2Response): string {
 	const signalDate = report.identity.signal_date ?? "<signal_date>";
 	const accountId = report.identity.account_id ?? "<account_id>";
 	return [
-		"pixi run -e dev ditto ops run-eod",
+		"uv run --no-sync ditto ops run-eod",
 		`--signal-date ${signalDate}`,
 		`--strategy-id ${report.identity.strategy_id}`,
 		`--account-id ${accountId}`,
@@ -63,7 +63,7 @@ function eodCommand(report: DailyDecisionV2Response): string {
 
 function recoveryCommand(reason: ReasonCode, report: DailyDecisionV2Response): string | null {
 	if (reason === "NO_ACTIVE_STRATEGY") {
-		return "pixi run -e dev ditto strategy bootstrap-seeds";
+		return "uv run --no-sync ditto strategy bootstrap-seeds";
 	}
 	if (
 		reason === "EOD_RUN_MISSING" ||

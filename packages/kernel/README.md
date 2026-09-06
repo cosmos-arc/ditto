@@ -27,7 +27,7 @@
 ## 测试
 
 ```bash
-pixi run -e dev pytest packages/kernel/tests/
+uv run --no-sync pytest packages/kernel/tests/
 ```
 
 ## 相关文档

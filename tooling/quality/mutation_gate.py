@@ -221,7 +221,7 @@ def run_gate(
     mutmut = shutil.which("mutmut")
     if mutmut is None:
         raise MutationGateError(
-            "mutmut executable is not available in the active Pixi env"
+            "mutmut executable is not available in the prepared uv environment"
         )
     if max_children < 1:
         raise MutationGateError("max children must be positive")

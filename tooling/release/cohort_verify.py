@@ -61,7 +61,9 @@ _SEMVER = re.compile(
 )
 _LOCK_INPUT_PATHS = frozenset(
     {
-        "release-inputs/pixi.lock",
+        "release-inputs/uv.lock",
+        "release-inputs/.python-version",
+        "release-inputs/Dockerfile",
         "release-inputs/bun.lock",
     }
 )

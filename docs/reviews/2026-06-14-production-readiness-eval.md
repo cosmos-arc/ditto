@@ -106,7 +106,7 @@ Ditto 是一个**工程质量已收敛到 4.4–4.9★ 的强骨架平台**,在�
 #### 证据
 
 1. [ci.yml](.github/workflows/ci.yml) 所有 job:
-   - `audit` job 跑 `pixi run -e dev test --fast`(line 81)——跳过慢速;
+   - `audit` job 跑 `task test -- --fast`(line 81)——跳过慢速;
    - `test-unit` job 只跑 `packages/*/tests/unit/`(line 149)——不跑 integration;
    - 无任何 job 跑 golden integration。
 

@@ -7,8 +7,8 @@
 - 类 public 方法数 ≤ 20
 
 使用方式：
-    pixi run -e dev python scripts/check_code_size.py
-    pixi run -e dev python scripts/check_code_size.py --verbose
+    uv run --no-sync python scripts/check_code_size.py
+    uv run --no-sync python scripts/check_code_size.py --verbose
 """
 
 import argparse
@@ -122,6 +122,7 @@ class CodeSizeChecker:
             if (
                 "test" in py_file.parts
                 or "__pycache__" in py_file.parts
+                or ".venv" in py_file.parts
                 or ".pixi" in py_file.parts
             ):
                 continue

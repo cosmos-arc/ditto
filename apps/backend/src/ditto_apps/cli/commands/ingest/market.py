@@ -62,17 +62,18 @@ def adj(
     date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
     force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
 ) -> None:
-    """
+    r"""
     摄取股票复权因子.
 
     按日期批量摄取股票复权因子:
 
-        pixi run ingest market adj 2024-01-15
+        uv run --no-sync ingest market adj 2024-01-15
 
     ETF/基金复权因子请使用 adj-fund 命令:
 
-        pixi run ingest market adj-fund 2024-01-15
-        pixi run ingest market adj-fund --ticker 510300 -s 2024-01-01 -e 2024-01-31
+        uv run --no-sync ingest market adj-fund 2024-01-15
+        uv run --no-sync ingest market adj-fund --ticker 510300 \\
+            -s 2024-01-01 -e 2024-01-31
     """
     return _adj_factor_impl(ctx, date, force)
 

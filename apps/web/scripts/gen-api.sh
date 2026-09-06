@@ -5,4 +5,4 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd -P)"
 
 cd -- "$REPO_ROOT"
-exec pixi run -e dev python -m tooling.contracts.generate_web_schema "$@"
+exec uv run --no-sync python -m tooling.contracts.generate_web_schema "$@"

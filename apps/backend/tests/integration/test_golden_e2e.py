@@ -313,31 +313,31 @@ class TestSyntheticGoldenE2E:
             audit=audit,
         )
 
-        # -- 执行回测 --
+        # -- 执行回测
         result = engine.run()
 
-        # -- 验收 1: 引擎成功返回 --
+        # -- 验收 1: 引擎成功返回
         assert result.run_id == "synthetic-golden-e2e"
         assert result.period == ("2026-01-05", "2026-01-09")
         assert not result.cancelled
 
-        # -- 验收 2: NAV 为正 --
+        # -- 验收 2: NAV 为正
         assert result.final_nav > 0, (
             f"final_nav should be positive, got {result.final_nav}"
         )
 
-        # -- 验收 3: 有成交记录 --
+        # -- 验收 3: 有成交记录
         assert result.total_trades > 0, "Strategy should produce at least some trades"
 
-        # -- 验收 4: 无跳过日期 --
+        # -- 验收 4: 无跳过日期
         assert result.skipped_dates == (), (
             f"No dates should be skipped, got {result.skipped_dates}"
         )
 
-        # -- 构建报告 --
+        # -- 构建报告
         report = build_report(audit, run_id=result.run_id)
 
-        # -- 验收 5: 报告结构完整 --
+        # -- 验收 5: 报告结构完整
         assert isinstance(report, BacktestReport)
         assert report.run_id == "synthetic-golden-e2e"
         # initial_cash 取首日 NAV（已扣首日交易费用），接近但不等于配置值
@@ -347,23 +347,23 @@ class TestSyntheticGoldenE2E:
             f" should not exceed config {INITIAL_CASH}"
         )
 
-        # -- 验收 6: NAV 曲线存在且长度正确 --
+        # -- 验收 6: NAV 曲线存在且长度正确
         assert len(report.nav_series) == len(TRADE_DATES), (
             f"NAV series length {len(report.nav_series)} "
             f"should match trading days {len(TRADE_DATES)}"
         )
 
-        # -- 验收 7: NAV 曲线单调合理 --
+        # -- 验收 7: NAV 曲线单调合理
         for date_str, nav in report.nav_series:
             assert nav > 0, f"NAV on {date_str} should be positive, got {nav}"
 
-        # -- 验收 8: 组合统计存在 --
+        # -- 验收 8: 组合统计存在
         assert len(report.portfolio_stats) == len(TRADE_DATES), (
             f"Portfolio stats length {len(report.portfolio_stats)} "
             f"should match trading days {len(TRADE_DATES)}"
         )
 
-        # -- 验收 9: 绩效统计存在且合理 --
+        # -- 验收 9: 绩效统计存在且合理
         assert isinstance(report.alpha_stats.sharpe_ratio, float)
         assert isinstance(report.alpha_stats.max_drawdown, float)
         assert isinstance(report.aggregated_trade_stats.total_trades, int)

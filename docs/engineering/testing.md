@@ -1,6 +1,6 @@
 # Ditto 测试指南
 
-本页记录项目特有的测试合同；命令事实源仍是 `pixi.toml`、`pyproject.toml` 和 CI。
+本页记录项目特有的测试合同；命令事实源仍是 `Taskfile.yml`、`pyproject.toml` 和 CI。
 
 ## 按风险验证
 
@@ -27,28 +27,28 @@ Registry 配置测试通过近端 `conftest.py` 临时安装现有 keyring 包�
 保留真实 ConfigProvider 装配，但不读取宿主钥匙串；每项测试结束恢复原 backend。
 测试具体密钥行为时显式注入固定值，生产密钥读取和显式真实数据 E2E 不受此 fixture 影响。
 
-本机完整验收通过根 `pixi run -e dev check` 编排；不要另起同一套后端和 Web 门禁并行抢占
+本机完整验收通过根 `task check` 编排；不要另起同一套后端和 Web 门禁并行抢占
 资源。集中出现交互测试超时时，先单独复现并排查资源争用，不直接增加超时或重试次数。
 
 ## 常用命令
 
 ```bash
 # 单个测试或包
-pixi run -e dev pytest packages/data/tests/test_example.py -q
-pixi run -e dev pytest packages/data/tests
+uv run --no-sync pytest packages/data/tests/test_example.py -q
+uv run --no-sync pytest packages/data/tests
 
 # 项目包装命令
-pixi run -e dev test --fast
-pixi run -e dev test
-pixi run -e dev test --integration
-pixi run -e dev test --cov-xml
+task test -- --fast
+task test
+task test -- --integration
+task test -- --cov-xml
 
 # 专项
-pixi run -e dev pytest -m pit
-pixi run -e dev type --tests
+uv run --no-sync pytest -m pit
+task type -- --tests
 ```
 
-仅测试 diff 仍需 Ruff format-check/lint 和测试类型检查。生产 Python、依赖、架构或配置 diff 运行 `pixi run -e dev check`。
+仅测试 diff 仍需 Ruff format-check/lint 和测试类型检查。生产 Python、依赖、架构或配置 diff 运行 `task check`。
 
 ## 覆盖率与证据
 

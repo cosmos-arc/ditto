@@ -508,14 +508,17 @@ async function main() {
 		}
 	}
 
-	const dependencyCruiser = path.join(WEB_ROOT, "node_modules/.bin/depcruise");
+	const dependencyCruiser = path.join(WEB_ROOT, "node_modules/dependency-cruiser/bin/dependency-cruise.mjs");
 	const typescriptLoader = path.join(
 		WEB_ROOT,
 		"scripts/dependency-cruiser-typescript-loader.mjs",
 	);
 	const cruise = spawnSync(
-		dependencyCruiser,
+		"node",
 		[
+			"--import",
+			path.join(REPOSITORY_ROOT, "tooling/dev/node-runtime.mjs"),
+			dependencyCruiser,
 			"--config",
 			"dependency-cruiser.config.mjs",
 			"--output-type",

@@ -56,7 +56,7 @@ def index_weight(
 
     按指数代码+日期摄取成分股权重:
 
-        pixi run ingest capital index-weight 000300.SH 2024-01-15
+        uv run --no-sync ingest capital index-weight 000300.SH 2024-01-15
     """
     validate_date_format(date)
 

@@ -413,7 +413,7 @@ class TestStrategySpec:
 class TestStrategySpecValidation:
     """F0.4: StrategySpec.__post_init__ 参数校验测试."""
 
-    # -- 必填字段非空 --
+    # -- 必填字段非空
 
     @pytest.mark.parametrize(
         ("field_name", "value"),
@@ -437,7 +437,7 @@ class TestStrategySpecValidation:
                 asset_class=value if field_name == "asset_class" else "etf",
             )
 
-    # -- template 枚举值 --
+    # -- template 枚举值
 
     def test_template_valid_values(self) -> None:
         from ditto_strategy.alpha.specs import StrategySpec
@@ -470,7 +470,7 @@ class TestStrategySpecValidation:
                 asset_class="etf",
             )
 
-    # -- benchmark 格式 --
+    # -- benchmark 格式
 
     def test_benchmark_none_ok(self) -> None:
         from ditto_strategy.alpha.specs import StrategySpec
@@ -548,7 +548,7 @@ class TestStrategySpecValidation:
                     benchmark=bad,
                 )
 
-    # -- execution.frequency 枚举值 --
+    # -- execution.frequency 枚举值
 
     @pytest.mark.parametrize("freq", ["D", "W", "M", "Q"])
     def test_execution_frequency_valid(self, freq: str) -> None:
@@ -577,7 +577,7 @@ class TestStrategySpecValidation:
                 execution=ExecutionSpec(frequency="Y"),
             )
 
-    # -- cost_model 边界 --
+    # -- cost_model 边界
 
     def test_commission_rate_negative_raises(self) -> None:
         from ditto_strategy.alpha.specs import (
@@ -671,7 +671,7 @@ class TestStrategySpecValidation:
         )
         assert spec.execution.cost_model.slippage_bps == 0.0
 
-    # -- signal_expressions / signal_weights 一致性 --
+    # -- signal_expressions / signal_weights 一致性
 
     def test_signal_weights_mismatch_raises(self) -> None:
         from ditto_strategy.alpha.specs import StrategySpec

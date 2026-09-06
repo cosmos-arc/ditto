@@ -587,7 +587,7 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 
 完成前：
 
-- 运行 `pixi run -e dev arch-check`。
+- 运行 `task arch-check`。
 - 对涉及的包运行对应测试或全量快速验证。
 - 若新增公共入口，更新包级 `CLAUDE.md` 或本目录文档。
 - 若接受架构偏离，新增 ADR 或在审计报告中记录。
@@ -621,10 +621,10 @@ Ditto 当前已经有较强的分层和门禁。下一阶段要解决的是“�
 ```bash
 # 代码架构门禁
 python scripts/architecture/check_architecture_smells.py   # passes (0 issues)
-pixi run -e dev lint-imports                                # 34 kept, 0 broken
-pixi run -e dev type                                        # 0 errors, 0 warnings, 0 notes
-pixi run -e dev test --fast                                 # all pass, 0 fail
-pixi run -e dev arch-check                                  # passes
+task lint-imports --                                # 34 kept, 0 broken
+task type --                                        # 0 errors, 0 warnings, 0 notes
+task test -- --fast                                 # all pass, 0 fail
+task arch-check --                                  # passes
 ```
 
 **功能性检查**：

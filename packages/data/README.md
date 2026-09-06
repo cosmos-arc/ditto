@@ -84,7 +84,7 @@ bars = market_service.query(query)
 ## 测试
 
 ```bash
-pixi run -e dev pytest packages/data/tests/
+uv run --no-sync pytest packages/data/tests/
 ```
 
 ## 相关文档

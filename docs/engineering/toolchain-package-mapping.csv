@@ -1,0 +1,891 @@
+platform,source_kind,original_name,python_distribution,original_version,uv_version
+linux-64,conda,aiosqlite,aiosqlite,0.22.1,0.22.1
+linux-64,conda,alembic,alembic,1.18.4,1.18.4
+linux-64,conda,amplitude-analytics,amplitude-analytics,1.2.2,1.2.2
+linux-64,conda,annotated-doc,annotated-doc,0.0.4,0.0.4
+linux-64,conda,annotated-types,annotated-types,0.7.0,0.7.0
+linux-64,conda,anyio,anyio,4.13.0,4.13.0
+linux-64,conda,apprise,apprise,1.10.0,1.10.0
+linux-64,conda,argon2-cffi,argon2-cffi,25.1.0,25.1.0
+linux-64,conda,argon2-cffi-bindings,argon2-cffi-bindings,25.1.0,25.1.0
+linux-64,conda,arrow,arrow,1.4.0,1.4.0
+linux-64,conda,asgi-lifespan,asgi-lifespan,2.1.0,2.1.0
+linux-64,conda,asttokens,asttokens,3.0.1,3.0.1
+linux-64,conda,async-exit-stack,async-exit-stack,1.0.1,not in runtime graph
+linux-64,conda,async-lru,async-lru,2.3.0,2.3.0
+linux-64,conda,async-timeout,async-timeout,5.0.1,not in runtime graph
+linux-64,conda,asyncpg,asyncpg,0.31.0,0.31.0
+linux-64,conda,attrs,attrs,26.1.0,26.1.0
+linux-64,conda,babel,babel,2.18.0,2.18.0
+linux-64,conda,backports.tarfile,backports-tarfile,1.2.0,not in runtime graph
+linux-64,conda,backports.zstd,backports-zstd,1.3.0,not in runtime graph
+linux-64,pypi,basedpyright,basedpyright,1.39.3,1.39.3
+linux-64,conda,bcrypt,bcrypt,5.0.0,not in runtime graph
+linux-64,conda,beartype,beartype,0.22.9,0.22.9
+linux-64,conda,beautifulsoup4,beautifulsoup4,4.14.3,4.14.3
+linux-64,conda,bleach,bleach,6.3.0,6.3.0
+linux-64,conda,blinker,blinker,1.9.0,not in runtime graph
+linux-64,conda,brotli-python,brotli,1.2.0,not in runtime graph
+linux-64,pypi,cachebox,cachebox,5.2.3,5.2.3
+linux-64,conda,cached_property,cached-property,1.5.2,not in runtime graph
+linux-64,conda,cachetools,cachetools,7.0.6,7.0.6
+linux-64,conda,certifi,certifi,2026.4.22,2026.4.22
+linux-64,conda,cffi,cffi,2.0.0,2.0.0
+linux-64,conda,cfgv,cfgv,3.5.0,3.5.0
+linux-64,conda,charset-normalizer,charset-normalizer,3.4.7,3.4.7
+linux-64,pypi,clarabel,clarabel,0.11.1,0.11.1
+linux-64,conda,click,click,8.3.3,8.3.3
+linux-64,conda,cloudpickle,cloudpickle,3.1.2,3.1.2
+linux-64,conda,colorama,colorama,0.4.6,0.4.6
+linux-64,conda,comm,comm,0.2.3,0.2.3
+linux-64,conda,coolname,coolname,4.1.0,4.1.0
+linux-64,conda,coverage,coverage,7.13.5,7.13.5
+linux-64,conda,cronsim,cronsim,2.6,2.6
+linux-64,conda,cryptography,cryptography,47.0.0,47.0.0
+linux-64,pypi,cvxpy,cvxpy,1.9.2,1.9.2
+linux-64,conda,cyclopts,cyclopts,4.11.0,4.11.0
+linux-64,conda,dateparser,dateparser,1.4.0,1.4.0
+linux-64,conda,debugpy,debugpy,1.8.20,1.8.20
+linux-64,conda,decorator,decorator,5.2.1,5.2.1
+linux-64,conda,defusedxml,defusedxml,0.7.1,0.7.1
+linux-64,pypi,deprecated,deprecated,1.3.1,1.3.1
+linux-64,pypi,dishka,dishka,1.10.1,1.10.1
+linux-64,conda,distlib,distlib,0.4.0,0.4.0
+linux-64,pypi,distro,distro,1.9.0,1.9.0
+linux-64,conda,dnspython,dnspython,2.8.0,not in runtime graph
+linux-64,conda,docker-py,docker,7.1.0,7.1.0
+linux-64,conda,docstring_parser,docstring-parser,0.17.0,0.17.0
+linux-64,conda,docutils,docutils,0.22.4,0.22.4
+linux-64,conda,python-duckdb,duckdb,1.5.2,1.5.2
+linux-64,conda,email-validator,email-validator,2.3.0,not in runtime graph
+linux-64,conda,exceptiongroup,exceptiongroup,1.3.1,1.3.1
+linux-64,conda,execnet,execnet,2.1.2,2.1.2
+linux-64,conda,executing,executing,2.2.1,2.2.1
+linux-64,conda,fakeredis,fakeredis,2.35.1,2.35.1
+linux-64,conda,fastapi-core,fastapi,0.136.1,0.136.1
+linux-64,conda,fastapi-cli,fastapi-cli,0.0.23,not in runtime graph
+linux-64,conda,fastar,fastar,0.11.0,not in runtime graph
+linux-64,conda,python-fastjsonschema,fastjsonschema,2.21.2,2.21.2
+linux-64,conda,filelock,filelock,3.29.0,3.29.0
+linux-64,conda,fqdn,fqdn,1.5.1,1.5.1
+linux-64,conda,fsspec,fsspec,2026.3.0,2026.3.0
+linux-64,pypi,googleapis-common-protos,googleapis-common-protos,1.74.0,1.74.0
+linux-64,pypi,granian,granian,2.7.4,2.7.4
+linux-64,pypi,graphql-core,graphql-core,3.2.12,3.2.12
+linux-64,conda,python-graphviz,graphviz,0.21,0.21
+linux-64,conda,greenlet,greenlet,3.5.0,3.5.0
+linux-64,conda,griffe,griffe,2.0.2,2.0.2
+linux-64,conda,griffecli,griffecli,2.0.2,2.0.2
+linux-64,conda,griffelib,griffelib,2.0.2,2.0.2
+linux-64,pypi,grimp,grimp,3.14,3.14
+linux-64,conda,h11,h11,0.16.0,0.16.0
+linux-64,conda,h2,h2,4.3.0,4.3.0
+linux-64,pypi,harfile,harfile,0.5.0,0.5.0
+linux-64,pypi,highspy,highspy,1.15.1,1.15.1
+linux-64,conda,hpack,hpack,4.1.0,4.1.0
+linux-64,conda,httpcore,httpcore,1.0.9,1.0.9
+linux-64,conda,httptools,httptools,0.7.1,not in runtime graph
+linux-64,conda,httpx,httpx,0.28.1,0.28.1
+linux-64,pypi,httpx-sse,httpx-sse,0.4.3,0.4.3
+linux-64,conda,humanize,humanize,4.15.0,4.15.0
+linux-64,conda,hyperframe,hyperframe,6.1.0,6.1.0
+linux-64,conda,hypothesis,hypothesis,6.152.4,6.152.4
+linux-64,pypi,hypothesis-graphql,hypothesis-graphql,0.13.1,0.13.1
+linux-64,conda,identify,identify,2.6.19,2.6.19
+linux-64,conda,idna,idna,3.13,3.13
+linux-64,pypi,import-linter,import-linter,2.11,2.11
+linux-64,conda,importlib-metadata,importlib-metadata,8.7.0,8.7.0
+linux-64,conda,importlib_resources,importlib-resources,7.1.0,not in runtime graph
+linux-64,conda,iniconfig,iniconfig,2.3.0,2.3.0
+linux-64,conda,inline-snapshot,inline-snapshot,0.32.7,0.32.7
+linux-64,conda,invoke,invoke,3.0.3,not in runtime graph
+linux-64,conda,ipykernel,ipykernel,6.31.0,6.31.0
+linux-64,conda,ipython,ipython,9.13.0,9.13.0
+linux-64,conda,ipython_pygments_lexers,ipython-pygments-lexers,1.1.1,1.1.1
+linux-64,conda,ipywidgets,ipywidgets,8.1.8,8.1.8
+linux-64,conda,isoduration,isoduration,20.11.0,20.11.0
+linux-64,conda,jaraco.classes,jaraco-classes,3.4.0,3.4.0
+linux-64,conda,jaraco.context,jaraco-context,6.1.2,6.1.2
+linux-64,pypi,jaraco-functools,jaraco-functools,4.4.0,4.4.0
+linux-64,conda,jedi,jedi,0.19.2,0.19.2
+linux-64,pypi,jeepney,jeepney,0.9.0,0.9.0
+linux-64,conda,jinja2,jinja2,3.1.6,3.1.6
+linux-64,conda,jinja2-humanize-extension,jinja2-humanize-extension,0.4.0,0.4.0
+linux-64,pypi,jiter,jiter,0.16.0,0.16.0
+linux-64,pypi,joblib,joblib,1.5.3,1.5.3
+linux-64,conda,json5,json5,0.14.0,0.14.0
+linux-64,conda,jsonpatch,jsonpatch,1.33,1.33
+linux-64,conda,jsonpointer,jsonpointer,3.1.1,3.1.1
+linux-64,conda,jsonschema,jsonschema,4.26.0,4.26.0
+linux-64,pypi,jsonschema-rs,jsonschema-rs,0.51.0,0.51.0
+linux-64,conda,jsonschema-specifications,jsonschema-specifications,2025.9.1,2025.9.1
+linux-64,conda,jupyter,jupyter,1.1.1,1.1.1
+linux-64,conda,jupyter_client,jupyter-client,8.8.0,8.8.0
+linux-64,conda,jupyter_console,jupyter-console,6.6.3,6.6.3
+linux-64,conda,jupyter_core,jupyter-core,5.9.1,5.9.1
+linux-64,conda,jupyter_events,jupyter-events,0.12.1,0.12.1
+linux-64,conda,jupyter-lsp,jupyter-lsp,2.3.1,2.3.1
+linux-64,conda,jupyter_server,jupyter-server,2.17.0,2.17.0
+linux-64,conda,jupyter_server_terminals,jupyter-server-terminals,0.5.4,0.5.4
+linux-64,conda,jupyterlab,jupyterlab,4.5.6,4.5.6
+linux-64,conda,jupyterlab_pygments,jupyterlab-pygments,0.3.0,0.3.0
+linux-64,conda,jupyterlab_server,jupyterlab-server,2.28.0,2.28.0
+linux-64,conda,jupyterlab_widgets,jupyterlab-widgets,3.0.16,3.0.16
+linux-64,pypi,keyring,keyring,25.7.0,25.7.0
+linux-64,conda,keyrings.alt,keyrings-alt,5.0.2,5.0.2
+linux-64,conda,lark,lark,1.3.1,1.3.1
+linux-64,pypi,libcst,libcst,1.9.0,1.9.0
+linux-64,pypi,limits,limits,5.8.0,5.8.0
+linux-64,conda,loguru,loguru,0.7.3,0.7.3
+linux-64,conda,lupa,lupa,2.8,2.8
+linux-64,conda,mako,mako,1.3.11,1.3.11
+linux-64,conda,markdown,markdown,3.10.2,3.10.2
+linux-64,conda,markdown-it-py,markdown-it-py,4.0.0,4.0.0
+linux-64,conda,markupsafe,markupsafe,3.0.3,3.0.3
+linux-64,conda,matplotlib-inline,matplotlib-inline,0.2.1,0.2.1
+linux-64,pypi,mcp,mcp,1.29.0,1.29.0
+linux-64,pypi,mdit-py-plugins,mdit-py-plugins,0.6.1,0.6.1
+linux-64,conda,mdurl,mdurl,0.1.2,0.1.2
+linux-64,conda,mistune,mistune,3.2.0,3.2.0
+linux-64,conda,more-itertools,more-itertools,11.0.2,11.0.2
+linux-64,pypi,mutmut,mutmut,3.7.0,3.7.0
+linux-64,conda,nbclient,nbclient,0.10.4,0.10.4
+linux-64,conda,nbconvert-core,nbconvert,7.17.1,7.17.1
+linux-64,conda,nbformat,nbformat,5.10.4,5.10.4
+linux-64,conda,nest-asyncio,nest-asyncio,1.6.0,1.6.0
+linux-64,conda,nodeenv,nodeenv,1.10.0,1.10.0
+linux-64,pypi,nodejs-wheel-binaries,nodejs-wheel-binaries,24.15.0,24.15.0
+linux-64,conda,notebook,notebook,7.5.5,7.5.5
+linux-64,conda,notebook-shim,notebook-shim,0.2.4,0.2.4
+linux-64,conda,numpy,numpy,2.4.3,2.4.3
+linux-64,conda,oauthlib,oauthlib,3.3.1,3.3.1
+linux-64,pypi,openai,openai,2.54.0,2.54.0
+linux-64,pypi,openai-agents,openai-agents,0.20.0,0.20.0
+linux-64,conda,opentelemetry-api,opentelemetry-api,1.41.1,1.41.1
+linux-64,pypi,opentelemetry-exporter-otlp-proto-common,opentelemetry-exporter-otlp-proto-common,1.41.1,1.41.1
+linux-64,pypi,opentelemetry-exporter-otlp-proto-http,opentelemetry-exporter-otlp-proto-http,1.41.1,1.41.1
+linux-64,conda,opentelemetry-exporter-prometheus,opentelemetry-exporter-prometheus,0.62b0,not in runtime graph
+linux-64,conda,opentelemetry-instrumentation,opentelemetry-instrumentation,0.62b1,not in runtime graph
+linux-64,pypi,opentelemetry-proto,opentelemetry-proto,1.41.1,1.41.1
+linux-64,conda,opentelemetry-sdk,opentelemetry-sdk,1.41.1,1.41.1
+linux-64,conda,opentelemetry-semantic-conventions,opentelemetry-semantic-conventions,0.62b1,0.62b1
+linux-64,conda,orjson,orjson,3.11.8,3.11.8
+linux-64,pypi,osqp,osqp,1.1.3,1.1.3
+linux-64,conda,overrides,overrides,7.7.0,not in runtime graph
+linux-64,conda,packaging,packaging,25.0,25.0
+linux-64,conda,pandocfilters,pandocfilters,1.5.0,1.5.0
+linux-64,conda,paramiko,paramiko,4.0.0,not in runtime graph
+linux-64,conda,parso,parso,0.8.6,0.8.6
+linux-64,conda,pathspec,pathspec,1.1.1,1.1.1
+linux-64,conda,pendulum,pendulum,3.2.0,not in runtime graph
+linux-64,conda,pexpect,pexpect,4.9.0,4.9.0
+linux-64,conda,platformdirs,platformdirs,4.9.6,4.9.6
+linux-64,conda,pluggy,pluggy,1.6.0,1.6.0
+linux-64,conda,polars,polars,1.40.0,1.40.0
+linux-64,conda,polars-runtime-32,polars-runtime-32,1.40.0,1.40.0
+linux-64,conda,pre-commit,pre-commit,4.6.0,4.6.0
+linux-64,conda,prefect,prefect,3.6.24,3.6.24
+linux-64,conda,prometheus_client,prometheus-client,0.25.0,0.25.0
+linux-64,conda,prompt-toolkit,prompt-toolkit,3.0.52,3.0.52
+linux-64,pypi,protobuf,protobuf,6.33.6,6.33.6
+linux-64,conda,psutil,psutil,7.2.2,7.2.2
+linux-64,conda,ptyprocess,ptyprocess,0.7.0,0.7.0
+linux-64,conda,pure_eval,pure-eval,0.2.3,0.2.3
+linux-64,conda,py-key-value-aio,py-key-value-aio,0.4.4,0.4.4
+linux-64,conda,pycparser,pycparser,2.22,2.22
+linux-64,conda,pydantic,pydantic,2.13.3,2.13.3
+linux-64,conda,pydantic-core,pydantic-core,2.46.3,2.46.3
+linux-64,conda,pydantic-extra-types,pydantic-extra-types,2.11.2,2.11.2
+linux-64,conda,pydantic-settings,pydantic-settings,2.14.0,2.14.0
+linux-64,conda,pydocket,pydocket,0.19.2,0.19.2
+linux-64,conda,pygments,pygments,2.20.0,2.20.0
+linux-64,conda,pyjwt,pyjwt,2.12.1,2.12.1
+linux-64,conda,pynacl,pynacl,1.6.2,not in runtime graph
+linux-64,pypi,pyrate-limiter,pyrate-limiter,4.5.0,4.5.0
+linux-64,conda,pysocks,pysocks,1.7.1,not in runtime graph
+linux-64,conda,pytest,pytest,9.0.3,9.0.3
+linux-64,conda,pytest-asyncio,pytest-asyncio,1.3.0,1.3.0
+linux-64,conda,pytest-cov,pytest-cov,7.1.0,7.1.0
+linux-64,conda,pytest-mock,pytest-mock,3.15.1,3.15.1
+linux-64,conda,pytest-timeout,pytest-timeout,2.4.0,2.4.0
+linux-64,conda,pytest-xdist,pytest-xdist,3.8.0,3.8.0
+linux-64,conda,python-dateutil,python-dateutil,2.9.0.post0,2.9.0.post0
+linux-64,conda,python-discovery,python-discovery,1.2.2,1.2.2
+linux-64,conda,python-dotenv,python-dotenv,1.2.2,1.2.2
+linux-64,conda,python-json-logger,python-json-logger,3.2.1,3.2.1
+linux-64,conda,python-multipart,python-multipart,0.0.27,0.0.27
+linux-64,conda,python-slugify,python-slugify,8.0.4,8.0.4
+linux-64,conda,pytz,pytz,2026.1.post1,2026.1.post1
+linux-64,conda,pyyaml,pyyaml,6.0.3,6.0.3
+linux-64,pypi,pyyaml-ft,pyyaml-ft,8.0.0,8.0.0
+linux-64,conda,pyzmq,pyzmq,27.1.0,27.1.0
+linux-64,pypi,qdldl,qdldl,0.1.9.post1,0.1.9.post1
+linux-64,conda,readchar,readchar,4.2.2,4.2.2
+linux-64,conda,redis-py,redis,7.4.0,7.4.0
+linux-64,conda,referencing,referencing,0.37.0,0.37.0
+linux-64,conda,regex,regex,2026.4.4,2026.4.4
+linux-64,conda,requests,requests,2.33.1,2.33.1
+linux-64,conda,requests-oauthlib,requests-oauthlib,2.0.0,2.0.0
+linux-64,conda,respx,respx,0.23.1,0.23.1
+linux-64,conda,rfc3339-validator,rfc3339-validator,0.1.4,0.1.4
+linux-64,conda,rfc3986-validator,rfc3986-validator,0.1.1,0.1.1
+linux-64,conda,rfc3987-syntax,rfc3987-syntax,1.1.0,1.1.0
+linux-64,conda,rich,rich,14.3.4,14.3.4
+linux-64,conda,rich-rst,rich-rst,1.3.2,1.3.2
+linux-64,conda,rich-toolkit,rich-toolkit,0.19.7,not in runtime graph
+linux-64,conda,rpds-py,rpds-py,0.30.0,0.30.0
+linux-64,conda,ruamel.yaml,ruamel-yaml,0.19.1,0.19.1
+linux-64,conda,ruamel.yaml.clib,ruamel-yaml-clib,0.2.15,0.2.15
+linux-64,conda,ruff,ruff,0.15.11,0.15.11
+linux-64,pypi,schemathesis,schemathesis,4.25.2,4.25.2
+linux-64,pypi,scipy,scipy,1.18.0,1.18.0
+linux-64,pypi,scs,scs,3.2.11,3.2.11
+linux-64,pypi,secretstorage,secretstorage,3.5.0,3.5.0
+linux-64,conda,semver,semver,3.0.4,3.0.4
+linux-64,conda,send2trash,send2trash,2.1.0,2.1.0
+linux-64,pypi,setproctitle,setproctitle,1.3.7,1.3.7
+linux-64,conda,setuptools,setuptools,82.0.1,82.0.1
+linux-64,conda,shellingham,shellingham,1.5.4,1.5.4
+linux-64,conda,six,six,1.17.0,1.17.0
+linux-64,conda,sniffio,sniffio,1.3.1,1.3.1
+linux-64,pypi,socksio,socksio,1.0.0,1.0.0
+linux-64,conda,sortedcontainers,sortedcontainers,2.4.0,2.4.0
+linux-64,conda,soupsieve,soupsieve,2.8.3,2.8.3
+linux-64,pypi,sparsediffpy,sparsediffpy,0.3.0,0.3.0
+linux-64,conda,sqlalchemy,sqlalchemy,2.0.49,2.0.49
+linux-64,pypi,sse-starlette,sse-starlette,3.4.8,3.4.8
+linux-64,conda,stack_data,stack-data,0.6.3,0.6.3
+linux-64,conda,starlette,starlette,1.0.0,1.0.0
+linux-64,pypi,starlette-testclient,starlette-testclient,0.4.1,0.4.1
+linux-64,pypi,tenacity,tenacity,9.1.4,9.1.4
+linux-64,conda,terminado,terminado,0.18.1,0.18.1
+linux-64,conda,text-unidecode,text-unidecode,1.3,1.3
+linux-64,pypi,textual,textual,8.2.8,8.2.8
+linux-64,conda,time-machine,time-machine,2.19.0,not in runtime graph
+linux-64,conda,tinycss2,tinycss2,1.4.0,1.4.0
+linux-64,conda,toml,toml,0.10.2,0.10.2
+linux-64,conda,tomli,tomli,2.4.1,not in runtime graph
+linux-64,conda,tornado,tornado,6.5.5,6.5.5
+linux-64,pypi,tqdm,tqdm,4.70.0,4.70.0
+linux-64,conda,traitlets,traitlets,5.14.3,5.14.3
+linux-64,conda,typer,typer,0.27.1,0.27.1
+linux-64,conda,types-python-dateutil,types-python-dateutil,2.9.0.20260408,2.9.0.20260408
+linux-64,conda,types-pyyaml,types-pyyaml,6.0.12.20260408,6.0.12.20260408
+linux-64,conda,typing_extensions,typing-extensions,4.15.0,4.15.0
+linux-64,conda,typing-inspection,typing-inspection,0.4.2,0.4.2
+linux-64,conda,typing_utils,typing-utils,0.1.0,not in runtime graph
+linux-64,conda,python-tzdata,tzdata,2026.2,2026.2
+linux-64,conda,tzlocal,tzlocal,5.3.1,5.3.1
+linux-64,conda,ukkonen,ukkonen,1.1.0,not in runtime graph
+linux-64,conda,uncalled-for,uncalled-for,0.3.1,0.3.1
+linux-64,conda,uri-template,uri-template,1.3.0,1.3.0
+linux-64,conda,urllib3,urllib3,2.6.3,2.6.3
+linux-64,conda,uvicorn,uvicorn,0.46.0,0.46.0
+linux-64,conda,uvloop,uvloop,0.22.1,not in runtime graph
+linux-64,conda,virtualenv,virtualenv,21.3.0,21.3.0
+linux-64,conda,watchfiles,watchfiles,1.1.1,not in runtime graph
+linux-64,conda,wcwidth,wcwidth,0.6.0,0.6.0
+linux-64,conda,webcolors,webcolors,25.10.0,25.10.0
+linux-64,conda,webencodings,webencodings,0.5.1,0.5.1
+linux-64,conda,websocket-client,websocket-client,1.9.0,1.9.0
+linux-64,conda,websockets,websockets,16.0,16.0
+linux-64,pypi,werkzeug,werkzeug,3.1.8,3.1.8
+linux-64,conda,whenever,whenever,0.9.5,0.9.5
+linux-64,conda,widgetsnbextension,widgetsnbextension,4.0.15,4.0.15
+linux-64,conda,wrapt,wrapt,2.1.2,2.1.2
+linux-64,pypi,xxhash,xxhash,3.7.0,3.7.0
+linux-64,conda,zipp,zipp,3.23.1,3.23.1
+osx-arm64,conda,aiosqlite,aiosqlite,0.22.1,0.22.1
+osx-arm64,conda,alembic,alembic,1.19.0,1.19.0
+osx-arm64,conda,amplitude-analytics,amplitude-analytics,1.2.3,1.2.3
+osx-arm64,conda,annotated-doc,annotated-doc,0.0.5,0.0.5
+osx-arm64,conda,annotated-types,annotated-types,0.8.0,0.8.0
+osx-arm64,conda,anyio,anyio,4.14.1,4.14.1
+osx-arm64,conda,appnope,appnope,0.1.4,0.1.4
+osx-arm64,conda,apprise,apprise,1.12.0,1.12.0
+osx-arm64,conda,argon2-cffi,argon2-cffi,25.1.0,25.1.0
+osx-arm64,conda,argon2-cffi-bindings,argon2-cffi-bindings,25.1.0,25.1.0
+osx-arm64,conda,arrow,arrow,1.4.0,1.4.0
+osx-arm64,conda,asgi-lifespan,asgi-lifespan,2.1.0,2.1.0
+osx-arm64,conda,asttokens,asttokens,3.0.2,3.0.2
+osx-arm64,conda,async-exit-stack,async-exit-stack,1.0.1,not in runtime graph
+osx-arm64,conda,async-lru,async-lru,2.3.0,2.3.0
+osx-arm64,conda,async-timeout,async-timeout,5.0.1,not in runtime graph
+osx-arm64,conda,asyncpg,asyncpg,0.31.0,0.31.0
+osx-arm64,conda,attrs,attrs,26.1.0,26.1.0
+osx-arm64,conda,babel,babel,2.18.0,2.18.0
+osx-arm64,conda,backports.tarfile,backports-tarfile,1.2.0,not in runtime graph
+osx-arm64,conda,backports.zstd,backports-zstd,1.6.0,not in runtime graph
+osx-arm64,pypi,basedpyright,basedpyright,1.39.9,1.39.9
+osx-arm64,conda,bcrypt,bcrypt,5.0.0,not in runtime graph
+osx-arm64,conda,beartype,beartype,0.22.9,0.22.9
+osx-arm64,conda,beautifulsoup4,beautifulsoup4,4.15.0,4.15.0
+osx-arm64,conda,bleach,bleach,6.4.0,6.4.0
+osx-arm64,conda,blinker,blinker,1.9.0,not in runtime graph
+osx-arm64,conda,brotli-python,brotli,1.2.0,not in runtime graph
+osx-arm64,conda,burner-redis,burner-redis,0.1.7,0.1.7
+osx-arm64,pypi,cachebox,cachebox,5.2.3,5.2.3
+osx-arm64,conda,cached_property,cached-property,1.5.2,not in runtime graph
+osx-arm64,conda,cachetools,cachetools,7.1.7,7.1.7
+osx-arm64,conda,certifi,certifi,2026.7.22,2026.7.22
+osx-arm64,conda,cffi,cffi,2.1.1,2.1.1
+osx-arm64,conda,cfgv,cfgv,3.5.0,3.5.0
+osx-arm64,conda,charset-normalizer,charset-normalizer,3.4.9,3.4.9
+osx-arm64,pypi,clarabel,clarabel,0.11.1,0.11.1
+osx-arm64,conda,click,click,8.4.2,8.4.2
+osx-arm64,conda,cloudpickle,cloudpickle,3.1.2,3.1.2
+osx-arm64,conda,colorama,colorama,0.4.6,0.4.6
+osx-arm64,conda,comm,comm,0.2.3,0.2.3
+osx-arm64,conda,coolname,coolname,4.2.0,4.2.0
+osx-arm64,conda,coverage,coverage,7.15.3,7.15.3
+osx-arm64,conda,cronsim,cronsim,2.6,2.6
+osx-arm64,conda,cryptography,cryptography,50.0.0,50.0.0
+osx-arm64,pypi,cvxpy,cvxpy,1.9.2,1.9.2
+osx-arm64,conda,cyclopts,cyclopts,4.22.5,4.22.5
+osx-arm64,conda,dateparser,dateparser,1.4.2,1.4.2
+osx-arm64,conda,debugpy,debugpy,1.8.21,1.8.21
+osx-arm64,conda,defusedxml,defusedxml,0.7.1,0.7.1
+osx-arm64,pypi,deprecated,deprecated,1.3.1,1.3.1
+osx-arm64,pypi,dishka,dishka,1.10.1,1.10.1
+osx-arm64,conda,distlib,distlib,0.4.3,0.4.3
+osx-arm64,pypi,distro,distro,1.9.0,1.9.0
+osx-arm64,conda,dnspython,dnspython,2.8.0,not in runtime graph
+osx-arm64,conda,docker-py,docker,7.2.0,7.2.0
+osx-arm64,conda,docstring_parser,docstring-parser,0.18.0,0.18.0
+osx-arm64,conda,python-duckdb,duckdb,1.5.5,1.5.5
+osx-arm64,conda,email-validator,email-validator,2.3.0,not in runtime graph
+osx-arm64,conda,exceptiongroup,exceptiongroup,1.3.1,1.3.1
+osx-arm64,conda,execnet,execnet,2.1.2,2.1.2
+osx-arm64,conda,executing,executing,2.2.1,2.2.1
+osx-arm64,conda,fastapi-core,fastapi,0.136.3,0.136.3
+osx-arm64,conda,fastapi-cli,fastapi-cli,0.0.32,not in runtime graph
+osx-arm64,conda,fastar,fastar,0.11.0,not in runtime graph
+osx-arm64,conda,python-fastjsonschema,fastjsonschema,2.22.1,2.22.1
+osx-arm64,conda,filelock,filelock,3.32.2,3.32.2
+osx-arm64,conda,fqdn,fqdn,1.5.1,1.5.1
+osx-arm64,conda,fsspec,fsspec,2026.7.0,2026.7.0
+osx-arm64,pypi,googleapis-common-protos,googleapis-common-protos,1.75.1,1.75.1
+osx-arm64,pypi,granian,granian,2.8.1,2.8.1
+osx-arm64,pypi,graphql-core,graphql-core,3.2.12,3.2.12
+osx-arm64,conda,python-graphviz,graphviz,0.21,0.21
+osx-arm64,conda,greenlet,greenlet,3.5.4,3.5.4
+osx-arm64,conda,griffe,griffe,2.1.0,2.1.0
+osx-arm64,conda,griffecli,griffecli,2.1.0,2.1.0
+osx-arm64,conda,griffelib,griffelib,2.1.0,2.1.0
+osx-arm64,pypi,grimp,grimp,3.15,3.15
+osx-arm64,conda,h11,h11,0.16.0,0.16.0
+osx-arm64,conda,h2,h2,4.4.1,4.4.1
+osx-arm64,pypi,harfile,harfile,0.5.0,0.5.0
+osx-arm64,pypi,highspy,highspy,1.15.1,1.15.1
+osx-arm64,conda,hpack,hpack,4.2.0,4.2.0
+osx-arm64,conda,httpcore,httpcore,1.0.9,1.0.9
+osx-arm64,pypi,httpcore2,httpcore2,2.10.0,2.10.0
+osx-arm64,conda,httptools,httptools,0.8.0,not in runtime graph
+osx-arm64,conda,httpx,httpx,0.28.1,0.28.1
+osx-arm64,pypi,httpx2,httpx2,2.10.0,2.10.0
+osx-arm64,conda,humanize,humanize,4.16.0,4.16.0
+osx-arm64,conda,hyperframe,hyperframe,6.1.0,6.1.0
+osx-arm64,conda,hypothesis,hypothesis,6.165.1,6.165.1
+osx-arm64,pypi,hypothesis-graphql,hypothesis-graphql,0.13.1,0.13.1
+osx-arm64,conda,identify,identify,2.6.19,2.6.19
+osx-arm64,conda,idna,idna,3.18,3.18
+osx-arm64,pypi,import-linter,import-linter,2.13,2.13
+osx-arm64,conda,importlib-metadata,importlib-metadata,8.7.1,8.7.0
+osx-arm64,conda,iniconfig,iniconfig,2.3.0,2.3.0
+osx-arm64,conda,inline-snapshot,inline-snapshot,0.35.3,0.35.3
+osx-arm64,conda,invoke,invoke,3.0.3,not in runtime graph
+osx-arm64,conda,ipykernel,ipykernel,6.31.0,6.31.0
+osx-arm64,conda,ipython,ipython,9.16.1,9.16.1
+osx-arm64,conda,ipython_pygments_lexers,ipython-pygments-lexers,1.1.1,1.1.1
+osx-arm64,conda,ipywidgets,ipywidgets,8.1.8,8.1.8
+osx-arm64,conda,isoduration,isoduration,20.11.0,20.11.0
+osx-arm64,conda,jaraco.classes,jaraco-classes,3.4.0,3.4.0
+osx-arm64,conda,jaraco.context,jaraco-context,6.1.2,6.1.2
+osx-arm64,pypi,jaraco-functools,jaraco-functools,4.6.0,4.6.0
+osx-arm64,conda,jedi,jedi,0.20.0,0.20.0
+osx-arm64,conda,jinja2,jinja2,3.1.6,3.1.6
+osx-arm64,conda,jinja2-humanize-extension,jinja2-humanize-extension,0.4.0,0.4.0
+osx-arm64,pypi,jiter,jiter,0.16.0,0.16.0
+osx-arm64,pypi,joblib,joblib,1.5.3,1.5.3
+osx-arm64,conda,json5,json5,0.15.0,0.15.0
+osx-arm64,conda,jsonpatch,jsonpatch,1.33,1.33
+osx-arm64,conda,jsonpointer,jsonpointer,3.1.1,3.1.1
+osx-arm64,conda,jsonschema,jsonschema,4.26.0,4.26.0
+osx-arm64,pypi,jsonschema-rs,jsonschema-rs,0.51.0,0.51.0
+osx-arm64,conda,jsonschema-specifications,jsonschema-specifications,2025.9.1,2025.9.1
+osx-arm64,conda,jupyter,jupyter,1.1.1,1.1.1
+osx-arm64,conda,jupyter-builder,jupyter-builder,1.2.1,1.2.1
+osx-arm64,conda,jupyter_client,jupyter-client,8.9.1,8.9.1
+osx-arm64,conda,jupyter_console,jupyter-console,6.6.3,6.6.3
+osx-arm64,conda,jupyter_core,jupyter-core,5.9.1,5.9.1
+osx-arm64,conda,jupyter_events,jupyter-events,0.12.1,0.12.1
+osx-arm64,conda,jupyter-lsp,jupyter-lsp,2.3.1,2.3.1
+osx-arm64,conda,jupyter_server,jupyter-server,2.20.0,2.20.0
+osx-arm64,conda,jupyter_server_terminals,jupyter-server-terminals,0.5.4,0.5.4
+osx-arm64,conda,jupyterlab,jupyterlab,4.6.2,4.6.2
+osx-arm64,conda,jupyterlab_pygments,jupyterlab-pygments,0.3.0,0.3.0
+osx-arm64,conda,jupyterlab_server,jupyterlab-server,2.28.0,2.28.0
+osx-arm64,conda,jupyterlab_widgets,jupyterlab-widgets,3.0.16,3.0.16
+osx-arm64,pypi,keyring,keyring,25.7.0,25.7.0
+osx-arm64,conda,keyrings.alt,keyrings-alt,5.0.2,5.0.2
+osx-arm64,conda,lark,lark,1.3.1,1.3.1
+osx-arm64,pypi,libcst,libcst,1.9.0,1.9.0
+osx-arm64,pypi,limits,limits,5.8.0,5.8.0
+osx-arm64,conda,loguru,loguru,0.7.3,0.7.3
+osx-arm64,conda,lupa,lupa,2.8,2.8
+osx-arm64,conda,mako,mako,1.4.1,1.4.1
+osx-arm64,conda,markdown,markdown,3.10.3,3.10.3
+osx-arm64,conda,markdown-it-py,markdown-it-py,4.2.0,4.2.0
+osx-arm64,conda,markupsafe,markupsafe,3.0.3,3.0.3
+osx-arm64,conda,matplotlib-inline,matplotlib-inline,0.2.2,0.2.2
+osx-arm64,pypi,mcp,mcp,2.0.0,2.0.0
+osx-arm64,pypi,mcp-types,mcp-types,2.0.0,2.0.0
+osx-arm64,pypi,mdit-py-plugins,mdit-py-plugins,0.6.1,0.6.1
+osx-arm64,conda,mdurl,mdurl,0.1.2,0.1.2
+osx-arm64,conda,mistune,mistune,3.3.4,3.3.4
+osx-arm64,conda,more-itertools,more-itertools,11.1.0,11.1.0
+osx-arm64,pypi,mutmut,mutmut,3.7.0,3.7.0
+osx-arm64,conda,nbclient,nbclient,0.11.0,0.11.0
+osx-arm64,conda,nbconvert-core,nbconvert,7.17.1,7.17.1
+osx-arm64,conda,nbformat,nbformat,5.11.0,5.11.0
+osx-arm64,conda,nest-asyncio,nest-asyncio,1.6.0,1.6.0
+osx-arm64,conda,nodeenv,nodeenv,1.10.0,1.10.0
+osx-arm64,pypi,nodejs-wheel-binaries,nodejs-wheel-binaries,24.16.0,24.16.0
+osx-arm64,conda,notebook,notebook,7.6.1,7.6.1
+osx-arm64,conda,notebook-shim,notebook-shim,0.2.4,0.2.4
+osx-arm64,conda,numpy,numpy,2.5.1,2.5.1
+osx-arm64,conda,oauthlib,oauthlib,3.3.1,3.3.1
+osx-arm64,pypi,openai,openai,2.54.0,2.54.0
+osx-arm64,pypi,openai-agents,openai-agents,0.20.0,0.20.0
+osx-arm64,conda,opentelemetry-api,opentelemetry-api,1.44.0,1.44.0
+osx-arm64,pypi,opentelemetry-exporter-otlp-proto-common,opentelemetry-exporter-otlp-proto-common,1.44.0,1.44.0
+osx-arm64,pypi,opentelemetry-exporter-otlp-proto-http,opentelemetry-exporter-otlp-proto-http,1.44.0,1.44.0
+osx-arm64,conda,opentelemetry-exporter-prometheus,opentelemetry-exporter-prometheus,0.65b0,not in runtime graph
+osx-arm64,conda,opentelemetry-instrumentation,opentelemetry-instrumentation,0.65b0,not in runtime graph
+osx-arm64,pypi,opentelemetry-proto,opentelemetry-proto,1.44.0,1.44.0
+osx-arm64,conda,opentelemetry-sdk,opentelemetry-sdk,1.44.0,1.44.0
+osx-arm64,conda,opentelemetry-semantic-conventions,opentelemetry-semantic-conventions,0.65b0,0.65b0
+osx-arm64,conda,orjson,orjson,3.11.9,3.11.9
+osx-arm64,pypi,osqp,osqp,1.1.3,1.1.3
+osx-arm64,conda,overrides,overrides,7.7.0,not in runtime graph
+osx-arm64,conda,packaging,packaging,25.0,25.0
+osx-arm64,conda,pandocfilters,pandocfilters,1.5.0,1.5.0
+osx-arm64,conda,paramiko,paramiko,5.0.0,not in runtime graph
+osx-arm64,conda,parso,parso,0.8.7,0.8.7
+osx-arm64,conda,pathspec,pathspec,1.1.1,1.1.1
+osx-arm64,conda,pendulum,pendulum,3.2.0,not in runtime graph
+osx-arm64,conda,pexpect,pexpect,4.9.0,4.9.0
+osx-arm64,conda,platformdirs,platformdirs,4.11.0,4.11.0
+osx-arm64,conda,pluggy,pluggy,1.6.0,1.6.0
+osx-arm64,conda,polars,polars,1.43.2,1.43.2
+osx-arm64,conda,polars-runtime-32,polars-runtime-32,1.43.2,1.43.2
+osx-arm64,conda,pre-commit,pre-commit,4.6.1,4.6.1
+osx-arm64,conda,prefect,prefect,3.8.1,3.6.24
+osx-arm64,conda,prometheus_client,prometheus-client,0.26.0,0.26.0
+osx-arm64,conda,prompt-toolkit,prompt-toolkit,3.0.53,3.0.53
+osx-arm64,pypi,protobuf,protobuf,7.35.1,7.35.1
+osx-arm64,conda,psutil,psutil,7.2.2,7.2.2
+osx-arm64,conda,ptyprocess,ptyprocess,0.7.0,0.7.0
+osx-arm64,conda,pure_eval,pure-eval,0.2.3,0.2.3
+osx-arm64,conda,py-key-value-aio,py-key-value-aio,0.4.5,0.4.5
+osx-arm64,conda,pycparser,pycparser,3.0,3.0
+osx-arm64,conda,pydantic,pydantic,2.13.4,2.13.4
+osx-arm64,conda,pydantic-core,pydantic-core,2.46.4,2.46.4
+osx-arm64,conda,pydantic-extra-types,pydantic-extra-types,2.11.1,2.11.1
+osx-arm64,conda,pydantic-settings,pydantic-settings,2.15.0,2.15.0
+osx-arm64,conda,pydocket,pydocket,0.23.1,0.23.1
+osx-arm64,conda,pygments,pygments,2.20.0,2.20.0
+osx-arm64,conda,pyjwt,pyjwt,2.13.0,2.13.0
+osx-arm64,conda,pynacl,pynacl,1.6.2,not in runtime graph
+osx-arm64,conda,pyobjc-core,pyobjc-core,12.2.1,not in runtime graph
+osx-arm64,conda,pyobjc-framework-cocoa,pyobjc-framework-cocoa,12.2.1,not in runtime graph
+osx-arm64,pypi,pyrate-limiter,pyrate-limiter,4.5.0,4.5.0
+osx-arm64,conda,pysocks,pysocks,1.7.1,not in runtime graph
+osx-arm64,conda,pytest,pytest,9.1.1,9.1.1
+osx-arm64,conda,pytest-asyncio,pytest-asyncio,1.4.0,1.4.0
+osx-arm64,conda,pytest-cov,pytest-cov,7.1.0,7.1.0
+osx-arm64,conda,pytest-mock,pytest-mock,3.15.1,3.15.1
+osx-arm64,conda,pytest-timeout,pytest-timeout,2.4.0,2.4.0
+osx-arm64,conda,pytest-xdist,pytest-xdist,3.8.0,3.8.0
+osx-arm64,conda,python-dateutil,python-dateutil,2.9.0.post0,2.9.0.post0
+osx-arm64,conda,python-discovery,python-discovery,1.5.1,1.5.1
+osx-arm64,conda,python-dotenv,python-dotenv,1.2.2,1.2.2
+osx-arm64,conda,python-json-logger,python-json-logger,4.1.0,4.1.0
+osx-arm64,conda,python-multipart,python-multipart,0.0.32,0.0.32
+osx-arm64,conda,python-slugify,python-slugify,8.0.4,8.0.4
+osx-arm64,conda,pytz,pytz,2026.3.post1,2026.3.post1
+osx-arm64,conda,pyyaml,pyyaml,6.0.3,6.0.3
+osx-arm64,pypi,pyyaml-ft,pyyaml-ft,8.0.0,8.0.0
+osx-arm64,conda,pyzmq,pyzmq,27.1.0,27.1.0
+osx-arm64,pypi,qdldl,qdldl,0.1.9.post1,0.1.9.post1
+osx-arm64,conda,readchar,readchar,4.2.2,4.2.2
+osx-arm64,conda,redis-py,redis,8.1.0,8.1.0
+osx-arm64,conda,referencing,referencing,0.37.0,0.37.0
+osx-arm64,conda,regex,regex,2026.7.19,2026.7.19
+osx-arm64,conda,requests,requests,2.34.2,2.34.2
+osx-arm64,conda,requests-oauthlib,requests-oauthlib,2.0.0,2.0.0
+osx-arm64,conda,respx,respx,0.23.1,0.23.1
+osx-arm64,conda,rfc3339-validator,rfc3339-validator,0.1.4,0.1.4
+osx-arm64,conda,rfc3986-validator,rfc3986-validator,0.1.1,0.1.1
+osx-arm64,conda,rfc3987-syntax,rfc3987-syntax,1.1.0,1.1.0
+osx-arm64,conda,rich,rich,14.3.4,14.3.4
+osx-arm64,conda,rich-rst,rich-rst,2.1.0,2.1.0
+osx-arm64,conda,rich-toolkit,rich-toolkit,0.20.3,not in runtime graph
+osx-arm64,conda,rpds-py,rpds-py,2026.6.3,2026.6.3
+osx-arm64,conda,ruamel.yaml,ruamel-yaml,0.19.1,0.19.1
+osx-arm64,conda,ruamel.yaml.clib,ruamel-yaml-clib,0.2.15,0.2.15
+osx-arm64,conda,ruff,ruff,0.15.11,0.15.11
+osx-arm64,pypi,schemathesis,schemathesis,4.25.2,4.25.2
+osx-arm64,pypi,scipy,scipy,1.18.0,1.18.0
+osx-arm64,pypi,scs,scs,3.2.11,3.2.11
+osx-arm64,conda,semver,semver,3.0.4,3.0.4
+osx-arm64,conda,send2trash,send2trash,2.1.0,2.1.0
+osx-arm64,pypi,setproctitle,setproctitle,1.3.7,1.3.7
+osx-arm64,conda,setuptools,setuptools,83.0.0,83.0.0
+osx-arm64,conda,shellingham,shellingham,1.5.4,1.5.4
+osx-arm64,conda,six,six,1.17.0,1.17.0
+osx-arm64,conda,sniffio,sniffio,1.3.1,1.3.1
+osx-arm64,pypi,socksio,socksio,1.0.0,1.0.0
+osx-arm64,conda,sortedcontainers,sortedcontainers,2.4.0,2.4.0
+osx-arm64,conda,soupsieve,soupsieve,2.9.1,2.9.1
+osx-arm64,pypi,sparsediffpy,sparsediffpy,0.3.0,0.3.0
+osx-arm64,conda,sqlalchemy,sqlalchemy,2.0.51,2.0.51
+osx-arm64,pypi,sse-starlette,sse-starlette,3.4.8,3.4.8
+osx-arm64,conda,stack_data,stack-data,0.6.3,0.6.3
+osx-arm64,conda,starlette,starlette,1.4.1,1.4.1
+osx-arm64,pypi,starlette-testclient,starlette-testclient,0.4.1,0.4.1
+osx-arm64,pypi,tenacity,tenacity,9.1.4,9.1.4
+osx-arm64,conda,terminado,terminado,0.18.1,0.18.1
+osx-arm64,conda,text-unidecode,text-unidecode,1.3,1.3
+osx-arm64,pypi,textual,textual,8.2.8,8.2.8
+osx-arm64,conda,time-machine,time-machine,2.19.0,not in runtime graph
+osx-arm64,conda,tinycss2,tinycss2,1.4.0,1.4.0
+osx-arm64,conda,toml,toml,0.10.2,0.10.2
+osx-arm64,conda,tomli,tomli,2.4.1,not in runtime graph
+osx-arm64,conda,tornado,tornado,6.5.7,6.5.7
+osx-arm64,pypi,tqdm,tqdm,4.70.0,4.70.0
+osx-arm64,conda,traitlets,traitlets,5.16.1,5.16.1
+osx-arm64,pypi,truststore,truststore,0.10.4,0.10.4
+osx-arm64,conda,typer,typer,0.27.1,0.27.1
+osx-arm64,conda,types-python-dateutil,types-python-dateutil,2.9.0.20260716,2.9.0.20260716
+osx-arm64,conda,types-pyyaml,types-pyyaml,6.0.12.20260724,6.0.12.20260724
+osx-arm64,conda,typing_extensions,typing-extensions,4.16.0,4.16.0
+osx-arm64,conda,typing-inspection,typing-inspection,0.4.2,0.4.2
+osx-arm64,conda,typing_utils,typing-utils,0.1.0,not in runtime graph
+osx-arm64,conda,python-tzdata,tzdata,2026.3,2026.3
+osx-arm64,conda,tzlocal,tzlocal,5.4.4,5.4.4
+osx-arm64,conda,ukkonen,ukkonen,1.1.0,not in runtime graph
+osx-arm64,conda,uncalled-for,uncalled-for,0.3.2,0.3.2
+osx-arm64,conda,uri-template,uri-template,1.3.0,1.3.0
+osx-arm64,conda,urllib3,urllib3,2.7.0,2.7.0
+osx-arm64,conda,uvicorn,uvicorn,0.52.1,0.52.1
+osx-arm64,conda,uvloop,uvloop,0.22.1,not in runtime graph
+osx-arm64,conda,virtualenv,virtualenv,21.7.1,21.7.1
+osx-arm64,conda,watchfiles,watchfiles,1.2.0,not in runtime graph
+osx-arm64,conda,wcwidth,wcwidth,0.8.2,0.8.2
+osx-arm64,conda,webcolors,webcolors,25.10.0,25.10.0
+osx-arm64,conda,webencodings,webencodings,0.5.1,0.5.1
+osx-arm64,conda,websocket-client,websocket-client,1.9.0,1.9.0
+osx-arm64,conda,websockets,websockets,16.1.1,16.1.1
+osx-arm64,pypi,werkzeug,werkzeug,3.1.8,3.1.8
+osx-arm64,conda,whenever,whenever,0.9.5,0.9.5
+osx-arm64,conda,widgetsnbextension,widgetsnbextension,4.0.15,4.0.15
+osx-arm64,conda,wrapt,wrapt,2.3.0,2.3.0
+osx-arm64,pypi,xxhash,xxhash,3.8.1,3.8.1
+osx-arm64,conda,zipp,zipp,4.1.0,3.23.1
+win-64,conda,aiosqlite,aiosqlite,0.22.1,0.22.1
+win-64,conda,alembic,alembic,1.18.4,1.18.4
+win-64,conda,amplitude-analytics,amplitude-analytics,1.2.2,1.2.2
+win-64,conda,annotated-doc,annotated-doc,0.0.4,0.0.4
+win-64,conda,annotated-types,annotated-types,0.7.0,0.7.0
+win-64,conda,anyio,anyio,4.13.0,4.13.0
+win-64,conda,apprise,apprise,1.10.0,1.10.0
+win-64,conda,argon2-cffi,argon2-cffi,25.1.0,25.1.0
+win-64,conda,argon2-cffi-bindings,argon2-cffi-bindings,25.1.0,25.1.0
+win-64,conda,arrow,arrow,1.4.0,1.4.0
+win-64,conda,asgi-lifespan,asgi-lifespan,2.1.0,2.1.0
+win-64,conda,asttokens,asttokens,3.0.1,3.0.1
+win-64,conda,async-exit-stack,async-exit-stack,1.0.1,not in runtime graph
+win-64,conda,async-lru,async-lru,2.3.0,2.3.0
+win-64,conda,async-timeout,async-timeout,5.0.1,not in runtime graph
+win-64,conda,asyncpg,asyncpg,0.31.0,0.31.0
+win-64,conda,attrs,attrs,26.1.0,26.1.0
+win-64,conda,babel,babel,2.18.0,2.18.0
+win-64,conda,backports.tarfile,backports-tarfile,1.2.0,not in runtime graph
+win-64,conda,backports.zstd,backports-zstd,1.3.0,not in runtime graph
+win-64,pypi,basedpyright,basedpyright,1.39.3,1.39.3
+win-64,conda,bcrypt,bcrypt,5.0.0,not in runtime graph
+win-64,conda,beartype,beartype,0.22.9,0.22.9
+win-64,conda,beautifulsoup4,beautifulsoup4,4.14.3,4.14.3
+win-64,conda,bleach,bleach,6.3.0,6.3.0
+win-64,conda,blinker,blinker,1.9.0,not in runtime graph
+win-64,conda,brotli-python,brotli,1.2.0,not in runtime graph
+win-64,pypi,cachebox,cachebox,5.2.3,5.2.3
+win-64,conda,cached_property,cached-property,1.5.2,not in runtime graph
+win-64,conda,cachetools,cachetools,7.0.6,7.0.6
+win-64,conda,certifi,certifi,2026.4.22,2026.4.22
+win-64,conda,cffi,cffi,2.0.0,2.0.0
+win-64,conda,cfgv,cfgv,3.5.0,3.5.0
+win-64,conda,charset-normalizer,charset-normalizer,3.4.7,3.4.7
+win-64,pypi,clarabel,clarabel,0.11.1,0.11.1
+win-64,conda,click,click,8.3.3,8.3.3
+win-64,conda,cloudpickle,cloudpickle,3.1.2,3.1.2
+win-64,conda,colorama,colorama,0.4.6,0.4.6
+win-64,conda,comm,comm,0.2.3,0.2.3
+win-64,conda,coolname,coolname,4.1.0,4.1.0
+win-64,conda,coverage,coverage,7.13.5,7.13.5
+win-64,conda,cronsim,cronsim,2.6,2.6
+win-64,conda,cryptography,cryptography,47.0.0,47.0.0
+win-64,pypi,cvxpy,cvxpy,1.9.2,1.9.2
+win-64,conda,cyclopts,cyclopts,4.11.0,4.11.0
+win-64,conda,dateparser,dateparser,1.4.0,1.4.0
+win-64,conda,debugpy,debugpy,1.8.20,1.8.20
+win-64,conda,decorator,decorator,5.2.1,5.2.1
+win-64,conda,defusedxml,defusedxml,0.7.1,0.7.1
+win-64,pypi,deprecated,deprecated,1.3.1,1.3.1
+win-64,pypi,dishka,dishka,1.10.1,1.10.1
+win-64,conda,distlib,distlib,0.4.0,0.4.0
+win-64,pypi,distro,distro,1.9.0,1.9.0
+win-64,conda,dnspython,dnspython,2.8.0,not in runtime graph
+win-64,conda,docker-py,docker,7.1.0,7.1.0
+win-64,conda,docstring_parser,docstring-parser,0.17.0,0.17.0
+win-64,conda,docutils,docutils,0.22.4,0.22.4
+win-64,conda,python-duckdb,duckdb,1.5.2,1.5.2
+win-64,conda,email-validator,email-validator,2.3.0,not in runtime graph
+win-64,conda,exceptiongroup,exceptiongroup,1.3.1,1.3.1
+win-64,conda,execnet,execnet,2.1.2,2.1.2
+win-64,conda,executing,executing,2.2.1,2.2.1
+win-64,conda,fakeredis,fakeredis,2.35.1,2.35.1
+win-64,conda,fastapi-core,fastapi,0.136.1,0.136.1
+win-64,conda,fastapi-cli,fastapi-cli,0.0.23,not in runtime graph
+win-64,conda,fastar,fastar,0.11.0,not in runtime graph
+win-64,conda,python-fastjsonschema,fastjsonschema,2.21.2,2.21.2
+win-64,conda,filelock,filelock,3.29.0,3.29.0
+win-64,conda,fqdn,fqdn,1.5.1,1.5.1
+win-64,conda,fsspec,fsspec,2026.3.0,2026.3.0
+win-64,pypi,googleapis-common-protos,googleapis-common-protos,1.74.0,1.74.0
+win-64,pypi,granian,granian,2.7.4,2.7.4
+win-64,pypi,graphql-core,graphql-core,3.2.12,3.2.12
+win-64,conda,python-graphviz,graphviz,0.21,0.21
+win-64,conda,greenlet,greenlet,3.5.0,3.5.0
+win-64,conda,griffe,griffe,2.0.2,2.0.2
+win-64,conda,griffecli,griffecli,2.0.2,2.0.2
+win-64,conda,griffelib,griffelib,2.0.2,2.0.2
+win-64,pypi,grimp,grimp,3.14,3.14
+win-64,conda,h11,h11,0.16.0,0.16.0
+win-64,conda,h2,h2,4.3.0,4.3.0
+win-64,pypi,harfile,harfile,0.5.0,0.5.0
+win-64,pypi,highspy,highspy,1.15.1,1.15.1
+win-64,conda,hpack,hpack,4.1.0,4.1.0
+win-64,conda,httpcore,httpcore,1.0.9,1.0.9
+win-64,conda,httptools,httptools,0.7.1,not in runtime graph
+win-64,conda,httpx,httpx,0.28.1,0.28.1
+win-64,pypi,httpx-sse,httpx-sse,0.4.3,0.4.3
+win-64,conda,humanize,humanize,4.15.0,4.15.0
+win-64,conda,hyperframe,hyperframe,6.1.0,6.1.0
+win-64,conda,hypothesis,hypothesis,6.152.4,6.152.4
+win-64,pypi,hypothesis-graphql,hypothesis-graphql,0.13.1,0.13.1
+win-64,conda,identify,identify,2.6.19,2.6.19
+win-64,conda,idna,idna,3.13,3.13
+win-64,pypi,import-linter,import-linter,2.11,2.11
+win-64,conda,importlib-metadata,importlib-metadata,8.7.0,8.7.0
+win-64,conda,importlib_resources,importlib-resources,7.1.0,not in runtime graph
+win-64,conda,iniconfig,iniconfig,2.3.0,2.3.0
+win-64,conda,inline-snapshot,inline-snapshot,0.32.7,0.32.7
+win-64,conda,invoke,invoke,3.0.3,not in runtime graph
+win-64,conda,ipykernel,ipykernel,6.31.0,6.31.0
+win-64,conda,ipython,ipython,9.13.0,9.13.0
+win-64,conda,ipython_pygments_lexers,ipython-pygments-lexers,1.1.1,1.1.1
+win-64,conda,ipywidgets,ipywidgets,8.1.8,8.1.8
+win-64,conda,isoduration,isoduration,20.11.0,20.11.0
+win-64,conda,jaraco.classes,jaraco-classes,3.4.0,3.4.0
+win-64,conda,jaraco.context,jaraco-context,6.1.2,6.1.2
+win-64,pypi,jaraco-functools,jaraco-functools,4.4.0,4.4.0
+win-64,conda,jedi,jedi,0.19.2,0.19.2
+win-64,conda,jinja2,jinja2,3.1.6,3.1.6
+win-64,conda,jinja2-humanize-extension,jinja2-humanize-extension,0.4.0,0.4.0
+win-64,pypi,jiter,jiter,0.16.0,0.16.0
+win-64,pypi,joblib,joblib,1.5.3,1.5.3
+win-64,conda,json5,json5,0.14.0,0.14.0
+win-64,conda,jsonpatch,jsonpatch,1.33,1.33
+win-64,conda,jsonpointer,jsonpointer,3.1.1,3.1.1
+win-64,conda,jsonschema,jsonschema,4.26.0,4.26.0
+win-64,pypi,jsonschema-rs,jsonschema-rs,0.51.0,0.51.0
+win-64,conda,jsonschema-specifications,jsonschema-specifications,2025.9.1,2025.9.1
+win-64,conda,jupyter,jupyter,1.1.1,1.1.1
+win-64,conda,jupyter_client,jupyter-client,8.8.0,8.8.0
+win-64,conda,jupyter_console,jupyter-console,6.6.3,6.6.3
+win-64,conda,jupyter_core,jupyter-core,5.9.1,5.9.1
+win-64,conda,jupyter_events,jupyter-events,0.12.1,0.12.1
+win-64,conda,jupyter-lsp,jupyter-lsp,2.3.1,2.3.1
+win-64,conda,jupyter_server,jupyter-server,2.17.0,2.17.0
+win-64,conda,jupyter_server_terminals,jupyter-server-terminals,0.5.4,0.5.4
+win-64,conda,jupyterlab,jupyterlab,4.5.6,4.5.6
+win-64,conda,jupyterlab_pygments,jupyterlab-pygments,0.3.0,0.3.0
+win-64,conda,jupyterlab_server,jupyterlab-server,2.28.0,2.28.0
+win-64,conda,jupyterlab_widgets,jupyterlab-widgets,3.0.16,3.0.16
+win-64,pypi,keyring,keyring,25.7.0,25.7.0
+win-64,conda,keyrings.alt,keyrings-alt,5.0.2,5.0.2
+win-64,conda,lark,lark,1.3.1,1.3.1
+win-64,pypi,libcst,libcst,1.9.0,1.9.0
+win-64,pypi,limits,limits,5.8.0,5.8.0
+win-64,conda,loguru,loguru,0.7.3,0.7.3
+win-64,conda,lupa,lupa,2.8,2.8
+win-64,conda,mako,mako,1.3.11,1.3.11
+win-64,conda,markdown,markdown,3.10.2,3.10.2
+win-64,conda,markdown-it-py,markdown-it-py,4.0.0,4.0.0
+win-64,conda,markupsafe,markupsafe,3.0.3,3.0.3
+win-64,conda,matplotlib-inline,matplotlib-inline,0.2.1,0.2.1
+win-64,pypi,mcp,mcp,1.29.0,1.29.0
+win-64,pypi,mdit-py-plugins,mdit-py-plugins,0.6.1,0.6.1
+win-64,conda,mdurl,mdurl,0.1.2,0.1.2
+win-64,conda,mistune,mistune,3.2.0,3.2.0
+win-64,conda,more-itertools,more-itertools,11.0.2,11.0.2
+win-64,pypi,mutmut,mutmut,3.7.0,3.7.0
+win-64,conda,nbclient,nbclient,0.10.4,0.10.4
+win-64,conda,nbconvert-core,nbconvert,7.17.1,7.17.1
+win-64,conda,nbformat,nbformat,5.10.4,5.10.4
+win-64,conda,nest-asyncio,nest-asyncio,1.6.0,1.6.0
+win-64,conda,nodeenv,nodeenv,1.10.0,1.10.0
+win-64,pypi,nodejs-wheel-binaries,nodejs-wheel-binaries,24.15.0,24.15.0
+win-64,conda,notebook,notebook,7.5.5,7.5.5
+win-64,conda,notebook-shim,notebook-shim,0.2.4,0.2.4
+win-64,conda,numpy,numpy,2.4.3,2.4.3
+win-64,conda,oauthlib,oauthlib,3.3.1,3.3.1
+win-64,pypi,openai,openai,2.54.0,2.54.0
+win-64,pypi,openai-agents,openai-agents,0.20.0,0.20.0
+win-64,conda,opentelemetry-api,opentelemetry-api,1.41.1,1.41.1
+win-64,pypi,opentelemetry-exporter-otlp-proto-common,opentelemetry-exporter-otlp-proto-common,1.41.1,1.41.1
+win-64,pypi,opentelemetry-exporter-otlp-proto-http,opentelemetry-exporter-otlp-proto-http,1.41.1,1.41.1
+win-64,conda,opentelemetry-exporter-prometheus,opentelemetry-exporter-prometheus,0.62b0,not in runtime graph
+win-64,conda,opentelemetry-instrumentation,opentelemetry-instrumentation,0.62b1,not in runtime graph
+win-64,pypi,opentelemetry-proto,opentelemetry-proto,1.41.1,1.41.1
+win-64,conda,opentelemetry-sdk,opentelemetry-sdk,1.41.1,1.41.1
+win-64,conda,opentelemetry-semantic-conventions,opentelemetry-semantic-conventions,0.62b1,0.62b1
+win-64,conda,orjson,orjson,3.11.8,3.11.8
+win-64,pypi,osqp,osqp,1.1.3,1.1.3
+win-64,conda,overrides,overrides,7.7.0,not in runtime graph
+win-64,conda,packaging,packaging,25.0,25.0
+win-64,conda,pandocfilters,pandocfilters,1.5.0,1.5.0
+win-64,conda,paramiko,paramiko,4.0.0,not in runtime graph
+win-64,conda,parso,parso,0.8.6,0.8.6
+win-64,conda,pathspec,pathspec,1.1.1,1.1.1
+win-64,conda,pendulum,pendulum,3.2.0,not in runtime graph
+win-64,conda,platformdirs,platformdirs,4.9.6,4.9.6
+win-64,conda,pluggy,pluggy,1.6.0,1.6.0
+win-64,conda,polars,polars,1.40.0,1.40.0
+win-64,conda,polars-runtime-32,polars-runtime-32,1.40.0,1.40.0
+win-64,conda,pre-commit,pre-commit,4.6.0,4.6.0
+win-64,conda,prefect,prefect,3.6.24,3.6.24
+win-64,conda,prometheus_client,prometheus-client,0.25.0,0.25.0
+win-64,conda,prompt-toolkit,prompt-toolkit,3.0.52,3.0.52
+win-64,pypi,protobuf,protobuf,6.33.6,6.33.6
+win-64,conda,psutil,psutil,7.2.2,7.2.2
+win-64,conda,pure_eval,pure-eval,0.2.3,0.2.3
+win-64,conda,py-key-value-aio,py-key-value-aio,0.4.4,0.4.4
+win-64,conda,pycparser,pycparser,2.22,2.22
+win-64,conda,pydantic,pydantic,2.13.3,2.13.3
+win-64,conda,pydantic-core,pydantic-core,2.46.3,2.46.3
+win-64,conda,pydantic-extra-types,pydantic-extra-types,2.11.2,2.11.2
+win-64,conda,pydantic-settings,pydantic-settings,2.14.0,2.14.0
+win-64,conda,pydocket,pydocket,0.19.2,0.19.2
+win-64,conda,pygments,pygments,2.20.0,2.20.0
+win-64,conda,pyjwt,pyjwt,2.12.1,2.12.1
+win-64,conda,pynacl,pynacl,1.6.2,not in runtime graph
+win-64,pypi,pyrate-limiter,pyrate-limiter,4.5.0,4.5.0
+win-64,conda,pysocks,pysocks,1.7.1,not in runtime graph
+win-64,conda,pytest,pytest,9.0.3,9.0.3
+win-64,conda,pytest-asyncio,pytest-asyncio,1.3.0,1.3.0
+win-64,conda,pytest-cov,pytest-cov,7.1.0,7.1.0
+win-64,conda,pytest-mock,pytest-mock,3.15.1,3.15.1
+win-64,conda,pytest-timeout,pytest-timeout,2.4.0,2.4.0
+win-64,conda,pytest-xdist,pytest-xdist,3.8.0,3.8.0
+win-64,conda,python-dateutil,python-dateutil,2.9.0.post0,2.9.0.post0
+win-64,conda,python-discovery,python-discovery,1.2.2,1.2.2
+win-64,conda,python-dotenv,python-dotenv,1.2.2,1.2.2
+win-64,conda,python-json-logger,python-json-logger,3.2.1,3.2.1
+win-64,conda,python-multipart,python-multipart,0.0.27,0.0.27
+win-64,conda,python-slugify,python-slugify,8.0.4,8.0.4
+win-64,conda,pytz,pytz,2026.1.post1,2026.1.post1
+win-64,conda,pywin32,pywin32,311,311
+win-64,pypi,pywin32-ctypes,pywin32-ctypes,0.2.3,0.2.3
+win-64,conda,pywinpty,pywinpty,2.0.15,2.0.15
+win-64,conda,pyyaml,pyyaml,6.0.3,6.0.3
+win-64,pypi,pyyaml-ft,pyyaml-ft,8.0.0,8.0.0
+win-64,conda,pyzmq,pyzmq,27.1.0,27.1.0
+win-64,pypi,qdldl,qdldl,0.1.9.post1,0.1.9.post1
+win-64,conda,readchar,readchar,4.2.2,4.2.2
+win-64,conda,redis-py,redis,7.4.0,7.4.0
+win-64,conda,referencing,referencing,0.37.0,0.37.0
+win-64,conda,regex,regex,2026.4.4,2026.4.4
+win-64,conda,requests,requests,2.33.1,2.33.1
+win-64,conda,requests-oauthlib,requests-oauthlib,2.0.0,2.0.0
+win-64,conda,respx,respx,0.23.1,0.23.1
+win-64,conda,rfc3339-validator,rfc3339-validator,0.1.4,0.1.4
+win-64,conda,rfc3986-validator,rfc3986-validator,0.1.1,0.1.1
+win-64,conda,rfc3987-syntax,rfc3987-syntax,1.1.0,1.1.0
+win-64,conda,rich,rich,14.3.4,14.3.4
+win-64,conda,rich-rst,rich-rst,1.3.2,1.3.2
+win-64,conda,rich-toolkit,rich-toolkit,0.19.7,not in runtime graph
+win-64,conda,rpds-py,rpds-py,0.30.0,0.30.0
+win-64,conda,ruamel.yaml,ruamel-yaml,0.19.1,0.19.1
+win-64,conda,ruamel.yaml.clib,ruamel-yaml-clib,0.2.15,0.2.15
+win-64,conda,ruff,ruff,0.15.11,0.15.11
+win-64,pypi,schemathesis,schemathesis,4.25.2,4.25.2
+win-64,pypi,scipy,scipy,1.18.0,1.18.0
+win-64,pypi,scs,scs,3.2.11,3.2.11
+win-64,conda,semver,semver,3.0.4,3.0.4
+win-64,conda,send2trash,send2trash,2.1.0,2.1.0
+win-64,pypi,setproctitle,setproctitle,1.3.7,1.3.7
+win-64,conda,setuptools,setuptools,82.0.1,82.0.1
+win-64,conda,shellingham,shellingham,1.5.4,1.5.4
+win-64,conda,six,six,1.17.0,1.17.0
+win-64,conda,sniffio,sniffio,1.3.1,1.3.1
+win-64,pypi,socksio,socksio,1.0.0,1.0.0
+win-64,conda,sortedcontainers,sortedcontainers,2.4.0,2.4.0
+win-64,conda,soupsieve,soupsieve,2.8.3,2.8.3
+win-64,pypi,sparsediffpy,sparsediffpy,0.3.0,0.3.0
+win-64,conda,sqlalchemy,sqlalchemy,2.0.49,2.0.49
+win-64,pypi,sse-starlette,sse-starlette,3.4.8,3.4.8
+win-64,conda,stack_data,stack-data,0.6.3,0.6.3
+win-64,conda,starlette,starlette,1.0.0,1.0.0
+win-64,pypi,starlette-testclient,starlette-testclient,0.4.1,0.4.1
+win-64,pypi,tenacity,tenacity,9.1.4,9.1.4
+win-64,conda,terminado,terminado,0.18.1,0.18.1
+win-64,conda,text-unidecode,text-unidecode,1.3,1.3
+win-64,pypi,textual,textual,8.2.8,8.2.8
+win-64,conda,time-machine,time-machine,2.19.0,not in runtime graph
+win-64,conda,tinycss2,tinycss2,1.4.0,1.4.0
+win-64,conda,toml,toml,0.10.2,0.10.2
+win-64,conda,tomli,tomli,2.4.1,not in runtime graph
+win-64,conda,tornado,tornado,6.5.5,6.5.5
+win-64,pypi,tqdm,tqdm,4.70.0,4.70.0
+win-64,conda,traitlets,traitlets,5.14.3,5.14.3
+win-64,conda,typer,typer,0.27.1,0.27.1
+win-64,conda,types-python-dateutil,types-python-dateutil,2.9.0.20260408,2.9.0.20260408
+win-64,conda,types-pyyaml,types-pyyaml,6.0.12.20260408,6.0.12.20260408
+win-64,conda,typing_extensions,typing-extensions,4.15.0,4.15.0
+win-64,conda,typing-inspection,typing-inspection,0.4.2,0.4.2
+win-64,conda,typing_utils,typing-utils,0.1.0,not in runtime graph
+win-64,conda,python-tzdata,tzdata,2026.2,2026.2
+win-64,conda,tzlocal,tzlocal,5.3.1,5.3.1
+win-64,conda,ukkonen,ukkonen,1.1.0,not in runtime graph
+win-64,conda,uncalled-for,uncalled-for,0.3.1,0.3.1
+win-64,conda,uri-template,uri-template,1.3.0,1.3.0
+win-64,conda,urllib3,urllib3,2.6.3,2.6.3
+win-64,conda,uvicorn,uvicorn,0.46.0,0.46.0
+win-64,conda,virtualenv,virtualenv,21.3.0,21.3.0
+win-64,conda,watchfiles,watchfiles,1.1.1,not in runtime graph
+win-64,conda,wcwidth,wcwidth,0.6.0,0.6.0
+win-64,conda,webcolors,webcolors,25.10.0,25.10.0
+win-64,conda,webencodings,webencodings,0.5.1,0.5.1
+win-64,conda,websocket-client,websocket-client,1.9.0,1.9.0
+win-64,conda,websockets,websockets,16.0,16.0
+win-64,pypi,werkzeug,werkzeug,3.1.8,3.1.8
+win-64,conda,whenever,whenever,0.9.5,0.9.5
+win-64,conda,widgetsnbextension,widgetsnbextension,4.0.15,4.0.15
+win-64,conda,win_inet_pton,win-inet-pton,1.1.0,not in runtime graph
+win-64,conda,win32_setctime,win32-setctime,1.2.0,1.2.0
+win-64,conda,wrapt,wrapt,2.1.2,2.1.2
+win-64,pypi,xxhash,xxhash,3.7.0,3.7.0
+win-64,conda,zipp,zipp,3.23.1,3.23.1

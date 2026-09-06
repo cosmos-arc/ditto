@@ -6,8 +6,8 @@
 /deploy/ @ChevyWang
 /tooling/release/ @ChevyWang
 /.github/renovate.json @ChevyWang
-/pixi.toml @ChevyWang
-/pixi.lock @ChevyWang
+/Taskfile.yml @ChevyWang
+/uv.lock @ChevyWang
 /package.json @ChevyWang
 /bun.lock @ChevyWang
 
@@ -24,3 +24,6 @@
 /packages/risk/ @ChevyWang
 /packages/execution/ @ChevyWang
 /packages/backtest/ @ChevyWang
+/.python-version @ChevyWang
+/.node-version @ChevyWang
+/.task-version @ChevyWang

@@ -4,7 +4,7 @@
 `compatibility-policy.sha256` 固定其原始字节。两者必须同时更新并通过：
 
 ```bash
-pixi run -e dev cohort-compatibility-check
+task cohort-compatibility-check
 ```
 
 policy 只允许一个动态 `current` build slot 和至多一个真实 `previous` cohort。

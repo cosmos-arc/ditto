@@ -32,7 +32,7 @@ _PROTECTED_RESOURCE_ORDER = (
     "lockfile",
     "migration",
 )
-_LOCKFILES = frozenset({"bun.lock", "pixi.lock"})
+_LOCKFILES = frozenset({"bun.lock", "uv.lock"})
 _GENERATOR_PATH_REGISTRY = (
     {
         "name": "api-contract",

@@ -22,6 +22,8 @@ from typing import Final
 
 from ditto_apps.api.app_metadata import SUPPORTED_API_CONTRACT_VERSION
 
+from tooling.dev.toolchain import node_executable
+
 SECRET_NAMES = {
     "ANTHROPIC_API_KEY",
     "AWS_SECRET_ACCESS_KEY",
@@ -439,16 +441,9 @@ def development_commands(
 ) -> tuple[list[str], list[str]]:
     """Build the API and Vite commands for interactive development."""
     api = backend_command(api_port)
-    bun = shutil.which("bun")
-    if bun is None:
-        raise RuntimeError("Bun is unavailable")
     web = [
-        bun,
-        "run",
-        "--cwd",
-        str(root / "apps" / "web"),
-        "dev",
-        "--",
+        node_executable(root),
+        str(root / "apps/web/node_modules/vite/bin/vite.js"),
         "--host",
         "127.0.0.1",
         "--port",

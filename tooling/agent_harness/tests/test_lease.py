@@ -60,7 +60,7 @@ class ProtectedPathTests(unittest.TestCase):
             "contracts/openapi/v1.json": ("contract",),
             "apps/web/src/api/generated/schema.d.ts": ("contract",),
             "bun.lock": ("lockfile",),
-            "pixi.lock": ("lockfile",),
+            "uv.lock": ("lockfile",),
             "packages/analysis/src/ditto_analysis/storage/migration_v1_to_v2.sql": (
                 "migration",
             ),
@@ -165,8 +165,8 @@ class SharedLeaseTests(unittest.TestCase):
             )
 
             assert replacement.owner == "replacement"
-            assert not authorize_paths(main, ("pixi.lock",), now=after_expiry).allowed
-            assert authorize_paths(secondary, ("pixi.lock",), now=after_expiry).allowed
+            assert not authorize_paths(main, ("uv.lock",), now=after_expiry).allowed
+            assert authorize_paths(secondary, ("uv.lock",), now=after_expiry).allowed
 
     def test_worktree_identity_isolated_but_guard_and_lease_are_shared(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -269,7 +269,7 @@ class HookLeaseTests(unittest.TestCase):
                     "command": (
                         "*** Begin Patch\n"
                         "*** Update File: contracts/openapi/v1.json\n"
-                        "*** Delete File: pixi.lock\n"
+                        "*** Delete File: uv.lock\n"
                         "*** Move to: migrations/0002.sql\n"
                         "*** End Patch"
                     )
@@ -279,7 +279,7 @@ class HookLeaseTests(unittest.TestCase):
             assert extract_edited_paths(payload, root) == [
                 "contracts/openapi/v1.json",
                 "migrations/0002.sql",
-                "pixi.lock",
+                "uv.lock",
             ]
 
     def test_pre_write_blocks_without_lease_and_allows_current_integrator(
@@ -310,12 +310,15 @@ class HookLeaseTests(unittest.TestCase):
 
     def test_known_bash_writers_cannot_bypass_pre_write_lease(self) -> None:
         commands = (
-            "pixi run -e dev python -m tooling.contracts.export_openapi --write",
+            "uv run --no-sync python -m tooling.contracts.export_openapi --write",
             "bun run contract:codegen -- --write",
             "bun run --cwd apps/web generate-contracts",
             "bun apps/web/scripts/page-contract/generate.mjs",
             "bun install",
-            "pixi update",
+            "uv lock",
+            "uv sync",
+            "uv run pytest",
+            "uv add polars",
             "printf changed > bun.lock",
             "cp fixture.ts apps/web/src/features/shell/page-contracts.generated.ts",
             "mv fixture.ts apps/web/src/routeTree.gen.ts",
@@ -339,7 +342,7 @@ class HookLeaseTests(unittest.TestCase):
                 pre_tool_decision(
                     {
                         "tool_name": "Bash",
-                        "tool_input": {"command": "pixi run -e dev check-contract"},
+                        "tool_input": {"command": "task check-contract"},
                     },
                     root,
                     "feature",

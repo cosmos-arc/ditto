@@ -30,7 +30,7 @@ def _dist_dir(argument: Path | None) -> Path:
     configured = os.environ.get("DITTO_OASDIFF_DIST_DIR")
     if configured:
         return Path(configured).resolve()
-    return bootstrap_oasdiff.ensure_distribution(
+    return bootstrap_oasdiff.prepared_distribution(
         system=platform.system(),
         machine=platform.machine(),
     )

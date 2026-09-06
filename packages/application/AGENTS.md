@@ -13,6 +13,6 @@ CQRS 应用编排层，协调 data 与各 capability package。允许依赖 kern
 
 ## 验证与参考
 
-- `pixi run -e dev pytest packages/application/tests`
-- `pixi run -e dev arch-check`
+- `uv run --no-sync pytest packages/application/tests`
+- `task arch-check`
 - [架构快速参考](../../docs/architecture/agent-context-pack.md) · [边界标准](../../docs/architecture/boundaries-and-abstraction-standards.md)

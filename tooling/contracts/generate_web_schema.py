@@ -7,7 +7,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,6 +14,8 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import cast
 from urllib.parse import unquote
+
+from tooling.dev.toolchain import node_executable
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_SNAPSHOT = _REPO_ROOT / "contracts/openapi/v1.json"
@@ -905,15 +906,13 @@ def local_generator() -> tuple[str, Generator]:
             "openapi-typescript version mismatch: "
             + f"expected {EXPECTED_GENERATOR_VERSION}, found {version!r}"
         )
-    bun = shutil.which("bun")
-    if bun is None:
-        raise CodegenError("Bun is required to execute the local generator")
+    node = node_executable(_REPO_ROOT)
 
     def run(source: Path, output: Path) -> None:
         environment = os.environ.copy()
         environment.update({"CI": "1", "NO_COLOR": "1"})
-        subprocess.run(  # noqa: S603 -- exact Bun and local pinned CLI paths
-            [bun, str(_GENERATOR_CLI), str(source), "--output", str(output)],
+        subprocess.run(  # noqa: S603 -- exact Node and local pinned CLI paths
+            [node, str(_GENERATOR_CLI), str(source), "--output", str(output)],
             # Keep openapi-typescript from auto-discovering the lint-only
             # multi-API Redocly config. The absolute schema is the sole input.
             cwd=output.parent,

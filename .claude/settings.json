@@ -11,7 +11,8 @@
       "Task(**)",
       "TodoWrite(**)",
       "AskUserQuestion(**)",
-      "Bash(pixi *)",
+      "Bash(uv *)",
+      "Bash(task *)",
       "Bash(git *)",
       "Bash(gh *)"
     ],

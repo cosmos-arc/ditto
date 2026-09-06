@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def _passing_web_gate() -> ToolEvidence:
     return ToolEvidence(
-        command=("pixi", "run", "-e", "dev", "check-web"),
+        command=("task", "check-web"),
         exit_code=0,
     )
 

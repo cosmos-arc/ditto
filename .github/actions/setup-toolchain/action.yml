@@ -1,0 +1,28 @@
+name: Setup repository toolchain
+description: Install declared runtimes and the locked Python development workspace
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-bun
+    - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      with:
+        version-file: pyproject.toml
+        enable-cache: true
+        cache-dependency-glob: |
+          uv.lock
+          .python-version
+          **/pyproject.toml
+    - name: Resolve Task version
+      id: task
+      shell: bash
+      run: echo "version=$(cat .task-version)" >> "$GITHUB_OUTPUT"
+    - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+      with:
+        version: ${{ steps.task.outputs.version }}
+        repo-token: ${{ github.token }}
+    - name: Install locked Python workspace
+      shell: bash
+      run: task python-install
+    - name: Validate runtime versions
+      shell: bash
+      run: task toolchain-check

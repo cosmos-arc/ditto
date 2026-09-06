@@ -99,8 +99,8 @@
 以下结果来自 2026 年 3 月 14 日在本地开发环境执行：
 
 ```bash
-pixi run -e dev python scripts/benchmarks/derived_benchmark.py --scale S --scale M --iterations 3
-pixi run -e dev python scripts/benchmarks/derived_benchmark.py --scale L --iterations 1
+uv run --no-sync python scripts/benchmarks/derived_benchmark.py --scale S --scale M --iterations 3
+uv run --no-sync python scripts/benchmarks/derived_benchmark.py --scale L --iterations 1
 ```
 
 | Workload | Scale | Elapsed (s) | Throughput (rows/s) | 用途 |

@@ -30,8 +30,8 @@ ditto ops promotion-collect <dataset>     # 工具收集客观证据 → Markdow
 ### `ditto ops promotion-collect` — 收集证据
 
 ```bash
-pixi run -e dev ditto ops promotion-collect stock_daily
-pixi run -e dev ditto ops promotion-collect stock_daily --output data_root/promotion_evidence/stock_daily/2026-06-15.md
+uv run --no-sync ditto ops promotion-collect stock_daily
+uv run --no-sync ditto ops promotion-collect stock_daily --output data_root/promotion_evidence/stock_daily/2026-06-15.md
 ```
 
 收集每条 criterion 的客观测量，输出 Markdown 报告：
@@ -45,7 +45,7 @@ pixi run -e dev ditto ops promotion-collect stock_daily --output data_root/promo
 ### `ditto ops promotion-review` — 提交 evidence
 
 ```bash
-pixi run -e dev ditto ops promotion-review stock_daily \
+uv run --no-sync ditto ops promotion-review stock_daily \
   --criterion "complete PIT/replay coverage for the dataset" \
   --evidence-uri "ditto://evidence/stock_daily/pit" \
   --reviewed-by architecture-review --passed
@@ -58,13 +58,13 @@ pixi run -e dev ditto ops promotion-review stock_daily \
 ### `ditto ops promotion-history` — 查看治理历史
 
 ```bash
-pixi run -e dev ditto ops promotion-history stock_daily
+uv run --no-sync ditto ops promotion-history stock_daily
 ```
 
 ### `ditto ops promotion-revoke` — 撤销晋级
 
 ```bash
-pixi run -e dev ditto ops promotion-revoke stock_daily \
+uv run --no-sync ditto ops promotion-revoke stock_daily \
   --revoked-by architecture-review --reason failed_revalidation
 ```
 
@@ -102,14 +102,14 @@ Production launch closure 使用固定 evidence 目录，便于 RC acceptance �
 
 ```bash
 # 1. 确认 launch 数据集 catalog/freshness/read-model 状态
-pixi run -e dev python -m ditto_apps.cli.main ops status --json
+uv run --no-sync python -m ditto_apps.cli.main ops status --json
 
 # 2. 为 14 个 launch 数据集生成 promotion evidence report
 for dataset in \
   stock_basic stock_daily stock_status balance_sheet income_statement cash_flow \
   valuation_metrics etf_basic etf_daily index_basic index_daily adj_factor \
   fund_adj macro_indicators; do
-  pixi run -e dev python -m ditto_apps.cli.main ops promotion-collect "$dataset" \
+  uv run --no-sync python -m ditto_apps.cli.main ops promotion-collect "$dataset" \
     --output "artifacts/promotion/${dataset}/2026-06-21.md"
 done
 
@@ -121,7 +121,7 @@ for dataset in \
     "complete PIT/replay coverage for the dataset" \
     "document runtime owner, freshness SLA, and source failover policy" \
     "pass catalog-backed runtime/read-model tests without research opt-in"; do
-    pixi run -e dev python -m ditto_apps.cli.main ops promotion-review "$dataset" \
+    uv run --no-sync python -m ditto_apps.cli.main ops promotion-review "$dataset" \
       --criterion "$criterion" \
       --evidence-uri "artifacts/promotion/${dataset}/2026-06-21.md" \
       --reviewed-by codex-rc1-launch \
@@ -130,7 +130,7 @@ for dataset in \
 done
 
 # 4. 保存 launch dataset status 快照
-pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py \
+uv run --no-sync python scripts/acceptance/rc1_real_data_acceptance.py \
   --real-data --require-promoted \
   --output artifacts/acceptance/rc1-report.json
 ```
@@ -144,7 +144,7 @@ count、freshness status。该 artifact 是发布检查证据，不属于代码�
 
 ```bash
 # 1. 收集 stock_daily 证据
-pixi run -e dev ditto ops promotion-collect stock_daily \
+uv run --no-sync ditto ops promotion-collect stock_daily \
   --output /tmp/stock_daily-evidence.md
 
 # 2. reviewer 审阅报告，确认 3 条 criterion 通过
@@ -154,7 +154,7 @@ for criterion in \
   "complete PIT/replay coverage for the dataset" \
   "document runtime owner, freshness SLA, and source failover policy" \
   "pass catalog-backed runtime/read-model tests without research opt-in"; do
-  pixi run -e dev ditto ops promotion-review stock_daily \
+  uv run --no-sync ditto ops promotion-review stock_daily \
     --criterion "$criterion" \
     --evidence-uri "ditto://evidence/stock_daily/2026-06-15" \
     --reviewed-by architecture-review --passed
@@ -163,5 +163,5 @@ done
 # 第 3 条提交后，handler 自动晋级 stock_daily → initial-focus
 
 # 4. 验证
-pixi run -e dev ditto ops promotion-history stock_daily
+uv run --no-sync ditto ops promotion-history stock_daily
 ```

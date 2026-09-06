@@ -40,7 +40,7 @@ stocks:
 生成脚本：`tests/scripts/generate_reconciliation_data.py`
 
 ```bash
-pixi run -e dev python tests/scripts/generate_reconciliation_data.py --date 2024-06-28
+uv run --no-sync python tests/scripts/generate_reconciliation_data.py --date 2024-06-28
 ```
 
 ## 对账标准

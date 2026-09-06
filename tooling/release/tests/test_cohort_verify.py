@@ -54,8 +54,10 @@ def _recompute_cohort_id(document: dict[str, object]) -> None:
 
 def _portable_cohort(root: Path) -> tuple[Path, dict[str, object]]:
     contract = root / "release-inputs" / "contracts" / "openapi" / "v1.json"
-    pixi_lock = root / "release-inputs" / "pixi.lock"
+    uv_lock = root / "release-inputs" / "uv.lock"
     bun_lock = root / "release-inputs" / "bun.lock"
+    interpreter = root / "release-inputs" / ".python-version"
+    source = root / "release-inputs" / "Dockerfile"
     backend = root / "ditto-image.tar"
     web = root / "ditto-web.tar"
     backend_sbom = root / "ditto-backend.spdx.json"
@@ -66,7 +68,9 @@ def _portable_cohort(root: Path) -> tuple[Path, dict[str, object]]:
     policy_digest = policy.with_suffix(".sha256")
     contract.parent.mkdir(parents=True)
     contract.write_bytes(b'{"openapi":"3.1.0"}\n')
-    pixi_lock.write_bytes(b"pixi-lock\n")
+    uv_lock.write_bytes(b"pixi-lock\n")
+    interpreter.write_text("cpython-3.13.14")
+    source.write_text("FROM python@sha256:fixture")
     bun_lock.write_bytes(b"bun-lock\n")
     backend.write_bytes(b"immutable-backend")
     web.write_bytes(b"immutable-web")
@@ -121,7 +125,9 @@ def _portable_cohort(root: Path) -> tuple[Path, dict[str, object]]:
         verifier_files.append(verifier_file)
     artifacts = (
         contract,
-        pixi_lock,
+        uv_lock,
+        interpreter,
+        source,
         bun_lock,
         backend,
         web,

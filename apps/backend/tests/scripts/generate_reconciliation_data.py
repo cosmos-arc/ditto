@@ -6,7 +6,7 @@
 用于 E2E 测试中的跨源对账验证。
 
 使用方法：
-    pixi run -e dev python tests/scripts/generate_reconciliation_data.py
+    uv run --no-sync python tests/scripts/generate_reconciliation_data.py
 """
 
 from __future__ import annotations

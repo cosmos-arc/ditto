@@ -71,14 +71,13 @@ def _run(
 
 def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[str]]]:
     commands = [
-        ("check", ["pixi", "run", "-e", "dev", "check"]),
+        ("check", ["task", "check"]),
         (
             "targeted-golden",
             [
-                "pixi",
+                "uv",
                 "run",
-                "-e",
-                "dev",
+                "--no-sync",
                 "pytest",
                 "apps/backend/tests/integration/test_golden_e2e.py",
                 "apps/backend/tests/integration/test_stock_selection_golden_e2e.py",
@@ -91,10 +90,9 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
         (
             "promotion-evidence-stock-daily",
             [
-                "pixi",
+                "uv",
                 "run",
-                "-e",
-                "dev",
+                "--no-sync",
                 "python",
                 "-m",
                 "ditto_apps.cli.main",
@@ -109,10 +107,9 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
             (
                 "real-data-e2e",
                 [
-                    "pixi",
+                    "uv",
                     "run",
-                    "-e",
-                    "dev",
+                    "--no-sync",
                     "pytest",
                     "apps/backend/tests/e2e/test_real_data_pipeline.py",
                     "apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py",
@@ -127,10 +124,9 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
             (
                 "maturity-status",
                 [
-                    "pixi",
+                    "uv",
                     "run",
-                    "-e",
-                    "dev",
+                    "--no-sync",
                     "python",
                     "-m",
                     "ditto_apps.cli.main",

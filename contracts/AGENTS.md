@@ -34,4 +34,4 @@ version or explicit deprecation and approval. Never generate from a running
 server or network URL, never create broad lint ignores, and never use mock-only
 evidence for live behavior.
 
-Run `pixi run -e dev check-contract` before completion.
+Run `task check-contract` before completion.

@@ -382,10 +382,10 @@ test/src ≈ 1.32 健康；kernel/execution >2.0；12,177 单测 189s 全绿；�
 ## 6. 验证命令（复现）
 
 ```bash
-pixi run -e dev arch-check          # 37 contracts kept, 0 broken
-pixi run -e dev type                # 0/0/0
-pixi run -e dev lint                # All checks passed
-pixi run -e dev test --unit --fast  # 12177 passed, 1 xfailed
+task arch-check --          # 37 contracts kept, 0 broken
+task type --                # 0/0/0
+task lint --                # All checks passed
+task test -- --unit --fast  # 12177 passed, 1 xfailed
 
 # 风险信号复核
 grep -rE "TYPE_CHECKING" packages/*/src --include='*.py' | wc -l   # 2

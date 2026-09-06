@@ -46,8 +46,8 @@ def create_instrument_command(
     创建双模式（按日期/按标的）摄取命令的工厂函数.
 
     生成一个支持两种模式的命令函数:
-    1. 按日期批量摄取: ``pixi run <cli_path> 2024-01-15``
-    2. 按标的+时间段摄取: ``pixi run <cli_path> --ticker 000001 -s ... -e ...``
+    1. 按日期批量摄取: ``uv run --no-sync <cli_path> 2024-01-15``
+    2. 按标的+时间段摄取: ``uv run --no-sync <cli_path> --ticker 000001 -s ... -e ...``
 
     Args:
         dataset: 数据集名称 (如 "stock_daily", "valuation_metrics")
@@ -107,11 +107,11 @@ def create_instrument_command(
             f"{description}.\n\n"
             "支持两种模式:\n\n"
             "1. 按日期批量摄取:\n"
-            f"   pixi run {cli_path} 2024-01-15\n\n"
+            f"   uv run --no-sync {cli_path} 2024-01-15\n\n"
             "2. 按标的+时间段摄取 (标识符三选一):\n"
-            f"   pixi run {cli_path} --ticker 000001 "
+            f"   uv run --no-sync {cli_path} --ticker 000001 "
             "-s 2024-01-01 -e 2024-06-30\n"
-            f"   pixi run {cli_path} --standard-ticker 000001.XSHE "
+            f"   uv run --no-sync {cli_path} --standard-ticker 000001.XSHE "
             "-s 2024-01-01 -e 2024-06-30"
         )
     else:

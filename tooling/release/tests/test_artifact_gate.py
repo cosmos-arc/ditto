@@ -51,6 +51,7 @@ def test_owned_temporary_directory_resolves_system_symlink_before_staging(
         artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
     )
     monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(artifact_gate, "environment_identity", lambda _root: "c" * 64)
     monkeypatch.setattr(
         artifact_gate, "_archive_image_config", lambda _path: "sha256:" + "d" * 64
     )
@@ -385,7 +386,10 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
     contract = tmp_path / "contracts" / "openapi" / "v1.json"
     contract.parent.mkdir(parents=True)
     contract.write_bytes(b'{"openapi":"3.1.0"}\n')
-    (tmp_path / "pixi.lock").write_bytes(b"pixi\n")
+    (tmp_path / "uv.lock").write_bytes(b"uv\n")
+    (tmp_path / ".python-version").write_text("cpython-3.13.14")
+    (tmp_path / "deploy/docker").mkdir(parents=True)
+    (tmp_path / "deploy/docker/Dockerfile").write_text("FROM fixture")
     (tmp_path / "bun.lock").write_bytes(b"bun\n")
     output = tmp_path / "dist"
     output.mkdir()
@@ -507,7 +511,7 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
     paths = {str(record["path"]) for record in verified["artifacts"]}
     assert paths >= {
         "release-inputs/contracts/openapi/v1.json",
-        "release-inputs/pixi.lock",
+        "release-inputs/uv.lock",
         "release-inputs/bun.lock",
         "release-tools/tooling/__init__.py",
         "release-tools/tooling/release/__init__.py",
@@ -595,6 +599,7 @@ def test_build_export_and_smoke_use_the_build_output_id(
         artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
     )
     monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(artifact_gate, "environment_identity", lambda _root: "c" * 64)
     monkeypatch.setattr(
         artifact_gate, "_archive_image_config", lambda _path: "sha256:" + "d" * 64
     )

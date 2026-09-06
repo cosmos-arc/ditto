@@ -197,10 +197,9 @@ def _live_evidence_environment(
 
 def _pytest(*targets: str) -> tuple[str, ...]:
     return (
-        "pixi",
+        "uv",
         "run",
-        "-e",
-        "dev",
+        "--no-sync",
         "pytest",
         *targets,
         "-q",
@@ -219,7 +218,7 @@ def deterministic_commands() -> tuple[CommandSpec, ...]:
         + "test_static_openapi_matches_canonical_runtime_contract"
     )
     return (
-        CommandSpec("backend-check", ("pixi", "run", "-e", "dev", "check")),
+        CommandSpec("backend-check", ("task", "check")),
         CommandSpec(
             "stock-golden",
             _pytest("apps/backend/tests/e2e/test_r3_stock_selection_golden.py"),
@@ -411,7 +410,7 @@ def run_fixture_acceptance(
     source_commit: str | None = None,
     command_runner: CommandRunner = _subprocess_runner,
     invocation: str = (
-        "pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance "
+        "uv run --no-sync python -m ditto_apps.scripts.r3_research_acceptance "
         "--fixture --workspace-root . "
         "--output artifacts/acceptance/r3-report.json"
     ),
@@ -541,7 +540,7 @@ def run_live_acceptance(
     source_commit: str | None = None,
     command_runner: CommandRunner = _subprocess_runner,
     invocation: str = (
-        "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev python -m "
+        "DITTO_RUN_REAL_DATA_ACCEPTANCE=1 uv run --no-sync python -m "
         "ditto_apps.scripts.r3_research_acceptance --real-data "
         "--workspace-root . "
         "--require-certified --require-both-golden-lanes "

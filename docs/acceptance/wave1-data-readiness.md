@@ -13,9 +13,9 @@ Phase 2 (Task 2.1-2.2) 完成：RC1 release acceptance `--real-data --require-pr
 ## Command Evidence
 
 - `source scripts/acceptance/wave1_env.sh`（Phase 1 固化 env：`DITTO_DATA_ROOT` / `SQLITE_PATH` / `DUCKDB_PATH` / `ENVIRONMENT=testing` / `PYTHONUNBUFFERED`，data root 默认 `.tmp/ditto-rc1`，gitignore 已覆盖）。
-- `pixi run -e dev python -m ditto_apps.cli.main init config --data-root .tmp/ditto-rc1 --force` → exit 0；建 31 directories + `metadata.sqlite`（catalog/promotion store 共用）。
-- `pixi run -e dev python scripts/acceptance/wave1_catalog_check.py` → 跑 `ops status --json` + `validate_maturity_status`，输出 14 数据集 per-dataset 矩阵与 failure 清单。RED（空环境）72 failures → GREEN（Phase 1 完成）0 failures。
-- `pixi run -e dev python -m ditto_apps.cli.main ops status --json` → exit 0；含 maturity_summary + per-dataset catalog/maturity/promotion 字段。
+- `uv run --no-sync python -m ditto_apps.cli.main init config --data-root .tmp/ditto-rc1 --force` → exit 0；建 31 directories + `metadata.sqlite`（catalog/promotion store 共用）。
+- `uv run --no-sync python scripts/acceptance/wave1_catalog_check.py` → 跑 `ops status --json` + `validate_maturity_status`，输出 14 数据集 per-dataset 矩阵与 failure 清单。RED（空环境）72 failures → GREEN（Phase 1 完成）0 failures。
+- `uv run --no-sync python -m ditto_apps.cli.main ops status --json` → exit 0；含 maturity_summary + per-dataset catalog/maturity/promotion 字段。
 - `ditto ops promotion-collect <dataset> --output /tmp/wave1-rc1-promotion/<dataset>.md` × 8 experimental 数据集 → 客观证据 markdown（criterion 1/2 measured，criterion 3 needs_review）。
 - `ditto ops promotion-review <dataset> --criterion <text> --evidence-uri <uri> --reviewed-by wave1-acceptance --passed` × 8 × 3 → 第 3 条 satisfied 后 `assess_dataset_promotion` 自动写 experimental→initial-focus override。
 - `ditto ops promotion-history <dataset>` → `promoted experimental->initial-focus actor=wave1-acceptance` audit event 可查。
@@ -74,7 +74,7 @@ Full RC1 required datasets are defined by `scripts/acceptance/rc1_requirements.p
 最终命令:
 
 ```
-pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py \
+uv run --no-sync python scripts/acceptance/rc1_real_data_acceptance.py \
   --real-data --require-promoted \
   --output artifacts/acceptance/rc1-report.json
 ```

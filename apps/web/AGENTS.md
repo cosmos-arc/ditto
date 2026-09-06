@@ -1,6 +1,6 @@
 # Ditto Web Agent Guide
 
-React SPA 消费同仓 FastAPI 的本地 OpenAPI 契约。Web 依赖和叶子任务由 Bun 管理，跨栈验证从根 Pixi 入口执行。
+React SPA 消费同仓 FastAPI 的本地 OpenAPI 契约。Web 依赖和叶子任务由 Bun 管理，跨栈验证从根 Task 入口执行。
 
 ## 按任务读取
 

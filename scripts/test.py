@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-pixi test 命令包装脚本
+task test 命令包装脚本
 
 简化测试命令，支持参数驱动：
-- pixi run test              # 默认：单元测试（并行）+ 集成测试（串行）
-- pixi run test --unit       # 只跑单元测试（并行）
-- pixi run test --integration # 只跑集成测试（串行）
-- pixi run test --fast       # 快速测试（跳过 slow/integration）
-- pixi run test --cov        # 带覆盖率报告
-- pixi run test --cov-xml    # 覆盖率 XML（CI 用）
-- pixi run test --snapshot   # 支持 inline-snapshot（串行）
-- pixi run -e dev pytest -m sandbox_live  # 物理容器安全验收（显式运行）
+- task test --              # 默认：单元测试（并行）+ 集成测试（串行）
+- task test -- --unit       # 只跑单元测试（并行）
+- task test -- --integration # 只跑集成测试（串行）
+- task test -- --fast       # 快速测试（跳过 slow/integration）
+- task test -- --cov        # 带覆盖率报告
+- task test -- --cov-xml    # 覆盖率 XML（CI 用）
+- task test -- --snapshot   # 支持 inline-snapshot（串行）
+- uv run --no-sync pytest -m sandbox_live  # 物理容器安全验收（显式运行）
 """
 
 import os

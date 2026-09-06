@@ -24,7 +24,7 @@ from tooling.dev.supervisor import (
     wait_until_ready,
     write_isolated_data_source_configuration,
 )
-from tooling.dev.toolchain import validate_toolchain
+from tooling.dev.toolchain import node_executable, validate_toolchain
 
 _ISOLATED_OBSERVABILITY_CONFIG = """\
 LOG_LEVEL=WARNING
@@ -161,10 +161,10 @@ def _write_runtime_config(web_root: Path, api_port: int) -> None:
     )
 
 
-def _preview_command(root: Path, bun: str, web_port: int) -> list[str]:
+def _preview_command(root: Path, node: str, web_port: int) -> list[str]:
     """Use the already-installed workspace Vite binary without package resolution."""
     return [
-        bun,
+        node,
         str(root / "apps" / "web" / "node_modules" / "vite" / "bin" / "vite.js"),
         "preview",
         "--host",
@@ -175,10 +175,10 @@ def _preview_command(root: Path, bun: str, web_port: int) -> list[str]:
     ]
 
 
-def _playwright_command(root: Path, bun: str, spec: str) -> list[str]:
+def _playwright_command(root: Path, node: str, spec: str) -> list[str]:
     """Use the pinned root Playwright CLI and one explicit lifecycle phase."""
     return [
-        bun,
+        node,
         str(root / "node_modules" / "@playwright" / "test" / "cli.js"),
         "test",
         "--config",
@@ -232,14 +232,14 @@ def _incompatible_cohort_api_command(port: int) -> list[str]:
 
 def _run_playwright(
     root: Path,
-    bun: str,
+    node: str,
     spec: str,
     environment: dict[str, str],
 ) -> None:
     phase_environment = dict(environment)
     output_root = Path(environment["DITTO_SYSTEM_OUTPUT_ROOT"])
     phase_environment["DITTO_SYSTEM_OUTPUT_ROOT"] = str(output_root / Path(spec).stem)
-    _run(_playwright_command(root, bun, spec), root, phase_environment)
+    _run(_playwright_command(root, node, spec), root, phase_environment)
 
 
 def _spawn_ready(
@@ -263,7 +263,7 @@ def _spawn_ready(
 def _run_primary_cohort(
     root: Path,
     web_root: Path,
-    bun: str,
+    node: str,
     api_port: int,
     web_port: int,
     environment: dict[str, str],
@@ -281,26 +281,26 @@ def _run_primary_cohort(
             timeout=60,
         )
         web_process = _spawn_ready(
-            _preview_command(root, bun, web_port),
+            _preview_command(root, node, web_port),
             web_root,
             environment,
             port=web_port,
             path="/",
             timeout=30,
         )
-        _run_playwright(root, bun, "cohort.spec.ts", environment)
+        _run_playwright(root, node, "cohort.spec.ts", environment)
 
         # A refused connection proves the built Web does not fall back to mocks.
         terminate_managed(api_process)
         api_process = None
-        _run_playwright(root, bun, "outage.spec.ts", environment)
+        _run_playwright(root, node, "outage.spec.ts", environment)
 
         # A connected peer that never produces HTTP bytes separately proves a
         # finite transport deadline.
         api_process = spawn_managed(_blackhole_command(api_port), root, environment)
         try:
             wait_until_listening("127.0.0.1", api_port, api_process, timeout=5)
-            _run_playwright(root, bun, "timeout.spec.ts", environment)
+            _run_playwright(root, node, "timeout.spec.ts", environment)
         finally:
             terminate_managed(api_process)
             api_process = None
@@ -318,7 +318,7 @@ def _run_primary_cohort(
         )
         _run_playwright(
             root,
-            bun,
+            node,
             "compatibility.spec.ts",
             environment,
         )
@@ -333,7 +333,7 @@ def _run_primary_cohort(
             path="/readyz",
             timeout=60,
         )
-        _run_playwright(root, bun, "restart.spec.ts", environment)
+        _run_playwright(root, node, "restart.spec.ts", environment)
     finally:
         if api_process is not None:
             terminate_managed(api_process)
@@ -343,7 +343,7 @@ def _run_primary_cohort(
 
 def _run_fixture_acceptance(
     root: Path,
-    bun: str,
+    node: str,
     api_port: int,
     environment: dict[str, str],
     *,
@@ -376,14 +376,14 @@ def _run_fixture_acceptance(
             if acceptance.web_root is not None and acceptance.web_port is not None:
                 _write_runtime_config(acceptance.web_root, api_port)
                 web_process = _spawn_ready(
-                    _preview_command(root, bun, acceptance.web_port),
+                    _preview_command(root, node, acceptance.web_port),
                     acceptance.web_root,
                     fixture_environment,
                     port=acceptance.web_port,
                     path="/",
                     timeout=30,
                 )
-            _run_playwright(root, bun, acceptance.spec, fixture_environment)
+            _run_playwright(root, node, acceptance.spec, fixture_environment)
         finally:
             if web_process is not None:
                 terminate_managed(web_process)
@@ -399,6 +399,7 @@ def main() -> int:
         return 1
     try:
         validate_toolchain(root)
+        node = node_executable(root)
         api_port, web_port = service_ports(0, 0)
         cache_root = root / ".cache" / "ditto-system"
         cache_root.mkdir(parents=True, exist_ok=True)
@@ -416,14 +417,14 @@ def main() -> int:
             environment.update(_cohort_environment(root))
             _run([bun, "run", "build"], web_root, environment)
             _write_runtime_config(web_root, api_port)
-            _run_primary_cohort(root, web_root, bun, api_port, web_port, environment)
+            _run_primary_cohort(root, web_root, node, api_port, web_port, environment)
 
             # The normal product profile keeps Agent disabled. This fixture
             # mounts the production router over real SQLite and pre-issued,
             # fictional actions without a model, credentials, or write tool.
             _run_fixture_acceptance(
                 root,
-                bun,
+                node,
                 api_port,
                 environment,
                 acceptance=_FixtureAcceptance(
@@ -440,7 +441,7 @@ def main() -> int:
             # both persistence stores are the production implementations.
             _run_fixture_acceptance(
                 root,
-                bun,
+                node,
                 api_port,
                 environment,
                 acceptance=_FixtureAcceptance(

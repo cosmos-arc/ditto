@@ -1,4 +1,4 @@
-"""Validate product package metadata against the root Pixi/Bun workspace."""
+"""Validate product package metadata against the root uv/Bun workspace."""
 
 from __future__ import annotations
 
@@ -7,19 +7,12 @@ import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from re import compile as compile_pattern
 from typing import cast
-from urllib.parse import urlparse
 
-import yaml
 from packaging.requirements import InvalidRequirement, Requirement
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.specifiers import SpecifierSet
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
-
-_CONDA_ARTIFACT = compile_pattern(
-    r"^(?P<name>.+)-(?P<version>\d[^-]*)-[^-]+\.(?:conda|tar\.bz2)$"
-)
 
 
 @dataclass(frozen=True)
@@ -99,64 +92,52 @@ def _discover_leaves(root: Path) -> tuple[LeafPackage, ...]:
     return tuple(leaves)
 
 
-def _root_local_packages(pixi: dict[str, object]) -> dict[str, str]:
-    declarations = _table(pixi.get("pypi-dependencies"))
+def _root_local_packages(root: Path, document: dict[str, object]) -> dict[str, str]:
+    uv = _table(_table(document.get("tool")).get("uv"))
+    sources = _table(uv.get("sources"))
+    members = _strings(_table(uv.get("workspace")).get("members"))
     packages: dict[str, str] = {}
-    for raw_name, raw_value in declarations.items():
-        value = _table(raw_value)
-        path = value.get("path")
-        if isinstance(path, str):
-            packages[path.removeprefix("./").rstrip("/")] = canonicalize_name(raw_name)
+    for member in members:
+        for directory in root.glob(member):
+            project = _table(_load_toml(directory / "pyproject.toml").get("project"))
+            name = project.get("name")
+            if (
+                isinstance(name, str)
+                and _table(sources.get(name)).get("workspace") is True
+            ):
+                packages[directory.relative_to(root).as_posix()] = canonicalize_name(
+                    name
+                )
     return packages
 
 
-def _root_constraints(pixi: dict[str, object]) -> dict[str, SpecifierSet]:
-    constraints: dict[str, SpecifierSet] = {}
-    for table_name in ("dependencies", "pypi-dependencies"):
-        for raw_name, raw_value in _table(pixi.get(table_name)).items():
-            if not isinstance(raw_value, str):
-                continue
-            try:
-                constraints[canonicalize_name(raw_name)] = SpecifierSet(raw_value)
-            except InvalidSpecifier:
-                continue
-    return constraints
+def _root_constraints(document: dict[str, object]) -> dict[str, SpecifierSet]:
+    declarations = _strings(_table(document.get("project")).get("dependencies"))
+    return {
+        canonicalize_name(requirement.name): requirement.specifier
+        for declaration in declarations
+        if (requirement := Requirement(declaration))
+    }
 
 
 def _load_lock(path: Path) -> tuple[dict[str, str], dict[str, set[str]]]:
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    document = _table(raw)
-    entries = document.get("packages")
+    document = _load_toml(path)
+    entries = document.get("package")
     if not isinstance(entries, list):
         return {}, {}
-
     local: dict[str, str] = {}
     resolved: dict[str, set[str]] = {}
     for raw_entry in entries:
         entry = _table(raw_entry)
-        name = entry.get("name")
-        version = entry.get("version")
-        conda_source = entry.get("conda")
-        if (
-            (not isinstance(name, str) or not isinstance(version, str))
-            and isinstance(conda_source, str)
-            and (
-                match := _CONDA_ARTIFACT.fullmatch(
-                    Path(urlparse(conda_source).path).name
-                )
-            )
-        ):
-            name = match.group("name")
-            version = match.group("version")
-        if not isinstance(name, str):
+        name, version = entry.get("name"), entry.get("version")
+        if not isinstance(name, str) or not isinstance(version, str):
             continue
-        canonical_name = canonicalize_name(name)
-        source = entry.get("pypi")
-        if isinstance(source, str) and source.startswith("./"):
-            local[source.removeprefix("./").rstrip("/")] = canonical_name
-            continue
-        if isinstance(version, str):
-            resolved.setdefault(canonical_name, set()).add(version)
+        source = _table(entry.get("source"))
+        editable = source.get("editable")
+        if isinstance(editable, str):
+            local[editable] = canonicalize_name(name)
+        elif "registry" in source:
+            resolved.setdefault(canonicalize_name(name), set()).add(version)
     return local, resolved
 
 
@@ -182,7 +163,7 @@ def _dependency_violations(
             versions = resolved.get(name, set())
             if not versions:
                 violations.append(
-                    f"{leaf.path}: dependency {declaration!r} is absent from pixi.lock"
+                    f"{leaf.path}: dependency {declaration!r} is absent from uv.lock"
                 )
                 continue
             combined = requirement.specifier
@@ -194,7 +175,7 @@ def _dependency_violations(
                     violations.append(
                         " ".join(
                             (
-                                f"pixi.lock: dependency {name!r} has invalid version",
+                                f"uv.lock: dependency {name!r} has invalid version",
                                 repr(raw_version),
                             )
                         )
@@ -241,19 +222,13 @@ def _mapping_violations(
 def validate_workspace(root: Path, *, expected_local_count: int = 13) -> list[str]:
     """Return deterministic package-contract violations for ``root``."""
     root = root.resolve()
-    root_project = _table(_load_toml(root / "pyproject.toml").get("project"))
-    pixi = _load_toml(root / "pixi.toml")
-    workspace = _table(pixi.get("workspace"))
+    document = _load_toml(root / "pyproject.toml")
+    root_project = _table(document.get("project"))
     product_version = root_project.get("version")
-    pixi_version = workspace.get("version")
     violations: list[str] = []
     if not isinstance(product_version, str):
         violations.append("pyproject.toml: [project].version is required")
         product_version = ""
-    if pixi_version != product_version:
-        violations.append(
-            "pixi.toml: [workspace].version must equal pyproject.toml [project].version"
-        )
     violations.extend(_javascript_version_violations(root, product_version))
 
     leaves = _discover_leaves(root)
@@ -278,25 +253,25 @@ def validate_workspace(root: Path, *, expected_local_count: int = 13) -> list[st
                 )
             )
 
-    declared = _root_local_packages(pixi)
+    declared = _root_local_packages(root, document)
     violations.extend(
         _mapping_violations(
-            source="pixi.toml [pypi-dependencies]",
+            source="pyproject.toml [tool.uv.sources]",
             actual=declared,
             expected=expected,
         )
     )
 
-    locked, resolved = _load_lock(root / "pixi.lock")
+    locked, resolved = _load_lock(root / "uv.lock")
     violations.extend(
-        _mapping_violations(source="pixi.lock", actual=locked, expected=expected)
+        _mapping_violations(source="uv.lock", actual=locked, expected=expected)
     )
 
     violations.extend(
         _dependency_violations(
             leaves,
             set(expected.values()),
-            _root_constraints(pixi),
+            _root_constraints(document),
             resolved,
         )
     )

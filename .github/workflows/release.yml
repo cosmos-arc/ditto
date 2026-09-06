@@ -72,7 +72,7 @@ jobs:
           test "$product_version" = "$manifest_version"
           generated_at="$(python3 -c 'from datetime import UTC, datetime; import sys; print(datetime.fromtimestamp(int(sys.argv[1]), UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))' "$(git show -s --format=%ct "$GITHUB_SHA")")"
           contract_sha256="$(sha256sum contracts/openapi/v1.json | cut -d ' ' -f 1)"
-          environment_lock_sha256="$(sha256sum pixi.lock | cut -d ' ' -f 1)"
+          environment_lock_sha256="$(python3 -m tooling.release.environment_identity)"
           {
             echo "product_version=$product_version"
             echo "generated_at=$generated_at"
@@ -84,7 +84,7 @@ jobs:
         run: mkdir -p dist
       - name: Stage release inputs
         run: |
-          for source in contracts/openapi/v1.json contracts/cohorts/compatibility-policy.json contracts/cohorts/compatibility-policy.sha256 pixi.lock bun.lock; do
+          for source in contracts/openapi/v1.json contracts/cohorts/compatibility-policy.json contracts/cohorts/compatibility-policy.sha256 uv.lock bun.lock .python-version deploy/docker/Dockerfile; do
             test -f "$source"
             test ! -L "$source"
           done
@@ -93,16 +93,18 @@ jobs:
           install -m 0644 contracts/cohorts/compatibility-policy.json dist/release-inputs/contracts/cohorts/compatibility-policy.json
           install -m 0644 contracts/cohorts/compatibility-policy.sha256 dist/release-inputs/contracts/cohorts/compatibility-policy.sha256
           install -m 0644 contracts/openapi/v1.json dist/release-inputs/contracts/openapi/v1.json
-          install -m 0644 pixi.lock dist/release-inputs/pixi.lock
+          install -m 0644 uv.lock dist/release-inputs/uv.lock
+          install -m 0644 .python-version dist/release-inputs/.python-version
+          install -m 0644 deploy/docker/Dockerfile dist/release-inputs/Dockerfile
           install -m 0644 bun.lock dist/release-inputs/bun.lock
           cmp contracts/openapi/v1.json dist/release-inputs/contracts/openapi/v1.json
-          cmp pixi.lock dist/release-inputs/pixi.lock
+          cmp uv.lock dist/release-inputs/uv.lock
           cmp bun.lock dist/release-inputs/bun.lock
           python3 -m tooling.release.cohort_bundle stage-tools \
             --source-root . \
             --workspace-root dist
       - name: Install the frozen Web workspace
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --registry=https://registry.npmjs.org
       - name: Build immutable Web release artifact
         env:
           DITTO_PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
@@ -128,6 +130,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
+          platforms: linux/amd64
           file: deploy/docker/Dockerfile
           push: false
           load: true
@@ -233,7 +236,9 @@ jobs:
             --artifact release-inputs/contracts/openapi/v1.json \
             --artifact release-inputs/contracts/cohorts/compatibility-policy.json \
             --artifact release-inputs/contracts/cohorts/compatibility-policy.sha256 \
-            --artifact release-inputs/pixi.lock \
+            --artifact release-inputs/uv.lock \
+            --artifact release-inputs/.python-version \
+            --artifact release-inputs/Dockerfile \
             --artifact release-inputs/bun.lock \
             --artifact release-tools/tooling/__init__.py \
             --artifact release-tools/tooling/release/__init__.py \
@@ -275,7 +280,9 @@ jobs:
               ditto-web.tar \
               ditto-web.spdx.json \
               release-inputs/contracts/openapi/v1.json \
-              release-inputs/pixi.lock \
+              release-inputs/uv.lock \
+              release-inputs/.python-version \
+              release-inputs/Dockerfile \
               release-inputs/bun.lock \
               release-cohort.json \
               next-cohort-policy/compatibility-policy.json \
@@ -289,6 +296,7 @@ jobs:
         with:
           name: ditto-release-staging-${{ github.sha }}
           path: dist
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
 
@@ -323,7 +331,9 @@ jobs:
             dist/ditto-web.tar
             dist/ditto-web.spdx.json
             dist/release-inputs/contracts/openapi/v1.json
-            dist/release-inputs/pixi.lock
+            dist/release-inputs/uv.lock
+            dist/release-inputs/.python-version
+            dist/release-inputs/Dockerfile
             dist/release-inputs/bun.lock
             dist/release-cohort.json
             dist/next-cohort-policy/compatibility-policy.json
@@ -354,7 +364,9 @@ jobs:
             dist/ditto-web.tar
             dist/ditto-web.spdx.json
             dist/release-inputs/contracts/openapi/v1.json
-            dist/release-inputs/pixi.lock
+            dist/release-inputs/uv.lock
+            dist/release-inputs/.python-version
+            dist/release-inputs/Dockerfile
             dist/release-inputs/bun.lock
             dist/release-cohort.json
             dist/next-cohort-policy/compatibility-policy.json
@@ -362,6 +374,7 @@ jobs:
             dist/ditto-release-cohort.tar
             dist/ditto-release-cohort.attestation.json
             dist/SHA256SUMS
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 90
       - name: Publish long-lived release evidence
@@ -380,7 +393,9 @@ jobs:
             "dist/ditto-web.tar#Web static artifact" \
             "dist/ditto-web.spdx.json#Web SPDX SBOM" \
             "dist/release-inputs/contracts/openapi/v1.json#OpenAPI contract release input" \
-            "dist/release-inputs/pixi.lock#Python environment release input" \
+            "dist/release-inputs/uv.lock#Python environment release input" \
+            "dist/release-inputs/.python-version#Python interpreter version" \
+            "dist/release-inputs/Dockerfile#Python interpreter source" \
             "dist/release-inputs/bun.lock#Web dependency release input" \
             "dist/release-cohort.json#Release cohort manifest" \
             "dist/next-cohort-policy/compatibility-policy.json#Next release compatibility policy candidate" \

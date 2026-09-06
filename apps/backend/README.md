@@ -21,10 +21,10 @@
 
 ```bash
 # 开发模式（热重载）
-pixi run -e dev dev
+task dev
 
 # 生产模式（4 workers）
-pixi run server
+task server
 
 # 健康检查
 curl http://localhost:8000/healthz

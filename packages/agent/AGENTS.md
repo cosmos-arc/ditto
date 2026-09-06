@@ -14,6 +14,6 @@
 
 ## 验证与参考
 
-- `pixi run -e dev pytest packages/agent/tests`
-- `pixi run -e dev arch-check`
+- `uv run --no-sync pytest packages/agent/tests`
+- `task arch-check`
 - [R5 设计](../../docs/plans/2026-08-12-r5-governed-quant-research-agent-design.md) · [架构快速参考](../../docs/architecture/agent-context-pack.md)

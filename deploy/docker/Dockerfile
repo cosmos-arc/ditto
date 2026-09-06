@@ -1,17 +1,16 @@
 # Renovate updates tags and digests together; builds always consume immutable bases.
-FROM ghcr.io/prefix-dev/pixi:0.73.0@sha256:66ae514a4421ca06587291beb037e5151b1b280a4f54eed82f57e9b70b94d5ca AS builder
+FROM ghcr.io/astral-sh/uv:0.12.7@sha256:95f2aa1fe59274951cfe9b0cbc7972e879ff1004bc8945d130a32eb0dbd85945 AS uv
+FROM docker.io/library/python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8 AS builder
 
 WORKDIR /opt/ditto
-
-COPY pixi.toml pixi.lock pyproject.toml README.md ./
+COPY --from=uv /uv /usr/local/bin/uv
+ENV UV_PYTHON_PREFERENCE=only-system UV_PYTHON_DOWNLOADS=never
+COPY uv.lock pyproject.toml .python-version README.md ./
 COPY packages/ ./packages/
 COPY apps/backend/ ./apps/backend/
-COPY config/ ./config/
+RUN uv sync --locked --no-dev --all-packages --no-editable --python /usr/local/bin/python
 
-RUN pixi install --frozen --environment default
-
-
-FROM docker.io/library/debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS runtime
+FROM docker.io/library/python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8 AS runtime
 
 ARG DITTO_PRODUCT_VERSION=0+unknown
 ARG DITTO_GIT_SHA=unknown
@@ -30,7 +29,7 @@ ENV DITTO_CONFIG_ROOT=/opt/ditto \
     DITTO_API_CONTRACT_SHA256=${DITTO_API_CONTRACT_SHA256} \
     ENVIRONMENT=production \
     HOME=/var/lib/ditto \
-    PATH=/opt/ditto/.pixi/envs/default/bin:${PATH} \
+    PATH=/opt/ditto/.venv/bin:${PATH} \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONNOUSERSITE=1 \
     PYTHONUNBUFFERED=1
@@ -41,7 +40,8 @@ LABEL org.opencontainers.image.title="Ditto" \
     io.ditto.api-contract.version="${DITTO_API_CONTRACT_VERSION}" \
     io.ditto.api-contract.sha256="${DITTO_API_CONTRACT_SHA256}"
 
-COPY --from=builder --chown=65532:65532 /opt/ditto /opt/ditto
+COPY --from=builder --chown=65532:65532 /opt/ditto/.venv /opt/ditto/.venv
+COPY --chown=65532:65532 config/ /opt/ditto/config/
 
 RUN mkdir -p /var/lib/ditto/state /var/cache/ditto /var/log/ditto \
     && chown -R 65532:65532 \

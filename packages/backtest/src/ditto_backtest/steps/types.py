@@ -101,13 +101,13 @@ class StepContext:
 
     """
 
-    # -- Day info (set by EngineLoop from Synchronizer output) --
+    # -- Day info (set by EngineLoop from Synchronizer output)
     time_context: TimeContext
     is_rebalance_day: bool
     bars: dict[InstrumentId, MarketSnapshot]
     source_snapshot_ids: dict[InstrumentId, str] = field(default_factory=dict)
 
-    # -- Step outputs (set by steps, read by subsequent steps) --
+    # -- Step outputs (set by steps, read by subsequent steps)
     slice_: Slice | None = None
     account_view: AccountView | None = None
     order_book: OrderBookReadOnly | None = None
@@ -118,7 +118,7 @@ class StepContext:
     execution_plan: ExecutionPlan | None = None
     rules: dict[InstrumentId, InstrumentRules] | None = None
 
-    # -- Daily accumulators (appended by steps) --
+    # -- Daily accumulators (appended by steps)
     step_orders: list[Order] = field(default_factory=list)
     step_fills: list[FillEvent] = field(default_factory=list)
     pre_trade_decisions: list[PreTradeDecisionRecord] = field(default_factory=list)

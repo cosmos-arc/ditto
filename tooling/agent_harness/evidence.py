@@ -50,11 +50,14 @@ _FINGERPRINT_CONFIGS = (
     "apps/web/vitest.config.ts",
     "biome.json",
     "bun.lock",
+    ".node-version",
     "bunfig.toml",
     "contracts/openapi/v1.json",
     "package.json",
-    "pixi.lock",
-    "pixi.toml",
+    "uv.lock",
+    ".python-version",
+    "Taskfile.yml",
+    ".task-version",
     "pyproject.toml",
     "tests/system/playwright.config.ts",
     "tooling/agent_harness/agent_eval.py",
@@ -68,9 +71,11 @@ _FINGERPRINT_CONFIGS = (
 
 TOOL_VERSION_COMMANDS = {
     "bun": ("bun", "--version"),
+    "node": ("node", "--version"),
     "git": ("git", "--version"),
     "host_python": (sys.executable, "--version"),
-    "pixi": ("pixi", "--version"),
+    "uv": ("uv", "--version"),
+    "task": ("task", "--version"),
 }
 PROJECT_TOOL_DISTRIBUTIONS = {
     "basedpyright": "basedpyright",
@@ -221,7 +226,15 @@ def _project_tool_versions(root: Path) -> dict[str, str]:
     )
     try:
         result = subprocess.run(
-            ("pixi", "run", "-e", "dev", "python", "-c", code),
+            (
+                str(
+                    root
+                    / ".venv"
+                    / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+                ),
+                "-c",
+                code,
+            ),
             cwd=root,
             capture_output=True,
             text=True,

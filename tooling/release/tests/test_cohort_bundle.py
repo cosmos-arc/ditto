@@ -31,8 +31,10 @@ def _sha256(path: Path) -> str:
 
 def _cohort(root: Path) -> tuple[Path, list[str]]:
     contract = root / "release-inputs" / "contracts" / "openapi" / "v1.json"
-    pixi_lock = root / "release-inputs" / "pixi.lock"
+    uv_lock = root / "release-inputs" / "uv.lock"
     bun_lock = root / "release-inputs" / "bun.lock"
+    interpreter = root / "release-inputs" / ".python-version"
+    source = root / "release-inputs" / "Dockerfile"
     backend = root / "ditto-image.tar"
     web = root / "ditto-web.tar"
     backend_sbom = root / "ditto-backend.spdx.json"
@@ -43,7 +45,9 @@ def _cohort(root: Path) -> tuple[Path, list[str]]:
     policy_digest = policy.with_suffix(".sha256")
     contract.parent.mkdir(parents=True)
     contract.write_bytes(b'{"openapi":"3.1.0"}\n')
-    pixi_lock.write_bytes(b"pixi\n")
+    uv_lock.write_bytes(b"pixi\n")
+    interpreter.write_text("cpython-3.13.14")
+    source.write_text("FROM python@sha256:fixture")
     bun_lock.write_bytes(b"bun\n")
     backend.write_bytes(b"backend\n")
     web.write_bytes(b"web\n")
@@ -111,7 +115,9 @@ def _cohort(root: Path) -> tuple[Path, list[str]]:
     )
     artifacts = (
         contract,
-        pixi_lock,
+        uv_lock,
+        interpreter,
+        source,
         bun_lock,
         backend,
         web,

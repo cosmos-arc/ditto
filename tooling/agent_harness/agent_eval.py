@@ -26,7 +26,7 @@ Verdict = Literal["pass", "fail"]
 RuntimeKind = Literal["none", "live", "mock"]
 WriteOrigin = Literal["agent", "generator", "preexisting"]
 
-_PIXI_DEV_PREFIX = ("pixi", "run", "-e", "dev")
+_UV_PREFIX = ("uv", "run", "--no-sync")
 
 REQUIRED_ADVERSARIAL_CATEGORIES = frozenset(
     {
@@ -468,8 +468,10 @@ def _has_instruction_hierarchy(
 
 def _gate_id(command: tuple[str, ...]) -> str:
     arguments = command
-    if len(arguments) > len(_PIXI_DEV_PREFIX) and arguments[:4] == _PIXI_DEV_PREFIX:
-        arguments = arguments[len(_PIXI_DEV_PREFIX) :]
+    if arguments[:1] == ("task",):
+        arguments = arguments[1:]
+    elif arguments[:3] == _UV_PREFIX:
+        arguments = arguments[3:]
     if not arguments:
         return "unknown"
     if arguments[0] in {

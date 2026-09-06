@@ -29,6 +29,7 @@ from tooling.release.cohort_manifest import (
     write_cohort_manifest,
 )
 from tooling.release.cohort_verify import verify_cohort_manifest
+from tooling.release.environment_identity import environment_identity
 
 _SYFT = (
     "ghcr.io/anchore/syft:v1.51.1@sha256:"
@@ -237,14 +238,18 @@ def _materialize_portable_cohort(
         / "contracts"
         / "cohorts"
         / "compatibility-policy.sha256",
-        release_root / "release-inputs" / "pixi.lock",
+        release_root / "release-inputs" / "uv.lock",
+        release_root / "release-inputs" / ".python-version",
+        release_root / "release-inputs" / "Dockerfile",
         release_root / "release-inputs" / "bun.lock",
     )
     source_inputs = (
         root / "contracts" / "openapi" / "v1.json",
         root / "contracts" / "cohorts" / "compatibility-policy.json",
         root / "contracts" / "cohorts" / "compatibility-policy.sha256",
-        root / "pixi.lock",
+        root / "uv.lock",
+        root / ".python-version",
+        root / "deploy/docker/Dockerfile",
         root / "bun.lock",
     )
     for source, destination in zip(source_inputs, staged_inputs, strict=True):
@@ -794,7 +799,7 @@ def run_artifact_gate(root: Path) -> None:
         timeout_seconds=_DOCKER_PROBE_TIMEOUT_SECONDS,
     )
     version, git_sha, contract_sha = _release_identity(workspace)
-    environment_lock_sha = _sha256(workspace / "pixi.lock")
+    environment_lock_sha = environment_identity(workspace)
     web_dist = workspace / "apps" / "web" / "dist"
     _verify_live_runtime_config(web_dist)
     output = workspace / "dist"
@@ -806,6 +811,8 @@ def run_artifact_gate(root: Path) -> None:
         [
             docker,
             "build",
+            "--platform",
+            "linux/amd64",
             "--pull",
             "--iidfile",
             str(image_id_file),

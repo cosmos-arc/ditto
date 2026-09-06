@@ -1,6 +1,6 @@
 # Ditto Web
 
-Ditto 的 React 单页应用。它是根 monorepo 的 Bun workspace，由根 Pixi 统一编排，
+Ditto 的 React 单页应用。它是根 monorepo 的 Bun workspace，由根 uv 统一编排，
 通过提交的 OpenAPI 3.1 快照与本地 FastAPI API 协作。
 
 ## 技术边界
@@ -31,11 +31,11 @@ workflow 层消费同一编排。`features/markets` 和 `features/home` 都不�
 从仓库根执行：
 
 ```bash
-pixi run -e dev bootstrap
-pixi run -e dev dev
-pixi run -e dev check-web
-pixi run -e dev check-contract
-pixi run -e dev test-system
+task bootstrap
+task dev
+task check-web
+task check-contract
+task test-system
 ```
 
 仅开发 Web 叶子任务时，可在本目录执行：
@@ -48,7 +48,7 @@ bun run test:prototype
 bun run build
 ```
 
-这些 Bun scripts 不定义跨栈 DAG；跨栈完成标准始终以根 Pixi 任务为准。
+这些 Bun scripts 不定义跨栈 DAG；跨栈完成标准始终以根 uv 任务为准。
 
 ## 目录
 

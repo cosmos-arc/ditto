@@ -8,13 +8,13 @@ E2E 测试数据准备脚本。
 
 使用方法：
     # 仅创建目录结构
-    pixi run -e dev python tests/scripts/prepare_e2e_data.py --dirs-only
+    uv run --no-sync python tests/scripts/prepare_e2e_data.py --dirs-only
 
     # 生成快照数据（需要 TUSHARE_TOKEN）
-    pixi run -e dev python tests/scripts/prepare_e2e_data.py --snapshots
+    uv run --no-sync python tests/scripts/prepare_e2e_data.py --snapshots
 
     # 指定快照日期
-    pixi run -e dev python tests/scripts/prepare_e2e_data.py --snapshots --date 2024-06-30
+    uv run --no-sync python tests/scripts/prepare_e2e_data.py --snapshots --date 2024-06-30
 
 参考文档：docs/plans/2026-02-17-e2e-validation-design.md
 """

@@ -15,12 +15,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 def test_all_bundled_server_entrypoints_are_loopback_only() -> None:
     """Unauthenticated development and direct entrypoints must not bind externally."""
     source = inspect.getsource(app_main)
-    pixi_config = (PROJECT_ROOT / "pixi.toml").read_text(encoding="utf-8")
+    task_config = (PROJECT_ROOT / "Taskfile.yml").read_text(encoding="utf-8")
 
     assert 'address="127.0.0.1:8000"' in source
-    assert "--host 127.0.0.1 --port 8000" in pixi_config
+    assert "--host 127.0.0.1 --port 8000" in task_config
     assert "0.0.0.0" not in source  # noqa: S104 - forbidden bind assertion
-    assert "0.0.0.0" not in pixi_config  # noqa: S104 - forbidden bind assertion
+    assert "0.0.0.0" not in task_config  # noqa: S104 - forbidden bind assertion
 
 
 def test_all_compose_published_ports_are_loopback_only() -> None:
@@ -125,8 +125,8 @@ def test_local_prefect_runbook_is_loopback_only() -> None:
 
 def test_local_prefect_memory_runtime_declares_lua_dependency() -> None:
     """Prefect's in-memory Docket backend requires fakeredis Lua support."""
-    pixi_config = tomllib.loads(
-        (PROJECT_ROOT / "pixi.toml").read_text(encoding="utf-8")
+    workspace = tomllib.loads(
+        (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     )
 
-    assert pixi_config["dependencies"]["lupa"] == ">=2.1,<3"
+    assert "lupa>=2.1,<3" in workspace["project"]["dependencies"]

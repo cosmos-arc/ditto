@@ -401,7 +401,6 @@ def _validate_bun_only(root: Path, errors: list[str]) -> None:
 
 def _validate_structured_configs(errors: list[str]) -> None:
     for path in (
-        ROOT / "pixi.toml",
         ROOT / "pyproject.toml",
         ROOT / "bunfig.toml",
         SKILL_REGISTRY,

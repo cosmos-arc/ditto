@@ -4,11 +4,7 @@
   "results": [
     {
       "command": [
-        "pixi",
-        "run",
-        "-e",
-        "dev",
-        "check"
+        "task", "check"
       ],
       "name": "check",
       "passed": true,
@@ -18,10 +14,7 @@
     },
     {
       "command": [
-        "pixi",
-        "run",
-        "-e",
-        "dev",
+        "uv", "run", "--no-sync",
         "pytest",
         "packages/apps/tests/integration/test_golden_e2e.py",
         "packages/apps/tests/integration/test_stock_selection_golden_e2e.py",
@@ -37,10 +30,7 @@
     },
     {
       "command": [
-        "pixi",
-        "run",
-        "-e",
-        "dev",
+        "uv", "run", "--no-sync",
         "python",
         "-m",
         "ditto_apps.cli.main",

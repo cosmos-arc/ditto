@@ -69,11 +69,15 @@ def _write_portable_manifest(root: Path) -> tuple[Path, dict[str, str]]:
     contract.write_text("{}\n")
     inputs = [
         contract,
-        root / "release-inputs" / "pixi.lock",
+        root / "release-inputs" / "uv.lock",
         root / "release-inputs" / "bun.lock",
     ]
     inputs[1].write_text("pixi\n")
     inputs[2].write_text("bun\n")
+    for name in (".python-version", "Dockerfile"):
+        path = root / "release-inputs" / name
+        path.write_text("fixture")
+        inputs.append(path)
     verifier_paths = (
         "release-tools/tooling/__init__.py",
         "release-tools/tooling/release/__init__.py",

@@ -8,7 +8,7 @@
 
 ## 背景
 
-Ditto 后端是由 13 个 Python package 组成的模块化单体，使用 Pixi、FastAPI、
+Ditto 后端是由 13 个 Python package 组成的模块化单体，使用 uv、FastAPI、
 Polars 和 import-linter。用户界面原位于独立的 `ditto-app` 仓库，使用 Bun、
 React、TypeScript、Vite 和 TanStack。两个仓库分别维护 CI、Agent 指令、Skills、
 Harness 和 OpenAPI 生成流程，导致同一产品行为不能由同一提交完整证明，且两个
@@ -33,7 +33,7 @@ ditto/
 ├── contracts/openapi/  # 唯一跨语言 API 契约
 ├── tests/system/       # production Web + 隔离 API 的跨栈验收
 ├── tooling/            # 跨栈契约、Harness、质量和开发工具
-├── pixi.toml
+├── Taskfile.yml
 └── package.json
 ```
 
@@ -57,8 +57,10 @@ fail-closed 语义或唯一 composition root。
 
 ### 3. 工具所有权
 
-- 根 `pixi.toml` 是唯一跨栈任务 DAG 和用户入口。
-- Pixi 管理 Python 环境；Bun workspace 管理 Web 依赖和叶子任务。
+2026-09-06 修订（#101）：Python 使用 uv；Task 接管跨栈任务图。保留 Bun 的安装效率和专用 API，Node CLI 使用固定 LTS。
+
+- 根 `Taskfile.yml` 是唯一跨栈任务 DAG 和用户入口。
+- uv 管理 Python workspace 与锁定环境；Bun workspace 管理 Web 依赖和叶子任务。
 - 根 Bun workspace 使用唯一文本 `bun.lock`；禁止引入 pnpm/npm/yarn lockfile。
 - 当前不引入 Nx、Bazel、Pants 或 Turborepo。
 - 验证任务不使用 task-result cache；只有输入声明完整且有 soundness 测试的确定性
@@ -88,7 +90,7 @@ OpenAPI snapshot 是唯一跨语言事实源。生成类型提交 Git，但只�
 - `cache_root`：可安全删除的缓存；
 - `contract_root`：只供契约生成和验证工具使用。
 
-生产运行时不得通过 `.git`、`pixi.toml` 或固定 `parents[n]` 推断状态和配置路径。
+生产运行时不得通过 `.git`、`Taskfile.yml` 或固定 `parents[n]` 推断状态和配置路径。
 
 ### 6. 机器执行
 
@@ -152,7 +154,7 @@ clone 中使用固定版本的 `git-filter-repo --to-subdirectory-filter apps/we
 本 ADR 只有在以下条件同时成立时才视为落地：
 
 1. 后端原历史 SHA 保持不变，前端所有导入 ref 可由 commit map 追溯。
-2. 根 Pixi/Bun workspace 可从干净 runner bootstrap。
+2. 根 Task/uv/Bun workspace 可从干净 runner bootstrap。
 3. Python 和 Web dependency graph 均为严格绿灯。
 4. OpenAPI snapshot、generated types 与 typed transport 构成 zero-diff 门禁。
 5. production Web 与隔离 API 的核心 system E2E 通过。

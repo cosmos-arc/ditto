@@ -5,7 +5,7 @@
 供 Phase 1.4 RED/GREEN 迭代: backfill/promotion 前后重跑, 观察 failures 收敛。
 
 用法: source scripts/acceptance/wave1_env.sh 后执行
-    pixi run -e dev python scripts/acceptance/wave1_catalog_check.py [--output FILE]
+    uv run --no-sync python scripts/acceptance/wave1_catalog_check.py [--output FILE]
 """
 
 from __future__ import annotations

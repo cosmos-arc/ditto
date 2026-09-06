@@ -24,7 +24,7 @@ directory, or a production/real-data root.
 
 ```bash
 cd /Users/chevy/Desktop/code/ditto
-DITTO_STATE_ROOT=/absolute/path/ditto-beta-state pixi run -e dev dev
+DITTO_STATE_ROOT=/absolute/path/ditto-beta-state task dev
 ```
 
 The root supervisor starts both processes on loopback, writes a validated
@@ -39,7 +39,7 @@ backend. Core research and paper trading remain usable without Agent model calls
 For a deterministic certified-data check that performs no provider call:
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r2_data_acceptance --mode fixture
+uv run --no-sync python -m ditto_apps.scripts.r2_data_acceptance --mode fixture
 ```
 
 For a fresh provider update, first follow
@@ -51,11 +51,11 @@ date, or source snapshot is blocked—not empty success and not a mock fallback.
 Current integrated research acceptance with a certified snapshot:
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r5_agent_release_preflight \
+uv run --no-sync python -m ditto_apps.scripts.r5_agent_release_preflight \
   --repo-root . \
   --output docs/evidence/r5/release/release-preflight.json
 
-pixi run -e dev python -m ditto_apps.scripts.r3_research_acceptance \
+uv run --no-sync python -m ditto_apps.scripts.r3_research_acceptance \
   --fixture \
   --output docs/evidence/product-beta/20260830/r3-certified-research-flow.json \
   --manifest docs/evidence/product-beta/20260830/r3-certified-research-flow.manifest.json
@@ -65,7 +65,7 @@ The five-day trading soak is simulated paper execution over five consecutive tra
 dates. It creates no real order and contacts no broker:
 
 ```bash
-pixi run -e dev pytest \
+uv run --no-sync pytest \
   apps/backend/tests/e2e/test_r1_daily_manual_trading.py::test_certified_etf_paper_flow_completes_five_consecutive_trading_days \
   -q --no-cov -n 0
 ```
@@ -79,13 +79,13 @@ artifact hashes, and query the restored projection before any cutover.
 Deterministic operator exercises:
 
 ```bash
-pixi run -e dev pytest \
+uv run --no-sync pytest \
   apps/backend/tests/e2e/test_r1_daily_manual_trading.py::test_online_backup_restore_preserves_the_queryable_r1_decision \
   apps/backend/tests/integration/test_agent_database_lifecycle.py::test_agent_bundle_backup_and_restore_preserve_readable_projection \
   apps/backend/tests/integration/research/test_r3_backup_restore.py::test_r3_backup_restore_preserves_governance_holdout_and_pinned_packet \
   -q --no-cov -n 0
 
-pixi run -e dev pytest \
+uv run --no-sync pytest \
   apps/backend/tests/e2e/test_r1_daily_manual_trading.py::test_rerun_recovers_a_durable_package_after_finalize_interruption \
   apps/backend/tests/integration/test_agent_run_execution.py::test_process_interruption_before_commit_leaves_run_queued_and_retryable \
   apps/backend/tests/integration/test_agent_run_execution.py::test_episode_write_failure_rolls_back_terminal_run_and_events \
@@ -118,15 +118,15 @@ rather than duplicating orders or fills.
 From `ditto`:
 
 ```bash
-pixi run -e dev pytest -m pit
-pixi run -e dev arch-check
-pixi run -e dev ci
+uv run --no-sync pytest -m pit
+task arch-check
+task ci
 git diff --check
 ```
 
 The root `ci` task owns the Web, contract, system, Harness, security, and artifact
 gates. Do not run a second repository-level Bun DAG; Bun scripts under `apps/web`
-are leaf tasks invoked by Pixi.
+are leaf tasks invoked by uv.
 
 Close the release only when the current P0–P5 ledger links the exact evidence files,
 isolated roots/modes, visual viewport results, recovery drills, and artifact hashes.

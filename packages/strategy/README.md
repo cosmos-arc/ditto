@@ -90,8 +90,8 @@ result = pipeline.execute(input_bundle)
 ## 测试
 
 ```bash
-pixi run -e dev pytest packages/strategy/tests/unit -q        # 单元测试
-pixi run -e dev pytest packages/strategy/tests/integration -q  # 集成测试
+uv run --no-sync pytest packages/strategy/tests/unit -q        # 单元测试
+uv run --no-sync pytest packages/strategy/tests/integration -q  # 集成测试
 ```
 
 ## 相关文档

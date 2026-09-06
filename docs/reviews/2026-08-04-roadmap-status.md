@@ -177,14 +177,14 @@ G2 经历了一次"假 PASS → 审计推翻 → 合法重过"的完整闭环，
 
 ```bash
 # G2 证据复现
-pixi run -e dev python scripts/acceptance/r3_research_acceptance.py --real-data
+uv run --no-sync python scripts/acceptance/r3_research_acceptance.py --real-data
 # r3-report.json 应：passed=true, r2_live_gate=PASS, status=ready
 
 # 架构门禁
-pixi run -e dev arch-check   # 37 contracts kept, 0 broken
+task arch-check --   # 37 contracts kept, 0 broken
 
 # 全量质量
-pixi run -e dev check        # lint + fmt + type + test --fast
+task check --        # lint + fmt + type + test --fast
 ```
 
 ## 8. 相关文档索引

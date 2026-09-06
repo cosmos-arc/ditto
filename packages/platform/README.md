@@ -45,7 +45,7 @@
 ## 测试
 
 ```bash
-pixi run -e dev pytest packages/platform/tests/
+uv run --no-sync pytest packages/platform/tests/
 ```
 
 ## 变更记录

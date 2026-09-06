@@ -516,7 +516,7 @@ Mobile
 - `bun run gen:api` 后生成类型与后端 OpenAPI 无漂移。
 - `bun run ci`、`bun run audit:routes`、`bun run audit:tokens`、`bun run build:tokens:check` 全绿。
 - 更新过的 page contracts、prototype gates 和 visual matrix 全绿。
-- 若修改后端展示契约，`pixi run -e dev check` 与 `pixi run -e dev arch-check` 全绿。
+- 若修改后端展示契约，`task check` 与 `task arch-check` 全绿。
 - R1–R5 live 验收报告包含环境、命令、request/event IDs、截图、失败注入和结果。
 - live 模式不存在生产 mock fallback，不存在旧 `/ai/**` 请求，不存在浏览器 provider key。
 
@@ -575,8 +575,8 @@ bun run build:tokens:check        # 视觉 token 变更
 bun run ci                        # Wave/里程碑合并前
 
 # ditto（仅后端展示契约有改动）
-pixi run -e dev check
-pixi run -e dev arch-check
+task check
+task arch-check
 git diff --check
 ```
 
@@ -640,6 +640,6 @@ git diff --check
 
 - 2026-08-25 / Wave 8.F8.1–F8.4 / working-tree (`ditto` + `ditto-app`)
   - 实际改动：刷新 OpenAPI、合同生成物、28 个视觉矩阵与 18 张 live 截图；补齐 Agent overlay/page 行为覆盖率，并归档 request/event IDs、失败注入、安全扫描和环境边界。
-  - 实际验证：前端 `bun run ci`、route/token audits、prototype gates/visual matrix/visual audit 全绿；后端 `pixi run -e dev check`（12,927 passed、1 expected xfail）与 `arch-check` 全绿；OpenAPI 连续生成哈希一致。
+  - 实际验证：前端 `bun run ci`、route/token audits、prototype gates/visual matrix/visual audit 全绿；后端 `task check`（12,927 passed、1 expected xfail）与 `arch-check` 全绿；OpenAPI 连续生成哈希一致。
   - 失败/偏差：浏览器工具政策禁止枚举 browser storage 内容；第一方业务源码无 storage 写入，bundle 仅含 Router 滚动恢复与 Zustand 通用 persist 实现且 secret 扫描零命中，以 live DOM/URL 与 console 零异常补充边界证据。
   - 下一步：无。M4 达成，详见 `docs/review/r1-r5-live-acceptance/report.md`。

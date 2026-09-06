@@ -6,7 +6,7 @@
 
 从 Web workspace 执行 `bun run test:unit` 验证 src 单元行为，`bun run test:coverage` 同时生成覆盖证据，`bun run test:prototype` 验证 scripts 下的原型、视觉和工具合同。覆盖阈值以 `vitest.config.ts` 为准，保留独立的高风险分支阈值。
 
-从仓库根执行 `pixi run -e dev check-web` 做日常 Web 验证，`pixi run -e dev web-ci` 做 Web 完整验证，`pixi run -e dev test-system` 验证 production Web 与隔离 API。Bun 不再有独立 check/ci 编排。
+从仓库根执行 `task check-web` 做日常 Web 验证，`task web-ci` 做 Web 完整验证，`task test-system` 验证 production Web 与隔离 API。Bun 不再有独立 check/ci 编排。
 
 首次运行浏览器测试时，在实际调用 Playwright 的 workspace 用锁定依赖执行 `bunx playwright install chromium`。浏览器缓存可通过 PLAYWRIGHT_BROWSERS_PATH 隔离；环境准备失败不代表产品断言失败。类型、coverage 和 build 的现有入口会生成 route tree，不手写生成文件。
 

@@ -51,7 +51,7 @@
 唯一提案是 `docs/evidence/personal-workstation/pap09/account-acceptance-proposal-20260902.json`。先验证 proposal 中的 `exact_acceptance_request.approval_hash` 与 canonical `arguments` 一致，并确认批准短语来自操作员本人；此前的策略保存或提交审核批准不能复用。bootstrap 是生产式本地账户写入，只能在收到 proposal 内完整精确批准短语后执行一次。
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.q4_live_account_acceptance bootstrap \
+uv run --no-sync python -m ditto_apps.scripts.q4_live_account_acceptance bootstrap \
   --proposal docs/evidence/personal-workstation/pap09/account-acceptance-proposal-20260902.json \
   --approved-request-hash 8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2 \
   --operator-id workspace-user
@@ -60,12 +60,12 @@ pixi run -e dev python -m ditto_apps.scripts.q4_live_account_acceptance bootstra
 bootstrap 必须产生专用 Manual/Paper 账户、Manual 追加事件与重建回执，同时保持 Paper session/fill、broker connection 和 real order 为 0。随后每次调度最多记录一个严格晚于批准本地日期、已经结束且 Tushare bar 已发布的交易日：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.q4_live_account_acceptance record-day \
+uv run --no-sync python -m ditto_apps.scripts.q4_live_account_acceptance record-day \
   --proposal docs/evidence/personal-workstation/pap09/account-acceptance-proposal-20260902.json \
   --approved-request-hash 8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2 \
   --operator-id workspace-user
 
-pixi run -e dev python -m ditto_apps.scripts.q4_live_account_acceptance status \
+uv run --no-sync python -m ditto_apps.scripts.q4_live_account_acceptance status \
   --proposal docs/evidence/personal-workstation/pap09/account-acceptance-proposal-20260902.json \
   --approved-request-hash 8f9e27eff65976bf42413335ae80e63cb9982b3cbb8a4727d69b2450792922e2
 ```
@@ -79,12 +79,12 @@ pixi run -e dev python -m ditto_apps.scripts.q4_live_account_acceptance status \
 加速提案需要独立的精确批准，不能复用账户 bootstrap、策略保存或提交审核批准。收到 proposal 内完整批准短语后运行：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.q4_accelerated_paper_acceptance run \
+uv run --no-sync python -m ditto_apps.scripts.q4_accelerated_paper_acceptance run \
   --proposal docs/evidence/personal-workstation/pap09-accelerated-proposal-20260902.json \
   --approved-request-hash 4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b \
   --operator-id workspace-user
 
-pixi run -e dev python -m ditto_apps.scripts.q4_accelerated_paper_acceptance status \
+uv run --no-sync python -m ditto_apps.scripts.q4_accelerated_paper_acceptance status \
   --proposal docs/evidence/personal-workstation/pap09-accelerated-proposal-20260902.json \
   --approved-request-hash 4a3a257bf97afe893cd402be34ab890869a96ac2e6db8b599f60c799b8a5032b
 ```
@@ -96,7 +96,7 @@ pixi run -e dev python -m ditto_apps.scripts.q4_accelerated_paper_acceptance sta
 `docs/evidence/personal-workstation/q5/live-portfolio-proposal-20260902.json` 冻结同一时点的 Model、Paper、Manual 身份、真实 Tushare snapshot、Selection lineage、策略输出和禁止写入项。它只写派生的 signal package、Manual execution baseline 与验收证据，不修改 Paper/Manual journal，不发布或激活策略。收到提案内完整精确批准短语后运行：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.q5_live_portfolio_acceptance run \
+uv run --no-sync python -m ditto_apps.scripts.q5_live_portfolio_acceptance run \
   --proposal docs/evidence/personal-workstation/q5/live-portfolio-proposal-20260902.json \
   --approved-request-hash f6661fefac9294bf1dee388b1fa19b050633d1f233768526c9e374f596c88811 \
   --operator-id workspace-user
@@ -105,7 +105,7 @@ pixi run -e dev python -m ditto_apps.scripts.q5_live_portfolio_acceptance run \
 组合证据通过后，以下入口只在显式 `--approval-a4` 之后加载已保存的本机 GLM 凭据，并仅发送 `approved-research` 最小化 evidence；原始 provider rows、账户流水和自由文本不会出站：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.q5_live_portfolio_diagnostic \
+uv run --no-sync python -m ditto_apps.scripts.q5_live_portfolio_diagnostic \
   --model glm-5.3 \
   --approval-a4 \
   --agent-data-root /private/tmp/ditto-q5-portfolio-diagnostic-20260902 \
@@ -120,14 +120,14 @@ pixi run -e dev python -m ditto_apps.scripts.q5_live_portfolio_diagnostic \
 恢复单位包含 data、research、trading 和 Agent 三个物理库，共六个 SQLite 文件。manifest 认证文件路径、大小、逐表行数、integrity check 与 SHA-256。
 
 ```bash
-pixi run -e dev python -m ditto_apps.cli.main ops workstation backup \
+uv run --no-sync python -m ditto_apps.cli.main ops workstation backup \
   --source-root /absolute/runtime \
   --destination /absolute/backups/ditto-YYYYMMDD-HHMMSS
 
-pixi run -e dev python -m ditto_apps.cli.main ops workstation verify \
+uv run --no-sync python -m ditto_apps.cli.main ops workstation verify \
   --backup-root /absolute/backups/ditto-YYYYMMDD-HHMMSS
 
-pixi run -e dev python -m ditto_apps.cli.main ops workstation restore \
+uv run --no-sync python -m ditto_apps.cli.main ops workstation restore \
   --backup-root /absolute/backups/ditto-YYYYMMDD-HHMMSS \
   --destination-root /absolute/restores/ditto-YYYYMMDD-HHMMSS
 ```
@@ -164,7 +164,7 @@ pixi run -e dev python -m ditto_apps.cli.main ops workstation restore \
 最终 UI-08 十步旅程、前后端冻结门禁和 Q0—Q5 均通过后，运行只读聚合器。聚合器会从每个 Gate 决策的相邻 `manifests/` 目录现场重算 SHA-256，要求 manifest 同时覆盖 Gate 决策 JSON 本身及其完整 evidence 列表，并再次从私有目录复验 PAP-09 HMAC 链。Q5 acceptance receipt 还必须重新绑定到原提案的 approval hash、provider snapshot/checksum、策略身份和 Model/Paper/Manual 三组合请求，PortfolioDiagnostic 必须反向绑定同一 Q5 acceptance hash；前后端 validation 的 `full_ci.completed_at` 必须不早于最终 Q5、PortfolioDiagnostic 和 UI-08 证据，validation `captured_at` 不得早于该 CI 完成时间，bundle `generated_at` 还必须不早于两份 validation 的捕获时间。任何公开镜像、日期、证据绑定、时序或状态漂移都拒绝签发。
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.personal_workstation_release_candidate \
+uv run --no-sync python -m ditto_apps.scripts.personal_workstation_release_candidate \
   --accelerated-proposal docs/evidence/personal-workstation/pap09-accelerated-proposal-20260902.json \
   --accelerated-bootstrap docs/evidence/personal-workstation/pap09-accelerated/bootstrap.json \
   --accelerated-progress docs/evidence/personal-workstation/pap09-accelerated/accelerated-progress.json \

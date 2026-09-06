@@ -15,7 +15,7 @@
 ## 命令用法
 
 ```bash
-pixi run -e dev ditto ops factor-ic <FACTOR> --start <YYYY-MM-DD> --end <YYYY-MM-DD> [OPTIONS]
+uv run --no-sync ditto ops factor-ic <FACTOR> --start <YYYY-MM-DD> --end <YYYY-MM-DD> [OPTIONS]
 ```
 
 ### 参数
@@ -42,14 +42,14 @@ pixi run -e dev ditto ops factor-ic <FACTOR> --start <YYYY-MM-DD> --end <YYYY-MM
 
 ```bash
 # 基础 IC 诊断(默认 stdout)
-pixi run -e dev ditto ops factor-ic momentum_1m --start 2024-01-01 --end 2024-06-30
+uv run --no-sync ditto ops factor-ic momentum_1m --start 2024-01-01 --end 2024-06-30
 
 # 写入文件 + 启用情景 IC
-pixi run -e dev ditto ops factor-ic momentum_1m \
+uv run --no-sync ditto ops factor-ic momentum_1m \
     --start 2024-01-01 --end 2024-06-30 --regime --output momentum_ic.md
 
 # 指定版本 + ETF 资产 + 绩效归因
-pixi run -e dev ditto ops factor-ic value_pe \
+uv run --no-sync ditto ops factor-ic value_pe \
     --start 2024-01-01 --end 2024-06-30 --version 2 --asset-class etf --attribution
 ```
 

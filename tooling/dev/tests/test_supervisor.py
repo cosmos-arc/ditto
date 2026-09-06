@@ -186,17 +186,13 @@ def test_service_ports_retry_a_dynamic_collision(
 def test_development_command_uses_the_pinned_workspace_leaf(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(supervisor.shutil, "which", lambda _name: "/toolchain/bun")
+    monkeypatch.setattr(supervisor, "node_executable", lambda _root: "/toolchain/node")
 
     _api, web = supervisor.development_commands(tmp_path, 18201, 18202)
 
     assert web == [
-        "/toolchain/bun",
-        "run",
-        "--cwd",
-        str(tmp_path / "apps" / "web"),
-        "dev",
-        "--",
+        "/toolchain/node",
+        str(tmp_path / "apps/web/node_modules/vite/bin/vite.js"),
         "--host",
         "127.0.0.1",
         "--port",
