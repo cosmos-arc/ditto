@@ -73,6 +73,7 @@ ENV DITTO_CONFIG_ROOT=/opt/ditto \
     DITTO_API_CONTRACT_SHA256=${DITTO_API_CONTRACT_SHA256} \
     ENVIRONMENT=production \
     HOME=/var/lib/ditto \
+    PYTHON_VERSION=3.13.14 \
     PYTHONPATH=/opt/ditto/.venv/lib/python3.13/site-packages \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONNOUSERSITE=1 \
