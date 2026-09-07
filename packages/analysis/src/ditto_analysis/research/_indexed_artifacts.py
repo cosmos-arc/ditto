@@ -378,7 +378,7 @@ class IndexedArtifactIO:
                 if target_stat is not None
                 and (
                     stat.S_ISLNK(target_stat.st_mode)
-                    or target_stat.st_file_attributes & reparse
+                    or getattr(target_stat, "st_file_attributes", 0) & reparse
                 )
                 else "artifact_not_regular_file"
             )

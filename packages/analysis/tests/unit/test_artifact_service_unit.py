@@ -1400,6 +1400,8 @@ class TestIndexedArtifactPublication:
         )
 
         if sys.platform == "win32":
+            # Windows refuses to rename the directory held open by publication,
+            # so the attempted parent swap fails closed before publication.
             with pytest.raises(PermissionError):
                 service.publish_indexed_json(
                     spec,
@@ -1581,6 +1583,34 @@ class TestIndexedArtifactReadAndPin:
             service.read_indexed_json(record.artifact_id)
         assert exc_info.value.details["reason_code"] == "artifact_symlink_rejected"
 
+    def test_regular_stat_after_open_failure_is_classified(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        service, _index, record = self._published(tmp_path)
+        regular_stat = (tmp_path / record.relative_path).stat()
+
+        def deny_open(*_args: object, **_kwargs: object) -> int:
+            raise PermissionError("injected open failure")
+
+        monkeypatch.setattr(artifact_module, "_open_file", deny_open)
+        monkeypatch.setattr(
+            artifact_module,
+            "_stat_entry",
+            lambda *_args: regular_stat,
+        )
+
+        with pytest.raises(ExperimentIntegrityError) as exc_info:
+            service._require_indexed()._measure_target(
+                0,
+                "target.json",
+                artifact_module.ArtifactFormat.JSON,
+                artifact_id=record.artifact_id,
+            )
+
+        assert exc_info.value.details["reason_code"] == "artifact_not_regular_file"
+
     def test_manifest_and_reproduction_fingerprint_are_reverified(
         self,
         tmp_path: Path,
@@ -1752,8 +1782,7 @@ class TestResolveArtifactRelativePath:
         result = service.resolve_artifact_relative_path("factor.alpha", 2)
 
         assert result is not None
-        assert "factor.alpha" in result
-        assert "v2" in result
+        assert result == "derived/artifacts/series/factor.alpha/v2"
 
     def test_resolve_artifact_relative_path_not_found(
         self,
