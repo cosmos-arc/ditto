@@ -184,7 +184,7 @@ def _windows_nt_create(
         _fields_ = [
             ("length", ctypes.c_uint16),
             ("maximum_length", ctypes.c_uint16),
-            ("buffer", ctypes.c_wchar_p),
+            ("buffer", ctypes.POINTER(ctypes.c_wchar)),
         ]
 
     class ObjectAttributes(ctypes.Structure):
