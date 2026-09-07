@@ -25,6 +25,7 @@ from ditto_analysis.research.artifact_measurement import (
 _IS_WINDOWS = sys.platform == "win32"
 _HAS_ATOMIC_NOFOLLOW = hasattr(os, "O_NOFOLLOW")
 _WINDOWS_DIRECTORY_REQUEST = 1 << 30
+_WINDOWS_ACCESS_MODE = 0o3
 _WINDOWS_DIRECTORY_FLAGS = _WINDOWS_DIRECTORY_REQUEST if _IS_WINDOWS else 0
 READ_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
 _DIRECTORY_FLAGS = (
@@ -84,7 +85,7 @@ def _raw_open(path: ArtifactFilePath, flags: int, mode: int = 0o777) -> int:
 
 def _windows_access(flags: int) -> int:
     access = 0x00100000  # SYNCHRONIZE
-    access_mode = flags & os.O_ACCMODE
+    access_mode = flags & _WINDOWS_ACCESS_MODE
     if access_mode == os.O_WRONLY:
         access |= 0x40000000  # GENERIC_WRITE
     elif access_mode == os.O_RDWR:
@@ -163,7 +164,7 @@ def _open_windows_absolute(
 
 def _windows_fd_flags(flags: int) -> int:
     return flags & (
-        os.O_ACCMODE
+        _WINDOWS_ACCESS_MODE
         | getattr(os, "O_APPEND", 0)
         | getattr(os, "O_BINARY", 0)
         | getattr(os, "O_TEXT", 0)

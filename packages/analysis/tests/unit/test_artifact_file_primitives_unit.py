@@ -14,12 +14,14 @@ from ditto_analysis.research import _artifact_file_primitives as primitives
 
 def test_modules_import_without_posix_only_open_flags() -> None:
     code = """import os
-for flag in ("O_NOFOLLOW", "O_DIRECTORY"):
+for flag in ("O_NOFOLLOW", "O_DIRECTORY", "O_ACCMODE"):
     if hasattr(os, flag):
         delattr(os, flag)
 import ditto_analysis.research._artifact_file_primitives as primitives
 import ditto_analysis.research._indexed_artifacts
 assert primitives._HAS_ATOMIC_NOFOLLOW is False
+assert primitives._windows_access(primitives.READ_FLAGS) != 0
+assert primitives._windows_fd_flags(primitives.READ_FLAGS) == 0
 """
     result = subprocess.run(  # noqa: S603 - fixed interpreter and inline literal
         [sys.executable, "-c", code],
