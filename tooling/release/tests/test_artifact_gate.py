@@ -730,6 +730,76 @@ def test_backend_source_scan_pulls_pinned_source_for_buildkit_daemon(
     assert commands[-1][1] == "save"
 
 
+def _write_json_blob(archive: tarfile.TarFile, payload: object) -> tuple[str, bytes]:
+    content = json.dumps(payload, separators=(",", ":")).encode()
+    digest = hashlib.sha256(content).hexdigest()
+    member = tarfile.TarInfo(f"blobs/sha256/{digest}")
+    member.size = len(content)
+    archive.addfile(member, io.BytesIO(content))
+    return digest, content
+
+
+@pytest.mark.parametrize(
+    ("architecture", "expected"), [("amd64", True), ("arm64", False)]
+)
+def test_select_amd64_archive_accepts_single_image_manifest(
+    tmp_path: Path,
+    architecture: str,
+    expected: bool,
+) -> None:
+    archive = tmp_path / "source.tar"
+    layer = b"layer"
+    layer_digest = hashlib.sha256(layer).hexdigest()
+
+    with tarfile.open(archive, "w") as output:
+        config = {"architecture": architecture, "os": "linux"}
+        config_digest, _ = _write_json_blob(output, config)
+        manifest = {
+            "config": {
+                "digest": f"sha256:{config_digest}",
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+            },
+            "layers": [{"digest": f"sha256:{layer_digest}"}],
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "schemaVersion": 2,
+        }
+        manifest_digest, _ = _write_json_blob(output, manifest)
+        index = {
+            "manifests": [
+                {
+                    "digest": f"sha256:{manifest_digest}",
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                }
+            ],
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "schemaVersion": 2,
+        }
+        _write_json_blob(output, index)
+        index_member = tarfile.TarInfo("index.json")
+        index_content = json.dumps(index, separators=(",", ":")).encode()
+        index_member.size = len(index_content)
+        output.addfile(index_member, io.BytesIO(index_content))
+        member = tarfile.TarInfo(f"blobs/sha256/{layer_digest}")
+        member.size = len(layer)
+        output.addfile(member, io.BytesIO(layer))
+
+    if expected:
+        image_id = artifact_gate._select_amd64_archive(archive)
+        assert image_id == f"sha256:{config_digest}"
+        with tarfile.open(archive) as result:
+            assert json.load(result.extractfile("manifest.json")) == [
+                {
+                    "Config": f"blobs/sha256/{config_digest}",
+                    "Layers": [f"blobs/sha256/{layer_digest}"],
+                    "RepoTags": None,
+                }
+            ]
+            assert result.extractfile(f"blobs/sha256/{config_digest}").read()
+    else:
+        with pytest.raises(artifact_gate.ArtifactGateError, match="not linux/amd64"):
+            artifact_gate._select_amd64_archive(archive)
+
+
 def _filesystem_tar(path: Path, files: dict[str, bytes]) -> None:
     with tarfile.open(path, "w") as archive:
         for name, payload in files.items():

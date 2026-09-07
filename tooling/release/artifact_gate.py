@@ -1148,7 +1148,7 @@ def _required_blob_name(digest: object) -> str:
 
 
 def _oci_amd64_descriptor(archive: tarfile.TarFile) -> dict[str, object] | None:
-    if archive.extractfile("index.json") is None:
+    if "index.json" not in archive.getnames():
         return None
     index = _tar_json(archive, "index.json")
     descriptors = index.get("manifests") if isinstance(index, dict) else None
@@ -1156,17 +1156,22 @@ def _oci_amd64_descriptor(archive: tarfile.TarFile) -> dict[str, object] | None:
         raise ArtifactGateError("source archive index is malformed")
     root = _tar_json(archive, _required_blob_name(descriptors[0].get("digest")))
     children = root.get("manifests") if isinstance(root, dict) else None
-    if not isinstance(children, list):
-        raise ArtifactGateError("source archive manifest list is malformed")
-    amd64 = [
-        child
-        for child in children
-        if isinstance(child, dict)
-        and child.get("platform") == {"architecture": "amd64", "os": "linux"}
-    ]
-    if len(amd64) != 1:
-        raise ArtifactGateError("source archive lacks one linux/amd64 image")
-    return amd64[0]
+    if isinstance(children, list):
+        amd64 = [
+            child
+            for child in children
+            if isinstance(child, dict)
+            and child.get("platform") == {"architecture": "amd64", "os": "linux"}
+        ]
+        if len(amd64) != 1:
+            raise ArtifactGateError("source archive lacks one linux/amd64 image")
+        return amd64[0]
+    if isinstance(root, dict) and isinstance(root.get("config"), dict):
+        platform = descriptors[0].get("platform")
+        if platform not in (None, {"architecture": "amd64", "os": "linux"}):
+            raise ArtifactGateError("source archive image is not linux/amd64")
+        return descriptors[0]
+    raise ArtifactGateError("source archive manifest is malformed")
 
 
 def _legacy_amd64_image_id(archive: tarfile.TarFile) -> str:
@@ -1198,6 +1203,12 @@ def _write_amd64_docker_archive(
     if not isinstance(config, dict) or not isinstance(layers, list):
         raise ArtifactGateError("source archive image manifest is malformed")
     config_name = _required_blob_name(config.get("digest"))
+    config_stream = source.extractfile(config_name)
+    if config_stream is None:
+        raise ArtifactGateError("source archive config is absent")
+    image_config = json.loads(config_stream.read())
+    if image_config.get("architecture") != "amd64" or image_config.get("os") != "linux":
+        raise ArtifactGateError("source archive image is not linux/amd64")
     layer_names = []
     for layer in layers:
         if not isinstance(layer, dict):
