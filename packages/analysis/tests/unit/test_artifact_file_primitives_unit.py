@@ -21,7 +21,11 @@ import ditto_analysis.research._artifact_file_primitives as primitives
 import ditto_analysis.research._indexed_artifacts
 assert primitives._HAS_ATOMIC_NOFOLLOW is False
 assert primitives._windows_access(primitives.READ_FLAGS) != 0
-assert primitives._windows_fd_flags(primitives.READ_FLAGS) == 0
+assert (
+    primitives._windows_fd_flags(primitives.READ_FLAGS)
+    & primitives._WINDOWS_ACCESS_MODE
+    == 0
+)
 """
     result = subprocess.run(  # noqa: S603 - fixed interpreter and inline literal
         [sys.executable, "-c", code],

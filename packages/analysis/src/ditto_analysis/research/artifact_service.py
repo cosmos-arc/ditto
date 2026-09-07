@@ -142,7 +142,7 @@ class ResearchArtifactService:
         temporary = Path(temporary_name)
         try:
             write(temporary)
-            with temporary.open("rb") as stream:
+            with temporary.open("r+b") as stream:
                 os.fsync(stream.fileno())
             temporary.replace(target)
         finally:

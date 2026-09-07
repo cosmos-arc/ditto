@@ -487,8 +487,8 @@ def open_directory(path: ArtifactFilePath, *, durable: bool = False) -> int:
     flushing; readers use the ordinary read-only handle.
     """
     access = (
-        0x40100000 if durable and _IS_WINDOWS else None
-    )  # SYNCHRONIZE | GENERIC_WRITE
+        0xC0100000 if durable and _IS_WINDOWS else None
+    )  # SYNCHRONIZE | GENERIC_READ | GENERIC_WRITE
     if access is None or not _IS_WINDOWS:
         descriptor = open_file(path, _DIRECTORY_FLAGS)
     else:
