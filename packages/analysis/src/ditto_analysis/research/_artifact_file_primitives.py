@@ -26,6 +26,8 @@ _IS_WINDOWS = sys.platform == "win32"
 _HAS_ATOMIC_NOFOLLOW = hasattr(os, "O_NOFOLLOW")
 _WINDOWS_DIRECTORY_REQUEST = 1 << 30
 _WINDOWS_ACCESS_MODE = 0o3
+_WINDOWS_DIRECTORY_READ_ACCESS = 0x001000A1
+_WINDOWS_DURABLE_DIRECTORY_ACCESS = 0x001001A7
 _WINDOWS_DIRECTORY_FLAGS = _WINDOWS_DIRECTORY_REQUEST if _IS_WINDOWS else 0
 READ_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
 _DIRECTORY_FLAGS = (
@@ -359,7 +361,7 @@ def make_directory_entry(path: DirectoryEntryPath) -> None:
     if _IS_WINDOWS:
         handle = _windows_nt_create(
             path,
-            0x80010002,  # SYNCHRONIZE | GENERIC_READ | FILE_WRITE_DATA
+            _WINDOWS_DIRECTORY_READ_ACCESS,
             2,  # FILE_CREATE
             0x00200021,  # OPEN_REPARSE_POINT | SYNCHRONOUS_IO | DIRECTORY
         )
@@ -487,8 +489,12 @@ def open_directory(path: ArtifactFilePath, *, durable: bool = False) -> int:
     flushing; readers use the ordinary read-only handle.
     """
     access = (
-        0xC0100000 if durable and _IS_WINDOWS else None
-    )  # SYNCHRONIZE | GENERIC_READ | GENERIC_WRITE
+        _WINDOWS_DURABLE_DIRECTORY_ACCESS
+        if durable and _IS_WINDOWS
+        else _WINDOWS_DIRECTORY_READ_ACCESS
+        if _IS_WINDOWS
+        else None
+    )
     if access is None or not _IS_WINDOWS:
         descriptor = open_file(path, _DIRECTORY_FLAGS)
     else:
