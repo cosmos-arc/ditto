@@ -787,14 +787,18 @@ def test_select_amd64_archive_accepts_single_image_manifest(
         image_id = artifact_gate._select_amd64_archive(archive)
         assert image_id == f"sha256:{config_digest}"
         with tarfile.open(archive) as result:
-            assert json.load(result.extractfile("manifest.json")) == [
+            manifest_stream = result.extractfile("manifest.json")
+            config_stream = result.extractfile(f"blobs/sha256/{config_digest}")
+            assert manifest_stream is not None
+            assert config_stream is not None
+            assert json.load(manifest_stream) == [
                 {
                     "Config": f"blobs/sha256/{config_digest}",
                     "Layers": [f"blobs/sha256/{layer_digest}"],
                     "RepoTags": None,
                 }
             ]
-            assert result.extractfile(f"blobs/sha256/{config_digest}").read()
+            assert config_stream.read()
     else:
         with pytest.raises(artifact_gate.ArtifactGateError, match="not linux/amd64"):
             artifact_gate._select_amd64_archive(archive)
