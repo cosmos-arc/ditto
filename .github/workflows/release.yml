@@ -171,8 +171,12 @@ jobs:
           docker save --output dist/ditto-image.tar "$IMAGE"
           docker run --rm \
             --volume "$PWD/dist:/work" \
+            --volume ditto-trivy-cache:/root/.cache/trivy \
             ghcr.io/aquasecurity/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
             image --input /work/ditto-image.tar --format json --output /work/trivy-backend.json --exit-code 1 --severity HIGH,CRITICAL
+          python3 -m tooling.release.artifact_gate scan-backend-sources \
+            --output dist \
+            --final-image "$IMAGE"
       - name: Generate SPDX SBOM from release subject
         env:
           PRODUCT_VERSION: ${{ steps.identity.outputs.product_version }}
@@ -201,8 +205,11 @@ jobs:
           from pathlib import Path
           from tooling.release.artifact_gate import (
               _archive_image_config,
+              _backend_library_sources,
+              _verify_scanner_source,
               _verify_scanner_subject,
               _bind_and_verify_web_sbom,
+              _bind_backend_source_provenance,
               _canonicalize_spdx_sbom,
               _verify_web_artifact_metadata,
           )
@@ -218,6 +225,16 @@ jobs:
           config_digest = _archive_image_config(Path("dist/ditto-image.tar"))
           _verify_scanner_subject(Path("dist/ditto-backend.syft.json"), image=config_digest, scanner="syft")
           _verify_scanner_subject(Path("dist/trivy-backend.json"), image=config_digest, scanner="trivy")
+          for stage, source in _backend_library_sources(Path(".")):
+              _verify_scanner_source(
+                  Path(f"dist/trivy-backend-source-{stage}.json"),
+                  source=source,
+                  stage=stage,
+              )
+          _bind_backend_source_provenance(
+              Path("dist/ditto-backend.spdx.json"),
+              Path("dist/ditto-backend-source-provenance.spdx.json"),
+          )
           _verify_web_artifact_metadata(Path("dist/ditto-web.tar"), release=release)
           _canonicalize_spdx_sbom(Path("dist/ditto-backend.spdx.json"), label="backend SPDX SBOM")
           _bind_and_verify_web_sbom(
@@ -248,6 +265,9 @@ jobs:
             --artifact release-tools/verify-cohort.py \
             --artifact ditto-image.tar \
             --artifact ditto-backend.spdx.json \
+            --artifact trivy-backend-source-runtime-libraries.json \
+            --artifact trivy-backend-source-debian-libraries.json \
+            --artifact ditto-backend-source-provenance.spdx.json \
             --artifact ditto-web.tar \
             --artifact ditto-web.spdx.json \
             --backend-artifact ditto-image.tar \
@@ -278,6 +298,9 @@ jobs:
             sha256sum \
               ditto-image.tar \
               ditto-backend.spdx.json \
+              trivy-backend-source-runtime-libraries.json \
+              trivy-backend-source-debian-libraries.json \
+              ditto-backend-source-provenance.spdx.json \
               ditto-web.tar \
               ditto-web.spdx.json \
               release-inputs/contracts/openapi/v1.json \
@@ -329,6 +352,7 @@ jobs:
           subject-path: |
             dist/ditto-image.tar
             dist/ditto-backend.spdx.json
+            dist/ditto-backend-source-provenance.spdx.json
             dist/ditto-web.tar
             dist/ditto-web.spdx.json
             dist/release-inputs/contracts/openapi/v1.json
@@ -362,6 +386,7 @@ jobs:
           path: |
             dist/ditto-image.tar
             dist/ditto-backend.spdx.json
+            dist/ditto-backend-source-provenance.spdx.json
             dist/ditto-web.tar
             dist/ditto-web.spdx.json
             dist/release-inputs/contracts/openapi/v1.json
@@ -391,6 +416,9 @@ jobs:
             --notes "Immutable release cohort for Git commit $GITHUB_SHA." \
             "dist/ditto-image.tar#Backend container image artifact" \
             "dist/ditto-backend.spdx.json#Backend SPDX SBOM" \
+            "dist/ditto-backend-source-provenance.spdx.json#Backend copied-library source provenance SPDX SBOM" \
+            "dist/trivy-backend-source-runtime-libraries.json#Runtime-library source Trivy raw report" \
+            "dist/trivy-backend-source-debian-libraries.json#Debian-library source Trivy raw report" \
             "dist/ditto-web.tar#Web static artifact" \
             "dist/ditto-web.spdx.json#Web SPDX SBOM" \
             "dist/release-inputs/contracts/openapi/v1.json#OpenAPI contract release input" \

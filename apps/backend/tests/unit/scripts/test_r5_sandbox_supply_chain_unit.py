@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from ditto_apps.scripts.r5_sandbox_supply_chain import build_spdx_sbom
+from ditto_apps.scripts.r5_sandbox_supply_chain import (
+    _debian_packages,
+    build_spdx_sbom,
+)
 
 
 def test_spdx_sbom_is_sorted_and_binds_every_observed_package() -> None:
@@ -43,3 +46,22 @@ def test_spdx_sbom_is_sorted_and_binds_every_observed_package() -> None:
         for package in packages
         if package["name"] not in {"ditto/r5-research-sandbox", "python-base-image"}
     } | {"SPDXRef-File-candidate-runner-py"}
+
+
+def test_dpkg_status_inventory_only_includes_installed_packages() -> None:
+    status = b"""Package: kept
+Status: deinstall ok config-files
+Version: 1
+
+Package: explicit installed
+Status: install ok installed
+Version: 2
+
+Package: distroless installed
+Version: 3
+"""
+
+    assert _debian_packages(status) == (
+        ("explicit installed", "2"),
+        ("distroless installed", "3"),
+    )

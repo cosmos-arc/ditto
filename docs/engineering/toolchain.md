@@ -28,7 +28,7 @@ Task 的组合任务顺序调用前置任务，失败立即传播；构建完成
 
 唯一已确认的必要运行时版本调整：macOS 的 Conda Prefect 3.8.1 对应 PyPI 分发要求 FastAPI ≥0.139，与项目 <0.137 冲突，因此采用原 Linux/Windows 已锁定的 Prefect 3.6.24。原锁的 `pydantic-extra-types==2.11.2` 已被 PyPI 撤回（非安全原因）；本次保留，后续依赖更新单独审查。
 
-开发解释器使用固定 uv 版本所分发的 python-build-standalone CPython 3.13.14；项目只接受 uv managed Python。生产容器使用 Dockerfile 内固定 digest 的 CPython 3.13.14 Debian 镜像，显式禁止解释器下载。两者来源不同，不能仅凭同一 Python 版本宣称原生 ABI 相同。
+开发解释器使用固定 uv 版本所分发的 python-build-standalone CPython 3.13.14；项目只接受 uv managed Python。生产容器在固定 digest 的 distroless Debian 13 base 上运行 CPython 3.13.14，并把构建阶段的 uv、pip 和源码 checkout 排除在最终镜像外；显式禁止解释器下载。两者来源不同，不能仅凭同一 Python 版本宣称原生 ABI 相同。
 
 Conda 的 NumPy/BLAS、DuckDB、Polars、Lupa 由 PyPI wheel 提供；Windows 原 MKL 与新 wheel 的数学库差异通过原有数值容差验证。Conda 引入的 Lua、Graphviz/GTK 等系统组件不作为独立 Python 依赖复制；实际 Prefect 内存队列的 Lua 能力由 Lupa wheel 验收。`no-build` 禁止第三方源码编译；本地 setuptools 包正常构建。支持范围保持 Linux x86_64、macOS ARM64、Windows x64，锁定解析不替代各平台的真实执行证据。
 
@@ -38,7 +38,12 @@ UV_PROJECT_ENVIRONMENT="$PWD/.cache/production-venv" \
   uv sync --locked --all-packages --no-dev --no-editable
 ```
 
-生产容器仅复制非 editable 环境与配置，不复制源码 checkout、uv 或 Bun。环境身份是版本化摘要，绑定 `uv.lock`、`.python-version`、Dockerfile 的固定来源及目标 `linux/amd64`；release inputs 携带全部输入，新 bundle 携带对应 stdlib verifier。历史 cohort 与其自带 verifier 不改写。
+生产容器仅复制非 editable 环境、固定 Python 运行时、必要系统库与配置，不复制源码 checkout、uv 或 Bun。两个复制库来源镜像在 release cohort 中均有按 amd64 digest/config 绑定的原始 Trivy 报告；报告保留全部 package inventory，来源镜像中带 HIGH/CRITICAL 的 installed file 必须在最终镜像中不存在，或与来源字节不同（即已被干净来源替换），否则失败。独立的 copied-library source provenance SPDX 通过 external document reference 挂到最终 backend SPDX，原始来源报告也直接发布为 release evidence。环境身份是版本化摘要，绑定 `uv.lock`、`.python-version`、Dockerfile 的固定来源及目标 `linux/amd64`；release inputs 携带全部输入，新 bundle 携带对应 stdlib verifier。历史 cohort 与其自带 verifier 不改写。
+
+## CI 时长基线
+
+通过 run [34100716341](https://github.com/cosmos-arc/ditto/actions/runs/34100716341) 中，`Backend tests and coverage` 约 31 分 44 秒，整轮 CI 约 33 分 18 秒；16,501 个测试通过、74 个跳过。最慢的真实测试组为 scheduler capacity `[2]` 345.70 秒、capacity `[4]` 300.20 秒和 128-candidate backend e2e wrapper 303.20 秒。它们在 job 内并发，但合计占据主要窗口；这不是 public repo quota、`TUSHARE_TOKEN` 或 release scanner 造成的。release 扫描共享 Trivy DB volume，避免最终镜像与来源镜像扫描重复下载漏洞库。
+
 
 ## 本次本机证据
 

@@ -72,6 +72,7 @@ def test_owned_temporary_directory_resolves_system_symlink_before_staging(
         "_run_ephemeral_container",
         "_canonicalize_spdx_sbom",
         "_verify_scanner_subject",
+        "_scan_backend_library_sources",
     ):
         monkeypatch.setattr(artifact_gate, name, noop)
     monkeypatch.setattr(
@@ -614,6 +615,7 @@ def test_build_export_and_smoke_use_the_build_output_id(
         "_run_ephemeral_container",
         "_canonicalize_spdx_sbom",
         "_verify_scanner_subject",
+        "_scan_backend_library_sources",
         "_stage_web_dependency_metadata",
         "_bind_and_verify_web_sbom",
     ):
@@ -621,6 +623,186 @@ def test_build_export_and_smoke_use_the_build_output_id(
     monkeypatch.setattr(artifact_gate, "_smoke_container", smoke)
     with pytest.raises(SmokeObserved):
         artifact_gate.run_artifact_gate(tmp_path)
+
+
+def test_backend_library_sources_are_bound_to_release_dockerfile() -> None:
+    assert artifact_gate._backend_library_sources(ROOT) == (
+        (
+            "runtime-libraries",
+            "cgr.dev/chainguard/python@sha256:c23539f80289046e2fa734d3f3fc418833fc22d064a50cc43fa9a6edc28c1615",
+        ),
+        (
+            "debian-libraries",
+            "gcr.io/distroless/python3-debian13@sha256:f3d5ddc6c64a019fe520e7f005f2880be21e6afc461b10a3c15ef2e4edc71e33",
+        ),
+    )
+
+
+def test_scanner_source_mismatch_cannot_pass(tmp_path: Path) -> None:
+    report = tmp_path / "source.json"
+    report.write_text(json.dumps({"Metadata": {"RepoDigests": ["wrong@sha256:x"]}}))
+    with pytest.raises(artifact_gate.ArtifactGateError, match="source"):
+        artifact_gate._verify_scanner_source(
+            report, source="right@sha256:" + "a" * 64, stage="runtime-libraries"
+        )
+
+
+def test_backend_source_scan_keeps_raw_inventory_for_post_scan_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = "source@sha256:" + "a" * 64
+
+    def sources(_root: Path) -> tuple[tuple[str, str], ...]:
+        return (("runtime-libraries", source),)
+
+    def scan_archive(
+        _docker: str,
+        _root: Path,
+        *,
+        source: str,
+        archive: Path,
+        output: Path,
+        report: Path,
+    ) -> None:
+        del source, archive, output
+        report.write_text(
+            json.dumps(
+                {
+                    "Metadata": {"ImageID": "sha256:" + "b" * 64},
+                    "Results": [{"Packages": [], "Vulnerabilities": None}],
+                }
+            )
+        )
+
+    monkeypatch.setattr(artifact_gate, "_backend_library_sources", sources)
+    monkeypatch.setattr(artifact_gate, "_scan_source_archive", scan_archive)
+
+    reports, provenance = artifact_gate.scan_backend_library_sources(tmp_path, tmp_path)
+
+    assert [path.name for path in reports] == [
+        "trivy-backend-source-runtime-libraries.json"
+    ]
+    assert provenance.name == "ditto-backend-source-provenance.spdx.json"
+    assert provenance.is_file()
+    assert provenance.is_file()
+
+
+def _filesystem_tar(path: Path, files: dict[str, bytes]) -> None:
+    with tarfile.open(path, "w") as archive:
+        for name, payload in files.items():
+            member = tarfile.TarInfo(name.removeprefix("/"))
+            member.size = len(payload)
+            archive.addfile(member, io.BytesIO(payload))
+
+
+def _vulnerable_report(source: str) -> dict[str, object]:
+    return {
+        "Metadata": {"RepoDigests": [source]},
+        "Results": [
+            {
+                "Packages": [
+                    {
+                        "Name": "libssl3t64",
+                        "Version": "3.0.0",
+                        "Identifier": {"PURL": "pkg:deb/debian/libssl3t64@3.0.0"},
+                        "InstalledFiles": ["/usr/lib/libssl.so.3"],
+                    }
+                ],
+                "Vulnerabilities": [{"PkgName": "libssl3t64"}],
+            }
+        ],
+    }
+
+
+def test_vulnerable_source_file_cannot_remain_byte_identical(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.tar"
+    final = tmp_path / "final.tar"
+    _filesystem_tar(source, {"/usr/lib/libssl.so.3": b"vulnerable"})
+    _filesystem_tar(final, {"/usr/lib/libssl.so.3": b"vulnerable"})
+
+    with pytest.raises(
+        artifact_gate.ArtifactGateError,
+        match=r"byte-identical.*libssl3t64:/usr/lib/libssl.so.3",
+    ):
+        artifact_gate._verify_vulnerable_source_files(
+            _vulnerable_report("source@sha256:" + "a" * 64),
+            source_export=source,
+            final_export=final,
+        )
+
+
+def test_vulnerable_source_file_may_be_absent_or_replaced(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.tar"
+    final = tmp_path / "final.tar"
+    _filesystem_tar(source, {"/usr/lib/libssl.so.3": b"vulnerable"})
+    _filesystem_tar(
+        final,
+        {
+            "/usr/lib/libssl.so.3": b"replacement",
+            "/usr/lib/other.so": b"clean",
+        },
+    )
+
+    artifact_gate._verify_vulnerable_source_files(
+        _vulnerable_report("source@sha256:" + "a" * 64),
+        source_export=source,
+        final_export=final,
+    )
+
+
+def test_backend_sbom_links_source_provenance_document(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    sbom = tmp_path / "backend.spdx.json"
+    provenance = tmp_path / "source-provenance.spdx.json"
+    sbom.write_text(
+        json.dumps(
+            {
+                "documentDescribes": ["SPDXRef-Subject"],
+                "packages": [{"SPDXID": "SPDXRef-Subject", "name": "backend"}],
+                "relationships": [],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    provenance.write_text(
+        json.dumps(
+            {
+                "documentDescribes": ["SPDXRef-backend-source-image-runtime-libraries"],
+                "documentNamespace": "https://ditto.invalid/source",
+                "packages": [],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "d" * 64)
+
+    artifact_gate._bind_backend_source_provenance(sbom, provenance)
+
+    document = json.loads(sbom.read_text())
+    assert document["externalDocumentRefs"] == [
+        {
+            "checksum": {"algorithm": "SHA256", "checksumValue": "d" * 64},
+            "externalDocumentId": "DocumentRef-runtime-libraries",
+            "spdxDocument": "https://ditto.invalid/source",
+        }
+    ]
+    assert document["relationships"] == [
+        {
+            "relatedSpdxElement": (
+                "DocumentRef-runtime-libraries:"
+                "SPDXRef-backend-source-image-runtime-libraries"
+            ),
+            "relationshipType": "DEPENDS_ON",
+            "spdxElementId": "SPDXRef-Subject",
+        }
+    ]
 
 
 @pytest.mark.parametrize("scanner", ["syft", "trivy"])

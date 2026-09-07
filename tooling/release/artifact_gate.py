@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import io
 import json
 import os
+import posixpath
 import re
 import shlex
 import shutil
@@ -15,9 +18,9 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from tooling.release.cohort_bundle import (
     create_release_bundle,
@@ -51,6 +54,8 @@ _DOCKER_CONTROL_TIMEOUT_SECONDS = 60
 _WEB_METADATA_MAX_BYTES = 64 * 1024
 _WEB_METADATA_FILENAME = "ditto-build-metadata.json"
 _WEB_ARTIFACT_SPDX_ID = "SPDXRef-Ditto-Web-Artifact"
+_BACKEND_LIBRARY_STAGES = ("runtime-libraries", "debian-libraries")
+_SOURCE_PROVENANCE_FILENAME = "ditto-backend-source-provenance.spdx.json"
 
 
 class ArtifactGateError(RuntimeError):
@@ -769,6 +774,30 @@ def _archive_image_config(path: Path) -> str:
         return "sha256:" + hashlib.sha256(config_file.read()).hexdigest()
 
 
+def _docker_export_filesystem(
+    docker: str,
+    root: Path,
+    *,
+    image: str,
+    destination: Path,
+    platform: str,
+) -> None:
+    container_id = _run(
+        [docker, "create", "--platform", platform, image],
+        cwd=root,
+        capture_output=True,
+        timeout_seconds=_DOCKER_CONTROL_TIMEOUT_SECONDS,
+    )
+    try:
+        _run(
+            [docker, "export", "--output", str(destination), container_id],
+            cwd=root,
+            timeout_seconds=_DOCKER_EXPORT_TIMEOUT_SECONDS,
+        )
+    finally:
+        _remove_container(docker, root, container_id)
+
+
 def _verify_scanner_subject(path: Path, *, image: str, scanner: str) -> None:
     report = _json_object(path.read_bytes(), label=f"{scanner} report")
     source = report.get("source") if scanner == "syft" else report
@@ -787,6 +816,549 @@ def _verify_scanner_subject(path: Path, *, image: str, scanner: str) -> None:
             f"{scanner} subject does not match build output: {actual!r} != {image}"
         )
     sys.stdout.write(f"{scanner} subject verified: {image}\n")
+
+
+def _backend_library_sources(root: Path) -> tuple[tuple[str, str], ...]:
+    content = (root / "deploy" / "docker" / "Dockerfile").read_text(encoding="utf-8")
+    sources: dict[str, str] = {}
+    for image, stage in re.findall(r"^FROM (\S+) AS (\S+)$", content, re.MULTILINE):
+        if stage in _BACKEND_LIBRARY_STAGES:
+            sources[stage] = image
+    if tuple(sources) != _BACKEND_LIBRARY_STAGES:
+        raise ArtifactGateError("backend copied-library source stages are incomplete")
+    return tuple(sources.items())
+
+
+def _source_results(report: dict[str, object]) -> list[dict[str, object]]:
+    results = report.get("Results")
+    if not isinstance(results, list) or not all(
+        isinstance(result, dict) for result in results
+    ):
+        raise ArtifactGateError("trivy source report has malformed results")
+    return results
+
+
+def _source_packages(report: dict[str, object]) -> dict[str, dict[str, object]]:
+    packages: dict[str, dict[str, object]] = {}
+    for result in _source_results(report):
+        inventory = result.get("Packages")
+        if inventory is None:
+            continue
+        if not isinstance(inventory, list) or not all(
+            isinstance(package, dict) for package in inventory
+        ):
+            raise ArtifactGateError("trivy source report has malformed packages")
+        for package in inventory:
+            name = package.get("Name")
+            if not isinstance(name, str) or not name:
+                raise ArtifactGateError("trivy source report has a malformed package")
+            packages[name] = package
+    return packages
+
+
+def _vulnerable_installed_files(
+    report: dict[str, object],
+) -> dict[str, tuple[str, ...]]:
+    vulnerable: set[str] = set()
+    for result in _source_results(report):
+        vulnerabilities = result.get("Vulnerabilities")
+        if vulnerabilities is None:
+            continue
+        if not isinstance(vulnerabilities, list) or not all(
+            isinstance(vulnerability, dict) for vulnerability in vulnerabilities
+        ):
+            raise ArtifactGateError("trivy source report has malformed vulnerabilities")
+        for vulnerability in vulnerabilities:
+            package_name = vulnerability.get("PkgName")
+            if not isinstance(package_name, str) or not package_name:
+                raise ArtifactGateError("trivy source report has a malformed package")
+            vulnerable.add(package_name)
+    packages = _source_packages(report)
+    missing = sorted(vulnerable.difference(packages))
+    if missing:
+        raise ArtifactGateError(
+            "trivy source report lacks inventory for vulnerable packages: "
+            + ", ".join(missing)
+        )
+    installed: dict[str, tuple[str, ...]] = {}
+    for name in sorted(vulnerable):
+        files = packages[name].get("InstalledFiles")
+        if not isinstance(files, list) or not files:
+            raise ArtifactGateError(
+                f"trivy source report lacks installed files for {name}"
+            )
+        paths = tuple(path for path in files if isinstance(path, str))
+        if len(paths) != len(files) or any(
+            not path.startswith("/") or ".." in PurePosixPath(path).parts
+            for path in paths
+        ):
+            raise ArtifactGateError(
+                f"trivy source report has invalid installed files for {name}"
+            )
+        installed[name] = paths
+    return installed
+
+
+def _tar_member_index(archive: tarfile.TarFile) -> dict[str, tarfile.TarInfo]:
+    return {member.name.removeprefix("./"): member for member in archive.getmembers()}
+
+
+def _resolved_tar_member(
+    index: Mapping[str, tarfile.TarInfo],
+    path: str,
+) -> tarfile.TarInfo | None:
+    current = path.removeprefix("/")
+    for _ in range(16):
+        member = index.get(current)
+        if member is None:
+            return None
+        if member.issym():
+            target = member.linkname
+            if not target.startswith("/"):
+                target = posixpath.normpath(
+                    posixpath.join(posixpath.dirname(current), target)
+                )
+            current = target.removeprefix("/")
+            continue
+        if member.islnk():
+            current = member.linkname.removeprefix("/")
+            continue
+        return member
+    raise ArtifactGateError(f"container filesystem has a symlink cycle: {path}")
+
+
+def _tar_file_digest(
+    archive: tarfile.TarFile,
+    index: Mapping[str, tarfile.TarInfo],
+    path: str,
+) -> str | None:
+    member = _resolved_tar_member(index, path)
+    if member is None or member.isdir():
+        return None
+    stream = archive.extractfile(member)
+    if stream is None:
+        raise ArtifactGateError(f"container filesystem file is unreadable: {path}")
+    return hashlib.sha256(stream.read()).hexdigest()
+
+
+def _verify_vulnerable_source_files(
+    report: dict[str, object],
+    *,
+    source_export: Path,
+    final_export: Path,
+) -> None:
+    vulnerable_files = _vulnerable_installed_files(report)
+    unchanged: list[str] = []
+    try:
+        with tarfile.open(source_export) as source, tarfile.open(final_export) as final:
+            source_index = _tar_member_index(source)
+            final_index = _tar_member_index(final)
+            for package, paths in vulnerable_files.items():
+                for path in paths:
+                    source_digest = _tar_file_digest(source, source_index, path)
+                    if source_digest is None:
+                        raise ArtifactGateError(
+                            "trivy source installed file is absent from source export: "
+                            + path
+                        )
+                    final_digest = _tar_file_digest(final, final_index, path)
+                    if final_digest == source_digest:
+                        unchanged.append(f"{package}:{path}")
+    except tarfile.TarError as error:
+        raise ArtifactGateError(
+            "backend source/final container export is unreadable"
+        ) from error
+    if unchanged:
+        raise ArtifactGateError(
+            "vulnerable source files remain byte-identical in final image: "
+            + ", ".join(unchanged[:5])
+        )
+
+
+def _verify_scanner_source(
+    path: Path,
+    *,
+    source: str,
+    stage: str,
+    image_id: str | None = None,
+) -> None:
+    del stage
+    report = _json_object(path.read_bytes(), label="trivy source report")
+    metadata = report.get("Metadata")
+    if not isinstance(metadata, dict):
+        raise ArtifactGateError("trivy source report has malformed metadata")
+    digests = metadata.get("RepoDigests")
+    if isinstance(digests, list) and source in digests:
+        return
+    scanned_image = metadata.get("ImageID")
+    if image_id is None or scanned_image != image_id:
+        raise ArtifactGateError(
+            f"trivy source does not match pinned image: {digests!r}/"
+            + f"{scanned_image!r} != {source!r}/{image_id!r}"
+        )
+
+
+def _spdx_id(value: str) -> str:
+    return "SPDXRef-" + re.sub(r"[^A-Za-z0-9.-]+", "-", value)
+
+
+def _write_backend_source_provenance(
+    reports: Sequence[Path],
+    sources: Sequence[tuple[str, str]],
+    output: Path,
+) -> Path:
+    packages: list[dict[str, object]] = []
+    relationships: list[dict[str, object]] = []
+    described: list[str] = []
+    for (stage, source), report_path in zip(sources, reports, strict=True):
+        report = _json_object(report_path.read_bytes(), label="trivy source report")
+        digest = source.rsplit("@", 1)[-1].removeprefix("sha256:")
+        image_id = _spdx_id(f"backend-source-image-{stage}")
+        described.append(image_id)
+        packages.append(
+            {
+                "SPDXID": image_id,
+                "checksums": [{"algorithm": "SHA256", "checksumValue": digest}],
+                "copyrightText": "NOASSERTION",
+                "downloadLocation": source,
+                "filesAnalyzed": False,
+                "licenseConcluded": "NOASSERTION",
+                "licenseDeclared": "NOASSERTION",
+                "name": source,
+                "sourceInfo": f"Pinned copied-library source for stage {stage}",
+                "versionInfo": digest,
+            }
+        )
+        for index, package in enumerate(_source_packages(report).values()):
+            package_id = _spdx_id(f"backend-source-{stage}-{index}")
+            version = package.get("Version")
+            identifier = package.get("Identifier")
+            purl = identifier.get("PURL") if isinstance(identifier, dict) else None
+            entry: dict[str, object] = {
+                "SPDXID": package_id,
+                "copyrightText": "NOASSERTION",
+                "downloadLocation": "NOASSERTION",
+                "filesAnalyzed": False,
+                "licenseConcluded": "NOASSERTION",
+                "licenseDeclared": "NOASSERTION",
+                "name": package["Name"],
+                "sourceInfo": f"Inventory from pinned source image {source}",
+            }
+            if isinstance(version, str) and version:
+                entry["versionInfo"] = version
+            if isinstance(purl, str) and purl:
+                entry["externalRefs"] = [
+                    {
+                        "referenceCategory": "PACKAGE-MANAGER",
+                        "referenceType": "purl",
+                        "referenceLocator": purl,
+                    }
+                ]
+            packages.append(entry)
+            relationships.append(
+                {
+                    "spdxElementId": package_id,
+                    "relatedSpdxElement": image_id,
+                    "relationshipType": "CONTAINED_BY",
+                }
+            )
+    document = {
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "creationInfo": {
+            "created": "1970-01-01T00:00:00Z",
+            "creators": ["Tool: ditto-artifact-gate"],
+        },
+        "dataLicense": "CC0-1.0",
+        "documentDescribes": described,
+        "documentNamespace": "https://ditto.invalid/spdx/backend-source-provenance",
+        "name": "ditto-backend-source-provenance",
+        "packages": packages,
+        "relationships": relationships,
+        "spdxVersion": "SPDX-2.3",
+    }
+    destination = output / _SOURCE_PROVENANCE_FILENAME
+    destination.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return destination
+
+
+def _bind_backend_source_provenance(sbom_path: Path, provenance_path: Path) -> None:
+    sbom = _json_object(sbom_path.read_bytes(), label="backend SPDX SBOM")
+    provenance = _json_object(
+        provenance_path.read_bytes(), label="backend source provenance SPDX"
+    )
+    described = sbom.get("documentDescribes")
+    if (
+        not isinstance(described, list)
+        or len(described) != 1
+        or not isinstance(described[0], str)
+        or not described[0]
+    ):
+        raise ArtifactGateError("backend SPDX SBOM must describe one subject")
+    references = sbom.setdefault("externalDocumentRefs", [])
+    if not isinstance(references, list):
+        raise ArtifactGateError("backend SPDX external document refs must be an array")
+    relationships = sbom.setdefault("relationships", [])
+    if not isinstance(relationships, list):
+        raise ArtifactGateError("backend SPDX relationships must be an array")
+    source_images = provenance.get("documentDescribes")
+    if not isinstance(source_images, list):
+        raise ArtifactGateError("backend source provenance must describe source images")
+    for value in source_images:
+        if not isinstance(value, str):
+            raise ArtifactGateError("backend source provenance image ID is invalid")
+        stage = value.removeprefix("SPDXRef-backend-source-image-")
+        document_id = f"DocumentRef-{stage}"
+        references.append(
+            {
+                "checksum": {
+                    "algorithm": "SHA256",
+                    "checksumValue": _sha256(provenance_path),
+                },
+                "externalDocumentId": document_id,
+                "spdxDocument": provenance["documentNamespace"],
+            }
+        )
+        relationships.append(
+            {
+                "relatedSpdxElement": f"{document_id}:{value}",
+                "relationshipType": "DEPENDS_ON",
+                "spdxElementId": described[0],
+            }
+        )
+    sbom_path.write_text(
+        json.dumps(sbom, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _tar_json(archive: tarfile.TarFile, name: str) -> object:
+    stream = archive.extractfile(name)
+    if stream is None:
+        raise ArtifactGateError(f"source archive JSON is absent: {name}")
+    return json.load(stream)
+
+
+def _required_blob_name(digest: object) -> str:
+    if not isinstance(digest, str) or not digest.startswith("sha256:"):
+        raise ArtifactGateError("source archive digest is invalid")
+    return "blobs/sha256/" + digest.removeprefix("sha256:")
+
+
+def _oci_amd64_descriptor(archive: tarfile.TarFile) -> dict[str, object] | None:
+    if archive.extractfile("index.json") is None:
+        return None
+    index = _tar_json(archive, "index.json")
+    descriptors = index.get("manifests") if isinstance(index, dict) else None
+    if not isinstance(descriptors, list) or len(descriptors) != 1:
+        raise ArtifactGateError("source archive index is malformed")
+    root = _tar_json(archive, _required_blob_name(descriptors[0].get("digest")))
+    children = root.get("manifests") if isinstance(root, dict) else None
+    if not isinstance(children, list):
+        raise ArtifactGateError("source archive manifest list is malformed")
+    amd64 = [
+        child
+        for child in children
+        if isinstance(child, dict)
+        and child.get("platform") == {"architecture": "amd64", "os": "linux"}
+    ]
+    if len(amd64) != 1:
+        raise ArtifactGateError("source archive lacks one linux/amd64 image")
+    return amd64[0]
+
+
+def _legacy_amd64_image_id(archive: tarfile.TarFile) -> str:
+    manifests = _tar_json(archive, "manifest.json")
+    if not isinstance(manifests, list) or not manifests:
+        raise ArtifactGateError("source archive manifest is malformed")
+    for image in manifests:
+        if not isinstance(image, dict) or not isinstance(image.get("Config"), str):
+            raise ArtifactGateError("source archive config is malformed")
+        config_name = image["Config"]
+        config_stream = archive.extractfile(config_name)
+        if config_stream is None:
+            raise ArtifactGateError("source archive config is absent")
+        payload = config_stream.read()
+        config = json.loads(payload)
+        if config.get("architecture") == "amd64" and config.get("os") == "linux":
+            return "sha256:" + hashlib.sha256(payload).hexdigest()
+    raise ArtifactGateError("source archive lacks a linux/amd64 image")
+
+
+def _write_amd64_docker_archive(
+    source: tarfile.TarFile,
+    target: tarfile.TarFile,
+    descriptor: dict[str, object],
+) -> str:
+    child = _tar_json(source, _required_blob_name(descriptor.get("digest")))
+    config = child.get("config") if isinstance(child, dict) else None
+    layers = child.get("layers") if isinstance(child, dict) else None
+    if not isinstance(config, dict) or not isinstance(layers, list):
+        raise ArtifactGateError("source archive image manifest is malformed")
+    config_name = _required_blob_name(config.get("digest"))
+    layer_names = []
+    for layer in layers:
+        if not isinstance(layer, dict):
+            raise ArtifactGateError("source archive layer is malformed")
+        layer_names.append(_required_blob_name(layer.get("digest")))
+    docker_manifest = [{"Config": config_name, "Layers": layer_names, "RepoTags": None}]
+    payload = json.dumps(docker_manifest, separators=(",", ":")).encode()
+    member = tarfile.TarInfo("manifest.json")
+    member.size = len(payload)
+    members = {original.name: original for original in source.getmembers()}
+    for name in sorted({config_name, *layer_names}):
+        original = members.get(name)
+        if original is None:
+            raise ArtifactGateError(f"source archive blob is absent: {name}")
+        stream = source.extractfile(original)
+        if stream is None:
+            raise ArtifactGateError(f"source archive blob is unreadable: {name}")
+        target.addfile(original, stream)
+    target.addfile(member, io.BytesIO(payload))
+    return "sha256:" + config_name.removeprefix("blobs/sha256/")
+
+
+def _select_amd64_archive(archive: Path) -> str:
+    """Return the linux/amd64 config ID and make that image the only archive subject."""
+    selected = archive.with_suffix(".amd64.tar")
+    try:
+        with tarfile.open(archive) as source:
+            descriptor = _oci_amd64_descriptor(source)
+            if descriptor is None:
+                return _legacy_amd64_image_id(source)
+            with tarfile.open(selected, "w") as target:
+                image_id = _write_amd64_docker_archive(source, target, descriptor)
+    except (OSError, tarfile.TarError, json.JSONDecodeError) as error:
+        raise ArtifactGateError("source archive is unreadable") from error
+    archive.unlink()
+    selected.replace(archive)
+    return image_id
+
+
+def _scan_source_archive(
+    docker: str,
+    root: Path,
+    *,
+    source: str,
+    archive: Path,
+    output: Path,
+    report: Path,
+) -> None:
+    repo_digests = _run(
+        [docker, "image", "inspect", "--format", '{{join .RepoDigests ","}}', source],
+        cwd=root,
+        capture_output=True,
+        timeout_seconds=_DOCKER_CONTROL_TIMEOUT_SECONDS,
+    ).split(",")
+    if source not in repo_digests:
+        raise ArtifactGateError(
+            f"docker source does not match pinned image: {repo_digests!r}"
+        )
+    _run(
+        [docker, "save", "--output", str(archive), source],
+        cwd=root,
+        timeout_seconds=_DOCKER_EXPORT_TIMEOUT_SECONDS,
+    )
+    image_id = _select_amd64_archive(archive)
+    _run_ephemeral_container(
+        docker,
+        root,
+        purpose="trivy-source",
+        arguments=[
+            "--volume",
+            "ditto-trivy-cache:/root/.cache/trivy",
+            "--volume",
+            f"{archive.parent}:/source:ro",
+            "--volume",
+            f"{output}:/work",
+            _TRIVY,
+            "image",
+            "--platform",
+            "linux/amd64",
+            "--input",
+            f"/source/{archive.name}",
+            "--format",
+            "json",
+            "--output",
+            f"/work/{report.name}",
+            "--exit-code",
+            "0",
+            "--severity",
+            "HIGH,CRITICAL",
+            "--scanners",
+            "vuln",
+            "--list-all-pkgs",
+        ],
+        timeout_seconds=_SCANNER_TIMEOUT_SECONDS,
+    )
+    _verify_scanner_source(report, source=source, stage="", image_id=image_id)
+
+
+def scan_backend_library_sources(
+    root: Path,
+    output: Path,
+    *,
+    final_image: str | None = None,
+) -> tuple[tuple[Path, ...], Path]:
+    """Scan copied-library sources and reject vulnerable files in the final image."""
+    root = root.expanduser().resolve(strict=True)
+    output = output.expanduser().resolve(strict=True)
+    docker = _executable("docker")
+    sources = _backend_library_sources(root)
+    reports: list[Path] = []
+    with tempfile.TemporaryDirectory(prefix="ditto-backend-source-") as temporary:
+        scratch = Path(temporary)
+        for stage, source in sources:
+            report = output / f"trivy-backend-source-{stage}.json"
+            archive = scratch / f"{stage}.tar"
+            _scan_source_archive(
+                docker,
+                root,
+                source=source,
+                archive=archive,
+                output=output,
+                report=report,
+            )
+            reports.append(report)
+        if final_image is not None:
+            final_export = scratch / "final.tar"
+            _docker_export_filesystem(
+                docker,
+                root,
+                image=final_image,
+                destination=final_export,
+                platform="linux/amd64",
+            )
+            for (_stage, source), report in zip(sources, reports, strict=True):
+                source_export = scratch / "source-filesystem.tar"
+                _docker_export_filesystem(
+                    docker,
+                    root,
+                    image=source,
+                    destination=source_export,
+                    platform="linux/amd64",
+                )
+                document = _json_object(
+                    report.read_bytes(), label="trivy source report"
+                )
+                _verify_vulnerable_source_files(
+                    document,
+                    source_export=source_export,
+                    final_export=final_export,
+                )
+    provenance = _write_backend_source_provenance(reports, sources, output)
+    return tuple(reports), provenance
+
+
+def _scan_backend_library_sources(
+    docker: str,
+    root: Path,
+    output: Path,
+) -> tuple[tuple[Path, ...], Path]:
+    del docker
+    return scan_backend_library_sources(root, output)
 
 
 def run_artifact_gate(root: Path) -> None:
@@ -927,6 +1499,8 @@ def run_artifact_gate(root: Path) -> None:
         purpose="trivy-backend",
         arguments=[
             "--volume",
+            "ditto-trivy-cache:/root/.cache/trivy",
+            "--volume",
             f"{output}:/work",
             _TRIVY,
             "image",
@@ -946,6 +1520,16 @@ def run_artifact_gate(root: Path) -> None:
     _verify_scanner_subject(
         output / "trivy-backend.json", image=config_digest, scanner="trivy"
     )
+    source_reports, source_provenance = scan_backend_library_sources(
+        workspace, output, final_image=image
+    )
+    _bind_backend_source_provenance(
+        output / "ditto-backend.spdx.json", source_provenance
+    )
+    _canonicalize_spdx_sbom(
+        output / "ditto-backend.spdx.json",
+        label="backend SPDX SBOM",
+    )
 
     manifest_path, cohort_artifacts = _materialize_portable_cohort(
         workspace=workspace,
@@ -954,7 +1538,9 @@ def run_artifact_gate(root: Path) -> None:
             image_tar,
             web_tar,
             output / "ditto-backend.spdx.json",
+            source_provenance,
             output / "ditto-web.spdx.json",
+            *source_reports,
         ),
         backend_artifact=image_tar,
         web_artifact=web_tar,
@@ -977,11 +1563,38 @@ def run_artifact_gate(root: Path) -> None:
 
 
 def main() -> int:
-    """Run the root-local artifact gate."""
+    """Run the root-local artifact gate or a focused release subprocess."""
+    parser = argparse.ArgumentParser(prog="tooling.release.artifact-gate")
+    commands = parser.add_subparsers(dest="command")
+    scanner = commands.add_parser(
+        "scan-backend-sources",
+        help="scan copied-library sources and bind them to the final image",
+    )
+    scanner.add_argument("--output", type=Path, required=True)
+    scanner.add_argument("--final-image")
+    args = parser.parse_args()
+
     root = Path(__file__).resolve().parents[2]
     try:
-        run_artifact_gate(root)
-    except (ArtifactGateError, OSError, ValueError, json.JSONDecodeError) as error:
+        if args.command == "scan-backend-sources":
+            reports, provenance = scan_backend_library_sources(
+                root,
+                args.output,
+                final_image=args.final_image,
+            )
+            sys.stdout.write(
+                "backend source provenance verified: "
+                + ", ".join(path.name for path in (*reports, provenance))
+                + "\n"
+            )
+        else:
+            run_artifact_gate(root)
+    except (
+        ArtifactGateError,
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as error:
         sys.stderr.write(f"artifact-gate: FAIL: {error}\n")
         return 1
     sys.stdout.write("artifact-gate: PASS\n")

@@ -192,14 +192,26 @@ def _docker(
     return process.stdout
 
 
-def _pairs(raw: bytes) -> tuple[tuple[str, str], ...]:
-    values: list[tuple[str, str]] = []
-    for line in raw.decode("utf-8").splitlines():
-        name, separator, version = line.partition("\t")
-        if not separator or not name or not version:
-            raise ValueError("package inventory is invalid")
-        values.append((name, version))
-    return tuple(values)
+def _debian_packages(status: bytes) -> tuple[tuple[str, str], ...]:
+    packages: list[tuple[str, str]] = []
+    fields: dict[str, str] = {}
+    for line in [*status.decode("utf-8").splitlines(), ""]:
+        if line:
+            key, separator, value = line.partition(": ")
+            if separator:
+                fields[key] = value
+            continue
+        if (
+            fields
+            and fields.get("Status", "install ok installed") == "install ok installed"
+        ):
+            name = fields.get("Package", "")
+            version = fields.get("Version", "")
+            if not name or not version:
+                raise ValueError("package inventory is invalid")
+            packages.append((name, version))
+        fields = {}
+    return tuple(packages)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -257,17 +269,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--security-opt=no-new-privileges=true",
         "--entrypoint",
     )
-    debian = _pairs(
+    debian_status_program = (
+        "from pathlib import Path; "
+        "print('\\n\\n'.join(p.read_text() "
+        "for p in sorted(Path('/var/lib/dpkg/status.d').iterdir()) "
+        "if not p.name.endswith('.md5sums')), end='')"
+    )
+    debian = _debian_packages(
         _docker(
             docker_binary=docker_binary,
             context=args.context,
             home=home,
             arguments=(
                 *run_prefix,
-                "/usr/bin/dpkg-query",
+                "/usr/local/bin/python",
                 args.image,
-                "-W",
-                "-f=${Package}\\t${Version}\\n",
+                "-c",
+                debian_status_program,
             ),
         )
     )

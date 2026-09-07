@@ -381,6 +381,50 @@ def test_release_workflow_attests_the_complete_cohort() -> None:
         assert required in content
 
 
+def test_release_scans_and_publishes_backend_library_provenance() -> None:
+    workflow = _workflow("release.yml")
+    steps = workflow["jobs"]["release-cohort"]["steps"]
+    verification = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Verify and export the release image"
+    )
+    sbom = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Generate SPDX SBOM from release subject"
+    )
+    cohort = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Generate and verify release cohort manifest"
+    )
+    publish = workflow["jobs"]["publish-cohort"]["steps"]
+    immutable = next(
+        step["with"]["path"]
+        for step in publish
+        if step.get("name") == "Upload immutable release cohort"
+    )
+    evidence = next(
+        step["run"]
+        for step in publish
+        if step.get("name") == "Publish long-lived release evidence"
+    )
+
+    assert "scan-backend-sources" in verification
+    assert '--final-image "$IMAGE"' in verification
+    assert "_bind_backend_source_provenance" in sbom
+    for relative in (
+        "ditto-backend-source-provenance.spdx.json",
+        "trivy-backend-source-runtime-libraries.json",
+        "trivy-backend-source-debian-libraries.json",
+    ):
+        assert f"--artifact {relative}" in cohort
+        assert relative in cohort[cohort.index("sha256sum") :]
+        assert f"dist/{relative}#" in evidence
+    assert "dist/ditto-backend-source-provenance.spdx.json" in immutable
+
+
 def test_release_cohort_is_self_contained_and_verified_before_distribution() -> None:
     """Downloaded evidence must verify without the repository checkout."""
     workflow = _workflow("release.yml")

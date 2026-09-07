@@ -346,7 +346,7 @@ def validate_live_report(
         or report.get("approval_id") != contract.approval_id
         or report.get("runtime") != contract.runtime
         or report.get("runtime_version") != contract.runtime_version
-        or report.get("image_repository") != "ditto/r5-research-sandbox"
+        or report.get("image_repository") != "127.0.0.1:55000/ditto/r5-research-sandbox"
         or type(digest) is not str
         or any(
             not _is_hash(report.get(field_name))
