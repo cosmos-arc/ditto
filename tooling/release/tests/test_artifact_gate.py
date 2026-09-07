@@ -688,6 +688,48 @@ def test_backend_source_scan_keeps_raw_inventory_for_post_scan_gate(
     assert provenance.is_file()
 
 
+def test_backend_source_scan_pulls_pinned_source_for_buildkit_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = "source@sha256:" + "a" * 64
+    commands: list[list[str]] = []
+
+    def run(command: list[str], **_kwargs: object) -> str:
+        commands.append(command)
+        if command[1:3] == ["image", "inspect"]:
+            return source
+        if command[1] == "save":
+            archive.write_text("archive", encoding="utf-8")
+        return ""
+
+    archive = tmp_path / "runtime-libraries.tar"
+    report = tmp_path / "report.json"
+    monkeypatch.setattr(artifact_gate, "_run", run)
+    monkeypatch.setattr(
+        artifact_gate, "_select_amd64_archive", lambda _path: "sha256:id"
+    )
+    monkeypatch.setattr(
+        artifact_gate, "_run_ephemeral_container", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        artifact_gate, "_verify_scanner_source", lambda *_args, **_kwargs: None
+    )
+
+    artifact_gate._scan_source_archive(
+        "docker",
+        tmp_path,
+        source=source,
+        archive=archive,
+        output=tmp_path,
+        report=report,
+    )
+
+    assert commands[0] == ["docker", "pull", "--platform", "linux/amd64", source]
+    assert commands[1][1:3] == ["image", "inspect"]
+    assert commands[-1][1] == "save"
+
+
 def _filesystem_tar(path: Path, files: dict[str, bytes]) -> None:
     with tarfile.open(path, "w") as archive:
         for name, payload in files.items():

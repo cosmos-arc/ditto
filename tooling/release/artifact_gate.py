@@ -1246,6 +1246,11 @@ def _scan_source_archive(
     output: Path,
     report: Path,
 ) -> None:
+    _run(
+        [docker, "pull", "--platform", "linux/amd64", source],
+        cwd=root,
+        timeout_seconds=_DOCKER_EXPORT_TIMEOUT_SECONDS,
+    )
     repo_digests = _run(
         [docker, "image", "inspect", "--format", '{{join .RepoDigests ","}}', source],
         cwd=root,
