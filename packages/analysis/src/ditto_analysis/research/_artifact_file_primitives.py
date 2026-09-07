@@ -26,6 +26,8 @@ _IS_WINDOWS = sys.platform == "win32"
 _HAS_ATOMIC_NOFOLLOW = hasattr(os, "O_NOFOLLOW")
 _WINDOWS_DIRECTORY_REQUEST = 1 << 30
 _WINDOWS_ACCESS_MODE = 0o3
+_WINDOWS_FILE_READ_ACCESS = 0x00100081
+_WINDOWS_FILE_WRITE_ACCESS = 0x00100106
 _WINDOWS_DIRECTORY_READ_ACCESS = 0x001000A1
 _WINDOWS_DURABLE_DIRECTORY_ACCESS = 0x001001A7
 _WINDOWS_DIRECTORY_FLAGS = _WINDOWS_DIRECTORY_REQUEST if _IS_WINDOWS else 0
@@ -86,17 +88,12 @@ def _raw_open(path: ArtifactFilePath, flags: int, mode: int = 0o777) -> int:
 
 
 def _windows_access(flags: int) -> int:
-    access = 0x00100000  # SYNCHRONIZE
     access_mode = flags & _WINDOWS_ACCESS_MODE
     if access_mode == os.O_WRONLY:
-        access |= 0x40000000  # GENERIC_WRITE
-    elif access_mode == os.O_RDWR:
-        access |= 0xC0000000  # GENERIC_READ | GENERIC_WRITE
-    else:
-        access |= 0x80000000  # GENERIC_READ
-    if flags & os.O_APPEND:
-        access |= 0x0004  # FILE_APPEND_DATA
-    return access
+        return _WINDOWS_FILE_WRITE_ACCESS
+    if access_mode == os.O_RDWR:
+        return _WINDOWS_FILE_READ_ACCESS | _WINDOWS_FILE_WRITE_ACCESS
+    return _WINDOWS_FILE_READ_ACCESS
 
 
 def _windows_absolute_creation(flags: int) -> int:
