@@ -217,6 +217,15 @@ def test_rejects_global_report_without_measured_lines_or_branches() -> None:
     assert "coverage report contains no measured production branches" in violations
 
 
+def test_production_paths_require_python_source() -> None:
+    assert coverage_gate._is_production_path(
+        "packages/data/src/ditto_data/sources/example.py"
+    )
+    assert not coverage_gate._is_production_path(
+        "packages/data/src/ditto_data/sources/README.md"
+    )
+
+
 def test_rejects_changed_production_path_absent_from_report() -> None:
     missing_path = "apps/backend/src/ditto_apps/new_behavior.py"
 
