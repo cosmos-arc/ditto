@@ -5,13 +5,14 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
+import sys
 import tempfile
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import orjson
 import polars as pl
@@ -1051,7 +1052,7 @@ class TestIndexedArtifactPublication:
             lease_fence=FENCE,
             now_epoch_us=NOW_US,
         )
-        parent = str(Path(original.relative_path).parent)
+        parent = str(PurePosixPath(original.relative_path).parent)
 
         with pytest.raises(ExperimentSpecError) as exc_info:
             _publication_spec(
@@ -1398,15 +1399,26 @@ class TestIndexedArtifactPublication:
             swap_parent_then_publish,
         )
 
-        with pytest.raises(ExperimentSpecError) as exc_info:
-            service.publish_indexed_json(
-                spec,
-                {"value": 1},
-                lease_fence=FENCE,
-                now_epoch_us=NOW_US,
+        if sys.platform == "win32":
+            with pytest.raises(PermissionError):
+                service.publish_indexed_json(
+                    spec,
+                    {"value": 1},
+                    lease_fence=FENCE,
+                    now_epoch_us=NOW_US,
+                )
+        else:
+            with pytest.raises(ExperimentSpecError) as exc_info:
+                service.publish_indexed_json(
+                    spec,
+                    {"value": 1},
+                    lease_fence=FENCE,
+                    now_epoch_us=NOW_US,
+                )
+            assert (
+                exc_info.value.details["reason_code"] == "artifact_path_race_detected"
             )
 
-        assert exc_info.value.details["reason_code"] == "artifact_path_race_detected"
         assert tuple(outside.rglob("result.json")) == ()
         assert index.get_artifact(spec.artifact_id) is None
 

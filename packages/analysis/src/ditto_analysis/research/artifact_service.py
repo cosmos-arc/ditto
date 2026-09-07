@@ -492,7 +492,7 @@ class ResearchArtifactService:
         if matches:
             resolved = matches[0].resolve()
             if resolved.is_relative_to(self._root):
-                relative_path = str(resolved.relative_to(self._root))
+                relative_path = resolved.relative_to(self._root).as_posix()
                 self._path(relative_path)
                 return relative_path
         return None

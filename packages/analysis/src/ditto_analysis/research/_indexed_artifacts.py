@@ -372,9 +372,14 @@ class IndexedArtifactIO:
                 target_stat = _stat_entry(DirectoryEntryPath(parent_fd, target_name))
             except OSError:
                 target_stat = None
+            reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
             reason_code = (
                 "artifact_symlink_rejected"
-                if target_stat is not None and stat.S_ISLNK(target_stat.st_mode)
+                if target_stat is not None
+                and (
+                    stat.S_ISLNK(target_stat.st_mode)
+                    or target_stat.st_file_attributes & reparse
+                )
                 else "artifact_not_regular_file"
             )
             raise ExperimentIntegrityError(
