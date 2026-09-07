@@ -33,8 +33,16 @@ from ditto_analysis.experiments.persistence import (
     validate_artifact_relative_path,
 )
 from ditto_analysis.research._artifact_file_primitives import (
+    READ_FLAGS,
+    SYNC_FLAGS,
     ArtifactFilePath,
     DirectoryEntryPath,
+)
+from ditto_analysis.research._artifact_file_primitives import (
+    fsync_entry as _fsync_entry,
+)
+from ditto_analysis.research._artifact_file_primitives import (
+    make_directory_entry as _make_directory_entry,
 )
 from ditto_analysis.research._artifact_file_primitives import (
     measure_json_artifact as _measure_json_artifact,
@@ -50,6 +58,12 @@ from ditto_analysis.research._artifact_file_primitives import (
 )
 from ditto_analysis.research._artifact_file_primitives import (
     publish_no_clobber as _publish_no_clobber,
+)
+from ditto_analysis.research._artifact_file_primitives import (
+    stat_entry as _stat_entry,
+)
+from ditto_analysis.research._artifact_file_primitives import (
+    unlink_entry as _unlink_entry,
 )
 from ditto_analysis.research._artifact_file_primitives import (
     write_json_file as _write_json_file,
@@ -69,7 +83,6 @@ from ditto_analysis.research.artifact_measurement import (
 
 __all__ = ["ArtifactIndexReader", "ArtifactIndexWriter", "IndexedArtifactIO"]
 
-_READ_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
 _WRITE_FLAGS = (
     os.O_WRONLY
     | os.O_CREAT
@@ -184,13 +197,16 @@ class IndexedArtifactIO:
         return DirectoryEntryPath(parent_fd=parent_fd, name=name)
 
     @staticmethod
-    def _open_absolute_directory(path: Path) -> int:
+    def _open_absolute_directory(path: Path, *, durable: bool = False) -> int:
         parts = path.parts
         descriptors = [_open_directory(Path(parts[0]))]
         try:
-            for part in parts[1:]:
+            for index, part in enumerate(parts[1:], start=1):
                 descriptors.append(
-                    _open_directory(DirectoryEntryPath(descriptors[-1], part))
+                    _open_directory(
+                        DirectoryEntryPath(descriptors[-1], part),
+                        durable=durable and index == len(parts) - 1,
+                    )
                 )
             result = descriptors.pop()
         finally:
@@ -200,17 +216,22 @@ class IndexedArtifactIO:
         return result
 
     @staticmethod
-    def _open_child_directory(parent_fd: int, name: str) -> int:
-        return _open_directory(DirectoryEntryPath(parent_fd, name))
+    def _open_child_directory(
+        parent_fd: int,
+        name: str,
+        *,
+        durable: bool = False,
+    ) -> int:
+        return _open_directory(DirectoryEntryPath(parent_fd, name), durable=durable)
 
     @staticmethod
     def _ensure_durable_directory(parent_fd: int, name: str) -> None:
         try:
-            os.mkdir(name, dir_fd=parent_fd)
+            _make_directory_entry(DirectoryEntryPath(parent_fd, name))
         except FileExistsError:
             pass
         try:
-            os.fsync(parent_fd)
+            _fsync_entry(parent_fd)
         except OSError as exc:
             raise _DirectorySyncError(str(exc)) from exc
 
@@ -225,17 +246,23 @@ class IndexedArtifactIO:
         canonical = validate_artifact_relative_path(relative_path)
         descriptors: list[int] = []
         try:
-            root_parent_fd = self._open_absolute_directory(self._root.parent)
+            root_parent_fd = self._open_absolute_directory(
+                self._root.parent, durable=create
+            )
             descriptors.append(root_parent_fd)
             if create:
                 self._ensure_durable_directory(root_parent_fd, self._root.name)
             descriptors.append(
-                self._open_child_directory(root_parent_fd, self._root.name)
+                self._open_child_directory(
+                    root_parent_fd, self._root.name, durable=create
+                )
             )
             for part in canonical.parts[:-1]:
                 if create:
                     self._ensure_durable_directory(descriptors[-1], part)
-                descriptors.append(self._open_child_directory(descriptors[-1], part))
+                descriptors.append(
+                    self._open_child_directory(descriptors[-1], part, durable=create)
+                )
         except _DirectorySyncError:
             for descriptor in reversed(descriptors):
                 with suppress(OSError):
@@ -332,7 +359,7 @@ class IndexedArtifactIO:
         try:
             descriptor = _open_file(
                 DirectoryEntryPath(parent_fd, target_name),
-                _READ_FLAGS,
+                READ_FLAGS,
             )
         except FileNotFoundError:
             _integrity(
@@ -342,11 +369,7 @@ class IndexedArtifactIO:
             )
         except OSError as exc:
             try:
-                target_stat = os.stat(
-                    target_name,
-                    dir_fd=parent_fd,
-                    follow_symlinks=False,
-                )
+                target_stat = _stat_entry(DirectoryEntryPath(parent_fd, target_name))
             except OSError:
                 target_stat = None
             reason_code = (
@@ -388,7 +411,7 @@ class IndexedArtifactIO:
     @staticmethod
     def _entry_exists(parent_fd: int, name: str) -> bool:
         try:
-            os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+            _stat_entry(DirectoryEntryPath(parent_fd, name))
         except FileNotFoundError:
             return False
         return True
@@ -408,7 +431,7 @@ class IndexedArtifactIO:
         sidecar_name = _manifest_sidecar_name(target_name)
         try:
             descriptor = _open_file(
-                DirectoryEntryPath(parent_fd, sidecar_name), _READ_FLAGS
+                DirectoryEntryPath(parent_fd, sidecar_name), READ_FLAGS
             )
         except FileNotFoundError:
             _integrity(
@@ -458,7 +481,7 @@ class IndexedArtifactIO:
         with os.fdopen(descriptor, "wb") as stream:
             stream.write(payload)
             stream.flush()
-            os.fsync(stream.fileno())
+            _fsync_entry(stream.fileno())
 
     def _publish_sidecar(
         self,
@@ -478,8 +501,8 @@ class IndexedArtifactIO:
                 self._fd_entry(parent_fd, sidecar_temporary_name),
                 self._fd_entry(parent_fd, sidecar_name),
             )
-            os.unlink(sidecar_temporary_name, dir_fd=parent_fd)
-            os.fsync(parent_fd)
+            _unlink_entry(DirectoryEntryPath(parent_fd, sidecar_temporary_name))
+            _fsync_entry(parent_fd)
             self._require_sidecar(
                 parent_fd,
                 target_name,
@@ -488,7 +511,7 @@ class IndexedArtifactIO:
             )
         finally:
             with suppress(FileNotFoundError):
-                os.unlink(sidecar_temporary_name, dir_fd=parent_fd)
+                _unlink_entry(DirectoryEntryPath(parent_fd, sidecar_temporary_name))
 
     @staticmethod
     def _require_measurement(
@@ -557,10 +580,10 @@ class IndexedArtifactIO:
         temporary_path = self._fd_entry(parent_fd, temporary_name)
         write(temporary_path)
         descriptor = _open_file(
-            DirectoryEntryPath(parent_fd, temporary_name), _READ_FLAGS
+            DirectoryEntryPath(parent_fd, temporary_name), SYNC_FLAGS
         )
         try:
-            os.fsync(descriptor)
+            _fsync_entry(descriptor)
         finally:
             os.close(descriptor)
         staged = self._measurement_for(artifact_format)(temporary_path)
@@ -668,8 +691,8 @@ class IndexedArtifactIO:
                     self._fd_entry(parent_fd, target_name),
                 )
                 with suppress(FileNotFoundError):
-                    os.unlink(temporary_name, dir_fd=parent_fd)
-                os.fsync(parent_fd)
+                    _unlink_entry(DirectoryEntryPath(parent_fd, temporary_name))
+                _fsync_entry(parent_fd)
                 actual, _final_payload = self._measure_target(
                     parent_fd,
                     target_name,
@@ -709,7 +732,7 @@ class IndexedArtifactIO:
                 return indexed
             finally:
                 with suppress(FileNotFoundError):
-                    os.unlink(temporary_name, dir_fd=parent_fd)
+                    _unlink_entry(DirectoryEntryPath(parent_fd, temporary_name))
 
     def publish_json(
         self,

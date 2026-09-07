@@ -1,5 +1,5 @@
 name: Setup repository toolchain
-description: Install declared runtimes and the locked Python development workspace
+description: Install declared runtimes and locked Bun/Python development workspaces
 runs:
   using: composite
   steps:
@@ -20,6 +20,9 @@ runs:
       with:
         version: ${{ steps.task.outputs.version }}
         repo-token: ${{ github.token }}
+    - name: Install locked Bun workspace
+      shell: bash
+      run: task bun-install
     - name: Install locked Python workspace
       shell: bash
       run: task python-install

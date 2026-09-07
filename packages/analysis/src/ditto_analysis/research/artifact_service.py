@@ -26,6 +26,12 @@ from ditto_analysis.experiments.persistence import (
     LeaseFence,
     validate_artifact_relative_path,
 )
+from ditto_analysis.research._artifact_file_primitives import (
+    fsync_entry as _fsync_entry,
+)
+from ditto_analysis.research._artifact_file_primitives import (
+    open_directory as _open_directory,
+)
 from ditto_analysis.research._indexed_artifacts import (
     ArtifactIndexReader,
     ArtifactIndexWriter,
@@ -373,9 +379,9 @@ class ResearchArtifactService:
 
     @staticmethod
     def _fsync_parent_directory(target: Path) -> None:
-        directory_descriptor = os.open(target.parent, os.O_RDONLY)
+        directory_descriptor = _open_directory(target.parent, durable=True)
         try:
-            os.fsync(directory_descriptor)
+            _fsync_entry(directory_descriptor)
         finally:
             os.close(directory_descriptor)
 

@@ -118,7 +118,7 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
     assert by_name["macos-arm64"]["os"] == "macos-14"
     assert by_name["windows-x64"]["os"] == "windows-2025"
     platform_steps = json.dumps(platform)
-    assert "task bootstrap" in platform_steps
+    assert "./.github/actions/setup-toolchain" in platform_steps
     assert "task check-backend" in platform_steps
     assert "task check-web" in platform_steps
     assert "task type-all" in platform_steps
@@ -147,6 +147,8 @@ def test_windows_gate_runs_representative_units_and_a_real_loopback_api() -> Non
     backend = _command(tasks["platform-backend-unit"])
     assert "packages/kernel/tests/unit/test_identity.py" in backend
     assert "apps/backend/tests/unit/test_main_unit.py" in backend
+    assert "test_artifact_file_primitives_unit.py" in backend
+    assert "test_artifact_service_unit.py" in backend
     assert "--no-cov" in backend
 
     web = tasks["platform-web-unit"]

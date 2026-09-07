@@ -290,6 +290,7 @@ tasks:
     cmds:
     - uv run --no-sync pytest packages/kernel/tests/unit/test_identity.py apps/backend/tests/unit/test_main_unit.py
       apps/backend/tests/unit/test_loopback_binding_unit.py apps/backend/tests/unit/cli/commands/test_init_unit.py
+      packages/analysis/tests/unit/test_artifact_file_primitives_unit.py packages/analysis/tests/unit/test_artifact_service_unit.py
       -q -n0 --no-cov {{.CLI_ARGS}}
   platform-web-unit:
     cmds:
