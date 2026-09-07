@@ -921,6 +921,53 @@ def test_backend_sbom_links_source_provenance_document(
     ]
 
 
+def test_backend_sbom_links_source_provenance_from_syft_describes_relationship(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    sbom = tmp_path / "backend.spdx.json"
+    provenance = tmp_path / "source-provenance.spdx.json"
+    sbom.write_text(
+        json.dumps(
+            {
+                "packages": [{"SPDXID": "SPDXRef-Subject", "name": "backend"}],
+                "relationships": [
+                    {
+                        "relatedSpdxElement": "SPDXRef-Subject",
+                        "relationshipType": "DESCRIBES",
+                        "spdxElementId": "SPDXRef-DOCUMENT",
+                    }
+                ],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    provenance.write_text(
+        json.dumps(
+            {
+                "documentDescribes": ["SPDXRef-backend-source-image-runtime-libraries"],
+                "documentNamespace": "https://ditto.invalid/source",
+                "packages": [],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "d" * 64)
+
+    artifact_gate._bind_backend_source_provenance(sbom, provenance)
+
+    document = json.loads(sbom.read_text())
+    assert document["documentDescribes"] == ["SPDXRef-Subject"]
+    assert document["relationships"][-1] == {
+        "relatedSpdxElement": (
+            "DocumentRef-runtime-libraries:"
+            "SPDXRef-backend-source-image-runtime-libraries"
+        ),
+        "relationshipType": "DEPENDS_ON",
+        "spdxElementId": "SPDXRef-Subject",
+    }
+
+
 @pytest.mark.parametrize("scanner", ["syft", "trivy"])
 def test_scanner_subject_mismatch_cannot_pass(tmp_path: Path, scanner: str) -> None:
     report = tmp_path / "report.json"

@@ -1089,20 +1089,29 @@ def _bind_backend_source_provenance(sbom_path: Path, provenance_path: Path) -> N
     provenance = _json_object(
         provenance_path.read_bytes(), label="backend source provenance SPDX"
     )
-    described = sbom.get("documentDescribes")
-    if (
-        not isinstance(described, list)
-        or len(described) != 1
-        or not isinstance(described[0], str)
-        or not described[0]
-    ):
+    described = sbom.get("documentDescribes", [])
+    relationships = sbom.get("relationships", [])
+    if not isinstance(described, list) or not isinstance(relationships, list):
+        raise ArtifactGateError("backend SPDX subject metadata is malformed")
+    if not described:
+        described = [
+            relationship["relatedSpdxElement"]
+            for relationship in relationships
+            if isinstance(relationship, dict)
+            and relationship.get("spdxElementId") == "SPDXRef-DOCUMENT"
+            and relationship.get("relationshipType") == "DESCRIBES"
+            and isinstance(relationship.get("relatedSpdxElement"), str)
+            and relationship["relatedSpdxElement"]
+        ]
+    if len(described) != 1 or not isinstance(described[0], str) or not described[0]:
         raise ArtifactGateError("backend SPDX SBOM must describe one subject")
+    sbom["documentDescribes"] = described
     references = sbom.setdefault("externalDocumentRefs", [])
     if not isinstance(references, list):
         raise ArtifactGateError("backend SPDX external document refs must be an array")
-    relationships = sbom.setdefault("relationships", [])
-    if not isinstance(relationships, list):
-        raise ArtifactGateError("backend SPDX relationships must be an array")
+    if relationships is None:
+        relationships = []
+        sbom["relationships"] = relationships
     source_images = provenance.get("documentDescribes")
     if not isinstance(source_images, list):
         raise ArtifactGateError("backend source provenance must describe source images")
