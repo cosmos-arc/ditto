@@ -19,7 +19,17 @@ from ditto_analysis.research.artifact_measurement import (
     measure_parquet_bytes as _measure_parquet_bytes,
 )
 
-_READ_FLAGS = os.O_RDONLY | os.O_NOFOLLOW
+_HAS_ATOMIC_NOFOLLOW = hasattr(os, "O_NOFOLLOW")
+_READ_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+_DIRECTORY_FLAGS = (
+    os.O_RDONLY
+    | getattr(os, "O_DIRECTORY", 0)
+    | getattr(os, "O_NOFOLLOW", 0)
+    | getattr(os, "O_BINARY", 0)
+)
+_WRITE_FILE_FLAGS = (
+    os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+)
 
 
 @dataclass(frozen=True)
@@ -51,15 +61,56 @@ class DirectoryEntryPath:
 type ArtifactFilePath = Path | DirectoryEntryPath
 
 
-def _open_file(path: ArtifactFilePath, flags: int) -> int:
+def _lstat_entry(path: ArtifactFilePath) -> os.stat_result:
     if isinstance(path, DirectoryEntryPath):
-        return os.open(path.name, flags, dir_fd=path.parent_fd)
-    return os.open(path, flags)
+        return os.stat(path.name, dir_fd=path.parent_fd, follow_symlinks=False)
+    return path.lstat()
+
+
+def _raw_open(path: ArtifactFilePath, flags: int, mode: int = 0o777) -> int:
+    if isinstance(path, DirectoryEntryPath):
+        return os.open(path.name, flags, mode, dir_fd=path.parent_fd)
+    return os.open(path, flags, mode)
+
+
+def open_file(path: ArtifactFilePath, flags: int, mode: int = 0o777) -> int:
+    """
+    Open an entry without following a final symlink.
+
+    Windows lacks ``O_NOFOLLOW``. In that case, bind the opened inode to the
+    no-follow ``lstat`` identity before returning it; a replacement race is
+    rejected before callers read or write the descriptor.
+    """
+    if _HAS_ATOMIC_NOFOLLOW or (flags & os.O_CREAT and flags & os.O_EXCL):
+        return _raw_open(path, flags, mode)
+
+    before = _lstat_entry(path)
+    descriptor = _raw_open(path, flags, mode)
+    try:
+        opened = os.fstat(descriptor)
+        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+            raise OSError("artifact path changed while opening")
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def open_directory(path: ArtifactFilePath) -> int:
+    """Open a directory without following a final symlink."""
+    descriptor = open_file(path, _DIRECTORY_FLAGS)
+    try:
+        if not stat.S_ISDIR(os.fstat(descriptor).st_mode):
+            raise OSError("artifact path is not a directory")
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
 
 
 def write_json_file(path: ArtifactFilePath, payload: bytes) -> None:
     """Write canonical JSON bytes to an already-created safe path."""
-    descriptor = _open_file(path, os.O_WRONLY | os.O_NOFOLLOW)
+    descriptor = open_file(path, _WRITE_FILE_FLAGS)
     with os.fdopen(descriptor, "wb") as stream:
         stream.write(payload)
         stream.flush()
@@ -67,14 +118,14 @@ def write_json_file(path: ArtifactFilePath, payload: bytes) -> None:
 
 def write_parquet_file(path: ArtifactFilePath, frame: pl.DataFrame) -> None:
     """Write one frame to an already-created safe path."""
-    descriptor = _open_file(path, os.O_WRONLY | os.O_NOFOLLOW)
+    descriptor = open_file(path, _WRITE_FILE_FLAGS)
     with os.fdopen(descriptor, "wb") as stream:
         frame.write_parquet(stream)
         stream.flush()
 
 
 def _read_path_bytes(path: ArtifactFilePath) -> bytes:
-    descriptor = _open_file(path, _READ_FLAGS)
+    descriptor = open_file(path, _READ_FLAGS)
     try:
         opened = os.fstat(descriptor)
         if not stat.S_ISREG(opened.st_mode):

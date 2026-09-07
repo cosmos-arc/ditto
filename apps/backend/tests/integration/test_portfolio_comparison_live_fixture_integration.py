@@ -18,10 +18,7 @@ def test_portfolio_comparison_live_fixture_uses_production_read_paths() -> None:
     )
     seed = cast("Callable[[Path], dict[str, object]]", namespace["seed"])
 
-    with tempfile.TemporaryDirectory(
-        prefix="ditto-cmp-live-",
-        dir="/private/tmp",
-    ) as temporary_directory:
+    with tempfile.TemporaryDirectory(prefix="ditto-cmp-live-") as temporary_directory:
         evidence = seed(Path(temporary_directory))
 
     assert evidence["artifact_checksum"] == (

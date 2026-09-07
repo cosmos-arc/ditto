@@ -43,6 +43,12 @@ from ditto_analysis.research._artifact_file_primitives import (
     measure_parquet_artifact as _measure_parquet_artifact,
 )
 from ditto_analysis.research._artifact_file_primitives import (
+    open_directory as _open_directory,
+)
+from ditto_analysis.research._artifact_file_primitives import (
+    open_file as _open_file,
+)
+from ditto_analysis.research._artifact_file_primitives import (
     publish_no_clobber as _publish_no_clobber,
 )
 from ditto_analysis.research._artifact_file_primitives import (
@@ -63,9 +69,14 @@ from ditto_analysis.research.artifact_measurement import (
 
 __all__ = ["ArtifactIndexReader", "ArtifactIndexWriter", "IndexedArtifactIO"]
 
-_DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-_READ_FLAGS = os.O_RDONLY | os.O_NOFOLLOW
-_WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+_READ_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+_WRITE_FLAGS = (
+    os.O_WRONLY
+    | os.O_CREAT
+    | os.O_EXCL
+    | getattr(os, "O_NOFOLLOW", 0)
+    | getattr(os, "O_BINARY", 0)
+)
 _SIDECAR_SUFFIX = ".ditto-manifest.json"
 
 
@@ -175,11 +186,11 @@ class IndexedArtifactIO:
     @staticmethod
     def _open_absolute_directory(path: Path) -> int:
         parts = path.parts
-        descriptors = [os.open(parts[0], _DIRECTORY_FLAGS)]
+        descriptors = [_open_directory(Path(parts[0]))]
         try:
             for part in parts[1:]:
                 descriptors.append(
-                    os.open(part, _DIRECTORY_FLAGS, dir_fd=descriptors[-1])
+                    _open_directory(DirectoryEntryPath(descriptors[-1], part))
                 )
             result = descriptors.pop()
         finally:
@@ -190,7 +201,7 @@ class IndexedArtifactIO:
 
     @staticmethod
     def _open_child_directory(parent_fd: int, name: str) -> int:
-        return os.open(name, _DIRECTORY_FLAGS, dir_fd=parent_fd)
+        return _open_directory(DirectoryEntryPath(parent_fd, name))
 
     @staticmethod
     def _ensure_durable_directory(parent_fd: int, name: str) -> None:
@@ -319,10 +330,9 @@ class IndexedArtifactIO:
         artifact_id: str,
     ) -> tuple[_ArtifactMeasurement, bytes]:
         try:
-            descriptor = os.open(
-                target_name,
+            descriptor = _open_file(
+                DirectoryEntryPath(parent_fd, target_name),
                 _READ_FLAGS,
-                dir_fd=parent_fd,
             )
         except FileNotFoundError:
             _integrity(
@@ -397,7 +407,9 @@ class IndexedArtifactIO:
     ) -> None:
         sidecar_name = _manifest_sidecar_name(target_name)
         try:
-            descriptor = os.open(sidecar_name, _READ_FLAGS, dir_fd=parent_fd)
+            descriptor = _open_file(
+                DirectoryEntryPath(parent_fd, sidecar_name), _READ_FLAGS
+            )
         except FileNotFoundError:
             _integrity(
                 "indexed artifact identity sidecar is missing",
@@ -438,7 +450,11 @@ class IndexedArtifactIO:
 
     @staticmethod
     def _write_fsynced_bytes(parent_fd: int, name: str, payload: bytes) -> None:
-        descriptor = os.open(name, _WRITE_FLAGS, 0o600, dir_fd=parent_fd)
+        descriptor = _open_file(
+            DirectoryEntryPath(parent_fd, name),
+            _WRITE_FLAGS,
+            0o600,
+        )
         with os.fdopen(descriptor, "wb") as stream:
             stream.write(payload)
             stream.flush()
@@ -540,7 +556,9 @@ class IndexedArtifactIO:
     ) -> tuple[ArtifactRecord, _ArtifactMeasurement]:
         temporary_path = self._fd_entry(parent_fd, temporary_name)
         write(temporary_path)
-        descriptor = os.open(temporary_name, _READ_FLAGS, dir_fd=parent_fd)
+        descriptor = _open_file(
+            DirectoryEntryPath(parent_fd, temporary_name), _READ_FLAGS
+        )
         try:
             os.fsync(descriptor)
         finally:
@@ -620,11 +638,10 @@ class IndexedArtifactIO:
             target_name,
         ):
             temporary_name = f".{target_name}.{secrets.token_hex(12)}.tmp"
-            descriptor = os.open(
-                temporary_name,
+            descriptor = _open_file(
+                DirectoryEntryPath(parent_fd, temporary_name),
                 _WRITE_FLAGS,
                 0o600,
-                dir_fd=parent_fd,
             )
             os.close(descriptor)
             try:

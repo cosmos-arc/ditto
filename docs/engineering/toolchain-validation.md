@@ -46,3 +46,11 @@ Python 已改为 uv workspace 与单一 uv.lock；根任务改为 Task；Bun 版
 - **Spec**：修复只读入口偷偷创建环境、Bun 传递依赖/跨 worktree 回退、离线镜像环境事实不绑定输入，以及历史记录被误改；离线 verifier/bundle 33 项定向测试通过，历史 review/plan/验收记录已恢复。
 
 当前分支可供审查，但由于上述原生 Windows、漏洞与服务阻断，#101 及最终平台/发布/清理验收票不能标记为全部完成。
+
+## 2026-09-07 追加收口
+
+- Windows 导入阻断已修复：artifact open 辅助层不再在 import 时读取 POSIX 专用标志；在缺少 `O_NOFOLLOW` 的平台先做 no-follow `lstat`，再把打开句柄绑定到同一 `(st_dev, st_ino)`，替换竞争在读写前失败。目录打开统一检查 `S_ISDIR`，`O_CREAT | O_EXCL` 保持 0600 模式。新增回归覆盖 POSIX 标志缺失 import、最终 symlink 拒绝、非目录拒绝与创建模式。
+- Linux 后端测试不再硬编码 macOS `/private/tmp`；CMP live fixture 使用平台临时目录，消除 CI 上的 `FileNotFoundError`。
+- `uv.lock` 仅针对 OSV 报告的受影响 Python 包收敛/升级（包括 Prefect 3.6.29、cryptography 50.0.1、Starlette 1.6.0、urllib3 2.7.0 等）。本地固定 OSV scanner 复扫：`uv.lock` 390 包、`bun.lock` 673 包均无命中；resolver 同时消除了此前跨平台的重复版本分支。
+- 追加本机验证：后端全量 pytest 与覆盖率门通过（16,474 passed / 73 skipped，覆盖率 89.41%）；Python source/tests 类型、PIT 401 passed、架构/Harness、契约、真实双栈系统验收、Web 1,757 覆盖率测试与 719 原型测试通过。第一次复合 `task ci` 只因本机 shell 使用 Node 24.18.0 / 未暴露 Task binary 中断；用仓库固定 Node 24.20.0 与 Task 3.53.1 后逐项补跑通过。
+- 仍不能宣称最终安全/发布完成：受版本控制的 agent sandbox SBOM 复扫仍有 102 包、109 条命中；CodeQL 上传仍要求仓库启用 Advanced Security；Trivy 后端镜像与最终 CI 需在新提交上真实复扫。没有新增 ignore、豁免或降低严重级门槛。
