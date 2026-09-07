@@ -244,7 +244,7 @@ def _windows_nt_create(
     )
     handle_value = handle.value
     if status != 0 or handle_value is None:
-        win_error = ntdll.RtlNtStatusToDosError(ctypes.c_ulong(status & 0xFFFFFFFF))
+        win_error = ntdll.RtlNtStatusToDosError(status & 0xFFFFFFFF)
         raise ctypes.WinError(win_error)
     return handle_value
 
@@ -299,7 +299,7 @@ def _windows_set_file_disposition(descriptor: int) -> None:
         64,  # FileDispositionInformationEx
     )
     if status != 0:
-        win_error = ntdll.RtlNtStatusToDosError(ctypes.c_ulong(status & 0xFFFFFFFF))
+        win_error = ntdll.RtlNtStatusToDosError(status & 0xFFFFFFFF)
         raise ctypes.WinError(win_error)
 
 
@@ -348,7 +348,7 @@ def _windows_create_hard_link(
             72,  # FileLinkInformation
         )
         if status != 0:
-            win_error = ntdll.RtlNtStatusToDosError(ctypes.c_ulong(status & 0xFFFFFFFF))
+            win_error = ntdll.RtlNtStatusToDosError(status & 0xFFFFFFFF)
             raise ctypes.WinError(win_error)
     finally:
         os.close(descriptor)
