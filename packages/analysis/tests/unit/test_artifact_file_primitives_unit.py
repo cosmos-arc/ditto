@@ -189,6 +189,12 @@ def _install_fake_msvcrt(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "msvcrt", module)
 
 
+_windows_coverage_simulation = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Linux coverage simulation; Windows exercises the real native APIs",
+)
+
+
 class _FakeWinApi:
     def __init__(self, handle: object = 123) -> None:
         self.CreateFileW = _FakeWinFunction(handle)
@@ -210,6 +216,7 @@ class _FakeWinFunction:
         return self.result(*args) if callable(self.result) else self.result
 
 
+@_windows_coverage_simulation
 def test_windows_absolute_open_converts_handle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -229,6 +236,7 @@ def test_windows_absolute_open_converts_handle(
     assert fake.CloseHandle.calls == []
 
 
+@_windows_coverage_simulation
 def test_windows_absolute_open_fails_closed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -250,6 +258,7 @@ def test_windows_absolute_open_fails_closed(
         )
 
 
+@_windows_coverage_simulation
 def test_windows_relative_open_converts_nt_handle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -314,6 +323,7 @@ def _install_fake_ntdll(
 
 
 @pytest.mark.parametrize("status", [0, 5])
+@_windows_coverage_simulation
 def test_windows_file_disposition_maps_status(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -337,6 +347,7 @@ def test_windows_file_disposition_maps_status(
 
 
 @pytest.mark.parametrize("status", [0, 5])
+@_windows_coverage_simulation
 def test_windows_hard_link_maps_status_and_closes_temporary(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -372,6 +383,7 @@ def test_windows_hard_link_maps_status_and_closes_temporary(
     os.close(parent_fd)
 
 
+@_windows_coverage_simulation
 def test_windows_directory_entry_primitives_use_safe_handles(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -423,6 +435,7 @@ def test_windows_directory_entry_primitives_use_safe_handles(
     os.close(parent_fd)
 
 
+@_windows_coverage_simulation
 def test_windows_link_entries_require_anchored_paths(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -444,6 +457,7 @@ def test_windows_link_entries_require_anchored_paths(
         primitives.link_entries(temporary, Path("target.json"))
 
 
+@_windows_coverage_simulation
 def test_windows_nofollow_closes_descriptors_on_reparse_and_stat_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -473,6 +487,7 @@ def test_windows_nofollow_closes_descriptors_on_reparse_and_stat_failure(
         os.fstat(descriptor)
 
 
+@_windows_coverage_simulation
 def test_windows_open_file_and_directory_use_masks(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -509,6 +524,7 @@ def test_windows_open_file_and_directory_use_masks(
     os.close(directory_fd)
 
 
+@_windows_coverage_simulation
 def test_windows_open_directory_rejects_and_closes_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
