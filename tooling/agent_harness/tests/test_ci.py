@@ -34,6 +34,20 @@ def gate_failures(required: set[str], results: Mapping[str, object]) -> bool:
 
 
 class CiTests(unittest.TestCase):
+    def test_skill_changes_select_lightweight_validation(self) -> None:
+        for path in (
+            ".agents/skills/ditto-pit-safety/SKILL.md",
+            ".claude/skills/ditto-pit-safety/SKILL.md",
+            ".agents/skills/registry.toml",
+        ):
+            with self.subTest(path=path):
+                assert required_jobs([path, "docs/guide.md"]) == {
+                    "repository-policy",
+                    "delivery-policy",
+                    "security-supply-chain",
+                    "skill-validation",
+                }
+
     def test_scope_preserves_shared_and_risk_checks(self) -> None:
         assert required_jobs(["packages/data/AGENTS.md"]) == {
             "repository-policy",

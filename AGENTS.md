@@ -10,6 +10,7 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决
 - 涉及 HTTP DTO、OpenAPI 或 Web transport：读 [契约指南](contracts/AGENTS.md) 与 [兼容性](contracts/openapi/README.md)。
 - 涉及 Bug、行为变化或验证安排：读 [测试指南](docs/engineering/testing.md)。
 - 涉及宿主 hooks、scope、receipt 或共享写入：读 [Harness 说明](docs/engineering/agent-harness.md)。
+- 涉及实现交付、通用 skill 适配或跨会话接手：读 [交付约定](docs/engineering/development-workflow.md)。
 - 处理 issue/spec/review 来源：使用 [GitHub Issues](docs/agents/issue-tracker.md)；状态标签见 [triage 配置](docs/agents/triage-labels.md)。
 - 探索领域命名或 ADR：按 [领域文档布局](docs/agents/domain.md) 检索。
 

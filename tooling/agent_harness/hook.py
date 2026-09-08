@@ -580,7 +580,7 @@ _BACKEND_TEST_PREFIX = ("apps", "backend", "tests")
 
 def _path_classes(paths: Sequence[str], *, root: Path | None = None) -> set[str]:
     classes = {category for path in paths for category in _path_categories(path)}
-    prose = [path for path in paths if _path_categories(path) == {"docs"}]
+    prose = [path for path in paths if _path_categories(path) in ({"docs"}, {"skills"})]
     if root is not None and prose:
         # Executable/symlink prose is an execution change, including deletions
         # and staged mode changes whose old form only survives in HEAD/index.
@@ -624,6 +624,10 @@ def _is_high_risk_path(path: str) -> bool:
 def _path_categories(path: str) -> set[str]:
     if path in _ROOT_GATE_PATHS or path.startswith(".github/"):
         return {"root"}
+    if path.startswith((".agents/skills/", ".claude/skills/")) and path.endswith(
+        (".md", ".rst", ".yaml", ".yml", ".toml", ".json", ".txt")
+    ):
+        return {"skills"}
     if path != "apps/web/DESIGN.md" and (
         path.endswith((".md", ".rst"))
         or (path.startswith("docs/") and path.endswith(".txt"))
@@ -663,7 +667,9 @@ def _collapse_diff_classes(classes: set[str]) -> str:
         level = exact_level
     elif "unknown" in non_docs:
         level = "unknown"
-    elif "root" in non_docs or ("harness" in non_docs and len(non_docs) > 1):
+    elif "root" in non_docs or (
+        bool(non_docs & {"harness", "skills"}) and len(non_docs) > 1
+    ):
         level = "root"
     elif "web" in non_docs and non_docs != {"web"}:
         level = "cross-stack"
@@ -793,8 +799,10 @@ def verification_commands(
     else:
         classes = {level}
     active_classes = classes - {"docs"}
-    if active_classes <= {"none"}:
-        return []
+    if active_classes <= {"none", "skills"}:
+        return {frozenset({"skills"}): [["task", "harness-validate"]]}.get(
+            frozenset(active_classes), []
+        )
 
     backend_classes = {"backend", "backend-tests", "high-risk"}
     crosses_stacks = "web" in active_classes and bool(active_classes & backend_classes)
@@ -802,7 +810,7 @@ def verification_commands(
         "contract" in active_classes or crosses_stacks or level == "cross-stack"
     )
     needs_full_check = (
-        bool(active_classes & {"contract", "harness", "root", "unknown"})
+        bool(active_classes & {"contract", "harness", "root", "unknown", "skills"})
         or needs_system
     )
 

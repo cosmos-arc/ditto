@@ -71,14 +71,8 @@ When changing imports, run `task arch-check`.
 `@traced` lives in `kernel.tracing`. Default is no-op. Install handler via `install_trace_handler()`.
 Composition root (`apps.registry`) wires OTel bridge and physical Agent adapters at startup.
 
-## T0 Acceptance Gate
+## 验证入口
 
-All must pass before merge:
-
-```
-python scripts/architecture/check_architecture_smells.py   # 0 issues
-task lint-imports --                                # all pass
-task type --                                        # 0 errors, 0 warnings
-task test -- --fast                                 # all pass
-task arch-check --                                  # passes
-```
+按[测试指南](../engineering/testing.md)选择 Task 验证范围；PR 的绿色结果只证明
+当前提交所选中的检查，完整证明由 main、merge queue、定期 CI 和发布要求承载。
+具体选择与聚合见[Harness 验证分工](../engineering/agent-harness.md#本地与-ci-的验证分工)。

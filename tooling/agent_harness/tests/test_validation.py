@@ -143,6 +143,28 @@ class FormatFixtureTests(unittest.TestCase):
                 check=False,
             )
             assert result.returncode == 0, result.stdout + result.stderr
+            # A prose-only skill edit must fail the same CLI used by the PR job.
+            skill = root / ".agents/skills/ditto-pit-safety/SKILL.md"
+            original_skill = skill.read_text()
+            skill.write_text(original_skill + "\nA new PIT instruction.\n")
+            drifted = subprocess.run(
+                [sys.executable, str(root / "tooling/agent_harness/validate.py")],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert drifted.returncode != 0
+            assert "content drift" in drifted.stdout + drifted.stderr
+            skill.write_text(original_skill)
+            restored = subprocess.run(
+                [sys.executable, str(root / "tooling/agent_harness/validate.py")],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert restored.returncode == 0, restored.stdout + restored.stderr
             for relative in (
                 ".codex/hooks.json",
                 ".claude/settings.json",
