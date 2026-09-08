@@ -55,7 +55,9 @@ Web docs/design/prototype/contracts、Backend/Data/Features owner 文档、根 a
 | 其余历史、owner 材料与引用不明项 | 当前入口/历史解释或待进一步核查，逐文件候选见 CSV | 保留；不作为失效入口执行 |
 
 `.github/workflows/release.yml` 已将完整 cohort 和关联证明发布为 Release 附件，
-普通 Actions artifact 的配置留存期为 90 天。这里记录实现的保存机制，不声称本次
+其中 release staging artifact 为 1 天，release 证明 artifact 为 90 天；CI 中覆盖率、
+系统测试、分片与 Web 构建输出按 PR/非 PR 分别为 14/30 天，CI cohort 为 14 天。
+这些短期 artifact 均不等同 Release 附件。这里记录实现的保存机制，不声称本次
 已发布 Release、验证所有历史远端副本或获得永久可用保证。
 
 ## Web 失效工具退役
