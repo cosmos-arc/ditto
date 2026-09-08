@@ -108,7 +108,7 @@ def main() -> int:
             if any(mode.lstrip(":") not in {"100644", "000000"} for mode in modes):
                 full = True
     required = required_jobs(paths, full=full)
-    analysis = required != _ALWAYS
+    analysis = bool(required - _ALWAYS - {"skill-validation"})
     output = (
         f"required={json.dumps(sorted(required))}\nanalysis={str(analysis).lower()}\n"
         f"full={str(required == set(REQUIRED_JOBS)).lower()}\n"
