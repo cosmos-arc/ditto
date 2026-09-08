@@ -264,6 +264,16 @@ def _validate_legacy_content(errors: list[str]) -> None:
             errors.append(f"legacy harness path still exists: {relative}")
 
     for path in _text_files():
+        relative = path.relative_to(ROOT)
+        # Reading material may discuss previous workflows. Only instruction
+        # sources, host configuration and executable inputs declare dependencies.
+        if (
+            path.suffix in {".md", ".rst"}
+            and path.name not in {"AGENTS.md", "CLAUDE.md", "SKILL.md"}
+            and relative.parts[0] not in {".agents", ".claude", ".codex", ".zcode"}
+            and not path.stat().st_mode & 0o111
+        ):
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:

@@ -135,6 +135,9 @@ class FormatFixtureTests(unittest.TestCase):
             for matcher in original["matcher"].split("|"):
                 entries.append({**original, "matcher": matcher})
             settings.write_text(json.dumps(config))
+            research = root / "docs/research/skill-history.md"
+            research.parent.mkdir(parents=True)
+            research.write_text("Historical discussion of super" + "powers: usage.\n")
             result = subprocess.run(
                 [sys.executable, str(root / "tooling/agent_harness/validate.py")],
                 cwd=root,
@@ -143,6 +146,22 @@ class FormatFixtureTests(unittest.TestCase):
                 check=False,
             )
             assert result.returncode == 0, result.stdout + result.stderr
+            # Actual instruction sources remain subject to legacy dependency checks.
+            instructions = root / "AGENTS.md"
+            original_instructions = instructions.read_text()
+            instructions.write_text(
+                original_instructions + "\nUse super" + "powers:run\n"
+            )
+            legacy = subprocess.run(
+                [sys.executable, str(root / "tooling/agent_harness/validate.py")],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert legacy.returncode != 0
+            assert "legacy workflow dependency in AGENTS.md" in legacy.stdout
+            instructions.write_text(original_instructions)
             # A prose-only skill edit must fail the same CLI used by the PR job.
             skill = root / ".agents/skills/ditto-pit-safety/SKILL.md"
             original_skill = skill.read_text()
