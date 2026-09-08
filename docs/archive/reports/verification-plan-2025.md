@@ -1,3 +1,6 @@
+> 历史记录：本文提及的 `scripts/verify-all-2025.sh` 已退役，不能作为执行入口。
+> [原脚本与恢复基线](https://github.com/cosmos-arc/ditto/blob/83dead1a2d57536db370c0c9f679b7e4c7333f42/scripts/verify-all-2025.sh)；当前验证见根 Taskfile。
+
 # 摄入与 API 能力验证计划 (2025)
 
 > **[已废弃]** 本文档为 2025 年验证计划，包名引用已过时。仅作历史参考。

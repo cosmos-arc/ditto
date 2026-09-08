@@ -55,3 +55,11 @@ UV_PROJECT_ENVIRONMENT="$PWD/.cache/production-venv" \
 | uv/Task 迁移分支 | 9.91 秒 | 0.03 秒 | `task web-type` 21.47 秒 |
 
 基线 Web 检查使用宿主 Node 24.18.0，迁移分支使用固定 Node 24.20.0。冷安装受网络波动影响明显，以上数字仅定位异常退化，不设任意性能门槛。Web 构建、208 文件/1757 项覆盖率测试、719 项原型测试、真实 API smoke 和 22 项优化器测试已通过。最终平台/整仓结果以本次实施记录及 CI 为准，不能由本页推断未运行的平台通过。
+
+## 本地工具的独立路径
+
+工具归档可解压到当前 checkout 的 `.cache/toolchains/`，入口放到其中的 `bin/`；
+入口应解析到本 checkout 内的固定版本工具，不能指向已合并分支的其他 worktree。
+从根目录设置 `export PATH="$PWD/.cache/toolchains/bin:$PATH"` 后运行 `task toolchain-check`。
+这只影响当前 shell，不改写全局 Node/Bun/uv 设置。旧 Pixi 环境的处置依据见
+[本地处置规则](knowledge-lifecycle.md#本地处置)；安装依赖不是删除真实状态的理由。

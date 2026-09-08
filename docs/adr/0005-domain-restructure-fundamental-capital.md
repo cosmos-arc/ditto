@@ -248,9 +248,9 @@ __all__ = ["ExpressStore", "ForecastStore"]
 
 ## 相关文档
 
-- [架构规范](../../.claude/rules/architecture.md)
+- [架构规范](../architecture/README.md)
 - [DataHub README](../../packages/data/README.md)
-- [域重构实施计划](../../plans/2026-01-30-domain-restructure-fundamental-capital.md)
+- [域重构实施计划](https://github.com/cosmos-arc/ditto/blob/83dead1a2d57536db370c0c9f679b7e4c7333f42/docs/plans/archive/2026-01-30-domain-restructure-fundamental-capital.md)
 - [ADR 0004: Domain Layer 子领域分层定位](0004-domain-layer-subdomains.md)
 
 ---

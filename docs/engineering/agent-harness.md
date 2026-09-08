@@ -63,7 +63,7 @@ task check-changed
 `check-changed` 按完整 changed set 分级，实时输出正在执行的命令和检查进度：
 
 - 无 staged、unstaged、rename/delete、mode change 或未 ignore 的 untracked：直接通过。
-- 普通文档：不运行 Python 套件。
+- 普通文档：运行轻量 `knowledge-check`，不运行 Python 测试套件。
 - 仅项目 skill 文本、metadata 或镜像：运行 `harness-validate` 检查结构及完整镜像；执行文件、模式变化和混合生产变更保留完整检查。
 - Harness：运行包含 `harness-check` 的根 `check`。
 - 仅测试：目标测试、Ruff format-check/lint、测试类型检查。Backend 的合同 fixtures（包括 Markdown 基线）按测试输入处理。

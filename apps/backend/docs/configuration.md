@@ -613,8 +613,8 @@ c.close()
 
 ### 相关文档
 
-- [架构设计规范](/.claude/rules/architecture.md)
-- [Python 核心规范](/.claude/rules/python.md)
-- [配置系统规范](/.claude/rules/config.md)
+- [架构设计规范](/docs/architecture/README.md)
+- [Python 核心规范](/AGENTS.md)
+- [配置系统规范](/apps/backend/AGENTS.md)
 - [CLAUDE.md - 配置系统规范](/CLAUDE.md)
 - [运维手册](/docs/ops-manual.md)

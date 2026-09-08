@@ -454,6 +454,6 @@ async def clear_factor_states(self, factor_id: str) -> int:
 
 ## 相关 ADR
 
-- [ADR-029: 盘中实时路径与盘后批量路径](adr-029-intraday-postmarket-paths.md) - STATE 因子使用场景
-- [ADR-010: Catalog 完整表结构与存储架构](adr-010-catalog-schema.md) - Kvrocks Key 设计
-- [ADR-030: Online Data Access Boundary](adr-030-online-data-access-boundary.md) - 状态查询路径
+- [ADR-029: 盘中实时路径与盘后批量路径](../adr-029-intraday-postmarket-paths.md) - STATE 因子使用场景
+- [ADR-010: Catalog 完整表结构与存储架构](../adr-010-catalog-schema.md) - Kvrocks Key 设计
+- [ADR-030: Online Data Access Boundary](../adr-030-online-data-access-boundary.md) - 状态查询路径

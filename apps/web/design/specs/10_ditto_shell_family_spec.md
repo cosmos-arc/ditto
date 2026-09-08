@@ -189,7 +189,7 @@ Ditto 全站建议固定为 **7 类基础壳层**：
 > **注意**：Radar 子变体已在 v1.4 中独立为第 7 类壳层 Radar Workspace Shell（§4.7）。
 > 以下内容保留作为设计演进历史参考。
 >
-> **详细设计**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
+> **详细设计**：[全市场总览设计文档](../../docs/plans/archieve/2026-03-29-cross-market-overview-design.md)
 
 **适用场景**
 

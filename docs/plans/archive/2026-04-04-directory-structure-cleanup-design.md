@@ -1,3 +1,6 @@
+> 历史记录：本文提及的 `scripts/verify-all-2025.sh` 已退役，不能作为执行入口。
+> [原脚本与恢复基线](https://github.com/cosmos-arc/ditto/blob/83dead1a2d57536db370c0c9f679b7e4c7333f42/scripts/verify-all-2025.sh)；当前验证见根 Taskfile。
+
 # 目录结构清理与优化设计
 
 > 日期：2026-04-04

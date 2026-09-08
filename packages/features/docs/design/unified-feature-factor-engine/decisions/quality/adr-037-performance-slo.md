@@ -92,7 +92,7 @@
 
 ### 2026-03-14 v1 基准实现
 
-**D-3**: Phase 6 的首版 benchmark harness 固化为 [`scripts/benchmarks/derived_benchmark.py`](../../../../scripts/benchmarks/derived_benchmark.py)，覆盖 `query / materialize / shadow_compare` 三类 workload。定时窗口只覆盖 workload 执行本身，不把 synthetic fixture 构造时间纳入 latency，避免把数据生成噪音混入回归预算。
+**D-3**: Phase 6 的首版 benchmark harness 固化为 [`scripts/benchmarks/derived_benchmark.py`](../../../../../../../scripts/benchmarks/derived_benchmark.py)，覆盖 `query / materialize / shadow_compare` 三类 workload。定时窗口只覆盖 workload 执行本身，不把 synthetic fixture 构造时间纳入 latency，避免把数据生成噪音混入回归预算。
 
 ### 本地基线快照（2026-03-14）
 

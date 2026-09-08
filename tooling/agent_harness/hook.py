@@ -833,9 +833,12 @@ def verification_commands(
         classes = {level}
     active_classes = classes - {"docs"}
     if active_classes <= {"none", "skills"}:
-        return {frozenset({"skills"}): [["task", "harness-validate"]]}.get(
-            frozenset(active_classes), []
-        )
+        return {
+            frozenset({"skills"}): [
+                ["task", "harness-validate"],
+                ["task", "knowledge-check"],
+            ]
+        }.get(frozenset(active_classes), [["task", "knowledge-check"]] if paths else [])
 
     backend_classes = {"backend", "backend-tests", "high-risk"}
     crosses_stacks = "web" in active_classes and bool(active_classes & backend_classes)

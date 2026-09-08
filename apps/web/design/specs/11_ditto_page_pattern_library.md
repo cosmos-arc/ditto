@@ -315,7 +315,7 @@ Global Pulse 是单行紧凑状态条，不是五张等权 KPI 卡片。它只�
 
 **C. Market Radar Workspace**（Radar 子变体）
 
-> **详细设计**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
+> **详细设计**：[全市场总览设计文档](../../docs/plans/archieve/2026-03-29-cross-market-overview-design.md)
 
 主工作面是 Market Cards + Cross-Market Matrix + Macro Drivers 的组合，不是单一主表/主图。
 
