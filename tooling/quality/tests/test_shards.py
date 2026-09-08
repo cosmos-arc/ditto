@@ -99,7 +99,7 @@ def test_real_shards_preserve_serial_lane_and_merge_coverage(tmp_path: Path) -> 
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
         "PYTEST_PLUGINS": "pytest_cov.plugin,xdist.plugin",
     }
-    output = tmp_path / "evidence"
+    output = tmp_path / "build" / "test-shards"
     for mode, index in [("run", 0), ("run", 1), ("combine", 0)]:
         subprocess.run(  # noqa: S603 - fixed modules over an isolated synthetic suite
             [
@@ -114,7 +114,7 @@ def test_real_shards_preserve_serial_lane_and_merge_coverage(tmp_path: Path) -> 
                 "--commit",
                 "current",
                 "--output",
-                str(output),
+                str(output.relative_to(tmp_path)),
             ],
             cwd=tmp_path,
             env=environment,
@@ -125,3 +125,51 @@ def test_real_shards_preserve_serial_lane_and_merge_coverage(tmp_path: Path) -> 
     report = json.loads((tmp_path / "coverage.json").read_text())
     assert report["totals"]["missing_lines"] == 0
     assert report["totals"]["missing_branches"] == 0
+
+
+def test_generated_contract_ids_are_selected_after_collection(tmp_path: Path) -> None:
+    """Schemathesis IDs must survive selection and missing IDs must fail closed."""
+    import os
+    import subprocess
+    import sys
+
+    repo = Path(__file__).resolve().parents[3]
+    test_file = "apps/backend/tests/contract/test_openapi_conformance.py"
+    selection = tmp_path / "selected.txt"
+    selection.write_text(
+        test_file
+        + "::test_side_effect_free_system_endpoints_conform_to_openapi[GET /]\n"
+    )
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("COV", "PYTEST_XDIST"))
+    }
+    environment["PYTHON_KEYRING_BACKEND"] = "keyring.backends.null.Keyring"
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "--import-mode=importlib",
+        "-n",
+        "2",
+        "-q",
+        "--no-cov",
+        "-p",
+        "tooling.quality.pytest_inventory",
+        "--selection-input",
+        str(selection),
+        test_file,
+    ]
+    result = subprocess.run(  # noqa: S603 - fixed repository contract test
+        command, cwd=repo, env=environment, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+    selection.write_text(test_file + "::missing_generated_case\n")
+    rejected = subprocess.run(  # noqa: S603 - same test with invalid selection
+        command, cwd=repo, env=environment, capture_output=True, text=True, check=False
+    )
+    assert rejected.returncode != 0

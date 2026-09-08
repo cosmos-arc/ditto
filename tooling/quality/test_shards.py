@@ -129,6 +129,10 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
             continue
         selection = output / f"nodes-{index}-{serial}.txt"
         selection.write_text("\n".join(nodeids) + "\n")
+        files = output / f"files-{index}-{serial}.txt"
+        files.write_text(
+            "\n".join(sorted({name.split("::", 1)[0] for name in nodeids})) + "\n"
+        )
         command = [
             "-m",
             "pytest",
@@ -145,7 +149,11 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
             "--cov",
             "--cov-report=",
             "--junitxml=" + str(output / f"junit-{index}-{serial}.xml"),
-            "@" + str(selection),
+            "-p",
+            "tooling.quality.pytest_inventory",
+            "--selection-input",
+            str(selection),
+            "@" + str(files),
         ]
         if executed:
             command.append("--cov-append")
