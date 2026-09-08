@@ -13,6 +13,7 @@ from tooling.agent_harness.hook import classify_diff
 
 REQUIRED_JOBS = frozenset(
     {
+        "skill-validation",
         "repository-policy",
         "delivery-policy",
         "backend-shards",
@@ -39,6 +40,8 @@ def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
     level = classify_diff(paths)
     if full:
         return set(REQUIRED_JOBS)
+    if level == "skills":
+        return _ALWAYS | {"skill-validation"}
     if level in {"docs", "none"}:
         return set(_ALWAYS)
     if level == "web" and all(
@@ -105,7 +108,7 @@ def main() -> int:
             if any(mode.lstrip(":") not in {"100644", "000000"} for mode in modes):
                 full = True
     required = required_jobs(paths, full=full)
-    analysis = required != _ALWAYS
+    analysis = bool(required - _ALWAYS - {"skill-validation"})
     output = (
         f"required={json.dumps(sorted(required))}\nanalysis={str(analysis).lower()}\n"
         f"full={str(required == set(REQUIRED_JOBS)).lower()}\n"

@@ -2,12 +2,12 @@
 
 > **当前架构权威来源**：`.importlinter` + `packages/*/AGENTS.md` + [`docs/architecture/`](architecture/README.md)
 > **历史文档**：各目录 `archive/` 子目录与 [`docs/archive/`](archive/)
-> **维护说明**：已完成里程碑、历史评审快照与被取代的设计统一归档（`git mv` 保留历史，`git log --follow` 可追溯）。
+> **生命周期**：按[知识治理规则](engineering/knowledge-lifecycle.md)区分当前规范、机器输入和历史；经核查退役的材料通过 Git 恢复。
 
 ## 🧭 活跃文档导航
 
 ### 架构与边界
-- [架构规范索引](architecture/README.md) — 12 包依赖图、边界约束、放置决策树
+- [架构规范索引](architecture/README.md) — 当前包归属、边界约束
 - [Agent 快速参考](architecture/agent-context-pack.md) — 依赖图、边界规则、关键路径
 - [分层与抽象标准](architecture/boundaries-and-abstraction-standards.md)
 - [能力成熟度分级](architecture/capability-maturity.md)
@@ -18,15 +18,21 @@
 - [数据集晋级治理](operations/dataset-promotion.md) · [因子 IC 诊断](operations/factor-ic-diagnosis.md)
 
 ### 工程约定
-- [测试指南](engineering/testing.md) · [Claude/Codex Agent Harness](engineering/agent-harness.md)
+- [测试指南](engineering/testing.md) · [Claude/Codex/ZCode Agent Harness](engineering/agent-harness.md)
 
-### 路线与计划（当前活跃）
+- [开发工具链](engineering/toolchain.md) · [任务交付与技能适配](engineering/development-workflow.md)
+- [知识归属与生命周期](engineering/knowledge-lifecycle.md)
+
+### 产品路线与设计来源
+
+任务规格、进度和验收以 [GitHub Issues](https://github.com/cosmos-arc/ditto/issues) 为准；
+以下材料提供设计背景，是否仍适用于当前实现需核对任务和源码。
 - [母版路线图](roadmaps/ditto-development-roadmap.md) — 分阶段产品/工程路线
 - [功能能力评级与业界对标](plans/2026-07-10-capability-benchmark-design.md)
 - [阶段 A 实施计划](plans/2026-07-10-phase-a-implementation-plan.md)
 - [R1 日频人工交易 MVP](plans/2026-07-10-r1-implementation-plan.md)
 
-### 最新评估（基线）
+### 历史评估（各自提交的证据）
 - [质量评估 2026-06-16](reviews/2026-06-16-quality-eval.md)
 - [生产上线就绪度 2026-06-14](reviews/2026-06-14-production-readiness-eval.md)
 - [架构评估 v2 2026-05-21](reviews/audit/2026-05-21-comprehensive-architecture-evaluation-v2.md)

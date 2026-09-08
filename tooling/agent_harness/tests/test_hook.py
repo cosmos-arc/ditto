@@ -384,7 +384,6 @@ class DiffClassificationTests(unittest.TestCase):
             "README.md",
             "packages/data/README.md",
             "AGENTS.md",
-            ".agents/skills/ditto-pit-safety/SKILL.md",
         ]
         assert classify_diff(prose) == "docs"
         assert verification_commands(classify_diff(prose), prose) == []
@@ -397,6 +396,23 @@ class DiffClassificationTests(unittest.TestCase):
             with self.subTest(path=path):
                 selected = [*prose, path]
                 assert verification_commands(classify_diff(selected), selected)
+
+    def test_skill_scope_preserves_lightweight_and_mixed_checks(self) -> None:
+        for path in (
+            ".agents/skills/ditto-pit-safety/SKILL.md",
+            ".claude/skills/ditto-pit-safety/agents/openai.yaml",
+            ".agents/skills/registry.toml",
+        ):
+            selected = [path, "docs/guide.md"]
+            assert classify_diff(selected) == "skills"
+            assert verification_commands(classify_diff(selected), selected) == [
+                ["task", "harness-validate"]
+            ]
+            selected.append("packages/risk/src/ditto_risk/rules.py")
+            assert verification_commands(classify_diff(selected), selected) == [
+                ["task", "check"],
+                ["task", "pit"],
+            ]
 
     def test_monorepo_diff_classes(self) -> None:
         fixtures = {

@@ -2,100 +2,16 @@
 
 > 本目录记录跨包架构规则、命名词典、抽象层级和扩展放置标准。它面向后续 agent 与个人开发者，回答"新代码应该放哪里、叫什么、依赖谁、不能做什么"。
 
-## 12 包依赖图速查
+## 当前架构与放置
 
-```
-                    ┌──────────┐
-                    │  kernel  │  ← 依赖图最底层，零外部依赖
-                    └────┬─────┘
-                         │
-                    ┌────┴─────┐
-                    │ platform │  ← 横切基础设施（仅 exceptions 继承 kernel.DittoError）
-                    └────┬─────┘
-                         │
-          ┌──────────────┼──────────────┐
-          │              │              │
-     ┌────┴────┐   ┌────┴─────┐  ┌────┴─────┐
-     │  data   │   │ features │  │ analysis │
-     └────┬────┘   └──────────┘  └──────────┘
-          │
-    ┌─────┼──────────────────────────────┐
-    │     │                              │
-┌───┴──┐ ┌┴────────┐ ┌──────┐ ┌────────┐
-│strategy│ │portfolio│ │ risk │ │execution│
-└───┬──┘ └────┬────┘ └──┬───┘ └───┬────┘
-    │         │         │         │
-    └─────────┼─────────┼─────────┘
-              │         │
-         ┌────┴─────────┴────┐
-         │     backtest      │
-         └────────┬──────────┘
-                  │
-         ┌────────┴──────────┐
-         │   application     │  ← CQRS 编排层
-         └────────┬──────────┘
-                  │
-         ┌────────┴──────────┐
-         │      apps         │  ← Composition Root + 入口
-         └───────────────────┘
-```
+[Agent 快速参考](agent-context-pack.md) 是当前依赖方向、包归属和放置规则的单一阅读入口；
+[`.importlinter`](../../.importlinter) 与各包 AGENTS 是机器边界和局部约束来源。
+Python 包含 `agent` 在内共 13 个 distribution，Web 独立构建。
+能力包是并列平面，不能把 import-linter 的技术排序理解为业务依赖链。
 
-## 包放置决策树
-
-```
-新增代码应该放哪个包？
-
-1. 是纯值类型/枚举/Protocol（跨 2+ 包使用、零 I/O）？
-   → kernel ✅
-
-2. 是横切基础设施（缓存/日志/DB/存储基类）？
-   → platform ✅
-
-3. 是市场/基本面/宏观数据获取或存储？
-   → data ✅
-
-4. 是因子/表达式/衍生数据计算？
-   → features ✅
-
-5. 是策略定义/信号生成/alpha pipeline？
-   → strategy ✅
-
-6. 是组合构建/调仓/会计？
-   → portfolio ✅
-
-7. 是风控检查/约束/暴露度？
-   → risk ✅
-
-8. 是订单管理/券商网关/成交处理？
-   → execution ✅
-
-9. 是回测引擎/绩效统计/模拟？
-   → backtest ✅
-
-10. 是研究分析/数据集契约？
-    → analysis ✅
-
-11. 是 Use Case 编排（CQRS）？
-    → application ✅
-
-12. 是 HTTP API / CLI / Prefect Job / DI 注册？
-    → apps ✅
-```
-
-## 关键约束速查
-
-| 约束 | 说明 |
-|------|------|
-| 生产包禁止依赖 analysis | data/features/strategy/portfolio/risk/execution/backtest → analysis ❌ |
-| strategy 禁止依赖 execution | strategy → execution ❌ |
-| execution 禁止依赖 backtest | execution → backtest ❌ |
-| backtest 禁止导入真实券商网关 | 只使用模拟执行 |
-| 禁止跨包 re-export | 消费者直接引用源头包 |
-| 禁止 TYPE_CHECKING 延迟导入 | 重构解决循环依赖 |
-| portfolio/risk/backtest 禁止 platform | 需要时先更新包契约 |
-| strategy 不依赖 data/features | 市场数据通过 Protocol 注入 |
-| 使用 polars（禁止 pandas） | 使用 orjson（禁止 json） |
-| Python 使用 uv，根任务使用 Task，Web 使用 Bun | Python ≥ 3.13 |
+新增概念或调整抽象时使用[边界与抽象标准](boundaries-and-abstraction-standards.md)。
+命令和按风险验证见[测试指南](../engineering/testing.md)，JSON 例外与跨栈不变量见
+[根 AGENTS](../../AGENTS.md)。
 
 ## 架构文档
 
@@ -133,6 +49,7 @@
 | backtest | [packages/backtest/AGENTS.md](../../packages/backtest/AGENTS.md) | 回测引擎 |
 | analysis | [packages/analysis/AGENTS.md](../../packages/analysis/AGENTS.md) | 研究分析 |
 | application | [packages/application/AGENTS.md](../../packages/application/AGENTS.md) | 应用编排（CQRS） |
+| agent | [packages/agent/AGENTS.md](../../packages/agent/AGENTS.md) | 模型运行、工具、审批与回放 |
 | apps | [apps/backend/AGENTS.md](../../apps/backend/AGENTS.md) | 应用入口 |
 
 ## 使用方式

@@ -64,6 +64,7 @@ task check-changed
 
 - 无 staged、unstaged、rename/delete、mode change 或未 ignore 的 untracked：直接通过。
 - 普通文档：不运行 Python 套件。
+- 仅项目 skill 文本、metadata 或镜像：运行 `harness-validate` 检查结构及完整镜像；执行文件、模式变化和混合生产变更保留完整检查。
 - Harness：运行包含 `harness-check` 的根 `check`。
 - 仅测试：目标测试、Ruff format-check/lint、测试类型检查。
 - 普通后端/Web 生产代码：分别运行所属包测试与静态检查/`check-web`；跨包或高风险变更运行 `check`。
@@ -126,7 +127,7 @@ task integrator-lease -- release
 schema、脚本和配置仍保守分类。页面设计源 `apps/web/DESIGN.md` 保留生成物检查。
 `web-manifest-check` 作为明确要求的文档 freshness 审计保留，不阻断普通 UI 修改。
 
-PR 复用 changed-scope 选择检查；根配置、共享工具和未知范围选择完整检查。
+PR 复用 changed-scope 选择检查；仅 skill 文本和镜像选择 `skill-validation`，使用固定工具链执行 `harness-validate`，汇总门要求成功。根配置、共享工具和未知范围选择完整检查。
 主分支、merge queue 和定期 CI 执行全套类型、行为、边界、平台、安全与制品验证。
 关键 mutation 在每周安全流程执行；发布仍要求对应提交完整 CI 与 cohort 验证。
 稳定 CI gate 始终运行，显式区分不适用与失败导致的跳过，缺失结果不会通过。

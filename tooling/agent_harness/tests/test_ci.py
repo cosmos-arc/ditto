@@ -34,6 +34,20 @@ def gate_failures(required: set[str], results: Mapping[str, object]) -> bool:
 
 
 class CiTests(unittest.TestCase):
+    def test_skill_changes_select_lightweight_validation(self) -> None:
+        for path in (
+            ".agents/skills/ditto-pit-safety/SKILL.md",
+            ".claude/skills/ditto-pit-safety/SKILL.md",
+            ".agents/skills/registry.toml",
+        ):
+            with self.subTest(path=path):
+                assert required_jobs([path, "docs/guide.md"]) == {
+                    "repository-policy",
+                    "delivery-policy",
+                    "security-supply-chain",
+                    "skill-validation",
+                }
+
     def test_scope_preserves_shared_and_risk_checks(self) -> None:
         assert required_jobs(["packages/data/AGENTS.md"]) == {
             "repository-policy",
@@ -70,12 +84,19 @@ class CiTests(unittest.TestCase):
             document.write_text("updated\n")
             git("add", ".")
             git("commit", "--quiet", "-m", "docs")
-            for executable in (False, True):
-                if executable:
+            for kind in ("docs", "skills", "executable"):
+                if kind == "skills":
+                    skill = root / ".agents/skills/example/SKILL.md"
+                    skill.parent.mkdir(parents=True)
+                    document.rename(skill)
+                    document = skill
+                    git("add", ".")
+                    git("commit", "--quiet", "-m", "skill")
+                if kind == "executable":
                     document.chmod(0o755)
                     git("add", ".")
                     git("commit", "--quiet", "-m", "executable")
-                output = root / "output.txt"
+                output = root / ".git/ci-output.txt"
                 output.unlink(missing_ok=True)
                 subprocess.run(
                     [sys.executable, "-m", "tooling.agent_harness.ci", "select"],
@@ -96,12 +117,17 @@ class CiTests(unittest.TestCase):
                 )
                 assert set(selected) == (
                     REQUIRED_JOBS
-                    if executable
+                    if kind == "executable"
                     else {
                         "repository-policy",
                         "delivery-policy",
                         "security-supply-chain",
                     }
+                    | ({"skill-validation"} if kind == "skills" else set())
+                )
+                assert (
+                    f"analysis={str(kind == 'executable').lower()}"
+                    in output.read_text()
                 )
 
     def test_gate_accepts_only_explicitly_unneeded_skips(self) -> None:

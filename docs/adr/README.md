@@ -1,7 +1,7 @@
 # 架构决策记录 (Architecture Decision Records)
 
 **版本**: v0.4.0
-**最后更新**: 2026-04-26
+**最后更新**: 2026-09-08
 **状态**: ✅ 稳定
 
 ## 概要
@@ -30,9 +30,10 @@ ADR 记录项目中的重要架构决策，每个 ADR 包含：
 | [0007](0007-datafeed-lookback-strategy.md) | 回测引擎 DataFeed 数据加载策略 | Accepted | 2026-04-13 | DataFeed start_date 向前扩展 max_lookback，EngineLoop 仅步进 config 区间 |
 | [0008](0008-strategy-artifact-io-layering.md) | 策略产物 I/O 分层 | Accepted | 2026-04-13 | 文件读取下沉到 Data 层 BacktestArtifactReader，App 层通过服务接口调用 |
 | [0009](0009-impact-model-governance.md) | 影响模型 ImpactModel 治理 | Accepted | 2026-04-13 | 非法值统一抛 ValueError，合法值限定为 none 和 volume_share |
-| [0010](0010-polyglot-monorepo.md) | 联邦式双技术栈 Monorepo | Accepted | 2026-09-04 | uv 根任务图、Bun workspace、OpenAPI 契约与完整前端历史导入 |
-
+| [0010](0010-polyglot-monorepo.md) | 联邦式双技术栈 Monorepo | Accepted | 2026-09-04 | Task 根任务图、uv Python、Bun workspace、OpenAPI 契约与完整前端历史导入 |
 | [0011](0011-ci-verification-scope.md) | 分层验证与 CI 证明范围 | Accepted | 2026-09-08 | 普通 PR 按粗粒度影响范围验证，高风险与未知全量；同提交完整覆盖率证明 |
+| [0012](0012-development-skills-ownership.md) | 通用开发 skills 与 Ditto 治理的职责边界 | Accepted | 2026-09-08 | 上游独立维护，项目适配与交付闭环 |
+| [0013](0013-repository-knowledge-lifecycle.md) | 仓库知识归属与生命周期 | Accepted | 2026-09-08 | GitHub 管任务，仓库保存长期知识 |
 
 ## ADR 编号规则
 
