@@ -47,6 +47,7 @@ def build_spdx_sbom(
     image_digest: str,
     base_image_digest: str,
     created_at: str,
+    interpreter_version: str,
     debian_packages: Sequence[tuple[str, str]],
     python_packages: Sequence[tuple[str, str]],
     files: Sequence[tuple[str, str]],
@@ -60,7 +61,7 @@ def build_spdx_sbom(
     )
     base = _package(
         spdx_id="SPDXRef-BaseImage",
-        name="python-base-image",
+        name="runtime-base-image",
         version=base_image_digest,
         package_type="oci",
     )
@@ -92,7 +93,27 @@ def build_spdx_sbom(
         }
         for path, digest in sorted(files)
     ]
-    components = [*debian, *python]
+    interpreter = _package(
+        spdx_id="SPDXRef-CPython",
+        name="cpython",
+        version=interpreter_version,
+        package_type="generic",
+    )
+    interpreter["externalRefs"] = [
+        {
+            "referenceCategory": "PACKAGE-MANAGER",
+            "referenceType": "purl",
+            "referenceLocator": f"pkg:generic/cpython@{interpreter_version}",
+        },
+        {
+            "referenceCategory": "SECURITY",
+            "referenceType": "cpe23Type",
+            "referenceLocator": (
+                f"cpe:2.3:a:python:python:{interpreter_version}:*:*:*:*:*:*:*"
+            ),
+        },
+    ]
+    components = [interpreter, *debian, *python]
     relationships = [
         {
             "spdxElementId": "SPDXRef-Image",
@@ -315,6 +336,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         (cast(str, item[0]), cast(str, item[1]))
         for item in cast("Sequence[Sequence[object]]", python_decoded)
     )
+    interpreter_version = (
+        _docker(
+            docker_binary=docker_binary,
+            context=args.context,
+            home=home,
+            arguments=(
+                *run_prefix,
+                "/usr/local/bin/python",
+                args.image,
+                "-c",
+                "import platform; from pathlib import Path; "
+                "assert not Path('/usr/lib/python3.13').exists(), "
+                "'untracked Debian stdlib'; "
+                "print(platform.python_version())",
+            ),
+        )
+        .decode("utf-8")
+        .strip()
+    )
     artifact_names = (
         "Containerfile",
         "candidate_runner.py",
@@ -330,6 +370,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         image_digest=digest,
         base_image_digest=base_digest,
         created_at=cast(str, inspect["Created"]),
+        interpreter_version=interpreter_version,
         debian_packages=debian,
         python_packages=python_packages,
         files=files,

@@ -199,7 +199,9 @@ class IndexedArtifactIO:
     @staticmethod
     def _open_absolute_directory(path: Path, *, durable: bool = False) -> int:
         parts = path.parts
-        descriptors = [_open_directory(Path(parts[0]))]
+        descriptors = [
+            _open_directory(Path(parts[0]), durable=durable and len(parts) == 1)
+        ]
         try:
             for index, part in enumerate(parts[1:], start=1):
                 descriptors.append(

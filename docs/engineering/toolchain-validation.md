@@ -4,6 +4,20 @@
 
 Python 已改为 uv workspace 与单一 uv.lock；根任务改为 Task；Bun 版本、isolated 安装和脚本信任策略保留。固定 Node 执行 Node CLI。版本、准备命令、原包映射及性能基线见 [工具链说明](toolchain.md)。历史发布、验收和研究记录未覆盖。
 
+## 2026-09-08 当前状态
+
+其他模型完成的 `f895dfef` 已在 [CI 34146971599](https://github.com/cosmos-arc/ditto/actions/runs/34146971599) 通过全部适用主门：Linux 后端测试与覆盖率、Web、契约、Harness、真实双栈系统验收、macOS/Windows 原生门、OSV、CodeQL 分析及上传、镜像扫描和 cohort 打包。仓库目前为 public，CodeQL 上传已实际成功。下文 9 月 6–7 日的阻断描述保留为历史记录，不代表当前状态。
+
+本次针对 `7e9f6eae...f895dfef` 的双轴复审发现并修复三项遗漏：
+
+- Windows artifact 父目录恰为磁盘/共享根目录时，没有传播 durable 打开权限；补充权限传递及读写对照回归。
+- 后端复制库扫描只比较相同路径；现在在 Dockerfile 实际复制目标 `/usr/lib` 与 `/lib` 中按内容比较，覆盖改名和 multiarch 展平，并保留独立 `/usr/local` 解释器的来源边界。
+- 沙箱曾删除 Debian Python 包清单却保留其旧标准库。实际镜像检查确认旧树存在 601 个 Python 文件；现在删除未使用的整套标准库，重新构建真实镜像，并为实际 CPython 3.13.14 增加 SPDX CPE/PURL inventory。新镜像为 `sha256:82451483c29540c7253374e9cb7c64b8047f94b4e6aaea88b1fa3d10301dc6fc`。
+
+新沙箱已重新生成 SBOM、image manifest、live status 和 preflight，真实验收通过 11 个攻击场景以及 fresh-container、concurrency、fit→score。OSV 对新 SBOM 复扫无命中（35 个 inventory 条目，其中 3 个本地/不支持生态条目不参与 OSV 匹配；这不等于 OSV 已覆盖 CPython CPE）。以上镜像证据属于本机 Linux ARM64/OrbStack，不扩大为其他沙箱平台通过。
+
+本次修补本机验证：`task check` 完整通过（后端快速测试 15,482 passed / 1 skipped、Web 208 文件 / 1,757 tests、契约、架构、Harness 和 tooling 门通过）；测试代码类型检查 0 errors；发布制品门定向测试 28 passed。加强后的复制库扫描已对本机现有后端候选镜像通过。新增修补尚待推送后的原生 CI 复验，不能用上述 `f895dfef` 的绿灯代替新提交结果。
+
 ## 已执行的本机验证
 
 环境：macOS ARM64，CPython 3.13.14，uv 0.12.7，Task 3.53.1，Node 24.20.0，Bun 1.3.14；新 worktree 的 `.venv`，未使用旧 Pixi 环境补包。

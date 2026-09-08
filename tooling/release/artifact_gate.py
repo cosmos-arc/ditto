@@ -938,7 +938,8 @@ def _tar_file_digest(
     stream = archive.extractfile(member)
     if stream is None:
         raise ArtifactGateError(f"container filesystem file is unreadable: {path}")
-    return hashlib.sha256(stream.read()).hexdigest()
+    with stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
 def _verify_vulnerable_source_files(
@@ -948,11 +949,14 @@ def _verify_vulnerable_source_files(
     final_export: Path,
 ) -> None:
     vulnerable_files = _vulnerable_installed_files(report)
+    if not vulnerable_files:
+        return
     unchanged: list[str] = []
     try:
         with tarfile.open(source_export) as source, tarfile.open(final_export) as final:
             source_index = _tar_member_index(source)
             final_index = _tar_member_index(final)
+            vulnerable_digests: dict[str, list[str]] = {}
             for package, paths in vulnerable_files.items():
                 for path in paths:
                     source_digest = _tar_file_digest(source, source_index, path)
@@ -961,9 +965,19 @@ def _verify_vulnerable_source_files(
                             "trivy source installed file is absent from source export: "
                             + path
                         )
-                    final_digest = _tar_file_digest(final, final_index, path)
-                    if final_digest == source_digest:
-                        unchanged.append(f"{package}:{path}")
+                    vulnerable_digests.setdefault(source_digest, []).append(
+                        f"{package}:{path}"
+                    )
+            # The Dockerfile copies source /usr/lib trees into /usr/lib and
+            # /lib, including flattened multiarch paths. Compare every file
+            # in those destinations, not unrelated /usr/local Python files
+            # whose empty package markers can match an older Python release.
+            for path, member in final_index.items():
+                if member.isdir() or not path.startswith(("usr/lib/", "lib/")):
+                    continue
+                final_digest = _tar_file_digest(final, final_index, path)
+                if final_digest in vulnerable_digests:
+                    unchanged.extend(vulnerable_digests[final_digest])
     except tarfile.TarError as error:
         raise ArtifactGateError(
             "backend source/final container export is unreadable"

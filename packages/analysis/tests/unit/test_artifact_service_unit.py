@@ -42,6 +42,33 @@ from ditto_analysis.research.artifact_service import ResearchArtifactService
 
 NOW = datetime(2026, 7, 23, 1, 2, 3, 456789, tzinfo=UTC)
 NOW_US = 1_774_000_000_000_000
+
+
+@pytest.mark.parametrize("durable", [False, True])
+def test_filesystem_root_open_preserves_flush_access(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    durable: bool,
+) -> None:
+    original = artifact_module._open_directory
+    requests: list[bool] = []
+
+    def observed(path: Path, *, durable: bool = False) -> int:
+        assert path == Path(tmp_path.anchor)
+        requests.append(durable)
+        # Exercise real handle access on an owned directory; CI need not have
+        # permission to write the machine's drive root.
+        return original(tmp_path, durable=durable)
+
+    monkeypatch.setattr(artifact_module, "_open_directory", observed)
+    descriptor = artifact_module.IndexedArtifactIO._open_absolute_directory(
+        Path(tmp_path.anchor),
+        durable=durable,
+    )
+    os.close(descriptor)
+    assert requests == [durable]
+
+
 FENCE = LeaseFence(
     experiment_id=ExperimentId("experiment-1"),
     owner_token="worker-1",

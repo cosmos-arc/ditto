@@ -831,18 +831,46 @@ def _vulnerable_report(source: str) -> dict[str, object]:
     }
 
 
+@pytest.mark.parametrize(
+    "destination", ["/usr/lib/libssl.so.3", "/lib/libssl.so.3", "/usr/lib/renamed.so"]
+)
 def test_vulnerable_source_file_cannot_remain_byte_identical(
     tmp_path: Path,
+    destination: str,
 ) -> None:
     source = tmp_path / "source.tar"
     final = tmp_path / "final.tar"
     _filesystem_tar(source, {"/usr/lib/libssl.so.3": b"vulnerable"})
-    _filesystem_tar(final, {"/usr/lib/libssl.so.3": b"vulnerable"})
+    _filesystem_tar(final, {destination: b"vulnerable"})
 
     with pytest.raises(
         artifact_gate.ArtifactGateError,
         match=r"byte-identical.*libssl3t64:/usr/lib/libssl.so.3",
     ):
+        artifact_gate._verify_vulnerable_source_files(
+            _vulnerable_report("source@sha256:" + "a" * 64),
+            source_export=source,
+            final_export=final,
+        )
+
+
+@pytest.mark.parametrize("link_type", [tarfile.SYMTYPE, tarfile.LNKTYPE])
+def test_vulnerable_library_link_cannot_hide_bytes_outside_library_tree(
+    tmp_path: Path,
+    link_type: bytes,
+) -> None:
+    source = tmp_path / "source.tar"
+    final = tmp_path / "final.tar"
+    _filesystem_tar(source, {"/usr/lib/libssl.so.3": b"vulnerable"})
+    _filesystem_tar(final, {"/opt/relocated.so": b"vulnerable"})
+    with tarfile.open(final, "a") as archive:
+        link = tarfile.TarInfo("lib/libssl.so.3")
+        link.type = link_type
+        link.linkname = (
+            "/opt/relocated.so" if link_type == tarfile.SYMTYPE else "opt/relocated.so"
+        )
+        archive.addfile(link)
+    with pytest.raises(artifact_gate.ArtifactGateError, match="byte-identical"):
         artifact_gate._verify_vulnerable_source_files(
             _vulnerable_report("source@sha256:" + "a" * 64),
             source_export=source,
@@ -861,6 +889,9 @@ def test_vulnerable_source_file_may_be_absent_or_replaced(
         {
             "/usr/lib/libssl.so.3": b"replacement",
             "/usr/lib/other.so": b"clean",
+            # Identical non-library content in an independently sourced runtime
+            # is not evidence that the copied source library survived.
+            "/usr/local/lib/python3.13/unrelated.py": b"vulnerable",
         },
     )
 

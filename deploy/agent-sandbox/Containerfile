@@ -24,7 +24,9 @@ FROM gcr.io/distroless/python3-debian13@sha256:f3d5ddc6c64a019fe520e7f005f2880be
 FROM python@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8 AS runtime-inventory
 COPY --from=runtime-libraries /usr/lib /tmp/runtime-lib
 COPY --from=runtime-libraries /var/lib/dpkg/status.d /tmp/status.d
-RUN find /tmp/runtime-lib \( \
+RUN rm -rf /tmp/runtime-lib/python3.13 \
+    && rm -f /tmp/runtime-lib/binfmt.d/python3.13.conf \
+    && find /tmp/runtime-lib \( \
       -name 'libncurses.so*' \
       -o -name 'libncursesw.so*' \
       -o -name 'libtinfo.so*' \
