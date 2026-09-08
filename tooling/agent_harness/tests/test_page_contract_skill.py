@@ -22,13 +22,7 @@ CANONICAL_VALIDATOR = (
     / "contract-validator.mjs"
 )
 SYSTEM_AGENT_OPS_CONTRACT = (
-    ROOT
-    / "apps"
-    / "web"
-    / "docs"
-    / "contracts"
-    / "pages"
-    / "system-agent-ops.contract.json"
+    ROOT / "apps" / "web" / "contracts" / "pages" / "system-agent-ops.contract.json"
 )
 
 
@@ -56,7 +50,7 @@ class PageContractGeneratorPathTests(unittest.TestCase):
             shutil.copy2(CANONICAL_GENERATOR, script)
 
             web_root = root / "apps" / "web"
-            contracts = web_root / "docs" / "contracts" / "pages"
+            contracts = web_root / "contracts" / "pages"
             contracts.mkdir(parents=True)
             (contracts / "fixture.contract.json").write_text(
                 json.dumps(

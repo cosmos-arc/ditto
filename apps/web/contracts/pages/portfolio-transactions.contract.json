@@ -1,0 +1,205 @@
+{
+  "id": "portfolio-transactions",
+  "version": 4,
+  "status": "contract-ready",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-08-31",
+  "route": "/portfolio/transactions",
+  "pagePattern": "ledger-execution-console",
+  "shellFamily": "ops-console",
+  "prototypeRef": "prototype/page-orders-ledger.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/portfolio",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/portfolio/components/orders-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "OrdersPage",
+      "OrderDetailPanel"
+    ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/manual/daily-decision/v2",
+      "/api/v1/manual/fills",
+      "/api/v1/manual/fills/effective",
+      "/api/v1/manual/fill-adjustments"
+    ],
+    "writePaths": [
+      "/api/v1/manual/intents/{intent_id}/status",
+      "/api/v1/manual/fills",
+      "/api/v1/manual/fills/{fill_id}/void",
+      "/api/v1/manual/fills/{fill_id}/replace"
+    ],
+    "mockFallback": false
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "health",
+      "required": true,
+      "prototypeSelector": ".status-strip",
+      "reactSelector": "[data-slot='health']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".ledger-table-area",
+      "reactSelector": "[data-testid='orders-ledger-main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "detail",
+      "required": true,
+      "prototypeSelector": ".order-trace",
+      "reactSelector": "[data-slot='detail']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "selected-row",
+      "order-active",
+      "cancel-confirm",
+      "retry-confirm",
+      "batch-cancel",
+      "partial-result"
+    ]
+  },
+  "overlays": [
+    {
+      "id": "orders-ledger.cancel-confirm",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "detail",
+        "action": "cancel-intent"
+      },
+      "prototypeSelector": "#overlay-cancel-confirm",
+      "reactComponent": "OrderDetailPanel",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "orders-ledger.retry-submit",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "detail",
+        "action": "retry-intent"
+      },
+      "prototypeSelector": "#overlay-retry-submit",
+      "reactComponent": "OrderDetailPanel",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "orders.order-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "select-order"
+      },
+      "prototypeSelector": "#overlay-order-detail",
+      "reactComponent": "OrderDetailPanel",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "orders.batch-cancel",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "health",
+        "action": "batch-cancel"
+      },
+      "prototypeSelector": "#overlay-batch-cancel",
+      "reactComponent": "BatchCancelDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ],
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "health": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1110,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "detail": {
+        "width": 360,
+        "height": 720,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.05
+  }
+}

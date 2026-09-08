@@ -5,8 +5,8 @@ React SPA 消费同仓 FastAPI 的本地 OpenAPI 契约。Web 依赖和叶子任
 ## 按任务读取
 
 - 产品方向或范围：[PRODUCT.md](PRODUCT.md)、[产品 brief](docs/brief/product-brief.md) 与 [约束](docs/brief/constitution.md)。
-- 页面、导航、状态或原型：[设计入口](DESIGN.md)、[产品 IA](docs/designs/specs/01_product_information_architecture.md)、[页面蓝图](docs/designs/specs/02_core_page_blueprints.md) 与 [交互状态](docs/designs/specs/04_interaction_state_spec.md)。
-- 布局、selector 或合同生成：[页面合同](docs/contracts/README.md) 与目标页面 JSON。
+- 页面、导航、状态或原型：[设计入口](DESIGN.md)、[产品 IA](design/specs/01_product_information_architecture.md)、[页面蓝图](design/specs/02_core_page_blueprints.md) 与 [交互状态](design/specs/04_interaction_state_spec.md)。
+- 布局、selector 或合同生成：[页面合同](contracts/README.md) 与目标页面 JSON。
 - 组件归属或依赖：[前端架构](docs/engineering/frontend-architecture.md)。
 - 行为与视觉验证：[Web 测试说明](docs/engineering/testing.md)；跨栈/API 变化另读 [契约指南](../../contracts/AGENTS.md)。
 - 宿主配置：[根 Harness](../../docs/engineering/agent-harness.md)。

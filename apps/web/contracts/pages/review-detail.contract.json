@@ -1,0 +1,179 @@
+{
+  "id": "review-detail",
+  "version": 2,
+  "status": "contract-ready",
+  "createdAt": "2026-08-01",
+  "updatedAt": "2026-08-30",
+  "route": "/research/reviews/$id",
+  "resolvedRoute": "/research/reviews/exp-rotation-v4?strategyId=seed_etf_industry_rotation&version=4",
+  "pagePattern": "object-hub",
+  "shellFamily": "object-hub",
+  "prototypeRef": "prototype/page-strategies-detail.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/research",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/research/components/review-detail-page.test.tsx",
+      "src/features/strategy/components/review-decision-panel.test.tsx"
+    ],
+    "reactComponentRefs": ["ReviewDetailPage", "ReviewDecisionPanel"]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/research/experiments/{experiment_id}/review-packet",
+      "/api/v1/strategies/{strategy_id}/versions",
+      "/api/v1/strategies/{strategy_id}/versions/{version}/diff",
+      "/api/v1/strategies/{strategy_id}/events"
+    ],
+    "writePaths": [
+      "/api/v1/strategies/{strategy_id}/versions/{version}/approve",
+      "/api/v1/strategies/{strategy_id}/versions/{version}/reject",
+      "/api/v1/strategies/{strategy_id}/versions/{version}/publish",
+      "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate"
+    ],
+    "mockFallback": false
+  },
+  "viewports": [
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" },
+    { "width": 1200, "height": 800, "role": "compact" }
+  ],
+  "slots": [
+    {
+      "name": "header",
+      "required": true,
+      "infoLevel": "l0",
+      "prototypeSelector": ".shell-header",
+      "reactSelector": "[data-slot='header']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.11 },
+      "a11yRole": "banner"
+    },
+    {
+      "name": "meta",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": ".hub-meta",
+      "reactSelector": "[data-testid='review-detail-meta']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 8, "widthRatio": 0.03, "heightRatio": 0.03 },
+      "a11yRole": "complementary",
+      "responsiveBehavior": { "compact": "reflow" }
+    },
+    {
+      "name": "tabs",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": ".hub-tabs",
+      "reactSelector": "[data-testid='review-detail-tabs']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 8, "widthRatio": 0.03, "heightRatio": 0.03 },
+      "a11yRole": "navigation",
+      "responsiveBehavior": { "compact": "reflow" }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": "[data-contract-slot='main']",
+      "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 8, "widthRatio": 0.03, "heightRatio": 0.03 },
+      "a11yRole": "main"
+    },
+    {
+      "name": "bottom",
+      "required": true,
+      "infoLevel": "l2",
+      "prototypeSelector": ".hub-bottom",
+      "reactSelector": "[data-testid='review-detail-bottom']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.03 },
+      "a11yRole": "region",
+      "responsiveBehavior": { "compact": "collapsed" }
+    }
+  ],
+  "states": {
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": [
+      "selected-decision-tab",
+      "selected-evidence-tab",
+      "selected-lineage-tab",
+      "selected-audit-tab",
+      "packet-unavailable",
+      "partial-version-error",
+      "partial-diff-error",
+      "hard-gate-blocked",
+      "review-pending",
+      "approved-awaiting-publish",
+      "published",
+      "rejected"
+    ]
+  },
+  "interactions": [
+    {
+      "id": "switch-review-evidence-view",
+      "trigger": "tab-change",
+      "affectedSlots": ["tabs", "main", "bottom"],
+      "expectedBehavior": "switches among decision, evidence, lineage, and append-only audit views without replacing the frozen packet identity"
+    },
+    {
+      "id": "approve-or-reject-review",
+      "trigger": "pending-review-decision",
+      "affectedSlots": ["main", "bottom"],
+      "expectedBehavior": "requires actor and reason; approval remains disabled whenever the server packet reports a hard-gate block while rejection stays available"
+    },
+    {
+      "id": "publish-approved-version",
+      "trigger": "publish-action",
+      "affectedSlots": ["main", "bottom"],
+      "expectedBehavior": "requires the exact packet bundle hash, actor, reason, and a typed version confirmation before the governed publish command"
+    },
+    {
+      "id": "deprecate-approved-version",
+      "trigger": "deprecate-action",
+      "affectedSlots": ["main", "bottom"],
+      "expectedBehavior": "records actor and reason through the append-only governance command without mutating review evidence"
+    },
+    {
+      "id": "retry-review-resource",
+      "trigger": "typed-retry-action",
+      "affectedSlots": ["meta", "tabs", "main", "bottom"],
+      "expectedBehavior": "retries the failed packet, version, diff, or audit resource while withholding synthetic evidence and executable actions when packet identity is unavailable"
+    }
+  ],
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
+  "metrics": {
+    "capturedAt": "2026-08-30",
+    "viewport": "1536x900",
+    "baseline": {
+      "meta": { "width": 1480, "height": 36, "strategy": "content-driven" },
+      "tabs": { "width": 1480, "height": 45, "strategy": "content-driven" },
+      "main": { "width": 1480, "height": 707, "strategy": "content-driven" },
+      "bottom": { "width": 1480, "height": 36, "strategy": "content-driven" }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.075
+  },
+  "overlays": [
+    {
+      "id": "review-detail.governance-confirmation",
+      "kind": "sheet",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "main", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-version-rollback",
+      "reactComponent": "DecisionDialog|PublishDialog",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    }
+  ]
+}

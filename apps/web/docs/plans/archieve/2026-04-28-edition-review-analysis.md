@@ -1,7 +1,7 @@
 # Ditto Edition Review 分析
 
 > 日期：2026-04-28
-> 范围：`docs/designs/specs/`、`docs/designs/specs/prototypes/`、页面合同、原型门禁、27 个页面标准/紧凑视口截图
+> 范围：`design/specs/`、`prototype/`、页面合同、原型门禁、27 个页面标准/紧凑视口截图
 > 模式：`/ditto-design-cycle --edition-review` + 设计大师视角审阅 + 业界最佳实践对标
 
 ## 结论
@@ -24,7 +24,7 @@
 
 ```bash
 bun test scripts/prototype-design-consistency.test.ts scripts/prototype-view-preferences.test.ts
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-a-shares.html --out-dir test-results/edition-gates/a-shares
+bun run prototype:gates -- --prototype prototype/page-a-shares.html --out-dir test-results/edition-gates/a-shares
 bun test scripts/prototype-design-consistency.test.ts scripts/prototype-view-preferences.test.ts scripts/page-orders-ledger-prototype.test.ts scripts/page-agent-console-prototype.test.ts
 bun run check
 ```

@@ -256,12 +256,12 @@ Mobile
 ### F0.4 更新页面合同和原型
 
 - **目标文件：**
-  - `docs/contracts/pages/agent-console.contract.json`
-  - `docs/contracts/pages/trading-overview.contract.json`
-  - `docs/contracts/pages/portfolio.contract.json`
-  - `docs/contracts/pages/risk-center.contract.json`
-  - `docs/contracts/pages/platform.contract.json`
-  - 对应 `docs/designs/specs/prototypes/**`
+  - `contracts/pages/agent-console.contract.json`
+  - `contracts/pages/trading-overview.contract.json`
+  - `contracts/pages/portfolio.contract.json`
+  - `contracts/pages/risk-center.contract.json`
+  - `contracts/pages/platform.contract.json`
+  - 对应 `prototype/**`
 - **Agent 状态：** loading、empty、disabled、degraded、running、partial、blocked、waiting-approval、approval-expired、guardrail-blocked、cancelled、failed、completed、reconnecting、stale。
 - **覆盖层：** run create、cancel confirm、approval exact-action、evidence detail、artifact preview、campaign draft/approval、guardrail detail。
 - **验收：** contract generator、route audit、token audit 和 prototype gates 全部通过；禁止用 `PrototypeOnlyOverlay` 表示本期 live 能力。

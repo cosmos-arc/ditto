@@ -389,7 +389,7 @@ Expected before Phase 2: FAIL with the same missing/legacy route drift listed in
 - Modify: `.claude/skills/ditto-page-contract/scripts/schema/contract.schema.json`
 - Modify: `.claude/skills/ditto-page-contract/scripts/validators/contract-validator.mjs`
 - Modify: `.claude/skills/ditto-page-contract/scripts/generate.mjs`
-- Modify: `docs/contracts/pages/home.contract.json`
+- Modify: `contracts/pages/home.contract.json`
 
 **Step 1: Add optional `landing` schema**
 
@@ -460,7 +460,7 @@ Expected: generated files remain syntactically valid.
 ### Task 1.3: Create Contracts For All Reviewed Route Pages
 
 **Files:**
-- Create: `docs/contracts/pages/*.contract.json`
+- Create: `contracts/pages/*.contract.json`
 - Modify generated: `src/features/shell/page-contracts.generated.ts`
 - Modify generated: `scripts/visual-audit.config.generated.mjs`
 
@@ -469,7 +469,7 @@ Expected: generated files remain syntactically valid.
 Copy from:
 
 ```bash
-docs/contracts/pages/home.contract.json
+contracts/pages/home.contract.json
 ```
 
 **Step 2: Create contracts in batches**
@@ -956,9 +956,9 @@ Expected: PASS.
 ### Task 3.3: Make Required Prototype Overlays Triggerable In Default Flow
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-*.html`
+- Modify: `prototype/page-*.html`
 - Modify: `scripts/page-*-prototype.test.ts`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
 
 **Step 1: Choose first target batch**
 
@@ -984,7 +984,7 @@ Wire row actions / buttons / cards to existing CSS-only overlay ids.
 **Step 4: Run prototype gates**
 
 ```bash
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-orders-ledger.html --out-dir test-results/ditto-design-cycle-gates/orders-ledger-overlay-default-flow
+bun run prototype:gates -- --prototype prototype/page-orders-ledger.html --out-dir test-results/ditto-design-cycle-gates/orders-ledger-overlay-default-flow
 ```
 
 Expected: PASS.
@@ -1038,7 +1038,7 @@ Expected: PASS.
 **Phase 3 commit:**
 
 ```bash
-git add docs/designs/specs/prototypes scripts src/components src/features/shell src/features/trading
+git add prototype scripts src/components src/features/shell src/features/trading
 git commit -m "feat: unify overlay registry and runtime behavior"
 ```
 
@@ -1166,7 +1166,7 @@ git commit -m "refactor: align core UI primitives with Ditto tokens"
 
 **Files:**
 - Modify: `.arch-manifest.json`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
 - Modify: `DESIGN.md`
 - Modify: `docs/reviews/2026-04-27-project-consistency-architecture-review.md`
 

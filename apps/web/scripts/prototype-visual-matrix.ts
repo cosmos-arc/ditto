@@ -12,7 +12,7 @@ type MatrixPreference = {
 	density: "compact" | "comfortable";
 };
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 const outputDir = resolve(import.meta.dirname, "../test-results/edition-review/visual-matrix");
 
 const pages: MatrixPage[] = [

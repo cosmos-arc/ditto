@@ -5,7 +5,7 @@ import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const navigationTimeoutMs = 10_000;
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const primaryAriaControlsActionSelector = "[data-answer-action][aria-controls], .answer-action[aria-controls]";
 let browser: Browser;

@@ -18,7 +18,7 @@ describe("R1 trading visual acceptance contract", () => {
 		};
 
 		expect(packageJson.scripts?.["visual:audit"]).toBe(
-			"bun scripts/visual-audit/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
+			"bun scripts/visual-audit/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/prototype",
 		);
 		expect(packageJson.scripts?.["visual:audit:cli"]).toBe("bun scripts/visual-audit/visual-audit.mjs");
 		expect(packageJson.scripts?.["acceptance:r1-trading"]).toBe("bun scripts/r1-trading-acceptance.ts");

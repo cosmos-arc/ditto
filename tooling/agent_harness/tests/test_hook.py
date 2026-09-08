@@ -363,19 +363,24 @@ class DiffClassificationTests(unittest.TestCase):
     def test_executable_prose_is_not_downgraded_after_mode_change_or_delete(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            _initialize_repository(root)
-            document = _commit_file(root, "packages/data/README.md", "ordinary prose\n")
-            document.write_text("updated prose\n")
-            assert classify_diff(changed_paths(root), root=root) == "docs"
-            document.chmod(0o755)
-            assert classify_diff(changed_paths(root), root=root) == "root"
-            subprocess.run(["git", "add", "."], cwd=root, check=True)
-            document.chmod(0o644)
-            assert classify_diff(changed_paths(root), root=root) == "root"
-            document.unlink()
-            assert classify_diff(changed_paths(root), root=root) == "root"
+        for path, category in (
+            ("packages/data/README.md", "docs"),
+            ("apps/web/design/specs/fixture.md", "web"),
+            ("apps/backend/tests/fixtures/contracts/surface.md", "backend-tests"),
+        ):
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                _initialize_repository(root)
+                document = _commit_file(root, path, "ordinary prose\n")
+                document.write_text("updated prose\n")
+                assert classify_diff(changed_paths(root), root=root) == category
+                document.chmod(0o755)
+                assert classify_diff(changed_paths(root), root=root) == "root"
+                subprocess.run(["git", "add", "."], cwd=root, check=True)
+                document.chmod(0o644)
+                assert classify_diff(changed_paths(root), root=root) == "root"
+                document.unlink()
+                assert classify_diff(changed_paths(root), root=root) == "root"
 
     def test_prose_is_lightweight_but_executable_and_contract_inputs_are_not(
         self,
@@ -413,6 +418,22 @@ class DiffClassificationTests(unittest.TestCase):
                 ["task", "check"],
                 ["task", "pit"],
             ]
+
+    def test_relocated_machine_prose_runs_its_consumers(self) -> None:
+        for path in (
+            "apps/web/design/specs/04_interaction_state_spec.md",
+            "apps/web/contracts/prototype-chart-interactions.md",
+            "apps/web/contracts/pages/home.contract.json",
+            "apps/web/prototype/page-home.html",
+        ):
+            assert verification_commands(classify_diff([path]), [path]) == [
+                ["task", "check-web"],
+                ["task", "web-prototype"],
+            ]
+        path = "apps/backend/tests/fixtures/contracts/r3-v1-api-surface.md"
+        assert classify_diff([path]) == "backend-tests"
+        assert verification_commands(classify_diff([path]), [path])
+        assert verification_commands("docs", ["apps/web/docs/README.md"]) == []
 
     def test_monorepo_diff_classes(self) -> None:
         fixtures = {

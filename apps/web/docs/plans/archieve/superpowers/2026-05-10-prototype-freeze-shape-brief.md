@@ -1,7 +1,7 @@
 # 原型冻结前最后一轮 Shape Brief
 
 > 日期：2026-05-10
-> 范围：`docs/designs/specs/prototypes/` 下全部 active 原型
+> 范围：`prototype/` 下全部 active 原型
 > 质量档位：高保真原型冻结候选，不是 React 生产落地
 > 注册类型：product
 
@@ -60,9 +60,9 @@ Primary Answer 固定结构：
 - `PRODUCT.md`：克制、可信、敏锐；判断先于操作，操作先于美感。
 - `DESIGN.md`：Graphite Studio、OKLCH token、三层颜色语义、density preset、shell 尺寸、domain signature。
 - `src/styles/design-tokens/`：base、semantic、domain、component、data-viz、interaction、density、shell、theme tokens。
-- `docs/designs/specs/00_ditto_visual_constitution.md`：统一工作台逻辑、主工作面、业务语义颜色、双维表达。
-- `docs/designs/specs/11_ditto_page_pattern_library.md`：8 套 Page Pattern 和 Primary Answer 合同。
-- `docs/designs/specs/prototypes/.edition-manifest.json`：active 原型、页面族、得分和落地状态。
+- `design/specs/00_ditto_visual_constitution.md`：统一工作台逻辑、主工作面、业务语义颜色、双维表达。
+- `design/specs/11_ditto_page_pattern_library.md`：8 套 Page Pattern 和 Primary Answer 合同。
+- `prototype/.edition-manifest.json`：active 原型、页面族、得分和落地状态。
 
 发现 drift 时先分类，再修：
 
@@ -281,9 +281,9 @@ P0 门禁未清零时，禁止进入 P1/P2 美化。
 - `.agents/skills/impeccable/reference/responsive-design.md`
 - `.agents/skills/impeccable/reference/motion-design.md`
 - `.agents/skills/impeccable/reference/ux-writing.md`
-- `docs/designs/specs/00_ditto_visual_constitution.md`
-- `docs/designs/specs/11_ditto_page_pattern_library.md`
-- `docs/designs/specs/prototypes/.edition-manifest.json`
+- `design/specs/00_ditto_visual_constitution.md`
+- `design/specs/11_ditto_page_pattern_library.md`
+- `prototype/.edition-manifest.json`
 
 ## 14. Open Questions
 

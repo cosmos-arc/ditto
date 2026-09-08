@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 仅在 `docs/designs/specs/prototypes/` 原型层修复 `20_interaction_ux_audit.md` 中确认有效的交互体验问题，并把 React 实现工作记录为后续 TODO。
+**Goal:** 仅在 `prototype/` 原型层修复 `20_interaction_ux_audit.md` 中确认有效的交互体验问题，并把 React 实现工作记录为后续 TODO。
 
 **Architecture:** 先把跨页交互语义转成可机器检查的 prototype contract，再按共享 chrome、页面家族和代表页面分层修复。原型阶段允许修改 HTML、共享 CSS、共享 JS 和原型测试，不引入 React 依赖，不改 `src/` 运行时代码。
 
@@ -14,12 +14,12 @@
 
 本计划只处理 prototype 层：
 
-- `docs/designs/specs/prototypes/page-*.html`
-- `docs/designs/specs/prototypes/shared/layout-base.css`
-- `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- `docs/designs/specs/prototypes/shared/theme-switcher.js`
+- `prototype/page-*.html`
+- `prototype/shared/layout-base.css`
+- `prototype/shared/prototype-interactions.js`
+- `prototype/shared/theme-switcher.js`
 - `scripts/*prototype*.test.ts`
-- 必要时更新 `docs/designs/specs/20_interaction_ux_audit.md` 中的原型事实校准
+- 必要时更新 `design/specs/20_interaction_ux_audit.md` 中的原型事实校准
 
 本计划不处理：
 
@@ -126,8 +126,8 @@ Rail 是跨页面导航，不是页面内动作。原型阶段统一为：
 
 - Create: `scripts/prototype-interaction-ux-contract.test.ts`
 - Modify: `package.json`
-- Read: `docs/designs/specs/prototypes/.edition-manifest.json`
-- Read: `docs/designs/specs/20_interaction_ux_audit.md`
+- Read: `prototype/.edition-manifest.json`
+- Read: `design/specs/20_interaction_ux_audit.md`
 
 **Step 1: Write failing Rail contract tests**
 
@@ -233,8 +233,8 @@ git commit -m "test(prototypes): add interaction ux contract gates"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: all active `docs/designs/specs/prototypes/page-*.html`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: all active `prototype/page-*.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: Update shared Rail styles to support anchors**
@@ -315,7 +315,7 @@ Expected: PASS for header utility and view preference tests.
 **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes package.json scripts/prototype-interaction-ux-contract.test.ts
+git add prototype package.json scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): standardize rail and utility icon semantics"
 ```
 
@@ -325,7 +325,7 @@ git commit -m "fix(prototypes): standardize rail and utility icon semantics"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
+- Modify: `prototype/page-strategy-studio.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 - Test: `scripts/page-strategy-studio-prototype.test.ts`
 
@@ -403,7 +403,7 @@ Expected: PASS.
 **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-strategy-studio.html scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/page-strategy-studio.html scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): clarify strategy studio action icons"
 ```
 
@@ -413,8 +413,8 @@ git commit -m "fix(prototypes): clarify strategy studio action icons"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-interactions.js`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: Add shared styles for summaries**
@@ -456,7 +456,7 @@ Expected: still FAIL until pages are migrated.
 **Step 3: Commit shared contract**
 
 ```bash
-git add docs/designs/specs/prototypes/shared/layout-base.css docs/designs/specs/prototypes/shared/prototype-interactions.js
+git add prototype/shared/layout-base.css prototype/shared/prototype-interactions.js
 git commit -m "fix(prototypes): add collapsible context section contract"
 ```
 
@@ -466,14 +466,14 @@ git commit -m "fix(prototypes): add collapsible context section contract"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-list.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-list.html`
-- Modify: `docs/designs/specs/prototypes/page-experiment-list.html`
-- Modify: `docs/designs/specs/prototypes/page-watchlist.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-calendar.html`
-- Modify: `docs/designs/specs/prototypes/page-universe-list.html`
+- Modify: `prototype/page-markets-screener.html`
+- Modify: `prototype/page-factor-list.html`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-backtest-list.html`
+- Modify: `prototype/page-experiment-list.html`
+- Modify: `prototype/page-watchlist.html`
+- Modify: `prototype/page-markets-calendar.html`
+- Modify: `prototype/page-universe-list.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 - Test: relevant `scripts/page-*-prototype.test.ts`
 
@@ -534,7 +534,7 @@ Expected: PASS.
 **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-*.html scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/page-*.html scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): apply catalog collapsible detail panels"
 ```
 
@@ -544,20 +544,20 @@ git commit -m "fix(prototypes): apply catalog collapsible detail panels"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-portfolio.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-regime-monitor.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-intelligence.html`
-- Modify: `docs/designs/specs/prototypes/page-research.html`
-- Modify: `docs/designs/specs/prototypes/page-platform.html`
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-orders-ledger.html`
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-analysis.html`
-- Modify: `docs/designs/specs/prototypes/page-strategies-detail.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-result.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-portfolio.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-regime-monitor.html`
+- Modify: `prototype/page-markets-intelligence.html`
+- Modify: `prototype/page-research.html`
+- Modify: `prototype/page-platform.html`
+- Modify: `prototype/page-platform-settings.html`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-orders-ledger.html`
+- Modify: `prototype/page-instrument-hub.html`
+- Modify: `prototype/page-factor-analysis.html`
+- Modify: `prototype/page-strategies-detail.html`
+- Modify: `prototype/page-backtest-result.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 - Test: relevant `scripts/page-*-prototype.test.ts`
 
@@ -611,7 +611,7 @@ Expected: PASS. Pages without dedicated tests, currently including Trading Overv
 **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-*.html scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/page-*.html scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): apply workspace collapsible section defaults"
 ```
 
@@ -621,12 +621,12 @@ git commit -m "fix(prototypes): apply workspace collapsible section defaults"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console.html`
-- Modify: `docs/designs/specs/prototypes/page-platform.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-agent-console.html`
+- Modify: `prototype/page-platform.html`
+- Modify: `prototype/page-trading-overview.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: Add Bottom Tray tests**
@@ -687,7 +687,7 @@ Expected: PASS.
 **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared docs/designs/specs/prototypes/page-*.html scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/shared prototype/page-*.html scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): refine bottom tray state transitions"
 ```
 
@@ -697,11 +697,11 @@ git commit -m "fix(prototypes): refine bottom tray state transitions"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-interactions.js`
 - Modify: Catalog pages from Task 5
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console.html`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-agent-console.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 - Test: `scripts/prototype-view-preferences.test.ts`
 
@@ -783,7 +783,7 @@ Expected: Studio assertions PASS.
 **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared docs/designs/specs/prototypes/page-*.html scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/shared prototype/page-*.html scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): add p0 resizable panel affordances"
 ```
 
@@ -793,7 +793,7 @@ git commit -m "fix(prototypes): add p0 resizable panel affordances"
 
 **Files:**
 
-- Modify: `docs/designs/specs/20_interaction_ux_audit.md`
+- Modify: `design/specs/20_interaction_ux_audit.md`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: Correct outdated implementation guidance**
@@ -832,7 +832,7 @@ Expected: PASS.
 **Step 3: Commit**
 
 ```bash
-git add docs/designs/specs/20_interaction_ux_audit.md
+git add design/specs/20_interaction_ux_audit.md
 git commit -m "docs(prototypes): calibrate interaction ux audit plan"
 ```
 

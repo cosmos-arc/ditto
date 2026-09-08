@@ -12,7 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 const TOKENS_DIR = resolve(ROOT, "src/styles/design-tokens");
 const STYLES_DIR = resolve(ROOT, "src/styles");
-const PROTOTYPES_DIR = resolve(ROOT, "docs/designs/specs/prototypes");
+const PROTOTYPES_DIR = resolve(ROOT, "prototype");
 
 // ── Collect all :root token declarations ──
 
@@ -260,7 +260,7 @@ function main() {
   }
 
   // 5. Check prototype HTML files for var() refs in <style> blocks
-  console.log("### docs/designs/specs/prototypes/\n");
+  console.log("### prototype/\n");
   let protoFilesChecked = 0;
   let protoDeadLinks = 0;
   try {

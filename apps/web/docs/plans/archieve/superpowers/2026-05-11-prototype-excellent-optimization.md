@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Raise `docs/designs/specs/prototypes/` active route prototypes from Good-high final review quality to Excellent by tightening A-Shares map semantics, complex-page cognitive load, high-risk action gates, and light-mode readability.
+**Goal:** Raise `prototype/` active route prototypes from Good-high final review quality to Excellent by tightening A-Shares map semantics, complex-page cognitive load, high-risk action gates, and light-mode readability.
 
 **Architecture:** Keep the existing Graphite Studio visual language and static prototype architecture. Add stricter Vitest/JSDOM/Playwright gates first, then make minimal HTML/CSS changes inside the existing prototype files and shared consistency tests. Do not add dependencies, do not change design tokens unless a human explicitly approves a token change, and do not reopen the overall visual direction.
 
@@ -36,29 +36,29 @@ Out of scope:
 
 - Modify `scripts/page-a-shares-prototype.test.ts`
   - Owns page-specific market map tests for A-Shares Treemap/Heatmap semantics.
-- Modify `docs/designs/specs/prototypes/page-a-shares.html`
+- Modify `prototype/page-a-shares.html`
   - Owns A-Shares market structure map copy, CSS variable naming, Treemap cell sign markers, label budget, and light/dark map readability.
 - Modify `scripts/prototype-expert-efficiency.test.ts`
   - Owns global expert-efficiency tests for complex page decision budgets.
-- Modify `docs/designs/specs/prototypes/page-alpha-explorer.html`
+- Modify `prototype/page-alpha-explorer.html`
   - Owns Alpha Explorer first-screen decision cluster and disclosure structure.
-- Modify `docs/designs/specs/prototypes/page-agent-console-v2.html`
+- Modify `prototype/page-agent-console-v2.html`
   - Owns Agent Console V2 first-screen decision cluster and inspector disclosure structure.
-- Modify `docs/designs/specs/prototypes/page-strategy-studio.html`
+- Modify `prototype/page-strategy-studio.html`
   - Owns Strategy Studio first-screen decision cluster and AI assistant disclosure structure.
-- Modify `docs/designs/specs/prototypes/page-instrument-hub.html`
+- Modify `prototype/page-instrument-hub.html`
   - Owns Instrument Hub first-screen action cluster and tab/action discoverability.
 - Modify `scripts/prototype-design-consistency.test.ts`
   - Owns cross-page consistency gates: high-risk action pages, light-mode readable surfaces, and data-viz semantics.
-- Modify `docs/designs/specs/prototypes/page-strategies-detail.html`
+- Modify `prototype/page-strategies-detail.html`
   - Owns destructive strategy deletion confirmation semantics.
-- Modify `docs/designs/specs/prototypes/page-universe-list.html`
+- Modify `prototype/page-universe-list.html`
   - Owns destructive stock-pool deletion confirmation semantics.
-- Modify `docs/designs/specs/prototypes/page-signals-inbox.html`
+- Modify `prototype/page-signals-inbox.html`
   - Owns batch signal approval/rejection impact semantics.
-- Modify `docs/designs/specs/prototypes/page-trading-overview.html`
+- Modify `prototype/page-trading-overview.html`
   - Owns trade pause/resume and signal-review high-risk action semantics.
-- Modify `docs/designs/specs/prototypes/page-platform-settings.html`
+- Modify `prototype/page-platform-settings.html`
   - Owns config rollback/save/authorization high-risk action semantics and light-mode weak text.
 - Create `docs/reviews/2026-05-11-prototype-excellent-optimization-results.md`
   - Records final evidence, scores, and remaining React implementation caveats.
@@ -200,12 +200,12 @@ git commit -m "test: require excellent a-shares map semantics"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
+- Modify: `prototype/page-a-shares.html`
 - Test: `scripts/page-a-shares-prototype.test.ts`
 
 - [ ] **Step 1: Rename local Treemap palette aliases from generic positive/negative to market up/down**
 
-In `docs/designs/specs/prototypes/page-a-shares.html`, perform these exact replacements.
+In `prototype/page-a-shares.html`, perform these exact replacements.
 
 ```text
 --map-positive-base      -> --map-market-up-base
@@ -376,7 +376,7 @@ Expected: PASS.
 Run:
 
 ```bash
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-a-shares.html
+bun run prototype:gates -- --prototype prototype/page-a-shares.html
 ```
 
 Expected: PASS for `VP-STANDARD`, `VP-COMPACT`, and `VP-NARROW`.
@@ -384,7 +384,7 @@ Expected: PASS for `VP-STANDARD`, `VP-COMPACT`, and `VP-NARROW`.
 - [ ] **Step 8: Commit A-Shares implementation**
 
 ```bash
-git add docs/designs/specs/prototypes/page-a-shares.html scripts/page-a-shares-prototype.test.ts
+git add prototype/page-a-shares.html scripts/page-a-shares-prototype.test.ts
 git commit -m "fix: clarify a-shares market map semantics"
 ```
 
@@ -511,10 +511,10 @@ git commit -m "test: require complex page decision budgets"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-alpha-explorer.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html`
+- Modify: `prototype/page-alpha-explorer.html`
+- Modify: `prototype/page-agent-console-v2.html`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-instrument-hub.html`
 - Test: `scripts/prototype-expert-efficiency.test.ts`
 
 - [ ] **Step 1: Add decision cluster attributes on Alpha Explorer**
@@ -638,10 +638,10 @@ Expected: PASS.
 Run:
 
 ```bash
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-alpha-explorer.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-agent-console-v2.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-strategy-studio.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-instrument-hub.html
+bun run prototype:gates -- --prototype prototype/page-alpha-explorer.html
+bun run prototype:gates -- --prototype prototype/page-agent-console-v2.html
+bun run prototype:gates -- --prototype prototype/page-strategy-studio.html
+bun run prototype:gates -- --prototype prototype/page-instrument-hub.html
 ```
 
 Expected: each command PASS for all default viewports.
@@ -649,7 +649,7 @@ Expected: each command PASS for all default viewports.
 - [ ] **Step 11: Commit complex page implementation**
 
 ```bash
-git add docs/designs/specs/prototypes/page-alpha-explorer.html docs/designs/specs/prototypes/page-agent-console-v2.html docs/designs/specs/prototypes/page-strategy-studio.html docs/designs/specs/prototypes/page-instrument-hub.html scripts/prototype-expert-efficiency.test.ts
+git add prototype/page-alpha-explorer.html prototype/page-agent-console-v2.html prototype/page-strategy-studio.html prototype/page-instrument-hub.html scripts/prototype-expert-efficiency.test.ts
 git commit -m "fix: reduce complex prototype decision load"
 ```
 
@@ -754,13 +754,13 @@ git commit -m "test: require production-grade high-risk action copy"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-strategies-detail.html`
-- Modify: `docs/designs/specs/prototypes/page-universe-list.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-orders-ledger.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
+- Modify: `prototype/page-strategies-detail.html`
+- Modify: `prototype/page-universe-list.html`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-orders-ledger.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-platform-settings.html`
+- Modify: `prototype/page-strategy-list.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 - [ ] **Step 1: Use the same high-risk confirmation structure on every covered page**
@@ -896,7 +896,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit high-risk implementation**
 
 ```bash
-git add docs/designs/specs/prototypes/page-strategies-detail.html docs/designs/specs/prototypes/page-universe-list.html docs/designs/specs/prototypes/page-signals-inbox.html docs/designs/specs/prototypes/page-orders-ledger.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-platform-settings.html docs/designs/specs/prototypes/page-strategy-list.html scripts/prototype-design-consistency.test.ts
+git add prototype/page-strategies-detail.html prototype/page-universe-list.html prototype/page-signals-inbox.html prototype/page-orders-ledger.html prototype/page-trading-overview.html prototype/page-platform-settings.html prototype/page-strategy-list.html scripts/prototype-design-consistency.test.ts
 git commit -m "fix: document high-risk prototype actions"
 ```
 
@@ -971,10 +971,10 @@ git commit -m "test: require readable light-mode prototype text"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-home.html`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
+- Modify: `prototype/page-home.html`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-platform-settings.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 - [ ] **Step 1: Add local light-readable token to each selected page**
@@ -1057,7 +1057,7 @@ test-results/edition-review/visual-matrix/platform-settings/light-compact.png
 - [ ] **Step 7: Commit light-mode cleanup**
 
 ```bash
-git add docs/designs/specs/prototypes/page-home.html docs/designs/specs/prototypes/page-a-shares.html docs/designs/specs/prototypes/page-strategy-studio.html docs/designs/specs/prototypes/page-platform-settings.html scripts/prototype-design-consistency.test.ts test-results/edition-review/visual-matrix
+git add prototype/page-home.html prototype/page-a-shares.html prototype/page-strategy-studio.html prototype/page-platform-settings.html scripts/prototype-design-consistency.test.ts test-results/edition-review/visual-matrix
 git commit -m "fix: improve light-mode prototype readability"
 ```
 
@@ -1075,7 +1075,7 @@ git commit -m "fix: improve light-mode prototype readability"
 Run:
 
 ```bash
-npx impeccable --json --fast $(bun -e "import { readFileSync } from 'node:fs'; const m=JSON.parse(readFileSync('docs/designs/specs/prototypes/.edition-manifest.json','utf8')); const archived=new Set(['ai-overview','ai-copilot']); const active=m.pages.filter(p=>p.file?.startsWith('page-')&&p.file.endsWith('.html')&&p.id!=='token-showcase'&&p.status!=='archived-specimen'&&!archived.has(p.id)); process.stdout.write(active.map(p=>'docs/designs/specs/prototypes/'+p.file).join(' '));")
+npx impeccable --json --fast $(bun -e "import { readFileSync } from 'node:fs'; const m=JSON.parse(readFileSync('prototype/.edition-manifest.json','utf8')); const archived=new Set(['ai-overview','ai-copilot']); const active=m.pages.filter(p=>p.file?.startsWith('page-')&&p.file.endsWith('.html')&&p.id!=='token-showcase'&&p.status!=='archived-specimen'&&!archived.has(p.id)); process.stdout.write(active.map(p=>'prototype/'+p.file).join(' '));")
 ```
 
 Expected:
@@ -1122,7 +1122,7 @@ Create `docs/reviews/2026-05-11-prototype-excellent-optimization-results.md` wit
 # Prototype Excellent Optimization Results
 
 > 日期：2026-05-11
-> 范围：`docs/designs/specs/prototypes/` 28 个 active route prototypes
+> 范围：`prototype/` 28 个 active route prototypes
 > 目标：Good-high → Excellent
 
 ## 1. 结论

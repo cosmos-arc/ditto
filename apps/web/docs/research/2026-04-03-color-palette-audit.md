@@ -150,7 +150,7 @@ UI 层次感可控到极高精度。
 
 # 附录：原型 Token 体系执行质量审计
 
-> 审计范围：`docs/designs/specs/prototypes/shared/` 下 9 个 token 文件 + `tokens-style.css`
+> 审计范围：`prototype/shared/` 下 9 个 token 文件 + `tokens-style.css`
 > 说明：生产 `src/styles/globals.css` 仅落地了原型 token 的 ~40%，本节审计的是原型设计规格本身
 
 ---

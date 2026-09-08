@@ -15,4 +15,4 @@ HTTP API、CLI、Prefect Jobs 与 DI composition root。常规入口依赖 `appl
 
 - `uv run --no-sync pytest apps/backend/tests`
 - `task arch-check`
-- [配置指南](../../docs/configuration.md) · [架构快速参考](../../docs/architecture/agent-context-pack.md)
+- [配置指南](docs/configuration.md) · [架构快速参考](../../docs/architecture/agent-context-pack.md)

@@ -32,7 +32,7 @@ Expected: FAIL because current homepage has only 5 pulse items, no decision impa
 ### Task 2: 首页首屏结构优化
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-home.html`
+- Modify: `prototype/page-home.html`
 
 **Step 1: Implement minimal structure**
 

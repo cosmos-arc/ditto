@@ -41,7 +41,7 @@
 去掉 `style-b-graphite-studio/` 文件夹层级，原型直接放在 `prototypes/` 下：
 
 ```
-docs/designs/specs/prototypes/
+prototype/
 ├── .edition-manifest.json        # Edition 元数据
 ├── page-home.html
 ├── page-markets.html
@@ -72,7 +72,7 @@ docs/designs/specs/prototypes/
 
 ## Edition Manifest 格式
 
-文件路径：`docs/designs/specs/prototypes/.edition-manifest.json`
+文件路径：`prototype/.edition-manifest.json`
 
 ```json
 {
@@ -314,7 +314,7 @@ Phase 8 新增步骤：
 
 | 改动项 | 类型 | 文件 | 影响 |
 |--------|------|------|------|
-| `.edition-manifest.json` | 新文件 | `docs/designs/specs/prototypes/` | Edition 状态跟踪 |
+| `.edition-manifest.json` | 新文件 | `prototype/` | Edition 状态跟踪 |
 | `--create-all` 模式 | 新增 | `ditto-design-cycle.md` | Phase 0.5 循环调用 |
 | `--reference <file>` 参数 | 新增 | `ditto-design-cycle.md` | `--create` 可指定 style anchor |
 | `--edition-review` 模式 | 新增 | `ditto-design-cycle.md` | Edition 级验收走查 |

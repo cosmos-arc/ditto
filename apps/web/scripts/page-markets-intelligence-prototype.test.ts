@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-markets-intelligence.html",
+	"../prototype/page-markets-intelligence.html",
 );
 
 function loadPage() {

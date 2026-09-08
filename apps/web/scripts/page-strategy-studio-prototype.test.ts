@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-strategy-studio.html",
+	"../prototype/page-strategy-studio.html",
 );
 
 function loadHtml() {

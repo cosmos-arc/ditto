@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 const manifestPath = join(prototypesDir, ".edition-manifest.json");
 const navigationTimeoutMs = 15_000;
 const scanTimeoutMs = 180_000;

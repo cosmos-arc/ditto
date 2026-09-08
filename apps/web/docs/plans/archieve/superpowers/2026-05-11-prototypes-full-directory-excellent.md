@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Bring every HTML surface under `docs/designs/specs/prototypes/` to Excellent quality, including active route prototypes, legacy non-active specimens, archive specimens, and the Graphite Studio token showcase.
+**Goal:** Bring every HTML surface under `prototype/` to Excellent quality, including active route prototypes, legacy non-active specimens, archive specimens, and the Graphite Studio token showcase.
 
 **Architecture:** Treat this as one prototype-quality subsystem because all changes live in the static prototype layer and its Vitest/Playwright gates. Add full-directory regression gates first, then apply small, local HTML/CSS fixes for detector-clean motion, responsive geometry, explicit accessible names, and final review evidence. Keep Graphite Studio direction, current design tokens, and existing prototype architecture intact.
 
@@ -39,31 +39,31 @@ Excluded:
   - Owns full-directory static quality gates: every prototype HTML file, all inline CSS, archive specimens, token showcase detector invariants, and explicit icon trigger names.
 - Create `scripts/prototype-full-directory-visual-audit.test.ts`
   - Owns Playwright geometry and runtime checks for all prototype HTML files and focused high-risk layout selectors.
-- Modify `docs/designs/specs/prototypes/page-agent-console.html`
+- Modify `prototype/page-agent-console.html`
   - Removes layout-property progress/resource bar transitions in legacy Agent Console.
-- Modify `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-overview.html`
+- Modify `prototype/archive/2026-04-30/page-ai-overview.html`
   - Removes bounce-named motion and layout-property progress/confidence transitions.
-- Modify `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-copilot.html`
+- Modify `prototype/archive/2026-04-30/page-ai-copilot.html`
   - Removes height/width transitions in archive Copilot message/confidence UI.
-- Modify `docs/designs/specs/prototypes/style-b-graphite-studio/token-showcase.html`
+- Modify `prototype/style-b-graphite-studio/token-showcase.html`
   - Removes detector-triggering width/height/max-height transitions, replaces the direct `Inter` sample override with token usage, and gives spacing demos more rhythm.
-- Modify `docs/designs/specs/prototypes/page-cross-market.html`
+- Modify `prototype/page-cross-market.html`
   - Fixes Macro Driver strip geometry in compact/narrow viewports and adds explicit `aria-label` to filter trigger.
-- Modify `docs/designs/specs/prototypes/page-regime-monitor.html`
+- Modify `prototype/page-regime-monitor.html`
   - Fixes heatgrid legend wrapping and text sizing without relying on horizontal overflow.
-- Modify `docs/designs/specs/prototypes/page-signals-inbox.html`
+- Modify `prototype/page-signals-inbox.html`
   - Clamps detail panel/header/body geometry in compact/narrow viewports.
-- Modify `docs/designs/specs/prototypes/page-trading-overview.html`
+- Modify `prototype/page-trading-overview.html`
   - Fixes status bar width calculation so it remains inside the viewport.
-- Modify `docs/designs/specs/prototypes/page-backtest-list.html`
+- Modify `prototype/page-backtest-list.html`
   - Clamps active filter count in narrow viewport.
-- Modify `docs/designs/specs/prototypes/page-experiment-list.html`
+- Modify `prototype/page-experiment-list.html`
   - Clamps active filter count in narrow viewport, including state gallery previews.
-- Modify `docs/designs/specs/prototypes/page-a-shares.html`
+- Modify `prototype/page-a-shares.html`
   - Adds explicit names to header icon overlay triggers.
-- Modify `docs/designs/specs/prototypes/page-markets-intelligence.html`
+- Modify `prototype/page-markets-intelligence.html`
   - Adds explicit name to custom filter trigger.
-- Modify `docs/designs/specs/prototypes/page-strategy-studio.html`
+- Modify `prototype/page-strategy-studio.html`
   - Adds explicit name/role to delete strategy trigger.
 - Create `docs/reviews/2026-05-11-prototype-full-directory-excellent-results.md`
   - Records full-directory evidence and remaining React implementation caveats.
@@ -280,15 +280,15 @@ git commit -m "test: cover full prototype directory excellence gates"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-agent-console.html`
-- Modify: `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-overview.html`
-- Modify: `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-copilot.html`
-- Modify: `docs/designs/specs/prototypes/style-b-graphite-studio/token-showcase.html`
+- Modify: `prototype/page-agent-console.html`
+- Modify: `prototype/archive/2026-04-30/page-ai-overview.html`
+- Modify: `prototype/archive/2026-04-30/page-ai-copilot.html`
+- Modify: `prototype/style-b-graphite-studio/token-showcase.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 - [ ] **Step 1: Replace legacy Agent Console layout-property transitions**
 
-In `docs/designs/specs/prototypes/page-agent-console.html`, replace the `.progress-bar-fill` and `.resource-bar-fill` transition declarations with transform-friendly declarations:
+In `prototype/page-agent-console.html`, replace the `.progress-bar-fill` and `.resource-bar-fill` transition declarations with transform-friendly declarations:
 
 ```css
     .progress-bar-fill {
@@ -312,7 +312,7 @@ In `docs/designs/specs/prototypes/page-agent-console.html`, replace the `.progre
 
 - [ ] **Step 2: Replace archive AI Overview bounce motion and layout-property transitions**
 
-In `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-overview.html`, change these declarations:
+In `prototype/archive/2026-04-30/page-ai-overview.html`, change these declarations:
 
 ```css
     .ai-plan-progress-fill {
@@ -354,7 +354,7 @@ In `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-overview.html`, cha
 
 - [ ] **Step 3: Replace archive AI Copilot layout-property transitions**
 
-In `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-copilot.html`, replace the user message accent and confidence fill rules:
+In `prototype/archive/2026-04-30/page-ai-copilot.html`, replace the user message accent and confidence fill rules:
 
 ```css
     .message--user .message-content::after {
@@ -389,7 +389,7 @@ In `docs/designs/specs/prototypes/archive/2026-04-30/page-ai-copilot.html`, repl
 
 - [ ] **Step 4: Clean token showcase transitions, font sample, and spacing rhythm**
 
-In `docs/designs/specs/prototypes/style-b-graphite-studio/token-showcase.html`, apply these CSS replacements:
+In `prototype/style-b-graphite-studio/token-showcase.html`, apply these CSS replacements:
 
 ```css
     .swatch {
@@ -472,7 +472,7 @@ In `docs/designs/specs/prototypes/style-b-graphite-studio/token-showcase.html`, 
 Run:
 
 ```bash
-find docs/designs/specs/prototypes -type f -name '*.html' -print0 | xargs -0 npx impeccable --json --fast
+find prototype -type f -name '*.html' -print0 | xargs -0 npx impeccable --json --fast
 ```
 
 Expected: exit 0 and output `[]`.
@@ -490,7 +490,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit detector cleanup**
 
 ```bash
-git add docs/designs/specs/prototypes/page-agent-console.html docs/designs/specs/prototypes/archive/2026-04-30/page-ai-overview.html docs/designs/specs/prototypes/archive/2026-04-30/page-ai-copilot.html docs/designs/specs/prototypes/style-b-graphite-studio/token-showcase.html scripts/prototype-design-consistency.test.ts
+git add prototype/page-agent-console.html prototype/archive/2026-04-30/page-ai-overview.html prototype/archive/2026-04-30/page-ai-copilot.html prototype/style-b-graphite-studio/token-showcase.html scripts/prototype-design-consistency.test.ts
 git commit -m "fix: make full prototype directory detector clean"
 ```
 
@@ -500,20 +500,20 @@ git commit -m "fix: make full prototype directory detector clean"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
-- Modify: `docs/designs/specs/prototypes/page-regime-monitor.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-list.html`
-- Modify: `docs/designs/specs/prototypes/page-experiment-list.html`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-intelligence.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
+- Modify: `prototype/page-cross-market.html`
+- Modify: `prototype/page-regime-monitor.html`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-backtest-list.html`
+- Modify: `prototype/page-experiment-list.html`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-markets-intelligence.html`
+- Modify: `prototype/page-strategy-studio.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 - [ ] **Step 1: Fix Cross-Market macro driver geometry and filter trigger name**
 
-In `docs/designs/specs/prototypes/page-cross-market.html`, add these media rules after `.driver-mini-bar.down { ... }`:
+In `prototype/page-cross-market.html`, add these media rules after `.driver-mini-bar.down { ... }`:
 
 ```css
     @media (max-width: 1366px) {
@@ -563,7 +563,7 @@ Change the filter trigger to include an explicit accessible name:
 
 - [ ] **Step 2: Fix Regime Monitor heatgrid legend**
 
-In `docs/designs/specs/prototypes/page-regime-monitor.html`, replace `.heatgrid-legend` and `.heatgrid-legend-item` with:
+In `prototype/page-regime-monitor.html`, replace `.heatgrid-legend` and `.heatgrid-legend-item` with:
 
 ```css
     .heatgrid-legend {
@@ -587,7 +587,7 @@ In `docs/designs/specs/prototypes/page-regime-monitor.html`, replace `.heatgrid-
 
 - [ ] **Step 3: Fix Signals Inbox detail rail geometry**
 
-In `docs/designs/specs/prototypes/page-signals-inbox.html`, extend the detail panel rules:
+In `prototype/page-signals-inbox.html`, extend the detail panel rules:
 
 ```css
     .shell-signals .detail-panel {
@@ -622,7 +622,7 @@ In `docs/designs/specs/prototypes/page-signals-inbox.html`, extend the detail pa
 
 - [ ] **Step 4: Fix Trading Overview status bar width**
 
-In `docs/designs/specs/prototypes/page-trading-overview.html`, replace the `#default-view > .status-bar` block with:
+In `prototype/page-trading-overview.html`, replace the `#default-view > .status-bar` block with:
 
 ```css
     #default-view > .status-bar {
@@ -640,7 +640,7 @@ In `docs/designs/specs/prototypes/page-trading-overview.html`, replace the `#def
 
 - [ ] **Step 5: Clamp Backtest List and Experiment List filter counts**
 
-In both `docs/designs/specs/prototypes/page-backtest-list.html` and `docs/designs/specs/prototypes/page-experiment-list.html`, add this rule after the existing `.filter-count` rule:
+In both `prototype/page-backtest-list.html` and `prototype/page-experiment-list.html`, add this rule after the existing `.filter-count` rule:
 
 ```css
     .filter-count {
@@ -658,7 +658,7 @@ For the gallery filter preview in `page-experiment-list.html`, ensure the previe
 
 Apply these exact HTML changes:
 
-`docs/designs/specs/prototypes/page-a-shares.html`:
+`prototype/page-a-shares.html`:
 
 ```html
           <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器" aria-label="打开筛选器">
@@ -668,13 +668,13 @@ Apply these exact HTML changes:
           <label for="overlay-ai-analysis" class="header-action-btn cursor-pointer" title="AI 解读" aria-label="打开 AI 解读">
 ```
 
-`docs/designs/specs/prototypes/page-markets-intelligence.html`:
+`prototype/page-markets-intelligence.html`:
 
 ```html
           <label for="overlay-custom-filter" class="header-action-btn cursor-pointer" title="筛选" aria-label="打开自定义筛选">
 ```
 
-`docs/designs/specs/prototypes/page-strategy-studio.html`:
+`prototype/page-strategy-studio.html`:
 
 ```html
         <label for="overlay-delete-strategy" class="header-delete-btn" title="删除策略" role="button" aria-label="删除策略" tabindex="0">
@@ -703,7 +703,7 @@ Expected: all 28 active route prototypes PASS with no blocking or non-blocking i
 - [ ] **Step 9: Commit active route polish**
 
 ```bash
-git add docs/designs/specs/prototypes/page-cross-market.html docs/designs/specs/prototypes/page-regime-monitor.html docs/designs/specs/prototypes/page-signals-inbox.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-backtest-list.html docs/designs/specs/prototypes/page-experiment-list.html docs/designs/specs/prototypes/page-a-shares.html docs/designs/specs/prototypes/page-markets-intelligence.html docs/designs/specs/prototypes/page-strategy-studio.html
+git add prototype/page-cross-market.html prototype/page-regime-monitor.html prototype/page-signals-inbox.html prototype/page-trading-overview.html prototype/page-backtest-list.html prototype/page-experiment-list.html prototype/page-a-shares.html prototype/page-markets-intelligence.html prototype/page-strategy-studio.html
 git commit -m "fix: polish prototype geometry and icon trigger names"
 ```
 
@@ -728,7 +728,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { chromium, type Browser } from "playwright";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const prototypesDir = join(root, "prototype");
 const navigationTimeoutMs = 20_000;
 const auditTimeoutMs = 90_000;
 const viewports = [
@@ -913,7 +913,7 @@ git commit -m "test: add full prototype directory visual audit"
 Run:
 
 ```bash
-find docs/designs/specs/prototypes -type f -name '*.html' -print0 | xargs -0 npx impeccable --json --fast
+find prototype -type f -name '*.html' -print0 | xargs -0 npx impeccable --json --fast
 ```
 
 Expected: exit 0 and output `[]`.
@@ -956,7 +956,7 @@ Create `docs/reviews/2026-05-11-prototype-full-directory-excellent-results.md`:
 # Prototype Full Directory Excellent Results
 
 > Date: 2026-05-11
-> Scope: every HTML file under `docs/designs/specs/prototypes/`
+> Scope: every HTML file under `prototype/`
 > Target: Excellent, full-directory freeze quality
 
 ## Conclusion
@@ -966,7 +966,7 @@ The full prototype directory meets Excellent review quality. Active route protot
 ## Evidence
 
 ```bash
-find docs/designs/specs/prototypes -type f -name '*.html' -print0 | xargs -0 npx impeccable --json --fast
+find prototype -type f -name '*.html' -print0 | xargs -0 npx impeccable --json --fast
 ```
 
 Result: `[]`
@@ -1019,7 +1019,7 @@ git commit -m "docs: record full prototype directory excellent review"
 
 Spec coverage:
 
-- Full-directory scope is covered by Task 1 and Task 4 through recursive HTML discovery under `docs/designs/specs/prototypes/`.
+- Full-directory scope is covered by Task 1 and Task 4 through recursive HTML discovery under `prototype/`.
 - Active route Excellent regressions are covered by Task 3 and `bun run prototype:gates`.
 - Non-active and archive detector findings are covered by Task 2.
 - Interaction and obvious bug checks are covered by Task 4: runtime errors, page errors, default horizontal scroll, default visible overlays, and known geometry selectors.

@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 将 `docs/designs/specs/prototypes/` 全量 27 个 active route prototypes 从 8.7/10 推进到接近 10 分的专业量化工作台候选版。
+**Goal:** 将 `prototype/` 全量 27 个 active route prototypes 从 8.7/10 推进到接近 10 分的专业量化工作台候选版。
 
-**Architecture:** 先把“接近 10 分”定义成可测试合同，再按页面族修复。共享底线进入 `scripts/` 与 `shared/`；页面业务判断留在对应 `page-*.html`；跨页规范同步写回 `docs/designs/specs/`，避免原型、合同、规范三套语言分叉。
+**Architecture:** 先把“接近 10 分”定义成可测试合同，再按页面族修复。共享底线进入 `scripts/` 与 `shared/`；页面业务判断留在对应 `page-*.html`；跨页规范同步写回 `design/specs/`，避免原型、合同、规范三套语言分叉。
 
 **Tech Stack:** HTML prototypes, shared prototype CSS/JS, Design Tokens, Vitest, JSDOM, Playwright, Bun, Biome.
 
@@ -44,47 +44,47 @@
 
 Active prototype files:
 
-- `docs/designs/specs/prototypes/page-home.html`
-- `docs/designs/specs/prototypes/page-cross-market.html`
-- `docs/designs/specs/prototypes/page-a-shares.html`
-- `docs/designs/specs/prototypes/page-markets-intelligence.html`
-- `docs/designs/specs/prototypes/page-markets-screener.html`
-- `docs/designs/specs/prototypes/page-markets-calendar.html`
-- `docs/designs/specs/prototypes/page-watchlist.html`
-- `docs/designs/specs/prototypes/page-instrument-hub.html`
-- `docs/designs/specs/prototypes/page-research.html`
-- `docs/designs/specs/prototypes/page-regime-monitor.html`
-- `docs/designs/specs/prototypes/page-factor-analysis.html`
-- `docs/designs/specs/prototypes/page-factor-list.html`
-- `docs/designs/specs/prototypes/page-strategy-list.html`
-- `docs/designs/specs/prototypes/page-strategies-detail.html`
-- `docs/designs/specs/prototypes/page-strategy-studio.html`
-- `docs/designs/specs/prototypes/page-backtest-list.html`
-- `docs/designs/specs/prototypes/page-backtest-result.html`
-- `docs/designs/specs/prototypes/page-experiment-list.html`
-- `docs/designs/specs/prototypes/page-universe-list.html`
-- `docs/designs/specs/prototypes/page-trading-overview.html`
-- `docs/designs/specs/prototypes/page-portfolio.html`
-- `docs/designs/specs/prototypes/page-orders-ledger.html`
-- `docs/designs/specs/prototypes/page-signals-inbox.html`
-- `docs/designs/specs/prototypes/page-risk-center.html`
-- `docs/designs/specs/prototypes/page-platform.html`
-- `docs/designs/specs/prototypes/page-agent-console.html`
-- `docs/designs/specs/prototypes/page-platform-settings.html`
+- `prototype/page-home.html`
+- `prototype/page-cross-market.html`
+- `prototype/page-a-shares.html`
+- `prototype/page-markets-intelligence.html`
+- `prototype/page-markets-screener.html`
+- `prototype/page-markets-calendar.html`
+- `prototype/page-watchlist.html`
+- `prototype/page-instrument-hub.html`
+- `prototype/page-research.html`
+- `prototype/page-regime-monitor.html`
+- `prototype/page-factor-analysis.html`
+- `prototype/page-factor-list.html`
+- `prototype/page-strategy-list.html`
+- `prototype/page-strategies-detail.html`
+- `prototype/page-strategy-studio.html`
+- `prototype/page-backtest-list.html`
+- `prototype/page-backtest-result.html`
+- `prototype/page-experiment-list.html`
+- `prototype/page-universe-list.html`
+- `prototype/page-trading-overview.html`
+- `prototype/page-portfolio.html`
+- `prototype/page-orders-ledger.html`
+- `prototype/page-signals-inbox.html`
+- `prototype/page-risk-center.html`
+- `prototype/page-platform.html`
+- `prototype/page-agent-console.html`
+- `prototype/page-platform-settings.html`
 
 Shared and test files:
 
-- `docs/designs/specs/prototypes/shared/layout-base.css`
-- `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- `docs/designs/specs/prototypes/tokens-style.css`
+- `prototype/shared/layout-base.css`
+- `prototype/shared/prototype-interactions.js`
+- `prototype/tokens-style.css`
 - `scripts/prototype-design-consistency.test.ts`
 - `scripts/prototype-interaction-ux-contract.test.ts`
 - `scripts/page-home-prototype.test.ts`
 - `scripts/run-prototype-gates.ts`
-- `docs/designs/specs/04_interaction_state_spec.md`
-- `docs/designs/specs/11_ditto_page_pattern_library.md`
-- `docs/designs/specs/12_ditto_data_views_spec.md`
-- `docs/designs/specs/20_interaction_ux_audit.md`
+- `design/specs/04_interaction_state_spec.md`
+- `design/specs/11_ditto_page_pattern_library.md`
+- `design/specs/12_ditto_data_views_spec.md`
+- `design/specs/20_interaction_ux_audit.md`
 
 Out of scope:
 
@@ -140,7 +140,7 @@ Decision: use contract-first remediation, then page-family upgrades.
 - Modify: `scripts/prototype-design-consistency.test.ts`
 - Modify: `scripts/prototype-interaction-ux-contract.test.ts`
 - Create: `scripts/prototype-near-10-contract.test.ts`
-- Read: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Read: `prototype/.edition-manifest.json`
 - Read: `test-results/prototype-review-current/structure-metrics.json`
 - Read: `test-results/prototype-review-current-home/home-structure-metrics.json`
 
@@ -154,7 +154,7 @@ import { join, resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 
 type ManifestPage = {
@@ -291,20 +291,20 @@ git commit -m "test(prototypes): add near-10 product quality gates"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-orders-ledger.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-regime-monitor.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-calendar.html`
-- Modify: `docs/designs/specs/prototypes/page-watchlist.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-list.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-list.html`
-- Modify: `docs/designs/specs/prototypes/page-experiment-list.html`
-- Modify: `docs/designs/specs/prototypes/page-universe-list.html`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-orders-ledger.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-regime-monitor.html`
+- Modify: `prototype/page-markets-screener.html`
+- Modify: `prototype/page-markets-calendar.html`
+- Modify: `prototype/page-watchlist.html`
+- Modify: `prototype/page-factor-list.html`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-backtest-list.html`
+- Modify: `prototype/page-experiment-list.html`
+- Modify: `prototype/page-universe-list.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: Run failing target-size test**
@@ -385,7 +385,7 @@ Expected: PASS.
 **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared/layout-base.css docs/designs/specs/prototypes/page-*.html scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/shared/layout-base.css prototype/page-*.html scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): normalize compact interaction targets"
 ```
 
@@ -395,7 +395,7 @@ git commit -m "fix(prototypes): normalize compact interaction targets"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-home.html`
+- Modify: `prototype/page-home.html`
 - Modify: `scripts/page-home-prototype.test.ts`
 - Test: `test-results/prototype-review-current-home/home-structure-metrics.json`
 
@@ -459,7 +459,7 @@ Required visible content:
 Run:
 
 ```bash
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-home.html
+bun run prototype:gates -- --prototype prototype/page-home.html
 ```
 
 Expected: PASS in standard, compact, and narrow default wrapper viewports.
@@ -467,7 +467,7 @@ Expected: PASS in standard, compact, and narrow default wrapper viewports.
 **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-home.html scripts/page-home-prototype.test.ts
+git add prototype/page-home.html scripts/page-home-prototype.test.ts
 git commit -m "fix(prototypes): sharpen home command center decision flow"
 ```
 
@@ -477,14 +477,14 @@ git commit -m "fix(prototypes): sharpen home command center decision flow"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-intelligence.html`
-- Modify: `docs/designs/specs/prototypes/page-research.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-portfolio.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-regime-monitor.html`
+- Modify: `prototype/page-cross-market.html`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-markets-intelligence.html`
+- Modify: `prototype/page-research.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-portfolio.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-regime-monitor.html`
 - Test: `scripts/prototype-near-10-contract.test.ts`
 
 **Step 1: Run Primary Answer tests**
@@ -542,8 +542,8 @@ Run:
 
 ```bash
 bun test scripts/prototype-near-10-contract.test.ts
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-cross-market.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-regime-monitor.html
+bun run prototype:gates -- --prototype prototype/page-cross-market.html
+bun run prototype:gates -- --prototype prototype/page-regime-monitor.html
 ```
 
 Expected: PASS.
@@ -551,7 +551,7 @@ Expected: PASS.
 **Step 7: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-cross-market.html docs/designs/specs/prototypes/page-a-shares.html docs/designs/specs/prototypes/page-markets-intelligence.html docs/designs/specs/prototypes/page-research.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-portfolio.html docs/designs/specs/prototypes/page-risk-center.html docs/designs/specs/prototypes/page-regime-monitor.html
+git add prototype/page-cross-market.html prototype/page-a-shares.html prototype/page-markets-intelligence.html prototype/page-research.html prototype/page-trading-overview.html prototype/page-portfolio.html prototype/page-risk-center.html prototype/page-regime-monitor.html
 git commit -m "fix(prototypes): strengthen analytical primary answers"
 ```
 
@@ -561,15 +561,15 @@ git commit -m "fix(prototypes): strengthen analytical primary answers"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-calendar.html`
-- Modify: `docs/designs/specs/prototypes/page-watchlist.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-list.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-list.html`
-- Modify: `docs/designs/specs/prototypes/page-experiment-list.html`
-- Modify: `docs/designs/specs/prototypes/page-universe-list.html`
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
+- Modify: `prototype/page-markets-screener.html`
+- Modify: `prototype/page-markets-calendar.html`
+- Modify: `prototype/page-watchlist.html`
+- Modify: `prototype/page-factor-list.html`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-backtest-list.html`
+- Modify: `prototype/page-experiment-list.html`
+- Modify: `prototype/page-universe-list.html`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
 - Test: `scripts/prototype-near-10-contract.test.ts`
 
 **Step 1: Add task-specific summary attributes**
@@ -648,11 +648,11 @@ Run:
 
 ```bash
 bun test scripts/prototype-near-10-contract.test.ts
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-strategy-list.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-backtest-list.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-experiment-list.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-factor-list.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-universe-list.html
+bun run prototype:gates -- --prototype prototype/page-strategy-list.html
+bun run prototype:gates -- --prototype prototype/page-backtest-list.html
+bun run prototype:gates -- --prototype prototype/page-experiment-list.html
+bun run prototype:gates -- --prototype prototype/page-factor-list.html
+bun run prototype:gates -- --prototype prototype/page-universe-list.html
 ```
 
 Expected: PASS.
@@ -660,7 +660,7 @@ Expected: PASS.
 **Step 9: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-markets-screener.html docs/designs/specs/prototypes/page-markets-calendar.html docs/designs/specs/prototypes/page-watchlist.html docs/designs/specs/prototypes/page-factor-list.html docs/designs/specs/prototypes/page-strategy-list.html docs/designs/specs/prototypes/page-backtest-list.html docs/designs/specs/prototypes/page-experiment-list.html docs/designs/specs/prototypes/page-universe-list.html docs/designs/specs/11_ditto_page_pattern_library.md
+git add prototype/page-markets-screener.html prototype/page-markets-calendar.html prototype/page-watchlist.html prototype/page-factor-list.html prototype/page-strategy-list.html prototype/page-backtest-list.html prototype/page-experiment-list.html prototype/page-universe-list.html design/specs/11_ditto_page_pattern_library.md
 git commit -m "fix(prototypes): differentiate catalog decision workflows"
 ```
 
@@ -670,13 +670,13 @@ git commit -m "fix(prototypes): differentiate catalog decision workflows"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-orders-ledger.html`
-- Modify: `docs/designs/specs/prototypes/page-platform.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console.html`
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-orders-ledger.html`
+- Modify: `prototype/page-platform.html`
+- Modify: `prototype/page-agent-console.html`
+- Modify: `prototype/page-platform-settings.html`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `design/specs/04_interaction_state_spec.md`
 - Test: `scripts/prototype-near-10-contract.test.ts`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
@@ -754,8 +754,8 @@ Run:
 ```bash
 bun test scripts/prototype-near-10-contract.test.ts
 bun run prototype:interaction
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-signals-inbox.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-agent-console.html
+bun run prototype:gates -- --prototype prototype/page-signals-inbox.html
+bun run prototype:gates -- --prototype prototype/page-agent-console.html
 ```
 
 Expected: PASS.
@@ -763,7 +763,7 @@ Expected: PASS.
 **Step 7: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-signals-inbox.html docs/designs/specs/prototypes/page-orders-ledger.html docs/designs/specs/prototypes/page-platform.html docs/designs/specs/prototypes/page-agent-console.html docs/designs/specs/prototypes/page-platform-settings.html docs/designs/specs/prototypes/page-strategy-studio.html docs/designs/specs/04_interaction_state_spec.md
+git add prototype/page-signals-inbox.html prototype/page-orders-ledger.html prototype/page-platform.html prototype/page-agent-console.html prototype/page-platform-settings.html prototype/page-strategy-studio.html design/specs/04_interaction_state_spec.md
 git commit -m "fix(prototypes): make ops and studio workflows decision-first"
 ```
 
@@ -773,11 +773,11 @@ git commit -m "fix(prototypes): make ops and studio workflows decision-first"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-analysis.html`
-- Modify: `docs/designs/specs/prototypes/page-strategies-detail.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-result.html`
-- Modify: `docs/designs/specs/12_ditto_data_views_spec.md`
+- Modify: `prototype/page-instrument-hub.html`
+- Modify: `prototype/page-factor-analysis.html`
+- Modify: `prototype/page-strategies-detail.html`
+- Modify: `prototype/page-backtest-result.html`
+- Modify: `design/specs/12_ditto_data_views_spec.md`
 - Test: `scripts/prototype-near-10-contract.test.ts`
 
 **Step 1: Add object consequence contract**
@@ -828,8 +828,8 @@ Run:
 
 ```bash
 bun test scripts/prototype-near-10-contract.test.ts
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-instrument-hub.html
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-backtest-result.html
+bun run prototype:gates -- --prototype prototype/page-instrument-hub.html
+bun run prototype:gates -- --prototype prototype/page-backtest-result.html
 ```
 
 Expected: PASS.
@@ -837,7 +837,7 @@ Expected: PASS.
 **Step 7: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-instrument-hub.html docs/designs/specs/prototypes/page-factor-analysis.html docs/designs/specs/prototypes/page-strategies-detail.html docs/designs/specs/prototypes/page-backtest-result.html docs/designs/specs/12_ditto_data_views_spec.md
+git add prototype/page-instrument-hub.html prototype/page-factor-analysis.html prototype/page-strategies-detail.html prototype/page-backtest-result.html design/specs/12_ditto_data_views_spec.md
 git commit -m "fix(prototypes): add object hub consequence previews"
 ```
 
@@ -847,10 +847,10 @@ git commit -m "fix(prototypes): add object hub consequence previews"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: active `docs/designs/specs/prototypes/page-*.html`
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: active `prototype/page-*.html`
+- Modify: `design/specs/04_interaction_state_spec.md`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: Extend command context contract**
@@ -903,7 +903,7 @@ Expected: PASS.
 **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared/prototype-interactions.js docs/designs/specs/prototypes/shared/layout-base.css docs/designs/specs/prototypes/page-*.html docs/designs/specs/04_interaction_state_spec.md scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/shared/prototype-interactions.js prototype/shared/layout-base.css prototype/page-*.html design/specs/04_interaction_state_spec.md scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): add context-aware command actions"
 ```
 
@@ -913,13 +913,13 @@ git commit -m "fix(prototypes): add context-aware command actions"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/tokens-style.css`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-intelligence.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/20_interaction_ux_audit.md`
+- Modify: `prototype/tokens-style.css`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-cross-market.html`
+- Modify: `prototype/page-markets-intelligence.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `design/specs/20_interaction_ux_audit.md`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Add non-color marker test**
@@ -966,7 +966,7 @@ Expected: no dark-mode chart island effect; no color-only state.
 **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/tokens-style.css docs/designs/specs/prototypes/shared/layout-base.css docs/designs/specs/prototypes/page-a-shares.html docs/designs/specs/prototypes/page-cross-market.html docs/designs/specs/prototypes/page-markets-intelligence.html docs/designs/specs/prototypes/page-risk-center.html docs/designs/specs/20_interaction_ux_audit.md scripts/prototype-design-consistency.test.ts
+git add prototype/tokens-style.css prototype/shared/layout-base.css prototype/page-a-shares.html prototype/page-cross-market.html prototype/page-markets-intelligence.html prototype/page-risk-center.html design/specs/20_interaction_ux_audit.md scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): strengthen non-color state semantics"
 ```
 
@@ -977,7 +977,7 @@ git commit -m "fix(prototypes): strengthen non-color state semantics"
 **Files:**
 
 - Create: `docs/reviews/2026-05-02-prototype-near-10-remediation-review.md`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
 - Verify: all active prototypes.
 
 **Step 1: Run targeted checks**
@@ -1034,7 +1034,7 @@ Expected: Biome, TypeScript, and Vitest pass.
 **Step 5: Commit**
 
 ```bash
-git add docs/reviews/2026-05-02-prototype-near-10-remediation-review.md docs/designs/specs/prototypes/.edition-manifest.json test-results
+git add docs/reviews/2026-05-02-prototype-near-10-remediation-review.md prototype/.edition-manifest.json test-results
 git commit -m "docs(prototypes): record near-10 remediation results"
 ```
 

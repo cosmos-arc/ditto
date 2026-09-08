@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { chromium, type Browser } from "playwright";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const prototypesDir = join(root, "prototype");
 const navigationTimeoutMs = 20_000;
 // This test intentionally scans every prototype HTML file across three desktop review widths.
 // Under the full Vitest suite it shares CPU with other Playwright and JSDOM tests, so the

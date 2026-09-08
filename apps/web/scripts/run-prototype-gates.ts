@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-const prototypesDir = "docs/designs/specs/prototypes";
+const prototypesDir = "prototype";
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const verifier = resolve(
 	import.meta.dirname,

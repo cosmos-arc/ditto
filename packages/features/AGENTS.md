@@ -16,3 +16,5 @@
 - `uv run --no-sync pytest packages/features/tests`
 - `uv run --no-sync pytest -m pit`
 - [架构快速参考](../../docs/architecture/agent-context-pack.md) · [PIT skill](../../.agents/skills/ditto-pit-safety/SKILL.md)
+
+- 因子计算设计与诊断：[设计入口](docs/design/unified-feature-factor-engine/README.md) · [IC 诊断](docs/factor-ic-diagnosis.md)

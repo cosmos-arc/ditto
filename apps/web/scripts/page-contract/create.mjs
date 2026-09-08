@@ -7,7 +7,7 @@
  * Phase W（Write）由 AI skill 组装最终 JSON。
  *
  * Usage:
- *   bun scripts/page-contract/create.mjs --prototype docs/designs/specs/prototypes/page-home.html
+ *   bun scripts/page-contract/create.mjs --prototype prototype/page-home.html
  */
 
 import { chromium } from "playwright";

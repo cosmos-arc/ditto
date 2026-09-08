@@ -71,22 +71,22 @@
 
 **Modify:**
 
-- `docs/designs/specs/prototypes/shared/prototype-interactions.js` — Phase 1, 3, 4, 5
-- `docs/designs/specs/prototypes/shared/layout-base.css` — Phase 2, 3
-- `docs/designs/specs/prototypes/shared/prototype-toggles.css` — Phase 2
-- `docs/designs/specs/prototypes/shared/theme-switcher.js` — Phase 4
-- `docs/designs/specs/prototypes/page-trading-overview.html` — Phase 3
-- `docs/designs/specs/prototypes/page-home.html` — Phase 3, 5
-- `docs/designs/specs/prototypes/page-signals-inbox.html` — Phase 3, 5
-- `docs/designs/specs/prototypes/page-agent-console-v2.html` — Phase 5
-- `docs/designs/specs/prototypes/page-markets-calendar.html` — Phase 3
-- `docs/designs/specs/prototypes/tokens-style.css` — Phase 5
+- `prototype/shared/prototype-interactions.js` — Phase 1, 3, 4, 5
+- `prototype/shared/layout-base.css` — Phase 2, 3
+- `prototype/shared/prototype-toggles.css` — Phase 2
+- `prototype/shared/theme-switcher.js` — Phase 4
+- `prototype/page-trading-overview.html` — Phase 3
+- `prototype/page-home.html` — Phase 3, 5
+- `prototype/page-signals-inbox.html` — Phase 3, 5
+- `prototype/page-agent-console-v2.html` — Phase 5
+- `prototype/page-markets-calendar.html` — Phase 3
+- `prototype/tokens-style.css` — Phase 5
 
 **Read:**
 
-- `docs/designs/specs/prototypes/shared/mock-data.js`
-- `docs/designs/specs/prototypes/tokens-style.css`
-- `docs/designs/specs/prototypes/.edition-manifest.json`
+- `prototype/shared/mock-data.js`
+- `prototype/tokens-style.css`
+- `prototype/.edition-manifest.json`
 - `src/styles/design-tokens/tokens-*.css`（验证 token 名称）
 
 **Out of scope:**
@@ -115,7 +115,7 @@
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: 扩展 Tabs keydown handler**
@@ -184,7 +184,7 @@ Expected: Tab 组内可用 ArrowRight/ArrowLeft 循环导航，Home/End 跳首�
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: 存储 trigger 引用 + focus trap**
 
@@ -234,7 +234,7 @@ Expected: Cmd+K 打开后 Tab 不会逃出 dialog，Esc 关闭后焦点回到触
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: 在 show 方法中设置 aria-describedby**
 
@@ -261,7 +261,7 @@ Expected: 屏幕阅读器可通过 `aria-describedby` 读取 tooltip 内容
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: Tabs.init() 中补全 ARIA 角色**
 
@@ -342,7 +342,7 @@ Expected: 所有 Tab 组有完整 ARIA 三件套（tablist/tab/tabpanel），Fil
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Modify: `prototype/shared/layout-base.css`
 
 **Step 1: 添加 min-width 保护**
 
@@ -376,7 +376,7 @@ Expected: 1024px 以上布局完好，以下有水平滚动保护
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Modify: `prototype/shared/layout-base.css`
 
 **Step 1: 在 layout-base.css 末尾添加全局规则**
 
@@ -412,7 +412,7 @@ Expected: 系统开启 reduced-motion 后，所有页面零动画
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-toggles.css`
+- Modify: `prototype/shared/prototype-toggles.css`
 
 **Step 1: 逐一替换 42 处硬编码 hex**
 
@@ -437,7 +437,7 @@ border-color: var(--border-default);
 
 需要逐行审查 `prototype-toggles.css` 全部 hex 值，映射到正确的 semantic token。
 
-Run: `grep -c '#[0-9a-fA-F]\{3,8\}' docs/designs/specs/prototypes/shared/prototype-toggles.css`
+Run: `grep -c '#[0-9a-fA-F]\{3,8\}' prototype/shared/prototype-toggles.css`
 
 Expected: 输出 0（零硬编码 hex）
 
@@ -492,9 +492,9 @@ Expected: 所有 29 个页面在 light mode 下视觉可接受（环境光不刺
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/page-trading-overview.html`
 
 **Step 1: 在 shell 布局中添加 live region**
 
@@ -542,7 +542,7 @@ Expected: 动态数字更新被屏幕阅读器播报（节流至合理频率）�
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Modify: `prototype/shared/layout-base.css`
 
 **Step 1: 添加全局涨跌三角样式**
 
@@ -586,7 +586,7 @@ Expected: 所有涨跌数据在色盲模拟下仍可通过 ▲/▼ 三角区分�
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Modify: `prototype/shared/layout-base.css`
 
 **Step 1: 添加全局表格交互样式**
 
@@ -619,7 +619,7 @@ Expected: 所有数据表格有 hover 行高亮 + sticky 表头
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-markets-calendar.html`
+- Modify: `prototype/page-markets-calendar.html`
 
 **Step 1: 统一面板间距**
 
@@ -635,7 +635,7 @@ Expected: Calendar 页面的面板间距与其他 Dashboard 页面一致
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: MouseGlow 改为事件委托**
 
@@ -685,8 +685,8 @@ Expected: 鼠标发光效果功能不变但监听器数量从 N×2 降至 2；Ob
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/shared/theme-switcher.js`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/shared/theme-switcher.js`
 
 **Step 1: Sparkline Math 安全**
 
@@ -730,7 +730,7 @@ Expected: 大数据集不栈溢出；隐私模式不崩溃；特殊 ID 不注入
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Modify: `prototype/shared/layout-base.css`
 
 **Step 1: 审计 65 处 !important**
 
@@ -751,7 +751,7 @@ Expected: `grep -c '!important' layout-base.css` ≤ 20
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: Tooltip 触摸支持**
 
@@ -786,7 +786,7 @@ Expected: 触摸设备长按可显示 tooltip
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: 添加 KeyboardShortcuts 模块**
 
@@ -832,7 +832,7 @@ Expected: `/` 聚焦搜索框，`Esc` 关闭 overlay
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Modify: `prototype/shared/layout-base.css`
 
 **Step 1: Rail active 过渡动画**
 
@@ -871,8 +871,8 @@ Expected: Rail 活跃指示器有平滑过渡；Tab 入场有微妙的 stagger �
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: 添加折叠过渡 CSS**
 
@@ -901,8 +901,8 @@ Expected: 面板折叠/展开有平滑高度过渡，reduced-motion 下跳过
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-home.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
+- Modify: `prototype/page-home.html`
+- Modify: `prototype/page-signals-inbox.html`
 
 **Step 1: 在 Home 决策卡片中嵌入 sparkline**
 
@@ -924,7 +924,7 @@ Expected: Home 和 Signals 页面有 sparkline 趋势可视化
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: AnimatedCounter 用 WeakMap 替代 expando**
 
@@ -955,7 +955,7 @@ Expected: 零 DOM expando 属性，零 className 拼接
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Step 1: AnimatedCounter 自动检测**
 
@@ -995,7 +995,7 @@ Expected: 风险指标和 conviction level 可用水平 bullet graph 展示
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html`
+- Modify: `prototype/page-agent-console-v2.html`
 
 **Step 1: 添加基础 Python 语法着色 CSS**
 
@@ -1019,8 +1019,8 @@ Expected: Agent Console 日志面板有基础语法着色
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/tokens-style.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/tokens-style.css`
 
 **Step 1: 添加 `data-atmosphere-intensity` 属性**
 
@@ -1091,11 +1091,11 @@ bun run prototype:interaction
 bun run prototype:gates
 
 # 硬编码颜色审计
-grep -rn '#[0-9a-fA-F]\{3,8\}' docs/designs/specs/prototypes/shared/prototype-toggles.css
+grep -rn '#[0-9a-fA-F]\{3,8\}' prototype/shared/prototype-toggles.css
 # Expected: 0 matches
 
 # !important 计数
-grep -c '!important' docs/designs/specs/prototypes/shared/layout-base.css
+grep -c '!important' prototype/shared/layout-base.css
 # Expected: ≤ 20
 
 # Tab 箭头键手动验证

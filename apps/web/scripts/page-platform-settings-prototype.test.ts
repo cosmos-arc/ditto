@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-platform-settings.html",
+	"../prototype/page-platform-settings.html",
 );
 
 function loadHtml() {

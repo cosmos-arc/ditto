@@ -12,7 +12,7 @@
 
 ## Execution Rules
 
-- Scope is prototype design only: `docs/designs/specs/prototypes/**`, `docs/contracts/pages/**`, design specs, manifest files, prototype tests, and review docs.
+- Scope is prototype design only: `prototype/**`, `contracts/pages/**`, design specs, manifest files, prototype tests, and review docs.
 - Do not modify `src/features/**`, `src/routes/**`, runtime React components, or API/domain types in this plan.
 - Do not add dependencies.
 - Do not change design token values unless the step explicitly updates the corresponding spec; prefer documenting the current token truth before changing values.
@@ -25,7 +25,7 @@
 
 - Active route candidate pool is 27 pages; `ai-overview` and `ai-copilot` are archived specimens, not landing candidates.
 - Every active prototype has matching shell family across blueprint, `.edition-manifest.json`, contract JSON, and HTML root shell class.
-- Every active prototype overlay id is represented in `docs/contracts/pages/*.contract.json`.
+- Every active prototype overlay id is represented in `contracts/pages/*.contract.json`.
 - Every required overlay has a default-view trigger and an overlay-gallery specimen marked with an explicit reference.
 - All active pages keep `view-default / view-states / view-overlays` as the only prototype-level zones.
 - Overlay classes converge on one grammar: `overlay-backdrop`, `overlay-surface`, `overlay-surface--drawer|sheet|modal|toast`, `overlay-header`, `overlay-body`, `overlay-actions`, `overlay-field`.
@@ -48,9 +48,9 @@
 Create a Vitest test that reads:
 
 - `.arch-manifest.json`
-- `docs/designs/specs/prototypes/.edition-manifest.json`
-- `docs/contracts/pages/*.contract.json`
-- `docs/designs/specs/prototypes/page-*.html`
+- `prototype/.edition-manifest.json`
+- `contracts/pages/*.contract.json`
+- `prototype/page-*.html`
 
 Required assertions:
 
@@ -60,8 +60,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
-const contractsDir = join(root, "docs/contracts/pages");
+const prototypesDir = join(root, "prototype");
+const contractsDir = join(root, "contracts/pages");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 
 function readJson<T>(path: string): T {
@@ -125,7 +125,7 @@ describe("prototype design consistency", () => {
 			if (!page.file?.startsWith("page-") || archivedPrototypeIds.has(page.id)) continue;
 			const html = readFileSync(join(prototypesDir, page.file), "utf8");
 			const ids = [...new Set([...html.matchAll(/id="(overlay-[^"]+)"/g)].map((match) => match[1]))];
-			const selectors = contractByPrototype.get(`docs/designs/specs/prototypes/${page.file}`) ?? new Set();
+			const selectors = contractByPrototype.get(`prototype/${page.file}`) ?? new Set();
 			for (const id of ids) {
 				if (!selectors.has(`[data-overlay='${id}']`) && !selectors.has(`[data-overlay="${id}"]`)) {
 					missing.push(`${page.id}:${id}`);
@@ -159,7 +159,7 @@ Do not loosen the assertions. Later tasks make this test pass.
 ### Task 1.1: Separate Active Route Prototypes From Archived AI Specimens
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
 - Modify: `.arch-manifest.json` only after confirming governance scope at execution time
 - Modify: `docs/reviews/2026-04-27-prototype-design-consistency-review.md` if the review needs an addendum
 
@@ -203,10 +203,10 @@ Expected: active route count assertion passes; overlay assertions may still fail
 ### Task 1.2: Fix The Three Shell Family Drift Records
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
-- Modify: `docs/contracts/pages/cross-market.contract.json`
-- Modify: `docs/contracts/pages/agent-console.contract.json`
-- Modify: `docs/contracts/pages/experiment-list.contract.json`
+- Modify: `prototype/.edition-manifest.json`
+- Modify: `contracts/pages/cross-market.contract.json`
+- Modify: `contracts/pages/agent-console.contract.json`
+- Modify: `contracts/pages/experiment-list.contract.json`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Add shell family assertions**
@@ -250,7 +250,7 @@ Expected: FAIL until the three records are corrected.
 
 **Step 2: Correct `/markets` contract**
 
-In `docs/contracts/pages/cross-market.contract.json`:
+In `contracts/pages/cross-market.contract.json`:
 
 - Change `shellFamily` to `radar`.
 - Keep `pagePattern` as `analytical-overview`.
@@ -267,7 +267,7 @@ In `.edition-manifest.json`, set `cross-market.shellFamily` to `radar`.
 
 **Step 3: Correct `/platform/agents` contract**
 
-In `docs/contracts/pages/agent-console.contract.json`:
+In `contracts/pages/agent-console.contract.json`:
 
 - Change `shellFamily` to `studio`.
 - Change `pagePattern` to `studio-builder`.
@@ -281,7 +281,7 @@ In `.edition-manifest.json`, set `agent-console.shellFamily` to `studio`.
 
 **Step 4: Correct `/research/experiments` contract**
 
-In `docs/contracts/pages/experiment-list.contract.json`:
+In `contracts/pages/experiment-list.contract.json`:
 
 - Change `shellFamily` to `catalog`.
 - Change `pagePattern` to `catalog-screener`.
@@ -310,7 +310,7 @@ Expected: shell assertions pass; overlay assertions may still fail.
 ### Task 2.1: Add Explicit Overlay References To Overlay Gallery Cards
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-*.html` for all active pages with overlays
+- Modify: `prototype/page-*.html` for all active pages with overlays
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Add a failing gallery reference test**
@@ -374,7 +374,7 @@ Expected: gallery reference assertion passes.
 ### Task 2.2: Fill `overlays[]` For All Active Page Contracts
 
 **Files:**
-- Modify: all active `docs/contracts/pages/*.contract.json`
+- Modify: all active `contracts/pages/*.contract.json`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Inventory active overlays**
@@ -385,7 +385,7 @@ Run:
 node - <<'JS'
 const fs = require("node:fs");
 const path = require("node:path");
-const root = "docs/designs/specs/prototypes";
+const root = "prototype";
 const manifest = JSON.parse(fs.readFileSync(path.join(root, ".edition-manifest.json"), "utf8"));
 const archived = new Set(["ai-overview", "ai-copilot"]);
 for (const page of manifest.pages) {
@@ -462,8 +462,8 @@ Expected:
 ### Task 3.1: Add Shared Overlay Surface Grammar
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/prototype-toggles.css`
-- Modify: active `docs/designs/specs/prototypes/page-*.html`
+- Modify: `prototype/shared/prototype-toggles.css`
+- Modify: active `prototype/page-*.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Add class grammar test**
@@ -552,7 +552,7 @@ Expected: class grammar test passes, and page prototype tests remain green.
 ### Task 3.2: Keep Gallery Zones Strictly Separated
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/prototype-toggles.css`
+- Modify: `prototype/shared/prototype-toggles.css`
 - Modify: active page prototypes only if tests find violations
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -589,8 +589,8 @@ Expected: all zone discipline tests pass.
 ### Task 4.1: Make 9-Step Typography The Documented Edition v1 Truth
 
 **Files:**
-- Modify: `docs/designs/specs/15_ditto_token_stabilization_spec.md`
-- Modify: `docs/designs/specs/14_ditto_token_naming_layering_spec.md` only if it contradicts the 9-step truth
+- Modify: `design/specs/15_ditto_token_stabilization_spec.md`
+- Modify: `design/specs/14_ditto_token_naming_layering_spec.md` only if it contradicts the 9-step truth
 - Modify: `DESIGN.md` only if clarification is needed
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -629,7 +629,7 @@ Expected: doc consistency assertion passes.
 ### Task 4.2: Remove Negative Letter Spacing From Active Prototypes
 
 **Files:**
-- Modify active `docs/designs/specs/prototypes/page-*.html`
+- Modify active `prototype/page-*.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Add failing test**
@@ -675,10 +675,10 @@ Expected: no negative letter spacing, no screenshot/layout regressions in protot
 ### Task 4.3: Tokenize Bare `rgba()` And Non-Relative `oklch()`
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-portfolio.html`
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console.html`
+- Modify: `prototype/page-portfolio.html`
+- Modify: `prototype/page-platform-settings.html`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-agent-console.html`
 - Modify other active pages only if the audit test identifies them
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -743,7 +743,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const root = "docs/designs/specs/prototypes";
+const root = "prototype";
 const manifest = JSON.parse(fs.readFileSync(path.join(root, ".edition-manifest.json"), "utf8"));
 const archived = new Set(["ai-overview", "ai-copilot"]);
 
@@ -780,7 +780,7 @@ Expected: PASS.
 
 **Files:**
 - Create: `docs/reviews/2026-04-28-prototype-design-remediation-review.md`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
 - Modify: `.arch-manifest.json` only if governance update is approved
 
 **Step 1: Write review summary**

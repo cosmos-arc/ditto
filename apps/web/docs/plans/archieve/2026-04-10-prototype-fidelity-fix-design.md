@@ -145,7 +145,7 @@
 - 修复 gradient ID 冲突（使用 `useId()`）
 - 保持现有 props API 不变
 
-算法参考：`docs/designs/specs/prototypes/shared/prototype-interactions.js` lines 94-173
+算法参考：`prototype/shared/prototype-interactions.js` lines 94-173
 
 ### 2.3 NumberTicker 组件
 

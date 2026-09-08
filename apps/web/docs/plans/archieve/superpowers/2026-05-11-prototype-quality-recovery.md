@@ -6,7 +6,7 @@
 
 **Architecture:** Treat this as two coupled systems: the evaluation system and the prototype design system. First stabilize the gates and score contract so the team compares like with like, then ship targeted prototype improvements through shared contracts instead of one-off page polish.
 
-**Tech Stack:** Static HTML prototypes, shared CSS modules under `docs/designs/specs/prototypes/shared`, Vitest, Playwright, JSDOM, Bun, Biome.
+**Tech Stack:** Static HTML prototypes, shared CSS modules under `prototype/shared`, Vitest, Playwright, JSDOM, Bun, Biome.
 
 ---
 
@@ -25,46 +25,46 @@ Do not try to recover the score by hiding information or deleting useful density
 
 Modify these files only in the listed tasks:
 
-- `docs/designs/specs/audits/2026-05-11-prototype-quality-score-contract.md`: new documentation that defines the two score families and prevents future false comparisons.
+- `design/specs/audits/2026-05-11-prototype-quality-score-contract.md`: new documentation that defines the two score families and prevents future false comparisons.
 - `scripts/prototype-design-consistency.test.ts`: stabilize timeout for a known JSDOM-heavy naming test.
 - `scripts/prototype-final-review-remediation.test.ts`: stabilize timeout for a known JSDOM-heavy visible text test.
 - `scripts/prototype-full-directory-visual-audit.test.ts`: keep all pages in scope, raise the full-directory timeout, and document why.
 - `scripts/prototype-high-risk-confirmation-contract.test.ts`: new contract test for high-risk confirmation content.
 - `scripts/prototype-primary-answer-contract.test.ts`: new contract test for first-screen decision hierarchy.
 - `scripts/prototype-action-tier-contract.test.ts`: new contract test for visible action tiering and action-count caps.
-- `docs/designs/specs/prototypes/shared/layout-components.css`: shared classes for high-risk confirmation, primary answer hierarchy, action tiering, and reduced visual noise.
-- `docs/designs/specs/prototypes/page-home.html`: harden order confirmation and reduce primary decision competition.
-- `docs/designs/specs/prototypes/page-trading-overview.html`: harden pause trading and order/signals path.
-- `docs/designs/specs/prototypes/page-risk-center.html`: harden stress test and rule editor confirmations.
-- `docs/designs/specs/prototypes/page-agent-console-v2.html`: harden Agent approval and rerun confirmations.
-- `docs/designs/specs/prototypes/page-backtest-result.html`: harden enable-signal confirmation.
-- `docs/designs/specs/prototypes/page-signals-inbox.html`: harden signal adoption/rejection.
-- `docs/designs/specs/prototypes/page-orders-ledger.html`: harden cancel/retry order actions.
-- `docs/designs/specs/prototypes/page-strategy-list.html`: harden bulk delete and strategy deletion.
-- `docs/designs/specs/prototypes/page-platform-settings.html`: harden settings reset and credential changes.
-- `docs/designs/specs/prototypes/page-universe-list.html`: harden universe deletion.
-- `docs/designs/specs/prototypes/page-markets-screener.html`: reduce action noise on the densest page.
-- `docs/designs/specs/prototypes/page-strategy-studio.html`: reduce action noise and make the submit-backtest decision dominant.
-- `docs/designs/specs/prototypes/page-a-shares.html`: reduce competing visual emphasis in market overview.
-- `docs/designs/specs/prototypes/page-cross-market.html`: reduce competing visual emphasis in macro/radar view.
-- `docs/designs/specs/prototypes/page-instrument-hub.html`: reduce overlay/action clutter in object hub.
-- `docs/designs/specs/prototypes/page-portfolio.html`: reduce right-rail and chart decoration noise.
-- `docs/designs/specs/prototypes/page-research.html`: replace placeholder-looking chart labels with production-grade static chart names.
-- `docs/designs/specs/prototypes/.edition-manifest.json`: update notes only after gates pass, do not inflate numeric scores manually.
+- `prototype/shared/layout-components.css`: shared classes for high-risk confirmation, primary answer hierarchy, action tiering, and reduced visual noise.
+- `prototype/page-home.html`: harden order confirmation and reduce primary decision competition.
+- `prototype/page-trading-overview.html`: harden pause trading and order/signals path.
+- `prototype/page-risk-center.html`: harden stress test and rule editor confirmations.
+- `prototype/page-agent-console-v2.html`: harden Agent approval and rerun confirmations.
+- `prototype/page-backtest-result.html`: harden enable-signal confirmation.
+- `prototype/page-signals-inbox.html`: harden signal adoption/rejection.
+- `prototype/page-orders-ledger.html`: harden cancel/retry order actions.
+- `prototype/page-strategy-list.html`: harden bulk delete and strategy deletion.
+- `prototype/page-platform-settings.html`: harden settings reset and credential changes.
+- `prototype/page-universe-list.html`: harden universe deletion.
+- `prototype/page-markets-screener.html`: reduce action noise on the densest page.
+- `prototype/page-strategy-studio.html`: reduce action noise and make the submit-backtest decision dominant.
+- `prototype/page-a-shares.html`: reduce competing visual emphasis in market overview.
+- `prototype/page-cross-market.html`: reduce competing visual emphasis in macro/radar view.
+- `prototype/page-instrument-hub.html`: reduce overlay/action clutter in object hub.
+- `prototype/page-portfolio.html`: reduce right-rail and chart decoration noise.
+- `prototype/page-research.html`: replace placeholder-looking chart labels with production-grade static chart names.
+- `prototype/.edition-manifest.json`: update notes only after gates pass, do not inflate numeric scores manually.
 
-Do not edit archived specimens under `docs/designs/specs/prototypes/archive/2026-04-30/` for release scoring. They remain historical references.
+Do not edit archived specimens under `prototype/archive/2026-04-30/` for release scoring. They remain historical references.
 
 ---
 
 ### Task 1: Stabilize The Scoring Contract
 
 **Files:**
-- Create: `docs/designs/specs/audits/2026-05-11-prototype-quality-score-contract.md`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Create: `design/specs/audits/2026-05-11-prototype-quality-score-contract.md`
+- Modify: `prototype/.edition-manifest.json`
 
 - [ ] **Step 1: Write the score contract document**
 
-Create `docs/designs/specs/audits/2026-05-11-prototype-quality-score-contract.md` with this exact content:
+Create `design/specs/audits/2026-05-11-prototype-quality-score-contract.md` with this exact content:
 
 ```markdown
 # Prototype Quality Score Contract
@@ -131,7 +131,7 @@ Do not raise manifest numeric scores after cosmetic changes. Raise release confi
 
 - [ ] **Step 2: Update manifest with a non-numeric note**
 
-In `docs/designs/specs/prototypes/.edition-manifest.json`, add this top-level field after `freezePolish`:
+In `prototype/.edition-manifest.json`, add this top-level field after `freezePolish`:
 
 ```json
 "releaseUxReview": {
@@ -150,7 +150,7 @@ Keep JSON valid by adding a comma after the previous object.
 Run:
 
 ```bash
-node -e "JSON.parse(require('node:fs').readFileSync('docs/designs/specs/prototypes/.edition-manifest.json','utf8')); console.log('manifest ok')"
+node -e "JSON.parse(require('node:fs').readFileSync('prototype/.edition-manifest.json','utf8')); console.log('manifest ok')"
 ```
 
 Expected:
@@ -162,7 +162,7 @@ manifest ok
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/audits/2026-05-11-prototype-quality-score-contract.md docs/designs/specs/prototypes/.edition-manifest.json
+git add design/specs/audits/2026-05-11-prototype-quality-score-contract.md prototype/.edition-manifest.json
 git commit -m "docs: define prototype quality score contract"
 ```
 
@@ -285,7 +285,7 @@ git commit -m "test: stabilize full prototype verification"
 
 **Files:**
 - Create: `scripts/prototype-high-risk-confirmation-contract.test.ts`
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/shared/layout-components.css`
 
 - [ ] **Step 1: Write the failing high-risk confirmation test**
 
@@ -298,7 +298,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const prototypesDir = join(root, "prototype");
 
 const highRiskPages = [
 	"page-home.html",
@@ -390,7 +390,7 @@ missing [data-recovery-path]
 
 - [ ] **Step 3: Add shared confirmation classes**
 
-Append this to `docs/designs/specs/prototypes/shared/layout-components.css`:
+Append this to `prototype/shared/layout-components.css`:
 
 ```css
 /* Final-review high-risk confirmation contract */
@@ -446,7 +446,7 @@ Append this to `docs/designs/specs/prototypes/shared/layout-components.css`:
 Run:
 
 ```bash
-bunx biome check scripts/prototype-high-risk-confirmation-contract.test.ts docs/designs/specs/prototypes/shared/layout-components.css
+bunx biome check scripts/prototype-high-risk-confirmation-contract.test.ts prototype/shared/layout-components.css
 ```
 
 Expected:
@@ -458,7 +458,7 @@ No fixes applied.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/prototype-high-risk-confirmation-contract.test.ts docs/designs/specs/prototypes/shared/layout-components.css
+git add scripts/prototype-high-risk-confirmation-contract.test.ts prototype/shared/layout-components.css
 git commit -m "test: require auditable high-risk confirmations"
 ```
 
@@ -467,11 +467,11 @@ git commit -m "test: require auditable high-risk confirmations"
 ### Task 4: Harden The Highest-Risk Confirmation Overlays
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-home.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-result.html`
+- Modify: `prototype/page-home.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-agent-console-v2.html`
+- Modify: `prototype/page-backtest-result.html`
 
 - [ ] **Step 1: Replace Home order confirmation body with the contract structure**
 
@@ -679,7 +679,7 @@ prototype:gates passed for every active route prototype.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-home.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-risk-center.html docs/designs/specs/prototypes/page-agent-console-v2.html docs/designs/specs/prototypes/page-backtest-result.html
+git add prototype/page-home.html prototype/page-trading-overview.html prototype/page-risk-center.html prototype/page-agent-console-v2.html prototype/page-backtest-result.html
 git commit -m "feat: harden critical prototype confirmations"
 ```
 
@@ -688,11 +688,11 @@ git commit -m "feat: harden critical prototype confirmations"
 ### Task 5: Complete High-Risk Coverage On List And Settings Pages
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-orders-ledger.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
-- Modify: `docs/designs/specs/prototypes/page-universe-list.html`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-orders-ledger.html`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-platform-settings.html`
+- Modify: `prototype/page-universe-list.html`
 
 - [ ] **Step 1: Add the same contract selectors to Signals Inbox**
 
@@ -800,7 +800,7 @@ PASS  scripts/prototype-high-risk-confirmation-contract.test.ts
 - [ ] **Step 7: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-signals-inbox.html docs/designs/specs/prototypes/page-orders-ledger.html docs/designs/specs/prototypes/page-strategy-list.html docs/designs/specs/prototypes/page-platform-settings.html docs/designs/specs/prototypes/page-universe-list.html
+git add prototype/page-signals-inbox.html prototype/page-orders-ledger.html prototype/page-strategy-list.html prototype/page-platform-settings.html prototype/page-universe-list.html
 git commit -m "feat: extend high-risk confirmation coverage"
 ```
 
@@ -810,7 +810,7 @@ git commit -m "feat: extend high-risk confirmation coverage"
 
 **Files:**
 - Create: `scripts/prototype-primary-answer-contract.test.ts`
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/shared/layout-components.css`
 
 - [ ] **Step 1: Write the failing contract test**
 
@@ -823,7 +823,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const prototypesDir = join(root, "prototype");
 
 const activePrototypeFiles = readdirSync(prototypesDir).filter((file) => /^page-.*\.html$/.test(file) && file !== "page-agent-console.html");
 
@@ -884,7 +884,7 @@ missing [data-secondary-context]
 
 - [ ] **Step 3: Add shared hierarchy classes**
 
-Append to `docs/designs/specs/prototypes/shared/layout-components.css`:
+Append to `prototype/shared/layout-components.css`:
 
 ```css
 /* Final-review primary answer hierarchy */
@@ -909,7 +909,7 @@ Append to `docs/designs/specs/prototypes/shared/layout-components.css`:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/prototype-primary-answer-contract.test.ts docs/designs/specs/prototypes/shared/layout-components.css
+git add scripts/prototype-primary-answer-contract.test.ts prototype/shared/layout-components.css
 git commit -m "test: require explicit primary answer hierarchy"
 ```
 
@@ -918,12 +918,12 @@ git commit -m "test: require explicit primary answer hierarchy"
 ### Task 7: Apply Primary Answer Hierarchy To Highest-Load Pages
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-home.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
+- Modify: `prototype/page-home.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-markets-screener.html`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-signals-inbox.html`
 
 - [ ] **Step 1: Mark Home decision card as dominant**
 
@@ -998,7 +998,7 @@ prototype:gates passed for every active route prototype.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-home.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-risk-center.html docs/designs/specs/prototypes/page-markets-screener.html docs/designs/specs/prototypes/page-strategy-studio.html docs/designs/specs/prototypes/page-signals-inbox.html
+git add prototype/page-home.html prototype/page-trading-overview.html prototype/page-risk-center.html prototype/page-markets-screener.html prototype/page-strategy-studio.html prototype/page-signals-inbox.html
 git commit -m "feat: clarify primary answer hierarchy"
 ```
 
@@ -1008,7 +1008,7 @@ git commit -m "feat: clarify primary answer hierarchy"
 
 **Files:**
 - Create: `scripts/prototype-action-tier-contract.test.ts`
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/shared/layout-components.css`
 
 - [ ] **Step 1: Write the action tier test**
 
@@ -1021,7 +1021,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const prototypesDir = join(root, "prototype");
 
 const highDensityPages = [
 	"page-markets-screener.html",
@@ -1091,7 +1091,7 @@ missing data-action-tier
 
 - [ ] **Step 3: Add shared tier classes**
 
-Append to `docs/designs/specs/prototypes/shared/layout-components.css`:
+Append to `prototype/shared/layout-components.css`:
 
 ```css
 /* Final-review action tiering */
@@ -1118,7 +1118,7 @@ Append to `docs/designs/specs/prototypes/shared/layout-components.css`:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/prototype-action-tier-contract.test.ts docs/designs/specs/prototypes/shared/layout-components.css
+git add scripts/prototype-action-tier-contract.test.ts prototype/shared/layout-components.css
 git commit -m "test: require action tiers on dense prototypes"
 ```
 
@@ -1127,14 +1127,14 @@ git commit -m "test: require action tiers on dense prototypes"
 ### Task 9: Reduce Action Noise On Dense Pages
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html`
-- Modify: `docs/designs/specs/prototypes/page-orders-ledger.html`
+- Modify: `prototype/page-markets-screener.html`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-cross-market.html`
+- Modify: `prototype/page-instrument-hub.html`
+- Modify: `prototype/page-orders-ledger.html`
 
 - [ ] **Step 1: Apply action tiers to Markets Screener**
 
@@ -1223,7 +1223,7 @@ prototype:gates passed for every active route prototype.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-markets-screener.html docs/designs/specs/prototypes/page-strategy-studio.html docs/designs/specs/prototypes/page-signals-inbox.html docs/designs/specs/prototypes/page-strategy-list.html docs/designs/specs/prototypes/page-a-shares.html docs/designs/specs/prototypes/page-cross-market.html docs/designs/specs/prototypes/page-instrument-hub.html docs/designs/specs/prototypes/page-orders-ledger.html
+git add prototype/page-markets-screener.html prototype/page-strategy-studio.html prototype/page-signals-inbox.html prototype/page-strategy-list.html prototype/page-a-shares.html prototype/page-cross-market.html prototype/page-instrument-hub.html prototype/page-orders-ledger.html
 git commit -m "feat: tier dense prototype actions"
 ```
 
@@ -1232,17 +1232,17 @@ git commit -m "feat: tier dense prototype actions"
 ### Task 10: Quiet Visual Noise Without Reducing Information Density
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
-- Modify: `docs/designs/specs/prototypes/page-home.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-platform.html`
-- Modify: `docs/designs/specs/prototypes/page-portfolio.html`
-- Modify: `docs/designs/specs/prototypes/page-research.html`
+- Modify: `prototype/shared/layout-components.css`
+- Modify: `prototype/page-home.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-platform.html`
+- Modify: `prototype/page-portfolio.html`
+- Modify: `prototype/page-research.html`
 
 - [ ] **Step 1: Add quieting utilities**
 
-Append to `docs/designs/specs/prototypes/shared/layout-components.css`:
+Append to `prototype/shared/layout-components.css`:
 
 ```css
 /* Final-review quieting utilities */
@@ -1336,7 +1336,7 @@ Tests  115 passed (115)
 - [ ] **Step 8: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared/layout-components.css docs/designs/specs/prototypes/page-home.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-risk-center.html docs/designs/specs/prototypes/page-platform.html docs/designs/specs/prototypes/page-portfolio.html docs/designs/specs/prototypes/page-research.html
+git add prototype/shared/layout-components.css prototype/page-home.html prototype/page-trading-overview.html prototype/page-risk-center.html prototype/page-platform.html prototype/page-portfolio.html prototype/page-research.html
 git commit -m "style: quiet prototype visual noise"
 ```
 
@@ -1345,8 +1345,8 @@ git commit -m "style: quiet prototype visual noise"
 ### Task 11: Run Full Per-Page Verification And Record The New Baseline
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
-- Create: `docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md`
+- Modify: `prototype/.edition-manifest.json`
+- Create: `design/specs/audits/2026-05-11-prototype-quality-recovery-results.md`
 
 - [ ] **Step 1: Run active route gates**
 
@@ -1410,7 +1410,7 @@ Record the exact final test-file and test counts in the recovery results documen
 
 - [ ] **Step 5: Create results document**
 
-Create `docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md`:
+Create `design/specs/audits/2026-05-11-prototype-quality-recovery-results.md`:
 
 ```markdown
 # Prototype Quality Recovery Results
@@ -1464,7 +1464,7 @@ to:
 Add:
 
 ```json
-"resultRecord": "docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md"
+"resultRecord": "design/specs/audits/2026-05-11-prototype-quality-recovery-results.md"
 ```
 
 inside `releaseUxReview`.
@@ -1472,7 +1472,7 @@ inside `releaseUxReview`.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md docs/designs/specs/prototypes/.edition-manifest.json
+git add design/specs/audits/2026-05-11-prototype-quality-recovery-results.md prototype/.edition-manifest.json
 git commit -m "docs: record prototype quality recovery results"
 ```
 

@@ -10,9 +10,9 @@ import {
 import { findHardcodedColors } from "./prototype-color-audit";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
-const contractsDir = join(root, "docs/contracts/pages");
-const chartInteractionContractPath = join(root, "docs/contracts/prototype-chart-interactions.md");
+const prototypesDir = join(root, "prototype");
+const contractsDir = join(root, "contracts/pages");
+const chartInteractionContractPath = join(root, "contracts/prototype-chart-interactions.md");
 const prototypeFontsCss = join(prototypesDir, "shared/fonts.css");
 const prototypeLayoutCss = join(prototypesDir, "shared/layout-shell.css");
 const prototypeLayoutModulePaths = [
@@ -42,14 +42,14 @@ const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
 const designSpec = join(root, "DESIGN.md");
-const pagePatternLibrarySpec = join(root, "docs/designs/specs/11_ditto_page_pattern_library.md");
+const pagePatternLibrarySpec = join(root, "design/specs/11_ditto_page_pattern_library.md");
 const tokenNamingLayeringSpec = join(
 	root,
-	"docs/designs/specs/14_ditto_token_naming_layering_spec.md",
+	"design/specs/14_ditto_token_naming_layering_spec.md",
 );
 const tokenStabilizationSpec = join(
 	root,
-	"docs/designs/specs/15_ditto_token_stabilization_spec.md",
+	"design/specs/15_ditto_token_stabilization_spec.md",
 );
 const expectedActiveRoutePrototypeCount = 28;
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
@@ -209,7 +209,7 @@ function readContracts(): PageContract[] {
 }
 
 function findPrimaryContract(page: ManifestPage): PageContract | undefined {
-	const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
+	const prototypeRef = `prototype/${page.file}`;
 	const contractId = currentContractIdByPrototypeId.get(page.id) ?? page.id;
 	return readContracts().find(
 		(contract) => contract.id === contractId && contract.prototypeRef === prototypeRef,
@@ -2728,7 +2728,7 @@ describe("prototype design consistency", () => {
 		]);
 		for (const contract of canonicalContracts) {
 			expect(contract.prototypeRef).toBe(
-				"docs/designs/specs/prototypes/page-agent-console-v2.html",
+				"prototype/page-agent-console-v2.html",
 			);
 			expect(contract.nextPrototypeRef).toBeUndefined();
 			expect(contract.nextSlots).toBeUndefined();
@@ -3678,7 +3678,7 @@ describe("prototype design consistency", () => {
 			) {
 				continue;
 			}
-			const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
+			const prototypeRef = `prototype/${page.file}`;
 			const selectors = new Set(
 				readContracts()
 					.filter(
@@ -3704,7 +3704,7 @@ describe("prototype design consistency", () => {
 		const activePrototypeRefs = new Set(
 			readManifest()
 				.pages.filter(isActiveRoutePrototype)
-				.map((page) => `docs/designs/specs/prototypes/${page.file}`),
+				.map((page) => `prototype/${page.file}`),
 		);
 		const failures: string[] = [];
 
@@ -3712,7 +3712,7 @@ describe("prototype design consistency", () => {
 			if (!activePrototypeRefs.has(contract.prototypeRef)) continue;
 
 			const page = readManifest().pages.find(
-				(manifestPage) => `docs/designs/specs/prototypes/${manifestPage.file}` === contract.prototypeRef,
+				(manifestPage) => `prototype/${manifestPage.file}` === contract.prototypeRef,
 			);
 			if (!page) continue;
 
@@ -4695,17 +4695,17 @@ describe("prototype design consistency", () => {
 
 	it("builds prototype gates across professional desktop viewports", () => {
 		const defaultViewports = defaultViewportArgs();
-		const fullLoopArgs = buildDefaultPrototypeGateArgs("docs/designs/specs/prototypes/page-home.html", "test-results/home");
-		const passthroughArgs = buildPassthroughGateArgs(["--prototype", "docs/designs/specs/prototypes/page-home.html"]);
-		const equalsPrototypeArgs = buildPassthroughGateArgs(["--prototype=docs/designs/specs/prototypes/page-home.html"]);
+		const fullLoopArgs = buildDefaultPrototypeGateArgs("prototype/page-home.html", "test-results/home");
+		const passthroughArgs = buildPassthroughGateArgs(["--prototype", "prototype/page-home.html"]);
+		const equalsPrototypeArgs = buildPassthroughGateArgs(["--prototype=prototype/page-home.html"]);
 		const explicitViewportArgs = buildPassthroughGateArgs([
 			"--prototype",
-			"docs/designs/specs/prototypes/page-home.html",
+			"prototype/page-home.html",
 			"--viewport",
 			"VP-CUSTOM=1440x900",
 		]);
 		const equalsViewportArgs = buildPassthroughGateArgs([
-			"--prototype=docs/designs/specs/prototypes/page-home.html",
+			"--prototype=prototype/page-home.html",
 			"--viewport=VP-CUSTOM=1440x900",
 		]);
 
@@ -4719,19 +4719,19 @@ describe("prototype design consistency", () => {
 		]);
 		expect(fullLoopArgs).toEqual([
 			"--prototype",
-			"docs/designs/specs/prototypes/page-home.html",
+			"prototype/page-home.html",
 			...defaultViewports,
 			"--out-dir",
 			"test-results/home",
 		]);
 		expect(passthroughArgs).toEqual([
 			"--prototype",
-			"docs/designs/specs/prototypes/page-home.html",
+			"prototype/page-home.html",
 			...defaultViewports,
 		]);
 		expect(equalsPrototypeArgs).toEqual([
 			"--prototype",
-			"docs/designs/specs/prototypes/page-home.html",
+			"prototype/page-home.html",
 			...defaultViewports,
 		]);
 		expect(explicitViewportArgs).toContain("VP-CUSTOM=1440x900");
@@ -4740,7 +4740,7 @@ describe("prototype design consistency", () => {
 		expect(explicitViewportArgs).not.toContain("VP-NARROW=1200x800");
 		expect(equalsViewportArgs).toEqual([
 			"--prototype",
-			"docs/designs/specs/prototypes/page-home.html",
+			"prototype/page-home.html",
 			"--viewport",
 			"VP-CUSTOM=1440x900",
 		]);

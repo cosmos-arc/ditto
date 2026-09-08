@@ -3,8 +3,9 @@
 # contract, runbook, source, and machine-enforced configuration paths.
 docs/archive/
 docs/architecture/archive/
+packages/features/docs/design/unified-feature-factor-engine/archive/
 docs/reviews/
-docs/plans/
+docs/plans/archive/
 docs/evidence/
 docs/acceptance/*-2026-*.md
 docs/acceptance/wave1-data-readiness.md

@@ -101,6 +101,6 @@ Ditto 明确不应看起来像：
 
 新方向或范围变化从现有 brief、constitution、system description 与 assumptions 读取已作决定；研究结论、推断和未验证假设分开记录。更新受影响事实即可，无需固定阶段、六类新产物或 discovery manifest 仪式。
 
-信息架构、页面蓝图及交互状态分别以 [IA](docs/designs/specs/01_product_information_architecture.md)、[页面蓝图](docs/designs/specs/02_core_page_blueprints.md)、[状态规范](docs/designs/specs/04_interaction_state_spec.md) 为准。shellFamily、pagePattern 和 slot 使用现有合同 schema/生成配置的词汇，避免另存枚举计数副本。导航保留选中资产上下文，数据界面覆盖 loading、empty、error、stale，破坏性动作显式确认。
+信息架构、页面蓝图及交互状态分别以 [IA](design/specs/01_product_information_architecture.md)、[页面蓝图](design/specs/02_core_page_blueprints.md)、[状态规范](design/specs/04_interaction_state_spec.md) 为准。shellFamily、pagePattern 和 slot 使用现有合同 schema/生成配置的词汇，避免另存枚举计数副本。导航保留选中资产上下文，数据界面覆盖 loading、empty、error、stale，破坏性动作显式确认。
 
 页面变化按实际路由、状态、可访问性和消费者验证；旧 manifest 可作为已有记录读取，不能仅凭摘要或阶段状态声称用户路径可用。

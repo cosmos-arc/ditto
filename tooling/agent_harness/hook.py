@@ -580,7 +580,12 @@ _BACKEND_TEST_PREFIX = ("apps", "backend", "tests")
 
 def _path_classes(paths: Sequence[str], *, root: Path | None = None) -> set[str]:
     classes = {category for path in paths for category in _path_categories(path)}
-    prose = [path for path in paths if _path_categories(path) in ({"docs"}, {"skills"})]
+    prose = [
+        path
+        for path in paths
+        if path.endswith((".md", ".rst"))
+        or _path_categories(path) in ({"docs"}, {"skills"})
+    ]
     if root is not None and prose:
         # Executable/symlink prose is an execution change, including deletions
         # and staged mode changes whose old form only survives in HEAD/index.
@@ -621,18 +626,46 @@ def _is_high_risk_path(path: str) -> bool:
     )
 
 
-def _path_categories(path: str) -> set[str]:
-    if path in _ROOT_GATE_PATHS or path.startswith(".github/"):
-        return {"root"}
+def _is_web_input(path: str) -> bool:
+    return (
+        path.startswith(
+            (
+                "apps/web/design/specs/",
+                "apps/web/contracts/pages/",
+                "apps/web/prototype/",
+            )
+        )
+        or path == "apps/web/contracts/prototype-chart-interactions.md"
+    )
+
+
+def _prototype_commands(paths: Sequence[str]) -> list[list[str]]:
+    return [["task", "web-prototype"]] if any(map(_is_web_input, paths)) else []
+
+
+def _material_category(path: str) -> str | None:
+    """Classify authored materials before generic source-code path rules."""
     if path.startswith((".agents/skills/", ".claude/skills/")) and path.endswith(
         (".md", ".rst", ".yaml", ".yml", ".toml", ".json", ".txt")
     ):
-        return {"skills"}
+        return "skills"
+    if _is_web_input(path):
+        return "web"
+    if path.startswith("apps/backend/tests/fixtures/contracts/"):
+        return "backend-tests"
     if path != "apps/web/DESIGN.md" and (
         path.endswith((".md", ".rst"))
         or (path.startswith("docs/") and path.endswith(".txt"))
     ):
-        return {"docs"}
+        return "docs"
+    return None
+
+
+def _path_categories(path: str) -> set[str]:
+    if path in _ROOT_GATE_PATHS or path.startswith(".github/"):
+        return {"root"}
+    if category := _material_category(path):
+        return {category}
     if _is_harness(path):
         return {"harness"}
 
@@ -828,6 +861,7 @@ def verification_commands(
         commands.append(["task", "test-system"])
     if "high-risk" in active_classes:
         commands.append(["task", "pit"])
+    commands.extend(_prototype_commands(paths))
     if needs_full_check or active_classes != {"backend-tests"}:
         return commands
     return _backend_test_commands(paths, root=root)

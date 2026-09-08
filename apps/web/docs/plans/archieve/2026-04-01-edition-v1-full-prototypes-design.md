@@ -194,10 +194,10 @@ page-{domain}-{feature}.html        # 二级功能页面
 
 ## 参考文档
 
-- [IA 信息架构](docs/designs/specs/01_product_information_architecture.md) v1.1
-- [核心页面蓝图](docs/designs/specs/02_core_page_blueprints.md) v1.2
-- [Shell 规范](docs/designs/specs/10_ditto_shell_family_spec.md) v1.2
-- [页面模式库](docs/designs/specs/11_ditto_page_pattern_library.md) v1.2
-- [核心用户流程](docs/designs/specs/06_core_user_flows.md) v1.2
+- [IA 信息架构](design/specs/01_product_information_architecture.md) v1.1
+- [核心页面蓝图](design/specs/02_core_page_blueprints.md) v1.2
+- [Shell 规范](design/specs/10_ditto_shell_family_spec.md) v1.2
+- [页面模式库](design/specs/11_ditto_page_pattern_library.md) v1.2
+- [核心用户流程](design/specs/06_core_user_flows.md) v1.2
 - [关键设计决策](docs/designs/decisions/2026-03-28-key-design-decisions.md)
-- [Edition Manifest](docs/designs/specs/prototypes/.edition-manifest.json)
+- [Edition Manifest](prototype/.edition-manifest.json)

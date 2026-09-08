@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
-const prototypePath = resolve(import.meta.dirname, "../docs/designs/specs/prototypes/page-a-shares.html");
+const prototypePath = resolve(import.meta.dirname, "../prototype/page-a-shares.html");
 
 function loadPage() {
 	const html = readFileSync(prototypePath, "utf-8");

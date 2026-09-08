@@ -360,13 +360,13 @@ bun add @fontsource-variable/noto-sans-sc
 | 文件 | 变更 |
 |------|------|
 | `docs/designs/decisions/2026-03-28-key-design-decisions.md §2-3` | 替换字体决策 |
-| `docs/designs/specs/15_ditto_token_stabilization_spec.md:198-208` | 字体家族表 3→4 行，字重用法收紧 |
+| `design/specs/15_ditto_token_stabilization_spec.md:198-208` | 字体家族表 3→4 行，字重用法收紧 |
 | `.claude/design-review/roles.md:9,18` | 审查维度补充 4-role system + OpenType |
 | `.claude/design-review/templates.md:189` | Token 一致性检查表补充 |
 
 ### 原型文件（延后同步）
 
-`docs/designs/specs/prototypes/` 下 36 个文件、180+ 处引用旧 token。原型是独立产物，不影响产品代码，可在规范落定后批量更新。
+`prototype/` 下 36 个文件、180+ 处引用旧 token。原型是独立产物，不影响产品代码，可在规范落定后批量更新。
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## 概述
 - 创建: 2026-05-07
-- 范围: 仅原型 HTML/CSS（`docs/designs/specs/prototypes/`）
+- 范围: 仅原型 HTML/CSS（`prototype/`）
 - 目标: 将列表页从"纯文本表格"提升为"数据扫描面板"，增强核心页面交互深度
 
 ## 技术方案

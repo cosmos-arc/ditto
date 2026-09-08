@@ -1,6 +1,6 @@
 # Prototype → React 实现待办
 
-> **来源**: 原型迭代审查与页面合同（`docs/contracts/pages/*.contract.json`）。
+> **来源**: 原型迭代审查与页面合同（`contracts/pages/*.contract.json`）。
 > **目标**: 把 prototype-only polish 与必须进入 React 产品实现的工作分离，并为每个已落地 React route 建立 contract → feature → test 的交接链路。
 
 ---

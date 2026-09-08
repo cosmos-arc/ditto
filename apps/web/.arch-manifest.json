@@ -15,8 +15,8 @@
       "DESIGN.md",
       "package.json",
       "dependency-cruiser.config.mjs",
-      "docs/contracts/pages/**/*.json",
-      "docs/designs/specs/*.md",
+      "contracts/pages/**/*.json",
+      "design/specs/*.md",
       "src/routes/**/*.tsx",
       "src/features/*/index.ts",
       "src/workflows/*/index.ts"

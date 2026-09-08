@@ -8,34 +8,22 @@ Ditto 将 CI、安全与发布证据分成三个职责明确的工作流。所�
 
 - `CI / CI gate`
 
-`ci.yml` 在 `pull_request`、`main` push 和 `merge_group` 上无条件启动以下十二个并行语义 job：
+PR 按 `tooling/agent_harness/ci.py` 的共用 changed-scope 选择检查；主分支、
+merge queue 与定期 CI 执行全量。普通文档保留轻量路径，skill 文本/镜像增加结构检查；
+根配置、共享工具、契约与未知范围使用完整门禁。具体分工见
+[Harness 验证规则](../../docs/engineering/agent-harness.md#本地与-ci-的验证分工)。
 
-1. repository policy
-2. backend format/lint
-3. backend types
-4. backend tests/coverage
-5. architecture/agent harness
-6. Web lint/types/tests/build
-7. OpenAPI compatibility/generated types
-8. supervised backend-Web system test
-9. release cohort generator/evidence
-10. container build/readiness smoke
-11. macOS arm64 与 Windows x64 platform smoke（Windows 除双栈类型检查外，
-    运行代表性的 kernel/API/CLI 单测、Web 契约/运行配置单测，以及真实 loopback
-    API 的 `/healthz`、`/readyz` 与 release cohort 身份验收；API 使用一次性
-    config/state/cache roots 并在成功或失败后回收完整进程树）
-12. 可复用 security/supply-chain workflow
-
-`ci-gate` 只接受十二个 `success`；`failure`、`cancelled` 和 `skipped` 都会失败。工作流不使用顶层 `paths` 或条件跳过，因此 required check 不会因改动路径而消失。
+`ci-gate` 要求选中的检查全部成功，不适用的检查允许跳过；失败、取消、缺失结果或
+错误跳过均不能通过。稳定 required check 始终存在，不因路径筛选消失。
 
 `security.yml` 由 `ci.yml` 通过 `workflow_call` 调用，并保留周度 schedule：
 
-- CodeQL：Python 与 JavaScript/TypeScript matrix；
+- CodeQL：Python、JavaScript/TypeScript 与 Actions matrix；
 - Gitleaks：当前规则集与已验证兼容规则集双重完整历史扫描；兼容扫描另有合成 GitHub PAT 哨兵，避免扫描器“运行成功但规则失效”；所有历史假阳性逐 finding fingerprint 放行；
 - OSV：递归扫描 Bun 等受支持的源码锁文件；
 - container security：Trivy HIGH/CRITICAL fail-closed 与 SPDX JSON SBOM。
 
-扫描器容器均固定 image digest。内部 `security-gate` 不接受 skipped，其结果再作为
+扫描器容器均固定 image digest。内部 `security-gate` 按所选安全范围区分不适用与失败，其结果再作为
 `security-supply-chain` job 被唯一 `ci-gate` 汇总。
 每周 schedule 另行运行根 `mutation-critical` uv 任务并上传
 `build/mutation/mutmut-cicd-stats.json`；它不进入 PR 快速 required gate。

@@ -42,7 +42,7 @@
 ```
 Phase 10 启动
 │
-├─ 检查 docs/contracts/pages/<page>.contract.json 是否存在？
+├─ 检查 contracts/pages/<page>.contract.json 是否存在？
 │   ├─ 否 → 提示用户先运行 /ditto-page-contract --create <page>
 │   │        或使用 --force-metric 强制执行度量提取
 │   └─ 是 → 检查 metrics.baseline 是否非空？
@@ -195,7 +195,7 @@ ditto-design-cycle done
     │
     ▼
 ditto-page-contract --create <page>      ← 新增
-    │  产出: docs/contracts/pages/<page>.contract.json (status: draft)
+    │  产出: contracts/pages/<page>.contract.json (status: draft)
     │  自动生成: .generated.ts + .generated.mjs
     │
     ▼

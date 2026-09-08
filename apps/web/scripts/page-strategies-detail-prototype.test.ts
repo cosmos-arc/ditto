@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-strategies-detail.html",
+	"../prototype/page-strategies-detail.html",
 );
 const navigationTimeoutMs = 10_000;
 
@@ -21,7 +21,7 @@ function loadPage() {
 describe("page-strategies-detail prototype", () => {
 	it("inherits the relaxed Object Hub header rhythm shared by detail pages", () => {
 		const layoutCss = readFileSync(
-			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-shell.css"),
+			resolve(import.meta.dirname, "../prototype/shared/layout-shell.css"),
 			"utf-8",
 		);
 

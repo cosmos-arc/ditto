@@ -66,7 +66,8 @@ task check-changed
 - 普通文档：不运行 Python 套件。
 - 仅项目 skill 文本、metadata 或镜像：运行 `harness-validate` 检查结构及完整镜像；执行文件、模式变化和混合生产变更保留完整检查。
 - Harness：运行包含 `harness-check` 的根 `check`。
-- 仅测试：目标测试、Ruff format-check/lint、测试类型检查。
+- 仅测试：目标测试、Ruff format-check/lint、测试类型检查。Backend 的合同 fixtures（包括 Markdown 基线）按测试输入处理。
+- Web `design/specs`、`contracts/pages`、原型交互合同与 `prototype` 是机器消费来源；本地检查追加 `web-prototype`，普通 `docs` 阅读说明保留轻量路径。
 - 普通后端/Web 生产代码：分别运行所属包测试与静态检查/`check-web`；跨包或高风险变更运行 `check`。
 - 契约或跨栈路径：运行 `check` 与 `test-system`。
 - data/features/strategy/portfolio/risk/execution/backtest，以及 application 的

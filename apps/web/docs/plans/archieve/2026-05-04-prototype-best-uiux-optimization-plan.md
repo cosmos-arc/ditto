@@ -46,8 +46,8 @@
 ### Task 0.1: Fix Instrument Hub Object Header Frame
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html`
-- Modify only if shared solution is cleaner: `docs/designs/specs/prototypes/shared/layout-shell.css`
+- Modify: `prototype/page-instrument-hub.html`
+- Modify only if shared solution is cleaner: `prototype/shared/layout-shell.css`
 - Test: `scripts/page-instrument-hub-prototype.test.ts`
 
 **Steps:**
@@ -63,9 +63,9 @@
 ### Task 0.2: Choose Canonical Agent Console
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
-- Modify: `docs/contracts/pages/agent-console.contract.json`
-- Potentially move: `docs/designs/specs/prototypes/page-agent-console.html`
+- Modify: `prototype/.edition-manifest.json`
+- Modify: `contracts/pages/agent-console.contract.json`
+- Potentially move: `prototype/page-agent-console.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Steps:**
@@ -85,8 +85,8 @@
 ### Task 1.1: Focus Ring Regression Guard
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-shell.css`
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/shared/layout-shell.css`
+- Modify: `prototype/shared/layout-components.css`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Steps:**
@@ -98,8 +98,8 @@
 ### Task 1.2: Skeleton System Normalization
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-state.css`
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/shared/layout-state.css`
+- Modify: `prototype/shared/layout-components.css`
 - Modify: active `page-*.html` skeleton usages as needed
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -113,9 +113,9 @@
 ### Task 1.3: 11px Usage Policy
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-*.html`
+- Modify: `prototype/page-*.html`
 - Modify: `scripts/prototype-design-consistency.test.ts`
-- Read before any token deletion: `DESIGN.md`, `docs/designs/specs/00_ditto_product_criteria.md`, `docs/designs/specs/prototypes/tokens-style.css`
+- Read before any token deletion: `DESIGN.md`, `design/specs/00_ditto_product_criteria.md`, `prototype/tokens-style.css`
 
 **Steps:**
 1. Do not delete `--font-size-11` in this phase; that is a Design Token decision.
@@ -129,8 +129,8 @@
 ### Task 1.4: Glow Budget
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-shell.css`
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/shared/layout-shell.css`
+- Modify: `prototype/shared/layout-components.css`
 - Modify: pages with high glow density: `page-home.html`, `page-instrument-hub.html`, `page-strategy-studio.html`, `page-trading-overview.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -147,8 +147,8 @@
 ### Task 2.1: Promote Command Palette From Suggestions To Action Bus
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.css`
 - Modify representative pages with context actions: `page-home.html`, `page-watchlist.html`, `page-strategy-list.html`, `page-backtest-list.html`, `page-signals-inbox.html`, `page-platform.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
@@ -165,8 +165,8 @@
 ### Task 2.2: Keyboard Shortcuts Overlay
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.css`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Steps:**
@@ -179,8 +179,8 @@
 ### Task 2.3: Context Menu Contract
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.css`
 - Modify representative tables: watchlist, signals inbox, strategy list, orders ledger
 - Test: `scripts/prototype-expert-efficiency.test.ts`
 
@@ -197,7 +197,7 @@
 ### Task 3.1: Define Chart Interaction Contract
 
 **Files:**
-- Create: `docs/contracts/prototype-chart-interactions.md`
+- Create: `contracts/prototype-chart-interactions.md`
 - Modify: `scripts/prototype-design-consistency.test.ts`
 - Read: `package.json`
 
@@ -210,10 +210,10 @@
 ### Task 3.2: Replace Representative Static Charts With Interactive Prototypes
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-result.html`
-- Modify or create shared JS/CSS chart helpers under `docs/designs/specs/prototypes/shared/`
+- Modify: `prototype/page-instrument-hub.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-backtest-result.html`
+- Modify or create shared JS/CSS chart helpers under `prototype/shared/`
 - Test: relevant page prototype tests + visual matrix
 
 **Steps:**
@@ -232,8 +232,8 @@
 ### Task 4.1: Compress Strip Stack Into Two-Layer Trading Context
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify shared collapsible styles if needed: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/page-trading-overview.html`
+- Modify shared collapsible styles if needed: `prototype/shared/layout-components.css`
 - Test: `scripts/page-trading-overview-prototype.test.ts`
 
 **Steps:**
@@ -246,7 +246,7 @@
 ### Task 4.2: Panel Resize Persistence Contract
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 - Modify: `scripts/prototype-interaction-ux-contract.test.ts`
 - Modify representative studio/catalog/ops pages
 
@@ -275,8 +275,8 @@
 ### Task 5.2: Reduced Motion Coverage
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-state.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.css`
+- Modify: `prototype/shared/layout-state.css`
+- Modify: `prototype/shared/prototype-interactions.css`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Steps:**
@@ -304,7 +304,7 @@
 
 **Files:**
 - Modify: `docs/plans/prototype-to-react-enhancement-backlog.md`
-- Modify relevant `docs/contracts/pages/*.json`
+- Modify relevant `contracts/pages/*.json`
 - Read: `src/features/*`
 
 **Steps:**

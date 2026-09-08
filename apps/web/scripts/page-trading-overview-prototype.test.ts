@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-trading-overview.html",
+	"../prototype/page-trading-overview.html",
 );
 const navigationTimeoutMs = 10_000;
 const compactViewports = [

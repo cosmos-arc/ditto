@@ -13,7 +13,7 @@ v1 原型的核心交互问题是 `100vh; overflow: hidden` 锁定视口导致�
 ## Phase 1：Foundation — layout-base.css 共享样式
 
 ### 1.1 body overflow 解锁
-- **文件**: `docs/designs/specs/prototypes/shared/layout-base.css` L22
+- **文件**: `prototype/shared/layout-base.css` L22
 - **改**: `overflow: hidden` → `overflow-y: auto`
 - **影响**: 所有页面。Shell 本身仍 `height: 100vh; overflow: hidden`，不受影响
 
@@ -61,7 +61,7 @@ v1 原型的核心交互问题是 `100vh; overflow: hidden` 锁定视口导致�
 
 ## Phase 2：Home 页面（D3 + D4）— 最复杂
 
-**文件**: `docs/designs/specs/prototypes/page-home.html`
+**文件**: `prototype/page-home.html`
 
 ### 2.1 Shell class 切换
 - L799: `class="shell shell-home"` → `class="shell-v2 shell-home"`
@@ -169,7 +169,7 @@ Phase 5 (已滚动页面) ───────┘
 ## 验证方式
 
 每个页面修改后：
-1. `cd docs/designs/specs/prototypes && python3 -m http.server 8888`
+1. `cd prototype && python3 -m http.server 8888`
 2. 浏览器打开 `http://localhost:8888/page-xxx.html`
 3. 检查项：
    - [ ] 无双滚动条
@@ -186,18 +186,18 @@ Phase 5 (已滚动页面) ───────┘
 
 | 文件 | 变更类型 |
 |---|---|
-| `docs/designs/specs/prototypes/shared/layout-base.css` | 核心变更 |
+| `prototype/shared/layout-base.css` | 核心变更 |
 | `src/styles/design-tokens/tokens-shell.css` | 新增 token |
-| `docs/designs/specs/prototypes/page-home.html` | 最大变更 |
-| `docs/designs/specs/prototypes/page-*-hub.html` (×4) | overflow 变更 |
-| `docs/designs/specs/prototypes/page-strategy-studio.html` | overflow 变更 |
-| `docs/designs/specs/prototypes/page-regime-monitor.html` | overflow 变更 |
-| `docs/designs/specs/prototypes/page-ai-overview.html` | overflow 变更 |
-| `docs/designs/specs/prototypes/page-ai-copilot.html` | overflow 变更 |
-| `docs/designs/specs/prototypes/page-agent-console.html` | overflow 变更 |
-| `docs/designs/specs/prototypes/page-orders-ledger.html` | overflow 变更 |
-| `docs/designs/specs/prototypes/page-risk-center.html` | 验证（Phase 1 自动生效） |
-| `docs/designs/specs/prototypes/page-trading-overview.html` | 验证 |
-| `docs/designs/specs/prototypes/page-research.html` | 验证 |
-| `docs/designs/specs/prototypes/page-signals-inbox.html` | 验证 |
-| `docs/designs/specs/prototypes/page-platform.html` | 验证 |
+| `prototype/page-home.html` | 最大变更 |
+| `prototype/page-*-hub.html` (×4) | overflow 变更 |
+| `prototype/page-strategy-studio.html` | overflow 变更 |
+| `prototype/page-regime-monitor.html` | overflow 变更 |
+| `prototype/page-ai-overview.html` | overflow 变更 |
+| `prototype/page-ai-copilot.html` | overflow 变更 |
+| `prototype/page-agent-console.html` | overflow 变更 |
+| `prototype/page-orders-ledger.html` | overflow 变更 |
+| `prototype/page-risk-center.html` | 验证（Phase 1 自动生效） |
+| `prototype/page-trading-overview.html` | 验证 |
+| `prototype/page-research.html` | 验证 |
+| `prototype/page-signals-inbox.html` | 验证 |
+| `prototype/page-platform.html` | 验证 |

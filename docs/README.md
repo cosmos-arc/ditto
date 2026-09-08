@@ -6,6 +6,12 @@
 
 ## 🧭 活跃文档导航
 
+### 产品与模块入口
+
+- [Web 文档与设计源](../apps/web/docs/README.md)
+- [Backend 配置](../apps/backend/docs/configuration.md)
+- [Data 手册](../packages/data/docs/data-manual.md) · [Features 设计](../packages/features/docs/design/unified-feature-factor-engine/README.md)
+
 ### 架构与边界
 - [架构规范索引](architecture/README.md) — 当前包归属、边界约束
 - [Agent 快速参考](architecture/agent-context-pack.md) — 依赖图、边界规则、关键路径
@@ -14,8 +20,8 @@
 - [架构决策记录 (ADR)](adr/README.md)
 
 ### 操作手册
-- [配置系统](configuration.md) · [数据集手册](data-manual.md) · [运维手册](ops-manual.md)
-- [数据集晋级治理](operations/dataset-promotion.md) · [因子 IC 诊断](operations/factor-ic-diagnosis.md)
+- [配置系统](../apps/backend/docs/configuration.md) · [数据集手册](../packages/data/docs/data-manual.md) · [运维手册](ops-manual.md)
+- [数据集晋级治理](../packages/data/docs/dataset-promotion.md) · [因子 IC 诊断](../packages/features/docs/factor-ic-diagnosis.md)
 
 ### 工程约定
 - [测试指南](engineering/testing.md) · [Claude/Codex/ZCode Agent Harness](engineering/agent-harness.md)
@@ -48,7 +54,7 @@
 - [Yahoo / Alpha Vantage 调研](research/yahoo-alpha-vantage-data-research.md)
 
 ### 因子引擎设计
-- [Unified Feature/Factor Engine](design/unified-feature-factor-engine/README.md) — 表达式编译、物化、IC、PIT
+- [Unified Feature/Factor Engine](../packages/features/docs/design/unified-feature-factor-engine/README.md) — 表达式编译、物化、IC、PIT
 
 ## 📦 归档区
 

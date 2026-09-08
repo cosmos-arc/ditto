@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-markets-calendar
+  Edition: v1
+  Generated: 2026-04-12
+
+  Tabs: 0 (Calendar 无 tab 系统)
+
+  Overlays: 3
+  - overlay-event-detail (Drawer: 事件详情) [covered]
+  - overlay-reminder (Sheet: 日历提醒设置) [covered]
+  - overlay-intelligence (Modal: 跳转 Intelligence) [covered]
+
+  State Variants: 4 groups × 3 states (empty/loading/failed)
+  - calendar-view: loading[covered] empty[covered] failed[covered]
+  - event-list: loading[covered] empty[covered] failed[covered]
+  - economic-timeline: loading[covered] empty[covered] failed[covered]
+  - filter-bar: empty[covered] failed[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="markets">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>市场日历 — Ditto</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> component -> data-viz -> style) -->
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ── Style label for visual comparison ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-8);
+      right: var(--space-8);
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Header subtitle (breadcrumb sub-text) ── */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-tertiary);
+      margin-left: var(--space-8);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Header button group ── */
+    .header-btn-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-btn-group-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-btn-group-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-title-group {
+      display: flex;
+      align-items: baseline;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .filter-chip:focus-visible,
+    .header-action-btn:focus-visible,
+    .header-avatar:focus-visible,
+    .cal-day:focus-visible,
+    .event-row:focus-visible,
+    .timeline-item:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    /* ══════════════════════════════════════════════
+     * Calendar Workspace Layout
+     * ══════════════════════════════════════════════ */
+
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header    header"
+        "rail toolbar toolbar   toolbar"
+        "rail insight separator detail"
+        "rail table   separator detail";
+      contain: paint;
+    }
+
+    .calendar-reading-strip {
+      grid-area: insight;
+      display: grid;
+      grid-template-columns: minmax(14rem, 1.2fr) repeat(4, minmax(0, 1fr));
+      gap: var(--space-8);
+      padding: var(--space-8) var(--density-panel-padding);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-app);
+      min-height: 0;
+    }
+
+    .calendar-reading-item {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+    }
+
+    .calendar-reading-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .calendar-reading-value {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .calendar-legend-scale {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-2);
+      height: 4px;
+      margin-top: var(--space-2);
+    }
+
+    .calendar-legend-stop {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+    }
+
+    .calendar-legend-stop[data-step="high"] { background: color-mix(in oklch, var(--risk-high-fg) 38%, transparent); }
+    .calendar-legend-stop[data-step="medium"] { background: color-mix(in oklch, var(--system-degraded-fg) 34%, transparent); }
+    .calendar-legend-stop[data-step="low"] { background: color-mix(in oklch, var(--text-tertiary) 30%, transparent); }
+    .calendar-legend-stop[data-step="actual"] { background: color-mix(in oklch, var(--market-up-fg) 30%, var(--market-down-fg) 18%); }
+
+    /* ── Workspace body: two-column split ── */
+    .workspace-body {
+      grid-area: table;
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      min-height: 0;
+    }
+
+    .workspace-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border-subtle);
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .workspace-right {
+      grid-area: detail;
+      width: auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    /* ── View switcher tabs (inside header area) ── */
+    .view-switcher {
+      display: flex;
+      gap: var(--space-2);
+      padding: var(--space-4) 0;
+    }
+
+    .view-switcher-btn {
+      padding: var(--space-4) var(--space-10);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-radius: var(--radius-4);
+      line-height: 1.4;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .view-switcher-btn:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .view-switcher input:checked + .view-switcher-btn {
+      color: var(--text-primary);
+      background: color-mix(in oklch, var(--brand-accent) 10%, transparent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 25%, transparent);
+    }
+
+    .view-switcher input:focus-visible + .view-switcher-btn {
+
+      outline: 2px solid var(--interaction-focus-ring);
+
+      outline-offset: 2px;
+
+    }
+
+    .shell-catalog:has(#calendar-view-list:checked) .calendar-section {
+      display: none;
+    }
+
+    .shell-catalog:has(#calendar-view-list:checked) .event-list-section {
+      flex: 1 1 auto;
+      max-height: none;
+      border-top: 0;
+    }
+
+    /* ── Date range picker (simplified) ── */
+    .date-range {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .date-range-label {
+      color: var(--text-tertiary);
+    }
+
+    .date-range-nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .date-range-nav-btn {
+      background: none;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-4);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .date-range-nav-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .date-range-value {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      min-width: 8rem;
+      text-align: center;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Calendar Grid (Month View)
+     * ══════════════════════════════════════════════ */
+
+    .calendar-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: var(--density-panel-padding);
+      min-height: 0;
+    }
+
+    .calendar-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+
+    .calendar-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .calendar-nav-btn {
+      background: none;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-4);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .calendar-nav-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .calendar-month-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      min-width: 6rem;
+      text-align: center;
+    }
+
+    /* ── Weekday headers ── */
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0;
+      margin-bottom: var(--space-4);
+    }
+
+    .cal-weekday {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-align: center;
+      padding: var(--space-4) 0;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Calendar grid: 7-column ── */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      flex: 1;
+      min-height: 0;
+      border: 1px solid var(--border-subtle);
+      background: var(--border-subtle);
+    }
+
+    /* ── Calendar day cell ── */
+    .cal-day {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-6);
+      min-height: 52px;
+      border-radius: 0;
+      background: var(--surface-app);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .cal-day:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .cal-day.outside {
+      opacity: 0.3;
+    }
+
+    .cal-day.today {
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+    .cal-day.today .cal-day-num {
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .cal-day.selected {
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
+    }
+
+    .cal-day[data-impact="high"] {
+      box-shadow: inset 0 0 0 1px var(--border-strong);
+    }
+
+    .cal-day[data-impact="medium"] {
+      box-shadow: inset 0 0 0 1px var(--border-default);
+    }
+
+    .cal-day-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      min-height: 16px;
+    }
+
+    .cal-day-num {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    .cal-day.outside .cal-day-num {
+      color: var(--text-disabled);
+    }
+
+    /* ── Event dots on calendar days ── */
+    .cal-dots {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .cal-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .cal-dot--ipo { background: var(--brand-accent); }
+    .cal-dot--lockup { background: var(--market-down-fg); }
+    .cal-dot--option { background: var(--system-degraded-fg); }
+    .cal-dot--future { background: color-mix(in oklch, var(--brand-accent) 60%, var(--system-degraded-fg)); }
+    .cal-dot--economic { background: var(--system-healthy-fg); }
+    .cal-dot--dividend { background: color-mix(in oklch, var(--system-healthy-fg) 70%, var(--brand-accent)); }
+    .cal-dot--earnings { background: color-mix(in oklch, var(--market-down-fg) 50%, var(--system-healthy-fg)); }
+
+    .cal-event-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .cal-event-tag {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      min-width: 0;
+      padding: 1px var(--space-4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-3);
+      background: var(--surface-panel-base);
+      color: var(--text-secondary);
+      font-size: var(--font-size-10);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cal-event-tag[data-event-type="ipo"] { color: var(--brand-accent); }
+    .cal-event-tag[data-event-type="lockup"] { color: var(--market-down-fg); }
+    .cal-event-tag[data-event-type="option"],
+    .cal-event-tag[data-event-type="future"] { color: var(--system-degraded-fg); }
+    .cal-event-tag[data-event-type="economic"],
+    .cal-event-tag[data-event-type="dividend"] { color: var(--system-healthy-fg); }
+    .cal-event-tag[data-event-type="earnings"] { color: color-mix(in oklch, var(--market-down-fg) 55%, var(--system-healthy-fg)); }
+
+    .cal-impact-symbol {
+      flex-shrink: 0;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Event List (v1.1)
+     * ══════════════════════════════════════════════ */
+
+    .event-list-section {
+      border-top: 1px solid var(--border-subtle);
+      padding: var(--density-panel-padding);
+      overflow-y: auto;
+      flex: 0 0 min(34%, 300px);
+      max-height: min(34%, 300px);
+    }
+
+    .event-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+
+    .event-list-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .event-list-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ── Event row ── */
+    .event-row {
+      display: grid;
+      grid-template-columns: 42px max-content minmax(0, 1fr) 58px;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .event-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .event-date {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .event-date-day {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      display: block;
+    }
+
+    .event-type-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-12);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .event-type-badge--ipo {
+      background: color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      color: var(--brand-accent);
+    }
+    .event-type-badge--lockup {
+      background: color-mix(in oklch, var(--market-down-fg) 12%, transparent);
+      color: var(--market-down-fg);
+    }
+    .event-type-badge--option {
+      background: color-mix(in oklch, var(--system-degraded-fg) 12%, transparent);
+      color: var(--system-degraded-fg);
+    }
+    .event-type-badge--future {
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      color: color-mix(in oklch, var(--brand-accent) 60%, var(--system-degraded-fg));
+    }
+    .event-type-badge--economic {
+      background: color-mix(in oklch, var(--system-healthy-fg) 12%, transparent);
+      color: var(--system-healthy-fg);
+    }
+    .event-type-badge--dividend {
+      background: color-mix(in oklch, var(--system-healthy-fg) 10%, transparent);
+      color: color-mix(in oklch, var(--system-healthy-fg) 70%, var(--brand-accent));
+    }
+    .event-type-badge--earnings {
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+      color: color-mix(in oklch, var(--market-down-fg) 50%, var(--system-healthy-fg));
+    }
+
+    .event-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .event-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .event-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .event-importance {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      justify-content: flex-end;
+    }
+
+    .importance-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .importance-dot--high { background: var(--risk-high-fg); }
+    .importance-dot--medium { background: var(--system-degraded-fg); }
+    .importance-dot--low { background: var(--text-disabled); }
+
+    .importance-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .impact-symbol {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      line-height: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Economic Data Timeline (Right Panel)
+     * ══════════════════════════════════════════════ */
+
+    .timeline-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .timeline-header {
+      padding: var(--space-10) var(--space-20) var(--space-10) var(--density-panel-padding);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .timeline-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .timeline-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .timeline-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-10) var(--space-20) var(--space-10) var(--density-panel-padding);
+    }
+
+    /* ── Timeline item ── */
+    .timeline-item {
+      position: relative;
+      padding: var(--space-8) var(--space-24);
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .timeline-item:last-child {
+      border-bottom: none;
+    }
+    .timeline-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+      margin: 0;
+      padding-left: var(--space-24);
+      padding-right: var(--space-24);
+      border-radius: var(--radius-4);
+    }
+
+    .timeline-item-date {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+      margin-bottom: var(--space-2);
+    }
+
+    .timeline-item-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
+    }
+
+    .timeline-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-6);
+    }
+
+    .timeline-impact-symbol {
+      flex-shrink: 0;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .timeline-item-region {
+      display: inline-flex;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-12);
+      background: var(--interaction-hover-subtle-bg);
+      margin-bottom: var(--space-6);
+    }
+
+    /* ── Data comparison row ── */
+    .timeline-data {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .timeline-data-cell {
+      flex: 1;
+    }
+
+    .timeline-data-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-bottom: 1px;
+    }
+
+    .timeline-data-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    .timeline-data-value.text-up { color: var(--market-up-fg); }
+    .timeline-data-value.text-down { color: var(--market-down-fg); }
+
+    .timeline-data-sep {
+      color: var(--text-disabled);
+      font-size: var(--font-size-12);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Overlay: 事件详情 Drawer */
+    :root:has(#overlay-event-detail:checked)
+      [data-overlay="overlay-event-detail"] { display: flex; }
+
+    /* Overlay: 日历提醒设置 Sheet */
+    :root:has(#overlay-reminder:checked)
+      [data-overlay="overlay-reminder"] { display: flex; }
+
+    /* Overlay: 跳转 Intelligence Modal */
+    :root:has(#overlay-intelligence:checked)
+      [data-overlay="overlay-intelligence"] { display: flex; }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-16);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    /* ── Overlay input fields ── */
+    .ov-input {
+      width: 100%;
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: var(--surface-muted);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+    }
+    .ov-input:focus {
+      outline: none;
+      border-color: var(--brand-accent);
+      box-shadow: 0 0 0 2px color-mix(in oklch, var(--brand-accent) 20%, transparent);
+    }
+
+    /* ── Checkbox/radio labels ── */
+    .ov-check-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .ov-check-label input[type="checkbox"],
+    .ov-check-label input[type="radio"] {
+      accent-color: var(--brand-accent);
+    }
+
+    .ov-radio-group {
+      display: flex;
+      gap: var(--space-6);
+      margin-bottom: var(--space-12);
+    }
+
+    .ov-label-btn { cursor: pointer; }
+
+    /* ── Gallery hint text ── */
+    .gallery-hint {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-top: var(--space-4);
+      display: block;
+    }
+    .gallery-hint--inline {
+      padding: var(--space-4);
+    }
+    .gallery-hint--sm {
+      font-size: var(--font-size-10);
+    }
+    .gallery-hint--mt8 {
+      margin-top: var(--space-8);
+    }
+
+    /* ── State variant containers ── */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* ── Utility classes ── */
+    .text-up { color: var(--market-up-fg); }
+    .text-down { color: var(--market-down-fg); }
+    .text-tertiary { color: var(--text-tertiary); }
+    .text-brand { color: var(--brand-accent); }
+    .text-secondary { color: var(--text-secondary); }
+    .font-medium { font-weight: var(--font-weight-medium); }
+    .flex-1 { flex: 1; }
+    .sv-pad-8 { padding: var(--space-8); }
+    .sv-pad-12 { padding: var(--space-12); }
+    .sv-pad-6-0 { padding: var(--space-6) 0; }
+    .sv-pad-section { padding: var(--space-4) 0 var(--space-8); }
+
+    /* ── Filter toolbar interaction lift ── */
+    .filter-toolbar {
+      position: relative;
+      background: var(--surface-muted);
+    }
+    .filter-toolbar::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in oklch, var(--border-default) 60%, transparent) 20%,
+        color-mix(in oklch, var(--border-default) 60%, transparent) 80%,
+        transparent
+      );
+      pointer-events: none;
+    }
+
+    /* ── Filter chip: refined hover micro-feedback ── */
+    .filter-chip {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .filter-chip:hover {
+      background: var(--interaction-hover-strong-bg);
+      border-color: var(--border-default);
+    }
+    .filter-chip.active {
+      position: relative;
+    }
+    .filter-chip.active::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
+      pointer-events: none;
+    }
+
+    /* ── Header button hover ── */
+    .header-action-btn {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .header-action-btn:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Detail panel brand touchpoint ── */
+    .overlay-surface::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--space-3);
+      height: 100%;
+      background: var(--brand-accent);
+      border-radius: 0 var(--radius-2) var(--radius-2) 0;
+      opacity: 0.6;
+    }
+
+    /* ── Related instruments in event detail ── */
+    .related-instruments {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-8);
+    }
+    .related-instrument {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-12);
+      background: var(--interaction-hover-subtle-bg);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .related-instrument:hover {
+      background: var(--interaction-hover-strong-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Event detail description ── */
+    .event-detail-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .cal-day { transition: none !important; }
+      .event-row { transition: none !important; }
+      .timeline-item { transition: none !important; }
+      .filter-chip { transition: none !important; }
+      .header-action-btn { transition: none !important; }
+      .view-switcher-btn { transition: none !important; }
+      .date-range-nav-btn { transition: none !important; }
+      .calendar-nav-btn { transition: none !important; }
+      .related-instrument { transition: none !important; }
+    }
+    /* ── Inline style cleanup ── */
+    .iv-text-down { color: var(--market-down-fg); }
+    .iv-risk-high { color: var(--risk-high-fg); }
+    .iv-textarea-resize { resize: vertical; }
+    .iv-flex-wrap-gap6-mb8 { display: flex; gap: var(--space-6); flex-wrap: wrap; margin-bottom: var(--space-8); }
+
+    /* ── Animations ── */
+    @keyframes tab-reveal {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .calendar-reading-item,
+    .calendar-reading-value {
+      min-width: 10rem;
+    }
+
+    .calendar-reading-value {
+      display: block;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+
+  <a class="skip-link" href="#main-content">跳至主要内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — 市场日历 · Compact · A股</div>
+
+  <div class="shell-catalog catalog-shell" data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon active" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header" role="toolbar" aria-label="市场日历工具栏">
+      <div class="header-title-group">
+        <h1 class="header-title">市场日历</h1>
+        <span class="header-subtitle">Markets · Calendar</span>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-btn-group-left">
+        <!-- View switcher -->
+        <div class="view-switcher" role="radiogroup" aria-label="日历视图">
+          <input type="radio" id="calendar-view-month" name="calendar-view" checked class="sr-only">
+          <label for="calendar-view-month" class="view-switcher-btn">月历</label>
+          <input type="radio" id="calendar-view-list" name="calendar-view" class="sr-only">
+          <label for="calendar-view-list" class="view-switcher-btn">列表</label>
+        </div>
+        <!-- Date range -->
+        <div class="date-range">
+          <span class="date-range-label">范围:</span>
+          <div class="date-range-nav">
+            <button class="date-range-nav-btn" aria-label="前一月">&lsaquo;</button>
+            <span class="date-range-value">2026-04</span>
+            <button class="date-range-nav-btn" aria-label="后一月">&rsaquo;</button>
+          </div>
+        </div>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══ Filter Bar ═══ -->
+    <div class="filter-toolbar" data-contract-slot="filter-bar" data-reveal="fade-up" data-reveal-delay="0">
+      <div class="filter-group">
+        <span class="filter-label">事件类型:</span>
+        <button class="filter-chip active" data-tooltip="新股申购">新股申购</button>
+        <button class="filter-chip active" data-tooltip="限售股解禁">限售解禁</button>
+        <button class="filter-chip active" data-tooltip="期权交割日">期权交割</button>
+        <button class="filter-chip active" data-tooltip="股指期货交割">期货交割</button>
+        <button class="filter-chip active" data-tooltip="经济数据发布">经济数据</button>
+        <button class="filter-chip active" data-tooltip="除权除息日">除权除息</button>
+        <button class="filter-chip active" data-tooltip="财报披露窗口">财报</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">重要性:</span>
+        <button class="filter-chip active" data-tooltip="全部重要性等级">全部</button>
+        <button class="filter-chip" data-tooltip="高重要性事件">高</button>
+        <button class="filter-chip" data-tooltip="中重要性事件">中</button>
+        <button class="filter-chip" data-tooltip="低重要性事件">低</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">市场:</span>
+        <button class="filter-chip active" data-tooltip="全部市场">全部</button>
+        <button class="filter-chip" data-tooltip="A股市场">A股</button>
+        <button class="filter-chip" data-tooltip="港股市场">港股</button>
+        <button class="filter-chip" data-tooltip="美股市场">美股</button>
+      </div>
+      <div class="filter-spacer"></div>
+      <button class="btn btn-ghost">重置</button>
+    </div>
+
+    <!-- ═══ Calendar Reading Strip ═══ -->
+    <div class="calendar-reading-strip" data-contract-slot="calendar-reading" data-primary-answer-equivalent data-primary-weight="dominant" data-catalog-task="event-calendar" aria-label="影响范围：未来 10 日市场事件窗口">
+      <div class="calendar-reading-item" data-answer-evidence>
+        <span class="calendar-reading-label">窗口</span>
+        <span class="calendar-reading-value" data-calendar-horizon data-answer-judgment data-answer-metric>未来 10 日 · 7 事件 · 3 关键日</span>
+      </div>
+      <div class="calendar-reading-item" data-answer-evidence>
+        <span class="calendar-reading-label">影响</span>
+        <span class="calendar-reading-value" data-calendar-impact>高影响4 · 中3 · 低0</span>
+      </div>
+      <div class="calendar-reading-item" data-answer-evidence>
+        <span class="calendar-reading-label">颜色</span>
+        <span class="calendar-reading-value" data-calendar-color>红涨绿跌: 公布值偏离</span>
+        <span class="calendar-legend-scale" aria-hidden="true">
+          <span class="calendar-legend-stop" data-step="high"></span>
+          <span class="calendar-legend-stop" data-step="medium"></span>
+          <span class="calendar-legend-stop" data-step="low"></span>
+          <span class="calendar-legend-stop" data-step="actual"></span>
+        </span>
+      </div>
+      <div class="calendar-reading-item">
+        <span class="calendar-reading-label">下一簇</span>
+        <span class="calendar-reading-value">04-17 期权 + 股指双交割</span>
+      </div>
+      <div class="calendar-reading-item">
+        <span class="calendar-reading-label">去向</span>
+        <span class="calendar-reading-value" data-calendar-destination data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看事件详情提醒和 AI">点击事件: 详情 / 提醒 / AI</span>
+      </div>
+    </div>
+
+    <!-- ═══ Workspace Body ═══ -->
+    <div class="workspace-body catalog-main catalog-table" id="main-content" data-contract-slot="main" data-selected-object-region data-secondary-context>
+
+      <!-- ─── Left Panel: Calendar + Event List ─── -->
+      <div class="workspace-left">
+
+        <!-- Calendar Month View -->
+        <div class="calendar-section" data-reveal="fade-up" data-reveal-delay="50">
+          <div class="calendar-header-row">
+            <span class="calendar-title">A 股事件日历</span>
+            <div class="calendar-nav">
+              <button class="calendar-nav-btn" aria-label="前一月">&lsaquo;</button>
+              <span class="calendar-month-label">2026年4月</span>
+              <button class="calendar-nav-btn" aria-label="后一月">&rsaquo;</button>
+            </div>
+          </div>
+
+          <!-- Weekday headers -->
+          <div class="cal-weekdays">
+            <span class="cal-weekday">一</span>
+            <span class="cal-weekday">二</span>
+            <span class="cal-weekday">三</span>
+            <span class="cal-weekday">四</span>
+            <span class="cal-weekday">五</span>
+            <span class="cal-weekday">六</span>
+            <span class="cal-weekday">日</span>
+          </div>
+
+          <!-- Calendar Grid: April 2026 starts on Wednesday -->
+          <div class="cal-grid">
+            <!-- Week 1: Mar 30 - Apr 5 -->
+            <div class="cal-day outside"><span class="cal-day-num">30</span></div>
+            <div class="cal-day outside"><span class="cal-day-num">31</span></div>
+            <div class="cal-day"><span class="cal-day-num">1</span></div>
+            <div class="cal-day"><span class="cal-day-num">2</span></div>
+            <div class="cal-day"><span class="cal-day-num">3</span></div>
+            <div class="cal-day" data-event-count="1" data-impact="medium" data-tooltip="04/04 · 财报披露">
+              <div class="cal-day-head"><span class="cal-day-num">4</span><span class="cal-impact-symbol">◆</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="earnings">财报窗口</span></div>
+            </div>
+            <div class="cal-day"><span class="cal-day-num">5</span></div>
+
+            <!-- Week 2: Apr 6 - Apr 12 -->
+            <div class="cal-day"><span class="cal-day-num">6</span></div>
+            <div class="cal-day"><span class="cal-day-num">7</span></div>
+            <div class="cal-day"><span class="cal-day-num">8</span></div>
+            <div class="cal-day"><span class="cal-day-num">9</span></div>
+            <div class="cal-day"><span class="cal-day-num">10</span></div>
+            <div class="cal-day"><span class="cal-day-num">11</span></div>
+            <div class="cal-day"><span class="cal-day-num">12</span></div>
+
+            <!-- Week 3: Apr 13 - Apr 19 -->
+            <div class="cal-day"><span class="cal-day-num">13</span></div>
+            <div class="cal-day selected" data-row-selection-marker data-event-count="1" data-impact="medium" data-tooltip="04/14 · 新股申购: 华海半导体">
+              <div class="cal-day-head"><span class="cal-day-num">14</span><span class="cal-impact-symbol">◆</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="ipo">新股 华海</span></div>
+            </div>
+            <div class="cal-day" data-event-count="1" data-impact="high" data-tooltip="04/15 · 限售解禁: 宁德时代 ¥45.2亿">
+              <div class="cal-day-head"><span class="cal-day-num">15</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="lockup">解禁 宁德</span></div>
+            </div>
+            <div class="cal-day"><span class="cal-day-num">16</span></div>
+            <div class="cal-day today" data-event-count="2" data-impact="high" data-tooltip="04/17 · 期权交割 + 期货交割">
+              <div class="cal-day-head"><span class="cal-day-num">17</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack">
+                <span class="cal-event-tag" data-event-type="option">期权交割</span>
+                <span class="cal-event-tag" data-event-type="future">IF 交割</span>
+              </div>
+            </div>
+            <div class="cal-day" data-event-count="1" data-impact="high" data-tooltip="04/18 · 经济数据: 一季度GDP">
+              <div class="cal-day-head"><span class="cal-day-num">18</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="economic">GDP 预期</span></div>
+            </div>
+            <div class="cal-day"><span class="cal-day-num">19</span></div>
+
+            <!-- Week 4: Apr 20 - Apr 26 -->
+            <div class="cal-day" data-event-count="1" data-impact="medium" data-tooltip="04/20 · 除权除息: 贵州茅台">
+              <div class="cal-day-head"><span class="cal-day-num">20</span><span class="cal-impact-symbol">◆</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="dividend">茅台除息</span></div>
+            </div>
+            <div class="cal-day"><span class="cal-day-num">21</span></div>
+            <div class="cal-day"><span class="cal-day-num">22</span></div>
+            <div class="cal-day"><span class="cal-day-num">23</span></div>
+            <div class="cal-day"><span class="cal-day-num">24</span></div>
+            <div class="cal-day" data-event-count="1" data-impact="high" data-tooltip="04/25 · 财报: 创业板业绩预告截止">
+              <div class="cal-day-head"><span class="cal-day-num">25</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="earnings">业绩预告</span></div>
+            </div>
+            <div class="cal-day"><span class="cal-day-num">26</span></div>
+
+            <!-- Week 5: Apr 27 - May 3 -->
+            <div class="cal-day"><span class="cal-day-num">27</span></div>
+            <div class="cal-day"><span class="cal-day-num">28</span></div>
+            <div class="cal-day"><span class="cal-day-num">29</span></div>
+            <div class="cal-day"><span class="cal-day-num">30</span></div>
+            <div class="cal-day outside"><span class="cal-day-num">1</span></div>
+            <div class="cal-day outside"><span class="cal-day-num">2</span></div>
+            <div class="cal-day outside"><span class="cal-day-num">3</span></div>
+          </div>
+        </div>
+
+        <!-- Event List -->
+        <div class="event-list-section" data-reveal="fade-up" data-reveal-delay="100">
+          <div class="event-list-header">
+            <span class="event-list-title">事件列表</span>
+            <span class="event-list-count">共 7 个事件</span>
+          </div>
+
+          <!-- Event 1: 新股申购 -->
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="ipo" data-impact="medium" data-reveal="fade-up" data-reveal-delay="120">
+            <div class="event-date">
+              <span class="event-date-day">14</span>
+              04月
+            </div>
+            <span class="event-type-badge event-type-badge--ipo">新股申购</span>
+            <div class="event-info">
+              <div class="event-title">华海半导体</div>
+              <div class="event-subtitle">申购代码: 787XXX</div>
+            </div>
+            <div class="event-importance">
+              <span class="impact-symbol">◆</span>
+              <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
+              <span class="importance-label">中</span>
+            </div>
+          </label>
+
+          <!-- Event 2: 限售解禁 -->
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="lockup" data-impact="high" data-reveal="fade-up" data-reveal-delay="140">
+            <div class="event-date">
+              <span class="event-date-day">15</span>
+              04月
+            </div>
+            <span class="event-type-badge event-type-badge--lockup">限售解禁</span>
+            <div class="event-info">
+              <div class="event-title">宁德时代</div>
+              <div class="event-subtitle">解禁市值: ¥45.2亿</div>
+            </div>
+            <div class="event-importance">
+              <span class="impact-symbol">▲</span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
+              <span class="importance-label">高</span>
+            </div>
+          </label>
+
+          <!-- Event 3: 期权交割日 -->
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="option" data-impact="medium" data-reveal="fade-up" data-reveal-delay="160">
+            <div class="event-date">
+              <span class="event-date-day">17</span>
+              04月
+            </div>
+            <span class="event-type-badge event-type-badge--option">期权交割</span>
+            <div class="event-info">
+              <div class="event-title">沪深300ETF期权交割日</div>
+              <div class="event-subtitle">当月合约到期</div>
+            </div>
+            <div class="event-importance">
+              <span class="impact-symbol">◆</span>
+              <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
+              <span class="importance-label">中</span>
+            </div>
+          </label>
+
+          <!-- Event 4: 股指期货交割 -->
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="future" data-impact="high" data-reveal="fade-up" data-reveal-delay="180">
+            <div class="event-date">
+              <span class="event-date-day">17</span>
+              04月
+            </div>
+            <span class="event-type-badge event-type-badge--future">期货交割</span>
+            <div class="event-info">
+              <div class="event-title">沪深300 IF 交割</div>
+              <div class="event-subtitle">股指期货当月合约到期</div>
+            </div>
+            <div class="event-importance">
+              <span class="impact-symbol">▲</span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
+              <span class="importance-label">高</span>
+            </div>
+          </label>
+
+          <!-- Event 5: 经济数据 -->
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="economic" data-impact="high" data-reveal="fade-up" data-reveal-delay="200">
+            <div class="event-date">
+              <span class="event-date-day">18</span>
+              04月
+            </div>
+            <span class="event-type-badge event-type-badge--economic">经济数据</span>
+            <div class="event-info">
+              <div class="event-title">一季度 GDP</div>
+              <div class="event-subtitle">预期: 5.2%</div>
+            </div>
+            <div class="event-importance">
+              <span class="impact-symbol">▲</span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
+              <span class="importance-label">高</span>
+            </div>
+          </label>
+
+          <!-- Event 6: 除权除息 -->
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="dividend" data-impact="medium" data-reveal="fade-up" data-reveal-delay="220">
+            <div class="event-date">
+              <span class="event-date-day">20</span>
+              04月
+            </div>
+            <span class="event-type-badge event-type-badge--dividend">除权除息</span>
+            <div class="event-info">
+              <div class="event-title">贵州茅台</div>
+              <div class="event-subtitle">每股派息 ¥27.53</div>
+            </div>
+            <div class="event-importance">
+              <span class="impact-symbol">◆</span>
+              <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
+              <span class="importance-label">中</span>
+            </div>
+          </label>
+
+          <!-- Event 7: 财报披露 -->
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="earnings" data-impact="high" data-reveal="fade-up" data-reveal-delay="240">
+            <div class="event-date">
+              <span class="event-date-day">25</span>
+              04月
+            </div>
+            <span class="event-type-badge event-type-badge--earnings">财报</span>
+            <div class="event-info">
+              <div class="event-title">创业板业绩预告截止</div>
+              <div class="event-subtitle">强制披露截止日</div>
+            </div>
+            <div class="event-importance">
+              <span class="impact-symbol">▲</span>
+              <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
+              <span class="importance-label">高</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+    </div><!-- /.workspace-body -->
+
+      <!-- ─── Right Panel: Economic Data Timeline ─── -->
+      <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320" aria-valuetext="调整详情面板宽度 320 像素"></div>
+
+      <div class="workspace-right catalog-detail" id="catalog-detail-panel" data-contract-slot="right-rail" data-selected-object-region data-detail-sticky-summary data-batch-action-bar>
+        <div class="timeline-section" data-reveal="fade-up" data-reveal-delay="150">
+          <div class="timeline-header">
+            <div class="timeline-title">经济数据时间线</div>
+            <div class="timeline-subtitle">即将发布的重要宏观数据</div>
+          </div>
+          <div class="timeline-body">
+
+            <!-- Timeline 1 -->
+            <div class="timeline-item" tabindex="0" data-impact="high" data-reveal="fade-up" data-reveal-delay="200" data-tooltip="社融规模 · 前值 2.42万亿 · 预期 2.80万亿">
+              <div class="timeline-item-date">04-17 周五 09:30</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">中国 3月社会融资规模</div>
+                <span class="timeline-impact-symbol">▲</span>
+              </div>
+              <div class="timeline-item-region">CN</div>
+              <div class="timeline-data">
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">前值</div>
+                  <div class="timeline-data-value">2.42万亿</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">预期</div>
+                  <div class="timeline-data-value text-up dir-up">2.80万亿</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">公布</div>
+                  <div class="timeline-data-value">--</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline 2 -->
+            <div class="timeline-item" tabindex="0" data-impact="high" data-reveal="fade-up" data-reveal-delay="240" data-tooltip="一季度 GDP · 前值 5.4% · 预期 5.2% · 高重要性">
+              <div class="timeline-item-date">04-18 周六 10:00</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">中国 一季度 GDP</div>
+                <span class="timeline-impact-symbol">▲</span>
+              </div>
+              <div class="timeline-item-region">CN</div>
+              <div class="timeline-data">
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">前值</div>
+                  <div class="timeline-data-value">5.4%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">预期</div>
+                  <div class="timeline-data-value text-down dir-down">5.2%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">公布</div>
+                  <div class="timeline-data-value">--</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline 3 -->
+            <div class="timeline-item" tabindex="0" data-impact="medium" data-reveal="fade-up" data-reveal-delay="280" data-tooltip="美国零售销售 · 前值 -0.1% · 预期 +0.3%">
+              <div class="timeline-item-date">04-20 周一 20:30</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">美国 3月零售销售环比</div>
+                <span class="timeline-impact-symbol">◆</span>
+              </div>
+              <div class="timeline-item-region">US</div>
+              <div class="timeline-data">
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">前值</div>
+                  <div class="timeline-data-value text-down dir-down">-0.1%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">预期</div>
+                  <div class="timeline-data-value text-up dir-up">+0.3%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">公布</div>
+                  <div class="timeline-data-value">--</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline 4 -->
+            <div class="timeline-item" tabindex="0" data-impact="medium" data-reveal="fade-up" data-reveal-delay="320" data-tooltip="工业利润同比 · 前值 +3.8% · 预期 +4.2%">
+              <div class="timeline-item-date">04-22 周三 09:30</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">中国 3月工业利润同比</div>
+                <span class="timeline-impact-symbol">◆</span>
+              </div>
+              <div class="timeline-item-region">CN</div>
+              <div class="timeline-data">
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">前值</div>
+                  <div class="timeline-data-value text-up dir-up">+3.8%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">预期</div>
+                  <div class="timeline-data-value text-up dir-up">+4.2%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">公布</div>
+                  <div class="timeline-data-value">--</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline 5 -->
+            <div class="timeline-item" tabindex="0" data-impact="high" data-reveal="fade-up" data-reveal-delay="360" data-tooltip="核心 PCE · 前值 2.8% · 预期 2.6% · 通胀关键指标">
+              <div class="timeline-item-date">04-25 周六 20:30</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">美国 核心 PCE物价指数同比</div>
+                <span class="timeline-impact-symbol">▲</span>
+              </div>
+              <div class="timeline-item-region">US</div>
+              <div class="timeline-data">
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">前值</div>
+                  <div class="timeline-data-value">2.8%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">预期</div>
+                  <div class="timeline-data-value text-down dir-down">2.6%</div>
+                </div>
+                <span class="timeline-data-sep">/</span>
+                <div class="timeline-data-cell">
+                  <div class="timeline-data-label">公布</div>
+                  <div class="timeline-data-value">--</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+  </div><!-- /.shell-catalog -->
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 事件详情 (Drawer 右侧滑出) -->
+    <div class="overlay-backdrop" data-overlay="overlay-event-detail">
+      <label class="overlay-dismiss" for="overlay-event-detail" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="事件详情">
+        <div class="overlay-header">
+          <span class="overlay-title">事件详情</span>
+          <label for="overlay-event-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
+          <h2>限售解禁 — 宁德时代</h2>
+          <div class="event-detail-desc">
+            宁德时代 (300750) 限售股解禁，本次解禁股份为 2023 年定增发行的限售股份，
+            解禁市值约 ¥45.2 亿元。建议关注解禁后短期抛压及对股价的影响。
+          </div>
+
+          <div class="overlay-field">
+            <span class="overlay-field-label">日期</span>
+            <span class="overlay-field-value">2026-04-15</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">时间</span>
+            <span class="overlay-field-value">开盘生效</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">事件类型</span>
+            <span class="overlay-field-value iv-text-down dir-down dir-down">限售解禁</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">重要性</span>
+            <span class="overlay-field-value iv-risk-high">高</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">解禁市值</span>
+            <span class="overlay-field-value">¥45.2 亿</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">解禁股数</span>
+            <span class="overlay-field-value">2,074 万股</span>
+          </div>
+
+          <h2>关联标的</h2>
+          <div class="related-instruments">
+            <span class="related-instrument">300750 宁德时代</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-reminder" class="overlay-btn overlay-btn-secondary ov-label-btn">设置提醒</label>
+            <label for="overlay-intelligence" class="overlay-btn overlay-btn-secondary ov-label-btn">AI 分析</label>
+            <label for="overlay-event-detail" class="overlay-btn overlay-btn-primary ov-label-btn">查看标的</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 日历提醒设置 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-reminder">
+      <label class="overlay-dismiss" for="overlay-reminder" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
+        <div class="overlay-header">
+          <span class="overlay-title">日历提醒设置</span>
+          <label for="overlay-reminder" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
+          <h2>提醒事件</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">事件</span>
+            <span class="overlay-field-value">限售解禁 — 宁德时代</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">日期</span>
+            <span class="overlay-field-value">2026-04-15</span>
+          </div>
+
+          <h2>提醒时间</h2>
+          <div class="ov-radio-group">
+            <label class="ov-check-label">
+              <input type="radio" name="reminder-time" checked > 前一天
+            </label>
+            <label class="ov-check-label">
+              <input type="radio" name="reminder-time" > 前 3 天
+            </label>
+            <label class="ov-check-label">
+              <input type="radio" name="reminder-time" > 前 7 天
+            </label>
+            <label class="ov-check-label">
+              <input type="radio" name="reminder-time" > 自定义
+            </label>
+          </div>
+
+          <h2>提醒方式</h2>
+          <div class="ov-check-list">
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 站内通知
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 浏览器推送
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" > 邮件提醒
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-reminder" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-reminder" class="overlay-btn overlay-btn-primary ov-label-btn">确认设置</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: 跳转 Intelligence (Modal 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-intelligence">
+      <label class="overlay-dismiss" for="overlay-intelligence" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="跳转 Intelligence">
+        <div class="overlay-header">
+          <span class="overlay-title">AI 分析</span>
+          <label for="overlay-intelligence" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
+          <p class="ov-desc-text">
+            将事件信息发送至 AI 分析模块，生成限售解禁对宁德时代股价的影响评估、
+            历史类似事件统计及操作建议。
+          </p>
+
+          <h2>分析提示词</h2>
+          <div class="sv-pad-section">
+            <textarea class="ov-input iv-textarea-resize" rows="4" placeholder="自定义分析提示词...">分析宁德时代 4 月 15 日限售解禁的影响：解禁市值 45.2 亿，解禁股数 2,074 万股，请评估对股价的短期冲击、历史解禁事件后的表现统计、以及建议的操作策略。</textarea>
+          </div>
+
+          <div class="overlay-field">
+            <span class="overlay-field-label">关联事件</span>
+            <span class="overlay-field-value">限售解禁 — 宁德时代</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">目标模块</span>
+            <span class="overlay-field-value">Intelligence · Copilot</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-intelligence" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-intelligence" class="overlay-btn overlay-btn-primary ov-label-btn">开始分析</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.overlays -->
+
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+
+  </section>
+
+  <!-- ═══ States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+
+      <!-- Group 1: calendar-view -->
+      <div class="gallery-group" data-component="calendar-view">
+        <div class="gallery-group__label">calendar-view</div>
+        <div class="gallery-cards">
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar--lg"></div>
+                  <div class="skeleton skeleton-bar-md"></div>
+                  <div class="skeleton skeleton-bar-md"></div>
+                  <div class="skeleton skeleton-bar-md"></div>
+                  <div class="skeleton skeleton-bar-md"></div>
+                  <div class="skeleton skeleton-bar-md"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">&#128197;</div>
+                  <div class="state-empty-title">本月暂无事件</div>
+                  <div class="state-empty-desc">当前月份没有 A 股市场事件，请切换到其他月份查看</div>
+                  <button class="state-empty-cta">切换到下月</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">日历数据加载失败</div>
+                  <div class="state-error-desc">无法获取日历事件数据，可能是数据服务异常或网络连接中断</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Group 2: event-list -->
+      <div class="gallery-group" data-component="event-list">
+        <div class="gallery-group__label">event-list</div>
+        <div class="gallery-cards">
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar-md"></div>
+                  <div class="skeleton skeleton-bar--sm"></div>
+                  <div class="skeleton skeleton-bar--sm"></div>
+                  <div class="skeleton skeleton-bar--sm"></div>
+                  <div class="skeleton skeleton-bar--sm"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">&#128203;</div>
+                  <div class="state-empty-title">暂无匹配事件</div>
+                  <div class="state-empty-desc">当前筛选条件下没有匹配的事件，请尝试调整筛选条件</div>
+                  <button class="state-empty-cta">重置筛选条件</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">事件列表加载失败</div>
+                  <div class="state-error-desc">无法获取事件列表数据，请检查网络连接或刷新页面重试</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Group 3: economic-timeline -->
+      <div class="gallery-group" data-component="economic-timeline">
+        <div class="gallery-group__label">economic-timeline</div>
+        <div class="gallery-cards">
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar-md"></div>
+                  <div class="skeleton skeleton-bar--sm"></div>
+                  <div class="skeleton skeleton-bar--sm"></div>
+                  <div class="skeleton skeleton-bar--sm"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">&#128200;</div>
+                  <div class="state-empty-title">暂无经济数据发布</div>
+                  <div class="state-empty-desc">当前时间范围内没有即将发布的经济数据，请扩大查询范围</div>
+                  <button class="state-empty-cta">扩大范围</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">经济数据加载失败</div>
+                  <div class="state-error-desc">无法获取经济日历数据，可能是数据服务异常</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Group 4: filter-bar -->
+      <div class="gallery-group" data-component="filter-bar">
+        <div class="gallery-group__label">filter-bar</div>
+        <div class="gallery-cards">
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="sv-pad-12">
+                  <div class="iv-flex-wrap-gap6-mb8">
+                    <span class="filter-chip">新股申购</span>
+                    <span class="filter-chip">限售解禁</span>
+                    <span class="filter-chip">期权交割</span>
+                    <span class="filter-chip">期货交割</span>
+                    <span class="filter-chip">经济数据</span>
+                    <span class="filter-chip">除权除息</span>
+                    <span class="filter-chip">财报</span>
+                  </div>
+                  <span class="gallery-hint">↑ 未选择任何筛选条件 — 所有事件类型默认全选</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">筛选条件加载失败</div>
+                  <div class="state-error-desc">无法获取事件类型配置，请检查网络连接或刷新页面重试</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层设计</div>
+        <div class="gallery-cards">
+
+          <!-- Overlay 1: 事件详情 (Drawer) -->
+          <div class="gallery-card" data-overlay-ref="overlay-event-detail">
+            <div class="gallery-card__label">事件详情 (Drawer)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="事件详情">
+                <div class="overlay-header">
+                  <span class="overlay-title">事件详情</span>
+                </div>
+                <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
+                  <h2>限售解禁 — 宁德时代</h2>
+                  <div class="event-detail-desc">
+                    宁德时代 (300750) 限售股解禁，本次解禁股份为 2023 年定增发行的限售股份，
+                    解禁市值约 ¥45.2 亿元。
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">日期</span>
+                    <span class="overlay-field-value">2026-04-15</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">事件类型</span>
+                    <span class="overlay-field-value iv-text-down dir-down dir-down">限售解禁</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">重要性</span>
+                    <span class="overlay-field-value iv-risk-high">高</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">解禁市值</span>
+                    <span class="overlay-field-value">¥45.2 亿</span>
+                  </div>
+                  <h2>关联标的</h2>
+                  <div class="related-instruments">
+                    <span class="related-instrument">300750 宁德时代</span>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">设置提醒</button>
+                    <button class="overlay-btn overlay-btn-secondary">AI 分析</button>
+                    <button class="overlay-btn overlay-btn-primary">查看标的</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 2: 日历提醒设置 (Sheet) -->
+          <div class="gallery-card" data-overlay-ref="overlay-reminder">
+            <div class="gallery-card__label">日历提醒设置 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
+                <div class="overlay-header">
+                  <span class="overlay-title">日历提醒设置</span>
+                </div>
+                <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
+                  <h2>提醒事件</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">事件</span>
+                    <span class="overlay-field-value">限售解禁 — 宁德时代</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">日期</span>
+                    <span class="overlay-field-value">2026-04-15</span>
+                  </div>
+                  <h2>提醒时间</h2>
+                  <div class="ov-radio-group">
+                    <label class="ov-check-label">
+                      <input type="radio" name="gallery-reminder-time" checked > 前一天
+                    </label>
+                    <label class="ov-check-label">
+                      <input type="radio" name="gallery-reminder-time" > 前 3 天
+                    </label>
+                    <label class="ov-check-label">
+                      <input type="radio" name="gallery-reminder-time" > 前 7 天
+                    </label>
+                  </div>
+                  <h2>提醒方式</h2>
+                  <div class="ov-check-list">
+                    <label class="ov-check-label">
+                      <input type="checkbox" checked > 站内通知
+                    </label>
+                    <label class="ov-check-label">
+                      <input type="checkbox" checked > 浏览器推送
+                    </label>
+                    <label class="ov-check-label">
+                      <input type="checkbox" > 邮件提醒
+                    </label>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">确认设置</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 3: 跳转 Intelligence (Modal) -->
+          <div class="gallery-card" data-overlay-ref="overlay-intelligence">
+            <div class="gallery-card__label">跳转 Intelligence (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="跳转 Intelligence">
+                <div class="overlay-header">
+                  <span class="overlay-title">AI 分析</span>
+                </div>
+                <div class="overlay-body" data-reveal="fade-up" data-reveal-delay="0">
+                  <p class="ov-desc-text">
+                    将事件信息发送至 AI 分析模块，生成影响评估及操作建议。
+                  </p>
+                  <h2>分析提示词</h2>
+                  <div class="sv-pad-section">
+                    <textarea class="ov-input iv-textarea-resize" rows="3" placeholder="自定义分析提示词..." readonly>分析宁德时代 4 月 15 日限售解禁的影响：解禁市值 45.2 亿，解禁股数 2,074 万股，请评估对股价的短期冲击及操作建议。</textarea>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">关联事件</span>
+                    <span class="overlay-field-value">限售解禁 — 宁德时代</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">目标模块</span>
+                    <span class="overlay-field-value">Intelligence · Copilot</span>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">开始分析</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-event-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-reminder" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-intelligence" class="overlay-radio sr-only">
+</body>
+</html>

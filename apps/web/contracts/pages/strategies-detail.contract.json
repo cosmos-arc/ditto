@@ -1,0 +1,321 @@
+{
+  "id": "strategies-detail",
+  "version": 3,
+  "status": "contract-ready",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-08-29",
+  "route": "/research/strategies/$id",
+  "pagePattern": "object-hub",
+  "shellFamily": "object-hub",
+  "prototypeRef": "prototype/page-strategies-detail.html",
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#19-strategy-detail"
+  ],
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/strategy",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/strategy/components/info-level-annotations.test.tsx",
+      "src/features/strategy/components/strategy-detail-components.test.tsx",
+      "src/features/strategy/components/strategy-detail-page-workspace.test.tsx",
+      "src/features/strategy/components/strategy-version-detail.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "StrategyDetailPage"
+    ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/strategies/{strategy_id}",
+      "/api/v1/strategies/{strategy_id}/versions",
+      "/api/v1/strategies/{strategy_id}/versions/{version}",
+      "/api/v1/strategies/{strategy_id}/active"
+    ],
+    "writePaths": [
+      "/api/v1/strategies",
+      "/api/v1/strategies/{strategy_id}/versions/{version}/deprecate",
+      "/api/v1/strategies/{strategy_id}/versions/{version}/reactivate"
+    ],
+    "mockFallback": false
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "header",
+      "required": true,
+      "infoLevel": "l0",
+      "prototypeSelector": ".shell-header",
+      "reactSelector": "[data-slot='header']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.11
+      },
+      "a11yRole": "banner"
+    },
+    {
+      "name": "meta",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": ".hub-meta",
+      "reactSelector": "[data-testid='strategy-detail-meta']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 8,
+        "widthRatio": 0.03,
+        "heightRatio": 0.03
+      },
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "tabs",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": ".hub-tabs",
+      "reactSelector": "[data-testid='strategy-detail-tabs']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 8,
+        "widthRatio": 0.03,
+        "heightRatio": 0.03
+      },
+      "a11yRole": "navigation",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": "[data-contract-slot='main']",
+      "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 8,
+        "widthRatio": 0.03,
+        "heightRatio": 0.03
+      },
+      "a11yRole": "main"
+    },
+    {
+      "name": "bottom",
+      "required": true,
+      "infoLevel": "l2",
+      "prototypeSelector": ".hub-bottom",
+      "reactSelector": "[data-testid='strategy-detail-bottom']",
+      "layoutStrategy": "content-driven",
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.03
+      },
+      "a11yRole": "region",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "selected-overview-tab",
+      "selected-version-tab",
+      "selected-factor-tab",
+      "performance-evidence-missing",
+      "backtest-planning-handoff",
+      "copy-draft-open",
+      "deprecation-command-open",
+      "rollback-governance-open"
+    ]
+  },
+  "interactions": [
+    {
+      "id": "edit-strategy",
+      "trigger": "edit-strategy-action",
+      "affectedSlots": [
+        "meta",
+        "main"
+      ],
+      "expectedBehavior": "opens Strategy Studio for the exact strategy identity"
+    },
+    {
+      "id": "plan-strategy-backtest",
+      "trigger": "submit-backtest-action",
+      "affectedSlots": [
+        "meta",
+        "main"
+      ],
+      "expectedBehavior": "hands the exact strategy id and version to experiment planning without directly creating a run"
+    },
+    {
+      "id": "copy-strategy-draft",
+      "trigger": "copy-strategy-action",
+      "affectedSlots": [
+        "meta",
+        "main"
+      ],
+      "expectedBehavior": "reads the source server definition and creates an independent draft with an idempotency key"
+    },
+    {
+      "id": "deprecate-strategy-version",
+      "trigger": "deprecate-strategy-action",
+      "affectedSlots": [
+        "meta",
+        "main"
+      ],
+      "expectedBehavior": "records actor and reason through the append-only deprecate command and preserves history"
+    },
+    {
+      "id": "govern-strategy-rollback",
+      "trigger": "rollback-strategy-action",
+      "affectedSlots": [
+        "tabs",
+        "main",
+        "bottom"
+      ],
+      "expectedBehavior": "opens version governance; reactivation requires a current pointer revision and exact confirmation"
+    }
+  ],
+  "flags": {
+    "hasStatusBar": false,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-08-29",
+    "viewport": "1536x900",
+    "baseline": {
+      "meta": {
+        "width": 1480,
+        "height": 36,
+        "strategy": "content-driven"
+      },
+      "tabs": {
+        "width": 1480,
+        "height": 45,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1480,
+        "height": 707,
+        "strategy": "content-driven"
+      },
+      "bottom": {
+        "width": 1480,
+        "height": 36,
+        "strategy": "content-driven"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.065
+  },
+  "overlays": [
+    {
+      "id": "strategies-detail.deprecate-strategy",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-delete-strategy",
+      "reactComponent": "StrategyDetailOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategies-detail.submit-backtest",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-submit-backtest",
+      "reactComponent": "StrategyDetailOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategies-detail.copy-strategy",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-copy-strategy",
+      "reactComponent": "StrategyDetailOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategies-detail.version-rollback",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-version-rollback",
+      "reactComponent": "StrategyDetailOverlays",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

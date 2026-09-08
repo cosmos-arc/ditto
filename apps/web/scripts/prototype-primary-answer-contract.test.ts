@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const prototypesDir = join(root, "prototype");
 const sharedLayoutComponentsCss = join(prototypesDir, "shared/layout-components.css");
 
 const activePrototypeFiles = readdirSync(prototypesDir).filter(

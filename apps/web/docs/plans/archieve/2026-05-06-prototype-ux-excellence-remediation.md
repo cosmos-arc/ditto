@@ -53,11 +53,11 @@
 - 不影响 prefers-color-scheme
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-state.css` — 添加 `.data-updated` keyframe + class
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js` — DataCounter 模块增强，自动检测 `data-contract-slot` 内的 numeric 元素
-- Modify: `docs/designs/specs/prototypes/page-home.html` — Decision Card metric-values 应用 `.data-updated`
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html` — object-price 应用 `.data-updated`
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html` — market-card-index 应用 `.data-updated`
+- Modify: `prototype/shared/layout-state.css` — 添加 `.data-updated` keyframe + class
+- Modify: `prototype/shared/prototype-interactions.js` — DataCounter 模块增强，自动检测 `data-contract-slot` 内的 numeric 元素
+- Modify: `prototype/page-home.html` — Decision Card metric-values 应用 `.data-updated`
+- Modify: `prototype/page-instrument-hub.html` — object-price 应用 `.data-updated`
+- Modify: `prototype/page-cross-market.html` — market-card-index 应用 `.data-updated`
 
 **Steps:**
 1. 在 `layout-state.css` 中定义 `@keyframes data-tick`：
@@ -87,8 +87,8 @@
 - `prefers-reduced-motion` 下脉冲停止，圆点保持静态
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-state.css` — 添加 `.sparkline-dot-pulse` keyframe
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css` — `.sparkline` 伪元素或 SVG circle 样式
+- Modify: `prototype/shared/layout-state.css` — 添加 `.sparkline-dot-pulse` keyframe
+- Modify: `prototype/shared/layout-components.css` — `.sparkline` 伪元素或 SVG circle 样式
 - Modify: 使用 sparkline 的页面 — 添加末端脉冲圆点
 
 **Steps:**
@@ -116,8 +116,8 @@
 - 带 `aria-label="数据连接状态: 正常"` 的可访问性标注
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-shell.css` — header utility bar 中 `.header-led` 位置
-- Modify: `docs/designs/specs/prototypes/shared/layout-state.css` — LED 脉冲动画（复用 `dot-pulse`）
+- Modify: `prototype/shared/layout-shell.css` — header utility bar 中 `.header-led` 位置
+- Modify: `prototype/shared/layout-state.css` — LED 脉冲动画（复用 `dot-pulse`）
 - Modify: 所有 `page-*.html` — header utility area 添加 LED 元素
 
 **Steps:**
@@ -152,9 +152,9 @@
 - 移动端（<1024px）降级为 4 列
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/page-home.html` — `.global-pulse` 重构
-- Modify: `docs/designs/specs/prototypes/shared/mock-data.js` — 补充 sparkline 数据
-- Read: `docs/designs/specs/prototypes/shared/layout-components.css` — 复用 `.card-sparkline` 模式
+- Modify: `prototype/page-home.html` — `.global-pulse` 重构
+- Modify: `prototype/shared/mock-data.js` — 补充 sparkline 数据
+- Read: `prototype/shared/layout-components.css` — 复用 `.card-sparkline` 模式
 
 **Steps:**
 1. 重构 `.global-pulse-item` CSS：
@@ -178,9 +178,9 @@
 - Risk level 文字替换为 BulletGraph 微型条
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/page-home.html` — `.decision-card` 样式调整
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css` — `.decision-card-judgment` 字号
-- Read: `docs/designs/specs/prototypes/shared/prototype-interactions.js` — BulletGraph 模块
+- Modify: `prototype/page-home.html` — `.decision-card` 样式调整
+- Modify: `prototype/shared/layout-components.css` — `.decision-card-judgment` 字号
+- Read: `prototype/shared/prototype-interactions.js` — BulletGraph 模块
 
 **Steps:**
 1. 在 tokens-style.css 中确认或添加 `--font-size-20: 1.25rem`（设计 token 变更，需遵循审批流程）
@@ -207,9 +207,9 @@
 - Header utility bar 显示未读告警 badge 计数
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/page-home.html` — alerts 区域动画
-- Modify: `docs/designs/specs/prototypes/shared/layout-state.css` — `@keyframes alert-slide-in` + `alert-flash-border`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js` — 新增 `AlertStream` 模块或扩展 `ScrollReveal`
+- Modify: `prototype/page-home.html` — alerts 区域动画
+- Modify: `prototype/shared/layout-state.css` — `@keyframes alert-slide-in` + `alert-flash-border`
+- Modify: `prototype/shared/prototype-interactions.js` — 新增 `AlertStream` 模块或扩展 `ScrollReveal`
 
 **Steps:**
 1. 定义告警动画 keyframes：
@@ -244,8 +244,8 @@
 - 支持 `⌘[` / `⌘]` 键盘后退/前进
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-shell.css` — `.header-breadcrumb` 样式
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js` — KeyboardShortcuts 扩展
+- Modify: `prototype/shared/layout-shell.css` — `.header-breadcrumb` 样式
+- Modify: `prototype/shared/prototype-interactions.js` — KeyboardShortcuts 扩展
 - Modify: 代表性页面（Home, Cross-Market, Instrument Hub, Trading Overview）— 添加 breadcrumb HTML
 
 **Steps:**
@@ -280,7 +280,7 @@
 - 悬停行上下 divider 升级为 `--border-default`
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css` — data table 行样式
+- Modify: `prototype/shared/layout-components.css` — data table 行样式
 
 **Steps:**
 1. 添加表格行悬停增强：
@@ -309,10 +309,10 @@
 - Context bar / Scope strip 的 frosted 处理同理
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html` — header 覆盖
-- Modify: `docs/designs/specs/prototypes/page-factor-analysis.html` — header 覆盖
-- Modify: `docs/designs/specs/prototypes/page-strategies-detail.html` — header 覆盖
-- Read: `docs/designs/specs/prototypes/shared/layout-shell.css` — 默认 frosted 行为
+- Modify: `prototype/page-instrument-hub.html` — header 覆盖
+- Modify: `prototype/page-factor-analysis.html` — header 覆盖
+- Modify: `prototype/page-strategies-detail.html` — header 覆盖
+- Read: `prototype/shared/layout-shell.css` — 默认 frosted 行为
 
 **Steps:**
 1. Hub 类页面（instrument-hub, factor-analysis, strategies-detail, backtest-result）在页面 `<style>` 中覆盖：
@@ -343,8 +343,8 @@
 - 不影响主内容区域布局
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-shell.css` — sidebar hover overlay
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js` — 扩展 SidebarToggle 模块
+- Modify: `prototype/shared/layout-shell.css` — sidebar hover overlay
+- Modify: `prototype/shared/prototype-interactions.js` — 扩展 SidebarToggle 模块
 
 **Steps:**
 1. 定义 sidebar peek overlay 样式：
@@ -377,7 +377,7 @@
 - 空状态插图使用 domain 签名色（非通用灰色）
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-gallery.css` — `.state-empty .empty-cta`
+- Modify: `prototype/shared/layout-gallery.css` — `.state-empty .empty-cta`
 - Modify: 代表性页面的 state-empty 模板 — 添加 CTA
 
 **Steps:**
@@ -411,8 +411,8 @@
 - Manifest coverage 更新为 100%
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/page-home.html` — states gallery 补充
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json` — coverage 更新
+- Modify: `prototype/page-home.html` — states gallery 补充
+- Modify: `prototype/.edition-manifest.json` — coverage 更新
 
 **Steps:**
 1. 为每个组件添加 stale 状态卡片：
@@ -436,7 +436,7 @@
 - `<768px`：1 列 stack
 
 **文件:**
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html` — `.market-card-grid` 响应式
+- Modify: `prototype/page-cross-market.html` — `.market-card-grid` 响应式
 
 **Steps:**
 1. 添加响应式断点：

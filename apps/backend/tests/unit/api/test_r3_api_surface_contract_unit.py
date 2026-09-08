@@ -14,8 +14,12 @@ import pytest
 from ditto_apps.openapi_contract import create_openapi_app
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
-_SURFACE_PATH = _REPO_ROOT / "docs/contracts/r3-v1-api-surface.json"
-_SURFACE_MARKDOWN_PATH = _REPO_ROOT / "docs/contracts/r3-v1-api-surface.md"
+_SURFACE_PATH = (
+    _REPO_ROOT / "apps/backend/tests/fixtures/contracts/r3-v1-api-surface.json"
+)
+_SURFACE_MARKDOWN_PATH = (
+    _REPO_ROOT / "apps/backend/tests/fixtures/contracts/r3-v1-api-surface.md"
+)
 _HTTP_METHODS = frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"})
 _DISPOSITIONS = frozenset({"IMPLEMENT", "EQUIVALENT", "DEFER"})
 _STATES = frozenset({"PLANNED", "IMPLEMENTED"})

@@ -2,7 +2,7 @@
 /**
  * Contract Generator — 读取 JSON 合同 → 产出 TS + mjs
  *
- * 输入：docs/contracts/pages/*.contract.json
+ * 输入：contracts/pages/*.contract.json
  * 产出：
  *   - src/features/shell/page-contracts.generated.ts
  *   - scripts/visual-audit.config.generated.mjs
@@ -18,7 +18,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(__dirname, "../../../..");
 const WEB_ROOT = resolve(WORKSPACE_ROOT, "apps/web");
 
-const CONTRACTS_DIR = resolve(WEB_ROOT, "docs/contracts/pages");
+const CONTRACTS_DIR = resolve(WEB_ROOT, "contracts/pages");
 const OUTPUT_TS = resolve(WEB_ROOT, "src/features/shell/page-contracts.generated.ts");
 const OUTPUT_MJS = resolve(WEB_ROOT, "scripts/visual-audit.config.generated.mjs");
 

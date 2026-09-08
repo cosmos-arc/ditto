@@ -309,7 +309,7 @@ html {
 
 #### Step 12: 更新 30 个 HTML 原型文件 — ✅ 已完成（29/29）
 
-每个 `docs/designs/specs/prototypes/page-*.html` 做两处修改：
+每个 `prototype/page-*.html` 做两处修改：
 
 1. 在 `tokens-semantic.css` 的 `<link>` 后添加：
    ```html
@@ -338,7 +338,7 @@ html {
 | `src/features/shell/hooks/use-active-domain.ts` | **新建** | 7 |
 | `src/features/shell/hooks/use-atmosphere.ts` | **新建** | 10 |
 | `src/features/shell/components/app-shell.tsx` | 修改 | 7, 10 |
-| 30 个 `docs/designs/specs/prototypes/page-*.html` | 修改 | 12 |
+| 30 个 `prototype/page-*.html` | 修改 | 12 |
 
 ---
 

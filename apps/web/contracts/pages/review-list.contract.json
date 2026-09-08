@@ -1,0 +1,120 @@
+{
+  "id": "review-list",
+  "version": 2,
+  "status": "contract-ready",
+  "createdAt": "2026-08-01",
+  "updatedAt": "2026-08-29",
+  "route": "/research/reviews",
+  "pagePattern": "catalog-screener",
+  "shellFamily": "catalog",
+  "prototypeRef": "prototype/page-experiment-list.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/research",
+    "contractStatus": "verified",
+    "overlayStatus": "none",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": ["src/features/research/components/review-queue-page.test.tsx"],
+    "reactComponentRefs": ["ReviewQueuePage"]
+  },
+  "liveData": {
+    "readPaths": ["/api/v1/research/reviews"],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "viewports": [
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" },
+    { "width": 1200, "height": 800, "role": "compact" }
+  ],
+  "slots": [
+    {
+      "name": "toolbar",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": ".filter-toolbar",
+      "reactSelector": "[data-slot='toolbar']",
+      "layoutStrategy": "content-driven",
+      "threshold": { "x": 6, "y": 44, "widthRatio": 0.03, "heightRatio": 0.55 },
+      "a11yRole": "toolbar",
+      "responsiveBehavior": { "compact": "reflow" }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "infoLevel": "l1",
+      "prototypeSelector": ".catalog-table",
+      "reactSelector": "[data-slot='main']",
+      "layoutStrategy": "flex",
+      "threshold": { "x": 10, "y": 22, "widthRatio": 0.05, "heightRatio": 0.08 },
+      "a11yRole": "main"
+    },
+    {
+      "name": "detail",
+      "required": true,
+      "infoLevel": "l2",
+      "prototypeSelector": ".catalog-detail",
+      "reactSelector": "[data-slot='detail']",
+      "layoutStrategy": "fixed-width",
+      "threshold": { "x": 22, "y": 60, "widthRatio": 0.2, "heightRatio": 0.14 },
+      "a11yRole": "complementary",
+      "responsiveBehavior": { "compact": "unchanged" }
+    }
+  ],
+  "states": {
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": [
+      "selected-review",
+      "filtered-results",
+      "filtered-empty",
+      "packet-missing",
+      "pending-review",
+      "approved-awaiting-publish"
+    ]
+  },
+  "interactions": [
+    {
+      "id": "filter-review-queue",
+      "trigger": "search-or-outcome-filter",
+      "affectedSlots": ["toolbar", "main", "detail"],
+      "expectedBehavior": "filters only live review entries and keeps selection aligned with the visible result set"
+    },
+    {
+      "id": "select-review-entry",
+      "trigger": "review-row",
+      "affectedSlots": ["main", "detail"],
+      "expectedBehavior": "shows the exact strategy version, parent, state, outcome, experiment identity, spec hash, and creation time"
+    },
+    {
+      "id": "open-review-workbench",
+      "trigger": "review-workbench-action",
+      "affectedSlots": ["detail"],
+      "expectedBehavior": "opens the governed review workbench only when the queue entry has a concrete experiment packet identity"
+    },
+    {
+      "id": "inspect-packet-missing-entry",
+      "trigger": "packet-missing-row",
+      "affectedSlots": ["main", "detail"],
+      "expectedBehavior": "keeps the version visible and selectable while withholding approve, reject, publish, and workbench actions"
+    }
+  ],
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
+  "metrics": {
+    "capturedAt": "2026-08-29",
+    "viewport": "1536x900",
+    "baseline": {
+      "toolbar": { "width": 1480, "height": 48, "strategy": "content-driven" },
+      "main": { "width": 1160, "height": 760, "strategy": "flex" },
+      "detail": { "width": 320, "height": 760, "strategy": "fixed-width" }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.065
+  },
+  "overlays": []
+}

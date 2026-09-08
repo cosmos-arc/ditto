@@ -60,7 +60,7 @@
 
 ## P0 — 共享 JS 工具库
 
-**文件**: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+**文件**: `prototype/shared/prototype-interactions.js`
 
 ### 模块设计（ES Module，零依赖）
 

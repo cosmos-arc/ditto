@@ -1,0 +1,179 @@
+{
+  "id": "system-jobs",
+  "version": 4,
+  "status": "contract-ready",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-08-31",
+  "route": "/system/jobs",
+  "pagePattern": "queue-ops-console",
+  "shellFamily": "ops-console",
+  "prototypeRef": "prototype/page-platform.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/system",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": false,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/system/components/system-components.test.tsx",
+      "src/features/system/components/info-level-annotations.test.tsx",
+      "src/features/system/hooks/system-hooks.test.tsx",
+      "src/features/system/api/system-overview.test.ts"
+    ],
+    "reactComponentRefs": [
+      "SystemPage"
+    ]
+  },
+  "liveData": {
+    "readPaths": [
+	  "/api/v1/ingestion/catalog/assets",
+      "/api/v1/ingestion/catalog/remediation/backlog",
+      "/api/v1/ingestion/catalog/source-health/summary",
+      "/api/v1/ingestion/catalog/source-fallback/summary",
+      "/api/v1/ingestion/catalog/promotion/readiness"
+    ],
+    "writePaths": [],
+    "mockFallback": false
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "health",
+      "required": true,
+      "prototypeSelector": ".ops-health",
+      "reactSelector": "[data-slot='health']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "unchanged"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".ops-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main",
+      "responsiveBehavior": {
+        "compact": "unchanged"
+      }
+    },
+    {
+      "name": "detail",
+      "required": true,
+      "prototypeSelector": ".ops-detail",
+      "reactSelector": "[data-slot='detail']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "unchanged"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "catalog-empty",
+      "pipeline-running",
+      "source-degraded",
+      "fallback-active",
+      "promotion-blocked",
+      "approval-expired",
+      "partial-unavailable",
+      "remediation-empty"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "health": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1110,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "detail": {
+        "width": 360,
+        "height": 720,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.07
+  },
+  "interactions": [
+    {
+      "id": "change-governance-trade-date",
+      "trigger": "trade-date-input",
+      "affectedSlots": ["health", "main", "detail"],
+      "expectedBehavior": "uses the exact selected trade date and catalog-derived dataset identities in every governance query key and request"
+    },
+    {
+      "id": "refresh-governance-evidence",
+      "trigger": "refresh-action",
+      "affectedSlots": ["health", "main", "detail"],
+      "expectedBehavior": "refetches catalog identity and the same scoped governance projections without falling back to prototype provider or infrastructure metrics"
+    }
+  ],
+  "overlays": [
+    {
+      "id": "system.pipeline-rerun",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "main", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-pipeline-rerun",
+      "reactComponent": "SystemOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    },
+    {
+      "id": "system.alert-handle",
+      "kind": "alert-dialog",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "detail", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-alert-handle",
+      "reactComponent": "SystemOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    },
+    {
+      "id": "system.task-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": { "slot": "main", "action": "open-overlay" },
+      "prototypeSelector": "#overlay-task-detail",
+      "reactComponent": "SystemOverlays",
+      "closeBehavior": ["escape", "outside-click", "primary-action"]
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 
 ## 结果摘要
 
-`docs/designs/specs/prototypes/` 已从可演示状态推进到 Best 级冻结候选。整改策略是先补机器门禁，再逐层修复共享交互、token 对比度、响应式 Shell、Primary Answer、Catalog 任务分化、专家效率与性能可维护性。
+`prototype/` 已从可演示状态推进到 Best 级冻结候选。整改策略是先补机器门禁，再逐层修复共享交互、token 对比度、响应式 Shell、Primary Answer、Catalog 任务分化、专家效率与性能可维护性。
 
 当前 active route prototypes 保持 27/27 覆盖；最终剩余风险已转入 React backlog 或标记为 prototype-only 例外。
 
@@ -28,16 +28,16 @@
 - `scripts/prototype-design-consistency.test.ts`
 - `scripts/prototype-interaction-ux-contract.test.ts`
 - `scripts/audit-wcag-contrast.mjs`
-- `docs/designs/specs/prototypes/shared/layout-base.css`
-- `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- `docs/designs/specs/prototypes/tokens-style.css`
-- active `docs/designs/specs/prototypes/page-*.html`
-- `docs/designs/specs/04_interaction_state_spec.md`
-- `docs/designs/specs/10_ditto_shell_family_spec.md`
-- `docs/designs/specs/11_ditto_page_pattern_library.md`
-- `docs/designs/specs/12_ditto_data_views_spec.md`
-- `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
-- `docs/designs/specs/20_interaction_ux_audit.md`
+- `prototype/shared/layout-base.css`
+- `prototype/shared/prototype-interactions.js`
+- `prototype/tokens-style.css`
+- active `prototype/page-*.html`
+- `design/specs/04_interaction_state_spec.md`
+- `design/specs/10_ditto_shell_family_spec.md`
+- `design/specs/11_ditto_page_pattern_library.md`
+- `design/specs/12_ditto_data_views_spec.md`
+- `design/specs/14_ditto_token_naming_layering_spec.md`
+- `design/specs/20_interaction_ux_audit.md`
 - `docs/plans/prototype-to-react-enhancement-backlog.md`
 
 ## 验证证据

@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-signals-inbox.html",
+	"../prototype/page-signals-inbox.html",
 );
 
 function loadPage() {

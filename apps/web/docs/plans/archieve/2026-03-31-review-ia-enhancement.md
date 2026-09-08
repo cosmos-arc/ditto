@@ -30,7 +30,7 @@
 
 #### review-scoring.md — 从 product-criteria.md 拆分
 
-将审查评分相关内容从 `product-criteria.md` 拆分到 `review-scoring.md`，产品策略部分移入 `docs/designs/specs/00_ditto_product_criteria.md`。
+将审查评分相关内容从 `product-criteria.md` 拆分到 `review-scoring.md`，产品策略部分移入 `design/specs/00_ditto_product_criteria.md`。
 
 新增内容:
 - Fixed/Sticky 元素遮挡检测
@@ -41,7 +41,7 @@
 #### product-criteria.md — 拆分
 
 拆分为两个文件:
-- `docs/designs/specs/00_ditto_product_criteria.md` — 产品策略（模块分层密度、字号映射、间距梯度）
+- `design/specs/00_ditto_product_criteria.md` — 产品策略（模块分层密度、字号映射、间距梯度）
 - `.claude/design-review/review-scoring.md` — 审查评分标准
 
 #### ditto-design-cycle.md（原 ditto-design-review.md）— 流程集成 + 创建模式
@@ -88,7 +88,7 @@
 | `.claude/design-review/templates.md` | 更新引用 |
 | `.claude/design-review/product-criteria.md` | 废弃，可删除 |
 | `.claude/product-arch/roles.md` | 新建（原 design-review/roles-product-arch.md） |
-| `docs/designs/specs/00_ditto_product_criteria.md` | 新建（产品策略部分） |
+| `design/specs/00_ditto_product_criteria.md` | 新建（产品策略部分） |
 
 ## 参考来源
 

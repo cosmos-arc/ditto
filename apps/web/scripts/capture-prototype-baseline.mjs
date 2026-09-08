@@ -12,8 +12,8 @@ import {
 } from "./product-recovery-core.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
-const PROTOTYPES_DIR = resolve(ROOT, "docs/designs/specs/prototypes");
-const CONTRACTS_DIR = resolve(ROOT, "docs/contracts/pages");
+const PROTOTYPES_DIR = resolve(ROOT, "prototype");
+const CONTRACTS_DIR = resolve(ROOT, "contracts/pages");
 const RECORD_PATH = resolve(PROTOTYPES_DIR, ".frozen-baseline.json");
 const FIXED_NOW = "2026-08-25T09:30:00+08:00";
 

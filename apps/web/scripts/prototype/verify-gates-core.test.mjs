@@ -8,10 +8,10 @@ import {
 
 describe("ditto design-cycle gate core", () => {
 	it("parses required prototype path and default viewport matrix", () => {
-		const options = parseArgs(["--prototype", "docs/designs/specs/prototypes/page-home.html"]);
+		const options = parseArgs(["--prototype", "prototype/page-home.html"]);
 
 		expect(options).toMatchObject({
-			prototype: "docs/designs/specs/prototypes/page-home.html",
+			prototype: "prototype/page-home.html",
 			viewports: [
 				{ label: "VP-STANDARD", width: 1536, height: 1080 },
 				{ label: "VP-COMPACT", width: 1366, height: 768 },
@@ -73,7 +73,7 @@ describe("ditto design-cycle gate core", () => {
 			[
 				"scripts/prototype/verify-gates.mjs",
 				"--prototype",
-				"docs/designs/specs/prototypes/page-strategy-studio.html",
+				"prototype/page-strategy-studio.html",
 				"--viewport",
 				"TEST=800x600",
 				"--out-dir",

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 const expertPages = ["page-home.html", "page-strategy-studio.html", "page-agent-console-v2.html"];
 const rowContextMenuPages = [
 	"page-watchlist.html",
