@@ -18,7 +18,9 @@ from ditto_apps.registry.agent.oci_sandbox_runner import (
 )
 
 
-def _fake_docker(tmp_path: Path) -> tuple[Path, Path]:
+def _fake_docker(
+    tmp_path: Path, *, probe_delay_seconds: float = 0
+) -> tuple[Path, Path]:
     cleanup_marker = tmp_path / "cleanup.marker"
     server_version = tmp_path / "server.version"
     server_version.write_text("29.4.0", encoding="ascii")
@@ -37,6 +39,7 @@ if pathlib.Path(sys.argv[0]).name != "docker":
 
 args = sys.argv[1:]
 if "info" in args:
+    time.sleep({probe_delay_seconds!r})
     print(json.dumps({{
         "ServerVersion": pathlib.Path(
             {str(server_version)!r}
@@ -48,6 +51,9 @@ if "info" in args:
         "SecurityOptions": ["name=seccomp,profile=builtin", "name=cgroupns"],
         "Runtimes": {{"runc": {{}}}},
     }}, separators=(",", ":")))
+    pathlib.Path({str(tmp_path / "probe.finished")!r}).write_text(
+        str(time.monotonic()), encoding="ascii"
+    )
     raise SystemExit(0)
 if "rm" in args:
     if pathlib.Path({str(tmp_path / "cleanup.fail")!r}).exists():
@@ -204,34 +210,42 @@ def test_runner_falls_back_to_exact_child_when_process_group_signal_is_denied(
     assert cleanup.read_text(encoding="utf-8") == "cleaned"
 
 
+@pytest.mark.parametrize("probe_delay_seconds", [0, 6])
 def test_runner_enforces_wall_timeout_and_removes_the_exact_container(
     tmp_path: Path,
+    probe_delay_seconds: float,
 ) -> None:
-    executable, cleanup = _fake_docker(tmp_path)
+    executable, cleanup = _fake_docker(
+        tmp_path, probe_delay_seconds=probe_delay_seconds
+    )
     runner, seccomp = _runner(executable, tmp_path)
 
-    started = time.monotonic()
     result = runner.run(_command("timeout", seccomp_path=seccomp, timeout=3))
+    started = float((tmp_path / "probe.finished").read_text(encoding="ascii"))
 
-    # Coverage instrumentation can delay the child interpreter before it writes
-    # the cidfile. Keep enough startup headroom while remaining below the fake
-    # child's ten-second sleep.
+    # Inventory has its own timeout. Measure from the real fake-CLI probe
+    # completion, retaining runtime startup and exact cleanup in this bound.
+    # Eight seconds remains below the fake workload's ten-second sleep.
     assert time.monotonic() - started < 8
     assert result.timed_out is True
     assert cleanup.read_text(encoding="utf-8") == "cleaned"
 
 
+@pytest.mark.parametrize("probe_delay_seconds", [0, 6])
 def test_runner_timeout_is_not_extended_by_orphaned_output_pipes(
     tmp_path: Path,
+    probe_delay_seconds: float,
 ) -> None:
-    executable, cleanup = _fake_docker(tmp_path)
+    executable, cleanup = _fake_docker(
+        tmp_path, probe_delay_seconds=probe_delay_seconds
+    )
     runner, seccomp = _runner(executable, tmp_path)
 
-    started = time.monotonic()
     result = runner.run(_command("orphan-pipe", seccomp_path=seccomp, timeout=3))
+    started = float((tmp_path / "probe.finished").read_text(encoding="ascii"))
 
-    # The hard bound remains below the orphan's ten-second sleep, while leaving
-    # coverage-instrumented startup headroom before the cidfile is written.
+    # Exclude only the separately bounded inventory probe, not execution or
+    # cleanup. Waiting for the orphan's ten-second sleep must still fail.
     assert time.monotonic() - started < 8
     assert result.timed_out is True
     assert cleanup.read_text(encoding="utf-8") == "cleaned"
