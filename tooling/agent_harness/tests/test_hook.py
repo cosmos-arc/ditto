@@ -407,7 +407,11 @@ class DiffClassificationTests(unittest.TestCase):
             "contract": ["contracts/openapi/v1.json"],
             "high-risk": ["packages/risk/src/ditto_risk/checks.py"],
             "root": ["pyproject.toml"],
-            "harness": [".codex/hooks.json", "tooling/agent_harness/hook.py"],
+            "harness": [
+                ".codex/hooks.json",
+                ".zcode/config.json",
+                "tooling/agent_harness/hook.py",
+            ],
             "unknown": ["unexpected/new-tool.conf"],
         }
         for name, paths in fixtures.items():
@@ -435,11 +439,11 @@ class DiffClassificationTests(unittest.TestCase):
                 assert classify_diff([path]) == "root"
 
     def test_harness_change_runs_the_complete_root_check(self) -> None:
-        path = ".codex/hooks.json"
+        for path in (".codex/hooks.json", ".zcode/config.json"):
+            with self.subTest(path=path):
+                commands = verification_commands(classify_diff([path]), [path])
 
-        commands = verification_commands(classify_diff([path]), [path])
-
-        assert [" ".join(command) for command in commands] == ["task check"]
+                assert [" ".join(command) for command in commands] == ["task check"]
 
     def test_contract_producers_are_classified_as_contract_changes(self) -> None:
         paths = (

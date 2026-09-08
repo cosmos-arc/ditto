@@ -128,3 +128,6 @@ docs/evidence/workstation-baseline-20260831.json:generic-api-key:48
 # Verified against https://pypi.org/pypi/parso/0.8.7/json; no credential or rule-wide exception.
 10432325fe30d1c00a2bc24bb82987819b8c794e:uv.lock:square-access-token:4111
 uv.lock:square-access-token:4113
+
+# Same audited parso sdist hash in PR #109 squash commit; v8.18.4 reports diff line 3889.
+47693622e220b37bbe0f12b88bf9dc788c19a639:uv.lock:square-access-token:3889

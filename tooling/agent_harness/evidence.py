@@ -38,6 +38,7 @@ _FINGERPRINT_CONFIGS = (
     ".importlinter",
     ".pre-commit-config.yaml",
     ".redocly.yaml",
+    ".zcode/config.json",
     "apps/web/dependency-cruiser.config.mjs",
     "apps/web/package.json",
     "apps/web/tsconfig.base.json",

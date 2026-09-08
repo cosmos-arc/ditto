@@ -1,6 +1,6 @@
 # Ditto Agent Harness
 
-Ditto 只维护 Claude Code 与 Codex 两个宿主。Harness 将项目事实、可复用知识、宿主适配和机器门禁分层，避免把通用代理工作流重复包装成项目规则。
+Ditto 只维护 Claude Code、Codex 与 ZCode 三个宿主。Harness 将项目事实、可复用知识、宿主适配和机器门禁分层，避免把通用代理工作流重复包装成项目规则。
 
 ## 结构与事实源
 
@@ -16,6 +16,7 @@ tooling/agent_harness/       同步、验证、hooks、确定性 eval 和测试
   lease.py                   common-dir 单写者 lease
 .claude/settings.json        Claude 薄适配
 .codex/hooks.json            Codex 薄适配
+.zcode/config.json           ZCode 薄适配（hooks 嵌套于 hooks.events，且需 enabled: true）
 ```
 
 `.importlinter` 是依赖边界机器事实源。Task tasks、Ruff、basedpyright、pytest 和 CI 执行质量规则；Markdown 只保留路由、风险和不变量。
@@ -35,6 +36,7 @@ task harness-check
 ```
 
 `sync_skills.py --check` 和 validator 比较完整文件集与字节内容，镜像缺失、额外文件或漂移都会失败。
+Claude 使用生成并提交的 `.claude/skills` 镜像；ZCode 直接读取 `.agents/skills`，无需镜像。
 
 ## Hook 矩阵
 
@@ -44,7 +46,7 @@ task harness-check
 | PostToolUse | Edit/Write/apply_patch | 只对能精确解析出的 Python 文件限时运行 Ruff format；不安装环境、不执行 lint fix |
 | Stop | 全部 | 快速提示工作区仍有改动；不执行测试、查询工具版本或宣称验证通过 |
 
-同步 hooks 的职责是快速反馈，不是每次回复后的 CI。Codex 与 Claude 的预算一致：
+同步 hooks 的职责是快速反馈，不是每次回复后的 CI。三个宿主的预算一致：
 PreToolUse 10 秒；PostToolUse 10 秒（格式化内部 5 秒，超时清理本次进程组）；
 Stop 3 秒。格式化使用 已准备 `.venv` 中的 `ruff format <files>`，仅消费已准备好的
 环境。环境缺失、超时或格式化失败会提供非阻断反馈，不掩盖问题，也不替换已完成工具
@@ -107,7 +109,7 @@ task integrator-lease -- release
 持有者应覆盖生成、验证和最终 diff 检查的完整期间，完成后主动 release。PreToolUse
 在 Edit/Write/apply_patch 前阻断非持有者，也识别 OpenAPI `--write`、Bun/uv lock
 更新和直接重定向到受保护文件等已知 Bash writer；任意 shell 语义无法被完全可靠解析，
-因此显式 `check-changed` 还会对完整 Git changed set 再做同一 lease 检查。validator 检查两个宿主必要事件的 matcher 覆盖与共享命令；允许合法附加配置。
+因此显式 `check-changed` 还会对完整 Git changed set 再做同一 lease 检查。validator 检查三个宿主必要事件的 matcher 覆盖与共享命令（ZCode 事件嵌套于 `hooks.events` 且要求 `enabled: true`，否则视为惰性配置）；允许合法附加配置。
 
 ## Policy 回归
 
