@@ -2,7 +2,7 @@
 
 **版本：v2.0**
 
-**最后更新：2026-03-04**
+**最后更新：2026-09-08**
 
 ---
 
@@ -35,36 +35,42 @@
 
 | 组件 | 最低要求 | 推荐配置 |
 |------|----------|----------|
-| 操作系统 | Windows 10/11, Linux | Windows 11 / Ubuntu 22.04 |
-| Python | 3.13+ | 3.13.x |
+| 操作系统 | Linux x86_64、macOS ARM64、Windows x64 | 与 CI 支持平台一致 |
+| Python | `.python-version` 固定版本 | uv managed Python |
 | 内存 | 4GB | 8GB+ |
 | 磁盘 | 10GB | 50GB+ SSD |
 
-#### 1.1.2 安装 uv
+#### 1.1.2 准备固定版本工具链
 
-uv 是项目的包管理器和任务运行器。
+uv 管理 Python 解释器和依赖，Task 编排跨栈任务，Bun 安装 Web 依赖，Node 执行 Node CLI。
+先克隆仓库，再按 [工具链说明](engineering/toolchain.md#准备与只读检查) 中的官方归档和校验和安装当前平台的 uv、Task、Bun、Node，并加入 PATH。版本以仓库声明为准，不安装浮动的 latest 版本：
 
-```bash
-# Linux/macOS
-curl -fsSL https://pixi.sh/install.sh | bash
-
-# Windows (PowerShell)
-iwr -useb https://pixi.sh/install.ps1 | iex
-```
+| 工具 | 版本声明 |
+| --- | --- |
+| uv | 根 `pyproject.toml` 的 `tool.uv.required-version` |
+| Task | `.task-version` |
+| Bun | 根 `package.json` 的 `packageManager` |
+| Node | `.node-version` |
+| Python | `.python-version`，由 uv 在显式初始化时安装 |
 
 #### 1.1.3 初始化项目
 
 ```bash
-# 克隆项目
-git clone <repo-url> ditto
+# 克隆项目；后续命令均在仓库根目录运行
+git clone https://github.com/cosmos-arc/ditto.git
 cd ditto
 
-# 安装依赖（开发环境）
-pixi install
+# 完成上面的固定版本工具链安装后，创建 .venv 并安装锁定的两栈依赖
+task bootstrap
+
+# 准备浏览器测试所需的 Chromium
+task browser-install
 
 # 安装 pre-commit hooks
 task pre-commit-install
 ```
+
+普通检查不自动安装依赖。若环境尚未准备，先执行上述初始化入口，不通过其他包管理器修改环境。
 
 #### 1.1.4 配置 API Token
 

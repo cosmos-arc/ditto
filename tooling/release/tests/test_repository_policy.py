@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import tomllib
@@ -416,6 +417,14 @@ def test_release_scans_and_publishes_backend_library_provenance() -> None:
     assert "scan-backend-sources" in verification
     assert '--final-image "$IMAGE"' in verification
     assert "_bind_backend_source_provenance" in sbom
+    python = sbom.split("python3 - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    for node in ast.walk(ast.parse(python)):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_verify_scanner_source"
+        ):
+            assert any(keyword.arg == "image_id" for keyword in node.keywords)
     for relative in (
         "ditto-backend-source-provenance.spdx.json",
         "trivy-backend-source-runtime-libraries.json",

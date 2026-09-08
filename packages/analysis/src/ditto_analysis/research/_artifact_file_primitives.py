@@ -312,7 +312,8 @@ def _windows_create_hard_link(
     descriptor = _open_windows_relative(
         temporary,
         os.O_RDONLY,
-        access=0x00100100,  # SYNCHRONIZE | DELETE | FILE_WRITE_ATTRIBUTES
+        # SYNCHRONIZE | FILE_WRITE_ATTRIBUTES; hard linking needs no DELETE access.
+        access=0x00100100,
     )
     name_bytes = target.name.encode("utf-16-le")
     # FILE_LINK_INFORMATION on the supported Windows x64 ABI.

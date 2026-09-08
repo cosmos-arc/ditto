@@ -730,6 +730,50 @@ def test_backend_source_scan_pulls_pinned_source_for_buildkit_daemon(
     assert commands[-1][1] == "save"
 
 
+@pytest.mark.parametrize("matches", [True, False])
+def test_source_archive_scan_binds_digest_only_report_to_selected_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, matches: bool
+) -> None:
+    """The release source scan accepts only the independently selected image ID."""
+    image_id = "sha256:" + "a" * 64
+    report = tmp_path / "trivy-source.json"
+    source = "registry/source@sha256:" + "b" * 64
+    monkeypatch.setattr(artifact_gate, "_run", lambda *_args, **_kwargs: source)
+    monkeypatch.setattr(artifact_gate, "_select_amd64_archive", lambda _path: image_id)
+
+    def scan(*_args: object, **_kwargs: object) -> None:
+        report.write_text(
+            json.dumps(
+                {
+                    "Metadata": {
+                        "ImageID": image_id if matches else "sha256:" + "c" * 64,
+                    }
+                }
+            )
+        )
+
+    monkeypatch.setattr(artifact_gate, "_run_ephemeral_container", scan)
+    if matches:
+        artifact_gate._scan_source_archive(
+            "docker",
+            tmp_path,
+            source=source,
+            archive=tmp_path / "source.tar",
+            output=tmp_path,
+            report=report,
+        )
+    else:
+        with pytest.raises(artifact_gate.ArtifactGateError, match="pinned image"):
+            artifact_gate._scan_source_archive(
+                "docker",
+                tmp_path,
+                source=source,
+                archive=tmp_path / "source.tar",
+                output=tmp_path,
+                report=report,
+            )
+
+
 def _write_json_blob(archive: tarfile.TarFile, payload: object) -> tuple[str, bytes]:
     content = json.dumps(payload, separators=(",", ":")).encode()
     digest = hashlib.sha256(content).hexdigest()

@@ -38,6 +38,27 @@ assert (
     assert result.returncode == 0, result.stderr
 
 
+def test_anchored_hard_link_publishes_without_replacing_existing_target(
+    tmp_path: Path,
+) -> None:
+    """Use the real platform filesystem, including Windows native link access."""
+    source = tmp_path / "staged.json"
+    source.write_bytes(b"original")
+    target = tmp_path / "published.json"
+    parent_fd = primitives.open_directory(tmp_path)
+    try:
+        source_entry = primitives.DirectoryEntryPath(parent_fd, source.name)
+        target_entry = primitives.DirectoryEntryPath(parent_fd, target.name)
+        primitives.link_entries(source_entry, target_entry)
+        assert source.samefile(target)
+        assert target.read_bytes() == b"original"
+        with pytest.raises(FileExistsError):
+            primitives.link_entries(source_entry, target_entry)
+        assert source.read_bytes() == target.read_bytes() == b"original"
+    finally:
+        os.close(parent_fd)
+
+
 def test_missing_atomic_nofollow_fails_closed_for_existing_entry(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

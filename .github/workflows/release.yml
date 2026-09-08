@@ -205,8 +205,6 @@ jobs:
           from pathlib import Path
           from tooling.release.artifact_gate import (
               _archive_image_config,
-              _backend_library_sources,
-              _verify_scanner_source,
               _verify_scanner_subject,
               _bind_and_verify_web_sbom,
               _bind_backend_source_provenance,
@@ -225,12 +223,9 @@ jobs:
           config_digest = _archive_image_config(Path("dist/ditto-image.tar"))
           _verify_scanner_subject(Path("dist/ditto-backend.syft.json"), image=config_digest, scanner="syft")
           _verify_scanner_subject(Path("dist/trivy-backend.json"), image=config_digest, scanner="trivy")
-          for stage, source in _backend_library_sources(Path(".")):
-              _verify_scanner_source(
-                  Path(f"dist/trivy-backend-source-{stage}.json"),
-                  source=source,
-                  stage=stage,
-              )
+          # scan-backend-sources already binds each report to its selected amd64
+          # archive ImageID and verifies vulnerable copied files against the final
+          # image. Rechecking without that ImageID rejects valid digest-only scans.
           _bind_backend_source_provenance(
               Path("dist/ditto-backend.spdx.json"),
               Path("dist/ditto-backend-source-provenance.spdx.json"),

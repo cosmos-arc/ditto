@@ -78,6 +78,7 @@ dev = [
 [tool.uv]
 required-version = "==0.12.7"
 package = false
+# uv 0.12 still builds first-party workspace/editable packages; block third-party sdists.
 no-build = true
 environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64' and implementation_name == 'cpython' and platform_python_implementation == 'CPython'",
