@@ -159,3 +159,5 @@ desktop.ini
 .merge-backups/
 # Mutmut creates an importable shadow source tree per Python capability package.
 mutants/
+
+.cache/

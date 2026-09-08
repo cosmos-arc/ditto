@@ -21,6 +21,7 @@ from tooling.release.cohort_manifest import (
     build_cohort_manifest,
     write_cohort_manifest,
 )
+from tooling.release.tests.image_fixture import write_image
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -31,8 +32,10 @@ def _sha256(path: Path) -> str:
 
 def _cohort(root: Path) -> tuple[Path, list[str]]:
     contract = root / "release-inputs" / "contracts" / "openapi" / "v1.json"
-    pixi_lock = root / "release-inputs" / "pixi.lock"
+    uv_lock = root / "release-inputs" / "uv.lock"
     bun_lock = root / "release-inputs" / "bun.lock"
+    interpreter = root / "release-inputs" / ".python-version"
+    source = root / "release-inputs" / "Dockerfile"
     backend = root / "ditto-image.tar"
     web = root / "ditto-web.tar"
     backend_sbom = root / "ditto-backend.spdx.json"
@@ -43,9 +46,11 @@ def _cohort(root: Path) -> tuple[Path, list[str]]:
     policy_digest = policy.with_suffix(".sha256")
     contract.parent.mkdir(parents=True)
     contract.write_bytes(b'{"openapi":"3.1.0"}\n')
-    pixi_lock.write_bytes(b"pixi\n")
+    uv_lock.write_bytes(b"uv\n")
+    interpreter.write_text("cpython-3.13.14")
+    source.write_text("FROM python@sha256:fixture")
     bun_lock.write_bytes(b"bun\n")
-    backend.write_bytes(b"backend\n")
+    write_image(backend, root / "release-inputs")
     web.write_bytes(b"web\n")
     backend_sbom.write_text(
         json.dumps(
@@ -111,7 +116,9 @@ def _cohort(root: Path) -> tuple[Path, list[str]]:
     )
     artifacts = (
         contract,
-        pixi_lock,
+        uv_lock,
+        interpreter,
+        source,
         bun_lock,
         backend,
         web,
@@ -253,6 +260,7 @@ def test_staged_verifier_is_an_exact_minimal_stdlib_only_package(
         "release-tools/tooling/release/__init__.py",
         "release-tools/tooling/release/cohort_manifest.py",
         "release-tools/tooling/release/cohort_verify.py",
+        "release-tools/tooling/release/environment_identity.py",
         "release-tools/verify-cohort.py",
     ]
     source_by_destination = {
@@ -266,6 +274,8 @@ def test_staged_verifier_is_an_exact_minimal_stdlib_only_package(
         "release-tools/tooling/release/cohort_verify.py": (
             ROOT / "tooling" / "release" / "cohort_verify.py"
         ),
+        "release-tools/tooling/release/environment_identity.py": ROOT
+        / "tooling/release/environment_identity.py",
         "release-tools/verify-cohort.py": (
             ROOT / "tooling" / "release" / "offline_verify.py"
         ),

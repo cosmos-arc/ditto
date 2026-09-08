@@ -6,6 +6,116 @@ version = "0.1.0"
 requires-python = ">=3.13,<3.14"
 description = "Local-first quantitative investment workstation monorepo"
 
+dependencies = [
+    "ditto-application",
+    "ditto-agent",
+    "ditto-data",
+    "ditto-platform",
+    "ditto-kernel",
+    "ditto-features",
+    "ditto-analysis",
+    "ditto-strategy",
+    "ditto-portfolio",
+    "ditto-risk",
+    "ditto-execution",
+    "ditto-backtest",
+    "ditto-apps",
+    "numpy>=2.0,<3",
+    "polars>=1.9,<2",
+    "duckdb>=1.3,<2",
+    "fastapi>=0.115,<0.137",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.10,<3",
+    "httpx>=0.28,<1",
+    "python-dotenv>=1.0,<2",
+    "loguru>=0.7,<1",
+    "pyyaml>=6.0,<7",
+    "typer==0.27.1",
+    "prefect>=3.4,<4",
+    "lupa>=2.1,<3",
+    "cachebox>=5.0,<6",
+    "granian>=2.0,<3",
+    "orjson>=3.10,<4",
+    "xxhash>=3.5,<4",
+    "filelock>=3.16,<4",
+    "opentelemetry-api>=1.28,<2",
+    "opentelemetry-sdk>=1.28,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.28,<2",
+    "tenacity>=9.0,<10",
+    "limits>=3.5,<6",
+    "keyring>=25.0,<26",
+    "openai-agents>=0.20.0,<0.21",
+    "dishka>=1.8,<2",
+    "socksio>=1.0,<2"
+]
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.11",
+    "pre-commit>=4.0,<5",
+    "pytest>=9.0,<10",
+    "pytest-cov>=7.0,<8",
+    "pytest-asyncio>=1.0,<2",
+    "pytest-mock>=3.14,<4",
+    "pytest-xdist>=3.6,<4",
+    "pytest-timeout>=2.3,<3",
+    "time-machine==2.19.0",
+    "inline-snapshot>=0.10,<1",
+    "hypothesis>=6.100,<7",
+    "respx>=0.21,<1",
+    "types-pyyaml>=6.0,<7",
+    "types-python-dateutil>=2.9,<3",
+    "ipykernel>=6.29,<7",
+    "jupyter>=1.1,<2",
+    "keyrings.alt>=5.0.2,<6",
+    "basedpyright>=1.29,<2",
+    "coverage>=7.6,<8",
+    "schemathesis==4.25.2",
+    "mutmut==3.7.0",
+    "import-linter>=2.6,<3"
+]
+
+[tool.uv]
+required-version = "==0.12.7"
+package = false
+# uv 0.12 still builds first-party workspace/editable packages; block third-party sdists.
+no-build = true
+environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64' and implementation_name == 'cpython' and platform_python_implementation == 'CPython'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64' and implementation_name == 'cpython' and platform_python_implementation == 'CPython'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64' and implementation_name == 'cpython' and platform_python_implementation == 'CPython'"
+]
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64' and implementation_name == 'cpython' and platform_python_implementation == 'CPython'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64' and implementation_name == 'cpython' and platform_python_implementation == 'CPython'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64' and implementation_name == 'cpython' and platform_python_implementation == 'CPython'"
+]
+python-preference = "only-managed"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[tool.uv.workspace]
+members = ["packages/application", "packages/agent", "packages/data", "packages/platform", "packages/kernel", "packages/features", "packages/analysis", "packages/strategy", "packages/portfolio", "packages/risk", "packages/execution", "packages/backtest", "apps/backend"]
+
+[tool.uv.sources]
+ditto-application = { workspace = true }
+ditto-agent = { workspace = true }
+ditto-data = { workspace = true }
+ditto-platform = { workspace = true }
+ditto-kernel = { workspace = true }
+ditto-features = { workspace = true }
+ditto-analysis = { workspace = true }
+ditto-strategy = { workspace = true }
+ditto-portfolio = { workspace = true }
+ditto-risk = { workspace = true }
+ditto-execution = { workspace = true }
+ditto-backtest = { workspace = true }
+ditto-apps = { workspace = true }
+
+
 # ===================================================================
 # Ruff (Linter + Formatter)
 # 核心代码质量工具，集成了数十种工具，速度极快。
@@ -202,8 +312,8 @@ pythonPlatform = "All"
 stubPath = "typings"
 
 # 显式指定 pixi 虚拟环境，确保 VS Code 扩展和 pixi shell 都能正确定位
-venvPath = ".pixi/envs"
-venv = "dev"
+venvPath = "."
+venv = ".venv"
 
 # 核心：standard 模式打底（比 basic 严格，比 strict 宽松）
 typeCheckingMode = "standard"

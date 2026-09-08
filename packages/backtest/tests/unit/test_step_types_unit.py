@@ -127,7 +127,7 @@ class TestTradingStepProtocol:
 class TestStepContextRequireGetters:
     """StepContext.require_*() 类型安全 getter 测试。"""
 
-    # -- require_slice --
+    # -- require_slice
 
     def test_require_slice_returns_value_when_set(self) -> None:
         """slice_ 已设置时 require_slice() 返回值。"""
@@ -142,7 +142,7 @@ class TestStepContextRequireGetters:
         with pytest.raises(SimulationError, match="slice_"):
             ctx.require_slice()
 
-    # -- require_account_view --
+    # -- require_account_view
 
     def test_require_account_view_returns_value_when_set(self) -> None:
         """account_view 已设置时 require_account_view() 返回值。"""
@@ -157,7 +157,7 @@ class TestStepContextRequireGetters:
         with pytest.raises(SimulationError, match="account_view"):
             ctx.require_account_view()
 
-    # -- require_execution_plan --
+    # -- require_execution_plan
 
     def test_require_execution_plan_returns_value_when_set(self) -> None:
         """execution_plan 已设置时 require_execution_plan() 返回值。"""
@@ -172,7 +172,7 @@ class TestStepContextRequireGetters:
         with pytest.raises(SimulationError, match="execution_plan"):
             ctx.require_execution_plan()
 
-    # -- require_target_portfolio --
+    # -- require_target_portfolio
 
     def test_require_target_portfolio_returns_value_when_set(self) -> None:
         """target_portfolio 已设置时 require_target_portfolio() 返回值。"""
@@ -187,7 +187,7 @@ class TestStepContextRequireGetters:
         with pytest.raises(SimulationError, match="target_portfolio"):
             ctx.require_target_portfolio()
 
-    # -- 错误信息质量 --
+    # -- 错误信息质量
 
     def test_error_message_contains_field_name(self) -> None:
         """错误信息包含字段名和上下文描述。"""

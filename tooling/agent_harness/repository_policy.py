@@ -25,7 +25,7 @@ FORBIDDEN_PACKAGE_MANAGER_FILES = frozenset(
 )
 FORBIDDEN_PACKAGE_MANAGER_DIRECTORIES = frozenset({".pnpm-store", ".yarn"})
 _FALLBACK_EXCLUDED_DIRECTORIES = frozenset(
-    {".cache", ".git", ".pixi", "artifacts", "node_modules"}
+    {".cache", ".git", ".pixi", ".venv", "artifacts", "node_modules"}
 )
 
 

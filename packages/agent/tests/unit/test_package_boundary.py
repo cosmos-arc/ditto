@@ -9,7 +9,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).parents[4]
 AGENT_PROJECT = REPOSITORY_ROOT / "packages" / "agent" / "pyproject.toml"
 IMPORT_LINTER = REPOSITORY_ROOT / ".importlinter"
-PIXI_PROJECT = REPOSITORY_ROOT / "pixi.toml"
+WORKSPACE_PROJECT = REPOSITORY_ROOT / "pyproject.toml"
 
 
 def _lines(value: str) -> set[str]:
@@ -55,21 +55,19 @@ def test_agent_root_import_does_not_load_forbidden_packages() -> None:
     assert not forbidden, f"Agent imported forbidden packages: {sorted(forbidden)}"
 
 
-def test_agent_dependency_range_is_frozen_in_package_and_pixi_metadata() -> None:
+def test_agent_dependency_range_is_frozen_in_package_and_workspace_metadata() -> None:
     project = tomllib.loads(AGENT_PROJECT.read_text(encoding="utf-8"))
     assert "openai-agents>=0.20.0,<0.21" in project["project"]["dependencies"]
 
-    pixi = tomllib.loads(PIXI_PROJECT.read_text(encoding="utf-8"))
-    assert pixi["pypi-dependencies"]["ditto-agent"] == {
-        "path": "packages/agent",
-        "editable": True,
-    }
-    assert pixi["pypi-dependencies"]["openai-agents"] == ">=0.20.0,<0.21"
+    workspace = tomllib.loads(WORKSPACE_PROJECT.read_text(encoding="utf-8"))
+    assert workspace["tool"]["uv"]["sources"]["ditto-agent"] == {"workspace": True}
+    assert "packages/agent" in workspace["tool"]["uv"]["workspace"]["members"]
+    assert "openai-agents>=0.20.0,<0.21" in workspace["project"]["dependencies"]
 
     try:
         installed = version("openai-agents")
     except PackageNotFoundError as exc:
-        message = "openai-agents is absent from the Pixi environment"
+        message = "openai-agents is absent from the uv environment"
         raise AssertionError(message) from exc
     major, minor, *_ = (int(part) for part in installed.split(".")[:2])
     assert (major, minor) == (0, 20)

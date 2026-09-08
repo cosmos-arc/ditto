@@ -1,31 +1,27 @@
 name: CI
-
-on:
+'on':
   pull_request:
-    branches: [main]
+    branches:
+      - main
   push:
-    branches: [main]
-  merge_group:
+    branches:
+      - main
+  merge_group: null
   schedule:
-    - cron: "11 1 * * 1"
-  workflow_dispatch:
-
+    - cron: 11 1 * * 1
+  workflow_dispatch: null
 permissions:
   contents: read
-
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
-env:
-  PIXI_VERSION: v0.73.0
-
 jobs:
   repository-policy:
     name: Repository policy
     outputs:
       required: ${{ steps.scope.outputs.required }}
       analysis: ${{ steps.scope.outputs.analysis }}
+      full: ${{ steps.scope.outputs.full }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -49,15 +45,6 @@ jobs:
           else
             git show --check --format= "$GITHUB_SHA"
           fi
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
-        with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
-      - name: Validate delivery policy
-        run: pixi run -e dev python -m pytest tooling/release/tests/test_repository_policy.py -q -n 0
-
   backend-quality:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-quality') }}
@@ -68,19 +55,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - uses: ./.github/actions/setup-toolchain
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
+          workspace: python
       - name: Package contracts
-        run: pixi run -e dev package-contract-check
+        run: task package-contract-check
       - name: Formatting
-        run: pixi run -e dev fmt-check
+        run: task fmt-check
       - name: Lint
-        run: pixi run -e dev lint
-
+        run: task lint
   backend-types:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-types') }}
@@ -91,49 +74,43 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - uses: ./.github/actions/setup-toolchain
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
+          workspace: python
       - name: Strict type check
-        run: pixi run -e dev type --all --clean
-
+        run: task type -- --all --clean
   backend-tests:
-    needs: repository-policy
+    needs:
+      - repository-policy
+      - backend-shards
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-tests') }}
     name: Backend tests and coverage
     permissions:
       contents: read
       id-token: write
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - uses: ./.github/actions/setup-toolchain
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
-      - name: Test with coverage policy
+          workspace: python
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          pattern: backend-shard-*-${{ github.run_id }}
+          path: build/test-shards
+          merge-multiple: true
+      - name: Verify shard completeness and coverage policy
         env:
           COVERAGE_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
-        run: pixi run -e dev backend-coverage
-      - name: Publish backend coverage
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          disable_search: true
-          fail_ci_if_error: true
-          files: coverage.xml
-          flags: backend,backend-critical
-          use_oidc: true
+        run: |-
+          task backend-coverage-combine -- --count 4 --commit "$GITHUB_SHA"
+          uv run --no-sync python tooling/quality/coverage_gate.py --report coverage.json
       - name: PIT correctness suite
-        run: pixi run -e dev pit
+        run: task pit
       - name: Upload coverage evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -144,7 +121,14 @@ jobs:
             coverage.xml
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
-
+      - name: Publish backend coverage
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          disable_search: true
+          fail_ci_if_error: true
+          files: coverage.xml
+          flags: backend,backend-critical
+          use_oidc: true
   architecture-harness:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'architecture-harness') }}
@@ -155,24 +139,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
-        with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
-      - uses: ./.github/actions/setup-bun
-      - name: Frozen Web install
-        run: bun install --frozen-lockfile
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-toolchain
       - name: Architecture boundaries
-        run: pixi run -e dev arch-check
+        run: task arch-check
       - name: Agent harness
-        run: pixi run -e dev harness-check
-
+        run: task harness-check
   web-quality:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'web-quality') }}
-    name: Web lint, types, tests and build
+    name: Web static checks and coverage
     permissions:
       contents: read
       id-token: write
@@ -182,20 +158,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bun
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - uses: ./.github/actions/setup-toolchain
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
-      - name: Frozen Web install
-        run: bun install --frozen-lockfile
-      - name: Prepare Web browser
-        working-directory: apps/web
-        run: bunx playwright install --with-deps chromium
+          workspace: web
       - name: Web CI
-        run: pixi run -e dev web-ci
+        run: task web-quality
       - name: Publish Web coverage
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
@@ -204,14 +171,6 @@ jobs:
           files: apps/web/coverage/coverage-final.json
           flags: web
           use_oidc: true
-      - name: Upload Web build
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: web-dist-${{ github.run_id }}
-          path: apps/web/dist
-          if-no-files-found: error
-          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
-
   api-contract:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'api-contract') }}
@@ -223,22 +182,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
-        with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
-      - uses: ./.github/actions/setup-bun
-      - name: Frozen Web install
-        run: bun install --frozen-lockfile
+      - uses: ./.github/actions/setup-toolchain
       - name: Prepare contract toolchain
-        run: pixi run -e dev contract-toolchain-bootstrap
+        run: task contract-toolchain-bootstrap
       - name: Contract gate
-        run: pixi run -e dev check-contract
-
+        run: task check-contract
   system-e2e:
-    needs: repository-policy
+    needs:
+      - repository-policy
+      - web-build
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'system-e2e') }}
     name: Supervised backend-Web system test
     runs-on: ubuntu-latest
@@ -247,19 +199,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - uses: ./.github/actions/setup-toolchain
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
-      - uses: ./.github/actions/setup-bun
-      - name: Frozen Web install
-        run: bun install --frozen-lockfile
+          name: web-dist-${{ github.run_id }}
+          path: apps/web/dist
       - name: Prepare system browser
-        run: bunx playwright install --with-deps chromium
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
       - name: Run supervised system test
-        run: pixi run -e dev test-system
+        run: task test-system
+        env:
+          DITTO_REUSE_WEB_BUILD: '1'
       - name: Upload system browser evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -268,7 +218,6 @@ jobs:
           path: build/system-e2e
           if-no-files-found: warn
           retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
-
   release-cohort:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'release-cohort') }}
@@ -279,17 +228,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - uses: ./.github/actions/setup-toolchain
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
+          workspace: python
       - name: Test release and security policy
-        run: pixi run -e dev python -m pytest tooling/release/tests tooling/security/tests -q -n 0
-
+        run: uv run --no-sync python -m pytest tooling/release/tests tooling/security/tests -q -n 0
   container-smoke:
-    needs: [repository-policy, web-quality]
+    needs:
+      - repository-policy
+      - web-build
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'container-smoke') }}
     name: Container build and readiness smoke
     runs-on: ubuntu-latest
@@ -298,18 +245,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - uses: ./.github/actions/setup-toolchain
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
+          workspace: python
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: web-dist-${{ github.run_id }}
           path: apps/web/dist
       - name: Build once, scan, attest subject and smoke
-        run: pixi run -e dev python -m tooling.release.artifact_gate
+        run: uv run --no-sync python -m tooling.release.artifact_gate
       - name: Upload artifact evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -318,7 +262,6 @@ jobs:
           path: dist
           if-no-files-found: error
           retention-days: 14
-
   platform-smoke:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'platform-smoke') }}
@@ -337,37 +280,36 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
-        with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          frozen: true
-          environments: dev
-      - uses: ./.github/actions/setup-bun
-      - name: Bootstrap the supported toolchain
-        run: pixi run -e dev bootstrap
+      - uses: ./.github/actions/setup-toolchain
+      - name: Native wheel behavior
+        run: task platform-native-test
       - name: macOS backend gate
-        if: ${{ matrix.name == 'macos-arm64' }}
-        run: pixi run -e dev check-backend
+        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full == 'true' }}
+        run: task check-backend
       - name: macOS Web gate
-        if: ${{ matrix.name == 'macos-arm64' }}
-        run: pixi run -e dev check-web
+        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full == 'true' }}
+        run: task check-web
       - name: Windows backend type gate
-        if: ${{ matrix.name == 'windows-x64' }}
-        run: pixi run -e dev type-all
+        if: ${{ matrix.name == 'windows-x64' && needs.repository-policy.outputs.full == 'true' }}
+        run: task type-all
       - name: Windows Web type gate
-        if: ${{ matrix.name == 'windows-x64' }}
-        run: pixi run -e dev web-type
+        if: ${{ matrix.name == 'windows-x64' && needs.repository-policy.outputs.full == 'true' }}
+        run: task web-type
       - name: Windows backend core unit
         if: ${{ matrix.name == 'windows-x64' }}
-        run: pixi run -e dev platform-backend-unit
+        run: task platform-backend-unit
       - name: Windows Web unit
         if: ${{ matrix.name == 'windows-x64' }}
-        run: pixi run -e dev platform-web-unit
+        run: task platform-web-unit
       - name: Windows loopback API smoke
         if: ${{ matrix.name == 'windows-x64' }}
-        run: pixi run -e dev platform-api-smoke
-
+        run: task platform-api-smoke
+      - name: macOS backend core unit
+        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full != 'true' }}
+        run: task platform-backend-unit
+      - name: macOS loopback API smoke
+        if: ${{ matrix.name == 'macos-arm64' && needs.repository-policy.outputs.full != 'true' }}
+        run: task platform-api-smoke
   security-supply-chain:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'security-supply-chain') }}
@@ -379,7 +321,6 @@ jobs:
     uses: ./.github/workflows/security.yml
     with:
       full-analysis: ${{ needs.repository-policy.outputs.analysis == 'true' }}
-
   ci-gate:
     name: CI gate
     if: ${{ always() }}
@@ -396,6 +337,10 @@ jobs:
       - container-smoke
       - platform-smoke
       - security-supply-chain
+      - delivery-policy
+      - backend-shards
+      - web-prototype
+      - web-build
     permissions: {}
     runs-on: ubuntu-latest
     steps:
@@ -421,3 +366,96 @@ jobs:
           if failures:
               raise SystemExit(f"CI fail-closed: {failures}")
           PYTHON
+  delivery-policy:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'delivery-policy') }}
+    name: delivery-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: python
+      - name: Validate delivery policy
+        run: uv run --no-sync python -m pytest tooling/release/tests/test_repository_policy.py -q -n 0
+  backend-shards:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-shards') }}
+    name: backend-shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: python
+      - name: Run isolated shard
+        run: task backend-test-shard -- --index ${{ matrix.index }} --count 4 --commit "$GITHUB_SHA"
+      - name: Preserve shard coverage and inventory
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-shard-${{ matrix.index }}-${{ github.run_id }}
+          path: build/test-shards
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
+          include-hidden-files: true
+    strategy:
+      fail-fast: false
+      matrix:
+        index:
+          - 0
+          - 1
+          - 2
+          - 3
+      max-parallel: 4
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      POLARS_MAX_THREADS: '2'
+      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+  web-prototype:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'web-prototype') }}
+    name: web-prototype
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: web
+      - name: Prepare browser
+        run: task browser-install -- --with-deps
+      - name: Prototype coverage of product flows
+        run: task web-prototype
+  web-build:
+    needs: repository-policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'web-build') }}
+    name: web-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+        with:
+          workspace: web
+      - name: Build production Web
+        run: task web-build
+      - name: Upload Web build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}

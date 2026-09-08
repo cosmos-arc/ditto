@@ -351,7 +351,7 @@ class ConfigProvider(Provider):
 
         解析优先级（每个字段独立）::
 
-            production: 完整且同提交的 Git SHA + pixi.lock SHA-256
+            production: 完整且同提交的 Git SHA + Python 环境身份 SHA-256
             development/testing: 环境变量 > 确定性 fallback
 
         构建系统负责注入版本；运行时不读取 checkout 或工具链文件。

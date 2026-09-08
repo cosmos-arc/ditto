@@ -315,7 +315,14 @@ export function buildLiveAcceptancePlan() {
 }
 
 export function buildFixtureCommand(): readonly string[] {
-	return ["bunx", "vitest", "run", ...FIXTURE_TESTS];
+	return [
+		"node",
+		"--import",
+		"../../tooling/dev/node-runtime.mjs",
+		"node_modules/vitest/vitest.mjs",
+		"run",
+		...FIXTURE_TESTS,
+	];
 }
 
 function runCommand(command: readonly string[]): CommandCapture {

@@ -1,4 +1,44 @@
-FROM python@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8
+FROM python@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8 AS builder
+
+ENV LANG=C \
+    LC_ALL=C
+
+COPY requirements.lock /tmp/requirements.lock
+COPY candidate_runner.py /tmp/candidate-runner
+RUN python -m pip install \
+      --disable-pip-version-check \
+      --no-cache-dir \
+      --no-compile \
+      --only-binary=:all: \
+      --require-hashes \
+      --target /opt/ditto/site-packages \
+      --requirement /tmp/requirements.lock \
+    && chmod 0555 /tmp/candidate-runner \
+    && rm -rf /usr/local/lib/python3.13/ensurepip \
+    && find /usr/local/lib/python3.13/site-packages -maxdepth 1 \
+         \( -name 'pip*' -o -name 'setuptools*' -o -name 'wheel*' \) \
+         -exec rm -rf {} +
+
+FROM gcr.io/distroless/python3-debian13@sha256:f3d5ddc6c64a019fe520e7f005f2880be21e6afc461b10a3c15ef2e4edc71e33 AS runtime-libraries
+
+FROM python@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8 AS runtime-inventory
+COPY --from=runtime-libraries /usr/lib /tmp/runtime-lib
+COPY --from=runtime-libraries /var/lib/dpkg/status.d /tmp/status.d
+RUN rm -rf /tmp/runtime-lib/python3.13 \
+    && rm -f /tmp/runtime-lib/binfmt.d/python3.13.conf \
+    && find /tmp/runtime-lib \( \
+      -name 'libncurses.so*' \
+      -o -name 'libncursesw.so*' \
+      -o -name 'libtinfo.so*' \
+      -o -name 'libsqlite3.so*' \
+      -o -name 'libuuid.so*' \
+      -o -name 'libpython3.13.so*' \
+    \) -delete \
+    && rm -f /tmp/status.d/libpython3.13* /tmp/status.d/python3.13* \
+           /tmp/status.d/libncursesw6* /tmp/status.d/libsqlite3-0* \
+           /tmp/status.d/libtinfo6* /tmp/status.d/libuuid1*
+
+FROM gcr.io/distroless/base-debian13@sha256:d199d20fb09c898d8822ae5cbd5cf3c6d424e9b5e1fc2eb9a719a7752cd9d861
 
 ENV LANG=C \
     LC_ALL=C \
@@ -6,23 +46,15 @@ ENV LANG=C \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONNOUSERSITE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/opt/ditto/site-packages \
     DITTO_SANDBOX_RUNTIME_MANIFEST=/opt/ditto/runtime-manifest.json
 
-COPY requirements.lock /opt/ditto/requirements.lock
-RUN python -m pip install \
-      --disable-pip-version-check \
-      --no-cache-dir \
-      --no-compile \
-      --only-binary=:all: \
-      --require-hashes \
-      --requirement /opt/ditto/requirements.lock \
-    && rm -rf /root/.cache /tmp/*
-
+COPY --from=runtime-inventory /tmp/runtime-lib /usr/lib
+COPY --from=runtime-inventory /tmp/status.d /var/lib/dpkg/status.d
+COPY --from=builder /usr/local /usr/local
+COPY --from=builder /opt/ditto/site-packages /opt/ditto/site-packages
 COPY runtime-manifest.json /opt/ditto/runtime-manifest.json
-COPY candidate_runner.py /opt/ditto/bin/candidate-runner
-RUN chmod 0444 /opt/ditto/requirements.lock /opt/ditto/runtime-manifest.json \
-    && chmod 0555 /opt/ditto/bin/candidate-runner \
-    && chown -R 65532:65532 /opt/ditto
+COPY --from=builder /tmp/candidate-runner /opt/ditto/bin/candidate-runner
 
 USER 65532:65532
 WORKDIR /tmp

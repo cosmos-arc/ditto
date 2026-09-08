@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import tomllib
@@ -24,6 +25,14 @@ def _workflow(name: str) -> dict[str, Any]:
     if True in loaded and "on" not in loaded:
         loaded["on"] = loaded.pop(True)
     return loaded
+
+
+def _dependencies(task: dict[str, Any]) -> set[str]:
+    return {command["task"] for command in task["cmds"] if isinstance(command, dict)}
+
+
+def _command(task: dict[str, Any]) -> str:
+    return " && ".join(command for command in task["cmds"] if isinstance(command, str))
 
 
 def test_ci_runs_parallel_semantic_jobs_and_has_fail_closed_gate() -> None:
@@ -70,7 +79,7 @@ def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
 
     for job_name, step_name in (
         ("backend-tests", "Upload coverage evidence"),
-        ("web-quality", "Upload Web build"),
+        ("web-build", "Upload Web build"),
     ):
         step = next(
             item
@@ -92,7 +101,7 @@ def test_backend_coverage_fetches_history_and_selects_every_event_base() -> None
     coverage_step = next(
         step
         for step in backend["steps"]
-        if step.get("run") == "pixi run -e dev backend-coverage"
+        if "backend-coverage-combine" in step.get("run", "")
     )
     base_ref = coverage_step["env"]["COVERAGE_BASE_REF"]
     assert "github.event.pull_request.base.sha" in base_ref
@@ -104,7 +113,7 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
     workflow = _workflow("ci.yml")
     jobs = workflow["jobs"]
     backend_steps = json.dumps(jobs["backend-tests"])
-    assert "pixi run -e dev pit" in backend_steps
+    assert "task pit" in backend_steps
 
     platform = jobs["platform-smoke"]
     matrix = platform["strategy"]["matrix"]["include"]
@@ -112,11 +121,11 @@ def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
     assert by_name["macos-arm64"]["os"] == "macos-14"
     assert by_name["windows-x64"]["os"] == "windows-2025"
     platform_steps = json.dumps(platform)
-    assert "pixi run -e dev bootstrap" in platform_steps
-    assert "pixi run -e dev check-backend" in platform_steps
-    assert "pixi run -e dev check-web" in platform_steps
-    assert "pixi run -e dev type-all" in platform_steps
-    assert "pixi run -e dev web-type" in platform_steps
+    assert "./.github/actions/setup-toolchain" in platform_steps
+    assert "task check-backend" in platform_steps
+    assert "task check-web" in platform_steps
+    assert "task type-all" in platform_steps
+    assert "task web-type" in platform_steps
 
 
 def test_windows_gate_runs_representative_units_and_a_real_loopback_api() -> None:
@@ -129,26 +138,30 @@ def test_windows_gate_runs_representative_units_and_a_real_loopback_api() -> Non
         if "matrix.name == 'windows-x64'" in str(step.get("if", ""))
     }
     expected = {
-        "Windows backend core unit": "pixi run -e dev platform-backend-unit",
-        "Windows Web unit": "pixi run -e dev platform-web-unit",
-        "Windows loopback API smoke": "pixi run -e dev platform-api-smoke",
+        "Windows backend core unit": "task platform-backend-unit",
+        "Windows Web unit": "task platform-web-unit",
+        "Windows loopback API smoke": "task platform-api-smoke",
     }
     for name, command in expected.items():
         assert windows_steps[name]["run"] == command
 
-    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    workspace = yaml.safe_load((ROOT / "Taskfile.yml").read_text(encoding="utf-8"))
     tasks = workspace["tasks"]
-    backend = tasks["platform-backend-unit"]
+    backend = _command(tasks["platform-backend-unit"])
     assert "packages/kernel/tests/unit/test_identity.py" in backend
     assert "apps/backend/tests/unit/test_main_unit.py" in backend
+    assert "test_artifact_file_primitives_unit.py" in backend
+    assert "test_artifact_service_unit.py" in backend
     assert "--no-cov" in backend
 
     web = tasks["platform-web-unit"]
-    assert web["cwd"] == "apps/web"
-    assert "vitest run" in web["cmd"]
-    assert "src/api/compatibility.test.ts" in web["cmd"]
+    assert web["dir"] == "apps/web"
+    assert "vitest.mjs run" in _command(web)
+    assert "src/api/compatibility.test.ts" in _command(web)
 
-    assert tasks["platform-api-smoke"] == "python -m tooling.dev.platform_smoke"
+    assert "python -m tooling.dev.platform_smoke" in _command(
+        tasks["platform-api-smoke"]
+    )
 
 
 def test_contract_job_uses_the_complete_root_contract_gate() -> None:
@@ -156,11 +169,8 @@ def test_contract_job_uses_the_complete_root_contract_gate() -> None:
     workflow = _workflow("ci.yml")
     steps = workflow["jobs"]["api-contract"]["steps"]
     contract_step = next(step for step in steps if step.get("name") == "Contract gate")
-    assert contract_step["run"] == "pixi run -e dev check-contract"
-    assert any(
-        step.get("run") == "pixi run -e dev contract-toolchain-bootstrap"
-        for step in steps
-    )
+    assert contract_step["run"] == "task check-contract"
+    assert any(step.get("run") == "task contract-toolchain-bootstrap" for step in steps)
 
 
 def test_required_ci_executes_all_release_and_supply_chain_policy_tests() -> None:
@@ -249,7 +259,7 @@ def test_workflows_have_read_only_defaults_and_no_top_level_path_filters() -> No
 def test_security_workflow_covers_both_stacks_and_required_scanners() -> None:
     workflow = _workflow("security.yml")
     matrix = workflow["jobs"]["codeql"]["strategy"]["matrix"]["language"]
-    assert set(matrix) == {"python", "javascript-typescript"}
+    assert set(matrix) == {"python", "javascript-typescript", "actions"}
     content = (
         (WORKFLOWS / "security.yml").read_text()
         + (ROOT / "tooling/release/artifact_gate.py").read_text()
@@ -321,7 +331,7 @@ def test_mutation_gate_is_weekly_evidence_not_a_pr_required_dependency() -> None
     mutation = workflow["jobs"]["mutation-critical"]
     assert "schedule" in mutation["if"]
     content = json.dumps(mutation)
-    assert "pixi run -e dev mutation-critical" in content
+    assert "task mutation-critical" in content
     assert "build/mutation/mutmut-cicd-stats.json" in content
     assert "mutation-critical" in workflow["jobs"]["security-gate"]["needs"]
 
@@ -374,6 +384,58 @@ def test_release_workflow_attests_the_complete_cohort() -> None:
         assert required in content
 
 
+def test_release_scans_and_publishes_backend_library_provenance() -> None:
+    workflow = _workflow("release.yml")
+    steps = workflow["jobs"]["release-cohort"]["steps"]
+    verification = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Verify and export the release image"
+    )
+    sbom = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Generate SPDX SBOM from release subject"
+    )
+    cohort = next(
+        step["run"]
+        for step in steps
+        if step.get("name") == "Generate and verify release cohort manifest"
+    )
+    publish = workflow["jobs"]["publish-cohort"]["steps"]
+    immutable = next(
+        step["with"]["path"]
+        for step in publish
+        if step.get("name") == "Upload immutable release cohort"
+    )
+    evidence = next(
+        step["run"]
+        for step in publish
+        if step.get("name") == "Publish long-lived release evidence"
+    )
+
+    assert "scan-backend-sources" in verification
+    assert '--final-image "$IMAGE"' in verification
+    assert "_bind_backend_source_provenance" in sbom
+    python = sbom.split("python3 - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    for node in ast.walk(ast.parse(python)):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_verify_scanner_source"
+        ):
+            assert any(keyword.arg == "image_id" for keyword in node.keywords)
+    for relative in (
+        "ditto-backend-source-provenance.spdx.json",
+        "trivy-backend-source-runtime-libraries.json",
+        "trivy-backend-source-debian-libraries.json",
+    ):
+        assert f"--artifact {relative}" in cohort
+        assert relative in cohort[cohort.index("sha256sum") :]
+        assert f"dist/{relative}#" in evidence
+    assert "dist/ditto-backend-source-provenance.spdx.json" in immutable
+
+
 def test_release_cohort_is_self_contained_and_verified_before_distribution() -> None:
     """Downloaded evidence must verify without the repository checkout."""
     workflow = _workflow("release.yml")
@@ -386,12 +448,12 @@ def test_release_cohort_is_self_contained_and_verified_before_distribution() -> 
     )
     required_inputs = (
         "dist/release-inputs/contracts/openapi/v1.json",
-        "dist/release-inputs/pixi.lock",
+        "dist/release-inputs/uv.lock",
         "dist/release-inputs/bun.lock",
     )
     for source, destination in (
         ("contracts/openapi/v1.json", required_inputs[0]),
-        ("pixi.lock", required_inputs[1]),
+        ("uv.lock", required_inputs[1]),
         ("bun.lock", required_inputs[2]),
     ):
         assert source in stage["run"]
@@ -401,7 +463,7 @@ def test_release_cohort_is_self_contained_and_verified_before_distribution() -> 
     assert "cd dist" in generation
     for relative in (
         "release-inputs/contracts/openapi/v1.json",
-        "release-inputs/pixi.lock",
+        "release-inputs/uv.lock",
         "release-inputs/bun.lock",
     ):
         assert f"--artifact {relative}" in generation
@@ -544,12 +606,12 @@ def test_release_ships_a_non_recursive_deterministic_offline_bundle() -> None:
 
 def test_contract_gate_validates_policy_and_release_emits_next_policy() -> None:
     """Each release must validate today's allowlist and emit a real next one."""
-    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    workspace = yaml.safe_load((ROOT / "Taskfile.yml").read_text(encoding="utf-8"))
     tasks = workspace["tasks"]
-    assert tasks["cohort-compatibility-check"] == (
-        "python -m tooling.release.compatibility_policy validate"
+    assert "python -m tooling.release.compatibility_policy validate" in _command(
+        tasks["cohort-compatibility-check"]
     )
-    assert "cohort-compatibility-check" in tasks["check-contract"]["depends-on"]
+    assert "cohort-compatibility-check" in _dependencies(tasks["check-contract"])
 
     content = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
     for required in (
@@ -640,7 +702,7 @@ def test_release_injects_exact_research_code_and_environment_lock() -> None:
     identity_script = next(
         step["run"] for step in steps if step.get("id") == "identity"
     )
-    assert "sha256sum pixi.lock" in identity_script
+    assert "tooling.release.environment_identity" in identity_script
     assert "environment_lock_sha256=" in identity_script
 
     image_build = next(
@@ -675,10 +737,10 @@ def test_container_readiness_smoke_uses_runtime_only_offline_credential() -> Non
     workflow = _workflow("ci.yml")
     steps = workflow["jobs"]["container-smoke"]["steps"]
     assert any(
-        step.get("run") == "pixi run -e dev python -m tooling.release.artifact_gate"
+        step.get("run") == "uv run --no-sync python -m tooling.release.artifact_gate"
         for step in steps
     )
-    assert "web-quality" in workflow["jobs"]["container-smoke"]["needs"]
+    assert "web-build" in workflow["jobs"]["container-smoke"]["needs"]
     # Runtime credentials, exact identity and immutable build/export/smoke binding
     # are exercised by test_artifact_gate, rather than duplicated shell snippets.
     dockerfile = (ROOT / "deploy" / "docker" / "Dockerfile").read_text()
@@ -726,51 +788,51 @@ def test_codeowners_and_renovate_are_canonical() -> None:
         "dockerfile",
         "docker-compose",
         "npm",
-        "pixi",
+        "pep621",
     }
     assert renovate["automerge"] is False
 
 
 def test_root_ci_includes_security_and_built_artifact_gates() -> None:
-    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    workspace = yaml.safe_load((ROOT / "Taskfile.yml").read_text(encoding="utf-8"))
     tasks = workspace["tasks"]
-    ci_dependencies = set(tasks["ci"]["depends-on"])
+    ci_dependencies = set(_dependencies(tasks["ci"]))
 
     assert "security-supply-chain" in ci_dependencies
     assert "artifact-gate" in ci_dependencies
-    assert "web-ci" in tasks["artifact-gate"]["depends-on"]
+    assert "web-ci" in _dependencies(tasks["artifact-gate"])
 
 
 def test_web_ci_uses_the_canonical_root_task() -> None:
-    """Hosted and local full Web validation must use the canonical Pixi task."""
-    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+    """Hosted and local full Web validation must use the canonical Task task."""
+    workspace = yaml.safe_load((ROOT / "Taskfile.yml").read_text(encoding="utf-8"))
     tasks = workspace["tasks"]
-    assert "web-manifest-check" not in tasks["web-ci"]["depends-on"]
+    assert "web-manifest-check" not in _dependencies(tasks["web-ci"])
 
     workflow = _workflow("ci.yml")
     web_job = workflow["jobs"]["web-quality"]
     uses = {step.get("uses") for step in web_job["steps"]}
     assert any(
-        isinstance(reference, str) and reference.startswith("prefix-dev/setup-pixi@")
+        isinstance(reference, str) and reference == "./.github/actions/setup-toolchain"
         for reference in uses
     )
     commands = {step.get("run") for step in web_job["steps"]}
-    assert "pixi run -e dev web-ci" in commands
+    assert "task web-quality" in commands
     assert "bun --cwd apps/web run ci" not in commands
 
 
-def test_web_composite_validation_is_owned_only_by_pixi() -> None:
-    workspace = tomllib.loads((ROOT / "pixi.toml").read_text(encoding="utf-8"))
+def test_web_composite_validation_is_owned_only_by_task() -> None:
+    workspace = yaml.safe_load((ROOT / "Taskfile.yml").read_text(encoding="utf-8"))
     scripts = json.loads((ROOT / "apps/web/package.json").read_text())["scripts"]
     assert "check" not in scripts
     assert "ci" not in scripts
     tasks = workspace["tasks"]
-    assert "cmd" not in tasks["check-web"]
-    assert "cmd" not in tasks["web-ci"]
+    assert not _command(tasks["check-web"])
+    assert not _command(tasks["web-ci"])
 
     def leaves(name: str) -> set[str]:
         task = tasks[name]
-        deps = task.get("depends-on", []) if isinstance(task, dict) else []
+        deps = _dependencies(task)
         return {name} | set().union(*(leaves(dep) for dep in deps))
 
     static = {

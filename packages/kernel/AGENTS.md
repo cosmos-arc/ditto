@@ -13,6 +13,6 @@
 
 ## 验证与参考
 
-- `pixi run -e dev pytest packages/kernel/tests`
-- `pixi run -e dev arch-check`
+- `uv run --no-sync pytest packages/kernel/tests`
+- `task arch-check`
 - [边界标准](../../docs/architecture/boundaries-and-abstraction-standards.md)

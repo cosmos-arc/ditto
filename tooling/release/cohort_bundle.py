@@ -36,6 +36,10 @@ _OFFLINE_VERIFIER_FILES = (
         "tooling/release/cohort_verify.py",
         "release-tools/tooling/release/cohort_verify.py",
     ),
+    (
+        "tooling/release/environment_identity.py",
+        "release-tools/tooling/release/environment_identity.py",
+    ),
     ("tooling/release/offline_verify.py", "release-tools/verify-cohort.py"),
 )
 

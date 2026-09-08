@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sqlite3
 import time
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -220,7 +221,7 @@ class SqlEngine:
         declared SQLite types are mapped through a closed set before interpolation.
         """
         self.con.execute("CREATE SCHEMA IF NOT EXISTS meta")
-        with sqlite3.connect(sqlite_path) as sqlite_conn:
+        with closing(sqlite3.connect(sqlite_path)) as sqlite_conn:
             table_rows = sqlite_conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             ).fetchall()

@@ -219,16 +219,16 @@ TUSHARE_TOKEN=YOUR_TOKEN
 
 ```bash
 # 运行所有 sources 测试
-pixi run -e dev pytest packages/data/tests/unit/sources/
+uv run --no-sync pytest packages/data/tests/unit/sources/
 
 # 运行 Tushare 测试
-pixi run -e dev pytest packages/data/tests/unit/sources/tushare/ -v
+uv run --no-sync pytest packages/data/tests/unit/sources/tushare/ -v
 
 # 运行 FRED 测试
-pixi run -e dev pytest packages/data/tests/unit/sources/fred/ -v
+uv run --no-sync pytest packages/data/tests/unit/sources/fred/ -v
 
 # 运行 TDX 测试
-pixi run -e dev pytest packages/data/tests/unit/sources/tdx/ -v
+uv run --no-sync pytest packages/data/tests/unit/sources/tdx/ -v
 ```
 
 ## 相关文档

@@ -5,7 +5,7 @@
 
 运行::
 
-    pixi run -e dev pytest scripts/acceptance/test_wave1_env_unit.py --no-cov -q
+    uv run --no-sync pytest scripts/acceptance/test_wave1_env_unit.py --no-cov -q
 """
 
 from __future__ import annotations

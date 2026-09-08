@@ -1,6 +1,6 @@
 # 0001 - Project Stack Selection
 
-Status: Accepted
+Status: Accepted（工具链于 2026-09-06 按 #101 修订）
 
 Date: 2024-01-01
 
@@ -18,8 +18,8 @@ Building a quantitative trading system requires careful technology selection. Th
 We selected the following technology stack:
 
 ### Core Languages & Frameworks
-- **Python 3.12+**: Primary language for codebase
-- **TypeScript/Next.js**: Web UI (future)
+- **Python 3.13**: Primary language for codebase
+- **TypeScript/React/Vite**: Web UI
 
 ### Data Processing
 - **Polars**: Primary data manipulation library (chosen over Pandas)
@@ -31,7 +31,9 @@ We selected the following technology stack:
 - **Prefect 3.x**: Workflow orchestration for data ingestion
 
 ### Package & Environment Management
-- **Pixi**: Cross-platform package management (replaces conda/pip)
+- **uv**: Python workspace and a shared lock; PyPI wheels on the three supported platforms
+- **Task**: Root cross-stack task graph
+- **Bun + Node LTS**: Bun installs Web dependencies and runs Bun-specific scripts; pinned Node runs Node CLIs
 - **pyproject.toml**: Standard Python project configuration
 
 ### Quality & Testing
@@ -49,14 +51,14 @@ We selected the following technology stack:
 
 ### Positive
 - **Polars** provides 10-100x faster data processing than Pandas
-- **Pixi** ensures reproducible environments across platforms
+- **uv** locks Python dependencies across supported platforms
 - **Monorepo structure** allows code sharing between packages
 - **Strict type checking** catches errors early
 - **Comprehensive observability** aids debugging
 
 ### Negative
 - **Polars** has a smaller ecosystem than Pandas (fewer third-party integrations)
-- **Pixi** is relatively new, less mature than conda
+- Native PyPI wheels must be validated on each supported platform; Conda ABI assumptions do not transfer
 - **Strict type checking** requires more upfront development time
 - **Windows-only** deployment limits collaboration options
 
@@ -65,11 +67,8 @@ We selected the following technology stack:
 ### Pandas vs Polars
 **Rejected**: Pandas is slower and uses more memory. While it has a larger ecosystem, Polars' performance advantages are critical for our use case.
 
-### Conda vs Pixi
-**Rejected**: Conda is slower to solve environments and has more complex configuration. Pixi uses the same conda-forge packages but with faster dependency resolution.
-
-### Poetry vs Pixi
-**Rejected**: Poetry doesn't support conda packages well, which we need for some scientific computing libraries.
+### uv and Task
+The current 13-package workspace has no demonstrated Conda-only runtime requirement. uv owns Python packaging; Task preserves the cross-stack DAG. Native wheels and actual API/solver behavior remain release gates. Bun is retained for installation efficiency and existing Bun APIs; its Node CLI execution and lock drift are checked explicitly.
 
 ### Airflow vs Prefect
 **Rejected**: Airflow is too heavy for a single-user Windows system. Prefect 3.x is more lightweight and has better Python-native workflows.

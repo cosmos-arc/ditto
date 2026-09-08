@@ -31,10 +31,10 @@ tests/
 ## 运行测试
 
 ```bash
-pixi run -e dev pytest packages/platform/tests/                 # 全部
-pixi run -e dev pytest packages/platform/tests/unit -v          # 单元
-pixi run -e dev pytest packages/platform/tests/integration -v   # 集成
-pixi run -e dev pytest packages/platform/tests/ --cov           # 含覆盖率
+uv run --no-sync pytest packages/platform/tests/                 # 全部
+uv run --no-sync pytest packages/platform/tests/unit -v          # 单元
+uv run --no-sync pytest packages/platform/tests/integration -v   # 集成
+uv run --no-sync pytest packages/platform/tests/ --cov           # 含覆盖率
 ```
 
 ## 覆盖率要求

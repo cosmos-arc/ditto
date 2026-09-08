@@ -9,7 +9,11 @@
     "dockerfile",
     "github-actions",
     "npm",
-    "pixi"
+    "pep621",
+    "bun",
+    "nodenv",
+    "pyenv",
+    "custom.regex"
   ],
   "automerge": false,
   "dependencyDashboard": true,
@@ -44,7 +48,8 @@
     {
       "description": "Group Web patch and minor updates",
       "matchManagers": [
-        "npm"
+        "npm",
+        "bun"
       ],
       "matchUpdateTypes": [
         "minor",
@@ -55,9 +60,9 @@
       "groupName": "web-dependencies"
     },
     {
-      "description": "Group Pixi patch and minor updates",
+      "description": "Group Python patch and minor updates",
       "matchManagers": [
-        "pixi"
+        "pep621"
       ],
       "matchUpdateTypes": [
         "minor",
@@ -73,6 +78,31 @@
         "major"
       ],
       "groupName": null
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.task-version$/"
+      ],
+      "matchStrings": [
+        "(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "go-task/task",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^pyproject\\.toml$/"
+      ],
+      "matchStrings": [
+        "required-version = \"==(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "astral-sh/uv",
+      "datasourceTemplate": "github-releases"
     }
   ]
 }

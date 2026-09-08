@@ -79,6 +79,7 @@ def _is_production_path(path: str) -> bool:
     return (
         (normalized.startswith("packages/") or normalized.startswith("apps/backend/"))
         and "/src/" in normalized
+        and normalized.endswith(".py")
         and "/generated/" not in normalized
     )
 

@@ -89,21 +89,21 @@ def test_bootstrap_repairs_a_corrupt_cached_archive(
     assert len(requests) == 1
 
 
-def test_contract_gate_bootstraps_when_no_distribution_environment_is_set(
+def test_contract_gate_resolves_prepared_distribution_without_bootstrapping(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     monkeypatch.delenv("DITTO_OASDIFF_DIST_DIR", raising=False)
     observed: dict[str, str] = {}
 
-    def ensure_distribution(*, system: str, machine: str) -> Path:
+    def prepared_distribution(*, system: str, machine: str) -> Path:
         observed.update(system=system, machine=machine)
         return tmp_path
 
     monkeypatch.setattr(
         bootstrap_oasdiff,
-        "ensure_distribution",
-        ensure_distribution,
+        "prepared_distribution",
+        prepared_distribution,
     )
     monkeypatch.setattr(check_contract.platform, "system", lambda: "TestOS")
     monkeypatch.setattr(check_contract.platform, "machine", lambda: "test-arch")

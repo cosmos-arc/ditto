@@ -95,13 +95,13 @@ def e2e_data_validation() -> dict[str, bool]:
     if not validation_result["tdx_samples"]:
         pytest.skip(
             f"TDX 样本数据不完整: SH {len(sh_files)} 文件, SZ {len(sz_files)} 文件。"
-            "请运行: pixi run -e dev python tests/scripts/prepare_e2e_data.py"
+            "请运行: uv run --no-sync python tests/scripts/prepare_e2e_data.py"
         )
 
     if not validation_result["pit_snapshots"]:
         pytest.skip(
             f"PIT 快照数据不完整: {len(snapshot_files)} 文件。"
-            "请运行: pixi run -e dev python tests/scripts/prepare_e2e_data.py --snapshots"
+            "请运行: uv run --no-sync python tests/scripts/prepare_e2e_data.py --snapshots"
         )
 
     return validation_result

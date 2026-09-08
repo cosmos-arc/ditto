@@ -13,6 +13,6 @@
 
 ## 验证与参考
 
-- `pixi run -e dev pytest packages/strategy/tests`
-- `pixi run -e dev arch-check`
+- `uv run --no-sync pytest packages/strategy/tests`
+- `task arch-check`
 - [架构快速参考](../../docs/architecture/agent-context-pack.md) · [PIT skill](../../.agents/skills/ditto-pit-safety/SKILL.md)

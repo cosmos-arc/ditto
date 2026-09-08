@@ -14,7 +14,10 @@ IMAGE_ROOT = REPO_ROOT / "deploy" / "agent-sandbox"
 
 # These assert runner semantics, not startup latency under parallel coverage.
 _RUNNER_PROCESS_TIMEOUT_SECONDS = 30
-BASE_DIGEST = "67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8"
+BASE_DIGEST = "d199d20fb09c898d8822ae5cbd5cf3c6d424e9b5e1fc2eb9a719a7752cd9d861"
+RUNTIME_LIBRARY_DIGEST = (
+    "f3d5ddc6c64a019fe520e7f005f2880be21e6afc461b10a3c15ef2e4edc71e33"
+)
 
 
 def _sha256(payload: bytes) -> str:
@@ -73,7 +76,11 @@ def _runner_payload(source: str, manifest: dict[str, object]) -> bytes:
 def test_containerfile_is_digest_pinned_non_root_and_has_no_runtime_installer() -> None:
     containerfile = (IMAGE_ROOT / "Containerfile").read_text(encoding="utf-8")
 
-    assert f"python@sha256:{BASE_DIGEST}" in containerfile
+    assert f"gcr.io/distroless/base-debian13@sha256:{BASE_DIGEST}" in containerfile
+    assert (
+        f"gcr.io/distroless/python3-debian13@sha256:{RUNTIME_LIBRARY_DIGEST}"
+        in containerfile
+    )
     assert "USER 65532:65532" in containerfile
     assert 'ENTRYPOINT ["/opt/ditto/bin/candidate-runner"]' in containerfile
     assert "--require-hashes" in containerfile

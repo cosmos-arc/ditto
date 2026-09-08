@@ -1,11 +1,11 @@
 # .pre-commit-config.yaml (Local Mode)
 #
 # 设计原则：
-# - 所有 Python 工具使用 local 模式，通过 pixi run 调用
+# - 所有 Python 工具使用 local 模式，通过 uv run --no-sync 调用
 # - 确保 pre-commit、CI、开发环境使用完全相同的工具版本
 # - Pyright 放在 CI 中运行（避免 pre-commit 隔离环境的依赖问题）
 #
-# 安装: pixi run pre-commit-install
+# 安装: task pre-commit-install
 
 minimum_pre_commit_version: "2.20.0"
 default_stages: [pre-commit]
@@ -44,7 +44,7 @@ repos:
       # Ruff Lint Fix（先修复）
       - id: ruff-lint-fix
         name: ruff lint (fix)
-        entry: pixi run -e dev ruff check --fix
+        entry: uv run --no-sync ruff check --fix
         language: system
         types: [python]
         require_serial: false
@@ -52,7 +52,7 @@ repos:
       # Ruff Format（再格式化）
       - id: ruff-format
         name: ruff format
-        entry: pixi run -e dev ruff format
+        entry: uv run --no-sync ruff format
         language: system
         types: [python]
         require_serial: false
@@ -61,11 +61,11 @@ repos:
       # pytest (pre-push 阶段)
       # --------------------------------------------------------
       - id: pytest-fast
-        name: pytest (fast)
-        entry: pixi run -e dev test --fast
+        name: verify changed scope
+        entry: uv run --no-sync python -m tooling.agent_harness.pre_push
         language: system
         pass_filenames: false
-        types: [python]
+        always_run: true
         stages: [pre-push]
 
   # ==========================================================

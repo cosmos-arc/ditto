@@ -3,7 +3,7 @@
 验证 FRED macro realtime PIT 语义在真实 FRED API 生效。
 
 CI 默认跳过（无 key/网络标记）；本地运行：
-    pixi run -e dev pytest apps/backend/tests/e2e/test_real_data_pipeline.py -m e2e
+    uv run --no-sync pytest apps/backend/tests/e2e/test_real_data_pipeline.py -m e2e
 """
 
 from __future__ import annotations

@@ -64,7 +64,7 @@ Do not create new `Manager`, `Helper`, or `Utils` names without a specific owned
 ## Before Editing
 
 Run `rg` for nearby patterns and import direction.
-When changing imports, run `pixi run -e dev arch-check`.
+When changing imports, run `task arch-check`.
 
 ## Tracing
 
@@ -77,8 +77,8 @@ All must pass before merge:
 
 ```
 python scripts/architecture/check_architecture_smells.py   # 0 issues
-pixi run -e dev lint-imports                                # all pass
-pixi run -e dev type                                        # 0 errors, 0 warnings
-pixi run -e dev test --fast                                 # all pass
-pixi run -e dev arch-check                                  # passes
+task lint-imports --                                # all pass
+task type --                                        # 0 errors, 0 warnings
+task test -- --fast                                 # all pass
+task arch-check --                                  # passes
 ```

@@ -26,7 +26,7 @@ Verdict = Literal["pass", "fail"]
 RuntimeKind = Literal["none", "live", "mock"]
 WriteOrigin = Literal["agent", "generator", "preexisting"]
 
-_PIXI_DEV_PREFIX = ("pixi", "run", "-e", "dev")
+_UV_PREFIX = ("uv", "run", "--no-sync")
 
 REQUIRED_ADVERSARIAL_CATEGORIES = frozenset(
     {
@@ -468,8 +468,10 @@ def _has_instruction_hierarchy(
 
 def _gate_id(command: tuple[str, ...]) -> str:
     arguments = command
-    if len(arguments) > len(_PIXI_DEV_PREFIX) and arguments[:4] == _PIXI_DEV_PREFIX:
-        arguments = arguments[len(_PIXI_DEV_PREFIX) :]
+    if arguments[:1] == ("task",):
+        arguments = arguments[1:]
+    elif arguments[:3] == _UV_PREFIX:
+        arguments = arguments[3:]
     if not arguments:
         return "unknown"
     if arguments[0] in {
@@ -495,12 +497,19 @@ def _gate_id(command: tuple[str, ...]) -> str:
 def _gate_covers(actual: str, required: str) -> bool:
     if actual in {required, "ci"}:
         return True
-    return actual == "check" and required in {
-        "check-backend",
-        "check-contract",
-        "check-web",
-        "harness-check",
-    }
+    return actual == "check" and (
+        required
+        in {
+            "check-backend",
+            "check-contract",
+            "check-web",
+            "harness-check",
+            "task lint",
+            "task fmt-check",
+            "task type-all",
+        }
+        or required.startswith("task test -- --fast ")
+    )
 
 
 def _required_gates(root: Path, paths: tuple[str, ...]) -> frozenset[str]:

@@ -1668,7 +1668,13 @@ def check_missing_init_py() -> list[str]:
                     continue
                 if any(
                     skip in py_dir.name
-                    for skip in ("__pycache__", ".pixi", ".egg-info", "egg-info")
+                    for skip in (
+                        "__pycache__",
+                        ".pixi",
+                        ".venv",
+                        ".egg-info",
+                        "egg-info",
+                    )
                 ):
                     continue
                 init_file = py_dir / "__init__.py"
@@ -2113,7 +2119,7 @@ def _check_per_file() -> list[str]:
     errors: list[str] = []
 
     for path in iter_source_files():
-        if "__pycache__" in path.parts or ".pixi" in path.parts:
+        if any(part in path.parts for part in ("__pycache__", ".pixi", ".venv")):
             continue
 
         try:

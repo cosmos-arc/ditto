@@ -13,6 +13,6 @@
 
 ## 验证与参考
 
-- `pixi run -e dev pytest packages/platform/tests`
-- `pixi run -e dev arch-check`
+- `uv run --no-sync pytest packages/platform/tests`
+- `task arch-check`
 - [架构快速参考](../../docs/architecture/agent-context-pack.md) · [边界标准](../../docs/architecture/boundaries-and-abstraction-standards.md)

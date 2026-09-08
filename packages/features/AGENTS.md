@@ -13,6 +13,6 @@
 
 ## 验证与参考
 
-- `pixi run -e dev pytest packages/features/tests`
-- `pixi run -e dev pytest -m pit`
+- `uv run --no-sync pytest packages/features/tests`
+- `uv run --no-sync pytest -m pit`
 - [架构快速参考](../../docs/architecture/agent-context-pack.md) · [PIT skill](../../.agents/skills/ditto-pit-safety/SKILL.md)

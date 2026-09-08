@@ -13,7 +13,7 @@ docker run --rm \
 curl --fail http://127.0.0.1:8000/readyz
 ```
 
-镜像使用固定 digest 的 builder/runtime base，多阶段构建，最终进程以 `65532:65532` 运行。容器内不调用 Pixi；只执行构建阶段生成的冻结环境。
+镜像使用固定 digest 的 builder/runtime base，多阶段构建，最终进程以 `65532:65532` 运行。容器内不调用 uv；只执行构建阶段生成的冻结环境。
 
 ## Compose
 

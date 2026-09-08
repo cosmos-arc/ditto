@@ -245,7 +245,7 @@ class PathExtractionTests(unittest.TestCase):
         project_distributions = evidence_module.PROJECT_TOOL_DISTRIBUTIONS
         package_manifests = evidence_module.INSTALLED_TOOL_PACKAGE_MANIFESTS
 
-        assert set(commands) >= {"bun", "git", "host_python", "pixi"}
+        assert set(commands) >= {"bun", "node", "git", "host_python", "uv", "task"}
         assert set(project_distributions) >= {
             "basedpyright",
             "coverage",
@@ -316,13 +316,8 @@ class PathExtractionTests(unittest.TestCase):
             "project_python",
         }
         assert run_mock.call_count == 1
-        assert run_mock.call_args.args[0][:5] == (
-            "pixi",
-            "run",
-            "-e",
-            "dev",
-            "python",
-        )
+        assert Path(run_mock.call_args.args[0][0]).name in {"python", "python.exe"}
+        assert ".venv" in run_mock.call_args.args[0][0]
 
 
 class CommandPolicyTests(unittest.TestCase):
@@ -351,7 +346,7 @@ class CommandPolicyTests(unittest.TestCase):
 
     def test_safe_project_commands_are_allowed(self) -> None:
         fixtures = (
-            "pixi run -e dev check",
+            "task check",
             "git status --short",
             "git diff --check",
             "pytest packages/data/tests/test_query.py",
@@ -435,7 +430,7 @@ class DiffClassificationTests(unittest.TestCase):
         )
 
     def test_root_toolchain_paths_are_not_reduced_to_harness_only(self) -> None:
-        for path in ("pixi.toml", ".pre-commit-config.yaml"):
+        for path in ("Taskfile.yml", ".pre-commit-config.yaml"):
             with self.subTest(path=path):
                 assert classify_diff([path]) == "root"
 
@@ -444,7 +439,7 @@ class DiffClassificationTests(unittest.TestCase):
 
         commands = verification_commands(classify_diff([path]), [path])
 
-        assert [" ".join(command) for command in commands] == ["pixi run -e dev check"]
+        assert [" ".join(command) for command in commands] == ["task check"]
 
     def test_contract_producers_are_classified_as_contract_changes(self) -> None:
         paths = (
@@ -473,8 +468,8 @@ class DiffClassificationTests(unittest.TestCase):
 
         assert level == "high-risk"
         assert commands == [
-            "pixi run -e dev check-backend",
-            "pixi run -e dev pytest -m pit",
+            "task check",
+            "task pit",
         ]
 
     def test_application_and_backend_risk_entrypoints_keep_specialized_gates(
@@ -483,19 +478,19 @@ class DiffClassificationTests(unittest.TestCase):
         fixtures = {
             "packages/application/src/ditto_application/commands/trade.py": (
                 "high-risk",
-                ("check-backend", "pytest -m pit"),
+                ("check", "task pit"),
             ),
             "packages/application/src/ditto_application/queries/factor_ic_report.py": (
                 "high-risk",
-                ("check-backend", "pytest -m pit"),
+                ("check", "task pit"),
             ),
             "apps/backend/src/ditto_apps/jobs/flows/backtest.py": (
                 "high-risk",
-                ("check-backend", "pytest -m pit"),
+                ("check", "task pit"),
             ),
             "apps/backend/src/ditto_apps/api/routes/trade_command_routes.py": (
                 "contract-high-risk",
-                ("check", "test-system", "pytest -m pit"),
+                ("check", "test-system", "task pit"),
             ),
         }
         for path, (expected_level, fragments) in fixtures.items():
@@ -516,7 +511,7 @@ class DiffClassificationTests(unittest.TestCase):
         flattened = [" ".join(command) for command in commands]
         assert any("ruff format --check" in command for command in flattened)
         assert any("ruff check" in command for command in flattened)
-        assert any("type --tests" in command for command in flattened)
+        assert any("type -- --tests" in command for command in flattened)
         assert any(path in command for command in flattened)
 
     def test_changed_test_fixture_runs_owning_package_tests(self) -> None:
@@ -524,7 +519,7 @@ class DiffClassificationTests(unittest.TestCase):
             "backend-tests", ["packages/data/tests/fixtures/market_snapshot.json"]
         )
         expected = (
-            "pixi run -e dev pytest -q --import-mode=importlib packages/data/tests"
+            "uv run --no-sync pytest -q --import-mode=importlib packages/data/tests"
         )
         assert expected in [" ".join(command) for command in commands]
 
@@ -535,7 +530,7 @@ class DiffClassificationTests(unittest.TestCase):
         )
         flattened = [" ".join(command) for command in commands]
         assert (
-            "pixi run -e dev pytest -q --import-mode=importlib apps/backend/tests"
+            "uv run --no-sync pytest -q --import-mode=importlib apps/backend/tests"
             in flattened
         )
 
@@ -552,11 +547,11 @@ class DiffClassificationTests(unittest.TestCase):
 
     def test_stack_specific_and_fail_closed_commands(self) -> None:
         fixtures = {
-            "backend": ["check-backend"],
+            "backend": ["check"],
             "web": ["check-web"],
             "contract": ["check", "test-system"],
-            "contract-high-risk": ["check", "test-system", "pytest -m pit"],
-            "high-risk": ["check-backend", "pytest -m pit"],
+            "contract-high-risk": ["check", "test-system", "task pit"],
+            "high-risk": ["check", "task pit"],
             "cross-stack": ["check", "test-system"],
             "root": ["check"],
             "unknown": ["check"],
@@ -575,8 +570,8 @@ class DiffClassificationTests(unittest.TestCase):
         commands = verification_commands(classify_diff([path]), [path])
         flattened = [" ".join(command) for command in commands]
         assert flattened == [
-            "pixi run -e dev check",
-            "pixi run -e dev test-system",
+            "task check",
+            "task test-system",
         ]
 
     def test_unknown_path_cannot_remove_cross_stack_or_pit_gates(self) -> None:
@@ -593,10 +588,8 @@ class DiffClassificationTests(unittest.TestCase):
         cross_commands = verification_commands(classify_diff(cross_stack), cross_stack)
         risk_commands = verification_commands(classify_diff(high_risk), high_risk)
 
-        assert "pixi run -e dev test-system" in [
-            " ".join(command) for command in cross_commands
-        ]
-        assert any("pytest -m pit" in " ".join(command) for command in risk_commands)
+        assert "task test-system" in [" ".join(command) for command in cross_commands]
+        assert any("task pit" in " ".join(command) for command in risk_commands)
 
     def test_docs_or_harness_paths_cannot_remove_an_owning_gate(self) -> None:
         test_path = "packages/data/tests/unit/test_data_import_boundary_unit.py"
@@ -614,9 +607,7 @@ class DiffClassificationTests(unittest.TestCase):
         )
 
         assert any(test_path in " ".join(command) for command in test_commands)
-        assert [" ".join(command) for command in harness_commands] == [
-            "pixi run -e dev check"
-        ]
+        assert [" ".join(command) for command in harness_commands] == ["task check"]
 
 
 class StopGateTests(unittest.TestCase):
@@ -893,8 +884,8 @@ class LifecycleLatencyTests(unittest.TestCase):
                 _initialize_repository(root)
                 if dirty:
                     (root / "AGENTS.md").write_text("Existing user edit\n")
-                executable = root / "bin" / "pixi"
-                executable.parent.mkdir()
+                executable = root / ".venv" / "bin" / "ruff"
+                executable.parent.mkdir(parents=True)
                 executable.write_text(
                     f"#!{sys.executable}\nimport time\ntime.sleep(30)\n"
                 )
@@ -954,11 +945,11 @@ class LifecycleLatencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "example.py").write_text("value=1\n")
-            executable = root / "bin" / "pixi"
-            executable.parent.mkdir()
+            executable = root / ".venv" / "bin" / "ruff"
+            executable.parent.mkdir(parents=True)
             executable.write_text(
                 f"#!{sys.executable}\nimport sys\n"
-                "sys.exit(0 if '--as-is' in sys.argv "
+                "sys.exit(0 if sys.argv[1] == 'format' "
                 "and '--fix' not in sys.argv else 42)\n"
             )
             executable.chmod(0o755)
@@ -979,8 +970,8 @@ class LifecycleLatencyTests(unittest.TestCase):
                 "import time; from pathlib import Path; time.sleep(1); "
                 f"Path({str(marker)!r}).touch()"
             )
-            executable = root / "bin" / "pixi"
-            executable.parent.mkdir()
+            executable = root / ".venv" / "bin" / "ruff"
+            executable.parent.mkdir(parents=True)
             executable.write_text(
                 f"#!{sys.executable}\nimport subprocess,sys,time\n"
                 f"subprocess.Popen([sys.executable, '-c', {child!r}])\n"
@@ -1006,3 +997,13 @@ class LifecycleLatencyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_single_package_local_checks_and_cross_package_escalation() -> None:
+    path = "packages/platform/src/ditto_platform/foundation/logging.py"
+    commands = verification_commands("backend", [path])
+    assert ["task", "test", "--", "--fast", "packages/platform/tests"] in commands
+    assert ["task", "type-all"] in commands
+    assert verification_commands(
+        "backend", [path, "packages/kernel/src/ditto_kernel/errors.py"]
+    ) == [["task", "check"]]

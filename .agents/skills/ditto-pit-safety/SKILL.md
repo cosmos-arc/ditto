@@ -33,6 +33,6 @@ If any required dimension is absent or ambiguous, fail closed. Do not substitute
 
 Use a future sentinel or late revision that would change the result if leaked. Verify exclusion beyond the cutoff and inclusion at a nearby allowed instant through the affected query, computation or replay entry point. For unsafe behavior, first reproduce the failure.
 
-Run the affected tests and the existing PIT suite (`pixi run -e dev pit`). Cross-package boundaries also require `pixi run -e dev arch-check`; broader verification follows [the testing guide](../../../docs/engineering/testing.md).
+Run the affected tests and the existing PIT suite (`task pit`). Cross-package boundaries also require `task arch-check`; broader verification follows [the testing guide](../../../docs/engineering/testing.md).
 
 Report the decision time, knowledge cutoff, snapshot identity, window/join semantics and actual verification results.

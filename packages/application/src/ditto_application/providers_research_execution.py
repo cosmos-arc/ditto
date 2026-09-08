@@ -11,7 +11,7 @@ backtest factory、first attempt factory 和 fold worker 串成一条从 coordin
 - 只做 wiring（构造对象、注入依赖），不包含业务逻辑。
 - 不读 git/lockfile（application 层禁做 git I/O）；``CodeEnvironmentLock`` 从
   :class:`ResearchExecutionSettings` 读 code_version + environment_lock_hash，由
-  apps composition root（C3）从真实 git HEAD + pixi.lock sha256 写入。
+  apps composition root（C3）从真实 git HEAD + Python 环境身份摘要 写入。
 - 通过 Protocol 类型（``FrozenResearchInputsResolver`` 等）注册，让消费侧的
   ``__init__`` 类型注解能直接解析到这些实例。
 """

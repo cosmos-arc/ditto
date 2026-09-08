@@ -1,0 +1,422 @@
+version: '3'
+vars:
+  VENV_PYTHON: '{{.ROOT_DIR}}/.venv/{{if eq OS "windows"}}Scripts/python.exe{{else}}bin/python{{end}}'
+env:
+  UV_PROJECT_ENVIRONMENT: '{{.ROOT_DIR}}/.venv'
+  UV_PYTHON_DOWNLOADS: never
+tasks:
+  lint:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync ruff check . {{.CLI_ARGS}}
+  lint-imports:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync lint-imports {{.CLI_ARGS}}
+  fmt:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync ruff format . {{.CLI_ARGS}}
+  fmt-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync ruff format --check . {{.CLI_ARGS}}
+  type:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/type.py {{.CLI_ARGS}}
+  type-all:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/type.py --all --clean {{.CLI_ARGS}}
+  arch-smells:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/architecture/check_architecture_smells.py {{.CLI_ARGS}}
+  arch-check:
+    cmds:
+    - task: lint-imports
+    - task: arch-smells
+  test:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/test.py {{.CLI_ARGS}}
+  test-cov-xml:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/test.py --cov-xml {{.CLI_ARGS}}
+  backend-coverage:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/test.py --cov-xml && uv run --no-sync python tooling/quality/coverage_gate.py
+      --report coverage.json {{.CLI_ARGS}}
+  test-fast:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/test.py --fast {{.CLI_ARGS}}
+  pit:
+    env:
+      PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync pytest -m pit -q -n0 --no-cov {{.CLI_ARGS}}
+  sync-agent-skills:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python tooling/agent_harness/sync_skills.py {{.CLI_ARGS}}
+  harness-validate:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python tooling/agent_harness/validate.py {{.CLI_ARGS}}
+  integrator-lease:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.agent_harness.lease {{.CLI_ARGS}}
+  harness-test:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m pytest tooling/agent_harness/tests -q -n0 --no-cov {{.CLI_ARGS}}
+  tooling-test:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync pytest tooling/dev/tests tooling/contracts/tests tooling/quality/tests -q -n0 --no-cov
+      {{.CLI_ARGS}}
+    - bun test tooling/quality/tests/bun_workspace.test.mjs
+  harness-type:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync basedpyright tooling/agent_harness {{.CLI_ARGS}}
+  large-file-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.large_files {{.CLI_ARGS}}
+  harness-check:
+    cmds:
+    - task: python-environment-check
+    - task: harness-validate
+    - task: harness-test
+    - task: tooling-test
+    - task: harness-type
+    - task: large-file-check
+  check-changed:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python tooling/agent_harness/hook.py --event check-changed {{.CLI_ARGS}}
+  package-contract-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python tooling/quality/package_contracts.py {{.CLI_ARGS}}
+  toolchain-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - '"{{.VENV_PYTHON}}" tooling/dev/toolchain.py {{.CLI_ARGS}}'
+  bun-install:
+    cmds:
+    - bun ci --frozen-lockfile --registry=https://registry.npmjs.org {{.CLI_ARGS}}
+  web-environment-check:
+    cmds:
+    - bun tooling/dev/bun-workspace.mjs {{.CLI_ARGS}}
+  contract-toolchain-bootstrap:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.contracts.bootstrap_oasdiff {{.CLI_ARGS}}
+  bootstrap:
+    cmds:
+    - task: python-install
+    - task: bun-install
+    - task: toolchain-check
+    - task: contract-toolchain-bootstrap
+  web-lint:
+    cmds:
+    - bun run lint {{.CLI_ARGS}}
+    dir: apps/web
+  web-type:
+    cmds:
+    - bun run type {{.CLI_ARGS}}
+    dir: apps/web
+  web-test:
+    cmds:
+    - bun run test:unit {{.CLI_ARGS}}
+    dir: apps/web
+  web-build:
+    cmds:
+    - bun run build {{.CLI_ARGS}}
+    dir: apps/web
+  web-product-check:
+    cmds:
+    - bun run audit:routes {{.CLI_ARGS}}
+    dir: apps/web
+  web-token-check:
+    cmds:
+    - bun run audit:tokens:dead-links --ci {{.CLI_ARGS}}
+    dir: apps/web
+  web-architecture:
+    cmds:
+    - bun run arch:check {{.CLI_ARGS}}
+    dir: apps/web
+  web-coverage:
+    cmds:
+    - bun run test:coverage {{.CLI_ARGS}}
+    dir: apps/web
+  web-prototype:
+    cmds:
+    - bun run test:prototype {{.CLI_ARGS}}
+    dir: apps/web
+  web-manifest-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python tooling/quality/web_manifest_freshness.py {{.CLI_ARGS}}
+  web-static:
+    cmds:
+    - task: web-environment-check
+    - task: web-lint
+    - task: web-type
+    - task: web-product-check
+    - task: web-token-check
+    - task: web-architecture
+  check-web:
+    cmds:
+    - task: web-static
+    - task: web-test
+  web-quality:
+    cmds:
+    - task: web-static
+    - task: web-coverage
+  web-ci:
+    cmds:
+    - task: web-quality
+    - task: web-prototype
+    - task: web-build
+  contract-static:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.contracts.check_contract {{.CLI_ARGS}}
+  contract-conformance:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync pytest apps/backend/tests/contract/test_openapi_conformance.py -q -n0 --no-cov
+      {{.CLI_ARGS}}
+  cohort-compatibility-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.release.compatibility_policy validate {{.CLI_ARGS}}
+  check-contract:
+    cmds:
+    - task: python-environment-check
+    - task: contract-static
+    - task: contract-conformance
+    - task: cohort-compatibility-check
+  test-system:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - task: python-environment-check
+    - uv run --no-sync python -m tooling.dev.system_tests {{.CLI_ARGS}}
+  mutation-critical:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.mutation_gate --threshold 80 {{.CLI_ARGS}}
+  security-supply-chain:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.security.supply_chain {{.CLI_ARGS}}
+  artifact-gate:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - task: web-ci
+    - uv run --no-sync python -m tooling.release.artifact_gate {{.CLI_ARGS}}
+  platform-backend-unit:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync pytest packages/kernel/tests/unit/test_identity.py apps/backend/tests/unit/test_main_unit.py
+      apps/backend/tests/unit/test_loopback_binding_unit.py apps/backend/tests/unit/cli/commands/test_init_unit.py
+      packages/analysis/tests/unit/test_artifact_file_primitives_unit.py packages/analysis/tests/unit/test_artifact_service_unit.py
+      -q -n0 --no-cov {{.CLI_ARGS}}
+  platform-web-unit:
+    cmds:
+    - node --import ../../tooling/dev/node-runtime.mjs node_modules/vitest/vitest.mjs run src/api/compatibility.test.ts src/api/runtime-config.test.ts {{.CLI_ARGS}}
+    dir: apps/web
+  platform-api-smoke:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.dev.platform_smoke {{.CLI_ARGS}}
+  check-backend:
+    cmds:
+    - task: python-environment-check
+    - task: package-contract-check
+    - task: lint
+    - task: fmt-check
+    - task: type-all
+    - task: test-fast
+    - task: arch-check
+  check:
+    cmds:
+    - task: toolchain-check
+    - task: check-backend
+    - task: check-web
+    - task: check-contract
+    - task: harness-check
+  backend-ci:
+    cmds:
+    - task: python-environment-check
+    - task: package-contract-check
+    - task: lint
+    - task: fmt-check
+    - task: type-all
+    - task: backend-coverage
+    - task: pit
+    - task: arch-check
+  ci:
+    cmds:
+    - task: backend-ci
+    - task: check-contract
+    - task: test-system
+    - task: harness-check
+    - task: security-supply-chain
+    - task: artifact-gate
+  dev:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - task: toolchain-check
+    - uv run --no-sync python -m tooling.dev.supervisor {{.CLI_ARGS}}
+  server:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m ditto_apps.server ditto_apps.main:app --interface asgi --host 127.0.0.1
+      --port 8000 --workers 4 {{.CLI_ARGS}}
+  clean:
+    cmds:
+    - "rm -rf dist/ build/ *.egg-info .pytest_cache .ruff_cache htmlcov .coverage coverage.xml\
+      \ **/__pycache__\n {{.CLI_ARGS}}"
+  pre-commit-install:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync pre-commit install --hook-type commit-msg --hook-type pre-commit --hook-type pre-push
+      {{.CLI_ARGS}}
+  pre-commit-run:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync pre-commit run --all-files {{.CLI_ARGS}}
+  pre-commit-update:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync pre-commit autoupdate {{.CLI_ARGS}}
+  analyze-slow-tests:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python scripts/analyze_slow_tests.py {{.CLI_ARGS}}
+  default:
+    cmds:
+    - task: check
+  python-install:
+    env:
+      UV_PYTHON_DOWNLOADS: automatic
+    cmds:
+    - uv sync --locked --all-packages {{.CLI_ARGS}}
+  python-environment-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv lock --check --offline
+    - uv sync --check --locked --offline --all-packages
+  browser-install:
+    cmds:
+    - node --import ./tooling/dev/node-runtime.mjs node_modules/@playwright/test/cli.js install chromium
+      {{.CLI_ARGS}}
+  platform-native-test:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - task: python-environment-check
+    - uv run --no-sync pytest packages/portfolio/tests/unit/rebalancing/test_cvxpy_optimizer_unit.py packages/data/tests/integration/runtime/test_sql_engine_integration.py -q -n 0 --no-cov {{.CLI_ARGS}}
+  backend-test-shard:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.test_shards run {{.CLI_ARGS}}
+  backend-coverage-combine:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.test_shards combine {{.CLI_ARGS}}

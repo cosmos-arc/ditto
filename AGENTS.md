@@ -1,10 +1,10 @@
 # Ditto Agent 指南
 
-Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决策、Paper Trading 和手工账户管理工作站，不连接券商下单。Python/Pixi 与 React/TypeScript/Bun 独立构建，以同一提交、跨栈契约和 release cohort 验收。
+Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决策、Paper Trading 和手工账户管理工作站，不连接券商下单。Python/uv 与 React/TypeScript/Bun 独立构建，以同一提交、跨栈契约和 release cohort 验收。
 
 ## 事实与阅读入口
 
-机器约束、源码/测试、架构文档、本文件依次优先；改动位置的近端 AGENTS 补充局部约束。命令以根 `pixi.toml` 与 CI 为准，依赖边界以 `.importlinter` 和 Web dependency graph 为准。
+机器约束、源码/测试、架构文档、本文件依次优先；改动位置的近端 AGENTS 补充局部约束。命令以根 `Taskfile.yml` 与 CI 为准，依赖边界以 `.importlinter` 和 Web dependency graph 为准。
 
 - 涉及跨包、公共 API、DI 或目录归属：读 [架构快速参考](docs/architecture/agent-context-pack.md)；新增概念或调整抽象时读 [边界标准](docs/architecture/boundaries-and-abstraction-standards.md)。
 - 涉及 HTTP DTO、OpenAPI 或 Web transport：读 [契约指南](contracts/AGENTS.md) 与 [兼容性](contracts/openapi/README.md)。
@@ -15,7 +15,7 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决
 
 ## 关键不变量
 
-- 根 Pixi 是唯一跨栈任务 DAG；Web 使用 Bun，根保留唯一 `bun.lock`。不以 pip/poetry/conda 或 npm/yarn/pnpm 修改环境。
+- 根 Task 是唯一跨栈任务 DAG；Web 使用 Bun，根保留唯一 `bun.lock`。不以 pip/poetry/conda 或 npm/yarn/pnpm 修改环境。
 - 数据帧与表计算用 Polars；外部高性能序列化优先 orjson，现有 schema、SQLite、测试和规范化场景允许标准库 json。
 - `application` 编排能力包，产品 `agent` 只经 application 使用业务能力，`apps/backend` 是唯一 Python composition root；kernel 零第三方依赖、零 I/O。
 - 跨栈方向为 FastAPI → 本地 OpenAPI snapshot → generated types/runtime metadata → typed transport → feature adapter → UI。生成物通过生成器更新，组件使用 view model。

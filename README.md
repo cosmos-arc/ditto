@@ -4,17 +4,17 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股个股与 ETF 决
 覆盖研究、回测、Paper Trading 与手工账户管理；系统不连接券商自动下单。
 
 本仓库是联邦式 polyglot monorepo：Python 后端与 TypeScript Web 保留各自原生
-生态，由根 Pixi 任务图、同一 OpenAPI 契约、同一 Git 提交和同一 release cohort
+生态，由根 Task 任务图、同一 OpenAPI 契约、同一 Git 提交和同一 release cohort
 统一治理。
 
 ## 技术栈
 
-Python、Pixi、FastAPI 与 Polars 版本见 [pixi.toml](pixi.toml)；Bun 版本见
-[根 package.json](package.json)，React、TypeScript 与 Vite 见
-[Web package.json](apps/web/package.json)。实际解析版本由根 lockfiles 固定。
+Python 依赖由 [pyproject.toml](pyproject.toml) 与 [uv.lock](uv.lock) 固定；
+解释器、Node 和 Task 的版本分别见 `.python-version`、`.node-version`、`.task-version`。
+Bun 由根 [package.json](package.json) 的 `packageManager` 固定。
 
-根 `pixi.toml` 是唯一跨栈任务编排事实源。Pixi 管理 Python、质量工具和任务 DAG；
-Bun 只管理 Web workspace 依赖及 lint/type/test/build/codegen 叶子任务。
+根 [Taskfile.yml](Taskfile.yml) 是唯一跨栈任务图。uv 管理 Python workspace；
+Bun 管理 Web 依赖和专用脚本，固定 Node 执行 Vite、Vitest、Playwright 与契约 CLI。
 
 ## 仓库地图
 
@@ -56,12 +56,14 @@ feature api adapters → typed src/api → contracts/openapi/v1.json
 
 ## 快速开始
 
-需要 Pixi `>=0.73,<0.74`。Bun 版本由根 `packageManager` 固定；不要使用 pip、
-Poetry、Conda、pnpm 或 npm 修改项目环境。
+先安装上述声明版本的 uv、Task、Node 和 Bun（来源与迁移映射见
+[工具链说明](docs/engineering/toolchain.md)）。`task bootstrap` 显式安装锁定依赖，
+`task browser-install` 显式准备 Playwright Chromium。普通检查不会安装依赖或修改锁。
 
 ```bash
-pixi run -e dev bootstrap
-pixi run -e dev dev
+task bootstrap
+task browser-install
+task dev
 ```
 
 `dev` 会为当前 worktree 分配隔离端口、state/cache/log 目录，等待 API/Web
@@ -72,16 +74,16 @@ readiness，并在 Ctrl-C、异常退出或超时后回收子进程。默认 pro
 
 | 命令 | 作用 |
 | --- | --- |
-| `pixi run -e dev bootstrap` | 校验工具链并执行冻结锁文件安装 |
-| `pixi run -e dev dev` | 受监督地启动 API 与 Web |
-| `pixi run -e dev check-backend` | Python lint、format、type、architecture、fast tests |
-| `pixi run -e dev check-web` | Web lint、全部 TS project、unit、graph 与产品合同 |
-| `pixi run -e dev check-contract` | OpenAPI export/lint/breaking/codegen zero-diff |
-| `pixi run -e dev test-system` | production Web + 隔离真实 API 的 Playwright |
-| `pixi run -e dev harness-check` | 根 Agent/Skill/hook 与工具回归 |
-| `pixi run -e dev check` | 唯一跨栈快速门 |
-| `pixi run -e dev ci` | 覆盖率、PIT、prototype、E2E、安全与制品全门 |
-| `pixi run -e dev check-changed` | Agent 本地反馈；未知路径 fail closed |
+| `task bootstrap` | 校验工具链并执行冻结锁文件安装 |
+| `task dev` | 受监督地启动 API 与 Web |
+| `task check-backend` | Python lint、format、type、architecture、fast tests |
+| `task check-web` | Web lint、全部 TS project、unit、graph 与产品合同 |
+| `task check-contract` | OpenAPI export/lint/breaking/codegen zero-diff |
+| `task test-system` | production Web + 隔离真实 API 的 Playwright |
+| `task harness-check` | 根 Agent/Skill/hook 与工具回归 |
+| `task check` | 唯一跨栈快速门 |
+| `task ci` | 覆盖率、PIT、prototype、E2E、安全与制品全门 |
+| `task check-changed` | Agent 本地反馈；未知路径 fail closed |
 
 Web 目录中的 Bun scripts 是叶子开发入口，不定义另一套跨栈 `check/ci` DAG。
 完整 `ci` 还会通过固定 digest 的 scanner image 构建、扫描并 smoke 后端容器，
@@ -103,7 +105,7 @@ FastAPI 的 side-effect-free app factory 是 API 语义源，提交后的唯一�
 
 ## 运行时与本地优先边界
 
-生产进程不依赖 Git checkout、`.git`、`pixi.toml` 或 `parents[n]` 推断路径：
+生产进程不依赖 Git checkout、`.git`、`Taskfile.yml` 或 `parents[n]` 推断路径：
 
 - `DITTO_CONFIG_ROOT`：显式配置；
 - `DITTO_STATE_ROOT`：SQLite、账本与运行状态；

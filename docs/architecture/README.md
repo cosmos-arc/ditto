@@ -95,7 +95,7 @@
 | portfolio/risk/backtest 禁止 platform | 需要时先更新包契约 |
 | strategy 不依赖 data/features | 市场数据通过 Protocol 注入 |
 | 使用 polars（禁止 pandas） | 使用 orjson（禁止 json） |
-| 使用 pixi（禁止 pip/poetry/conda） | Python ≥ 3.13 |
+| Python 使用 uv，根任务使用 Task，Web 使用 Bun | Python ≥ 3.13 |
 
 ## 架构文档
 

@@ -72,7 +72,7 @@ class ReconcileSourcesHandler:
         except Exception as e:
             return self._handle_reconciliation_error(cmd.trade_date, cmd.dataset, e)
 
-    # -- Private helpers (absorbed from QualityReconciliationService) --
+    # -- Private helpers (absorbed from QualityReconciliationService)
 
     def _handle_reconciliation_error(
         self,

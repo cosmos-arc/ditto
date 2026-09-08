@@ -39,7 +39,7 @@ class ArtifactPersistenceService:
             _writer if _writer is not None else DerivedArtifactWriter(artifact_root)
         )
 
-    # -- public API (mirrors DerivedArtifactWriter) --
+    # -- public API (mirrors DerivedArtifactWriter)
 
     def write_ephemeral_result(
         self,

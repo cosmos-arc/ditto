@@ -4,8 +4,8 @@
   "pythonVersion": "3.13",
   "pythonPlatform": "All",
   "stubPath": "typings",
-  "venvPath": ".pixi/envs",
-  "venv": "dev",
+  "venvPath": ".",
+  "venv": ".venv",
   "typeCheckingMode": "basic",
   "extraPaths": [
     "packages/kernel/src",

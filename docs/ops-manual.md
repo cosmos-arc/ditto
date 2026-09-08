@@ -2,7 +2,7 @@
 
 **版本：v2.0**
 
-**最后更新：2026-03-04**
+**最后更新：2026-09-08**
 
 ---
 
@@ -35,36 +35,42 @@
 
 | 组件 | 最低要求 | 推荐配置 |
 |------|----------|----------|
-| 操作系统 | Windows 10/11, Linux | Windows 11 / Ubuntu 22.04 |
-| Python | 3.13+ | 3.13.x |
+| 操作系统 | Linux x86_64、macOS ARM64、Windows x64 | 与 CI 支持平台一致 |
+| Python | `.python-version` 固定版本 | uv managed Python |
 | 内存 | 4GB | 8GB+ |
 | 磁盘 | 10GB | 50GB+ SSD |
 
-#### 1.1.2 安装 Pixi
+#### 1.1.2 准备固定版本工具链
 
-Pixi 是项目的包管理器和任务运行器。
+uv 管理 Python 解释器和依赖，Task 编排跨栈任务，Bun 安装 Web 依赖，Node 执行 Node CLI。
+先克隆仓库，再按 [工具链说明](engineering/toolchain.md#准备与只读检查) 中的官方归档和校验和安装当前平台的 uv、Task、Bun、Node，并加入 PATH。版本以仓库声明为准，不安装浮动的 latest 版本：
 
-```bash
-# Linux/macOS
-curl -fsSL https://pixi.sh/install.sh | bash
-
-# Windows (PowerShell)
-iwr -useb https://pixi.sh/install.ps1 | iex
-```
+| 工具 | 版本声明 |
+| --- | --- |
+| uv | 根 `pyproject.toml` 的 `tool.uv.required-version` |
+| Task | `.task-version` |
+| Bun | 根 `package.json` 的 `packageManager` |
+| Node | `.node-version` |
+| Python | `.python-version`，由 uv 在显式初始化时安装 |
 
 #### 1.1.3 初始化项目
 
 ```bash
-# 克隆项目
-git clone <repo-url> ditto
+# 克隆项目；后续命令均在仓库根目录运行
+git clone https://github.com/cosmos-arc/ditto.git
 cd ditto
 
-# 安装依赖（开发环境）
-pixi install
+# 完成上面的固定版本工具链安装后，创建 .venv 并安装锁定的两栈依赖
+task bootstrap
+
+# 准备浏览器测试所需的 Chromium
+task browser-install
 
 # 安装 pre-commit hooks
-pixi run -e dev pre-commit-install
+task pre-commit-install
 ```
+
+普通检查不自动安装依赖。若环境尚未准备，先执行上述初始化入口，不通过其他包管理器修改环境。
 
 #### 1.1.4 配置 API Token
 
@@ -72,19 +78,19 @@ Tushare API Token 和 FRED API Key 通过系统密钥管理（keyring），不�
 
 ```bash
 # 设置 Tushare Token（首次配置）
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 keyring.set_password('tushare', 'token', 'YOUR_TOKEN_HERE')
 "
 
 # 设置 FRED API Key（美国宏观数据）
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 keyring.set_password('fred', 'api_key', 'YOUR_API_KEY_HERE')
 "
 
 # 验证 Token
-pixi run -e dev python -c "
+uv run --no-sync python -c "
 import keyring
 token = keyring.get_password('tushare', 'token')
 api_key = keyring.get_password('fred', 'api_key')
@@ -101,29 +107,29 @@ print(f'FRED: {\"已配置\" if api_key else \"未配置\"}')
 
 | 命令 | 说明 |
 |------|------|
-| `pixi run dev` | 开发模式启动（热重载，端口 8000） |
-| `pixi run server` | 生产模式启动（4 workers，端口 8000） |
+| `task dev` | 开发模式启动（热重载，端口 8000） |
+| `task server` | 生产模式启动（4 workers，端口 8000） |
 
 #### 1.2.2 代码质量
 
 | 命令 | 说明 |
 |------|------|
-| `pixi run -e dev check` | 快速验证（lint + fmt + type + test --fast） |
-| `pixi run -e dev ci` | CI 完整检查 |
-| `pixi run -e dev lint` | Ruff 代码检查 |
-| `pixi run -e dev lint --fix` | 自动修复 lint 问题 |
-| `pixi run -e dev fmt` | 代码格式化 |
-| `pixi run -e dev type` | 类型检查（源码，strict） |
-| `pixi run -e dev type --all` | 完整类型检查（含测试） |
-| `pixi run -e dev arch-check` | 架构边界检查（Import Linter） |
+| `task check` | 快速验证（lint + fmt + type + test --fast） |
+| `task ci` | CI 完整检查 |
+| `task lint` | Ruff 代码检查 |
+| `task lint -- --fix` | 自动修复 lint 问题 |
+| `task fmt` | 代码格式化 |
+| `task type` | 类型检查（源码，strict） |
+| `task type -- --all` | 完整类型检查（含测试） |
+| `task arch-check` | 架构边界检查（Import Linter） |
 
 #### 1.2.3 其他命令
 
 | 命令 | 说明 |
 |------|------|
-| `pixi run clean` | 清理缓存（pytest/ruff/__pycache__） |
-| `pixi run -e dev pre-commit-run` | 运行 pre-commit hooks |
-| `pixi run -e dev pre-commit-update` | 更新 pre-commit hooks 版本 |
+| `task clean` | 清理缓存（pytest/ruff/__pycache__） |
+| `task pre-commit-run` | 运行 pre-commit hooks |
+| `task pre-commit-update` | 更新 pre-commit hooks 版本 |
 
 ---
 
@@ -133,28 +139,28 @@ print(f'FRED: {\"已配置\" if api_key else \"未配置\"}')
 
 ```bash
 # 默认：单元测试（并行）
-pixi run -e dev test
+task test
 
 # 只运行单元测试
-pixi run -e dev test --unit
+task test -- --unit
 
 # 只运行集成测试（串行）
-pixi run -e dev test --integration
+task test -- --integration
 
 # 快速测试（跳过 slow/integration）
-pixi run -e dev test --fast
+task test -- --fast
 
 # 带覆盖率报告
-pixi run -e dev test --cov
+task test -- --cov
 
 # 覆盖率 XML（CI 用）
-pixi run -e dev test --cov-xml
+task test -- --cov-xml
 
 # 支持 inline-snapshot
-pixi run -e dev test --snapshot
+task test -- --snapshot
 
 # E2E 验证测试
-pixi run -e dev pytest tests/e2e/ -v
+uv run --no-sync pytest tests/e2e/ -v
 ```
 
 #### 1.3.2 测试覆盖率要求
@@ -168,7 +174,7 @@ pixi run -e dev pytest tests/e2e/ -v
 提交前必须通过：
 
 ```bash
-pixi run -e dev check
+task check
 ```
 
 包含：
@@ -387,7 +393,7 @@ sleep 5
 prefect worker start --pool default-agent-pool &
 
 # 4. 启动 FastAPI Server
-pixi run server
+task server
 ```
 
 #### 3.1.3 端口配置
@@ -423,7 +429,7 @@ pixi run server
 │                   环境控制层次（从外到内）                         │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  Layer 1: Pixi 环境 (依赖管理层)                                 │
+│  Layer 1: uv 环境 (依赖管理层)                                 │
 │  ├── default → 生产依赖                                          │
 │  └── dev      → default + 开发工具                               │
 │                                                                  │
@@ -497,11 +503,11 @@ config/
 
 #### 3.2.4 环境切换
 
-| 场景 | Pixi 环境 | ENVIRONMENT | 命令示例 |
+| 场景 | uv 环境 | ENVIRONMENT | 命令示例 |
 |------|-----------|-------------|----------|
-| 本地开发 | `dev` | `development` | `pixi run -e dev pytest` |
-| 测试执行 | `dev` | `testing` | `pixi run -e dev pytest` |
-| 生产部署 | `default` | `production` | `pixi run server` |
+| 本地开发 | `dev` | `development` | `uv run --no-sync pytest` |
+| 测试执行 | `dev` | `testing` | `uv run --no-sync pytest` |
+| 生产部署 | `default` | `production` | `task server` |
 
 ---
 
@@ -824,10 +830,10 @@ E2E（端到端）验证系统用于确保数据摄入、存储、查询的全�
 
 ```bash
 # 准备 E2E 测试数据
-pixi run -e dev python tests/scripts/prepare_e2e_data.py
+uv run --no-sync python tests/scripts/prepare_e2e_data.py
 
 # 运行 E2E 测试
-pixi run -e dev pytest tests/e2e/ -v
+uv run --no-sync pytest tests/e2e/ -v
 
 # 生成验收报告
 # 报告自动保存至 tests/reports/e2e_validation_YYYYMMDD.md
@@ -863,7 +869,7 @@ pixi run -e dev pytest tests/e2e/ -v
 |------|------|
 | 服务器主入口 | `apps/backend/src/ditto_apps/main.py` |
 | CLI 入口 | `apps/backend/src/ditto_apps/cli/main.py` |
-| Pixi 配置 | `pixi.toml` |
+| uv 配置 | `Taskfile.yml` |
 | 生产配置 | `config/production/` |
 | 开发配置 | `config/development/` |
 | 可观测性模块 | `packages/platform/src/ditto_platform/foundation/observability/` |

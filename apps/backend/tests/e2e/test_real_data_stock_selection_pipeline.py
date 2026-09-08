@@ -5,7 +5,7 @@
 2. stock_selection 策略经官方 EOD 入口通过 freshness/DQ 门禁并发布信号包。
 
 CI 默认在网络访问前跳过（未显式启用）；本地真实演练：
-    DITTO_RUN_REAL_DATA_ACCEPTANCE=1 pixi run -e dev pytest \
+    DITTO_RUN_REAL_DATA_ACCEPTANCE=1 uv run --no-sync pytest \
         apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py \
         -m e2e --no-cov -q
 """

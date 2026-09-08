@@ -12,6 +12,6 @@
 
 ## 验证与参考
 
-- `pixi run -e dev pytest packages/portfolio/tests`
-- `pixi run -e dev arch-check`
+- `uv run --no-sync pytest packages/portfolio/tests`
+- `task arch-check`
 - [架构快速参考](../../docs/architecture/agent-context-pack.md) · [测试指南](../../docs/engineering/testing.md)

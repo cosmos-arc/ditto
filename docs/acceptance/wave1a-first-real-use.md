@@ -5,7 +5,7 @@
 > Frontend branch: `feat/wave1-backend-wiring`
 >
 > Historical evidence: commands and `VITE_*` flags below describe the original
-> two-repository run. Current reruns use root `pixi run -e dev dev` plus
+> two-repository run. Current reruns use root `task dev` plus
 > `ditto-runtime-config.json`; the Web tree now lives at `apps/web`.
 
 ## Summary
@@ -51,8 +51,8 @@ bun run check
 
 ```
 source scripts/acceptance/wave1_env.sh
-export TUSHARE_TOKEN="$(pixi run -e dev python -c "import keyring; print(keyring.get_password('tushare','token'))")"
-pixi run server                    # granian :8000
+export TUSHARE_TOKEN="$(uv run --no-sync python -c "import keyring; print(keyring.get_password('tushare','token'))")"
+task server --                    # granian :8000
 # ditto-app: bun run dev           # Vite :5173, VITE_USE_MOCK=false, proxy /api → :8000
 ```
 
@@ -86,6 +86,6 @@ pixi run server                    # granian :8000
 1. `source scripts/acceptance/wave1_env.sh`
 2. 启动 Ditto API server。
 3. 跑 EOD 或 publish-signals，产出 `seed_etf_industry_rotation` intents。
-4. 以根 `pixi run -e dev dev` 启动 `runtime=live`，打开 `/trading`、`/trading/signals`、`/trading/portfolio`、`/trading/orders`。
+4. 以根 `task dev` 启动 `runtime=live`，打开 `/trading`、`/trading/signals`、`/trading/portfolio`、`/trading/orders`。
 5. 记录 readiness、latest signal date、signal count、positions、deviation/pnl、Pipeline Strip、Portfolio 归因/交易流水。
 6. 将截图或真实 response 摘要追加到本文件。

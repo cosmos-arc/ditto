@@ -16,6 +16,7 @@ import pytest
 from tooling.release import artifact_gate
 from tooling.release.cohort_manifest import CohortManifest, ReleaseCoordinates
 from tooling.release.cohort_verify import verify_cohort_manifest
+from tooling.release.tests.image_fixture import write_image
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -51,6 +52,7 @@ def test_owned_temporary_directory_resolves_system_symlink_before_staging(
         artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
     )
     monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(artifact_gate, "environment_identity", lambda _root: "c" * 64)
     monkeypatch.setattr(
         artifact_gate, "_archive_image_config", lambda _path: "sha256:" + "d" * 64
     )
@@ -70,6 +72,7 @@ def test_owned_temporary_directory_resolves_system_symlink_before_staging(
         "_run_ephemeral_container",
         "_canonicalize_spdx_sbom",
         "_verify_scanner_subject",
+        "_scan_backend_library_sources",
     ):
         monkeypatch.setattr(artifact_gate, name, noop)
     monkeypatch.setattr(
@@ -385,7 +388,10 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
     contract = tmp_path / "contracts" / "openapi" / "v1.json"
     contract.parent.mkdir(parents=True)
     contract.write_bytes(b'{"openapi":"3.1.0"}\n')
-    (tmp_path / "pixi.lock").write_bytes(b"pixi\n")
+    (tmp_path / "uv.lock").write_bytes(b"uv\n")
+    (tmp_path / ".python-version").write_text("cpython-3.13.14")
+    (tmp_path / "deploy/docker").mkdir(parents=True)
+    (tmp_path / "deploy/docker/Dockerfile").write_text("FROM fixture")
     (tmp_path / "bun.lock").write_bytes(b"bun\n")
     output = tmp_path / "dist"
     output.mkdir()
@@ -393,7 +399,7 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
     web = output / "ditto-web.tar"
     backend_sbom = output / "ditto-backend.spdx.json"
     web_sbom = output / "ditto-web.spdx.json"
-    backend.write_bytes(b"backend")
+    write_image(backend, tmp_path, staged=False)
     web.write_bytes(b"web")
     backend_sbom.write_text(
         json.dumps(
@@ -462,6 +468,7 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
         "tooling/release/__init__.py",
         "tooling/release/cohort_manifest.py",
         "tooling/release/cohort_verify.py",
+        "tooling/release/environment_identity.py",
         "tooling/release/offline_verify.py",
     ):
         source = ROOT / relative
@@ -507,12 +514,13 @@ def test_local_artifact_gate_materializes_and_verifies_a_portable_cohort(
     paths = {str(record["path"]) for record in verified["artifacts"]}
     assert paths >= {
         "release-inputs/contracts/openapi/v1.json",
-        "release-inputs/pixi.lock",
+        "release-inputs/uv.lock",
         "release-inputs/bun.lock",
         "release-tools/tooling/__init__.py",
         "release-tools/tooling/release/__init__.py",
         "release-tools/tooling/release/cohort_manifest.py",
         "release-tools/tooling/release/cohort_verify.py",
+        "release-tools/tooling/release/environment_identity.py",
         "release-tools/verify-cohort.py",
     }
     assert all(path.is_relative_to(output) for path in cohort_artifacts)
@@ -595,6 +603,7 @@ def test_build_export_and_smoke_use_the_build_output_id(
         artifact_gate, "_release_identity", lambda _root: ("1.0.0", "a" * 40, "b" * 64)
     )
     monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "c" * 64)
+    monkeypatch.setattr(artifact_gate, "environment_identity", lambda _root: "c" * 64)
     monkeypatch.setattr(
         artifact_gate, "_archive_image_config", lambda _path: "sha256:" + "d" * 64
     )
@@ -606,6 +615,7 @@ def test_build_export_and_smoke_use_the_build_output_id(
         "_run_ephemeral_container",
         "_canonicalize_spdx_sbom",
         "_verify_scanner_subject",
+        "_scan_backend_library_sources",
         "_stage_web_dependency_metadata",
         "_bind_and_verify_web_sbom",
     ):
@@ -613,6 +623,424 @@ def test_build_export_and_smoke_use_the_build_output_id(
     monkeypatch.setattr(artifact_gate, "_smoke_container", smoke)
     with pytest.raises(SmokeObserved):
         artifact_gate.run_artifact_gate(tmp_path)
+
+
+def test_backend_library_sources_are_bound_to_release_dockerfile() -> None:
+    assert artifact_gate._backend_library_sources(ROOT) == (
+        (
+            "runtime-libraries",
+            "cgr.dev/chainguard/python@sha256:c23539f80289046e2fa734d3f3fc418833fc22d064a50cc43fa9a6edc28c1615",
+        ),
+        (
+            "debian-libraries",
+            "gcr.io/distroless/python3-debian13@sha256:f3d5ddc6c64a019fe520e7f005f2880be21e6afc461b10a3c15ef2e4edc71e33",
+        ),
+    )
+
+
+def test_scanner_source_mismatch_cannot_pass(tmp_path: Path) -> None:
+    report = tmp_path / "source.json"
+    report.write_text(json.dumps({"Metadata": {"RepoDigests": ["wrong@sha256:x"]}}))
+    with pytest.raises(artifact_gate.ArtifactGateError, match="source"):
+        artifact_gate._verify_scanner_source(
+            report, source="right@sha256:" + "a" * 64, stage="runtime-libraries"
+        )
+
+
+def test_backend_source_scan_keeps_raw_inventory_for_post_scan_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = "source@sha256:" + "a" * 64
+
+    def sources(_root: Path) -> tuple[tuple[str, str], ...]:
+        return (("runtime-libraries", source),)
+
+    def scan_archive(
+        _docker: str,
+        _root: Path,
+        *,
+        source: str,
+        archive: Path,
+        output: Path,
+        report: Path,
+    ) -> None:
+        del source, archive, output
+        report.write_text(
+            json.dumps(
+                {
+                    "Metadata": {"ImageID": "sha256:" + "b" * 64},
+                    "Results": [{"Packages": [], "Vulnerabilities": None}],
+                }
+            )
+        )
+
+    monkeypatch.setattr(artifact_gate, "_backend_library_sources", sources)
+    monkeypatch.setattr(artifact_gate, "_scan_source_archive", scan_archive)
+
+    reports, provenance = artifact_gate.scan_backend_library_sources(tmp_path, tmp_path)
+
+    assert [path.name for path in reports] == [
+        "trivy-backend-source-runtime-libraries.json"
+    ]
+    assert provenance.name == "ditto-backend-source-provenance.spdx.json"
+    assert provenance.is_file()
+    assert provenance.is_file()
+
+
+def test_backend_source_scan_pulls_pinned_source_for_buildkit_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = "source@sha256:" + "a" * 64
+    commands: list[list[str]] = []
+
+    def run(command: list[str], **_kwargs: object) -> str:
+        commands.append(command)
+        if command[1:3] == ["image", "inspect"]:
+            return source
+        if command[1] == "save":
+            archive.write_text("archive", encoding="utf-8")
+        return ""
+
+    archive = tmp_path / "runtime-libraries.tar"
+    report = tmp_path / "report.json"
+    monkeypatch.setattr(artifact_gate, "_run", run)
+    monkeypatch.setattr(
+        artifact_gate, "_select_amd64_archive", lambda _path: "sha256:id"
+    )
+    monkeypatch.setattr(
+        artifact_gate, "_run_ephemeral_container", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        artifact_gate, "_verify_scanner_source", lambda *_args, **_kwargs: None
+    )
+
+    artifact_gate._scan_source_archive(
+        "docker",
+        tmp_path,
+        source=source,
+        archive=archive,
+        output=tmp_path,
+        report=report,
+    )
+
+    assert commands[0] == ["docker", "pull", "--platform", "linux/amd64", source]
+    assert commands[1][1:3] == ["image", "inspect"]
+    assert commands[-1][1] == "save"
+
+
+@pytest.mark.parametrize("matches", [True, False])
+def test_source_archive_scan_binds_digest_only_report_to_selected_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, matches: bool
+) -> None:
+    """The release source scan accepts only the independently selected image ID."""
+    image_id = "sha256:" + "a" * 64
+    report = tmp_path / "trivy-source.json"
+    source = "registry/source@sha256:" + "b" * 64
+    monkeypatch.setattr(artifact_gate, "_run", lambda *_args, **_kwargs: source)
+    monkeypatch.setattr(artifact_gate, "_select_amd64_archive", lambda _path: image_id)
+
+    def scan(*_args: object, **_kwargs: object) -> None:
+        report.write_text(
+            json.dumps(
+                {
+                    "Metadata": {
+                        "ImageID": image_id if matches else "sha256:" + "c" * 64,
+                    }
+                }
+            )
+        )
+
+    monkeypatch.setattr(artifact_gate, "_run_ephemeral_container", scan)
+    if matches:
+        artifact_gate._scan_source_archive(
+            "docker",
+            tmp_path,
+            source=source,
+            archive=tmp_path / "source.tar",
+            output=tmp_path,
+            report=report,
+        )
+    else:
+        with pytest.raises(artifact_gate.ArtifactGateError, match="pinned image"):
+            artifact_gate._scan_source_archive(
+                "docker",
+                tmp_path,
+                source=source,
+                archive=tmp_path / "source.tar",
+                output=tmp_path,
+                report=report,
+            )
+
+
+def _write_json_blob(archive: tarfile.TarFile, payload: object) -> tuple[str, bytes]:
+    content = json.dumps(payload, separators=(",", ":")).encode()
+    digest = hashlib.sha256(content).hexdigest()
+    member = tarfile.TarInfo(f"blobs/sha256/{digest}")
+    member.size = len(content)
+    archive.addfile(member, io.BytesIO(content))
+    return digest, content
+
+
+@pytest.mark.parametrize(
+    ("architecture", "expected"), [("amd64", True), ("arm64", False)]
+)
+def test_select_amd64_archive_accepts_single_image_manifest(
+    tmp_path: Path,
+    architecture: str,
+    expected: bool,
+) -> None:
+    archive = tmp_path / "source.tar"
+    layer = b"layer"
+    layer_digest = hashlib.sha256(layer).hexdigest()
+
+    with tarfile.open(archive, "w") as output:
+        config = {"architecture": architecture, "os": "linux"}
+        config_digest, _ = _write_json_blob(output, config)
+        manifest = {
+            "config": {
+                "digest": f"sha256:{config_digest}",
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+            },
+            "layers": [{"digest": f"sha256:{layer_digest}"}],
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "schemaVersion": 2,
+        }
+        manifest_digest, _ = _write_json_blob(output, manifest)
+        index = {
+            "manifests": [
+                {
+                    "digest": f"sha256:{manifest_digest}",
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                }
+            ],
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "schemaVersion": 2,
+        }
+        _write_json_blob(output, index)
+        index_member = tarfile.TarInfo("index.json")
+        index_content = json.dumps(index, separators=(",", ":")).encode()
+        index_member.size = len(index_content)
+        output.addfile(index_member, io.BytesIO(index_content))
+        member = tarfile.TarInfo(f"blobs/sha256/{layer_digest}")
+        member.size = len(layer)
+        output.addfile(member, io.BytesIO(layer))
+
+    if expected:
+        image_id = artifact_gate._select_amd64_archive(archive)
+        assert image_id == f"sha256:{config_digest}"
+        with tarfile.open(archive) as result:
+            manifest_stream = result.extractfile("manifest.json")
+            config_stream = result.extractfile(f"blobs/sha256/{config_digest}")
+            assert manifest_stream is not None
+            assert config_stream is not None
+            assert json.load(manifest_stream) == [
+                {
+                    "Config": f"blobs/sha256/{config_digest}",
+                    "Layers": [f"blobs/sha256/{layer_digest}"],
+                    "RepoTags": None,
+                }
+            ]
+            assert config_stream.read()
+    else:
+        with pytest.raises(artifact_gate.ArtifactGateError, match="not linux/amd64"):
+            artifact_gate._select_amd64_archive(archive)
+
+
+def _filesystem_tar(path: Path, files: dict[str, bytes]) -> None:
+    with tarfile.open(path, "w") as archive:
+        for name, payload in files.items():
+            member = tarfile.TarInfo(name.removeprefix("/"))
+            member.size = len(payload)
+            archive.addfile(member, io.BytesIO(payload))
+
+
+def _vulnerable_report(source: str) -> dict[str, object]:
+    return {
+        "Metadata": {"RepoDigests": [source]},
+        "Results": [
+            {
+                "Packages": [
+                    {
+                        "Name": "libssl3t64",
+                        "Version": "3.0.0",
+                        "Identifier": {"PURL": "pkg:deb/debian/libssl3t64@3.0.0"},
+                        "InstalledFiles": ["/usr/lib/libssl.so.3"],
+                    }
+                ],
+                "Vulnerabilities": [{"PkgName": "libssl3t64"}],
+            }
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    "destination", ["/usr/lib/libssl.so.3", "/lib/libssl.so.3", "/usr/lib/renamed.so"]
+)
+def test_vulnerable_source_file_cannot_remain_byte_identical(
+    tmp_path: Path,
+    destination: str,
+) -> None:
+    source = tmp_path / "source.tar"
+    final = tmp_path / "final.tar"
+    _filesystem_tar(source, {"/usr/lib/libssl.so.3": b"vulnerable"})
+    _filesystem_tar(final, {destination: b"vulnerable"})
+
+    with pytest.raises(
+        artifact_gate.ArtifactGateError,
+        match=r"byte-identical.*libssl3t64:/usr/lib/libssl.so.3",
+    ):
+        artifact_gate._verify_vulnerable_source_files(
+            _vulnerable_report("source@sha256:" + "a" * 64),
+            source_export=source,
+            final_export=final,
+        )
+
+
+@pytest.mark.parametrize("link_type", [tarfile.SYMTYPE, tarfile.LNKTYPE])
+def test_vulnerable_library_link_cannot_hide_bytes_outside_library_tree(
+    tmp_path: Path,
+    link_type: bytes,
+) -> None:
+    source = tmp_path / "source.tar"
+    final = tmp_path / "final.tar"
+    _filesystem_tar(source, {"/usr/lib/libssl.so.3": b"vulnerable"})
+    _filesystem_tar(final, {"/opt/relocated.so": b"vulnerable"})
+    with tarfile.open(final, "a") as archive:
+        link = tarfile.TarInfo("lib/libssl.so.3")
+        link.type = link_type
+        link.linkname = (
+            "/opt/relocated.so" if link_type == tarfile.SYMTYPE else "opt/relocated.so"
+        )
+        archive.addfile(link)
+    with pytest.raises(artifact_gate.ArtifactGateError, match="byte-identical"):
+        artifact_gate._verify_vulnerable_source_files(
+            _vulnerable_report("source@sha256:" + "a" * 64),
+            source_export=source,
+            final_export=final,
+        )
+
+
+def test_vulnerable_source_file_may_be_absent_or_replaced(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.tar"
+    final = tmp_path / "final.tar"
+    _filesystem_tar(source, {"/usr/lib/libssl.so.3": b"vulnerable"})
+    _filesystem_tar(
+        final,
+        {
+            "/usr/lib/libssl.so.3": b"replacement",
+            "/usr/lib/other.so": b"clean",
+            # Identical non-library content in an independently sourced runtime
+            # is not evidence that the copied source library survived.
+            "/usr/local/lib/python3.13/unrelated.py": b"vulnerable",
+        },
+    )
+
+    artifact_gate._verify_vulnerable_source_files(
+        _vulnerable_report("source@sha256:" + "a" * 64),
+        source_export=source,
+        final_export=final,
+    )
+
+
+def test_backend_sbom_links_source_provenance_document(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    sbom = tmp_path / "backend.spdx.json"
+    provenance = tmp_path / "source-provenance.spdx.json"
+    sbom.write_text(
+        json.dumps(
+            {
+                "documentDescribes": ["SPDXRef-Subject"],
+                "packages": [{"SPDXID": "SPDXRef-Subject", "name": "backend"}],
+                "relationships": [],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    provenance.write_text(
+        json.dumps(
+            {
+                "documentDescribes": ["SPDXRef-backend-source-image-runtime-libraries"],
+                "documentNamespace": "https://ditto.invalid/source",
+                "packages": [],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "d" * 64)
+
+    artifact_gate._bind_backend_source_provenance(sbom, provenance)
+
+    document = json.loads(sbom.read_text())
+    assert document["externalDocumentRefs"] == [
+        {
+            "checksum": {"algorithm": "SHA256", "checksumValue": "d" * 64},
+            "externalDocumentId": "DocumentRef-runtime-libraries",
+            "spdxDocument": "https://ditto.invalid/source",
+        }
+    ]
+    assert document["relationships"] == [
+        {
+            "relatedSpdxElement": (
+                "DocumentRef-runtime-libraries:"
+                "SPDXRef-backend-source-image-runtime-libraries"
+            ),
+            "relationshipType": "DEPENDS_ON",
+            "spdxElementId": "SPDXRef-Subject",
+        }
+    ]
+
+
+def test_backend_sbom_links_source_provenance_from_syft_describes_relationship(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    sbom = tmp_path / "backend.spdx.json"
+    provenance = tmp_path / "source-provenance.spdx.json"
+    sbom.write_text(
+        json.dumps(
+            {
+                "packages": [{"SPDXID": "SPDXRef-Subject", "name": "backend"}],
+                "relationships": [
+                    {
+                        "relatedSpdxElement": "SPDXRef-Subject",
+                        "relationshipType": "DESCRIBES",
+                        "spdxElementId": "SPDXRef-DOCUMENT",
+                    }
+                ],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    provenance.write_text(
+        json.dumps(
+            {
+                "documentDescribes": ["SPDXRef-backend-source-image-runtime-libraries"],
+                "documentNamespace": "https://ditto.invalid/source",
+                "packages": [],
+                "spdxVersion": "SPDX-2.3",
+            }
+        )
+    )
+    monkeypatch.setattr(artifact_gate, "_sha256", lambda _path: "d" * 64)
+
+    artifact_gate._bind_backend_source_provenance(sbom, provenance)
+
+    document = json.loads(sbom.read_text())
+    assert document["documentDescribes"] == ["SPDXRef-Subject"]
+    assert document["relationships"][-1] == {
+        "relatedSpdxElement": (
+            "DocumentRef-runtime-libraries:"
+            "SPDXRef-backend-source-image-runtime-libraries"
+        ),
+        "relationshipType": "DEPENDS_ON",
+        "spdxElementId": "SPDXRef-Subject",
+    }
 
 
 @pytest.mark.parametrize("scanner", ["syft", "trivy"])

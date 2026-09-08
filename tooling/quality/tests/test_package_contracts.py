@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-import yaml
 
 from tooling.quality.package_contracts import validate_workspace
 
@@ -20,22 +19,12 @@ def workspace(tmp_path: Path) -> Path:
 name = "ditto-workspace"
 version = "1.2.3"
 requires-python = ">=3.13,<3.14"
-""",
-    )
-    _write(
-        tmp_path / "pixi.toml",
-        """\
-[workspace]
-name = "ditto"
-version = "1.2.3"
-
-[dependencies]
-python = "3.13.*"
-pydantic = ">=2,<3"
-
-[pypi-dependencies]
-ditto-kernel = { path = "packages/kernel", editable = true }
-ditto-apps = { path = "apps/backend", editable = true }
+dependencies = ["pydantic>=2,<3"]
+[tool.uv.workspace]
+members = ["packages/kernel", "apps/backend"]
+[tool.uv.sources]
+ditto-kernel = { workspace = true }
+ditto-apps = { workspace = true }
 """,
     )
     _write(
@@ -65,19 +54,23 @@ requires-python = ">=3.13"
 dependencies = ["ditto-kernel", "pydantic>=2.10"]
 """,
     )
-    lock = {
-        "version": 6,
-        "packages": [
-            {"pypi": "./packages/kernel", "name": "ditto-kernel"},
-            {"pypi": "./apps/backend", "name": "ditto-apps"},
-            {
-                "conda": "https://example.invalid/pydantic.conda",
-                "name": "pydantic",
-                "version": "2.11.0",
-            },
-        ],
-    }
-    _write(tmp_path / "pixi.lock", yaml.safe_dump(lock, sort_keys=False))
+    _write(
+        tmp_path / "uv.lock",
+        """
+[[package]]
+name = "ditto-kernel"
+version = "1.2.3"
+source = { editable = "packages/kernel" }
+[[package]]
+name = "ditto-apps"
+version = "1.2.3"
+source = { editable = "apps/backend" }
+[[package]]
+name = "pydantic"
+version = "2.11.0"
+source = { registry = "https://pypi.org/simple" }
+""",
+    )
     return tmp_path
 
 
@@ -108,17 +101,15 @@ def test_reports_javascript_product_version_drift(
 
 
 def test_reports_missing_root_and_lock_path(workspace: Path) -> None:
-    pixi = workspace / "pixi.toml"
-    pixi.write_text(
-        pixi.read_text().replace(
-            'ditto-kernel = { path = "packages/kernel", editable = true }\n', ""
-        )
+    manifest = workspace / "pyproject.toml"
+    manifest.write_text(
+        manifest.read_text().replace("ditto-kernel = { workspace = true }\n", "")
     )
 
     violations = validate_workspace(workspace, expected_local_count=2)
 
     assert any(
-        "pypi-dependencies" in item and "packages/kernel" in item for item in violations
+        "tool.uv.sources" in item and "packages/kernel" in item for item in violations
     )
 
 

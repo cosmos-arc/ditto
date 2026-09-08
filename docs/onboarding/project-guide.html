@@ -353,7 +353,7 @@
   <div class="badges">
     <span class="badge">polars</span>
     <span class="badge">orjson</span>
-    <span class="badge">pixi</span>
+    <span class="badge">uv</span>
     <span class="badge">FastAPI + granian</span>
     <span class="badge">Prefect</span>
     <span class="badge">Dishka DI</span>
@@ -382,7 +382,7 @@
   </table>
 
   <div class="callout key">
-    <b>不可逾越的技术铁律：</b>数据处理用 <code>polars</code>（禁 pandas）/ JSON 用 <code>orjson</code>（禁 json）/ 包管理用 <code>pixi</code>（禁 pip/poetry/conda）/ 禁用 <code>TYPE_CHECKING</code> 解决循环依赖（必须重构）/ 禁止跨包 re-export / <code>rolling_mean(20)</code> 必须带 <code>closed="left"</code>（防数据泄漏）。
+    <b>不可逾越的技术铁律：</b>数据处理用 <code>polars</code>（禁 pandas）/ JSON 用 <code>orjson</code>（禁 json）/ Python 包管理用 <code>uv</code>，根任务用 <code>Task</code>，Web 保留 <code>Bun</code>（禁 pip/poetry/conda）/ 禁用 <code>TYPE_CHECKING</code> 解决循环依赖（必须重构）/ 禁止跨包 re-export / <code>rolling_mean(20)</code> 必须带 <code>closed="left"</code>（防数据泄漏）。
   </div>
 </section>
 
@@ -815,7 +815,7 @@
           <br><b>cli/：</b>ditto {init|ingest|backfill|query|strategy|experiment|research|ops|data-products}
           <br><b>jobs/：</b>9 个 Prefect flow（daily T0→T1→T3 编排等）
           <br><b>registry/：</b>container + contexts(领域 bundle) + infra(平台 Provider) + live(R2/R3 验收 root)
-          <br><b>三层环境：</b>Pixi(default/dev) × ENVIRONMENT(dev/test/prod) × config/{env}/{name}.env
+          <br><b>三层环境：</b>uv(runtime/dev) × ENVIRONMENT(dev/test/prod) × config/{env}/{name}.env
           <br><b>上手：</b>CLAUDE.md → main.py → registry/container → 跑 ditto query / ditto ops status
         </div></details>
       </div>
@@ -1014,18 +1014,18 @@
   <p class="section-desc">从零到建立体感的最短路径。</p>
 
   <h4>① 环境准备</h4>
-<pre><code><span class="cmt"># 必须用 pixi（禁 pip/poetry/conda）</span>
-pixi install -e dev
-pixi run -e dev check          <span class="cmt"># 全量验证：lint + fmt + type + test --fast</span></code></pre>
+<pre><code><span class="cmt"># 必须用 uv（禁 pip/poetry/conda）</span>
+task bootstrap
+task check          <span class="cmt"># 全量验证：lint + fmt + type + test --fast</span></code></pre>
 
   <h4>② 常用命令</h4>
   <div class="cmd-grid">
-    <div class="cmd-card"><code>pixi run -e dev test --fast</code><span>快速测试</span></div>
-    <div class="cmd-card"><code>pixi run -e dev test --unit</code><span>只跑单元测试</span></div>
-    <div class="cmd-card"><code>pixi run -e dev type</code><span>basedpyright 类型检查</span></div>
-    <div class="cmd-card"><code>pixi run -e dev lint</code><span>ruff 检查</span></div>
-    <div class="cmd-card"><code>pixi run -e dev arch-check</code><span>架构合约（37 条）</span></div>
-    <div class="cmd-card"><code>pixi run -e dev lint-imports</code><span>依赖边界检查</span></div>
+    <div class="cmd-card"><code>task test -- --fast</code><span>快速测试</span></div>
+    <div class="cmd-card"><code>task test -- --unit</code><span>只跑单元测试</span></div>
+    <div class="cmd-card"><code>task type</code><span>basedpyright 类型检查</span></div>
+    <div class="cmd-card"><code>task lint</code><span>ruff 检查</span></div>
+    <div class="cmd-card"><code>task arch-check</code><span>架构合约（37 条）</span></div>
+    <div class="cmd-card"><code>task lint-imports</code><span>依赖边界检查</span></div>
     <div class="cmd-card"><code>ditto query market --instrument 510300.SH ...</code><span>查行情建立体感</span></div>
     <div class="cmd-card"><code>ditto ops status --json</code><span>看运维状态</span></div>
   </div>
@@ -1045,7 +1045,7 @@ pixi run -e dev check          <span class="cmt"># 全量验证：lint + fmt + t
   <h4>④ 容易踩的坑（前人血泪）</h4>
   <table>
     <tr><th>❌ 禁止</th><th>✅ 正确</th></tr>
-    <tr><td>用 pandas / json / pip</td><td>用 polars / orjson / pixi</td></tr>
+    <tr><td>用 pandas / json / pip</td><td>用 polars / orjson / uv</td></tr>
     <tr><td><code>rolling_mean(20)</code> 不带 <code>closed="left"</code></td><td>数据泄漏！必须加</td></tr>
     <tr><td>用 TYPE_CHECKING 解决循环依赖</td><td>必须重构架构 / 用 Protocol</td></tr>
     <tr><td>跨包 re-export</td><td>消费者直接引用叶模块</td></tr>

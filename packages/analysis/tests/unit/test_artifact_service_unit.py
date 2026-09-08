@@ -5,13 +5,14 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
+import sys
 import tempfile
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import orjson
 import polars as pl
@@ -41,6 +42,33 @@ from ditto_analysis.research.artifact_service import ResearchArtifactService
 
 NOW = datetime(2026, 7, 23, 1, 2, 3, 456789, tzinfo=UTC)
 NOW_US = 1_774_000_000_000_000
+
+
+@pytest.mark.parametrize("durable", [False, True])
+def test_filesystem_root_open_preserves_flush_access(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    durable: bool,
+) -> None:
+    original = artifact_module._open_directory
+    requests: list[bool] = []
+
+    def observed(path: Path, *, durable: bool = False) -> int:
+        assert path == Path(tmp_path.anchor)
+        requests.append(durable)
+        # Exercise real handle access on an owned directory; CI need not have
+        # permission to write the machine's drive root.
+        return original(tmp_path, durable=durable)
+
+    monkeypatch.setattr(artifact_module, "_open_directory", observed)
+    descriptor = artifact_module.IndexedArtifactIO._open_absolute_directory(
+        Path(tmp_path.anchor),
+        durable=durable,
+    )
+    os.close(descriptor)
+    assert requests == [durable]
+
+
 FENCE = LeaseFence(
     experiment_id=ExperimentId("experiment-1"),
     owner_token="worker-1",
@@ -1051,7 +1079,7 @@ class TestIndexedArtifactPublication:
             lease_fence=FENCE,
             now_epoch_us=NOW_US,
         )
-        parent = str(Path(original.relative_path).parent)
+        parent = str(PurePosixPath(original.relative_path).parent)
 
         with pytest.raises(ExperimentSpecError) as exc_info:
             _publication_spec(
@@ -1398,15 +1426,28 @@ class TestIndexedArtifactPublication:
             swap_parent_then_publish,
         )
 
-        with pytest.raises(ExperimentSpecError) as exc_info:
-            service.publish_indexed_json(
-                spec,
-                {"value": 1},
-                lease_fence=FENCE,
-                now_epoch_us=NOW_US,
+        if sys.platform == "win32":
+            # Windows refuses to rename the directory held open by publication,
+            # so the attempted parent swap fails closed before publication.
+            with pytest.raises(PermissionError):
+                service.publish_indexed_json(
+                    spec,
+                    {"value": 1},
+                    lease_fence=FENCE,
+                    now_epoch_us=NOW_US,
+                )
+        else:
+            with pytest.raises(ExperimentSpecError) as exc_info:
+                service.publish_indexed_json(
+                    spec,
+                    {"value": 1},
+                    lease_fence=FENCE,
+                    now_epoch_us=NOW_US,
+                )
+            assert (
+                exc_info.value.details["reason_code"] == "artifact_path_race_detected"
             )
 
-        assert exc_info.value.details["reason_code"] == "artifact_path_race_detected"
         assert tuple(outside.rglob("result.json")) == ()
         assert index.get_artifact(spec.artifact_id) is None
 
@@ -1568,6 +1609,34 @@ class TestIndexedArtifactReadAndPin:
         with pytest.raises(ExperimentIntegrityError) as exc_info:
             service.read_indexed_json(record.artifact_id)
         assert exc_info.value.details["reason_code"] == "artifact_symlink_rejected"
+
+    def test_regular_stat_after_open_failure_is_classified(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        service, _index, record = self._published(tmp_path)
+        regular_stat = (tmp_path / record.relative_path).stat()
+
+        def deny_open(*_args: object, **_kwargs: object) -> int:
+            raise PermissionError("injected open failure")
+
+        monkeypatch.setattr(artifact_module, "_open_file", deny_open)
+        monkeypatch.setattr(
+            artifact_module,
+            "_stat_entry",
+            lambda *_args: regular_stat,
+        )
+
+        with pytest.raises(ExperimentIntegrityError) as exc_info:
+            service._require_indexed()._measure_target(
+                0,
+                "target.json",
+                artifact_module.ArtifactFormat.JSON,
+                artifact_id=record.artifact_id,
+            )
+
+        assert exc_info.value.details["reason_code"] == "artifact_not_regular_file"
 
     def test_manifest_and_reproduction_fingerprint_are_reverified(
         self,
@@ -1740,8 +1809,7 @@ class TestResolveArtifactRelativePath:
         result = service.resolve_artifact_relative_path("factor.alpha", 2)
 
         assert result is not None
-        assert "factor.alpha" in result
-        assert "v2" in result
+        assert result == "derived/artifacts/series/factor.alpha/v2"
 
     def test_resolve_artifact_relative_path_not_found(
         self,

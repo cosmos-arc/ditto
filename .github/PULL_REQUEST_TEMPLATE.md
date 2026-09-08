@@ -25,7 +25,7 @@
 ## Definition of Done
 
 ### 工程质量
-- [ ] `pixi run -e dev check` 全部通过
+- [ ] `task check` 全部通过
 - [ ] 测试覆盖率达标（整体 ≥80%，风控 100%）
 - [ ] 类型注解完整，basedpyright 0 错误
 

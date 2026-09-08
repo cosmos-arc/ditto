@@ -20,6 +20,7 @@ from tooling.release.compatibility_policy import (
     load_compatibility_policy,
     register_previous_release,
 )
+from tooling.release.tests.image_fixture import write_image
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -69,16 +70,21 @@ def _write_portable_manifest(root: Path) -> tuple[Path, dict[str, str]]:
     contract.write_text("{}\n")
     inputs = [
         contract,
-        root / "release-inputs" / "pixi.lock",
+        root / "release-inputs" / "uv.lock",
         root / "release-inputs" / "bun.lock",
     ]
-    inputs[1].write_text("pixi\n")
+    inputs[1].write_text("uv\n")
     inputs[2].write_text("bun\n")
+    for name in (".python-version", "Dockerfile"):
+        path = root / "release-inputs" / name
+        path.write_text("fixture")
+        inputs.append(path)
     verifier_paths = (
         "release-tools/tooling/__init__.py",
         "release-tools/tooling/release/__init__.py",
         "release-tools/tooling/release/cohort_manifest.py",
         "release-tools/tooling/release/cohort_verify.py",
+        "release-tools/tooling/release/environment_identity.py",
         "release-tools/verify-cohort.py",
     )
     for relative in verifier_paths:
@@ -88,7 +94,7 @@ def _write_portable_manifest(root: Path) -> tuple[Path, dict[str, str]]:
         inputs.append(target)
     backend = root / "backend.tar"
     web = root / "web.tar"
-    backend.write_text("backend\n")
+    write_image(backend, root / "release-inputs")
     web.write_text("web\n")
     inputs.extend((backend, web))
     for name, packages in (

@@ -23,7 +23,7 @@
 Command:
 
 ```bash
-pixi run -e dev pytest --no-cov apps/backend/tests/e2e/test_r1_daily_manual_trading.py -q
+uv run --no-sync pytest --no-cov apps/backend/tests/e2e/test_r1_daily_manual_trading.py -q
 ```
 
 | Scenario | Expected evidence | Artifact / checksum | Result |
@@ -63,7 +63,7 @@ Designated exercise: `signal_date=2024-03-29`, `seed_stock_selection_rotation`ï¼
 
 ```bash
 DITTO_RUN_REAL_DATA_ACCEPTANCE=1 \
-  pixi run -e dev pytest --no-cov \
+  uv run --no-sync pytest --no-cov \
   apps/backend/tests/e2e/test_real_data_stock_selection_pipeline.py \
   -m e2e -q
 ```
@@ -97,17 +97,17 @@ Runtime: `ditto-runtime-config.json` declares `runtime=live`; API and Web bind o
 Commands:
 
 ```bash
-pixi run -e dev check-web
-pixi run -e dev check-contract
-pixi run -e dev test-system
+task check-web
+task check-contract
+task test-system
 ```
 
 ## 6. Quality and security gates
 
 | Gate | Command / inspection | Result |
 |---|---|---|
-| Backend full check | `pixi run -e dev check` | `<PASS/FAIL>` |
-| Architecture gates | `pixi run -e dev arch-check` | `<PASS/FAIL>` |
+| Backend full check | `task check` | `<PASS/FAIL>` |
+| Architecture gates | `task arch-check` | `<PASS/FAIL>` |
 | R1 deterministic E2E | command in section 2 | `<PASS/FAIL>` |
 | Frontend full check | `bun run check` | `<PASS/FAIL>` |
 | Loopback-only | Host entry points/tasks use `127.0.0.1`; any container-internal `0.0.0.0` is reachable only through a `127.0.0.1` published port; runtime host sockets inspected | `<PASS/FAIL>` |

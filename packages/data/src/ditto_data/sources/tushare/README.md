@@ -209,17 +209,17 @@ except SourceFetchError:
 
 ```bash
 # 运行所有单元测试
-pixi run -e dev pytest packages/data/tests/unit/sources/tushare/
+uv run --no-sync pytest packages/data/tests/unit/sources/tushare/
 
 # 查看覆盖率
-pixi run -e dev pytest --cov packages/data/src/ditto_data/sources/tushare/
+uv run --no-sync pytest --cov packages/data/src/ditto_data/sources/tushare/
 ```
 
 ### 集成测试（需要真实 Token）
 
 ```bash
 # 运行端到端测试（需要 TUSHARE_TOKEN）
-pixi run -e dev pytest packages/data/tests/integration/sources/tushare/test_end_to_end.py -m external
+uv run --no-sync pytest packages/data/tests/integration/sources/tushare/test_end_to_end.py -m external
 ```
 
 ---

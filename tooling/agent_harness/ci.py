@@ -14,6 +14,10 @@ from tooling.agent_harness.hook import classify_diff
 REQUIRED_JOBS = frozenset(
     {
         "repository-policy",
+        "delivery-policy",
+        "backend-shards",
+        "web-build",
+        "web-prototype",
         "backend-quality",
         "backend-types",
         "backend-tests",
@@ -27,7 +31,7 @@ REQUIRED_JOBS = frozenset(
         "security-supply-chain",
     }
 )
-_ALWAYS = {"repository-policy", "security-supply-chain"}
+_ALWAYS = {"repository-policy", "delivery-policy", "security-supply-chain"}
 
 
 def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
@@ -37,15 +41,37 @@ def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
         return set(REQUIRED_JOBS)
     if level in {"docs", "none"}:
         return set(_ALWAYS)
-    if level == "web":
+    if level == "web" and all(
+        path.startswith(
+            ("apps/web/src/", "apps/web/tests/", "apps/web/prototype/", "docs/")
+        )
+        and path.endswith((".ts", ".tsx", ".css", ".md", ".rst"))
+        for path in paths
+    ):
         return _ALWAYS | {
             "web-quality",
+            "web-prototype",
+            "web-build",
             "api-contract",
             "system-e2e",
-            "container-smoke",
-            "release-cohort",
         }
-    # Backend, contracts and shared tooling can affect runtime/cohort semantics.
+    if level in {"backend", "backend-tests"} and all(
+        path.endswith((".py", ".md", ".rst"))
+        and path.startswith(("packages/", "apps/backend/", "docs/"))
+        for path in paths
+    ):
+        return _ALWAYS | {
+            "backend-quality",
+            "backend-types",
+            "backend-shards",
+            "backend-tests",
+            "architecture-harness",
+            "api-contract",
+            "system-e2e",
+            "web-build",
+            "platform-smoke",
+        }
+    # Contracts, toolchain, security, unknown and high-risk paths use all gates.
     return set(REQUIRED_JOBS)
 
 
@@ -82,6 +108,7 @@ def main() -> int:
     analysis = required != _ALWAYS
     output = (
         f"required={json.dumps(sorted(required))}\nanalysis={str(analysis).lower()}\n"
+        f"full={str(required == set(REQUIRED_JOBS)).lower()}\n"
     )
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
         stream.write(output)

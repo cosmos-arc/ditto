@@ -18,7 +18,7 @@ tooling/agent_harness/       同步、验证、hooks、确定性 eval 和测试
 .codex/hooks.json            Codex 薄适配
 ```
 
-`.importlinter` 是依赖边界机器事实源。Pixi tasks、Ruff、basedpyright、pytest 和 CI 执行质量规则；Markdown 只保留路由、风险和不变量。
+`.importlinter` 是依赖边界机器事实源。Task tasks、Ruff、basedpyright、pytest 和 CI 执行质量规则；Markdown 只保留路由、风险和不变量。
 
 ## Skills
 
@@ -30,8 +30,8 @@ Web 工具位于 `apps/web/scripts/{page-contract,prototype,visual-audit}`，与
 编辑 `.agents/skills` 后运行：
 
 ```bash
-pixi run -e dev sync-agent-skills
-pixi run -e dev harness-check
+task sync-agent-skills
+task harness-check
 ```
 
 `sync_skills.py --check` 和 validator 比较完整文件集与字节内容，镜像缺失、额外文件或漂移都会失败。
@@ -46,7 +46,7 @@ pixi run -e dev harness-check
 
 同步 hooks 的职责是快速反馈，不是每次回复后的 CI。Codex 与 Claude 的预算一致：
 PreToolUse 10 秒；PostToolUse 10 秒（格式化内部 5 秒，超时清理本次进程组）；
-Stop 3 秒。格式化使用 `pixi run --as-is -e dev ruff format <files>`，仅消费已准备好的
+Stop 3 秒。格式化使用 已准备 `.venv` 中的 `ruff format <files>`，仅消费已准备好的
 环境。环境缺失、超时或格式化失败会提供非阻断反馈，不掩盖问题，也不替换已完成工具
 的原始结果。命令策略和受保护写入仍在 PreToolUse 阻断。
 
@@ -55,7 +55,7 @@ Stop 不把已有脏文件推断为本任务编辑，不返回 `decision: block`
 Stop 成功也不等于质量门通过。以下显式命令和根 CI 仍负责验证：
 
 ```bash
-pixi run -e dev check-changed
+task check-changed
 ```
 
 `check-changed` 按完整 changed set 分级，实时输出正在执行的命令和检查进度：
@@ -64,7 +64,7 @@ pixi run -e dev check-changed
 - 普通文档：不运行 Python 套件。
 - Harness：运行包含 `harness-check` 的根 `check`。
 - 仅测试：目标测试、Ruff format-check/lint、测试类型检查。
-- 普通后端/Web 生产代码：分别运行 `check-backend`/`check-web`。
+- 普通后端/Web 生产代码：分别运行所属包测试与静态检查/`check-web`；跨包或高风险变更运行 `check`。
 - 契约或跨栈路径：运行 `check` 与 `test-system`。
 - data/features/strategy/portfolio/risk/execution/backtest，以及 application 的
   query/process/builder、交易类 command 和对应 backend 入口：额外运行 PIT 专项；
@@ -88,7 +88,7 @@ enabled/trust 状态；不要使用 bypass 参数代替审阅。官方事件语�
 以下路径只能由当前 integrator worktree 写入：
 
 - `contracts/**` 与 `apps/web/src/api/generated/**`；
-- 根 `bun.lock`、`pixi.lock`；
+- 根 `bun.lock`、`uv.lock`；
 - 非 `docs/**` 的 migration 目录或 `migration_*` 源文件；
 - `.redocly.yaml`、`tooling/contracts/**` 和 Web OpenAPI generator script。
 
@@ -98,14 +98,14 @@ enabled/trust 状态；不要使用 bypass 参数代替审阅。官方事件语�
 fail closed；格式正确的过期 lease 可由新 integrator 原子回收。TTL 最大四小时。
 
 ```bash
-pixi run -e dev integrator-lease acquire \
+task integrator-lease -- acquire \
   --owner <agent-id> --task <canonical-task> --ttl-seconds 1800
-pixi run -e dev integrator-lease status
-pixi run -e dev integrator-lease release
+task integrator-lease -- status
+task integrator-lease -- release
 ```
 
 持有者应覆盖生成、验证和最终 diff 检查的完整期间，完成后主动 release。PreToolUse
-在 Edit/Write/apply_patch 前阻断非持有者，也识别 OpenAPI `--write`、Bun/Pixi lock
+在 Edit/Write/apply_patch 前阻断非持有者，也识别 OpenAPI `--write`、Bun/uv lock
 更新和直接重定向到受保护文件等已知 Bash writer；任意 shell 语义无法被完全可靠解析，
 因此显式 `check-changed` 还会对完整 Git changed set 再做同一 lease 检查。validator 检查两个宿主必要事件的 matcher 覆盖与共享命令；允许合法附加配置。
 
@@ -140,11 +140,11 @@ PR 复用 changed-scope 选择检查；根配置、共享工具和未知范围�
 ## 验收
 
 ```bash
-pixi run -e dev harness-check
-pixi run -e dev check
-pixi run -e dev ci
+task harness-check
+task check
+task ci
 git diff --check
-pixi run -e dev pre-commit-run
+task pre-commit-run
 ```
 
 `harness-check` 执行 validator、policy/Harness 回归、开发/契约/质量工具测试和类型检查。
@@ -153,3 +153,7 @@ validator 检查可发现 skill 与 registry、完整镜像、wrapper 和必要 
 
 从仓库根、`apps/web` 和目标 capability package 检查宿主发现：项目只应出现 PIT skill，
 用户全局技能和本地 hook trust 不由仓库脚本修改。宿主实际发现与 CLI 验证分别报告。
+
+### 推送范围验证
+
+pre-push 使用 pre-commit 提供的提交范围选择检查，覆盖已提交且工作区干净的变更；不以未提交差异代替推送范围。待推送提交必须是当前 HEAD，工作区必须干净，缺少基线历史时执行 `task check`。纯 Web 推送和文件删除同样进入范围选择。

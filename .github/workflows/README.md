@@ -37,7 +37,7 @@ Ditto 将 CI、安全与发布证据分成三个职责明确的工作流。所�
 
 扫描器容器均固定 image digest。内部 `security-gate` 不接受 skipped，其结果再作为
 `security-supply-chain` job 被唯一 `ci-gate` 汇总。
-每周 schedule 另行运行根 `mutation-critical` Pixi 任务并上传
+每周 schedule 另行运行根 `mutation-critical` uv 任务并上传
 `build/mutation/mutmut-cicd-stats.json`；它不进入 PR 快速 required gate。
 
 ## Release cohort
@@ -95,23 +95,23 @@ containment、普通文件/无符号链接、大小、固定 MIME、SHA-256、ba
 canonical SPDX SBOM；Web SBOM 必须绑定最终 tar 的 SHA-256，不接受空包列表或占位文件）：
 
 ```bash
-pixi run -e dev python -m pytest tooling/release/tests -q -n 0
+uv run --no-sync python -m pytest tooling/release/tests -q -n 0
 mkdir -p dist/release-inputs/contracts/openapi
 mkdir -p dist/release-inputs/contracts/cohorts
 install -m 0644 contracts/openapi/v1.json dist/release-inputs/contracts/openapi/v1.json
 install -m 0644 contracts/cohorts/compatibility-policy.json dist/release-inputs/contracts/cohorts/compatibility-policy.json
 install -m 0644 contracts/cohorts/compatibility-policy.sha256 dist/release-inputs/contracts/cohorts/compatibility-policy.sha256
-install -m 0644 pixi.lock dist/release-inputs/pixi.lock
+install -m 0644 uv.lock dist/release-inputs/uv.lock
 install -m 0644 bun.lock dist/release-inputs/bun.lock
-pixi run -e dev python -m tooling.release.cohort_bundle stage-tools \
+uv run --no-sync python -m tooling.release.cohort_bundle stage-tools \
   --source-root . \
   --workspace-root dist
-pixi run -e dev python -m tooling.release.cohort_manifest \
+uv run --no-sync python -m tooling.release.cohort_manifest \
   --workspace-root dist \
   --artifact release-inputs/contracts/openapi/v1.json \
   --artifact release-inputs/contracts/cohorts/compatibility-policy.json \
   --artifact release-inputs/contracts/cohorts/compatibility-policy.sha256 \
-  --artifact release-inputs/pixi.lock \
+  --artifact release-inputs/uv.lock \
   --artifact release-inputs/bun.lock \
   --artifact release-tools/tooling/__init__.py \
   --artifact release-tools/tooling/release/__init__.py \
@@ -130,15 +130,15 @@ pixi run -e dev python -m tooling.release.cohort_manifest \
   --api-contract-sha256 "$(sha256sum dist/release-inputs/contracts/openapi/v1.json | cut -d ' ' -f 1)" \
   --generated-at 2026-09-04T00:00:00Z \
   --output release-cohort.json
-pixi run -e dev python -m tooling.release.cohort_verify \
+uv run --no-sync python -m tooling.release.cohort_verify \
   --workspace-root dist \
   --manifest release-cohort.json
-pixi run -e dev python -m tooling.release.compatibility_policy register-previous \
+uv run --no-sync python -m tooling.release.compatibility_policy register-previous \
   --workspace-root dist \
   --release-manifest dist/release-cohort.json \
   --output-policy dist/next-cohort-policy/compatibility-policy.json \
   --output-digest dist/next-cohort-policy/compatibility-policy.sha256
-pixi run -e dev python -m tooling.release.cohort_bundle create \
+uv run --no-sync python -m tooling.release.cohort_bundle create \
   --workspace-root dist \
   --manifest release-cohort.json \
   --include next-cohort-policy/compatibility-policy.json \
@@ -147,7 +147,7 @@ pixi run -e dev python -m tooling.release.cohort_bundle create \
   --source-date-epoch "$(git show -s --format=%ct HEAD)"
 ```
 
-根 `pixi run -e dev artifact-gate` 在读取 `HEAD` 并给制品写入 `git_sha` 前，会检查
+根 `task artifact-gate` 在读取 `HEAD` 并给制品写入 `git_sha` 前，会检查
 staged、unstaged tracked 以及所有未被 ignore 的 untracked 文件；任何 dirty source
 都会 fail closed。被 ignore 的构建输出不影响 provenance 检查。
 

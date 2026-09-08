@@ -86,7 +86,6 @@ class FormatFixtureTests(unittest.TestCase):
             for relative in (
                 "AGENTS.md",
                 "CLAUDE.md",
-                "pixi.toml",
                 "pyproject.toml",
                 "bunfig.toml",
                 "package.json",

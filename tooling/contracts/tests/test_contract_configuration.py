@@ -30,6 +30,6 @@ def test_generated_contract_artifacts_are_marked_for_review_tools() -> None:
 def test_web_codegen_entrypoint_has_no_server_or_package_manager_fallback() -> None:
     script = (_REPO_ROOT / "apps/web/scripts/gen-api.sh").read_text(encoding="utf-8")
 
-    assert "pixi run -e dev python -m tooling.contracts.generate_web_schema" in script
+    assert "uv run --no-sync python -m tooling.contracts.generate_web_schema" in script
     assert "curl" not in script
     assert "bunx" not in script

@@ -171,7 +171,7 @@ class TestRepresentativeFactorIC:
         """100 天 x 50 证券，IC 强度 0.3."""
         return _make_factor_and_return(n_dates=100, n_entities=50, ic_strength=0.3)
 
-    # -- Value factor: ep_ttm --
+    # -- Value factor: ep_ttm
 
     def test_value_factor_ic(self, factor_and_return: FactorReturnPair) -> None:
         """价值因子 ep_ttm: IC 应为正.
@@ -186,7 +186,7 @@ class TestRepresentativeFactorIC:
         _assert_long_short_positive(report)
         _assert_observations_valid(report)
 
-    # -- Momentum factor: reversal_1m --
+    # -- Momentum factor: reversal_1m
 
     def test_momentum_factor_ic(self, factor_and_return: FactorReturnPair) -> None:
         """动量因子 reversal_1m: IC 应为正（表达式含负号）.
@@ -204,7 +204,7 @@ class TestRepresentativeFactorIC:
         _assert_long_short_positive(report)
         _assert_observations_valid(report)
 
-    # -- Quality factor: gross_margin --
+    # -- Quality factor: gross_margin
 
     def test_quality_factor_ic(self, factor_and_return: FactorReturnPair) -> None:
         """质量因子 gross_margin: IC 应为正.
@@ -219,7 +219,7 @@ class TestRepresentativeFactorIC:
         _assert_long_short_positive(report)
         _assert_observations_valid(report)
 
-    # -- Negative IC factor --
+    # -- Negative IC factor
 
     def test_ic_strength_negative(self) -> None:
         """负 IC 强度：因子值与收益率负相关.
@@ -246,7 +246,7 @@ class TestRepresentativeFactorIC:
         )
         _assert_observations_valid(report)
 
-    # -- Zero IC factor --
+    # -- Zero IC factor
 
     def test_zero_ic_factor(self) -> None:
         """零 IC 因子：IC 应接近零."""
@@ -262,7 +262,7 @@ class TestRepresentativeFactorIC:
         )
         _assert_observations_valid(report)
 
-    # -- Detailed IC summary checks --
+    # -- Detailed IC summary checks
 
     def test_ic_summary_statistics_are_finite(
         self,
@@ -294,7 +294,7 @@ class TestRepresentativeFactorIC:
             f"Rank IC sign ({rank_sign}) != Pearson IC sign ({pearson_sign})"
         )
 
-    # -- Quantile returns detailed checks --
+    # -- Quantile returns detailed checks
 
     def test_quantile_returns_exist(
         self,
@@ -308,7 +308,7 @@ class TestRepresentativeFactorIC:
         for q, ret in report.quantile_annual_returns.items():
             assert math.isfinite(ret), f"Quantile {q} return not finite: {ret}"
 
-    # -- Long-short detailed checks --
+    # -- Long-short detailed checks
 
     def test_long_short_metrics_are_finite(
         self,

@@ -19,7 +19,7 @@ partial root；已有备份、源 data root 和历史证据均不会删除。
 Task 17 runner 只在 pytest 提供的任务专用 `tmp_path` 内执行联合 backup/restore：
 
 ```bash
-pixi run -e dev pytest \
+uv run --no-sync pytest \
   apps/backend/tests/e2e/test_r3_governance_recovery.py::\
 test_fixture_backup_restore_preserves_domain_identity \
   -q --no-cov
@@ -65,7 +65,7 @@ export SQLITE_PATH=/absolute/path/ditto-data/metadata/metadata.sqlite
 indexed artifact 能以数据库中的 exact content hash 在文件树中找到：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r3_research_backup \
+uv run --no-sync python -m ditto_apps.scripts.r3_research_backup \
   dry-run \
   --data-root "${DITTO_DATA_ROOT}" \
   --sqlite-path "${SQLITE_PATH}"
@@ -79,7 +79,7 @@ SQLite integrity 问题。
 backup root 必须不存在，且不能等于或位于 source data root 内：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r3_research_backup \
+uv run --no-sync python -m ditto_apps.scripts.r3_research_backup \
   backup \
   --data-root "${DITTO_DATA_ROOT}" \
   --sqlite-path "${SQLITE_PATH}" \
@@ -117,7 +117,7 @@ history、holdout claim 和 pinned review packet 的 domain recovery evidence。
 artifacts、SQLite drift、artifact tree drift、pinned index/file hash drift：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r3_research_backup \
+uv run --no-sync python -m ditto_apps.scripts.r3_research_backup \
   verify \
   --backup-root /absolute/path/backups/r3-20260728T040000Z
 ```
@@ -131,7 +131,7 @@ restore 始终写入一个全新的 data root；目标只要已存在、等于 b
 backup root 内就会拒绝：
 
 ```bash
-pixi run -e dev python -m ditto_apps.scripts.r3_research_backup \
+uv run --no-sync python -m ditto_apps.scripts.r3_research_backup \
   restore \
   --backup-root /absolute/path/backups/r3-20260728T040000Z \
   --destination-root /absolute/path/restore-drills/r3-20260728T040000Z
@@ -156,7 +156,7 @@ r3-20260728T040000Z/
 RESTORED_DATA_ROOT=/absolute/path/restore-drills/r3-20260728T040000Z
 RESTORED_SQLITE_PATH="${RESTORED_DATA_ROOT}/metadata/metadata.sqlite"
 
-pixi run -e dev python -m ditto_apps.scripts.r3_research_backup \
+uv run --no-sync python -m ditto_apps.scripts.r3_research_backup \
   verify-restored \
   --backup-root /absolute/path/backups/r3-20260728T040000Z \
   --destination-root "${RESTORED_DATA_ROOT}" \
@@ -164,7 +164,7 @@ pixi run -e dev python -m ditto_apps.scripts.r3_research_backup \
 
 DITTO_DATA_ROOT="${RESTORED_DATA_ROOT}" \
 SQLITE_PATH="${RESTORED_SQLITE_PATH}" \
-pixi run -e dev python -m ditto_apps.cli.main ops status --json
+uv run --no-sync python -m ditto_apps.cli.main ops status --json
 ```
 
 `verify-restored` exit `0` 才构成 stores/domain 恢复证明；只看到文件存在或只跑
@@ -177,7 +177,7 @@ Cutover 前保留原 data root 为只读，不移动、不覆盖、不删除：
 ```bash
 DITTO_DATA_ROOT="${RESTORED_DATA_ROOT}" \
 SQLITE_PATH="${RESTORED_SQLITE_PATH}" \
-pixi run -e dev python -m ditto_apps.cli.main ops status --json
+uv run --no-sync python -m ditto_apps.cli.main ops status --json
 ```
 
 当前 composition root 同时读取 `DITTO_DATA_ROOT` 和 `SQLITE_PATH`。由部署系统
@@ -190,14 +190,14 @@ ORIGINAL_SQLITE_PATH="${ORIGINAL_DATA_ROOT}/metadata/metadata.sqlite"
 
 DITTO_DATA_ROOT="${ORIGINAL_DATA_ROOT}" \
 SQLITE_PATH="${ORIGINAL_SQLITE_PATH}" \
-pixi run -e dev python -m ditto_apps.scripts.r3_research_backup \
+uv run --no-sync python -m ditto_apps.scripts.r3_research_backup \
   dry-run \
   --data-root "${ORIGINAL_DATA_ROOT}" \
   --sqlite-path "${ORIGINAL_SQLITE_PATH}"
 
 DITTO_DATA_ROOT="${ORIGINAL_DATA_ROOT}" \
 SQLITE_PATH="${ORIGINAL_SQLITE_PATH}" \
-pixi run -e dev python -m ditto_apps.cli.main ops status --json
+uv run --no-sync python -m ditto_apps.cli.main ops status --json
 ```
 
 Rollback 是配置指针回切，不是把文件复制回原路径。失败的新 root 和 backup

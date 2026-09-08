@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+import pytest
 from ditto_platform.foundation.config.paths import (
     AppConfig,
     EnvVarConfig,
@@ -13,6 +14,27 @@ from ditto_platform.foundation.config.paths import (
     XDGPaths,
 )
 from pytest_mock import MockerFixture
+
+
+@pytest.fixture(autouse=True)
+def isolated_path_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each priority case owns its environment, independent of runner and order."""
+    for name in (
+        "DITTO_BASE_DIR",
+        "DITTO_CONFIG_DIR",
+        "DITTO_DATA_DIR",
+        "DITTO_STATE_DIR",
+        "DITTO_CACHE_DIR",
+        "DITTO_RUNTIME_DIR",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_STATE_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_RUNTIME_DIR",
+        "LOCALAPPDATA",
+        "TEMP",
+    ):
+        monkeypatch.delenv(name, raising=False)
 
 
 class TestPathResolver:

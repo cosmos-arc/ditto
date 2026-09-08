@@ -143,7 +143,7 @@ def test_current_preflight_accepts_both_refreshed_live_profiles() -> None:
             / "evidence"
             / "r5"
             / "release"
-            / "release-preflight.json"
+            / "release-preflight-uv-toolchain.json"
         ).read_bytes()
     )
 

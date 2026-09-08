@@ -219,13 +219,15 @@ def policy_violation(command: str, branch: str) -> str | None:
             return "non-Bun package execution is blocked; use the root Bun workspace"
 
     package_mutations = (
+        r"\bpixi\s+(?:add|install|lock|remove|run|update|upgrade)\b",
         r"\b(?:python(?:3)?\s+-m\s+)?pip\s+(?:install|uninstall)\b",
         r"\bpoetry\s+(?:add|remove|install|update)\b",
         r"\b(?:conda|mamba)\s+(?:install|create|remove|update)\b",
     )
     if any(re.search(pattern, compact) for pattern in package_mutations):
         return (
-            "direct environment mutation is blocked; use the repository Pixi workflow"
+            "direct environment mutation is blocked; "
+            "use the repository uv bootstrap workflow"
         )
     return None
 
@@ -314,18 +316,6 @@ def _mutates_bun_lock(tokens: Sequence[str]) -> bool:
     } and not ({"--frozen-lockfile", "--no-save"} & token_set)
 
 
-def _mutates_pixi_lock(tokens: Sequence[str]) -> bool:
-    token_set = set(tokens)
-    return _command_after_executable(tokens, "pixi") in {
-        "add",
-        "install",
-        "lock",
-        "remove",
-        "update",
-        "upgrade",
-    } and not ({"--frozen", "--locked"} & token_set)
-
-
 def _known_command_write_targets(command: str, root: Path) -> tuple[str, ...]:
     targets: set[str] = set()
     for tokens in _tokenized_segments(command):
@@ -337,8 +327,27 @@ def _known_command_write_targets(command: str, root: Path) -> tuple[str, ...]:
         targets.update(_direct_write_targets(tokens, root))
         if _mutates_bun_lock(tokens):
             targets.add("bun.lock")
-        if _mutates_pixi_lock(tokens):
-            targets.add("pixi.lock")
+        uv_command = _command_after_executable(tokens, "uv")
+        if uv_command in {"add", "remove", "lock", "sync", "run"}:
+            options = tokens[tokens.index(uv_command) + 1 :]
+            if uv_command == "run":
+                # Application arguments must never exempt uv's implicit lock write.
+                end = next(
+                    (
+                        i
+                        for i, value in enumerate(options)
+                        if not value.startswith("-") or value == "--"
+                    ),
+                    len(options),
+                )
+                options = options[:end]
+            readonly = {"--locked", "--frozen"}
+            if uv_command == "run":
+                readonly.add("--no-sync")
+            if uv_command == "lock":
+                readonly.add("--check")
+            if not readonly.intersection(options):
+                targets.add("uv.lock")
     return tuple(sorted(targets))
 
 
@@ -429,7 +438,8 @@ def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
         )
 
     relative = [path.relative_to(root).as_posix() for path in paths]
-    command = ["pixi", "run", "--as-is", "-e", "dev", "ruff", "format", *relative]
+    ruff = root / ".venv" / ("Scripts/ruff.exe" if os.name == "nt" else "bin/ruff")
+    command = [str(ruff), "format", *relative]
     try:
         process = subprocess.Popen(
             command,
@@ -447,7 +457,7 @@ def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
         _terminate_formatter(process)
         return VerificationResult(
             False,
-            "Formatting exceeded time budget; run pixi run -e dev fmt explicitly.",
+            "Formatting exceeded time budget; run task fmt explicitly.",
         )
     except BaseException:
         _terminate_formatter(process)
@@ -460,7 +470,7 @@ def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
 
 def _is_harness(path: str) -> bool:
     return (
-        path in {"AGENTS.md", "CLAUDE.md", "pixi.toml", ".pre-commit-config.yaml"}
+        path in {"AGENTS.md", "CLAUDE.md", "Taskfile.yml", ".pre-commit-config.yaml"}
         or bool(
             re.fullmatch(
                 r"(?:packages/[^/]+|apps/(?:backend|web)|contracts)/(?:AGENTS|CLAUDE)\.md",
@@ -489,8 +499,11 @@ _ROOT_GATE_PATHS = {
     "bun.lock",
     "bunfig.toml",
     "package.json",
-    "pixi.lock",
-    "pixi.toml",
+    "Taskfile.yml",
+    ".node-version",
+    ".python-version",
+    ".task-version",
+    "uv.lock",
     "pyproject.toml",
 }
 _HIGH_RISK_PREFIXES = tuple(
@@ -716,34 +729,31 @@ def _backend_test_commands(
         commands.extend(
             [
                 [
-                    "pixi",
+                    "uv",
                     "run",
-                    "-e",
-                    "dev",
+                    "--no-sync",
                     "ruff",
                     "format",
                     "--check",
                     *existing_test_files,
                 ],
                 [
-                    "pixi",
+                    "uv",
                     "run",
-                    "-e",
-                    "dev",
+                    "--no-sync",
                     "ruff",
                     "check",
                     *existing_test_files,
                 ],
             ]
         )
-    commands.append(["pixi", "run", "-e", "dev", "type", "--tests"])
+    commands.append(["task", "type", "--", "--tests"])
     if test_targets:
         commands.append(
             [
-                "pixi",
+                "uv",
                 "run",
-                "-e",
-                "dev",
+                "--no-sync",
                 "pytest",
                 "-q",
                 "--import-mode=importlib",
@@ -751,6 +761,25 @@ def _backend_test_commands(
             ]
         )
     return commands
+
+
+def _backend_source_commands(
+    paths: Sequence[str], *, high_risk: bool
+) -> list[list[str]]:
+    owners = {
+        "/".join(path.split("/")[:2])
+        for path in paths
+        if path.endswith(".py") and path.startswith(("packages/", "apps/backend/"))
+    }
+    if high_risk or len(owners) != 1:
+        return [["task", "check"]]
+    owner = next(iter(owners))
+    return [
+        ["task", "lint"],
+        ["task", "fmt-check"],
+        ["task", "type-all"],
+        ["task", "test", "--", "--fast", f"{owner}/tests"],
+    ]
 
 
 def verification_commands(
@@ -779,16 +808,18 @@ def verification_commands(
 
     commands: list[list[str]] = []
     if needs_full_check:
-        commands.append(["pixi", "run", "-e", "dev", "check"])
+        commands.append(["task", "check"])
     elif "web" in active_classes:
-        commands.append(["pixi", "run", "-e", "dev", "check-web"])
+        commands.append(["task", "check-web"])
     elif active_classes & {"backend", "high-risk"}:
-        commands.append(["pixi", "run", "-e", "dev", "check-backend"])
+        commands.extend(
+            _backend_source_commands(paths, high_risk="high-risk" in active_classes)
+        )
 
     if needs_system:
-        commands.append(["pixi", "run", "-e", "dev", "test-system"])
+        commands.append(["task", "test-system"])
     if "high-risk" in active_classes:
-        commands.append(["pixi", "run", "-e", "dev", "pytest", "-m", "pit"])
+        commands.append(["task", "pit"])
     if needs_full_check or active_classes != {"backend-tests"}:
         return commands
     return _backend_test_commands(paths, root=root)
@@ -1032,7 +1063,7 @@ def stop_feedback(payload: dict[str, Any], root: Path) -> dict[str, Any]:
             f"Worktree has {len(paths)} pending paths "
             f"({classify_diff(paths, root=root)}); "
             "these may predate this task. Stop does not run or certify quality gates. "
-            "For code changes, run pixi run -e dev check-changed explicitly "
+            "For code changes, run task check-changed explicitly "
             "and report actual results."
         )
     }

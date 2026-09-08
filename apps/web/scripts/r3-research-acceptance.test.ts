@@ -350,14 +350,22 @@ describe("R3 research deterministic acceptance contract", () => {
 
 	it("binds Studio, Experiment, Review, refresh, hard-gate, and live-boundary tests", async () => {
 		const { buildFixtureCommand } = await loadAcceptance();
-		const command = buildFixtureCommand().join(" ");
+		const command = buildFixtureCommand();
+		const commandText = command.join(" ");
 
-		expect(command).toContain("experiment-create-page.test.tsx");
-		expect(command).toContain("experiment-detail-page.test.tsx");
-		expect(command).toContain("experiment-run-recovery.test.tsx");
-		expect(command).toContain("review-detail-page.test.tsx");
-		expect(command).toContain("review-queue-page.test.tsx");
-		expect(command).toContain("live-boundary.test.tsx");
+		expect(command.slice(0, 5)).toEqual([
+			"node",
+			"--import",
+			"../../tooling/dev/node-runtime.mjs",
+			"node_modules/vitest/vitest.mjs",
+			"run",
+		]);
+		expect(commandText).toContain("experiment-create-page.test.tsx");
+		expect(commandText).toContain("experiment-detail-page.test.tsx");
+		expect(commandText).toContain("experiment-run-recovery.test.tsx");
+		expect(commandText).toContain("review-detail-page.test.tsx");
+		expect(commandText).toContain("review-queue-page.test.tsx");
+		expect(commandText).toContain("live-boundary.test.tsx");
 	});
 
 	it("labels MSW evidence as UI contract only", async () => {
