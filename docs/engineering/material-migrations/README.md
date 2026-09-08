@@ -62,7 +62,9 @@ Web docs/design/prototype/contracts、Backend/Data/Features owner 文档、根 a
 
 [2026-09-08 Web 退役清单](2026-09-08-web-retirements.csv)只包含
 `apps/web/scripts/audit-tokens.mjs`。该历史提取脚本读取不存在的原型和 token 目录，
-输出旧计划目录下的原始报告。tracked 调用方核查仅发现其自身用法注释；现行
+输出旧计划目录下的原始报告。tracked 文本核查未发现活跃调用；除自身用法注释外，
+历史 `2026-05-03-prototype-uiux-audit-remediation-plan.md` 第 432 行曾建议修改该
+脚本，该建议不是当前执行依赖，原历史语境保留。现行
 `audit:tokens` 使用独立的 WCAG 和 token dead-link 工具，保留不变。
 此处不是将历史原始报告生成能力移交给现行审计，也没有删除其他视觉工具或材料。
 按 CSV 中固定提交与源路径可恢复原字节。
