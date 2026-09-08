@@ -154,6 +154,8 @@ Thumbs.db
 desktop.ini
 .codex/*
 !.codex/hooks.json
+.zcode/*
+!.zcode/config.json
 .cache/ditto-agent-harness/
 .worktrees/
 .merge-backups/

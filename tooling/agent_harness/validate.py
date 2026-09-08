@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Ditto's canonical, polyglot dual-host agent harness."""
+"""Validate Ditto's canonical, polyglot multi-host agent harness."""
 
 from __future__ import annotations
 
@@ -70,6 +70,11 @@ _HOST_MATCHERS = {
         "PostToolUse": {"Edit", "Write", "apply_patch"},
         "Stop": set(),
     },
+    "zcode": {
+        "PreToolUse": {"Bash", "Edit", "Write"},
+        "PostToolUse": {"Edit", "Write"},
+        "Stop": set(),
+    },
 }
 _HOST_COMMAND_BASE = {
     "claude": 'python3 "$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py"',
@@ -77,6 +82,7 @@ _HOST_COMMAND_BASE = {
         '/usr/bin/env python3 "$(git rev-parse --show-toplevel)/'
         + 'tooling/agent_harness/hook.py"'
     ),
+    "zcode": 'python3 "${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py"',
 }
 
 
@@ -300,10 +306,18 @@ def _event_matchers(config: dict[str, object], event: str) -> set[str]:
     }
 
 
+def _host_event_entries(hooks: dict[object, object], host: str, event: str) -> object:
+    """Resolve per-host event lists; ZCode nests them under hooks.events."""
+    container: object = hooks.get("events") if host == "zcode" else hooks
+    if not isinstance(container, dict):
+        return None
+    return container.get(event)
+
+
 def _validate_host_event(
     hooks: dict[object, object], host: str, event: str, errors: list[str]
 ) -> None:
-    entries = hooks.get(event)
+    entries = _host_event_entries(hooks, host, event)
     if not isinstance(entries, list) or not entries:
         errors.append(f"{host} {event} requires an active shared hook")
         return
@@ -354,6 +368,8 @@ def _validate_host_hook_contract(
     if not isinstance(hooks, dict):
         errors.append(f"{host} hooks must be an object")
         return
+    if host == "zcode" and hooks.get("enabled") is not True:
+        errors.append("zcode hooks must set enabled to true; file hooks are inert")
     for event in sorted(HOOK_EVENTS):
         _validate_host_event(hooks, host, event, errors)
 
@@ -361,8 +377,10 @@ def _validate_host_hook_contract(
 def _validate_host_configs(errors: list[str]) -> None:
     settings_path = ROOT / ".claude" / "settings.json"
     codex_path = ROOT / ".codex" / "hooks.json"
+    zcode_path = ROOT / ".zcode" / "config.json"
     settings = _load_json(settings_path, errors)
     codex = _load_json(codex_path, errors)
+    zcode = _load_json(zcode_path, errors)
 
     if settings is not None:
         plugins = settings.get("enabledPlugins")
@@ -385,8 +403,12 @@ def _validate_host_configs(errors: list[str]) -> None:
         if not any("apply_patch" in matcher.split("|") for matcher in post_matchers):
             errors.append("Codex PostToolUse must match apply_patch")
 
+    if zcode is not None:
+        _validate_host_hook_contract(zcode, "zcode", errors)
+
     _validate_hook_target(settings_path, errors)
     _validate_hook_target(codex_path, errors)
+    _validate_hook_target(zcode_path, errors)
     hook_script = ROOT / "tooling" / "agent_harness" / "hook.py"
     if not hook_script.is_file():
         errors.append("shared hook target is missing")

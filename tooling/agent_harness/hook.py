@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared repository hook policy for Claude Code and Codex."""
+"""Shared repository hook policy for Claude Code, Codex, and ZCode."""
 
 from __future__ import annotations
 
@@ -478,7 +478,7 @@ def _is_harness(path: str) -> bool:
             )
         )
         or path.startswith(
-            (".agents/", ".claude/", ".codex/", "tooling/agent_harness/")
+            (".agents/", ".claude/", ".codex/", ".zcode/", "tooling/agent_harness/")
         )
         or path == "docs/engineering/agent-harness.md"
     )
@@ -1076,7 +1076,7 @@ def main() -> int:
         required=True,
         choices=("pre-tool", "post-tool", "stop", "check-changed"),
     )
-    parser.add_argument("--host", choices=("claude", "codex"), default="codex")
+    parser.add_argument("--host", choices=("claude", "codex", "zcode"), default="codex")
     args = parser.parse_args()
 
     root = git_root(Path.cwd())

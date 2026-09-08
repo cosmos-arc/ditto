@@ -1,0 +1,45 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "PreToolUse": [
+        {
+          "matcher": "Bash|Edit|Write",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python3 \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event pre-tool",
+              "timeout": 10,
+              "statusMessage": "Checking Ditto command policy"
+            }
+          ]
+        }
+      ],
+      "PostToolUse": [
+        {
+          "matcher": "Edit|Write",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python3 \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event post-tool",
+              "timeout": 10,
+              "statusMessage": "Formatting edited Python files"
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python3 \"${ZCODE_PROJECT_DIR}/tooling/agent_harness/hook.py\" --host zcode --event stop",
+              "timeout": 3,
+              "statusMessage": "Checking pending changes"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

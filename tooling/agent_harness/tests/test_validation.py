@@ -92,6 +92,7 @@ class FormatFixtureTests(unittest.TestCase):
                 "apps/web/package.json",
                 ".claude/settings.json",
                 ".codex/hooks.json",
+                ".zcode/config.json",
             ):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -142,11 +143,18 @@ class FormatFixtureTests(unittest.TestCase):
                 check=False,
             )
             assert result.returncode == 0, result.stdout + result.stderr
-            for relative in (".codex/hooks.json", ".claude/settings.json"):
+            for relative in (
+                ".codex/hooks.json",
+                ".claude/settings.json",
+                ".zcode/config.json",
+            ):
                 config_path = root / relative
                 original_text = config_path.read_text()
                 broken = json.loads(original_text)
-                for entry in broken["hooks"]["PreToolUse"]:
+                container = broken["hooks"]
+                if relative == ".zcode/config.json":
+                    container = container["events"]
+                for entry in container["PreToolUse"]:
                     for hook in entry["hooks"]:
                         hook["command"] = hook["command"].replace('"', "'")
                 config_path.write_text(json.dumps(broken))
@@ -230,20 +238,25 @@ class FormatFixtureTests(unittest.TestCase):
 
         assert any("apply_patch" in matcher.split("|") for matcher in matchers)
 
-    def test_both_hosts_pre_tool_hooks_cover_structured_writes(self) -> None:
+    def test_all_hosts_pre_tool_hooks_cover_structured_writes(self) -> None:
         expected = {
             "claude": {"Bash", "Edit", "Write"},
             "codex": {"Bash", "Edit", "Write", "apply_patch"},
+            "zcode": {"Bash", "Edit", "Write"},
         }
         paths = {
             "claude": ROOT / ".claude" / "settings.json",
             "codex": ROOT / ".codex" / "hooks.json",
+            "zcode": ROOT / ".zcode" / "config.json",
         }
 
         for host, path in paths.items():
             with self.subTest(host=host):
                 config = json.loads(path.read_text(encoding="utf-8"))
-                entries = config["hooks"]["PreToolUse"]
+                entries = validate_module._host_event_entries(
+                    config["hooks"], host, "PreToolUse"
+                )
+                assert isinstance(entries, list)
                 covered = {
                     tool
                     for entry in entries
@@ -254,6 +267,63 @@ class FormatFixtureTests(unittest.TestCase):
                     for tool in entry["matcher"].split("|")
                 }
                 assert expected[host] <= covered
+
+    def test_zcode_hook_contract_requires_enabled_and_nested_events(self) -> None:
+        command = validate_module._HOST_COMMAND_BASE["zcode"]
+        config: dict[str, object] = {
+            "hooks": {
+                "events": {
+                    "PreToolUse": [
+                        {
+                            "matcher": "Bash|Edit|Write",
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": command
+                                    + " --host zcode --event pre-tool",
+                                    "timeout": 10,
+                                }
+                            ],
+                        }
+                    ],
+                    "PostToolUse": [
+                        {
+                            "matcher": "Edit|Write",
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": command
+                                    + " --host zcode --event post-tool",
+                                    "timeout": 10,
+                                }
+                            ],
+                        }
+                    ],
+                    "Stop": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": command + " --host zcode --event stop",
+                                    "timeout": 3,
+                                }
+                            ]
+                        }
+                    ],
+                }
+            }
+        }
+
+        disabled: list[str] = []
+        validate_module._validate_host_hook_contract(config, "zcode", disabled)
+        assert any("enabled" in error for error in disabled)
+
+        hooks = config["hooks"]
+        assert isinstance(hooks, dict)
+        hooks["enabled"] = True
+        enabled: list[str] = []
+        validate_module._validate_host_hook_contract(config, "zcode", enabled)
+        assert enabled == []
 
     def test_inert_host_hook_entries_are_rejected(self) -> None:
         config: dict[str, object] = {
