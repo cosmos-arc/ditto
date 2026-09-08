@@ -1,0 +1,28 @@
+schema_version = 1
+# Current navigation/operating rules. Historical plans, research and evidence are
+# deliberately not linted as current instructions; there is no banned-word list.
+active_documents = [
+  "README.md", "AGENTS.md", "apps/*/AGENTS.md", "packages/*/AGENTS.md",
+  "contracts/AGENTS.md", "contracts/openapi/README.md",
+  "docs/README.md", "docs/architecture/*.md", "docs/adr/*.md",
+  "docs/engineering/*.md", "docs/agents/*.md", "docs/plans/README.md",
+  "apps/web/design/specs/*.md",
+  "packages/features/docs/design/unified-feature-factor-engine/decisions/**/*.md",
+  "apps/web/docs/README.md", "apps/web/contracts/README.md",
+  "apps/backend/docs/*.md", "packages/data/docs/*.md",
+  "packages/features/docs/*.md",
+  "packages/features/docs/design/unified-feature-factor-engine/README.md",
+]
+# Location guards complement the existing identity/generation/browser validators.
+# Exact sentinels catch an accidentally removed directory even when globs shrink.
+machine_inputs = [
+  "packages/analysis/tests/fixtures/migrations/research-schema-v1.sql",
+  "apps/backend/tests/fixtures/contracts/r3-v1-api-surface.json",
+  "apps/backend/tests/fixtures/contracts/r3-v1-api-surface.md",
+  "contracts/openapi/v1.json",
+  "apps/web/contracts/pages/*.contract.json",
+  "apps/web/contracts/prototype-chart-interactions.md",
+  "apps/web/design/specs/01_product_information_architecture.md",
+  "apps/web/prototype/.frozen-baseline.json",
+  "apps/web/prototype/baselines/frontend-recovery-m0-2026-09-04.json",
+]

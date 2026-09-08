@@ -507,6 +507,7 @@ def _gate_covers(actual: str, required: str) -> bool:
             "task lint",
             "task fmt-check",
             "task type-all",
+            "task knowledge-check",
         }
         or required.startswith("task test -- --fast ")
     )

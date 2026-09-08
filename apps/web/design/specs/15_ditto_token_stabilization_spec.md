@@ -205,7 +205,7 @@ R1 精简后的 6 级字号体系。与上游规范 §6 相比，移除了 11/18
 ### 字体家族（4-role system）
 
 > **更新**：2026-03-31，从 3 套升级为 4 套
-> **完整规范**：[2026-04-01-typography-system-design.md](../../../plans/2026-04-01-typography-system-design.md)
+> **完整规范**：[2026-04-01-typography-system-design.md](../../docs/plans/archieve/2026-04-01-typography-system-design.md)
 
 | Token | Value | Role |
 |-------|-------|------|

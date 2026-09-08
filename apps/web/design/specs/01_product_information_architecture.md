@@ -6,7 +6,7 @@
 >
 > **v4.0 变更摘要（2026-08-31）**：冻结 D1—D16，并把五域从产品命名落实为唯一目标路由；`/trading/*`、`/platform/*` 不再保留兼容、redirect 或双路由。
 >
-> **解释优先级**：本文的 v4.0 目标路由表和后端[工作站实施计划](../../../../ditto/docs/plans/2026-08-31-ditto-personal-quant-workstation-implementation-plan.md)是当前实施事实源。下文保留的旧路径只用于解释历史页面能力如何归并，不授权兼容实现。
+> **解释优先级**：本文的 v4.0 目标路由表和后端[工作站实施计划](../../../../docs/plans/2026-08-31-ditto-personal-quant-workstation-implementation-plan.md)是当前实施事实源。下文保留的旧路径只用于解释历史页面能力如何归并，不授权兼容实现。
 
 ---
 
@@ -330,7 +330,7 @@ Markets 同时覆盖环境扫描与 A 股下钻，但全球市场只作为参照
 - `/markets/a-shares` → 中国 A 股总览，核心动词 structure scan
 - 全球参照优先作为 `/markets` 的矩阵和下钻视图，不建立全球证券交易、外币账户或结算心智
 
-详见 [全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)。
+详见 [全市场总览设计文档](../../docs/plans/archieve/2026-03-29-cross-market-overview-design.md)。
 
 **v2.0 调整**：
 

@@ -83,7 +83,7 @@ Phase 1 默认热层 retention 统一为表族级 profile，不再按单表零�
 
 1. 30 天窗口内，热层缺失优先由 Parquet `bar_1m` 回补。
 2. 超出 30 天窗口的盘中数据恢复，不依赖热层 TTL，改由上游标准化源重放或重算。
-3. “进入 Parquet”不等于“在线查询默认可读”；在线默认边界仍遵循 [ADR-030](adr-030-online-data-access-boundary.md)。
+3. “进入 Parquet”不等于“在线查询默认可读”；在线默认边界仍遵循 [ADR-030](../adr-030-online-data-access-boundary.md)。
 
 ---
 

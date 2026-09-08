@@ -128,6 +128,9 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python -m tooling.quality.large_files {{.CLI_ARGS}}
+  knowledge-check:
+    cmds:
+    - uv run --no-sync python -m tooling.quality.knowledge {{.CLI_ARGS}}
   harness-check:
     cmds:
     - task: python-environment-check
@@ -136,6 +139,7 @@ tasks:
     - task: tooling-test
     - task: harness-type
     - task: large-file-check
+    - task: knowledge-check
   check-changed:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'

@@ -583,7 +583,7 @@ Timeline 应作为独立组件族，而不是"某种图表的附属样式"。
 
 ## Part C-1 — Cross-Market Components（Radar Shell 专用）
 
-> **上游**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
+> **上游**：[全市场总览设计文档](../../docs/plans/archieve/2026-03-29-cross-market-overview-design.md)
 
 以下组件服务于 Analytical / Radar Shell 子变体，用于跨市场总览和单市场总览页面。
 

@@ -36,6 +36,24 @@ class AgentEvalRegistryTests(unittest.TestCase):
         assert len({case.case_id for case in registry.cases}) == len(registry.cases)
         assert evaluate_registry(registry, root=ROOT) == ()
 
+    def test_full_check_covers_documentation_knowledge_gate(self) -> None:
+        attempt = AgentAttempt(
+            changes=(ChangeEvidence(path="docs/guide.md", tracked=True),),
+            reported_paths=("docs/guide.md",),
+            read_instructions=("AGENTS.md",),
+            tool_evidence=(ToolEvidence(command=("task", "check"), exit_code=0),),
+        )
+        assert grade_attempt(attempt, root=ROOT).violations == ()
+        missing = AgentAttempt(
+            changes=attempt.changes,
+            reported_paths=attempt.reported_paths,
+            read_instructions=attempt.read_instructions,
+            tool_evidence=(),
+        )
+        assert grade_attempt(missing, root=ROOT).violations == (
+            "verification_scope_too_small",
+        )
+
     def test_nearest_agents_instruction_is_required_in_root_to_leaf_order(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

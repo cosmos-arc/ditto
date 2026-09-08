@@ -79,42 +79,44 @@ class SkillRegistryTests(unittest.TestCase):
         assert registry["ditto-pit-safety"] == "backend"
 
 
+def _copy_harness_fixture(root: Path) -> None:
+    for relative in (
+        "AGENTS.md",
+        "CLAUDE.md",
+        "pyproject.toml",
+        "bunfig.toml",
+        "package.json",
+        "apps/web/package.json",
+        ".claude/settings.json",
+        ".codex/hooks.json",
+        ".zcode/config.json",
+    ):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
+    for relative in (
+        "tooling/agent_harness",
+        ".agents/skills",
+        ".claude/skills",
+    ):
+        shutil.copytree(ROOT / relative, root / relative)
+    for path in [
+        *(ROOT / "packages").glob("*/AGENTS.md"),
+        ROOT / "apps/backend/AGENTS.md",
+        ROOT / "apps/web/AGENTS.md",
+        ROOT / "contracts/AGENTS.md",
+    ]:
+        target = root / path.relative_to(ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(path, target)
+        shutil.copyfile(path.with_name("CLAUDE.md"), target.with_name("CLAUDE.md"))
+
+
 class FormatFixtureTests(unittest.TestCase):
     def test_cli_accepts_supported_skill_and_host_extensions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for relative in (
-                "AGENTS.md",
-                "CLAUDE.md",
-                "pyproject.toml",
-                "bunfig.toml",
-                "package.json",
-                "apps/web/package.json",
-                ".claude/settings.json",
-                ".codex/hooks.json",
-                ".zcode/config.json",
-            ):
-                target = root / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(ROOT / relative, target)
-            for relative in (
-                "tooling/agent_harness",
-                ".agents/skills",
-                ".claude/skills",
-            ):
-                shutil.copytree(ROOT / relative, root / relative)
-            for path in [
-                *(ROOT / "packages").glob("*/AGENTS.md"),
-                ROOT / "apps/backend/AGENTS.md",
-                ROOT / "apps/web/AGENTS.md",
-                ROOT / "contracts/AGENTS.md",
-            ]:
-                target = root / path.relative_to(ROOT)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(path, target)
-                shutil.copyfile(
-                    path.with_name("CLAUDE.md"), target.with_name("CLAUDE.md")
-                )
+            _copy_harness_fixture(root)
             for tree in (".agents", ".claude"):
                 skill = root / tree / "skills/ditto-pit-safety/SKILL.md"
                 skill.write_text(
@@ -135,6 +137,9 @@ class FormatFixtureTests(unittest.TestCase):
             for matcher in original["matcher"].split("|"):
                 entries.append({**original, "matcher": matcher})
             settings.write_text(json.dumps(config))
+            research = root / "docs/research/skill-history.md"
+            research.parent.mkdir(parents=True)
+            research.write_text("Historical discussion of super" + "powers: usage.\n")
             result = subprocess.run(
                 [sys.executable, str(root / "tooling/agent_harness/validate.py")],
                 cwd=root,
@@ -143,6 +148,22 @@ class FormatFixtureTests(unittest.TestCase):
                 check=False,
             )
             assert result.returncode == 0, result.stdout + result.stderr
+            # Actual instruction sources remain subject to legacy dependency checks.
+            instructions = root / "AGENTS.md"
+            original_instructions = instructions.read_text()
+            instructions.write_text(
+                original_instructions + "\nUse super" + "powers:run\n"
+            )
+            legacy = subprocess.run(
+                [sys.executable, str(root / "tooling/agent_harness/validate.py")],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert legacy.returncode != 0
+            assert "legacy workflow dependency in AGENTS.md" in legacy.stdout
+            instructions.write_text(original_instructions)
             # A prose-only skill edit must fail the same CLI used by the PR job.
             skill = root / ".agents/skills/ditto-pit-safety/SKILL.md"
             original_skill = skill.read_text()

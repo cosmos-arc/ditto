@@ -34,6 +34,8 @@ jobs:
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: python3 -m tooling.agent_harness.ci select
+      - name: Validate active knowledge and machine input locations
+        run: python3 -m tooling.quality.knowledge
       - name: Diff hygiene
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}

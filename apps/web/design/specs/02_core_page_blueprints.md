@@ -218,7 +218,7 @@ Today Pulse → Daily Brief Strip → Decision Banner → Priority Findings → 
 ## 2. 全市场总览（Cross-Market Overview）
 
 > **路由**：`/markets`
-> **详细设计**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
+> **详细设计**：[全市场总览设计文档](../../docs/plans/archieve/2026-03-29-cross-market-overview-design.md)
 
 ### 页面目标
 
