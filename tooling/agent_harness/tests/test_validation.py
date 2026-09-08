@@ -79,42 +79,44 @@ class SkillRegistryTests(unittest.TestCase):
         assert registry["ditto-pit-safety"] == "backend"
 
 
+def _copy_harness_fixture(root: Path) -> None:
+    for relative in (
+        "AGENTS.md",
+        "CLAUDE.md",
+        "pyproject.toml",
+        "bunfig.toml",
+        "package.json",
+        "apps/web/package.json",
+        ".claude/settings.json",
+        ".codex/hooks.json",
+        ".zcode/config.json",
+    ):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
+    for relative in (
+        "tooling/agent_harness",
+        ".agents/skills",
+        ".claude/skills",
+    ):
+        shutil.copytree(ROOT / relative, root / relative)
+    for path in [
+        *(ROOT / "packages").glob("*/AGENTS.md"),
+        ROOT / "apps/backend/AGENTS.md",
+        ROOT / "apps/web/AGENTS.md",
+        ROOT / "contracts/AGENTS.md",
+    ]:
+        target = root / path.relative_to(ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(path, target)
+        shutil.copyfile(path.with_name("CLAUDE.md"), target.with_name("CLAUDE.md"))
+
+
 class FormatFixtureTests(unittest.TestCase):
     def test_cli_accepts_supported_skill_and_host_extensions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for relative in (
-                "AGENTS.md",
-                "CLAUDE.md",
-                "pyproject.toml",
-                "bunfig.toml",
-                "package.json",
-                "apps/web/package.json",
-                ".claude/settings.json",
-                ".codex/hooks.json",
-                ".zcode/config.json",
-            ):
-                target = root / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(ROOT / relative, target)
-            for relative in (
-                "tooling/agent_harness",
-                ".agents/skills",
-                ".claude/skills",
-            ):
-                shutil.copytree(ROOT / relative, root / relative)
-            for path in [
-                *(ROOT / "packages").glob("*/AGENTS.md"),
-                ROOT / "apps/backend/AGENTS.md",
-                ROOT / "apps/web/AGENTS.md",
-                ROOT / "contracts/AGENTS.md",
-            ]:
-                target = root / path.relative_to(ROOT)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(path, target)
-                shutil.copyfile(
-                    path.with_name("CLAUDE.md"), target.with_name("CLAUDE.md")
-                )
+            _copy_harness_fixture(root)
             for tree in (".agents", ".claude"):
                 skill = root / tree / "skills/ditto-pit-safety/SKILL.md"
                 skill.write_text(
