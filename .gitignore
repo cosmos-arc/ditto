@@ -163,3 +163,6 @@ desktop.ini
 mutants/
 
 .cache/
+# New acceptance runs are local output. Existing tracked evidence stays tracked;
+# promoting a new evidence file requires an explicit, reviewed git add -f.
+/artifacts/

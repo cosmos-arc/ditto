@@ -6,6 +6,14 @@ Python 已改为 uv workspace 与单一 uv.lock；根任务改为 Task；Bun 版
 
 ## 2026-09-08 当前状态
 
+合并后复核：PR #109 最终提交 `c44be47a` 的
+[CI 34194186435](https://github.com/cosmos-arc/ditto/actions/runs/34194186435) 全部适用门
+通过。其 squash 提交 `47693622` 曾因 Gitleaks 的提交/行号指纹变化失败；
+PR #110 修复精确误报后，后续 main `fd8cd17a` 的
+[CI 34232894885](https://github.com/cosmos-arc/ditto/actions/runs/34232894885) 再次通过。
+下文“新增修补尚待推送”和阻断描述均属于当时快照，不是当前未完成事项。
+这证明工具链迁移交付及当前适用平台/制品门，不代表发布了正式产品版本。
+
 其他模型完成的 `f895dfef` 已在 [CI 34146971599](https://github.com/cosmos-arc/ditto/actions/runs/34146971599) 通过全部适用主门：Linux 后端测试与覆盖率、Web、契约、Harness、真实双栈系统验收、macOS/Windows 原生门、OSV、CodeQL 分析及上传、镜像扫描和 cohort 打包。仓库目前为 public，CodeQL 上传已实际成功。下文 9 月 6–7 日的阻断描述保留为历史记录，不代表当前状态。
 
 本次针对 `7e9f6eae...f895dfef` 的双轴复审发现并修复三项遗漏：

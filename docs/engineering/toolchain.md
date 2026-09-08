@@ -45,6 +45,26 @@ UV_PROJECT_ENVIRONMENT="$PWD/.cache/production-venv" \
 通过 run [34100716341](https://github.com/cosmos-arc/ditto/actions/runs/34100716341) 中，`Backend tests and coverage` 约 31 分 44 秒，整轮 CI 约 33 分 18 秒；16,501 个测试通过、74 个跳过。最慢的真实测试组为 scheduler capacity `[2]` 345.70 秒、capacity `[4]` 300.20 秒和 128-candidate backend e2e wrapper 303.20 秒。它们在 job 内并发，但合计占据主要窗口；这不是 public repo quota、`TUSHARE_TOKEN` 或 release scanner 造成的。release 扫描共享 Trivy DB volume，避免最终镜像与来源镜像扫描重复下载漏洞库。
 
 
+### 2026-09-08 有限反馈诊断
+
+迁移后的样本不能与上述单 job 旧基线直接比较。以下时间来自 Actions 的 run/job/step
+时间戳，包含对应层级的调度与收尾，不等同单项测试耗时。
+
+| 样本 | 整轮 | 后端分片 2 / 3 | macOS gate job |
+| --- | ---: | ---: | ---: |
+| [#110 PR，34202493420](https://github.com/cosmos-arc/ditto/actions/runs/34202493420)，扫描误报及宿主修复 | 16m25s | 13m21s / 13m39s | 13m24s |
+| [main，34232894885](https://github.com/cosmos-arc/ditto/actions/runs/34232894885)，第三批广泛治理变更 | 16m49s | 13m42s / 13m29s | 13m17s |
+
+两组后端慢分片的实际 `Run isolated shard` 步骤为 774–790 秒；macOS 的准备步骤
+34–42 秒，backend gate 482–515 秒，Web gate 217–254 秒。由此可定位到测试执行
+窗口，不能归因为单纯下载或队列等待。小改动也可能选择完整高风险门；这两个样本
+不足以估计所有普通 PR 的分位数，更不能证明削减门禁或增加 runner 的收益。
+
+后续仅在需要优化反馈时间时，先从慢分片的测试级记录和分配方式判断负载是否失衡，
+同时保留平台验收边界。旧本地 #110 记录中的 OCI timeout 用例曾为 9.16 秒超过
+8 秒，其单文件复测通过；这是调度敏感性的线索，不是放宽上限或增加重试的依据。
+本次未修改分片、超时、coverage、runner 额度或验证收据政策。
+
 ## 本次本机证据
 
 2026-09-07 在同一 macOS ARM64 主机上比较迁移前后 Bun 效率。两侧均为独立临时 worktree、Bun 1.3.14、独立空安装缓存；冷安装执行一次 `bun ci --frozen-lockfile`，热安装立即用同一缓存重复执行。常用根检查在已准备环境上分别执行各自的 `web-type` 入口。
