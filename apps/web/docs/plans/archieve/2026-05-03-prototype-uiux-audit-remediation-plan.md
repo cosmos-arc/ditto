@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 只修复 `docs/designs/specs/audits/2026-05-03-prototype-uiux-audit.md` 中真实、可验证、对原型体验有实际收益的问题，并把误报校准回审核工具。
+**Goal:** 只修复 `design/specs/audits/2026-05-03-prototype-uiux-audit.md` 中真实、可验证、对原型体验有实际收益的问题，并把误报校准回审核工具。
 
 **Architecture:** 先校准活跃原型范围和自动化合同，再修复高风险可访问性问题。跨页规则进入 shared CSS 和 prototype contract tests；页面特有问题留在对应 `page-*.html`；需要新增或调整 Design Token 的事项作为审批检查点，不在无批准状态下直接落地。
 
@@ -47,14 +47,14 @@
 
 Read:
 
-- `docs/designs/specs/audits/2026-05-03-prototype-uiux-audit.md`
-- `docs/designs/specs/prototypes/.edition-manifest.json`
-- `docs/designs/specs/prototypes/page-alpha-explorer.html`
-- `docs/designs/specs/prototypes/page-agent-console-v2.html`
-- `docs/designs/specs/prototypes/page-home.html`
-- `docs/designs/specs/prototypes/page-signals-inbox.html`
-- `docs/designs/specs/prototypes/shared/layout-base.css`
-- `docs/designs/specs/prototypes/tokens-style.css`
+- `design/specs/audits/2026-05-03-prototype-uiux-audit.md`
+- `prototype/.edition-manifest.json`
+- `prototype/page-alpha-explorer.html`
+- `prototype/page-agent-console-v2.html`
+- `prototype/page-home.html`
+- `prototype/page-signals-inbox.html`
+- `prototype/shared/layout-base.css`
+- `prototype/tokens-style.css`
 - `scripts/prototype-interaction-ux-contract.test.ts`
 - `scripts/prototype-design-consistency.test.ts`
 - `scripts/page-alpha-explorer-prototype.test.ts`
@@ -85,7 +85,7 @@ Out of scope:
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
 - Modify: `scripts/prototype-interaction-ux-contract.test.ts`
 - Modify: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/page-alpha-explorer-prototype.test.ts`
@@ -147,9 +147,9 @@ Expected: PASS.
 
 - Modify: `scripts/prototype-interaction-ux-contract.test.ts`
 - Modify: `scripts/page-alpha-explorer-prototype.test.ts`
-- Read: `docs/designs/specs/prototypes/page-alpha-explorer.html`
-- Read: `docs/designs/specs/prototypes/page-home.html`
-- Read: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Read: `prototype/page-alpha-explorer.html`
+- Read: `prototype/page-home.html`
+- Read: `prototype/shared/layout-base.css`
 
 **Step 1: Write failing tests for pointer-only core controls**
 
@@ -213,7 +213,7 @@ Expected: FAIL until Home focus selectors are explicit.
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-alpha-explorer.html`
+- Modify: `prototype/page-alpha-explorer.html`
 - Test: `scripts/page-alpha-explorer-prototype.test.ts`
 
 **Step 1: Add semantic keyboard affordances**
@@ -276,8 +276,8 @@ Expected: PASS.
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: focused page-local selectors in `docs/designs/specs/prototypes/page-*.html`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: focused page-local selectors in `prototype/page-*.html`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -330,10 +330,10 @@ Expected: PASS.
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-alpha-explorer.html`
-- Modify: `docs/designs/specs/prototypes/page-signals-inbox.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html`
-- Modify: `docs/designs/specs/prototypes/page-research.html`
+- Modify: `prototype/page-alpha-explorer.html`
+- Modify: `prototype/page-signals-inbox.html`
+- Modify: `prototype/page-agent-console-v2.html`
+- Modify: `prototype/page-research.html`
 - Modify: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Add failing reduced-motion coverage test**
@@ -395,7 +395,7 @@ Expected: PASS.
 **Files:**
 
 - Modify: `scripts/prototype-design-consistency.test.ts`
-- Modify: selected page styles in `docs/designs/specs/prototypes/page-*.html`
+- Modify: selected page styles in `prototype/page-*.html`
 
 **Step 1: Add a layout-transition audit with categories**
 
@@ -431,8 +431,8 @@ Expected: PASS.
 
 - Modify: `scripts/audit-tokens.mjs` or create a focused helper under `scripts/`
 - Modify: `scripts/prototype-design-consistency.test.ts`
-- Read: `docs/designs/specs/prototypes/page-agent-console.html`
-- Read: `docs/designs/specs/prototypes/page-strategy-studio.html`
+- Read: `prototype/page-agent-console.html`
+- Read: `prototype/page-strategy-studio.html`
 
 **Step 1: Add scanner exclusions**
 
@@ -469,11 +469,11 @@ Expected: PASS and no color migration tasks generated from false positives.
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/tokens-style.css`
-- Modify: `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
-- Modify: `docs/designs/specs/15_ditto_token_stabilization_spec.md`
-- Modify: `docs/designs/specs/prototypes/page-alpha-explorer.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html`
+- Modify: `prototype/tokens-style.css`
+- Modify: `design/specs/14_ditto_token_naming_layering_spec.md`
+- Modify: `design/specs/15_ditto_token_stabilization_spec.md`
+- Modify: `prototype/page-alpha-explorer.html`
+- Modify: `prototype/page-agent-console-v2.html`
 
 **Candidate tokens:**
 
@@ -501,7 +501,7 @@ Expected: PASS.
 
 **Files:**
 
-- Modify: targeted `docs/designs/specs/prototypes/page-*.html`
+- Modify: targeted `prototype/page-*.html`
 - Modify: `scripts/prototype-interaction-ux-contract.test.ts`
 
 **Step 1: Add low-risk semantic assertions**

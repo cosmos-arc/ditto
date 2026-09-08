@@ -27,7 +27,7 @@ export type {
 	PrototypeSource,
 	ShellFamily,
 } from "./page-contracts.generated";
-// Page contracts — generated from docs/contracts/pages/*.contract.json
+// Page contracts — generated from contracts/pages/*.contract.json
 export {
 	PAGE_CONTRACTS,
 	PAGE_PATTERNS,

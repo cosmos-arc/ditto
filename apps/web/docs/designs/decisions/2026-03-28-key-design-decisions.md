@@ -8,7 +8,7 @@
 - **选择**：Style B (Graphite Studio)，Linear/Vercel/Raycast 风格
 - **淘汰**：Style A (Obsidian Terminal), C (Slate Observatory), D (Warm Carbon), E (Deep Navy), F (Zenith)
 - **Why:** 现代 Sans 主导，信息密度与可读性平衡，适合日常量化工作台。非 Mono 极密风格，减少长时间使用疲劳
-- **How to apply:** 所有原型和 Token 以 `docs/designs/specs/prototypes/style-b-graphite-studio/` 为基准
+- **How to apply:** 所有原型和 Token 以 `prototype/style-b-graphite-studio/` 为基准
 
 ## 2. 排版系统 → 4-role Font System
 
@@ -92,7 +92,7 @@
 
 - **选择**：Foundation → Semantic Surface → Shell → Data View → Component → Interaction → Domain Semantic → Density → Module Pattern
 - **Why:** 清晰的关注点分离，每层可独立演进，密度层可在不改变业务语义的情况下调整视觉密度
-- **How to apply:** 参见 `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
+- **How to apply:** 参见 `design/specs/14_ditto_token_naming_layering_spec.md`
 
 - **选择**：`html` 保持浏览器默认 16px，`body` 设 `font-size: var(--font-size-13)`，所有间距/密度用 `rem`
 - **Why:** 修复了 `html { font-size: var(--font-size-13) }` 导致所有 rem 值基于 13px 计算的 bug（缩水 19%）。html 16px 确保 rem 值符合设计预期
@@ -108,4 +108,4 @@
 
 - **选择**：Foundation → Semantic Surface → Shell → Data View → Component → Interaction → Domain Semantic → Density → Module Pattern
 - **Why:** 清晰的关注点分离，每层可独立演进，密度层可在不改变业务语义的情况下调整视觉密度
-- **How to apply:** 参见 `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
+- **How to apply:** 参见 `design/specs/14_ditto_token_naming_layering_spec.md`

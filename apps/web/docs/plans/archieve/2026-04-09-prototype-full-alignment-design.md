@@ -175,11 +175,11 @@
 
 | 用途 | 文件路径 |
 |------|---------|
-| 原型 CSS（权威参考）| `docs/designs/specs/prototypes/shared/layout-base.css` |
-| Graphite Studio tokens | `docs/designs/specs/prototypes/tokens-style.css` |
-| Shell 规格 | `docs/designs/specs/10_ditto_shell_family_spec.md` |
-| 组件规格 | `docs/designs/specs/13_ditto_component_spec.md` |
-| 页面蓝图 | `docs/designs/specs/02_core_page_blueprints.md` |
+| 原型 CSS（权威参考）| `prototype/shared/layout-base.css` |
+| Graphite Studio tokens | `prototype/tokens-style.css` |
+| Shell 规格 | `design/specs/10_ditto_shell_family_spec.md` |
+| 组件规格 | `design/specs/13_ditto_component_spec.md` |
+| 页面蓝图 | `design/specs/02_core_page_blueprints.md` |
 | React Token 层 | `src/styles/tokens/` (01-08) |
 | Panel 组件 | `src/features/shell/components/panel.tsx` |
 | Header 组件 | `src/features/shell/components/header.tsx` |

@@ -4,7 +4,7 @@
 
 **Goal:** 将 `2026-04-28-edition-review-analysis.md` 与 `docs/reviews/2026-04-28-prototype-edition-review-ui-ux-pro-max.md` 中仍然有效的审查结论转化为可执行的原型与规范修复计划，优先解决共享 CSS/Token 基线、紧凑视口遮挡、颜色依赖、Command 可发现性、Light mode 审计和危险操作确认链路。
 
-**Architecture:** 先抽象跨页合同和门禁，再落到代表页面，最后扩展到页面家族。共享行为进入 `docs/designs/specs/prototypes/shared/`，页面特殊结构留在单页原型，规范同步写入 `docs/designs/specs/`，测试以原型合同、Playwright 交互和 visual gate 组合验证。
+**Architecture:** 先抽象跨页合同和门禁，再落到代表页面，最后扩展到页面家族。共享行为进入 `prototype/shared/`，页面特殊结构留在单页原型，规范同步写入 `design/specs/`，测试以原型合同、Playwright 交互和 visual gate 组合验证。
 
 **Tech Stack:** HTML prototypes, shared CSS/JS, Vitest, Playwright, JSDOM, Bun, Biome, Edition Gates.
 
@@ -56,7 +56,7 @@
 
 ## Definition of Done
 
-- `docs/designs/specs/` 中对应合同已同步。
+- `design/specs/` 中对应合同已同步。
 - 27 个活跃原型仍全部通过 Edition Gates。
 - 每个 P1 项都有至少一个失败优先的测试覆盖。
 - Pro Max 纳入项均有机器门禁或显式审计清单。
@@ -69,11 +69,11 @@
 
 **Files:**
 
-- Modify: `docs/designs/specs/13_ditto_component_spec.md`
-- Modify: `docs/designs/specs/19_ditto_shell_chrome_contract.md`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-toggles.css`
-- Modify: active `docs/designs/specs/prototypes/page-*.html` only where audits fail
+- Modify: `design/specs/13_ditto_component_spec.md`
+- Modify: `design/specs/19_ditto_shell_chrome_contract.md`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-toggles.css`
+- Modify: active `prototype/page-*.html` only where audits fail
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Create: `docs/plans/2026-04-29-pro-max-findings-triage.md`
 
@@ -110,8 +110,8 @@ Create `2026-04-29-pro-max-findings-triage.md` with:
 Run:
 
 ```bash
-node -e "const m=require('./docs/designs/specs/prototypes/.edition-manifest.json'); console.log(m.pages.filter(p=>p.status==='reviewed').length)"
-rg "oklch\\(from|role=\"button\"|prefers-reduced-motion|proto-nav|data-contract-slot" docs/designs/specs/prototypes
+node -e "const m=require('./prototype/.edition-manifest.json'); console.log(m.pages.filter(p=>p.status==='reviewed').length)"
+rg "oklch\\(from|role=\"button\"|prefers-reduced-motion|proto-nav|data-contract-slot" prototype
 ```
 
 Expected: triage document lists current facts, not stale counts.
@@ -166,7 +166,7 @@ Expected: PASS.
 **Step 7: Commit**
 
 ```bash
-git add docs/plans/2026-04-29-pro-max-findings-triage.md docs/designs/specs/13_ditto_component_spec.md docs/designs/specs/19_ditto_shell_chrome_contract.md docs/designs/specs/prototypes/shared docs/designs/specs/prototypes/page-*.html scripts/prototype-design-consistency.test.ts
+git add docs/plans/2026-04-29-pro-max-findings-triage.md design/specs/13_ditto_component_spec.md design/specs/19_ditto_shell_chrome_contract.md prototype/shared prototype/page-*.html scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): harden pro max baseline"
 ```
 
@@ -176,15 +176,15 @@ git commit -m "fix(prototypes): harden pro max baseline"
 
 **Files:**
 
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
-- Modify: `docs/designs/specs/13_ditto_component_spec.md`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-toggles.css`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console.html`
-- Modify: `docs/designs/specs/prototypes/page-platform.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
+- Modify: `design/specs/04_interaction_state_spec.md`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
+- Modify: `design/specs/13_ditto_component_spec.md`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-toggles.css`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-agent-console.html`
+- Modify: `prototype/page-platform.html`
+- Modify: `prototype/page-trading-overview.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/page-strategy-studio-prototype.test.ts`
 - Test: `scripts/page-agent-console-prototype.test.ts`
@@ -246,8 +246,8 @@ Run:
 
 ```bash
 bun test scripts/prototype-design-consistency.test.ts scripts/page-strategy-studio-prototype.test.ts scripts/page-agent-console-prototype.test.ts
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-strategy-studio.html --out-dir test-results/edition-gates/strategy-studio
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-agent-console.html --out-dir test-results/edition-gates/agent-console
+bun run prototype:gates -- --prototype prototype/page-strategy-studio.html --out-dir test-results/edition-gates/strategy-studio
+bun run prototype:gates -- --prototype prototype/page-agent-console.html --out-dir test-results/edition-gates/agent-console
 ```
 
 Expected: PASS.
@@ -255,7 +255,7 @@ Expected: PASS.
 **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/04_interaction_state_spec.md docs/designs/specs/11_ditto_page_pattern_library.md docs/designs/specs/13_ditto_component_spec.md docs/designs/specs/prototypes/shared docs/designs/specs/prototypes/page-strategy-studio.html docs/designs/specs/prototypes/page-agent-console.html docs/designs/specs/prototypes/page-platform.html docs/designs/specs/prototypes/page-trading-overview.html scripts/prototype-design-consistency.test.ts scripts/page-strategy-studio-prototype.test.ts scripts/page-agent-console-prototype.test.ts
+git add design/specs/04_interaction_state_spec.md design/specs/11_ditto_page_pattern_library.md design/specs/13_ditto_component_spec.md prototype/shared prototype/page-strategy-studio.html prototype/page-agent-console.html prototype/page-platform.html prototype/page-trading-overview.html scripts/prototype-design-consistency.test.ts scripts/page-strategy-studio-prototype.test.ts scripts/page-agent-console-prototype.test.ts
 git commit -m "fix(prototypes): add bottom tray contract"
 ```
 
@@ -265,15 +265,15 @@ git commit -m "fix(prototypes): add bottom tray contract"
 
 **Files:**
 
-- Modify: `docs/designs/specs/12_ditto_data_views_spec.md`
-- Modify: `docs/designs/specs/13_ditto_component_spec.md`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-regime-monitor.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-analysis.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-result.html`
+- Modify: `design/specs/12_ditto_data_views_spec.md`
+- Modify: `design/specs/13_ditto_component_spec.md`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-cross-market.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-regime-monitor.html`
+- Modify: `prototype/page-factor-analysis.html`
+- Modify: `prototype/page-backtest-result.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Write failing tests**
@@ -328,9 +328,9 @@ Run:
 
 ```bash
 bun test scripts/prototype-design-consistency.test.ts
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-a-shares.html --out-dir test-results/edition-gates/a-shares
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-cross-market.html --out-dir test-results/edition-gates/cross-market
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-risk-center.html --out-dir test-results/edition-gates/risk-center
+bun run prototype:gates -- --prototype prototype/page-a-shares.html --out-dir test-results/edition-gates/a-shares
+bun run prototype:gates -- --prototype prototype/page-cross-market.html --out-dir test-results/edition-gates/cross-market
+bun run prototype:gates -- --prototype prototype/page-risk-center.html --out-dir test-results/edition-gates/risk-center
 ```
 
 Expected: PASS, with no new color hardcode violations.
@@ -338,7 +338,7 @@ Expected: PASS, with no new color hardcode violations.
 **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/12_ditto_data_views_spec.md docs/designs/specs/13_ditto_component_spec.md docs/designs/specs/prototypes/shared/layout-base.css docs/designs/specs/prototypes/page-a-shares.html docs/designs/specs/prototypes/page-cross-market.html docs/designs/specs/prototypes/page-risk-center.html docs/designs/specs/prototypes/page-regime-monitor.html docs/designs/specs/prototypes/page-factor-analysis.html docs/designs/specs/prototypes/page-backtest-result.html scripts/prototype-design-consistency.test.ts
+git add design/specs/12_ditto_data_views_spec.md design/specs/13_ditto_component_spec.md prototype/shared/layout-base.css prototype/page-a-shares.html prototype/page-cross-market.html prototype/page-risk-center.html prototype/page-regime-monitor.html prototype/page-factor-analysis.html prototype/page-backtest-result.html scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): add non-color data viz encoding"
 ```
 
@@ -348,10 +348,10 @@ git commit -m "fix(prototypes): add non-color data viz encoding"
 
 **Files:**
 
-- Modify: `docs/designs/specs/19_ditto_shell_chrome_contract.md`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/theme-switcher.js`
-- Modify: all active `docs/designs/specs/prototypes/page-*.html` only if markup lacks required attrs
+- Modify: `design/specs/19_ditto_shell_chrome_contract.md`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/theme-switcher.js`
+- Modify: all active `prototype/page-*.html` only if markup lacks required attrs
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/prototype-view-preferences.test.ts`
 
@@ -401,7 +401,7 @@ Expected: PASS.
 **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/19_ditto_shell_chrome_contract.md docs/designs/specs/prototypes/shared scripts/prototype-design-consistency.test.ts scripts/prototype-view-preferences.test.ts docs/designs/specs/prototypes/page-*.html
+git add design/specs/19_ditto_shell_chrome_contract.md prototype/shared scripts/prototype-design-consistency.test.ts scripts/prototype-view-preferences.test.ts prototype/page-*.html
 git commit -m "fix(prototypes): improve command discoverability"
 ```
 
@@ -413,7 +413,7 @@ git commit -m "fix(prototypes): improve command discoverability"
 
 - Create: `scripts/prototype-visual-matrix.ts`
 - Modify: `package.json`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
 - Modify: `docs/plans/2026-04-28-edition-review-analysis.md`
 - Test: `scripts/prototype-view-preferences.test.ts`
 
@@ -474,7 +474,7 @@ Append a short visual audit section to `2026-04-28-edition-review-analysis.md` t
 **Step 6: Commit**
 
 ```bash
-git add package.json scripts/prototype-visual-matrix.ts scripts/prototype-view-preferences.test.ts docs/designs/specs/prototypes/.edition-manifest.json docs/plans/2026-04-28-edition-review-analysis.md test-results/edition-review/visual-matrix
+git add package.json scripts/prototype-visual-matrix.ts scripts/prototype-view-preferences.test.ts prototype/.edition-manifest.json docs/plans/2026-04-28-edition-review-analysis.md test-results/edition-review/visual-matrix
 git commit -m "test(prototypes): add visual matrix audit"
 ```
 
@@ -484,16 +484,16 @@ git commit -m "test(prototypes): add visual matrix audit"
 
 **Files:**
 
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/page-watchlist.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-list.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-list.html`
-- Modify: `docs/designs/specs/prototypes/page-experiment-list.html`
-- Modify: `docs/designs/specs/prototypes/page-universe-list.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-calendar.html`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/page-watchlist.html`
+- Modify: `prototype/page-factor-list.html`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-backtest-list.html`
+- Modify: `prototype/page-experiment-list.html`
+- Modify: `prototype/page-universe-list.html`
+- Modify: `prototype/page-markets-screener.html`
+- Modify: `prototype/page-markets-calendar.html`
 - Test: corresponding `scripts/page-*-prototype.test.ts`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -562,7 +562,7 @@ Expected: PASS.
 **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/11_ditto_page_pattern_library.md docs/designs/specs/prototypes/shared/layout-base.css docs/designs/specs/prototypes/page-watchlist.html docs/designs/specs/prototypes/page-factor-list.html docs/designs/specs/prototypes/page-strategy-list.html docs/designs/specs/prototypes/page-backtest-list.html docs/designs/specs/prototypes/page-experiment-list.html docs/designs/specs/prototypes/page-universe-list.html docs/designs/specs/prototypes/page-markets-screener.html docs/designs/specs/prototypes/page-markets-calendar.html scripts/page-*-prototype.test.ts scripts/prototype-design-consistency.test.ts
+git add design/specs/11_ditto_page_pattern_library.md prototype/shared/layout-base.css prototype/page-watchlist.html prototype/page-factor-list.html prototype/page-strategy-list.html prototype/page-backtest-list.html prototype/page-experiment-list.html prototype/page-universe-list.html prototype/page-markets-screener.html prototype/page-markets-calendar.html scripts/page-*-prototype.test.ts scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): refine catalog interactions"
 ```
 
@@ -572,11 +572,11 @@ git commit -m "fix(prototypes): refine catalog interactions"
 
 **Files:**
 
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-universe-list.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
+- Modify: `design/specs/04_interaction_state_spec.md`
+- Modify: `prototype/page-platform-settings.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-universe-list.html`
+- Modify: `prototype/page-strategy-list.html`
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/page-universe-list-prototype.test.ts`
 - Test: create or update `scripts/page-platform-settings-prototype.test.ts` if present
@@ -586,7 +586,7 @@ git commit -m "fix(prototypes): refine catalog interactions"
 Run:
 
 ```bash
-rg "platform-settings|danger|delete|rollback|confirm" scripts docs/designs/specs/prototypes
+rg "platform-settings|danger|delete|rollback|confirm" scripts prototype
 ```
 
 Use existing page-specific test files where present. Create a new one only if no test exists.
@@ -622,8 +622,8 @@ Run:
 
 ```bash
 bun test scripts/prototype-design-consistency.test.ts scripts/page-universe-list-prototype.test.ts
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-platform-settings.html --out-dir test-results/edition-gates/platform-settings
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-trading-overview.html --out-dir test-results/edition-gates/trading-overview
+bun run prototype:gates -- --prototype prototype/page-platform-settings.html --out-dir test-results/edition-gates/platform-settings
+bun run prototype:gates -- --prototype prototype/page-trading-overview.html --out-dir test-results/edition-gates/trading-overview
 ```
 
 Expected: PASS.
@@ -631,7 +631,7 @@ Expected: PASS.
 **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/04_interaction_state_spec.md docs/designs/specs/prototypes/page-platform-settings.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-universe-list.html docs/designs/specs/prototypes/page-strategy-list.html scripts
+git add design/specs/04_interaction_state_spec.md prototype/page-platform-settings.html prototype/page-trading-overview.html prototype/page-universe-list.html prototype/page-strategy-list.html scripts
 git commit -m "fix(prototypes): add high-risk action confirmation"
 ```
 
@@ -643,10 +643,10 @@ git commit -m "fix(prototypes): add high-risk action confirmation"
 
 - Modify: `.claude/skills/ditto-design-cycle/review-scoring.md`
 - Modify: `.claude/skills/ditto-design-cycle/quality-levels.md`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
-- Modify: `docs/designs/specs/prototypes/page-home.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
-- Modify: `docs/designs/specs/prototypes/page-agent-console.html`
+- Modify: `prototype/.edition-manifest.json`
+- Modify: `prototype/page-home.html`
+- Modify: `prototype/page-strategy-studio.html`
+- Modify: `prototype/page-agent-console.html`
 - Modify: `scripts/prototype-design-consistency.test.ts`
 - Create: `scripts/prototype-expert-efficiency.test.ts`
 - Test: `scripts/page-home-prototype.test.ts`
@@ -698,7 +698,7 @@ Expected: PASS.
 **Step 5: Commit**
 
 ```bash
-git add .claude/skills/ditto-design-cycle/review-scoring.md .claude/skills/ditto-design-cycle/quality-levels.md docs/designs/specs/prototypes/.edition-manifest.json docs/designs/specs/prototypes/page-home.html docs/designs/specs/prototypes/page-strategy-studio.html docs/designs/specs/prototypes/page-agent-console.html scripts/prototype-design-consistency.test.ts scripts/prototype-expert-efficiency.test.ts scripts/page-home-prototype.test.ts scripts/page-strategy-studio-prototype.test.ts scripts/page-agent-console-prototype.test.ts
+git add .claude/skills/ditto-design-cycle/review-scoring.md .claude/skills/ditto-design-cycle/quality-levels.md prototype/.edition-manifest.json prototype/page-home.html prototype/page-strategy-studio.html prototype/page-agent-console.html scripts/prototype-design-consistency.test.ts scripts/prototype-expert-efficiency.test.ts scripts/page-home-prototype.test.ts scripts/page-strategy-studio-prototype.test.ts scripts/page-agent-console-prototype.test.ts
 git commit -m "test(prototypes): calibrate expert efficiency scoring"
 ```
 

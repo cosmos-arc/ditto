@@ -1,7 +1,7 @@
 # Pro Max Findings Triage
 
 > 日期：2026-04-29
-> 范围：`docs/designs/specs/prototypes/.edition-manifest.json`、27 个活跃 `page-*.html`、`shared/layout-base.css`
+> 范围：`prototype/.edition-manifest.json`、27 个活跃 `page-*.html`、`shared/layout-base.css`
 > 目的：把 2026-04-28 Pro Max Review 中仍然有效的结论校准为当前分支事实，避免沿用旧页数和旧缺口。
 
 ## 当前样本
@@ -66,7 +66,7 @@ Shell 分布：
 ## 复核命令
 
 ```bash
-node -e "const m=require('./docs/designs/specs/prototypes/.edition-manifest.json'); console.log(m.pages.filter(p=>p.status==='reviewed').length)"
-rg "oklch\\(from|role=\"button\"|prefers-reduced-motion|proto-nav|data-contract-slot" docs/designs/specs/prototypes
+node -e "const m=require('./prototype/.edition-manifest.json'); console.log(m.pages.filter(p=>p.status==='reviewed').length)"
+rg "oklch\\(from|role=\"button\"|prefers-reduced-motion|proto-nav|data-contract-slot" prototype
 bun test scripts/prototype-design-consistency.test.ts
 ```

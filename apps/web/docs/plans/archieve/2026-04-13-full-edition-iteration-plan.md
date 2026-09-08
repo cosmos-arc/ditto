@@ -45,11 +45,11 @@ bun run check
 
 ```bash
 # 1-1. Home 首页
-/ditto-design-cycle docs/designs/specs/prototypes/page-home.html \
+/ditto-design-cycle prototype/page-home.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 1-2. Platform 平台管理
-/ditto-design-cycle docs/designs/specs/prototypes/page-platform.html \
+/ditto-design-cycle prototype/page-platform.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 ```
 
@@ -59,23 +59,23 @@ bun run check
 
 ```bash
 # 2-1. Markets 跨市场总览
-/ditto-design-cycle docs/designs/specs/prototypes/page-cross-market.html \
+/ditto-design-cycle prototype/page-cross-market.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 2-2. Markets Screener 市场筛选
-/ditto-design-cycle docs/designs/specs/prototypes/page-markets-screener.html \
+/ditto-design-cycle prototype/page-markets-screener.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 2-3. Markets Intelligence 市场情报
-/ditto-design-cycle docs/designs/specs/prototypes/page-markets-intelligence.html \
+/ditto-design-cycle prototype/page-markets-intelligence.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 2-4. A-Shares A股总览
-/ditto-design-cycle docs/designs/specs/prototypes/page-a-shares.html \
+/ditto-design-cycle prototype/page-a-shares.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 2-5. Markets Calendar 事件日历
-/ditto-design-cycle docs/designs/specs/prototypes/page-markets-calendar.html \
+/ditto-design-cycle prototype/page-markets-calendar.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 ```
 
@@ -85,23 +85,23 @@ bun run check
 
 ```bash
 # 3-1. Research 研究
-/ditto-design-cycle docs/designs/specs/prototypes/page-research.html \
+/ditto-design-cycle prototype/page-research.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 3-2. Regime Monitor
-/ditto-design-cycle docs/designs/specs/prototypes/page-regime-monitor.html \
+/ditto-design-cycle prototype/page-regime-monitor.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 3-3. Strategy Studio
-/ditto-design-cycle docs/designs/specs/prototypes/page-strategy-studio.html \
+/ditto-design-cycle prototype/page-strategy-studio.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 3-4. Backtest Result 回测结果
-/ditto-design-cycle docs/designs/specs/prototypes/page-backtest-result.html \
+/ditto-design-cycle prototype/page-backtest-result.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 3-5. Factor Analysis 因子分析
-/ditto-design-cycle docs/designs/specs/prototypes/page-factor-analysis.html \
+/ditto-design-cycle prototype/page-factor-analysis.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 ```
 
@@ -111,19 +111,19 @@ bun run check
 
 ```bash
 # 4-1. Trading Overview 交易总览
-/ditto-design-cycle docs/designs/specs/prototypes/page-trading-overview.html \
+/ditto-design-cycle prototype/page-trading-overview.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 4-2. Signals Inbox 信号收件箱
-/ditto-design-cycle docs/designs/specs/prototypes/page-signals-inbox.html \
+/ditto-design-cycle prototype/page-signals-inbox.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 4-3. Orders Ledger 订单台账
-/ditto-design-cycle docs/designs/specs/prototypes/page-orders-ledger.html \
+/ditto-design-cycle prototype/page-orders-ledger.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 4-4. Risk Center 风控中心
-/ditto-design-cycle docs/designs/specs/prototypes/page-risk-center.html \
+/ditto-design-cycle prototype/page-risk-center.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 ```
 
@@ -133,15 +133,15 @@ bun run check
 
 ```bash
 # 5-1. AI Overview
-/ditto-design-cycle docs/designs/specs/prototypes/page-ai-overview.html \
+/ditto-design-cycle prototype/page-ai-overview.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 5-2. AI Copilot
-/ditto-design-cycle docs/designs/specs/prototypes/page-ai-copilot.html \
+/ditto-design-cycle prototype/page-ai-copilot.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 5-3. Agent Console
-/ditto-design-cycle docs/designs/specs/prototypes/page-agent-console.html \
+/ditto-design-cycle prototype/page-agent-console.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 ```
 
@@ -151,11 +151,11 @@ bun run check
 
 ```bash
 # 6-1. Instrument Hub 标的详情
-/ditto-design-cycle docs/designs/specs/prototypes/page-instrument-hub.html \
+/ditto-design-cycle prototype/page-instrument-hub.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 
 # 6-2. Strategies Detail 策略详情
-/ditto-design-cycle docs/designs/specs/prototypes/page-strategies-detail.html \
+/ditto-design-cycle prototype/page-strategies-detail.html \
   --iterate --goal 10.0 --max-rounds 5 --level best
 ```
 

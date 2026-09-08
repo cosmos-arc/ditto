@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { chromium, type Browser, type LaunchOptions, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 const projectRoot = resolve(import.meta.dirname, "..");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const visualMatrixScriptPath = join(projectRoot, "scripts/prototype-visual-matrix.ts");

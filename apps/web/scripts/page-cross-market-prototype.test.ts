@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-cross-market.html",
+	"../prototype/page-cross-market.html",
 );
 function loadPage() {
 	return new JSDOM(readFileSync(prototypePath, "utf-8")).window.document;

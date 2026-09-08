@@ -24,7 +24,7 @@
 ### Task 2: Implement Homepage Structure
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-home.html`
+- Modify: `prototype/page-home.html`
 
 **Steps:**
 1. Merge Activity Feed and AI Insights into one panel.
@@ -35,7 +35,7 @@
 ### Task 3: Implement Shared Sidebar Toggle
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- Modify: `prototype/shared/prototype-interactions.js`
 
 **Steps:**
 1. Add `SidebarToggle` module.
@@ -48,5 +48,5 @@
 Run:
 - `bun run test:run scripts/page-home-prototype.test.ts`
 - `bun run test:run scripts/prototype-design-consistency.test.ts scripts/prototype-interaction-ux-contract.test.ts`
-- `bun scripts/run-prototype-gates.ts --prototype docs/designs/specs/prototypes/page-home.html`
+- `bun scripts/run-prototype-gates.ts --prototype prototype/page-home.html`
 - `bun run check`

@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const prototypesDir = join(__dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = join(__dirname, "../prototype");
 
 function readPage(file: string): string {
 	return readFileSync(join(prototypesDir, file), "utf8");

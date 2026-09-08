@@ -111,7 +111,7 @@ def _architecture_facts(root: Path) -> dict[str, int]:
     )
     page_contracts = tuple(
         path
-        for path in (root / "docs" / "contracts" / "pages").glob("*.contract.json")
+        for path in (root / "contracts" / "pages").glob("*.contract.json")
         if path.is_file()
     )
 

@@ -122,8 +122,9 @@ def test_runtime_schema_resource_matches_the_approved_ddl_byte_for_byte() -> Non
         "ditto_analysis.storage.sqlite.experiments"
     ).joinpath("schema_v1.sql")
     payload = resource.read_bytes()
-    approved = Path(
-        "docs/plans/2026-07-19-r3-task7-research-schema-v1.sql"
+    approved = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures/migrations/research-schema-v1.sql"
     ).read_bytes()
 
     assert payload == approved

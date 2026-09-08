@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Close the final-review blockers found in `docs/designs/specs/prototypes/` so the active route prototypes can move from conditional pass to freeze-ready: audited label controls are keyboard/AT explicit, Platform Settings form labels are bound, shipped copy contains no visible draft wording, Cross Market right-rail drivers do not overflow, and the fixes are protected by regression tests.
+**Goal:** Close the final-review blockers found in `prototype/` so the active route prototypes can move from conditional pass to freeze-ready: audited label controls are keyboard/AT explicit, Platform Settings form labels are bound, shipped copy contains no visible draft wording, Cross Market right-rail drivers do not overflow, and the fixes are protected by regression tests.
 
 **Architecture:** Preserve the existing static prototype system and Graphite Studio direction. Add one focused Vitest/JSDOM/Playwright regression file first, then make minimal HTML/CSS edits in the affected prototype pages. Do not add dependencies, do not change design tokens, and do not reshape page IA in this remediation pass.
 
@@ -33,17 +33,17 @@ Out of scope:
 
 - Create `scripts/prototype-final-review-remediation.test.ts`
   - Owns final-review regression gates for audited labels, Platform Settings labels, shipped-copy wording, and Cross Market driver overflow.
-- Modify `docs/designs/specs/prototypes/page-research.html`
+- Modify `prototype/page-research.html`
   - Owns audited inline review/detail label triggers.
-- Modify `docs/designs/specs/prototypes/page-trading-overview.html`
+- Modify `prototype/page-trading-overview.html`
   - Owns audited pipeline-stage label triggers.
-- Modify `docs/designs/specs/prototypes/page-a-shares.html`
+- Modify `prototype/page-a-shares.html`
   - Owns audited Northbound context and right-rail expand label triggers.
-- Modify `docs/designs/specs/prototypes/page-cross-market.html`
+- Modify `prototype/page-cross-market.html`
   - Owns Cross Market pair-chart copy and macro-driver overflow behavior.
-- Modify `docs/designs/specs/prototypes/page-risk-center.html`
+- Modify `prototype/page-risk-center.html`
   - Owns Risk Center history chart copy and semantic chart replacement.
-- Modify `docs/designs/specs/prototypes/page-platform-settings.html`
+- Modify `prototype/page-platform-settings.html`
   - Owns Settings form control labels and non-native grouped field labels.
 - Create `docs/reviews/2026-05-11-prototype-final-review-remediation-results.md`
   - Records commands, screenshots if produced, remaining caveats, and final score.
@@ -79,7 +79,7 @@ import { describe, expect, it } from "vitest";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const prototypesDir = join(__dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = join(__dirname, "../prototype");
 
 function readPage(file: string): string {
 	return readFileSync(join(prototypesDir, file), "utf8");
@@ -307,12 +307,12 @@ git commit -m "test prototype final review blockers"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-research.html`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
+- Modify: `prototype/page-research.html`
+- Modify: `prototype/page-trading-overview.html`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `prototype/page-cross-market.html`
 - Test: `scripts/prototype-final-review-remediation.test.ts`
-- Existing protection: `docs/designs/specs/prototypes/shared/prototype-interactions.js` already activates `[role="button"]` with Enter and Space.
+- Existing protection: `prototype/shared/prototype-interactions.js` already activates `[role="button"]` with Enter and Space.
 
 - [ ] **Step 1: Update Research inline action labels**
 
@@ -404,7 +404,7 @@ Expected result:
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-platform-settings.html`
+- Modify: `prototype/page-platform-settings.html`
 - Test: `scripts/prototype-final-review-remediation.test.ts`
 
 - [ ] **Step 1: Bind Wind editor native controls**
@@ -472,8 +472,8 @@ Expected result:
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-risk-center.html`
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
+- Modify: `prototype/page-risk-center.html`
+- Modify: `prototype/page-cross-market.html`
 - Test: `scripts/prototype-final-review-remediation.test.ts`
 
 - [ ] **Step 1: Replace Risk Center visible draft wording with semantic trend content**
@@ -576,7 +576,7 @@ Expected result:
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-cross-market.html`
+- Modify: `prototype/page-cross-market.html`
 - Test: `scripts/prototype-final-review-remediation.test.ts`
 - Visual QA: `/tmp/ditto-prototype-final-review-remediation/cross-market-1440.png`
 
@@ -655,7 +655,7 @@ Expected result:
 
 ```bash
 mkdir -p /tmp/ditto-prototype-final-review-remediation
-bunx playwright screenshot "file://$PWD/docs/designs/specs/prototypes/page-cross-market.html" /tmp/ditto-prototype-final-review-remediation/cross-market-1440.png --viewport-size=1440,1000
+bunx playwright screenshot "file://$PWD/prototype/page-cross-market.html" /tmp/ditto-prototype-final-review-remediation/cross-market-1440.png --viewport-size=1440,1000
 ```
 
 Expected result:
@@ -689,7 +689,7 @@ Expected result:
 - [ ] **Step 2: Run the design-audit CLI**
 
 ```bash
-npx impeccable --json --fast docs/designs/specs/prototypes
+npx impeccable --json --fast prototype
 ```
 
 Expected result:
@@ -718,7 +718,7 @@ Create `docs/reviews/2026-05-11-prototype-final-review-remediation-results.md`:
 # Prototype Final Review Remediation Results
 
 Date: 2026-05-11
-Scope: `docs/designs/specs/prototypes/`
+Scope: `prototype/`
 
 ## Changes
 
@@ -731,7 +731,7 @@ Scope: `docs/designs/specs/prototypes/`
 
 - `bun test scripts/prototype-final-review-remediation.test.ts`: pass
 - `bun test scripts/prototype-interaction-ux-contract.test.ts scripts/prototype-design-consistency.test.ts scripts/prototype-full-directory-visual-audit.test.ts`: pass
-- `npx impeccable --json --fast docs/designs/specs/prototypes`: pass with accepted low/false positives listed below
+- `npx impeccable --json --fast prototype`: pass with accepted low/false positives listed below
 - `bun run check`: pass
 
 ## Accepted CLI Findings
@@ -748,12 +748,12 @@ Broad decision-load restructuring across Orders Ledger, Markets Screener, and In
 
 ```bash
 git add scripts/prototype-final-review-remediation.test.ts \
-  docs/designs/specs/prototypes/page-research.html \
-  docs/designs/specs/prototypes/page-trading-overview.html \
-  docs/designs/specs/prototypes/page-a-shares.html \
-  docs/designs/specs/prototypes/page-cross-market.html \
-  docs/designs/specs/prototypes/page-risk-center.html \
-  docs/designs/specs/prototypes/page-platform-settings.html \
+  prototype/page-research.html \
+  prototype/page-trading-overview.html \
+  prototype/page-a-shares.html \
+  prototype/page-cross-market.html \
+  prototype/page-risk-center.html \
+  prototype/page-platform-settings.html \
   docs/reviews/2026-05-11-prototype-final-review-remediation-results.md
 git commit -m "fix prototype final review blockers"
 ```
@@ -768,6 +768,6 @@ git commit -m "fix prototype final review blockers"
 - [ ] No active route prototype exposes visible text or `aria-label` containing `占位`.
 - [ ] Cross Market macro drivers do not overflow at 1440px, 1366px, or 1200px.
 - [ ] Focused and adjacent prototype tests pass.
-- [ ] `npx impeccable --json --fast docs/designs/specs/prototypes` is recorded.
+- [ ] `npx impeccable --json --fast prototype` is recorded.
 - [ ] `bun run check` passes.
 - [ ] Results document is created with commands and accepted caveats.

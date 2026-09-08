@@ -1,0 +1,81 @@
+{
+  "id": "markets-screener",
+  "version": 4,
+  "status": "contract-ready",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-08-31",
+  "route": "/markets/screener",
+  "pagePattern": "catalog-screener",
+  "shellFamily": "catalog",
+  "prototypeRef": "prototype/page-markets-screener.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/selection",
+    "contractStatus": "verified",
+    "overlayStatus": "implemented",
+    "prototypeVerified": false,
+    "reactParityVerified": false,
+    "reactTestRefs": ["src/features/selection/components/selection-workspace-page.test.tsx"],
+    "reactComponentRefs": ["SelectionWorkspacePage"]
+  },
+  "viewports": [
+    { "width": 1536, "height": 900, "role": "primary" },
+    { "width": 1366, "height": 768, "role": "compact" }
+  ],
+  "slots": [
+    {
+      "name": "toolbar", "required": true,
+      "prototypeSelector": ".filter-toolbar", "reactSelector": "[data-slot='toolbar']", "a11yRole": "region",
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 1 },
+      "responsiveBehavior": { "compact": "collapsed" }
+    },
+    {
+      "name": "main", "required": true,
+      "prototypeSelector": ".catalog-table", "reactSelector": "[data-slot='main']", "a11yRole": "main",
+      "threshold": { "x": 4, "y": 190, "widthRatio": 0.03, "heightRatio": 0.41 }
+    },
+    {
+      "name": "detail", "required": true,
+      "prototypeSelector": ".catalog-detail", "reactSelector": "[data-slot='detail']", "a11yRole": "complementary",
+      "threshold": { "x": 4, "y": 36, "widthRatio": 0.03, "heightRatio": 0.06 },
+      "responsiveBehavior": { "compact": "overlay" }
+    }
+  ],
+  "states": {
+    "universal": ["loading", "empty", "error", "stale"],
+    "pageSpecific": ["saved-run", "blocked-run", "candidate-selected", "exclusion-visible", "compare-ready", "input-invalid"]
+  },
+  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
+  "metrics": {
+    "capturedAt": "2026-04-27", "viewport": "1536x900",
+    "baseline": {
+      "toolbar": { "width": 1536, "height": 64, "strategy": "content-driven" },
+      "main": { "width": 1110, "height": 720, "strategy": "content-driven" },
+      "detail": { "width": 360, "height": 720, "strategy": "fixed-width" }
+    }
+  },
+  "visualThresholds": { "consoleErrors": 0, "pageErrors": 0, "missingSelectors": 0, "targetMismatch": 0, "pixelDiffRatio": 0.04 },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/selections/runs",
+      "/api/v1/selections/runs/{run_id}",
+      "/api/v1/selections/runs/{before_run_id}/compare/{after_run_id}"
+    ],
+    "writePaths": ["/api/v1/selections/runs"],
+    "mockFallback": false
+  },
+  "interactions": [
+    {
+      "id": "select-saved-run", "trigger": "run-history-selection", "affectedSlots": ["main", "detail"],
+      "expectedBehavior": "reads one exact SelectionRun and preserves candidate ranks, factor contributions, exclusions, and lineage"
+    },
+    {
+      "id": "compare-exact-runs", "trigger": "compare-two-run-identities", "affectedSlots": ["detail"],
+      "expectedBehavior": "attributes differences to data, industry rotation, spec, seed, rank, and exclusion changes"
+    },
+    {
+      "id": "run-selection", "trigger": "validated-input-submit", "affectedSlots": ["main", "detail"],
+      "expectedBehavior": "persists a content-addressed SelectionRun and selects the returned exact identity"
+    }
+  ]
+}

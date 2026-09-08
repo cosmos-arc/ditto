@@ -2,7 +2,7 @@
 
 > **日期**：2026-04-10
 > **状态**：已确认设计，待进入实现
-> **范围**：`docs/designs/specs/*` + `docs/designs/specs/prototypes/*` 与 `src/` 当前实现的收敛恢复
+> **范围**：`design/specs/*` + `prototype/*` 与 `src/` 当前实现的收敛恢复
 > **目标**：解决“页面能跑但整体不一致”的系统性问题，建立后续原型落地的唯一真源
 
 ## 1. 背景与判断
@@ -18,7 +18,7 @@
 
 ### 1.1 当前完成度评估
 
-以 `docs/designs/specs/prototypes` + specs 为落地标准，当前估算如下：
+以 `prototype` + specs 为落地标准，当前估算如下：
 
 | 维度 | 估算完成度 | 判断 |
 |---|---:|---|
@@ -215,7 +215,7 @@ token 层已经拆分完成，但运行时仍存在两套命名并存、别名�
   pagePattern: "queue-ops-console",
   shellFamily: "ops-console",
   prototypeSource: "prototype-backed",
-  prototypeRef: "docs/designs/specs/prototypes/page-signals-inbox.html",
+  prototypeRef: "prototype/page-signals-inbox.html",
   requiredSlots: ["health", "main", "detail"],
   requiredStates: ["loading", "empty", "error", "stale", "selected-row", "sheet-open"]
 }

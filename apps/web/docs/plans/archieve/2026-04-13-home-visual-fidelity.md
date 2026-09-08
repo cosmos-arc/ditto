@@ -31,9 +31,9 @@
 4. **临时方案**: 如果 Google Fonts 仍超时，在 Playwright 截图前等待 `document.fonts.ready` + 额外等待确保字体加载
 
 **涉及文件**:
-- `docs/designs/specs/prototypes/page-home.html` (第 33-36 行 `<link>` 标签)
-- `docs/designs/specs/prototypes/shared/layout-base.css` (第 72-74 行 `--font-family-*`)
-- `docs/designs/specs/prototypes/shared/tokens-base.css` (token 引用)
+- `prototype/page-home.html` (第 33-36 行 `<link>` 标签)
+- `prototype/shared/layout-base.css` (第 72-74 行 `--font-family-*`)
+- `prototype/shared/tokens-base.css` (token 引用)
 
 ---
 

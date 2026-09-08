@@ -893,7 +893,7 @@ uv run --no-sync pytest tests/e2e/ -v
 
 ### C. 相关文档
 
-- [配置系统手册](/docs/configuration.md)
-- [数据集手册](/docs/data-manual.md)
+- [配置系统手册](/apps/backend/docs/configuration.md)
+- [数据集手册](/packages/data/docs/data-manual.md)
 - [Docker 部署文档](/deploy/docker/README.md)
 - [可观测性部署文档](/deploy/observability/README.md)

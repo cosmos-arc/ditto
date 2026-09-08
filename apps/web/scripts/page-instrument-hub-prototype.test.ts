@@ -6,11 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-instrument-hub.html",
+	"../prototype/page-instrument-hub.html",
 );
 const layoutCssPath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/shared/layout-shell.css",
+	"../prototype/shared/layout-shell.css",
 );
 const prototypeUrl = `file://${prototypePath}`;
 const navigationTimeoutMs = 10_000;

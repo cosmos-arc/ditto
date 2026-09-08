@@ -362,9 +362,9 @@ Expected: FAIL.
 ### Task 1.1: Add The Contract Spec
 
 **Files:**
-- Create: `docs/designs/specs/19_ditto_shell_chrome_contract.md`
-- Modify: `docs/designs/specs/10_ditto_shell_family_spec.md`
-- Modify: `docs/designs/specs/13_ditto_component_spec.md`
+- Create: `design/specs/19_ditto_shell_chrome_contract.md`
+- Modify: `design/specs/10_ditto_shell_family_spec.md`
+- Modify: `design/specs/13_ditto_component_spec.md`
 - Modify: `DESIGN.md`
 
 **Step 1: Create `19_ditto_shell_chrome_contract.md`**
@@ -427,7 +427,7 @@ Do not change token YAML values.
 Run:
 
 ```bash
-bunx biome check docs/designs/specs/19_ditto_shell_chrome_contract.md docs/designs/specs/10_ditto_shell_family_spec.md docs/designs/specs/13_ditto_component_spec.md DESIGN.md
+bunx biome check design/specs/19_ditto_shell_chrome_contract.md design/specs/10_ditto_shell_family_spec.md design/specs/13_ditto_component_spec.md DESIGN.md
 ```
 
 Expected: PASS or Markdown ignored by Biome. If Biome reports formatting issues, fix only the reported files.
@@ -666,9 +666,9 @@ Expected: PASS.
 ### Task 3.1: Update Shared Prototype CSS/JS For Utilities
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-toggles.css`
-- Modify: `docs/designs/specs/prototypes/shared/theme-switcher.js`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-toggles.css`
+- Modify: `prototype/shared/theme-switcher.js`
 
 **Step 1: Add shared header utility classes**
 
@@ -753,7 +753,7 @@ Expected: still FAIL until page HTML is normalized.
 ### Task 3.2: Normalize Active Prototype Headers
 
 **Files:**
-- Modify active route prototypes under `docs/designs/specs/prototypes/page-*.html`
+- Modify active route prototypes under `prototype/page-*.html`
 - Do not modify archived `page-ai-overview.html` or `page-ai-copilot.html` unless their focused tests require it.
 
 **Active page inventory:**
@@ -987,9 +987,9 @@ Expected: PASS.
 ### Task 4.2: Document Page Action Placement Rules
 
 **Files:**
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
-- Modify: `docs/designs/specs/12_ditto_data_views_spec.md`
-- Modify: `docs/designs/specs/19_ditto_shell_chrome_contract.md`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
+- Modify: `design/specs/12_ditto_data_views_spec.md`
+- Modify: `design/specs/19_ditto_shell_chrome_contract.md`
 
 **Step 1: Add placement matrix**
 
@@ -1017,7 +1017,7 @@ Add:
 Run:
 
 ```bash
-bunx biome check docs/designs/specs/11_ditto_page_pattern_library.md docs/designs/specs/12_ditto_data_views_spec.md docs/designs/specs/19_ditto_shell_chrome_contract.md
+bunx biome check design/specs/11_ditto_page_pattern_library.md design/specs/12_ditto_data_views_spec.md design/specs/19_ditto_shell_chrome_contract.md
 ```
 
 Expected: PASS or Markdown ignored by Biome.

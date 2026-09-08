@@ -21,7 +21,7 @@
 ## 技术方案
 
 ### 命名约定
-- Prototype 文件路径前缀: `docs/designs/specs/prototypes/`
+- Prototype 文件路径前缀: `prototype/`
 - Runtime 文件路径前缀: `src/styles/tokens/`
 
 ### 关键原则
@@ -35,7 +35,7 @@
 ## Phase A: Prototype Foundation（P0）
 
 ### Task 1: Lapis chroma 微调 `[S]`
-- **文件**: `docs/designs/specs/prototypes/shared/tokens-base.css`
+- **文件**: `prototype/shared/tokens-base.css`
 - **变更**:
   - Line 26: `--brand-300: oklch(0.830 0.050 235)` → `oklch(0.830 0.065 235)`
   - Line 27: `--brand-400: oklch(0.760 0.080 235)` → `oklch(0.760 0.090 235)`
@@ -44,7 +44,7 @@
 - **验收**: 打开任意 prototype 页面，品牌 accent 浅色标签应更有蓝色辨识度
 
 ### Task 2: tokens-style.css Neutral hue 260→253 `[M]`
-- **文件**: `docs/designs/specs/prototypes/tokens-style.css`
+- **文件**: `prototype/tokens-style.css`
 - **变更**:
   - Line 4 注释: `hue-260` → `hue-253`
   - Dark mode (lines 14-31, 39, 75-82): **21 处** oklchroma hue 260 → 253
@@ -54,7 +54,7 @@
 - **验收**: 页面整体色调从微紫偏移到微蓝，与 Lapis 235 更协调
 
 ### Task 3: tokens-style.css Domain 色调同步 `[S]`
-- **文件**: `docs/designs/specs/prototypes/tokens-style.css`
+- **文件**: `prototype/tokens-style.css`
 - **变更**（与 Task 2 同文件，建议连续编辑）:
   - Line 40: `--market-strong-fg: oklch(0.720 0.140 172)` → `oklch(0.700 0.140 155)`
   - Line 49: `--system-healthy-fg: oklch(0.680 0.120 175)` → `oklch(0.680 0.120 155)`
@@ -67,7 +67,7 @@
 ## Phase B: Prototype Domain（P1）
 
 ### Task 4: tokens-domain.css 市场色 Down 175→155 `[S]`
-- **文件**: `docs/designs/specs/prototypes/shared/tokens-domain.css`
+- **文件**: `prototype/shared/tokens-domain.css`
 - **变更**:
   - Line 20: `--market-down-fg: oklch(0.680 0.120 175)` → `oklch(0.680 0.120 155)`
   - Line 21: `--market-down-bg: oklch(0.680 0.120 175 / 0.10)` → `oklch(0.680 0.120 155 / 0.10)`
@@ -77,7 +77,7 @@
 - **验收**: 所有"跌"指标从 teal-绿变为纯绿
 
 ### Task 5: tokens-interaction.css 硬编码修复 `[S]`
-- **文件**: `docs/designs/specs/prototypes/shared/tokens-interaction.css`
+- **文件**: `prototype/shared/tokens-interaction.css`
 - **变更**:
   - Line 32: `--feedback-banner-warning-bg: oklch(0.7341 0.1177 79.66 / 0.1)` → `oklch(from var(--amber-500) l c h / 0.10)`
   - Line 34: `--feedback-banner-critical-bg: oklch(0.6317 0.1567 22.64 / 0.12)` → `oklch(from var(--red-600) l c h / 0.12)`
@@ -97,7 +97,7 @@
 ## Phase C: Sparkline 硬编码修复（P0）
 
 ### Task 7: Sparkline JS — 支持 series 属性 `[S]`
-- **文件**: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
+- **文件**: `prototype/shared/prototype-interactions.js`
 - **变更**:
   - Sparkline.render (line 98-100): 新增 `series` 属性映射:
     ```javascript
@@ -136,8 +136,8 @@
 
 ### Task 9: Brass 3 触点 CSS `[M]`
 - **文件**:
-  - `docs/designs/specs/prototypes/tokens-style.css` — 新增 Brass Rail token
-  - `docs/designs/specs/prototypes/shared/tokens-shell.css` — Rail 图标 Brass 微光点样式
+  - `prototype/tokens-style.css` — 新增 Brass Rail token
+  - `prototype/shared/tokens-shell.css` — Rail 图标 Brass 微光点样式
   - 全部 16 个 HTML prototype 页面 — 标题下划线改为三段渐变
 - **变更**:
   1. tokens-style.css: 新增 `--brand-signature-glow: oklch(from var(--brand-signature-fg) l c h / 0.60)`

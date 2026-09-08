@@ -114,7 +114,7 @@ async function checkBlueprintRefs(contract, ctx) {
 
   const results = [];
   for (const ref of contract.blueprintRefs) {
-    const blueprintPath = resolve(ctx.root, "docs/designs/specs", ref.split("#")[0]);
+    const blueprintPath = resolve(ctx.root, "design/specs", ref.split("#")[0]);
     try {
       await access(blueprintPath);
       results.push({ ref, exists: true });

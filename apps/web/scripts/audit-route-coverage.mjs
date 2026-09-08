@@ -6,8 +6,8 @@ import { auditRouteCoverage, deriveExpectedProductRoutes, normalizeRoute } from 
 
 const ROOT = resolve(import.meta.dirname, "..");
 const ROUTES_DIR = resolve(ROOT, "src/routes");
-const CONTRACTS_DIR = resolve(ROOT, "docs/contracts/pages");
-const EDITION_MANIFEST_PATH = resolve(ROOT, "docs/designs/specs/prototypes/.edition-manifest.json");
+const CONTRACTS_DIR = resolve(ROOT, "contracts/pages");
+const EDITION_MANIFEST_PATH = resolve(ROOT, "prototype/.edition-manifest.json");
 const ALLOWED_NON_PRODUCT_ROUTES = ["/showcase", "/research/node-descriptors", "/instruments"];
 
 const ROUTE_CALL_PATTERN = /createFileRoute\(\s*["'`]([^"'`]+)["'`]\s*\)/g;

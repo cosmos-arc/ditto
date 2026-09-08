@@ -1,0 +1,3771 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-orders-ledger
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 5 — radio tab system
+  - orders-pending (待提交)
+  - orders-submitted (已提交)
+  - orders-partial (部分成交)
+  - orders-done (已完成) [default, checked]
+  - orders-failed (失败/已撤单)
+
+  Overlays: 4
+  - overlay-cancel-confirm (Modal: 撤单确认) [covered]
+  - overlay-retry-submit (Modal: 重试提交) [covered]
+  - overlay-order-detail (Drawer: 订单详情) [covered]
+  - overlay-batch-cancel (Modal: 批量撤单确认) [covered]
+
+  State Variants: 6 components x 3 states (empty/loading/error)
+  - status-strip: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - orders-ledger-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - order-trace: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - filter-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - batch-action-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - pagination: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="trading">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Orders Ledger 执行账本</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ── Style label ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .header-action-btn:focus-visible,
+    .panel-action:focus-visible,
+    .header-avatar:focus-visible,
+    .status-tab:focus-visible,
+    .ledger-table tr:focus-visible,
+    .filter-btn:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Shell — Ledger variant (Catalog Workspace)
+     * Grid: Rail (56px) | Main (1fr) | Trace (340px)
+     * Rows: Header (var(--shell-header-height)) | Strip (auto) | Table (1fr)
+     * ══════════════════════════════════════════════ */
+    .shell-ledger {
+      display: grid;
+      --prototype-ops-detail-width: var(--shell-ops-detail-width);
+      grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 1px minmax(280px, var(--prototype-ops-detail-width));
+      grid-template-rows: var(--shell-header-height) auto auto 1fr;
+      grid-template-areas:
+        "rail header  header    header"
+        "rail strip   strip     strip"
+        "rail kpi     separator trace"
+        "rail table   separator trace";
+      min-height: calc(100dvh - var(--shell-status-bar-height));
+      width: 100vw;
+      overflow-y: auto;
+    }
+
+    .shell-ledger > .resize-separator {
+      grid-area: separator;
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-ledger .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    /* ── Noise material texture ── */
+    .shell-ledger {
+      position: relative;
+    }
+    .shell-ledger::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* Subtle top-edge structural line */
+    .shell-ledger::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: var(--border-subtle);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shell-ledger > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Rail right edge structural line */
+    .shell-ledger .shell-rail {
+      position: relative;
+    }
+    .shell-ledger .shell-rail::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: var(--border-subtle);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* ── Header title underline ── */
+    .header-title {
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 2px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
+    }
+
+    /* Rail logo domain tint */
+    .rail-logo {
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* Rail active indicator — 80% saturation for even distribution */
+    .rail-icon.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
+    }
+
+    /* ── Header subtitle ── */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+      margin-left: var(--space-8);
+    }
+
+    /* ── Header Filters (orders header area) ── */
+    .header-filters {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .filter-btn:hover {
+      color: var(--text-secondary);
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .filter-btn .filter-value {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .filter-sep {
+      width: 1px;
+      height: 16px;
+      background: var(--border-subtle);
+    }
+
+    /* ── Status Strip (tab bar) ── */
+    .status-strip {
+      grid-area: strip;
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-16);
+      height: var(--density-strip-height);
+      overflow-x: auto;
+      position: relative;
+    }
+    .status-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 100%;
+    }
+
+    .status-tab {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-4) var(--space-12);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      border-radius: var(--radius-4) var(--radius-4) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      height: 100%;
+      user-select: none;
+    }
+
+    .status-tab:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .status-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    .status-tab .tab-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      min-width: 18px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+    }
+
+    .status-tab.active .tab-count {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* Tab accent dot for active states with pending items */
+    .status-tab .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tab-dot.pending   { background: var(--execution-pending-fg); }
+    .tab-dot.submitted { background: var(--cyan-500); }
+    .tab-dot.partial   { background: var(--execution-partial-fg); }
+    .tab-dot.done      { background: var(--execution-filled-fg); }
+    .tab-dot.failed    { background: var(--execution-rejected-fg); }
+
+    .status-strip-spacer { flex: 1; }
+
+    .status-strip-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .strip-action {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: none;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .strip-action.primary {
+      color: var(--brand-accent);
+      background: transparent;
+    }
+    .strip-action.primary:hover {
+      background: var(--brand-accent-subtle);
+    }
+
+    .strip-action.danger {
+      color: var(--execution-rejected-fg);
+      background: transparent;
+    }
+    .strip-action.danger:hover {
+      background: var(--execution-rejected-bg);
+    }
+
+    .strip-action.secondary {
+      color: var(--text-tertiary);
+      background: transparent;
+    }
+    .strip-action.secondary:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Ledger Table Area ── */
+    .ledger-table-area {
+      grid-area: table;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+    }
+
+    [data-tab-panel] { display: none; }
+    [data-tab-panel="all"] { display: block; }
+
+    /* ── Brand anchor: table header bottom accent ── */
+    .ledger-table thead {
+      border-bottom: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
+    }
+
+    .ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .ledger-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .ledger-table th {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-align: left;
+      padding: var(--space-4) var(--density-cell-padding-x);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-strip);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .ledger-table th:hover {
+      color: var(--text-secondary);
+    }
+
+    .ledger-table th .sort-indicator {
+      font-size: var(--font-size-10);
+      color: var(--text-disabled);
+      margin-left: var(--space-2);
+    }
+
+    .main-ledger-table th:nth-child(1) { width: 10%; }
+    .main-ledger-table th:nth-child(2) { width: 14%; }
+    .main-ledger-table th:nth-child(3) { width: 8%; }
+    .main-ledger-table th:nth-child(4) { width: 8%; }
+    .main-ledger-table th:nth-child(5) { width: 11%; }
+    .main-ledger-table th:nth-child(6) { width: 11%; }
+    .main-ledger-table th:nth-child(7) { width: 7%; }
+    .main-ledger-table th:nth-child(8) { width: 15%; }
+    .main-ledger-table th:nth-child(9) { width: 16%; }
+
+    .ledger-table th.right { text-align: right; }
+    .ledger-table th.numeric { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
+
+    .ledger-table td {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      padding: var(--space-4) var(--density-cell-padding-x);
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ledger-table td.right { text-align: right; }
+    .ledger-table td.numeric { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
+
+    .ledger-table tbody tr {
+      height: calc(var(--space-24) + var(--space-4));
+      transition:
+        background var(--motion-duration-fast) var(--motion-easing-standard),
+        box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+        transform var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .ledger-table tbody tr:hover {
+      background: var(--interaction-hover-strong-bg);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-subtle) 50%, transparent);
+    }
+    .ledger-table tbody tr.selected {
+      background: var(--interaction-selected-bg);
+    }
+    .ledger-table tbody tr.selected:hover {
+      background: color-mix(in oklch, var(--interaction-selected-bg) 80%, var(--interaction-hover-strong-bg));
+    }
+
+    /* Token consistency: force oklch borders on all table cells */
+    .ledger-table td,
+    .ledger-table th {
+      border-color: var(--border-subtle);
+    }
+
+    /* ── Order Status Badge ── */
+    .order-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-3);
+      white-space: nowrap;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .order-status .status-dot-inline {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .order-status.pending {
+      color: var(--execution-pending-fg);
+      background: var(--execution-pending-bg);
+    }
+    .order-status.pending .status-dot-inline {
+      background: var(--execution-pending-fg);
+      animation: dot-breathe 2.5s ease-in-out infinite;
+    }
+
+    .order-status.submitted {
+      color: var(--cyan-500);
+      background: var(--execution-partial-bg);
+    }
+    .order-status.submitted .status-dot-inline {
+      background: var(--cyan-500);
+      animation: dot-breathe 2s ease-in-out infinite;
+    }
+
+    .order-status.partial {
+      color: var(--execution-partial-fg);
+      background: var(--execution-partial-bg);
+    }
+    .order-status.partial .status-dot-inline {
+      background: var(--execution-partial-fg);
+    }
+
+    .order-status.filled {
+      color: var(--execution-filled-fg);
+      background: var(--execution-filled-bg);
+    }
+    .order-status.filled .status-dot-inline {
+      background: var(--execution-filled-fg);
+    }
+
+    .order-status.failed {
+      color: var(--execution-rejected-fg);
+      background: var(--execution-rejected-bg);
+    }
+    .order-status.failed .status-dot-inline {
+      background: var(--execution-rejected-fg);
+    }
+
+    .order-status.cancelled {
+      color: var(--execution-cancelled-fg);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .order-status.cancelled .status-dot-inline {
+      background: var(--execution-cancelled-fg);
+    }
+
+    @keyframes dot-breathe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ── Order Side (Buy/Sell) ── */
+    .order-side {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .order-side .side-arrow {
+      font-size: var(--font-size-10);
+    }
+
+    .order-side.buy {
+      color: var(--market-up-fg);
+    }
+    .order-side.buy .side-arrow::before {
+      content: var(--indicator-up-sym);
+    }
+
+    .order-side.sell {
+      color: var(--market-down-fg);
+    }
+    .order-side.sell .side-arrow::before {
+      content: var(--indicator-down-sym);
+    }
+
+    /* ── Order Type Tag ── */
+    .order-type-tag {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Order Trace Panel (right 340px) ── */
+    .order-trace {
+      grid-area: trace;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .trace-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .trace-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .trace-title .trace-order-id {
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+    }
+
+    .trace-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .trace-actions .trace-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-12);
+      min-height: 26px;
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      border: none;
+      font-weight: var(--font-weight-medium);
+      line-height: 1;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .trace-action-btn.primary {
+      color: var(--brand-accent);
+      background: transparent;
+    }
+    .trace-action-btn.primary:hover {
+      background: var(--brand-accent-subtle);
+    }
+
+    .trace-action-btn.danger {
+      color: var(--execution-rejected-fg);
+      background: transparent;
+    }
+    .trace-action-btn.danger:hover {
+      background: var(--execution-rejected-bg);
+    }
+
+    /* ── Trace Sections ── */
+    .trace-sections {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .trace-section {
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      opacity: 0;
+      transform: translateY(6px);
+      animation: trace-section-in 0.35s var(--motion-easing-standard) forwards;
+    }
+    .trace-section:nth-child(1) { animation-delay: 0.05s; }
+    .trace-section:nth-child(2) { animation-delay: 0.12s; }
+    .trace-section:nth-child(3) { animation-delay: 0.19s; }
+    .trace-section:nth-child(4) { animation-delay: 0.26s; }
+    .trace-section:nth-child(5) { animation-delay: 0.33s; }
+    @keyframes trace-section-in {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .trace-section + .trace-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--overlay-3);
+      pointer-events: none;
+    }
+
+    .trace-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-8) var(--space-12);
+      flex-shrink: 0;
+    }
+
+    .trace-section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .trace-section-body {
+      padding: 0 var(--space-12) var(--space-8);
+    }
+
+    /* ── Order Info Grid ── */
+    .order-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+    }
+
+    .order-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .order-info-label {
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .order-info-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .order-info-value.up    { color: var(--market-up-fg); }
+    .order-info-value.down  { color: var(--market-down-fg); }
+
+    /* ── Status Timeline ── */
+    .status-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .timeline-step {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      position: relative;
+    }
+
+    .timeline-step::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 26px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .timeline-step:last-child::before {
+      display: none;
+    }
+
+    .timeline-indicator {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .timeline-indicator.completed {
+      background: var(--execution-filled-bg);
+      color: var(--execution-filled-fg);
+    }
+
+    .timeline-indicator.active {
+      background: var(--execution-partial-bg);
+      color: var(--execution-partial-fg);
+      animation: timeline-pulse 2s ease-in-out infinite;
+    }
+
+    .timeline-indicator.pending-step {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-disabled);
+    }
+
+    .timeline-indicator.failed-step {
+      background: var(--execution-rejected-bg);
+      color: var(--execution-rejected-fg);
+    }
+
+    @keyframes timeline-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.72; transform: scale(1.08); }
+    }
+
+    .timeline-indicator svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .timeline-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding-top: 2px;
+    }
+
+    .timeline-step-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .timeline-step.active .timeline-step-title {
+      color: var(--execution-partial-fg);
+    }
+
+    .timeline-step.pending-step .timeline-step-title {
+      color: var(--text-disabled);
+    }
+
+    .timeline-step.failed-step .timeline-step-title {
+      color: var(--execution-rejected-fg);
+    }
+
+    .timeline-step-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .timeline-step-detail {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Fee Detail Rows ── */
+    .fee-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .fee-row:last-child {
+      border-bottom: none;
+    }
+
+    .fee-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .fee-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .fee-total {
+      border-top: 1px solid var(--border-default);
+      border-bottom: none;
+      padding-top: var(--space-6);
+      margin-top: var(--space-2);
+    }
+
+    .fee-total .fee-label {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .fee-total .fee-value {
+      color: var(--text-primary);
+    }
+
+    /* ── Slippage Analysis ── */
+    .slippage-display {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-4) 0;
+    }
+
+    .slippage-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .slippage-value.negative {
+      color: var(--market-down-fg);
+    }
+    .slippage-value.positive {
+      color: var(--market-up-fg);
+    }
+    .slippage-value.zero {
+      color: var(--text-tertiary);
+    }
+
+    .slippage-detail {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .slippage-bar-container {
+      margin-top: var(--space-4);
+    }
+
+    .slippage-bar {
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px color-mix(in oklch, var(--neutral-0) 40%, transparent);
+    }
+
+    .slippage-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .slippage-bar-fill.negative {
+      background: linear-gradient(90deg, var(--market-down-fg), color-mix(in oklch, var(--market-down-fg) 80%, var(--brand-accent-fg)));
+    }
+
+    .slippage-bar-fill.positive {
+      background: linear-gradient(90deg, var(--market-up-fg), color-mix(in oklch, var(--market-up-fg) 80%, var(--brand-accent-fg)));
+    }
+
+    /* ── Route Log ── */
+    .route-log {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .route-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-8);
+      padding: var(--space-6) 0;
+      position: relative;
+      font-size: var(--font-size-12);
+    }
+
+    .route-entry::before {
+      content: '';
+      position: absolute;
+      left: 22px;
+      top: 20px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border-subtle);
+    }
+    .route-entry:last-child::before {
+      display: none;
+    }
+
+    .route-entry-time {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+      min-width: 48px;
+    }
+
+    .route-entry-time::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      margin-right: var(--space-4);
+      vertical-align: middle;
+    }
+
+    .route-entry-text {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .route-entry.older .route-entry-text {
+      color: var(--text-tertiary);
+    }
+
+    /* ── Empty Trace State ── */
+    .trace-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: var(--space-8);
+      color: var(--text-tertiary);
+    }
+
+    .trace-empty svg {
+      width: 32px;
+      height: 32px;
+      opacity: 0.4;
+    }
+
+    .trace-empty-text {
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Cell utility classes ── */
+    .cell-name     { font-weight: var(--font-weight-medium); }
+    .cell-numeric  { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
+    .cell-time     { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; color: var(--text-secondary); }
+    .cell-disabled { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; color: var(--text-disabled); }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--shell-rail-width);
+      right: 0;
+      display: flex;
+      align-items: center;
+      height: var(--shell-status-bar-height);
+      padding: 0 var(--space-8);
+      background: var(--surface-app);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      user-select: none;
+      z-index: 25;
+    }
+    .status-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--system-healthy-fg);
+      margin-right: var(--space-6);
+      flex-shrink: 0;
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .status-sep {
+      margin: 0 var(--space-4);
+      color: var(--border-subtle);
+    }
+    .status-spacer { flex: 1; }
+    .status-kbd {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Respect reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .rail-icon, .header-action-btn, .panel-action,
+      .status-tab, .order-status .status-dot-inline,
+      .timeline-indicator, .status-indicator, .trace-action-btn {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Activation Rules (prototype-toggles.css)
+     *
+     * 5 tabs: pending / submitted / partial / done / failed
+     * Radio name="orders-tab" drives panel visibility.
+     *
+     * NOTE: radio inputs are inside .status-strip (outside .tab-group),
+     * so we use :root:has() instead of .tab-group:has().
+     * ══════════════════════════════════════════════ */
+
+    /* Hide all panels first, then show the checked one */
+    .tab-group .tab-panel { display: none; }
+
+    :root:has(#orders-done:checked)
+      [data-panel="orders-done"] { display: contents; }
+    :root:has(#orders-pending:checked)
+      [data-panel="orders-pending"] { display: contents; }
+    :root:has(#orders-submitted:checked)
+      [data-panel="orders-submitted"] { display: contents; }
+    :root:has(#orders-partial:checked)
+      [data-panel="orders-partial"] { display: contents; }
+    :root:has(#orders-failed:checked)
+      [data-panel="orders-failed"] { display: contents; }
+
+    .shell-ledger .tab-panel > .state-empty {
+      display: none;
+    }
+
+    /* Tab label active state — driven by :has() */
+    :root:has(#orders-pending:checked)  label[for="orders-pending"],
+    :root:has(#orders-submitted:checked) label[for="orders-submitted"],
+    :root:has(#orders-partial:checked)  label[for="orders-partial"],
+    :root:has(#orders-done:checked)     label[for="orders-done"],
+    :root:has(#orders-failed:checked)   label[for="orders-failed"] {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+    :root:has(#orders-pending:checked)  label[for="orders-pending"] .tab-count,
+    :root:has(#orders-submitted:checked) label[for="orders-submitted"] .tab-count,
+    :root:has(#orders-partial:checked)  label[for="orders-partial"] .tab-count,
+    :root:has(#orders-done:checked)     label[for="orders-done"] .tab-count,
+    :root:has(#orders-failed:checked)   label[for="orders-failed"] .tab-count {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* Status tab as label — inherit existing status-tab styles */
+    .status-tab.label-tab {
+      cursor: pointer;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     *
+     * 4 overlays: cancel-confirm / retry-submit / order-detail / batch-cancel
+     * ══════════════════════════════════════════════ */
+
+    /* Overlay A: 撤单确认 Modal */
+    :root:has(#overlay-cancel-confirm:checked)
+      [data-overlay="overlay-cancel-confirm"] { display: flex; }
+
+    /* Overlay B: 重试提交 Modal */
+    :root:has(#overlay-retry-submit:checked)
+      [data-overlay="overlay-retry-submit"] { display: flex; }
+
+    /* Overlay C: 订单详情 Drawer */
+    :root:has(#overlay-order-detail:checked)
+      [data-overlay="overlay-order-detail"] { display: flex; }
+
+    /* Overlay D: 批量撤单确认 Modal */
+    :root:has(#overlay-batch-cancel:checked)
+      [data-overlay="overlay-batch-cancel"] { display: flex; }
+
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-16);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+    /* Stale state uses shared prototype-toggles.css definition */
+
+    /* Batch action bar */
+    .batch-action-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+      background: var(--surface-panel-elevated);
+      border-top: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .batch-action-btn {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .batch-action-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+    .batch-action-btn.danger {
+      border-color: var(--risk-high-fg);
+      color: var(--risk-high-fg);
+    }
+
+    /* Pagination bar */
+    .pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-6) var(--space-12);
+      border-top: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+    .pagination-info {
+      font-family: var(--font-family-numeric);
+    }
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .pagination-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-12);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .pagination-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+    .pagination-btn.active {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      border-color: var(--brand-accent);
+    }
+    .pagination-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Overlay trigger labels styled as existing buttons */
+    .strip-action.label-trigger {
+      cursor: pointer;
+    }
+
+    /* ── Overlay cursor trigger (label acting as button) ── */
+    .cursor-trigger { cursor: pointer; }
+
+    /* ── Overlay semantic colors ── */
+    .text-buy { color: var(--market-up-fg); }
+    .text-sell { color: var(--market-down-fg); }
+    .text-pending { color: var(--execution-pending-fg); }
+    .text-partial { color: var(--execution-partial-fg); }
+    .text-risk { color: var(--risk-high-fg); }
+    .text-pass { color: var(--system-healthy-fg); }
+    .text-highlight { color: var(--text-primary); }
+    .text-status-live { color: var(--market-up-fg); }
+
+    /* ── Overlay layout helpers ── */
+    .overlay-warning-title { color: var(--risk-high-fg); }
+    .overlay-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: var(--space-8) 0 0;
+    }
+    .overlay-desc-error {
+      color: var(--risk-high-fg);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .overlay-desc-batch {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0 0 var(--space-8);
+    }
+
+    /* ── Flex spacer ── */
+    .flex-spacer { flex: 1; }
+
+    /* ── Batch action accent button ── */
+    .batch-action-btn.accent {
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+    }
+
+    /* ── Pending wait time ── */
+    .cell-waiting {
+      color: var(--execution-pending-fg);
+    }
+
+    /* ── Partial fill highlight ── */
+    .cell-partial-highlight {
+      color: var(--execution-partial-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Fill progress bar ── */
+    .fill-progress {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .fill-progress-track {
+      flex: 1;
+      height: 4px;
+      background: var(--neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .fill-progress-fill {
+      height: 100%;
+      background: var(--execution-partial-fg);
+      border-radius: 2px;
+    }
+    .fill-progress-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--execution-partial-fg);
+    }
+
+    /* ── Failed reason cell ── */
+    .cell-reason {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── State variant helpers ── */
+    .state-pad-lg { padding: var(--space-16) var(--space-12); }
+    .state-pad-md { padding: var(--space-8); }
+    .state-title-sm { font-size: var(--font-size-12); }
+    .state-error-icon-sm {
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+    }
+    .state-retry-sm { font-size: var(--font-size-12); }
+
+    /* ── Batch action bar state variants ── */
+    .batch-disabled { color: var(--text-disabled); }
+    .batch-error { color: var(--risk-high-fg); }
+    .batch-error-retry {
+      border-color: var(--risk-high-fg);
+      color: var(--risk-high-fg);
+    }
+
+    /* ── Pagination state variants ── */
+    .pagination-disabled { color: var(--text-disabled); }
+    .pagination-error { color: var(--risk-high-fg); }
+    .pagination-error-retry {
+      border-color: var(--risk-high-fg);
+      color: var(--risk-high-fg);
+    }
+
+    /* ── Status strip gallery positioning ── */
+    .gallery-status-strip { position: relative; }
+
+    /* ── KPI sparkline (execution metrics) ── */
+    .kpi-strip {
+      grid-area: kpi;
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      padding: 0 var(--space-16);
+      height: 48px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-strip);
+      overflow: hidden;
+    }
+    .kpi-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+    .kpi-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .kpi-label {
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .kpi-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+    }
+    .kpi-change.up { color: var(--market-up-fg); }
+    .kpi-change.down { color: var(--market-down-fg); }
+    .kpi-sparkline {
+      width: 56px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .kpi-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    /* ── Status distribution flow bar ── */
+    .status-flow-bar {
+      display: flex;
+      height: 3px;
+      border-radius: 1.5px;
+      overflow: hidden;
+      background: var(--neutral-200);
+      width: 120px;
+      flex-shrink: 0;
+    }
+    .status-flow-segment {
+      height: 100%;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .status-flow-segment.seg-filled { background: var(--execution-filled-fg); }
+    .status-flow-segment.seg-partial { background: var(--execution-partial-fg); }
+    .status-flow-segment.seg-pending { background: var(--execution-pending-fg); }
+    .status-flow-segment.seg-failed  { background: var(--execution-rejected-fg); }
+
+    /* ── KPI unit suffix ── */
+    .kpi-unit {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+
+    /* ── Table row conditional state tint ── */
+    .ledger-table tbody tr.row-filled td:first-child {
+      outline: 1px solid color-mix(in oklch, var(--execution-filled-fg) 18%, transparent);
+      outline-offset: -1px;
+    }
+    .ledger-table tbody tr.row-partial td:first-child {
+      outline: 1px solid color-mix(in oklch, var(--execution-partial-fg) 20%, transparent);
+      outline-offset: -1px;
+    }
+    .ledger-table tbody tr.row-pending td:first-child {
+      outline: 1px solid color-mix(in oklch, var(--execution-pending-fg) 20%, transparent);
+      outline-offset: -1px;
+    }
+    .ledger-table tbody tr.row-failed td:first-child {
+      outline: 1px solid color-mix(in oklch, var(--execution-rejected-fg) 18%, transparent);
+      outline-offset: -1px;
+    }
+    .ledger-table tbody tr.row-submitted td:first-child {
+      outline: 1px solid color-mix(in oklch, var(--cyan-500) 18%, transparent);
+      outline-offset: -1px;
+    }
+
+    .kpi-strip {
+      position: relative;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* ── Page-local column widths (non-standard) ── */
+    .col-xwide   { width: 110px; }
+    .col-2xwide  { width: 120px; }
+
+    /* ══════════════════════════════════════════════
+     * Round 2 Enhancements — Brand DNA + Visual Polish
+     * ══════════════════════════════════════════════ */
+
+    /* Brand DNA #3: Overlay accent border — all sheets and drawers */
+    .overlay-surface {
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+    }
+
+    .ledger-table thead tr {
+      position: relative;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* Trace section title upgrade — 12px semibold for readability */
+    .trace-section-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* Status tab active — brand accent text color */
+    :root:has(#orders-pending:checked)  label[for="orders-pending"],
+    :root:has(#orders-submitted:checked) label[for="orders-submitted"],
+    :root:has(#orders-partial:checked)  label[for="orders-partial"],
+    :root:has(#orders-done:checked)     label[for="orders-done"],
+    :root:has(#orders-failed:checked)   label[for="orders-failed"] {
+      color: var(--brand-accent);
+    }
+
+    /* Batch action accent button hover state */
+    .batch-action-btn.accent:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
+    }
+
+    /* Slippage bar height alignment — 4px → 6px */
+    .slippage-bar {
+      height: 6px;
+      border-radius: 3px;
+    }
+    .slippage-bar-fill {
+      border-radius: 3px;
+    }
+
+    /* Fill progress bar — 4px → 6px for visual consistency */
+    .fill-progress-track {
+      height: 6px;
+      border-radius: 3px;
+    }
+    .fill-progress-fill {
+      border-radius: 3px;
+    }
+
+    /* Inline style replacements — progress bar widths via CSS classes */
+    .slippage-bar-fill.negative.low   { width: 3%; }
+    .fill-progress-fill.partial-35   { width: 35%; }
+
+    /* ══════════════════════════════════════════════
+     * Round 3 Polish — Brand DNA + Visual Hierarchy
+     * ══════════════════════════════════════════════ */
+
+    /* ── A1. Tab stagger animation (matches backtest-result pattern) ── */
+    .status-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .status-tab:nth-child(1) { animation-delay: 30ms; }
+    .status-tab:nth-child(2) { animation-delay: 50ms; }
+    .status-tab:nth-child(3) { animation-delay: 70ms; }
+    .status-tab:nth-child(4) { animation-delay: 90ms; }
+    .status-tab:nth-child(5) { animation-delay: 110ms; }
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── A2. Active tab brand-tinted background (6% brand accent) ── */
+    :root:has(#orders-pending:checked)  label[for="orders-pending"],
+    :root:has(#orders-submitted:checked) label[for="orders-submitted"],
+    :root:has(#orders-partial:checked)  label[for="orders-partial"],
+    :root:has(#orders-done:checked)     label[for="orders-done"],
+    :root:has(#orders-failed:checked)   label[for="orders-failed"] {
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
+    }
+
+    /* ── A3. Session strip brand-tinted border-bottom (matches backtest-result meta-strip) ── */
+    .status-strip {
+      border-bottom-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--neutral-0) 8%, transparent);
+    }
+
+    /* ── B1. Table header subtle background treatment ── */
+    .ledger-table th {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-strip));
+      letter-spacing: 0.03em;
+    }
+
+    /* ── B2. Order status badges — enhanced visual weight ── */
+    .order-status {
+      padding: 2px var(--space-8);
+      font-size: var(--font-size-12);
+      letter-spacing: 0.01em;
+    }
+    .order-status.pending {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 56%, transparent);
+    }
+    .order-status.submitted {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--cyan-500) 20%, transparent);
+    }
+    .order-status.partial {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 56%, transparent);
+    }
+    .order-status.filled {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 56%, transparent);
+    }
+    .order-status.failed {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 56%, transparent);
+    }
+
+    /* ── C1. P&L color coding — execution price tinted by trade direction ── */
+    .ledger-table tbody tr:has(.order-side.buy) td:nth-child(6) {
+      color: color-mix(in oklch, var(--market-up-fg) 85%, var(--text-primary));
+    }
+    .ledger-table tbody tr:has(.order-side.sell) td:nth-child(6) {
+      color: color-mix(in oklch, var(--market-down-fg) 85%, var(--text-primary));
+    }
+
+    /* ── C2. Time column de-emphasis (font-size-12, text-tertiary) ── */
+    .cell-time {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    /* ── C3. Row hover with subtle brand touch (3% brand accent) ── */
+    .ledger-table tbody tr:hover {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-strong-bg));
+    }
+
+    /* ── D1. Filter group brand subtle border (matches signals-inbox pattern) ── */
+    .filter-btn.active {
+      background: var(--interaction-selected-bg);
+      border-color: color-mix(in oklch, var(--brand-accent) 20%, var(--border-default));
+      color: var(--text-primary);
+    }
+
+    /* ── D2. Status bar top accent for visual continuity ── */
+    .status-bar {
+      border-top-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
+    }
+
+    /* ── D3. Batch action bar brand touch (matches signals-inbox pattern) ── */
+    .batch-action-bar {
+      border-top-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
+    }
+
+    /* ── Reduced motion — include Round 3 animations ── */
+    @media (prefers-reduced-motion: reduce) {
+      .status-tab {
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter for material texture -->
+  <svg class="noise-svg-source" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+
+
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Execution Ledger · Compact · A股</div>
+
+  <div class="shell-ledger catalog-shell" data-tabs="order-tabs" data-resizable-panel-group="ops-main-detail" data-resize-var="--prototype-ops-detail-width">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon active" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header">
+      <h1 class="header-title">执行账本</h1>
+      <div class="header-filters" data-contract-slot="filter-bar" role="toolbar" aria-label="订单筛选">
+        <button class="filter-btn" tabindex="0" aria-label="会话: 主策略会话" data-action-tier="context">
+          <span>会话</span>
+          <span class="filter-value">主策略会话</span>
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <button class="filter-btn" tabindex="0" aria-label="账户: 中信建投" data-action-tier="context">
+          <span>账户</span>
+          <span class="filter-value">中信建投</span>
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <button class="filter-btn" tabindex="0" aria-label="券商: 全部" data-action-tier="context">
+          <span>券商</span>
+          <span class="filter-value">全部</span>
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
+        </button>
+        <span class="filter-sep" aria-hidden="true"></span>
+        <!-- JS Tabs: 快速过滤 -->
+        <div data-tabs="order-tabs" role="tablist" aria-label="订单快速过滤">
+          <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true" id="tab-all" aria-controls="panel-all" data-action-tier="context">全部</button>
+          <button class="filter-btn" data-tab-target="pending" role="tab" aria-selected="false" id="tab-pending" aria-controls="panel-pending" data-action-tier="context">待处理</button>
+          <button class="filter-btn" data-tab-target="filled" role="tab" aria-selected="false" id="tab-filled" aria-controls="panel-filled" data-action-tier="context">已成</button>
+          <button class="filter-btn" data-tab-target="cancelled" role="tab" aria-selected="false" id="tab-cancelled" aria-controls="panel-cancelled" data-action-tier="context">撤单</button>
+        </div>
+        <span class="filter-sep" aria-hidden="true"></span>
+        <button class="filter-btn" tabindex="0" aria-label="日期范围: 今日" data-action-tier="context">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="13" rx="1"/><path d="M3 9h14M7 2v4M13 2v4"/></svg>
+          <span class="filter-value">今日</span>
+        </button>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-actions" role="toolbar" aria-label="页面操作">
+        <button class="filter-btn" tabindex="0" aria-label="刷新订单" title="刷新" data-action-tier="context">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
+          刷新
+        </button>
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="导出订单" title="导出" data-action-tier="context">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10m0 0l-3-3m3 3l3-3M3 17h14"/></svg>
+        </div>
+
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <div class="command-context-actions" data-command-context-route="/trading/orders" data-command-context-object="ORD-20240401-001" data-command-context-actions="open-orders, view-logs, retry, create-incident" hidden></div>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" data-action-tier="overflow" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" data-action-tier="overflow" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" data-action-tier="overflow" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" data-action-tier="overflow" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" data-action-tier="overflow" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-action-tier="overflow" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══ State Variants: Filter Bar ═══ -->
+
+
+
+
+    <!-- ═══ Status Strip (Radio Tab System) ═══ -->
+    <div class="status-strip" data-reveal="fade-up" data-reveal-delay="0" aria-label="影响范围：订单执行队列" data-primary-answer-equivalent data-primary-weight="dominant" data-active-filters-summary>
+      <!-- Overlay checkbox inputs (placed here for :has() scope) -->
+
+
+
+
+
+      <!-- Radio inputs for tabs (default: orders-done checked) -->
+      <input type="radio" name="orders-tab" id="orders-pending" class="tab-radio sr-only">
+      <input type="radio" name="orders-tab" id="orders-submitted" class="tab-radio sr-only">
+      <input type="radio" name="orders-tab" id="orders-partial" class="tab-radio sr-only">
+      <input type="radio" name="orders-tab" id="orders-done" class="tab-radio sr-only" checked>
+      <input type="radio" name="orders-tab" id="orders-failed" class="tab-radio sr-only">
+
+      <div class="status-tabs">
+        <label for="orders-pending" class="status-tab label-tab" role="tab" id="tab-orders-pending" aria-selected="false" aria-controls="panel-orders-pending" data-answer-evidence data-action-tier="context">
+          <span class="tab-dot pending" aria-hidden="true"></span>
+          待提交
+          <span class="tab-count">2</span>
+        </label>
+        <label for="orders-submitted" class="status-tab label-tab" role="tab" id="tab-orders-submitted" aria-selected="false" aria-controls="panel-orders-submitted" data-answer-evidence data-action-tier="context">
+          <span class="tab-dot submitted" aria-hidden="true"></span>
+          已提交
+          <span class="tab-count">5</span>
+        </label>
+        <label for="orders-partial" class="status-tab label-tab" role="tab" id="tab-orders-partial" aria-selected="false" aria-controls="panel-orders-partial" data-answer-judgment data-action-tier="context">
+          <span class="tab-dot partial" aria-hidden="true"></span>
+          1 笔部分成交需处理
+          <span class="tab-count" data-answer-metric>1</span>
+        </label>
+        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true" id="tab-orders-done" aria-controls="panel-orders-done" data-action-tier="context">
+          <span class="tab-dot done" aria-hidden="true"></span>
+          已完成
+          <span class="tab-count">148</span>
+        </label>
+        <label for="orders-failed" class="status-tab label-tab" role="tab" id="tab-orders-failed" aria-selected="false" aria-controls="panel-orders-failed" data-answer-evidence data-action-tier="context">
+          <span class="tab-dot failed" aria-hidden="true"></span>
+          失败/撤单
+          <span class="tab-count">12</span>
+        </label>
+      </div>
+      <div class="status-strip-spacer"></div>
+      <div class="status-strip-actions" data-bulk-action-bar role="toolbar" aria-label="订单批量操作">
+        <label for="overlay-retry-submit" class="strip-action primary label-trigger" tabindex="0" role="button" aria-label="重试失败订单" data-answer-action data-action-tier="primary">重试失败订单</label>
+        <label for="overlay-batch-cancel" class="strip-action danger label-trigger" tabindex="0" role="button" aria-label="批量撤单" data-action-tier="overflow">撤单</label>
+        <label for="overlay-retry-submit" class="strip-action secondary label-trigger" tabindex="0" role="button" aria-label="批量重试" data-action-tier="overflow">重试</label>
+      </div>
+    </div>
+
+    <!-- ═══ Execution KPI Strip ═══ -->
+    <div class="kpi-strip" data-reveal="fade-up" data-reveal-delay="50" role="region" aria-label="执行概览">
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value"><span>168</span></div>
+          <div class="kpi-label">今日订单</div>
+        </div>
+        <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
+          <polyline points="0,18 8,14 16,16 24,10 32,12 40,6 48,8 56,4" stroke="var(--brand-accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+          <linearGradient id="spark1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/></linearGradient>
+          <polygon points="0,18 8,14 16,16 24,10 32,12 40,6 48,8 56,4 56,24 0,24" fill="url(#spark1)"/>
+        </svg>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value"><span>¥12.80</span><span class="kpi-unit">M</span></div>
+          <div class="kpi-label">成交额</div>
+        </div>
+        <span class="kpi-change up">+8.3%</span>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value"><span>88.1</span><span class="kpi-unit">%</span></div>
+          <div class="kpi-label">成交率</div>
+        </div>
+        <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
+          <polyline points="0,12 8,10 16,14 24,8 32,6 40,9 48,5 56,3" stroke="var(--market-up-fg)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+          <linearGradient id="spark2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient>
+          <polygon points="0,12 8,10 16,14 24,8 32,6 40,9 48,5 56,3 56,24 0,24" fill="url(#spark2)"/>
+        </svg>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-value"><span>-0.04</span><span class="kpi-unit">%</span></div>
+          <div class="kpi-label">平均滑点</div>
+        </div>
+        <span class="kpi-change down">改善</span>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi-item">
+        <div>
+          <div class="kpi-label">状态分布</div>
+          <div data-flow='{"segments":[{"label":"待报","value":2,"color":"var(--execution-pending-fg)"},{"label":"已报","value":5,"color":"var(--cyan-500)"},{"label":"部成","value":1,"color":"var(--execution-partial-fg)"},{"label":"已成","value":148,"color":"var(--execution-filled-fg)"},{"label":"撤单","value":12,"color":"var(--execution-rejected-fg)"}]}' data-tooltip="今日 168 笔订单状态分布" aria-label="订单状态分布"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ State Variants: Status Strip ═══ -->
+    <!-- ═══ Tab Panels: Orders content area ═══ -->
+    <div class="tab-group" data-tab-group="orders">
+
+      <!-- Tab Panel: 已完成 (default — visible) -->
+      <div class="tab-panel" data-panel="orders-done" id="panel-orders-done" role="tabpanel" aria-labelledby="tab-orders-done" aria-hidden="false">
+
+    <!-- ═══ Orders Ledger Table ═══ -->
+    <div class="ledger-table-area catalog-main" id="main-content" data-selected-object-region data-contract-slot="order-list" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表" data-secondary-context>
+      <!-- JS Tab Panel: 全部 (default visible) -->
+      <div data-tab-panel="all" data-tab-display="block" id="panel-all" role="tabpanel" aria-labelledby="tab-all" aria-hidden="false">
+      <table class="ledger-table main-ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="订单账本">
+        <thead>
+          <tr>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row 1: Filled — selected -->
+          <tr class="selected row-filled" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001" data-row-context-route="/trading/orders" data-row-context-object="ORD-20240401-001" data-row-context-actions="open-orders, view-logs, retry, create-incident">
+            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger" data-tooltip="点击查看完整订单详情">ORD-001</label></td>
+            <td class="cell-name">贵州茅台</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">200</td>
+            <td class="numeric">1,725.00</td>
+            <td class="numeric" data-tooltip="滑点 -0.09% · 较委托价节省 ¥300"><span>1,723.50</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 200/200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:42:15</td>
+          </tr>
+          <!-- Row 2: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-002">
+            <td class="cell-numeric"><span data-tooltip="宁德时代 · 卖出 500 股 · 限价">ORD-002</span></td>
+            <td class="cell-name">宁德时代</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">500</td>
+            <td class="numeric">198.80</td>
+            <td class="numeric" data-tooltip="滑点 +0.20% · 高于委托价 ¥0.40/股"><span>199.20</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 500/500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:35:08</td>
+          </tr>
+          <!-- Row 3: Partial fill -->
+          <tr class="row-partial" tabindex="0" role="row" data-order-id="ORD-20240401-003">
+            <td class="cell-numeric"><span data-tooltip="比亚迪 · 买入 1,000 股 · 部分成交 35%">ORD-003</span></td>
+            <td class="cell-name">比亚迪</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,000</td>
+            <td class="numeric">265.00</td>
+            <td class="numeric" data-tooltip="滑点 -0.08% · 已成交 350/1,000 股"><span>264.80</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status partial" data-tooltip="部分成交 · 350/1,000 股 · 等待剩余"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
+            </td>
+            <td class="cell-time">09:48:33</td>
+          </tr>
+          <!-- Row 4: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-004">
+            <td class="cell-numeric"><span data-tooltip="招商银行 · 买入 2,000 股 · 等待成交">ORD-004</span></td>
+            <td class="cell-name">招商银行</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">2,000</td>
+            <td class="numeric">33.45</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status submitted" data-tooltip="已报券商 · 等待撮合 · 等待 3分12秒"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">09:50:01</td>
+          </tr>
+          <!-- Row 5: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-005">
+            <td class="cell-numeric"><span data-tooltip="中国平安 · 卖出 800 股 · 市价">ORD-005</span></td>
+            <td class="cell-name">中国平安</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">800</td>
+            <td class="numeric">45.20</td>
+            <td class="numeric" data-tooltip="滑点 -0.11% · 市价即时成交"><span>45.15</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 800/800 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:31:20</td>
+          </tr>
+          <!-- Row 6: Pending -->
+          <tr class="row-pending" tabindex="0" role="row" data-order-id="ORD-20240401-006">
+            <td class="cell-numeric"><span data-tooltip="药明康德 · 买入 300 股 · 待提交">ORD-006</span></td>
+            <td class="cell-name">药明康德</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">300</td>
+            <td class="numeric">62.80</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status pending" data-tooltip="策略引擎生成 · 等待确认提交"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
+            </td>
+            <td class="cell-time">—</td>
+          </tr>
+          <!-- Row 7: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-007">
+            <td class="cell-numeric"><span data-tooltip="隆基绿能 · 卖出 1,500 股 · 市价">ORD-007</span></td>
+            <td class="cell-name">隆基绿能</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">1,500</td>
+            <td class="numeric">27.90</td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span>27.85</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 1,500/1,500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:05:44</td>
+          </tr>
+          <!-- Row 8: Failed -->
+          <tr class="row-failed" tabindex="0" role="row" data-order-id="ORD-20240401-008">
+            <td class="cell-numeric"><span data-tooltip="紫金矿业 · 买入 3,000 股 · 已撤单">ORD-008</span></td>
+            <td class="cell-name">紫金矿业</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">3,000</td>
+            <td class="numeric">15.60</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status failed" data-tooltip="用户主动撤单 · 未成交"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span>
+            </td>
+            <td class="cell-time">10:12:30</td>
+          </tr>
+          <!-- Row 9: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-009">
+            <td class="cell-numeric"><span data-tooltip="迈瑞医疗 · 买入 100 股 · 等待成交">ORD-009</span></td>
+            <td class="cell-name">迈瑞医疗</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">100</td>
+            <td class="numeric">285.00</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status submitted" data-tooltip="已报券商 · 等待撮合 · 等待 1分48秒"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">10:15:02</td>
+          </tr>
+          <!-- Row 10: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-010">
+            <td class="cell-numeric"><span data-tooltip="长江电力 · 买入 1,200 股 · 市价">ORD-010</span></td>
+            <td class="cell-name">长江电力</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,200</td>
+            <td class="numeric">28.10</td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span>28.05</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 1,200/1,200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:22:18</td>
+          </tr>
+          <!-- Row 11: Pending -->
+          <tr class="row-pending" tabindex="0" role="row" data-order-id="ORD-20240401-011">
+            <td class="cell-numeric"><span data-tooltip="海尔智家 · 买入 400 股 · 待提交">ORD-011</span></td>
+            <td class="cell-name">海尔智家</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">400</td>
+            <td class="numeric">28.50</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status pending" data-tooltip="策略引擎生成 · 等待盘中确认"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
+            </td>
+            <td class="cell-time">—</td>
+          </tr>
+          <!-- Row 12: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-012">
+            <td class="cell-numeric"><span data-tooltip="中际旭创 · 卖出 200 股 · 限价">ORD-012</span></td>
+            <td class="cell-name">中际旭创</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">200</td>
+            <td class="numeric">178.20</td>
+            <td class="numeric" data-tooltip="滑点 +0.22% · 高于委托价 ¥0.40/股"><span>178.60</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 200/200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:23:44</td>
+          </tr>
+          <!-- Row 13: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-013">
+            <td class="cell-numeric"><span data-tooltip="工业富联 · 买入 600 股 · 限价">ORD-013</span></td>
+            <td class="cell-name">工业富联</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">600</td>
+            <td class="numeric">45.60</td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 较委托价节省 ¥48"><span>45.52</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 600/600 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:24:02</td>
+          </tr>
+          <!-- Row 14: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-014">
+            <td class="cell-numeric"><span data-tooltip="中国船舶 · 卖出 300 股 · 等待成交">ORD-014</span></td>
+            <td class="cell-name">中国船舶</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">300</td>
+            <td class="numeric">38.20</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status submitted" data-tooltip="已报券商 · 等待撮合 · 等待 42秒"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">10:24:05</td>
+          </tr>
+          <!-- Row 15: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-015">
+            <td class="cell-numeric"><span data-tooltip="立讯精密 · 买入 700 股 · 市价">ORD-015</span></td>
+            <td class="cell-name">立讯精密</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">700</td>
+            <td class="numeric">39.80</td>
+            <td class="numeric" data-tooltip="滑点 -0.20% · 市价即时成交"><span>39.72</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 700/700 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:25:17</td>
+          </tr>
+          <!-- Row 16: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-016">
+            <td class="cell-numeric"><span data-tooltip="万华化学 · 卖出 500 股 · 限价">ORD-016</span></td>
+            <td class="cell-name">万华化学</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">500</td>
+            <td class="numeric">83.10</td>
+            <td class="numeric" data-tooltip="滑点 +0.30% · 高于委托价 ¥0.25/股"><span>83.35</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 500/500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:27:41</td>
+          </tr>
+          <!-- Row 17: Failed -->
+          <tr class="row-failed" tabindex="0" role="row" data-order-id="ORD-20240401-017">
+            <td class="cell-numeric"><span data-tooltip="汇川技术 · 买入 400 股 · 券商拒单">ORD-017</span></td>
+            <td class="cell-name">汇川技术</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">400</td>
+            <td class="numeric">64.20</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status failed" data-tooltip="券商拒单 · 可调整价格后重试"><span class="status-dot-inline" aria-hidden="true"></span> 已拒单</span>
+            </td>
+            <td class="cell-time">10:29:03</td>
+          </tr>
+          <!-- Row 18: Partial fill -->
+          <tr class="row-partial" tabindex="0" role="row" data-order-id="ORD-20240401-018">
+            <td class="cell-numeric"><span data-tooltip="中芯国际 · 买入 1,000 股 · 部分成交 60%">ORD-018</span></td>
+            <td class="cell-name">中芯国际</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,000</td>
+            <td class="numeric">52.30</td>
+            <td class="numeric" data-tooltip="滑点 -0.38% · 已成交 600/1,000 股"><span>52.10</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status partial" data-tooltip="部分成交 · 600/1,000 股 · 等待剩余"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
+            </td>
+            <td class="cell-time">10:31:26</td>
+          </tr>
+        </tbody>
+      </table>
+      </div><!-- /data-tab-panel="all" -->
+
+      <!-- JS Tab Panel: 待处理 -->
+      <div data-tab-panel="pending" data-tab-display="block" id="panel-pending" role="tabpanel" aria-labelledby="tab-pending" aria-hidden="true">
+      <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="待处理订单">
+        <thead>
+          <tr>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row: Pending -->
+          <tr class="row-pending" tabindex="0" role="row" data-order-id="ORD-20240401-006">
+            <td class="cell-numeric">ORD-006</td>
+            <td class="cell-name">药明康德</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">300</td>
+            <td class="numeric">62.80</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status pending"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
+            </td>
+            <td class="cell-time">—</td>
+          </tr>
+          <!-- Row: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-004">
+            <td class="cell-numeric">ORD-004</td>
+            <td class="cell-name">招商银行</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">2,000</td>
+            <td class="numeric">33.45</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">09:50:01</td>
+          </tr>
+          <!-- Row: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-009">
+            <td class="cell-numeric">ORD-009</td>
+            <td class="cell-name">迈瑞医疗</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">100</td>
+            <td class="numeric">285.00</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">10:15:02</td>
+          </tr>
+        </tbody>
+      </table>
+      </div><!-- /data-tab-panel="pending" -->
+
+      <!-- JS Tab Panel: 已成 -->
+      <div data-tab-panel="filled" data-tab-display="block" id="panel-filled" role="tabpanel" aria-labelledby="tab-filled" aria-hidden="true">
+      <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="已成订单">
+        <thead>
+          <tr>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row: Filled -->
+          <tr class="row-filled selected" aria-selected="true" tabindex="0" role="row" data-order-id="ORD-20240401-001">
+            <td class="cell-numeric"><label for="overlay-order-detail" class="cursor-trigger" data-tooltip="点击查看完整订单详情">ORD-001</label></td>
+            <td class="cell-name">贵州茅台</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">200</td>
+            <td class="numeric">1,725.00</td>
+            <td class="numeric">1,723.50</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:42:15</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-002">
+            <td class="cell-numeric">ORD-002</td>
+            <td class="cell-name">宁德时代</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">500</td>
+            <td class="numeric">198.80</td>
+            <td class="numeric">199.20</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:35:08</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-005">
+            <td class="cell-numeric">ORD-005</td>
+            <td class="cell-name">中国平安</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">800</td>
+            <td class="numeric">45.20</td>
+            <td class="numeric">45.15</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">09:31:20</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-007">
+            <td class="cell-numeric">ORD-007</td>
+            <td class="cell-name">隆基绿能</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">1,500</td>
+            <td class="numeric">27.90</td>
+            <td class="numeric">27.85</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:05:44</td>
+          </tr>
+          <!-- Row: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-010">
+            <td class="cell-numeric">ORD-010</td>
+            <td class="cell-name">长江电力</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,200</td>
+            <td class="numeric">28.10</td>
+            <td class="numeric">28.05</td>
+            <td><span class="order-type-tag">市价</span></td>
+            <td>
+              <span class="order-status filled"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:22:18</td>
+          </tr>
+        </tbody>
+      </table>
+      </div><!-- /data-tab-panel="filled" -->
+
+      <!-- JS Tab Panel: 撤单 -->
+      <div data-tab-panel="cancelled" data-tab-display="block" id="panel-cancelled" role="tabpanel" aria-labelledby="tab-cancelled" aria-hidden="true">
+      <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="已撤单订单">
+        <thead>
+          <tr>
+            <th scope="col" class="col-wide">订单ID</th>
+            <th scope="col" class="col-wide">标的</th>
+            <th scope="col" class="col-small">方向</th>
+            <th scope="col" class="col-small">数量</th>
+            <th scope="col" class="col-medium">委托价</th>
+            <th scope="col" class="col-medium">成交价</th>
+            <th scope="col" class="col-narrow">类型</th>
+            <th scope="col" class="col-wide">状态</th>
+            <th scope="col" class="col-narrow">时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row: Failed -->
+          <tr class="row-failed" tabindex="0" role="row" data-order-id="ORD-20240401-008">
+            <td class="cell-numeric">ORD-008</td>
+            <td class="cell-name">紫金矿业</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">3,000</td>
+            <td class="numeric">15.60</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag">限价</span></td>
+            <td>
+              <span class="order-status failed"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span>
+            </td>
+            <td class="cell-time">10:12:30</td>
+          </tr>
+        </tbody>
+      </table>
+      </div><!-- /data-tab-panel="cancelled" -->
+
+    </div>
+
+    <!-- ═══ State Variants: Orders Ledger Table ═══ -->
+
+
+
+
+
+    <!-- ═══ Order Trace Panel (340px) ═══ -->
+    <aside class="order-trace catalog-detail" id="order-trace-panel" data-selected-object-region data-contract-slot="execution-trace" data-reveal="fade-up" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
+      <!-- Trace Header -->
+      <div class="trace-header">
+        <div class="trace-title">
+          订单详情
+          <span class="trace-order-id" data-tooltip="贵州茅台 600519 · 限价买入 · 已完成">ORD-001</span>
+        </div>
+        <div class="trace-actions">
+          <label for="overlay-cancel-confirm" class="trace-action-btn danger label-trigger" tabindex="0" role="button" aria-label="撤单" data-action-tier="overflow">撤单</label>
+          <button class="trace-action-btn" tabindex="0" role="button" aria-label="复制订单" data-action-tier="context">复制</button>
+        </div>
+      </div>
+
+      <div class="trace-sections">
+        <!-- Section 1: Order Information -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">订单信息</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="order-info-grid">
+              <div class="order-info-item">
+                <span class="order-info-label">标的</span>
+                <span class="order-info-value">贵州茅台 600519</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">方向</span>
+                <span class="order-info-value up">买入</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">委托数量</span>
+                <span class="order-info-value">200 股</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">成交数量</span>
+                <span class="order-info-value">200 股</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">委托价格</span>
+                <span class="order-info-value"><span>1,725.00</span></span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">成交均价</span>
+                <span class="order-info-value"><span>1,723.50</span></span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">委托金额</span>
+                <span class="order-info-value"><span>¥345,000.00</span></span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">成交金额</span>
+                <span class="order-info-value"><span>¥344,700.00</span></span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">账户</span>
+                <span class="order-info-value">中信建投 · 主账户</span>
+              </div>
+              <div class="order-info-item">
+                <span class="order-info-label">策略来源</span>
+                <span class="order-info-value">Alpha v2 — 消费</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Status Timeline -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">状态时间线</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="status-timeline">
+              <!-- Step 1: Created -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">订单创建</span>
+                  <span class="timeline-step-time">09:42:15</span>
+                </div>
+              </div>
+              <!-- Step 2: Submitted -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">已报备</span>
+                  <span class="timeline-step-time">09:42:16</span>
+                  <span class="timeline-step-detail">券商确认接收</span>
+                </div>
+              </div>
+              <!-- Step 3: Partial Fill -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">部分成交</span>
+                  <span class="timeline-step-time">09:42:18</span>
+                  <span class="timeline-step-detail">成交 100/200 股 @ 1,724.00</span>
+                </div>
+              </div>
+              <!-- Step 4: Full Fill -->
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">全部成交</span>
+                  <span class="timeline-step-time">09:42:20</span>
+                  <span class="timeline-step-detail">成交 100/200 股 @ 1,723.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Fee Breakdown -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">费用明细</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="fee-row">
+              <span class="fee-label">佣金</span>
+              <span class="fee-value"><span>¥172.35</span></span>
+            </div>
+            <div class="fee-row">
+              <span class="fee-label">过户费</span>
+              <span class="fee-value"><span>¥17.24</span></span>
+            </div>
+            <div class="fee-row">
+              <span class="fee-label">印花税</span>
+              <span class="fee-value"><span>¥344.70</span></span>
+            </div>
+            <div class="fee-row fee-total">
+              <span class="fee-label">费用合计</span>
+              <span class="fee-value"><span>¥534.29</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Slippage Analysis -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">滑点分析</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="slippage-display">
+              <span class="slippage-value negative" data-tooltip="滑点 = (成交均价 - 委托价) / 委托价">-0.09%</span>
+              <span class="slippage-detail">委托 1,725.00 / 成交 1,723.50 · 节省 300.00</span>
+            </div>
+            <div class="slippage-bar-container">
+              <div class="slippage-bar" role="progressbar" aria-valuenow="3" aria-valuemin="0" aria-valuemax="100" aria-label="滑点幅度">
+                <div class="slippage-bar-fill negative low"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Route Log -->
+        <div class="trace-section">
+          <div class="trace-section-header">
+            <span class="trace-section-title">路由日志</span>
+          </div>
+          <div class="trace-section-body">
+            <div class="route-log">
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:15</span>
+                <span class="route-entry-text">订单创建 — 策略 Alpha v2 生成</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:16</span>
+                <span class="route-entry-text">路由选择 — 中信建投 (延迟 2ms)</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:16</span>
+                <span class="route-entry-text">报单发送 — 上交所 限价买入 200 股 @ 1,725.00</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:18</span>
+                <span class="route-entry-text">部分成交 — 100 股 @ 1,724.00</span>
+              </div>
+              <div class="route-entry">
+                <span class="route-entry-time">09:42:20</span>
+                <span class="route-entry-text">全部成交 — 100 股 @ 1,723.00 · 均价 1,723.50</span>
+              </div>
+              <div class="route-entry older">
+                <span class="route-entry-time">09:42:20</span>
+                <span class="route-entry-text">回报确认 · 滑点 -0.09% · 费用 534.29</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ State Variants: Order Trace ═══ -->
+
+
+
+
+    </div><!-- /tab-panel orders-done -->
+
+    <!-- Tab Panel: 待提交 -->
+    <div class="tab-panel" data-panel="orders-pending" id="panel-orders-pending" role="tabpanel" aria-labelledby="tab-orders-pending" aria-hidden="true">
+      <div class="state-empty state-pad-lg">
+        <div class="state-empty-icon">📋</div>
+        <div class="state-empty-title">2 笔待提交订单</div>
+        <div class="state-empty-desc">以下订单已由策略引擎生成，等待人工确认或自动提交规则触发</div>
+        <button class="state-empty-cta">批量提交</button>
+      </div>
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="待提交订单">
+          <thead>
+            <tr>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">数量</th>
+              <th scope="col" class="col-medium">委托价</th>
+              <th scope="col" class="col-narrow">类型</th>
+              <th scope="col" class="col-wide">状态</th>
+              <th scope="col" class="col-narrow">时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr tabindex="0" role="row" data-order-id="ORD-20240401-006">
+              <td class="cell-numeric">ORD-006</td>
+              <td class="cell-name">药明康德</td>
+              <td><span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span></td>
+              <td class="numeric">300</td>
+              <td class="numeric">62.80</td>
+              <td><span class="order-type-tag">限价</span></td>
+              <td><span class="order-status pending"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span></td>
+              <td class="cell-time">—</td>
+            </tr>
+            <tr tabindex="0" role="row">
+              <td class="cell-numeric">ORD-011</td>
+              <td class="cell-name">海尔智家</td>
+              <td><span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span></td>
+              <td class="numeric">400</td>
+              <td class="numeric">28.50</td>
+              <td><span class="order-type-tag">限价</span></td>
+              <td><span class="order-status pending"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span></td>
+              <td class="cell-time">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="batch-action-bar">
+          <span>已选择 2 笔待提交</span>
+          <div class="flex-spacer"></div>
+          <label for="overlay-retry-submit" class="batch-action-btn label-trigger" tabindex="0" role="button" aria-label="批量编辑订单" data-action-tier="context">批量编辑</label>
+          <button class="batch-action-btn accent" data-action-tier="primary">批量提交</button>
+        </div>
+        <div class="pagination-bar">
+          <span class="pagination-info">共 2 条 · 第 1/1 页</span>
+          <div class="pagination-controls">
+            <button class="pagination-btn" disabled aria-label="上一页" data-action-tier="context">&#8249;</button>
+            <button class="pagination-btn active" data-action-tier="context">1</button>
+            <button class="pagination-btn" disabled aria-label="下一页" data-action-tier="context">&#8250;</button>
+          </div>
+        </div>
+      </div>
+      <!-- Empty trace panel for pending tab -->
+      <aside class="order-trace">
+        <div class="trace-header">
+          <div class="trace-title">订单详情</div>
+        </div>
+        <div class="trace-empty">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          <span class="trace-empty-text">选择左侧订单查看追踪</span>
+        </div>
+      </aside>
+
+    <!-- ═══ State Variants: Batch Action Bar ═══ -->
+
+
+
+
+
+    <!-- ═══ State Variants: Pagination ═══ -->
+
+
+
+
+    </div><!-- /tab-panel orders-pending -->
+
+    <!-- Tab Panel: 已提交 -->
+    <div class="tab-panel" data-panel="orders-submitted" id="panel-orders-submitted" role="tabpanel" aria-labelledby="tab-orders-submitted" aria-hidden="true">
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="已提交订单">
+          <thead>
+            <tr>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">数量</th>
+              <th scope="col" class="col-medium">委托价</th>
+              <th scope="col" class="col-wide">状态</th>
+              <th scope="col" class="col-xwide">提交时间</th>
+              <th scope="col" class="col-medium">等待</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr tabindex="0" role="row" data-order-id="ORD-20240401-004">
+              <td class="cell-numeric">ORD-004</td>
+              <td class="cell-name">招商银行</td>
+              <td><span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span></td>
+              <td class="numeric">2,000</td>
+              <td class="numeric">33.45</td>
+              <td><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></td>
+              <td class="cell-time">09:50:01</td>
+              <td class="cell-numeric cell-waiting">3分12秒</td>
+            </tr>
+            <tr tabindex="0" role="row" data-order-id="ORD-20240401-009">
+              <td class="cell-numeric">ORD-009</td>
+              <td class="cell-name">迈瑞医疗</td>
+              <td><span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span></td>
+              <td class="numeric">100</td>
+              <td class="numeric">285.00</td>
+              <td><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></td>
+              <td class="cell-time">10:15:02</td>
+              <td class="cell-numeric cell-waiting">1分48秒</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="order-trace">
+        <div class="trace-header">
+          <div class="trace-title">订单详情</div>
+        </div>
+        <div class="trace-empty">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          <span class="trace-empty-text">选择左侧订单查看追踪</span>
+        </div>
+      </aside>
+    </div><!-- /tab-panel orders-submitted -->
+
+    <!-- Tab Panel: 部分成交 -->
+    <div class="tab-panel" data-panel="orders-partial" id="panel-orders-partial" role="tabpanel" aria-labelledby="tab-orders-partial" aria-hidden="true">
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="部分成交订单">
+          <thead>
+            <tr>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">委托</th>
+              <th scope="col" class="col-small">已成交</th>
+              <th scope="col" class="col-medium">均价</th>
+              <th scope="col" class="col-2xwide">进度</th>
+              <th scope="col" class="col-narrow">时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr tabindex="0" role="row" data-order-id="ORD-20240401-003">
+              <td class="cell-numeric">ORD-003</td>
+              <td class="cell-name">比亚迪</td>
+              <td><span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span></td>
+              <td class="numeric">1,000</td>
+              <td class="numeric cell-partial-highlight">350</td>
+              <td class="numeric">264.80</td>
+              <td>
+                <div class="fill-progress">
+                  <div class="fill-progress-track">
+                    <div class="fill-progress-fill partial-35"></div>
+                  </div>
+                  <span class="fill-progress-label">35%</span>
+                </div>
+              </td>
+              <td class="cell-time">09:48:33</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="order-trace">
+        <div class="trace-header">
+          <div class="trace-title">订单详情</div>
+        </div>
+        <div class="trace-empty">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          <span class="trace-empty-text">选择左侧订单查看追踪</span>
+        </div>
+      </aside>
+    </div><!-- /tab-panel orders-partial -->
+
+    <!-- Tab Panel: 失败/撤单 -->
+    <div class="tab-panel" data-panel="orders-failed" id="panel-orders-failed" role="tabpanel" aria-labelledby="tab-orders-failed" aria-hidden="true">
+      <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="失败/撤单订单">
+          <thead>
+            <tr>
+              <th scope="col" class="col-wide">订单ID</th>
+              <th scope="col" class="col-wide">标的</th>
+              <th scope="col" class="col-small">方向</th>
+              <th scope="col" class="col-small">数量</th>
+              <th scope="col" class="col-medium">委托价</th>
+              <th scope="col" class="col-wide">状态</th>
+              <th scope="col" class="col-2xwide">原因</th>
+              <th scope="col" class="col-narrow">时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr tabindex="0" role="row" data-order-id="ORD-20240401-008">
+              <td class="cell-numeric">ORD-008</td>
+              <td class="cell-name">紫金矿业</td>
+              <td><span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span></td>
+              <td class="numeric">3,000</td>
+              <td class="numeric">15.60</td>
+              <td><span class="order-status cancelled"><span class="status-dot-inline" aria-hidden="true"></span> 已撤单</span></td>
+              <td class="cell-reason">用户主动撤单</td>
+              <td class="cell-time">10:12:30</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="order-trace">
+        <div class="trace-header">
+          <div class="trace-title">订单详情</div>
+        </div>
+        <div class="trace-empty">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          <span class="trace-empty-text">选择左侧订单查看追踪</span>
+        </div>
+      </aside>
+    </div><!-- /tab-panel orders-failed -->
+
+    </div><!-- /tab-group -->
+
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-ops-detail-width" data-resize-default="340" data-resize-min="280" data-resize-max="560" role="separator" tabindex="0" aria-label="调整执行追踪宽度" aria-orientation="vertical" aria-controls="main-content order-trace-panel" aria-valuemin="280" aria-valuemax="560" aria-valuenow="340" aria-valuetext="调整执行追踪宽度 340 像素"></div>
+
+  </div><!-- /shell-ledger -->
+
+  <!-- ══════════════════════════════════════════════
+       Overlays (4) — Modal / Drawer containers
+       Checkbox inputs are inside .status-strip above.
+       Clicking overlay-dismiss label closes each overlay.
+       ══════════════════════════════════════════════ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 撤单确认 Modal (破坏性操作) -->
+    <div class="overlay-backdrop" data-overlay="overlay-cancel-confirm">
+      <label class="overlay-dismiss" for="overlay-cancel-confirm" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="撤单确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="order-control">
+        <div class="overlay-header">
+          <span class="overlay-title overlay-warning-title"><span data-danger-marker>!</span> 撤单确认</span>
+          <label for="overlay-cancel-confirm" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h2>订单摘要</h2>
+          <p data-risk-object>对象：ORD-001 贵州茅台买入订单</p>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的</span>
+            <span class="overlay-field-value">贵州茅台 600519</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">方向</span>
+            <span class="overlay-field-value text-buy">买入</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">数量</span>
+            <span class="overlay-field-value">2,000 股</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">当前状态</span>
+            <span class="overlay-field-value"><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></span>
+          </div>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">撤单请求提交到券商通道后结果取决于成交状态；已成交部分不可撤回。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">订单状态从待处理或失败进入券商通道处理；最终状态以回报为准。</p>
+            </div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">保留原始订单参数、券商回报、失败原因和操作备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、订单 id、动作、通道响应和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">撤单结果会回写订单台账；失败时保留原订单状态并提示下一步处理。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control data-action-tier="context">取消，保留订单</label>
+            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action data-action-tier="primary">确认撤单</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 重试/修正提交 Modal -->
+    <div class="overlay-backdrop" data-overlay="overlay-retry-submit">
+      <label class="overlay-dismiss" for="overlay-retry-submit" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重试或修正提交" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="order-control">
+        <div class="overlay-header">
+          <span class="overlay-title"><span data-danger-marker>!</span> 重试/修正提交</span>
+          <label for="overlay-retry-submit" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h2>原始订单参数</h2>
+          <p data-risk-object>对象：失败订单重试或待提交订单修正</p>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的</span>
+            <span class="overlay-field-value">紫金矿业 601899</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">方向</span>
+            <span class="overlay-field-value text-buy">买入</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">数量</span>
+            <span class="overlay-field-value">3,000 股</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">委托价格</span>
+            <span class="overlay-field-value">15.60</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">修正入口</span>
+            <span class="overlay-field-value">批量编辑会先保存修正草稿，再进入提交复核</span>
+          </div>
+
+          <h2>失败原因</h2>
+          <p class="overlay-desc-error">
+            券商网关超时：订单在 30 秒内未收到确认回报，系统自动标记为失败。
+          </p>
+
+          <h2>风控检查</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">持仓集中度</span>
+            <span class="overlay-field-value text-pass">通过 ✓</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">单笔限额</span>
+            <span class="overlay-field-value text-pass">通过 ✓</span>
+          </div>
+
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">重试会按原始或修正后的订单参数重新进入提交流程；修正草稿保存后仍需再次提交确认。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">失败订单会按原始参数重新进入提交流程；券商回报决定最终状态。</p>
+            </div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">保留原始订单参数、失败原因、重试前风控检查和通道响应。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、订单 id、重试动作、券商通道和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">重试或修正结果会回写订单台账；失败时保留原订单状态、修正草稿和下一步处理提示。</p>
+            </div>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control data-action-tier="context">取消</label>
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger" data-confirm-control data-danger-action data-action-tier="primary">确认重试/修正</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: 订单详情 Drawer (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-order-detail">
+      <label class="overlay-dismiss" for="overlay-order-detail" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="订单详情">
+        <div class="overlay-header">
+          <span class="overlay-title">订单详情</span>
+          <label for="overlay-order-detail" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <h2>订单信息</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">订单 ID</span>
+            <span class="overlay-field-value">ORD-20240401-002</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">标的</span>
+            <span class="overlay-field-value">宁德时代 300750</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">方向</span>
+            <span class="overlay-field-value text-sell">卖出</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">数量</span>
+            <span class="overlay-field-value">500 股</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">委托价格</span>
+            <span class="overlay-field-value">198.80</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">成交均价</span>
+            <span class="overlay-field-value">199.20</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">类型</span>
+            <span class="overlay-field-value">限价</span>
+          </div>
+
+          <h2>状态时间线</h2>
+          <div class="status-timeline">
+            <div class="timeline-step">
+              <div class="timeline-indicator completed">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-step-title">订单创建</span>
+                <span class="timeline-step-time">09:35:06</span>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-indicator completed">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-step-title">已报备</span>
+                <span class="timeline-step-time">09:35:07</span>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="timeline-indicator completed">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-step-title">全部成交</span>
+                <span class="timeline-step-time">09:35:08</span>
+              </div>
+            </div>
+          </div>
+
+          <h2>费用明细</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">佣金</span>
+            <span class="overlay-field-value">99.60</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">过户费</span>
+            <span class="overlay-field-value">9.96</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">印花税</span>
+            <span class="overlay-field-value">49.80</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label overlay-field-label-bold">费用合计</span>
+            <span class="overlay-field-value overlay-field-value-bold">159.36</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay D: 批量撤单确认 Modal (破坏性操作) -->
+    <div class="overlay-backdrop" data-overlay="overlay-batch-cancel">
+      <label class="overlay-dismiss" for="overlay-batch-cancel" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量撤单确认" data-danger-confirmation data-high-risk-confirmation data-high-risk-kind="order-control">
+        <div class="overlay-header">
+          <span class="overlay-title overlay-warning-title"><span data-danger-marker>!</span> 批量撤单确认</span>
+          <label for="overlay-batch-cancel" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <p class="overlay-desc-batch">
+            确认撤销以下 <strong class="text-highlight">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
+          </p>
+          <p data-risk-object>对象：已选择 5 条订单</p>
+          <h2>已选订单摘要</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">ORD-004</span>
+            <span class="overlay-field-value">招商银行 · 买入 2,000 股 · 已提交</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">ORD-009</span>
+            <span class="overlay-field-value">迈瑞医疗 · 买入 100 股 · 已提交</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">ORD-003</span>
+            <span class="overlay-field-value">比亚迪 · 买入 1,000 股 · 部分成交</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">ORD-006</span>
+            <span class="overlay-field-value">药明康德 · 买入 300 股 · 待提交</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">ORD-011</span>
+            <span class="overlay-field-value">海尔智家 · 买入 400 股 · 待提交</span>
+          </div>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary data-impact-preview class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">撤单请求提交到券商通道后结果取决于成交状态；已成交部分不可撤回。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">选中订单会逐笔提交撤单请求；部分订单可能因成交状态返回不同结果。</p>
+            </div>
+            <div data-evidence-chain data-risk-object-list class="risk-confirmation-block">
+              <div class="risk-confirmation-title">对象清单</div>
+              <p class="risk-confirmation-copy">保留批量选择快照、每笔订单状态、券商回报和失败原因。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、订单集合、批量动作、通道响应和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">撤单结果会回写订单台账；失败时保留原订单状态并提示下一步处理。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control data-action-tier="context">取消</label>
+            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action data-action-tier="primary">确认批量撤单</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /overlays -->
+
+  <!-- Status Bar — terminal DNA -->
+  <div class="status-bar" role="status" aria-label="系统状态">
+    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-live">LIVE</span>
+    <span class="status-sep">|</span>
+    <span>今日 168 笔 · 成交 148 · 待处理 8</span>
+    <span class="status-sep">|</span>
+    <span>成交额 <span class="status-live text-status-live">12.8M</span></span>
+    <span class="status-sep">|</span>
+    <span>10:22:18 CST</span>
+    <span class="status-sep">|</span>
+    <span>中信建投 · 延迟 2ms</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl+K</span> 搜索
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+
+  </section>
+
+<section id="states-gallery" class="proto-section">
+      <div class="gallery-grid">
+        <div class="gallery-group" data-component="other">
+          <div class="gallery-group__label">other</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Filter Bar · Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="skeleton-filter-row">
+          <div class="skeleton skeleton-badge skel-badge-96"></div>
+          <div class="skeleton skeleton-badge skel-badge-88"></div>
+          <div class="skeleton skeleton-badge skel-badge-72"></div>
+          <div class="skeleton skeleton-badge skel-badge-56"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Filter Bar · Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty state-pad-md">
+          <div class="state-empty-title state-title-sm">无可选筛选条件</div>
+          <div class="state-empty-desc">当前没有可用的会话或账户数据</div>
+          <button class="state-empty-cta">连接账户</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Filter Bar · Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error state-pad-md">
+          <div class="state-error-icon state-error-icon-sm">!</div>
+          <div class="state-error-title state-title-sm">筛选器加载失败</div>
+          <button class="state-error-retry state-retry-sm">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Filter Bar · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">筛选条件数据过期</div>
+          <div class="state-stale-desc">会话和账户列表最后更新于 3 分钟前，可用选项可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Status Strip · Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="status-strip gallery-status-strip">
+          <div class="status-tabs skeleton-tabs-row">
+            <div class="skeleton skeleton-badge skel-badge-72"></div>
+            <div class="skeleton skeleton-badge skel-badge-64"></div>
+            <div class="skeleton skeleton-badge skel-badge-80"></div>
+            <div class="skeleton skeleton-badge skel-badge-64"></div>
+            <div class="skeleton skeleton-badge skel-badge-80"></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Status Strip · Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">暂无订单</div>
+
+          <div class="state-empty-desc">当前会话无任何订单记录，通过策略引擎生成或手动创建订单后将在此处展示</div>
+          <button class="state-empty-cta">新建订单</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Status Strip · Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">订单状态加载失败</div>
+          <div class="state-error-desc">无法获取订单统计数据，请检查网络连接或稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Status Strip · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">订单统计过期</div>
+          <div class="state-stale-desc">各状态标签页的计数最后更新于 20 秒前，可能与实际不符</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Orders Table · Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Orders Table · Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">当前无订单</div>
+          <div class="state-empty-desc">此状态下没有订单记录，新订单创建后将自动出现在列表中</div>
+          <button class="state-empty-cta">查看全部订单</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Orders Table · Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">订单列表加载失败</div>
+          <div class="state-error-desc">无法获取订单数据，请检查网络连接或稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Orders Table · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">订单数据过期</div>
+          <div class="state-stale-desc">订单列表最后更新于 15 秒前，订单状态和成交信息可能不准确</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Order Trace · Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-heading skel-heading-60"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text-sm"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text-sm"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text-sm"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Order Trace · Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="trace-empty">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
+          <span class="trace-empty-text">选择左侧订单查看追踪</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Order Trace · Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">订单详情加载失败</div>
+          <div class="state-error-desc">无法获取订单追踪信息，请稍后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Order Trace · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">订单追踪数据过期</div>
+          <div class="state-stale-desc">状态时间线和路由日志最后更新于 30 秒前，可能缺少最新事件</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Batch Actions · Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="batch-action-bar">
+          <div class="skeleton skeleton-text skel-text-100"></div>
+          <div class="flex-spacer"></div>
+          <div class="skeleton skeleton-badge skel-badge-24"></div>
+          <div class="skeleton skeleton-badge skel-badge-24"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Batch Actions · Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="batch-action-bar batch-disabled">
+          <span>未选择任何订单</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Batch Actions · Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error state-pad-md">
+          <div class="state-error-icon state-error-icon-sm">!</div>
+          <div class="state-error-title state-title-sm">批量操作失败</div>
+          <div class="state-error-desc state-title-sm">部分订单操作未成功执行</div>
+          <button class="state-error-retry state-retry-sm">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Batch Actions · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">选中订单状态已变更</div>
+          <div class="state-stale-desc">部分选中订单在批量选择后状态已更新，操作前请确认</div>
+          <button class="state-stale-retry">重新选择</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Pagination · Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="pagination-bar">
+          <div class="skeleton skeleton-text-sm skel-text-80"></div>
+          <div class="pagination-controls">
+            <div class="skeleton skeleton-badge skel-page-btn"></div>
+            <div class="skeleton skeleton-badge skel-page-btn"></div>
+            <div class="skeleton skeleton-badge skel-page-btn"></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Pagination · Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="pagination-bar pagination-disabled">
+          <span class="pagination-info">共 0 条</span>
+          <div class="pagination-controls">
+            <button class="pagination-btn" disabled>&#8249;</button>
+            <button class="pagination-btn" disabled>1</button>
+            <button class="pagination-btn" disabled>&#8250;</button>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Pagination · Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="pagination-bar pagination-error">
+          <span>分页数据加载失败</span>
+          <div class="pagination-controls">
+            <button class="pagination-btn pagination-error-retry">重试</button>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Pagination · Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="state-stale">
+          <div class="state-stale-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
+          </div>
+          <div class="state-stale-title">分页计数过期</div>
+          <div class="state-stale-desc">总条数和页码信息可能不准确，新订单可能已增加或删除</div>
+          <button class="state-stale-retry">立即刷新</button>
+        </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<section id="overlays-gallery" class="proto-section">
+      <div class="gallery-grid gallery-grid--overlays">
+        <div class="gallery-group" data-component="overlays">
+          <div class="gallery-group__label">弹层设计</div>
+          <div class="gallery-cards">
+
+    <div class="gallery-card" data-overlay-ref="overlay-cancel-confirm">
+      <div class="gallery-card__label">撤单确认 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
+          <div class="overlay-header">
+            <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
+          </div>
+          <div class="overlay-body">
+            <h2>订单摘要</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标的</span>
+              <span class="overlay-field-value">贵州茅台 600519</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">方向</span>
+              <span class="overlay-field-value text-buy">买入</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">数量</span>
+              <span class="overlay-field-value">2,000 股</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">当前状态</span>
+              <span class="overlay-field-value"><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></span>
+            </div>
+            <p class="overlay-desc">
+              确认撤销此订单？已成交部分将被保留，未成交部分将被取消。此操作不可撤销。
+            </p>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-danger">确认撤单</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-retry-submit">
+      <div class="gallery-card__label">重试提交 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="重试提交">
+          <div class="overlay-header">
+            <span class="overlay-title">重试提交</span>
+          </div>
+          <div class="overlay-body">
+            <h2>原始订单参数</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标的</span>
+              <span class="overlay-field-value">紫金矿业 601899</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">方向</span>
+              <span class="overlay-field-value text-buy">买入</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">数量</span>
+              <span class="overlay-field-value">3,000 股</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">委托价格</span>
+              <span class="overlay-field-value">15.60</span>
+            </div>
+
+            <h2>失败原因</h2>
+            <p class="overlay-desc-error">
+              券商网关超时：订单在 30 秒内未收到确认回报，系统自动标记为失败。
+            </p>
+
+            <h2>风控检查</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">持仓集中度</span>
+              <span class="overlay-field-value text-pass">通过 ✓</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">单笔限额</span>
+              <span class="overlay-field-value text-pass">通过 ✓</span>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">重新提交</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-order-detail">
+      <div class="gallery-card__label">订单详情 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="订单详情">
+          <div class="overlay-header">
+            <span class="overlay-title">订单详情</span>
+          </div>
+          <div class="overlay-body">
+            <h2>订单信息</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">订单 ID</span>
+              <span class="overlay-field-value">ORD-20240401-002</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">标的</span>
+              <span class="overlay-field-value">宁德时代 300750</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">方向</span>
+              <span class="overlay-field-value text-sell">卖出</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">数量</span>
+              <span class="overlay-field-value">500 股</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">委托价格</span>
+              <span class="overlay-field-value">198.80</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">成交均价</span>
+              <span class="overlay-field-value">199.20</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">类型</span>
+              <span class="overlay-field-value">限价</span>
+            </div>
+
+            <h2>状态时间线</h2>
+            <div class="status-timeline">
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">订单创建</span>
+                  <span class="timeline-step-time">09:35:06</span>
+                </div>
+              </div>
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">已报备</span>
+                  <span class="timeline-step-time">09:35:07</span>
+                </div>
+              </div>
+              <div class="timeline-step">
+                <div class="timeline-indicator completed">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l3 3 7-7"/></svg>
+                </div>
+                <div class="timeline-content">
+                  <span class="timeline-step-title">全部成交</span>
+                  <span class="timeline-step-time">09:35:08</span>
+                </div>
+              </div>
+            </div>
+
+            <h2>费用明细</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">佣金</span>
+              <span class="overlay-field-value">99.60</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">过户费</span>
+              <span class="overlay-field-value">9.96</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">印花税</span>
+              <span class="overlay-field-value">49.80</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label overlay-field-label-bold">费用合计</span>
+              <span class="overlay-field-value overlay-field-value-bold">159.36</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-batch-cancel">
+      <div class="gallery-card__label">批量撤单确认 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
+          <div class="overlay-header">
+            <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
+          </div>
+          <div class="overlay-body">
+            <p class="overlay-desc-batch">
+              确认撤销以下 <strong class="text-highlight">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
+            </p>
+            <h2>已选订单摘要</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">ORD-004</span>
+              <span class="overlay-field-value">招商银行 · 买入 2,000 股 · 已提交</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">ORD-009</span>
+              <span class="overlay-field-value">迈瑞医疗 · 买入 100 股 · 已提交</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">ORD-003</span>
+              <span class="overlay-field-value">比亚迪 · 买入 1,000 股 · 部分成交</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">ORD-006</span>
+              <span class="overlay-field-value">药明康德 · 买入 300 股 · 待提交</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">ORD-011</span>
+              <span class="overlay-field-value">海尔智家 · 买入 400 股 · 待提交</span>
+            </div>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-danger">确认批量撤单</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-cancel-confirm" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-retry-submit" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-order-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-batch-cancel" class="overlay-radio sr-only">
+</body>
+</html>

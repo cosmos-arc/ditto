@@ -98,7 +98,7 @@
 
 **产出物：**
 ```
-docs/designs/specs/
+design/specs/
 ├── 01_product_information_architecture.md
 ├── 02_core_page_blueprints.md
 ├── 10_ditto_shell_family_spec.md
@@ -125,7 +125,7 @@ docs/designs/specs/
 
 **当前原型架构（已验证可行）：**
 ```
-docs/designs/specs/prototypes/
+prototype/
 ├── shared/
 │   ├── tokens-base.css          # Layer 1: 物理原语
 │   ├── tokens-semantic.css      # Layer 2: 语义映射

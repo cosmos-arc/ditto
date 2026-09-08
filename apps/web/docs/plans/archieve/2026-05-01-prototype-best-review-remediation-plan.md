@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 将 `2026-04-30-prototype-audit-impeccable.md` 与 `2026-04-30-prototype-ui-ux-pro-max-best-review.md` 中仍然有效的原型审查结论转化为可执行整改任务，使 `docs/designs/specs/prototypes/` 从可演示状态推进到 Best 级冻结候选。
+**Goal:** 将 `2026-04-30-prototype-audit-impeccable.md` 与 `2026-04-30-prototype-ui-ux-pro-max-best-review.md` 中仍然有效的原型审查结论转化为可执行整改任务，使 `prototype/` 从可演示状态推进到 Best 级冻结候选。
 
-**Architecture:** 先补机器门禁，防止继续依赖人工审查记忆；再按共享基础设施、设计 token、Shell 响应式、页面模式和专家效率分层修复。所有跨页行为进入 `shared/` 与 `scripts/`，页面特定业务主答案留在对应 `page-*.html`，规范同步写回 `docs/designs/specs/`。
+**Architecture:** 先补机器门禁，防止继续依赖人工审查记忆；再按共享基础设施、设计 token、Shell 响应式、页面模式和专家效率分层修复。所有跨页行为进入 `shared/` 与 `scripts/`，页面特定业务主答案留在对应 `page-*.html`，规范同步写回 `design/specs/`。
 
 **Tech Stack:** HTML prototypes, shared prototype CSS/JS, Design Tokens, Vitest, JSDOM, Playwright, Bun, Biome.
 
@@ -14,18 +14,18 @@
 
 本计划处理当前活跃原型与设计规范：
 
-- `docs/designs/specs/prototypes/page-*.html`
-- `docs/designs/specs/prototypes/shared/layout-base.css`
-- `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- `docs/designs/specs/prototypes/tokens-style.css`
+- `prototype/page-*.html`
+- `prototype/shared/layout-base.css`
+- `prototype/shared/prototype-interactions.js`
+- `prototype/tokens-style.css`
 - `src/styles/design-tokens/tokens-semantic.css`
 - `scripts/prototype-*.test.ts`
 - `scripts/audit-wcag-contrast.mjs`
-- `docs/designs/specs/04_interaction_state_spec.md`
-- `docs/designs/specs/10_ditto_shell_family_spec.md`
-- `docs/designs/specs/11_ditto_page_pattern_library.md`
-- `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
-- `docs/designs/specs/20_interaction_ux_audit.md`
+- `design/specs/04_interaction_state_spec.md`
+- `design/specs/10_ditto_shell_family_spec.md`
+- `design/specs/11_ditto_page_pattern_library.md`
+- `design/specs/14_ditto_token_naming_layering_spec.md`
+- `design/specs/20_interaction_ux_audit.md`
 
 本计划不处理：
 
@@ -86,7 +86,7 @@
 - Modify: `scripts/prototype-design-consistency.test.ts`
 - Modify: `scripts/prototype-interaction-ux-contract.test.ts`
 - Modify: `scripts/audit-wcag-contrast.mjs`
-- Read: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Read: `prototype/.edition-manifest.json`
 - Read: `docs/reviews/2026-04-30-prototype-audit-impeccable.md`
 - Read: `docs/reviews/2026-04-30-prototype-ui-ux-pro-max-best-review.md`
 
@@ -201,10 +201,10 @@ git commit -m "test(prototypes): add best review regression gates"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: active `docs/designs/specs/prototypes/page-*.html`
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: active `prototype/page-*.html`
+- Modify: `design/specs/04_interaction_state_spec.md`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
@@ -370,7 +370,7 @@ Expected: PASS.
 **Step 10: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes docs/designs/specs/04_interaction_state_spec.md scripts/prototype-interaction-ux-contract.test.ts scripts/prototype-design-consistency.test.ts
+git add prototype design/specs/04_interaction_state_spec.md scripts/prototype-interaction-ux-contract.test.ts scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): harden accessibility baseline"
 ```
 
@@ -382,8 +382,8 @@ git commit -m "fix(prototypes): harden accessibility baseline"
 
 - Modify: `scripts/audit-wcag-contrast.mjs`
 - Modify: `src/styles/design-tokens/tokens-semantic.css`
-- Modify: `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
+- Modify: `design/specs/14_ditto_token_naming_layering_spec.md`
+- Modify: `design/specs/04_interaction_state_spec.md`
 - Test: `scripts/audit-wcag-contrast.mjs`
 
 **Step 1: Confirm approval gate for token semantic changes**
@@ -428,7 +428,7 @@ Do not add new token names unless approved.
 Scan:
 
 ```bash
-rg "text-quaternary|text-data-stale" docs/designs/specs/prototypes src
+rg "text-quaternary|text-data-stale" prototype src
 ```
 
 For status, timestamps, stale indicators, table metadata and queue timing, use `text-tertiary`, `text-secondary`, or `text-data-stale` according to the tier.
@@ -448,7 +448,7 @@ Expected: PASS for operational / data-critical contrast tiers. Decorative disabl
 **Step 7: Commit**
 
 ```bash
-git add scripts/audit-wcag-contrast.mjs src/styles/design-tokens/tokens-semantic.css docs/designs/specs/14_ditto_token_naming_layering_spec.md docs/designs/specs/04_interaction_state_spec.md docs/designs/specs/prototypes src
+git add scripts/audit-wcag-contrast.mjs src/styles/design-tokens/tokens-semantic.css design/specs/14_ditto_token_naming_layering_spec.md design/specs/04_interaction_state_spec.md prototype src
 git commit -m "fix(tokens): enforce contrast usage tiers"
 ```
 
@@ -458,10 +458,10 @@ git commit -m "fix(tokens): enforce contrast usage tiers"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/shared/prototype-toggles.css`
-- Modify: active `docs/designs/specs/prototypes/page-*.html` with page-local `100vh`
-- Modify: `docs/designs/specs/10_ditto_shell_family_spec.md`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-toggles.css`
+- Modify: active `prototype/page-*.html` with page-local `100vh`
+- Modify: `design/specs/10_ditto_shell_family_spec.md`
 - Modify: `scripts/run-prototype-gates.ts`
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/run-prototype-gates.ts`
@@ -571,7 +571,7 @@ Expected: PASS.
 **Step 7: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes docs/designs/specs/10_ditto_shell_family_spec.md scripts/run-prototype-gates.ts scripts/prototype-design-consistency.test.ts
+git add prototype design/specs/10_ditto_shell_family_spec.md scripts/run-prototype-gates.ts scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): harden shell viewport behavior"
 ```
 
@@ -581,9 +581,9 @@ git commit -m "fix(prototypes): harden shell viewport behavior"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
-- Modify: `docs/designs/specs/12_ditto_data_views_spec.md`
-- Modify: `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
+- Modify: `prototype/page-a-shares.html`
+- Modify: `design/specs/12_ditto_data_views_spec.md`
+- Modify: `design/specs/14_ditto_token_naming_layering_spec.md`
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/prototype-visual-matrix.ts`
 
@@ -693,7 +693,7 @@ Expected: PASS.
 **Step 8: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-a-shares.html docs/designs/specs/12_ditto_data_views_spec.md docs/designs/specs/14_ditto_token_naming_layering_spec.md scripts/prototype-design-consistency.test.ts test-results
+git add prototype/page-a-shares.html design/specs/12_ditto_data_views_spec.md design/specs/14_ditto_token_naming_layering_spec.md scripts/prototype-design-consistency.test.ts test-results
 git commit -m "fix(prototypes): improve a shares light data visualization"
 ```
 
@@ -703,10 +703,10 @@ git commit -m "fix(prototypes): improve a shares light data visualization"
 
 **Files:**
 
-- Modify: active `docs/designs/specs/prototypes/page-*.html`
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
-- Modify: `docs/designs/specs/10_ditto_shell_family_spec.md`
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
+- Modify: active `prototype/page-*.html`
+- Modify: `design/specs/04_interaction_state_spec.md`
+- Modify: `design/specs/10_ditto_shell_family_spec.md`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Write failing primary answer tests**
@@ -786,7 +786,7 @@ Expected: PASS.
 **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes docs/designs/specs/04_interaction_state_spec.md docs/designs/specs/10_ditto_shell_family_spec.md docs/designs/specs/11_ditto_page_pattern_library.md scripts/prototype-design-consistency.test.ts
+git add prototype design/specs/04_interaction_state_spec.md design/specs/10_ditto_shell_family_spec.md design/specs/11_ditto_page_pattern_library.md scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): define primary answer contract"
 ```
 
@@ -796,9 +796,9 @@ git commit -m "fix(prototypes): define primary answer contract"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-home.html`
-- Modify: `docs/designs/specs/10_ditto_shell_family_spec.md`
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
+- Modify: `prototype/page-home.html`
+- Modify: `design/specs/10_ditto_shell_family_spec.md`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/run-prototype-gates.ts`
 
@@ -879,7 +879,7 @@ Expected: Home screenshots show one dominant decision surface within first scree
 **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-home.html docs/designs/specs/10_ditto_shell_family_spec.md docs/designs/specs/11_ditto_page_pattern_library.md scripts/prototype-design-consistency.test.ts
+git add prototype/page-home.html design/specs/10_ditto_shell_family_spec.md design/specs/11_ditto_page_pattern_library.md scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): sharpen home primary decision"
 ```
 
@@ -889,12 +889,12 @@ git commit -m "fix(prototypes): sharpen home primary decision"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-backtest-list.html`
-- Modify: `docs/designs/specs/prototypes/page-experiment-list.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-list.html`
-- Modify: `docs/designs/specs/prototypes/page-watchlist.html`
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-backtest-list.html`
+- Modify: `prototype/page-experiment-list.html`
+- Modify: `prototype/page-factor-list.html`
+- Modify: `prototype/page-watchlist.html`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
 - Test: `scripts/prototype-design-consistency.test.ts`
 
 **Step 1: Write failing Catalog subtype tests**
@@ -1003,7 +1003,7 @@ Expected: PASS and screenshots show clear family differences without card clutte
 **Step 9: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-strategy-list.html docs/designs/specs/prototypes/page-backtest-list.html docs/designs/specs/prototypes/page-experiment-list.html docs/designs/specs/prototypes/page-factor-list.html docs/designs/specs/prototypes/page-watchlist.html docs/designs/specs/11_ditto_page_pattern_library.md scripts/prototype-design-consistency.test.ts
+git add prototype/page-strategy-list.html prototype/page-backtest-list.html prototype/page-experiment-list.html prototype/page-factor-list.html prototype/page-watchlist.html design/specs/11_ditto_page_pattern_library.md scripts/prototype-design-consistency.test.ts
 git commit -m "fix(prototypes): differentiate catalog task surfaces"
 ```
 
@@ -1013,11 +1013,11 @@ git commit -m "fix(prototypes): differentiate catalog task surfaces"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/shared/layout-base.css`
 - Modify: active Catalog / Studio / Ops pages where contracts are visible
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
+- Modify: `design/specs/04_interaction_state_spec.md`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
 - Modify: `docs/plans/prototype-to-react-enhancement-backlog.md`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
 
@@ -1116,7 +1116,7 @@ Expected: PASS.
 **Step 8: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes docs/designs/specs/04_interaction_state_spec.md docs/designs/specs/11_ditto_page_pattern_library.md docs/plans/prototype-to-react-enhancement-backlog.md scripts/prototype-interaction-ux-contract.test.ts
+git add prototype design/specs/04_interaction_state_spec.md design/specs/11_ditto_page_pattern_library.md docs/plans/prototype-to-react-enhancement-backlog.md scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "feat(prototypes): add expert efficiency contracts"
 ```
 
@@ -1126,9 +1126,9 @@ git commit -m "feat(prototypes): add expert efficiency contracts"
 
 **Files:**
 
-- Modify: `docs/designs/specs/prototypes/shared/prototype-interactions.js`
-- Modify: `docs/designs/specs/prototypes/shared/layout-base.css`
-- Modify: `docs/designs/specs/prototypes/tokens-style.css`
+- Modify: `prototype/shared/prototype-interactions.js`
+- Modify: `prototype/shared/layout-base.css`
+- Modify: `prototype/tokens-style.css`
 - Modify: active page-local CSS with `transition: all`
 - Test: `scripts/prototype-design-consistency.test.ts`
 - Test: `scripts/prototype-interaction-ux-contract.test.ts`
@@ -1265,7 +1265,7 @@ Expected: PASS.
 **Step 9: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared docs/designs/specs/prototypes/tokens-style.css docs/designs/specs/prototypes/page-*.html scripts/prototype-design-consistency.test.ts scripts/prototype-interaction-ux-contract.test.ts
+git add prototype/shared prototype/tokens-style.css prototype/page-*.html scripts/prototype-design-consistency.test.ts scripts/prototype-interaction-ux-contract.test.ts
 git commit -m "fix(prototypes): improve interaction performance hygiene"
 ```
 
@@ -1275,12 +1275,12 @@ git commit -m "fix(prototypes): improve interaction performance hygiene"
 
 **Files:**
 
-- Modify: `docs/designs/specs/04_interaction_state_spec.md`
-- Modify: `docs/designs/specs/10_ditto_shell_family_spec.md`
-- Modify: `docs/designs/specs/11_ditto_page_pattern_library.md`
-- Modify: `docs/designs/specs/12_ditto_data_views_spec.md`
-- Modify: `docs/designs/specs/14_ditto_token_naming_layering_spec.md`
-- Modify: `docs/designs/specs/20_interaction_ux_audit.md`
+- Modify: `design/specs/04_interaction_state_spec.md`
+- Modify: `design/specs/10_ditto_shell_family_spec.md`
+- Modify: `design/specs/11_ditto_page_pattern_library.md`
+- Modify: `design/specs/12_ditto_data_views_spec.md`
+- Modify: `design/specs/14_ditto_token_naming_layering_spec.md`
+- Modify: `design/specs/20_interaction_ux_audit.md`
 - Create: `docs/plans/2026-05-01-prototype-best-review-remediation-results.md`
 
 **Step 1: Update specs from implemented facts**
@@ -1333,7 +1333,7 @@ Expected:
 **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs docs/plans/2026-05-01-prototype-best-review-remediation-results.md
+git add design/specs docs/plans/2026-05-01-prototype-best-review-remediation-results.md
 git commit -m "docs(prototypes): record best review remediation results"
 ```
 

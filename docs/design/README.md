@@ -7,7 +7,7 @@
 
 | 文档 | 用途 |
 |------|------|
-| [unified-feature-factor-engine/](unified-feature-factor-engine/README.md) | 统一因子/特征引擎设计（表达式编译、物化、IC、PIT 一致性） |
+| [unified-feature-factor-engine/](../../packages/features/docs/design/unified-feature-factor-engine/README.md) | 统一因子/特征引擎设计（表达式编译、物化、IC、PIT 一致性） |
 
 ## 归档设计（旧架构时期）
 

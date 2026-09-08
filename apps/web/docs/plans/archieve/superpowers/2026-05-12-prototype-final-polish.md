@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把 `docs/designs/specs/prototypes` 的发布前 UX 风险收敛到可放行状态：消除首屏交互遮挡、底部/侧栏视窗遮挡、表格数值截断，并把 `page-a-shares` 热力图改成专业 A 股红涨绿跌语义。
+**Goal:** 把 `prototype` 的发布前 UX 风险收敛到可放行状态：消除首屏交互遮挡、底部/侧栏视窗遮挡、表格数值截断，并把 `page-a-shares` 热力图改成专业 A 股红涨绿跌语义。
 
 **Architecture:** 先新增可重复运行的 Vitest + Playwright 回归合同，锁住遮挡、文本 fit、红绿热力图和 impeccable 绝对禁令；再按页面边界做小范围 CSS/HTML 修复。全局只改共享原型 CSS 和原型 HTML，不改 `src/styles/design-tokens/`，避免未批准的 Design Token 变更。
 
@@ -19,7 +19,7 @@
 - `bun run prototype:gates`: active route prototypes 全部通过，但该门禁没有覆盖所有交互目标被覆盖的问题。
 - `bunx vitest run scripts/prototype-design-consistency.test.ts scripts/prototype-final-review-remediation.test.ts scripts/prototype-full-directory-visual-audit.test.ts --testTimeout=180000 --hookTimeout=180000`: 3 files, 116 tests passed。
 - 自定义 Playwright 遮挡扫描发现：29 页 × 5 视窗，56 个记录存在交互遮挡，59 个记录存在文本溢出，3 个 fixed/sticky 越界，0 个全局横向溢出。
-- `bunx impeccable --json --fast docs/designs/specs/prototypes`: `shared/fonts.css` 的 Inter 是 product UI 可接受误报；`shared/layout-components.css:2282` 的 `border-left: 4px solid var(--text-tertiary)` 是真实问题。
+- `bunx impeccable --json --fast prototype`: `shared/fonts.css` 的 Inter 是 product UI 可接受误报；`shared/layout-components.css:2282` 的 `border-left: 4px solid var(--text-tertiary)` 是真实问题。
 - `bun run check`: 150 files, 1803 tests passed。
 
 ## File Structure
@@ -28,29 +28,29 @@
   - 静态合同：禁止 active prototype / shared prototype CSS 中出现有色粗侧边框；要求 `page-a-shares` 使用 OKLCH 红绿 stepped heatmap palette；要求 active root 不保留 superseded root specimen。
 - Create: `scripts/prototype-viewport-obstruction-contract.test.ts`
   - Playwright 合同：在 gate viewports 检查可见交互目标没有被其他层覆盖；检查 fixed/sticky 交互目标不越出视窗；检查关键数据列文本不被压缩到不可读。
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css`
+- Modify: `prototype/shared/layout-components.css`
   - 替换 collapsible rail 的 border triangle；补强 table footer 和 numeric cell 的通用 fit 规则。
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html`
+- Modify: `prototype/page-a-shares.html`
   - 改为 A 股红涨绿跌 stepped OKLCH palette；保留 `▲/▼`、正负号、阈值图例、aria label 的双维表达。
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html`
+- Modify: `prototype/page-strategy-studio.html`
   - 重排 header 策略摘要、删除入口和 action toolbar，消除 `删除策略` 被 action 区覆盖。
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html`
+- Modify: `prototype/page-agent-console-v2.html`
   - 让 top/bottom main 使用明确 grid row contract 和内部滚动，消除 findings / auto research / quality panels 垂直互压。
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html`
+- Modify: `prototype/page-markets-screener.html`
   - 保证 detail rail 不覆盖 table action；让 footer 占据正常 flow；表格右侧 action 留出安全空间。
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html`
+- Modify: `prototype/page-trading-overview.html`
   - 底部 status bar 彻底进入文档流，main/detail scroll area 扣除 status bar 高度。
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html`
+- Modify: `prototype/page-instrument-hub.html`
   - 右 rail section 使用内部滚动和底部安全距离，消除研究项被后续 summary 覆盖。
-- Modify: `docs/designs/specs/prototypes/page-research.html`
+- Modify: `prototype/page-research.html`
   - 修正右 rail queue/run item 宽度和 z-index，避免 `查看回测详情` 被审批队列文本覆盖。
-- Modify: `docs/designs/specs/prototypes/page-markets-intelligence.html`
+- Modify: `prototype/page-markets-intelligence.html`
   - state variant / stale action 不再与右 rail action 互压。
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Modify: `prototype/.edition-manifest.json`
   - 如归档 root superseded `page-agent-console.html`，同步 manifest 中 root specimen 的文件路径或状态说明。
-- Move: `docs/designs/specs/prototypes/page-agent-console.html` → `docs/designs/specs/prototypes/archive/2026-05-12/page-agent-console.html`
+- Move: `prototype/page-agent-console.html` → `prototype/archive/2026-05-12/page-agent-console.html`
   - 仅在 Task 9 执行；它是 superseded specimen，不应继续参与 root 目录发布面扫描。
-- Modify: `docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md`
+- Modify: `design/specs/audits/2026-05-11-prototype-quality-recovery-results.md`
   - 追加本轮修复结果和验证证据。
 
 ## References
@@ -77,7 +77,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 
 const activeSharedCssFiles = [
 	"shared/layout-components.css",
@@ -195,12 +195,12 @@ git commit -m "test: add prototype final polish static contract"
 ## Task 2: Remove Thick Side-Border Accent From Shared Components
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css:2274-2288`
+- Modify: `prototype/shared/layout-components.css:2274-2288`
 - Test: `scripts/prototype-final-polish-contract.test.ts`
 
 - [ ] **Step 1: Replace the triangle side-border pseudo-element**
 
-In `docs/designs/specs/prototypes/shared/layout-components.css`, replace the existing `.rail-section[data-collapsible-strip] .rail-section-header::after` block with this code:
+In `prototype/shared/layout-components.css`, replace the existing `.rail-section[data-collapsible-strip] .rail-section-header::after` block with this code:
 
 ```css
 .rail-section[data-collapsible-strip] .rail-section-header::after {
@@ -248,7 +248,7 @@ Expected: PASS.
 Run:
 
 ```bash
-bunx impeccable --json --fast docs/designs/specs/prototypes/shared/layout-components.css
+bunx impeccable --json --fast prototype/shared/layout-components.css
 ```
 
 Expected: exit code 0 or no `side-tab` finding. If the command still exits with non-zero for a different active finding, capture the JSON output and inspect the reported file/line before changing code.
@@ -256,14 +256,14 @@ Expected: exit code 0 or no `side-tab` finding. If the command still exits with 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared/layout-components.css
+git add prototype/shared/layout-components.css
 git commit -m "fix: remove prototype side accent border"
 ```
 
 ## Task 3: Convert A-Share Heatmap To Red/Green Stepped Palette
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-a-shares.html:386-470`
+- Modify: `prototype/page-a-shares.html:386-470`
 - Test: `scripts/prototype-final-polish-contract.test.ts`
 - Test: `scripts/page-a-shares-prototype.test.ts`
 
@@ -333,7 +333,7 @@ Expected: PASS. This preserves current semantics: `A股：红涨绿跌`, explici
 Run:
 
 ```bash
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-a-shares.html --viewport VP-COMPACT=1366x768 --out-dir test-results/ditto-design-cycle-gates/a-shares-red-green-check
+bun run prototype:gates -- --prototype prototype/page-a-shares.html --viewport VP-COMPACT=1366x768 --out-dir test-results/ditto-design-cycle-gates/a-shares-red-green-check
 ```
 
 Expected: PASS. Inspect `test-results/ditto-design-cycle-gates/a-shares-red-green-check/page-a-shares.html-VP-COMPACT.png`; the sector map should read as muted but unmistakable red/green, not purple/cyan.
@@ -341,7 +341,7 @@ Expected: PASS. Inspect `test-results/ditto-design-cycle-gates/a-shares-red-gree
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-a-shares.html
+git add prototype/page-a-shares.html
 git commit -m "fix: calibrate a-share heatmap red green palette"
 ```
 
@@ -361,7 +361,7 @@ import { join, resolve } from "node:path";
 import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
 const manifestPath = join(prototypesDir, ".edition-manifest.json");
 const navigationTimeoutMs = 15_000;
 const scanTimeoutMs = 180_000;
@@ -780,9 +780,9 @@ git commit -m "test: add prototype viewport obstruction contract"
 ## Task 5: Fix Strategy Studio Header Action Overlap
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html:252-364`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html:1365-1381`
-- Modify: `docs/designs/specs/prototypes/page-strategy-studio.html:2029-2076`
+- Modify: `prototype/page-strategy-studio.html:252-364`
+- Modify: `prototype/page-strategy-studio.html:1365-1381`
+- Modify: `prototype/page-strategy-studio.html:2029-2076`
 - Test: `scripts/prototype-viewport-obstruction-contract.test.ts`
 
 - [ ] **Step 1: Update the header layout CSS**
@@ -926,16 +926,16 @@ Expected: FAIL only for remaining pages; `strategy-studio` must not appear in th
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-strategy-studio.html
+git add prototype/page-strategy-studio.html
 git commit -m "fix: stabilize strategy studio header actions"
 ```
 
 ## Task 6: Fix Agent Console V2 Vertical Panel Collisions
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html:74-92`
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html:522-596`
-- Modify: `docs/designs/specs/prototypes/page-agent-console-v2.html:786-825`
+- Modify: `prototype/page-agent-console-v2.html:74-92`
+- Modify: `prototype/page-agent-console-v2.html:522-596`
+- Modify: `prototype/page-agent-console-v2.html:786-825`
 - Test: `scripts/prototype-viewport-obstruction-contract.test.ts`
 
 - [ ] **Step 1: Give the main panel explicit vertical track ownership**
@@ -1048,17 +1048,17 @@ Expected: FAIL only for remaining pages; `agent-console-v2` must not appear in t
 - [ ] **Step 6: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-agent-console-v2.html
+git add prototype/page-agent-console-v2.html
 git commit -m "fix: contain agent console panel scrolling"
 ```
 
 ## Task 7: Fix Markets Screener Detail Rail And Table Action Overlap
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html:105-130`
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html:1878-1882`
-- Modify: `docs/designs/specs/prototypes/page-markets-screener.html:2585-2588`
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css:1647-1684`
+- Modify: `prototype/page-markets-screener.html:105-130`
+- Modify: `prototype/page-markets-screener.html:1878-1882`
+- Modify: `prototype/page-markets-screener.html:2585-2588`
+- Modify: `prototype/shared/layout-components.css:1647-1684`
 - Test: `scripts/prototype-viewport-obstruction-contract.test.ts`
 
 - [ ] **Step 1: Give the catalog table a right-side safety gutter**
@@ -1168,18 +1168,18 @@ Expected: FAIL only for remaining pages; `markets-screener` must not report tabl
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-markets-screener.html docs/designs/specs/prototypes/shared/layout-components.css
+git add prototype/page-markets-screener.html prototype/shared/layout-components.css
 git commit -m "fix: contain screener detail rail and footer"
 ```
 
 ## Task 8: Normalize Bottom Status Bar Safe Areas
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html:1035-1058`
-- Modify: `docs/designs/specs/prototypes/page-trading-overview.html:1838-1850`
-- Modify: `docs/designs/specs/prototypes/page-instrument-hub.html:602-871`
-- Modify: `docs/designs/specs/prototypes/page-research.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-intelligence.html`
+- Modify: `prototype/page-trading-overview.html:1035-1058`
+- Modify: `prototype/page-trading-overview.html:1838-1850`
+- Modify: `prototype/page-instrument-hub.html:602-871`
+- Modify: `prototype/page-research.html`
+- Modify: `prototype/page-markets-intelligence.html`
 - Test: `scripts/prototype-viewport-obstruction-contract.test.ts`
 
 - [ ] **Step 1: Make `trading-overview` status bar relative from the primary definition**
@@ -1311,15 +1311,15 @@ Expected: `trading-overview`, `instrument-hub`, `research`, `markets-intelligenc
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-instrument-hub.html docs/designs/specs/prototypes/page-research.html docs/designs/specs/prototypes/page-markets-intelligence.html
+git add prototype/page-trading-overview.html prototype/page-instrument-hub.html prototype/page-research.html prototype/page-markets-intelligence.html
 git commit -m "fix: add prototype status and rail safe areas"
 ```
 
 ## Task 9: Archive Superseded Agent Console Root Specimen
 
 **Files:**
-- Move: `docs/designs/specs/prototypes/page-agent-console.html` → `docs/designs/specs/prototypes/archive/2026-05-12/page-agent-console.html`
-- Modify: `docs/designs/specs/prototypes/.edition-manifest.json`
+- Move: `prototype/page-agent-console.html` → `prototype/archive/2026-05-12/page-agent-console.html`
+- Modify: `prototype/.edition-manifest.json`
 - Test: `scripts/prototype-final-polish-contract.test.ts`
 
 - [ ] **Step 1: Move the superseded file**
@@ -1327,15 +1327,15 @@ git commit -m "fix: add prototype status and rail safe areas"
 Run:
 
 ```bash
-mkdir -p docs/designs/specs/prototypes/archive/2026-05-12
-git mv docs/designs/specs/prototypes/page-agent-console.html docs/designs/specs/prototypes/archive/2026-05-12/page-agent-console.html
+mkdir -p prototype/archive/2026-05-12
+git mv prototype/page-agent-console.html prototype/archive/2026-05-12/page-agent-console.html
 ```
 
 Expected: `git status --short` shows one rename.
 
 - [ ] **Step 2: Update the manifest entry**
 
-In `docs/designs/specs/prototypes/.edition-manifest.json`, change the `agent-console` entry to:
+In `prototype/.edition-manifest.json`, change the `agent-console` entry to:
 
 ```json
 {
@@ -1393,24 +1393,24 @@ Expected: PASS.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/.edition-manifest.json docs/designs/specs/prototypes/archive/2026-05-12/page-agent-console.html
+git add prototype/.edition-manifest.json prototype/archive/2026-05-12/page-agent-console.html
 git commit -m "chore: archive superseded agent console prototype"
 ```
 
 ## Task 10: Fix Dense Table Numeric And Label Fit
 
 **Files:**
-- Modify: `docs/designs/specs/prototypes/shared/layout-components.css:1460-1491`
-- Modify: `docs/designs/specs/prototypes/page-backtest-list.html`
-- Modify: `docs/designs/specs/prototypes/page-strategy-list.html`
-- Modify: `docs/designs/specs/prototypes/page-experiment-list.html`
-- Modify: `docs/designs/specs/prototypes/page-factor-list.html`
-- Modify: `docs/designs/specs/prototypes/page-portfolio.html`
-- Modify: `docs/designs/specs/prototypes/page-watchlist.html`
-- Modify: `docs/designs/specs/prototypes/page-strategies-detail.html`
-- Modify: `docs/designs/specs/prototypes/page-platform.html`
-- Modify: `docs/designs/specs/prototypes/page-regime-monitor.html`
-- Modify: `docs/designs/specs/prototypes/page-markets-calendar.html`
+- Modify: `prototype/shared/layout-components.css:1460-1491`
+- Modify: `prototype/page-backtest-list.html`
+- Modify: `prototype/page-strategy-list.html`
+- Modify: `prototype/page-experiment-list.html`
+- Modify: `prototype/page-factor-list.html`
+- Modify: `prototype/page-portfolio.html`
+- Modify: `prototype/page-watchlist.html`
+- Modify: `prototype/page-strategies-detail.html`
+- Modify: `prototype/page-platform.html`
+- Modify: `prototype/page-regime-monitor.html`
+- Modify: `prototype/page-markets-calendar.html`
 - Test: `scripts/prototype-viewport-obstruction-contract.test.ts`
 
 - [ ] **Step 1: Add shared numeric fit utilities**
@@ -1456,7 +1456,7 @@ In `shared/layout-components.css`, replace `.data-table td.numeric` and `.data-t
 
 For each listed file, add a compact column rule inside the existing `<style>` block. Use only the rule that matches the page:
 
-`docs/designs/specs/prototypes/page-backtest-list.html`
+`prototype/page-backtest-list.html`
 
 ```css
     .data-table th:nth-child(2),
@@ -1465,7 +1465,7 @@ For each listed file, add a compact column rule inside the existing `<style>` bl
     .data-table td:nth-child(6) { min-width: 5.5rem; }
 ```
 
-`docs/designs/specs/prototypes/page-strategy-list.html`
+`prototype/page-strategy-list.html`
 
 ```css
     .data-table th:nth-child(2),
@@ -1474,14 +1474,14 @@ For each listed file, add a compact column rule inside the existing `<style>` bl
     .data-table td:nth-child(6) { min-width: 5.5rem; }
 ```
 
-`docs/designs/specs/prototypes/page-experiment-list.html`
+`prototype/page-experiment-list.html`
 
 ```css
     .data-table th:nth-child(6),
     .data-table td:nth-child(6) { min-width: 5.25rem; }
 ```
 
-`docs/designs/specs/prototypes/page-factor-list.html`
+`prototype/page-factor-list.html`
 
 ```css
     .data-table th:nth-child(3),
@@ -1490,7 +1490,7 @@ For each listed file, add a compact column rule inside the existing `<style>` bl
     .data-table td:nth-child(5) { min-width: 5.25rem; }
 ```
 
-`docs/designs/specs/prototypes/page-portfolio.html`
+`prototype/page-portfolio.html`
 
 ```css
     .data-table th:nth-child(1),
@@ -1505,7 +1505,7 @@ For each listed file, add a compact column rule inside the existing `<style>` bl
     .data-table td:nth-child(11) { min-width: 6.5rem; }
 ```
 
-`docs/designs/specs/prototypes/page-watchlist.html`
+`prototype/page-watchlist.html`
 
 ```css
     .data-table th:nth-child(4),
@@ -1516,14 +1516,14 @@ For each listed file, add a compact column rule inside the existing `<style>` bl
     .data-table td:nth-child(8) { min-width: 6.5rem; }
 ```
 
-`docs/designs/specs/prototypes/page-strategies-detail.html`
+`prototype/page-strategies-detail.html`
 
 ```css
     .data-table th:nth-child(2),
     .data-table td:nth-child(2) { min-width: 9rem; }
 ```
 
-`docs/designs/specs/prototypes/page-platform.html`
+`prototype/page-platform.html`
 
 ```css
     .data-table th:nth-child(1),
@@ -1532,7 +1532,7 @@ For each listed file, add a compact column rule inside the existing `<style>` bl
     .data-table td:nth-child(4) { min-width: 4rem; }
 ```
 
-`docs/designs/specs/prototypes/page-regime-monitor.html`
+`prototype/page-regime-monitor.html`
 
 ```css
     .regime-strip-metric {
@@ -1541,7 +1541,7 @@ For each listed file, add a compact column rule inside the existing `<style>` bl
     }
 ```
 
-`docs/designs/specs/prototypes/page-markets-calendar.html`
+`prototype/page-markets-calendar.html`
 
 ```css
     .calendar-reading-value {
@@ -1565,9 +1565,9 @@ Expected: PASS.
 Run:
 
 ```bash
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-portfolio.html --viewport VP-COMPACT=1366x768 --out-dir test-results/ditto-design-cycle-gates/portfolio-fit-check
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-factor-list.html --viewport VP-NARROW=1200x800 --out-dir test-results/ditto-design-cycle-gates/factor-list-fit-check
-bun run prototype:gates -- --prototype docs/designs/specs/prototypes/page-watchlist.html --viewport VP-NARROW=1200x800 --out-dir test-results/ditto-design-cycle-gates/watchlist-fit-check
+bun run prototype:gates -- --prototype prototype/page-portfolio.html --viewport VP-COMPACT=1366x768 --out-dir test-results/ditto-design-cycle-gates/portfolio-fit-check
+bun run prototype:gates -- --prototype prototype/page-factor-list.html --viewport VP-NARROW=1200x800 --out-dir test-results/ditto-design-cycle-gates/factor-list-fit-check
+bun run prototype:gates -- --prototype prototype/page-watchlist.html --viewport VP-NARROW=1200x800 --out-dir test-results/ditto-design-cycle-gates/watchlist-fit-check
 ```
 
 Expected: all PASS. Inspect screenshots for horizontal table scroll inside the table region, not page-level horizontal overflow.
@@ -1575,14 +1575,14 @@ Expected: all PASS. Inspect screenshots for horizontal table scroll inside the t
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/designs/specs/prototypes/shared/layout-components.css docs/designs/specs/prototypes/page-backtest-list.html docs/designs/specs/prototypes/page-strategy-list.html docs/designs/specs/prototypes/page-experiment-list.html docs/designs/specs/prototypes/page-factor-list.html docs/designs/specs/prototypes/page-portfolio.html docs/designs/specs/prototypes/page-watchlist.html docs/designs/specs/prototypes/page-strategies-detail.html docs/designs/specs/prototypes/page-platform.html docs/designs/specs/prototypes/page-regime-monitor.html docs/designs/specs/prototypes/page-markets-calendar.html
+git add prototype/shared/layout-components.css prototype/page-backtest-list.html prototype/page-strategy-list.html prototype/page-experiment-list.html prototype/page-factor-list.html prototype/page-portfolio.html prototype/page-watchlist.html prototype/page-strategies-detail.html prototype/page-platform.html prototype/page-regime-monitor.html prototype/page-markets-calendar.html
 git commit -m "fix: preserve dense prototype table readability"
 ```
 
 ## Task 11: Full Verification And Audit Record
 
 **Files:**
-- Modify: `docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md`
+- Modify: `design/specs/audits/2026-05-11-prototype-quality-recovery-results.md`
 - Test: full prototype and project checks
 
 - [ ] **Step 1: Run all final polish contracts**
@@ -1620,7 +1620,7 @@ Expected: PASS for every active route prototype.
 Run:
 
 ```bash
-bunx impeccable --json --fast docs/designs/specs/prototypes
+bunx impeccable --json --fast prototype
 ```
 
 Expected: no `side-tab`, `gradient-text`, or active route layout findings. `overused-font` for `shared/fonts.css` is acceptable in this product UI because `DESIGN.md` explicitly defines Inter / Geist / JetBrains Mono as the typography system.
@@ -1637,7 +1637,7 @@ Expected: biome, TypeScript, and Vitest all pass.
 
 - [ ] **Step 6: Append audit evidence**
 
-Append this section to `docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md`:
+Append this section to `design/specs/audits/2026-05-11-prototype-quality-recovery-results.md`:
 
 ```md
 ## 2026-05-12 Final Polish Verification
@@ -1654,7 +1654,7 @@ Verification:
 - `bunx vitest run scripts/prototype-final-polish-contract.test.ts scripts/prototype-viewport-obstruction-contract.test.ts --testTimeout=180000 --hookTimeout=180000`: PASS.
 - `bunx vitest run scripts/prototype-design-consistency.test.ts scripts/prototype-final-review-remediation.test.ts scripts/prototype-full-directory-visual-audit.test.ts scripts/page-a-shares-prototype.test.ts --testTimeout=180000 --hookTimeout=180000`: PASS.
 - `bun run prototype:gates`: PASS for every active route prototype.
-- `bunx impeccable --json --fast docs/designs/specs/prototypes`: no active blocking design anti-patterns; product typography detector warning for Inter accepted by `DESIGN.md`.
+- `bunx impeccable --json --fast prototype`: no active blocking design anti-patterns; product typography detector warning for Inter accepted by `DESIGN.md`.
 - `bun run check`: PASS.
 
 Release UX delta:
@@ -1668,7 +1668,7 @@ Release UX delta:
 - [ ] **Step 7: Commit**
 
 ```bash
-git add docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md scripts/prototype-final-polish-contract.test.ts scripts/prototype-viewport-obstruction-contract.test.ts
+git add design/specs/audits/2026-05-11-prototype-quality-recovery-results.md scripts/prototype-final-polish-contract.test.ts scripts/prototype-viewport-obstruction-contract.test.ts
 git commit -m "docs: record prototype final polish verification"
 ```
 

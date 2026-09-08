@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-experiment-list
+  Edition: v1
+  Generated: 2026-04-21
+
+  Tabs: 0 (Experiment List 无 tab 系统)
+
+  Overlays: 1
+  - overlay-experiment-detail (Drawer: 实验详情) [covered]
+
+  State Variants: 3 components x 2-6 states
+  - filter-bar: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[covered] bulk[n/a]
+  - experiment-summary: default[covered] loading[n/a] empty[n/a] failed[n/a] stale[covered] selected[n/a] bulk[n/a]
+  - experiment-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[n/a]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Research / Experiments</title>
+
+  <link rel="stylesheet" href="shared/fonts.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    .style-label {
+      position: fixed; top: var(--space-8); right: var(--space-8); z-index: 999;
+      font-family: var(--font-family-ui); font-size: var(--font-size-10);
+      color: var(--brand-signature-fg); background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle); padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4); pointer-events: none; letter-spacing: 0.02em;
+    }
+    .header-subtitle { font-size: var(--font-size-12); font-weight: var(--font-weight-regular); color: var(--text-tertiary); margin-left: var(--space-8); letter-spacing: 0.01em; }
+    .header-title-group { display: flex; align-items: baseline; }
+    .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 1 auto;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1200px) {
+      .filter-toolbar {
+        gap: var(--space-6);
+        overflow: hidden;
+      }
+
+      .filter-divider {
+        display: none;
+      }
+
+      .filter-group {
+        min-width: 0;
+        gap: var(--space-4);
+        flex: 0 1 auto;
+      }
+
+      .filter-search {
+        width: 140px;
+      }
+
+      .filter-chip {
+        min-width: 0;
+        max-width: 8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .filter-spacer {
+        min-width: var(--space-8);
+        flex: 1 1 var(--space-8);
+      }
+
+      .filter-count {
+        flex: 0 0 auto;
+        max-width: 7rem;
+      }
+    }
+
+    .catalog-table-inner { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+    .catalog-table-inner .table-container { flex: 1; overflow-y: auto; background: var(--surface-app); }
+    .catalog-table-inner .table-footer { flex-shrink: 0; }
+
+    /* ── Experiment status pill ── */
+    .exp-status {
+      display: inline-flex; align-items: center; font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium); padding: 1px var(--space-8);
+      border-radius: var(--radius-12); white-space: nowrap;
+    }
+    .exp-status.running { background: var(--brand-accent-subtle); color: var(--brand-accent); }
+    .exp-status.completed { background: var(--system-healthy-bg); color: var(--system-healthy-fg); }
+    .exp-status.significant { background: var(--market-up-bg); color: var(--market-up-fg); }
+    .exp-status.insignificant { background: var(--interaction-hover-subtle-bg); color: var(--text-tertiary); }
+    .exp-status.failed { background: var(--system-down-bg); color: var(--system-down-fg); }
+    .exp-status.draft { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+
+    /* ── Significance indicator ── */
+    .sig-indicator {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-10); font-weight: var(--font-weight-medium);
+    }
+    .sig-indicator.high { color: var(--market-up-fg); }
+    .sig-indicator.medium { color: var(--risk-medium-fg); }
+    .sig-indicator.low { color: var(--text-tertiary); }
+    .sig-indicator::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+    }
+    .sig-indicator.high::before { background: var(--market-up-fg); }
+    .sig-indicator.medium::before { background: var(--risk-medium-fg); }
+    .sig-indicator.low::before { background: var(--text-tertiary); }
+
+    /* ── Overlay activation ── */
+    :root:has(#overlay-experiment-detail:checked) [data-overlay="overlay-experiment-detail"] { display: flex; }
+    .overlay-close { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: var(--font-size-16); padding: var(--space-2); line-height: 1; }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    .state-variant .state-variant-content { background: var(--surface-app); }
+    .data-table tr.row.selected { background: color-mix(in oklch, var(--brand-accent) 5%, transparent); }
+    .data-table tr.row.selected td:first-child { box-shadow: inset 0 0 0 1px var(--interaction-selected-border); }
+
+    .stale-banner { padding: var(--space-12); display: flex; align-items: center; gap: var(--space-6); }
+    .stale-dot-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--system-degraded-fg); display: inline-block; flex-shrink: 0; }
+    .stale-banner-text { font-size: var(--font-size-12); color: var(--system-degraded-fg); }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header    header"
+        "rail toolbar toolbar   toolbar"
+        "rail summary separator detail"
+        "rail table   separator detail";
+      contain: paint;
+    }
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-catalog .catalog-detail { box-shadow: none; }
+
+    .experiment-summary {
+      grid-area: summary;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: center;
+      gap: var(--space-12);
+      padding: var(--space-6) var(--density-gutter);
+      background: var(--surface-strip);
+      border-bottom: 1px solid var(--border-subtle);
+      min-height: var(--density-strip-height);
+    }
+    .experiment-summary-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      min-width: 0;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .experiment-summary-item .es-label { white-space: nowrap; }
+    .experiment-summary-item .es-value {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+    .experiment-summary-item .es-value.positive { color: var(--system-healthy-fg); }
+    .experiment-summary-item .es-value.negative { color: var(--system-down-fg); }
+
+    .experiment-name-stack { display: flex; flex-direction: column; gap: 1px; }
+    .experiment-name-stack .cell-ticker { line-height: 1.2; }
+    .experiment-meta { color: var(--text-tertiary); font-size: var(--font-size-10); line-height: 1.2; }
+    .metric-delta { margin-right: var(--space-4); color: currentColor; font-size: var(--font-size-10); }
+    .metric-pending { color: var(--text-tertiary); }
+    .data-table tr.row { cursor: pointer; }
+    .data-table tr.row:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+    .col-exp-name { width: 21%; }
+    .col-exp-status { width: 8%; }
+    .col-exp-control,
+    .col-exp-variant { width: 14%; }
+    .col-exp-delta,
+    .col-exp-sig { width: 9%; }
+    .col-exp-created { width: 11%; }
+    .col-exp-action { width: 7%; }
+
+    .exp-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      margin-right: var(--space-4);
+      opacity: 0.78;
+    }
+
+    .row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-6); }
+    .row-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 0 var(--space-6);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-12);
+    }
+    .row-action:hover { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .row-action.primary { color: var(--brand-accent); }
+
+    .catalog-detail .context-section { flex: 0 0 auto; }
+    .catalog-detail .context-section-body { flex: 0 0 auto; overflow: visible; }
+    .detail-hero {
+      display: grid;
+      gap: var(--space-10);
+      padding: var(--space-2) 0 var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .detail-ticker {
+      font-size: var(--font-size-20);
+      line-height: 1.15;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .detail-live-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      min-height: 24px;
+      padding: 0 var(--space-8);
+      border-radius: var(--radius-12);
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      justify-self: start;
+    }
+    .detail-live-chip::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: var(--data-freshness-live);
+    }
+    .detail-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); }
+    .detail-kpi {
+      padding: var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-muted);
+    }
+    .detail-kpi-label { display: block; color: var(--text-tertiary); font-size: var(--font-size-10); }
+    .detail-kpi-value {
+      display: block;
+      margin-top: var(--space-2);
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+    }
+    .result-sparkline {
+      width: 100%;
+      height: 56px;
+      color: var(--brand-accent);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .result-sparkline .spark-area { fill: color-mix(in oklch, var(--brand-accent) 12%, transparent); }
+    .result-sparkline .spark-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .decision-bars { display: grid; gap: var(--space-8); }
+    .decision-row { display: grid; grid-template-columns: 72px 1fr 46px; gap: var(--space-8); align-items: center; font-size: var(--font-size-11); color: var(--text-tertiary); }
+    .decision-track { height: 4px; border-radius: var(--radius-4); background: var(--surface-muted); overflow: hidden; }
+    .decision-fill { height: 100%; background: color-mix(in oklch, var(--brand-accent) 64%, transparent); border-radius: inherit; }
+    .decision-fill.w-96 { width: 96%; }
+    .decision-fill.w-88 { width: 88%; }
+    .decision-fill.w-74 { width: 74%; }
+    .detail-actions { display: grid; gap: var(--space-8); }
+    .detail-actions .btn,
+    .detail-actions .row-action { width: 100%; }
+    .detail-actions .row-action {
+      border: 1px solid var(--border-default);
+      color: var(--text-secondary);
+    }
+    .detail-actions .row-action:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+
+    .overlays .overlay-backdrop { justify-content: flex-end; }
+    .overlays .overlay-surface {
+      height: 100dvh;
+      max-height: 100dvh;
+      border-radius: var(--radius-8) 0 0 var(--radius-8);
+    }
+    .ov-label-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; }
+
+    @media (max-height: 800px) {
+      .catalog-detail .context-section-header { padding-block: var(--space-6); }
+      .detail-kpi { padding: var(--space-6); }
+      .result-sparkline { height: 46px; }
+      .decision-bars { gap: var(--space-6); }
+      .detail-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .detail-actions .btn,
+      .detail-actions .row-action { width: auto; }
+    }
+
+    /* ── Confidence micro-bar width utilities ── */
+    .bar-w-68 .micro-bar-fill { width: 68%; }
+    .bar-w-79 .micro-bar-fill { width: 79%; }
+    .bar-w-96 .micro-bar-fill { width: 96%; }
+    .bar-w-99 .micro-bar-fill { width: 99%; }
+    .bar-w-100 .micro-bar-fill { width: 100%; }
+
+    @media (prefers-reduced-motion: reduce) { .btn { transition: none !important; } }
+    .data-table th:nth-child(6),
+    .data-table td:nth-child(6) { min-width: 5.25rem; }
+  </style>
+</head>
+<body>
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <input type="checkbox" id="overlay-experiment-detail" class="overlay-radio sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+    <a class="skip-link" href="#main-content">跳至主要内容</a>
+    <div class="style-label" aria-hidden="true">Graphite Studio — 实验列表 · Compact · A股</div>
+
+    <div class="shell-catalog catalog-shell" data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
+      <!-- ═══ Rail ═══ -->
+      <nav class="shell-rail" aria-label="主导航">
+        <div class="rail-logo">D</div>
+        <div class="rail-nav">
+          <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+          <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+          <a class="rail-icon active" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+          <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+          <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+        </div>
+
+      </nav>
+
+      <!-- ═══ Header ═══ -->
+      <header class="shell-header" role="toolbar" aria-label="实验列表工具栏">
+        <div class="header-title-group">
+          <h1 class="header-title">实验列表</h1>
+          <span class="header-subtitle">Research · Experiments</span>
+        </div>
+        <div class="header-spacer"></div>
+        <div class="header-btn-group">
+          <button class="btn btn-primary">新建实验</button>
+        </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+      <!-- ═══ Filter Toolbar ═══ -->
+      <div class="filter-toolbar" data-contract-slot="header">
+        <div class="filter-group">
+          <span class="filter-label">搜索:</span>
+          <input type="text" class="filter-search" placeholder="搜索实验名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索实验名称...">
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">状态:</span>
+          <button class="filter-chip active">全部</button>
+          <button class="filter-chip">运行中</button>
+          <button class="filter-chip">显著</button>
+          <button class="filter-chip">不显著</button>
+          <button class="filter-chip">失败</button>
+          <button class="filter-chip">草稿</button>
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">显著性:</span>
+          <button class="filter-chip active">全部</button>
+          <button class="filter-chip">p < 0.01</button>
+          <button class="filter-chip">p < 0.05</button>
+          <button class="filter-chip">p > 0.05</button>
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <span class="filter-label">时间:</span>
+          <button class="filter-chip active">近 30 日</button>
+          <button class="filter-chip">本季度</button>
+          <button class="filter-chip">全部</button>
+        </div>
+        <div class="filter-spacer"></div>
+        <span class="filter-count" data-active-filters-summary>共 <span>10 个实验</span></span>
+      </div>
+
+      <!-- ═══ Experiment Summary ═══ -->
+      <div class="experiment-summary" data-primary-answer-equivalent data-primary-weight="dominant" data-catalog-task="experiment-result-matrix" aria-label="实验运行摘要，影响范围：当前实验列表筛选结果">
+        <div class="experiment-summary-item" data-answer-evidence>
+          <span class="es-label" data-answer-judgment>胜出参数</span>
+          <span class="es-value positive" data-answer-metric>4</span>
+        </div>
+        <div class="experiment-summary-item" data-answer-evidence>
+          <span class="es-label">参数稳定性</span>
+          <span class="es-value positive">高</span>
+        </div>
+        <div class="experiment-summary-item" data-answer-evidence>
+          <span class="es-label">显著性</span>
+          <span class="es-value">p&lt;0.05</span>
+        </div>
+        <div class="experiment-summary-item">
+          <span class="es-label">待复核</span>
+          <span class="es-value">3 · 失败原因: 数据漂移</span>
+        </div>
+        <div class="experiment-summary-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看胜出实验">
+          <span class="es-label">查看胜出</span>
+          <span class="es-value positive">+1.21pp</span>
+        </div>
+      </div>
+
+      <!-- ═══ Main Table Area ═══ -->
+      <div class="catalog-table" data-contract-slot="main" data-selected-object-region data-secondary-context>
+        <div class="catalog-table-inner" id="main-content">
+          <div class="table-container">
+            <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="实验列表">
+              <caption class="sr-only">实验列表：共 10 个实验</caption>
+              <colgroup>
+                <col class="col-exp-name">
+                <col class="col-exp-status">
+                <col class="col-exp-control">
+                <col class="col-exp-variant">
+                <col class="col-exp-delta">
+                <col class="col-exp-sig">
+                <col class="col-exp-created">
+                <col class="col-exp-action">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" class="sorted">名称 <span class="sort-icon">▲</span></th>
+                  <th scope="col">状态</th>
+                  <th scope="col">对照组</th>
+                  <th scope="col">实验组</th>
+                  <th scope="col" class="right">指标差异 <span class="sort-icon"></span></th>
+                  <th scope="col">显著性</th>
+                  <th scope="col" class="right">创建时间</th>
+                  <th scope="col" class="right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="row selected" data-row-selection-marker tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">MOM 因子衰减测试</span>
+                      <span class="experiment-meta">IC Mean · 252 交易日 · 负责人 Chen</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status significant">显著</span></td>
+                  <td>MOM_20D · 当前</td>
+                  <td>MOM_20D_v2 · 加权</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.018</td>
+                  <td><span class="sig-indicator high">p=0.003</span><span class="micro-bar bar-w-100"><span class="micro-bar-fill up"></span></span></td>
+                  <td class="right numeric">2026-04-20</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action primary">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">质量因子多空组合</span>
+                      <span class="experiment-meta">多空组合 · 180 交易日 · 负责人 Lin</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status significant">显著</span></td>
+                  <td>ROE_STABLE · 多头</td>
+                  <td>ROE_STABLE · 多空</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.024</td>
+                  <td><span class="sig-indicator high">p=0.001</span><span class="micro-bar bar-w-100"><span class="micro-bar-fill up"></span></span></td>
+                  <td class="right numeric">2026-04-19</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action primary">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">EP 因子去极值</span>
+                      <span class="experiment-meta">去极值 · 252 交易日 · 负责人 Qiao</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status significant">显著</span></td>
+                  <td>EP_TTM · 原始</td>
+                  <td>EP_TTM · 3-sigma</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.012</td>
+                  <td><span class="sig-indicator high">p=0.008</span><span class="micro-bar bar-w-99"><span class="micro-bar-fill up"></span></span></td>
+                  <td class="right numeric">2026-04-18</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action primary">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">低波动过滤阈值</span>
+                      <span class="experiment-meta">风险过滤 · 120 交易日 · 负责人 Zhang</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status completed">完成</span></td>
+                  <td>VOL_FILTER · 30%</td>
+                  <td>VOL_FILTER · 20%</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.009</td>
+                  <td><span class="sig-indicator medium">p=0.041</span><span class="micro-bar bar-w-96"><span class="micro-bar-fill up"></span></span></td>
+                  <td class="right numeric">2026-04-18</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">换手率因子频率</span>
+                      <span class="experiment-meta">刷新频率 · 90 交易日 · 负责人 Gao</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status running">运行中</span></td>
+                  <td>TURNOVER · 日频</td>
+                  <td>TURNOVER · 周频</td>
+                  <td class="right numeric metric-pending">--</td>
+                  <td><span class="sig-indicator medium">计算中</span></td>
+                  <td class="right numeric">2026-04-17</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">波动率因子替换</span>
+                      <span class="experiment-meta">代理替换 · 252 交易日 · 负责人 Wang</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status insignificant">不显著</span></td>
+                  <td>VOL_20D</td>
+                  <td>GVOL_60D</td>
+                  <td class="right numeric"><span class="metric-delta">▲</span>+0.005</td>
+                  <td><span class="sig-indicator low">p=0.32</span><span class="micro-bar bar-w-68"><span class="micro-bar-fill neutral"></span></span></td>
+                  <td class="right numeric">2026-04-16</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">成长因子窗口</span>
+                      <span class="experiment-meta">回看窗口 · 未运行 · 负责人 He</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status draft">草稿</span></td>
+                  <td>GROWTH_REV · 1Q</td>
+                  <td>GROWTH_REV · 4Q</td>
+                  <td class="right numeric metric-pending">--</td>
+                  <td><span class="sig-indicator low">待运行</span></td>
+                  <td class="right numeric">2026-04-15</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">行业中性约束</span>
+                      <span class="experiment-meta">中性化 · 160 交易日 · 负责人 Liu</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status failed">失败</span></td>
+                  <td>IND_NEUTRAL · off</td>
+                  <td>IND_NEUTRAL · on</td>
+                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-0.006</td>
+                  <td><span class="sig-indicator low">样本缺失</span></td>
+                  <td class="right numeric">2026-04-14</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">成交额过滤窗口</span>
+                      <span class="experiment-meta">流动性 · 120 交易日 · 负责人 Zhao</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status running">运行中</span></td>
+                  <td>ADV_20D</td>
+                  <td>ADV_60D</td>
+                  <td class="right numeric metric-pending">--</td>
+                  <td><span class="sig-indicator medium">计算中</span></td>
+                  <td class="right numeric">2026-04-13</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="experiment-name-stack">
+                      <span class="cell-ticker">红利因子滞后处理</span>
+                      <span class="experiment-meta">滞后测试 · 252 交易日 · 负责人 Sun</span>
+                    </div>
+                  </td>
+                  <td><span class="exp-status completed">完成</span></td>
+                  <td>DIV_YIELD · T+0</td>
+                  <td>DIV_YIELD · T+2</td>
+                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-0.002</td>
+                  <td><span class="sig-indicator low">p=0.21</span><span class="micro-bar bar-w-79"><span class="micro-bar-fill neutral"></span></span></td>
+                  <td class="right numeric">2026-04-12</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <div class="table-footer-info">
+              <span>共 10 个实验</span>
+              <span>4 显著 · 2 运行中 · 1 失败 · 3 待复核</span>
+            </div>
+            <div class="table-footer-actions">
+              <span class="pagination-ellipsis">1 / 2</span>
+            </div>
+          </div>
+          <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
+        </div>
+      </div>
+
+      <!-- ═══ Detail Panel ═══ -->
+      <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320" aria-valuetext="调整详情面板宽度 320 像素"></div>
+
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
+        <div class="context-section" data-collapse-priority="l1">
+          <div class="context-section-header">
+            <span class="context-section-title">胜出参数</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-hero">
+              <span class="detail-live-chip">可采纳 · 已复核</span>
+              <div class="detail-ticker">MOM 因子衰减测试</div>
+              <div class="detail-meta">
+                <span><span class="meta-label">负责人</span><span class="meta-value">Chen</span></span>
+                <span><span class="meta-label">样本</span><span class="meta-value">252 日</span></span>
+                <span><span class="meta-label">失败原因</span><span class="meta-value">1 组成本约束</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">关键结果</span>
+            <span class="collapse-count">4 指标</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="detail-kpi-grid">
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">IC Mean uplift</span>
+                <span class="detail-kpi-value">+0.018</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">p value</span>
+                <span class="detail-kpi-value">0.003</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">t-stat</span>
+                <span class="detail-kpi-value">3.12</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">effect size</span>
+                <span class="detail-kpi-value">0.42</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <details class="context-section" data-collapse-priority="l3">
+          <summary class="context-section-header">
+            <span class="context-section-title">结果轨迹</span>
+            <span class="collapse-count">1 趋势</span>
+            <span class="collapse-summary">IC 差异走势</span>
+          </summary>
+          <div class="context-section-body">
+            <svg class="result-sparkline" viewBox="0 0 240 58" role="img" aria-label="IC 差异走势">
+              <path class="spark-area" d="M0 46 L0 36 L24 35 L48 30 L72 33 L96 25 L120 23 L144 20 L168 18 L192 14 L216 16 L240 10 L240 46 Z"></path>
+              <path class="spark-line" d="M0 36 L24 35 L48 30 L72 33 L96 25 L120 23 L144 20 L168 18 L192 14 L216 16 L240 10"></path>
+            </svg>
+          </div>
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">参数稳定性 / 显著性</span>
+            <span class="collapse-count">3 项</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="decision-bars">
+              <div class="decision-row">
+                <span>显著性</span>
+                <span class="decision-track"><span class="decision-fill w-96"></span></span>
+                <span>96%</span>
+              </div>
+              <div class="decision-row">
+                <span>稳定性</span>
+                <span class="decision-track"><span class="decision-fill w-88"></span></span>
+                <span>88%</span>
+              </div>
+              <div class="decision-row">
+                <span>成本约束</span>
+                <span class="decision-track"><span class="decision-fill w-74"></span></span>
+                <span>74%</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
+          <div class="context-section-header">
+            <span class="context-section-title">操作</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-actions">
+              <button class="btn btn-primary">应用变更</button>
+              <label for="overlay-experiment-detail" class="row-action primary">打开详情</label>
+              <button class="btn">克隆实验</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="overlays" aria-hidden="true">
+      <div class="overlay-backdrop" data-overlay="overlay-experiment-detail">
+        <label class="overlay-dismiss" for="overlay-experiment-detail" aria-label="关闭"></label>
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="实验详情">
+          <div class="overlay-header">
+            <span class="overlay-title">实验详情：MOM 因子衰减测试</span>
+            <label for="overlay-experiment-detail" class="overlay-close" aria-label="关闭">×</label>
+          </div>
+          <div class="overlay-body">
+            <h2>实验配置</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">对照组</span>
+              <span class="overlay-field-value">MOM_20D · 当前</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">实验组</span>
+              <span class="overlay-field-value">MOM_20D_v2 · 加权</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">评估指标</span>
+              <span class="overlay-field-value">IC Mean</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">样本区间</span>
+              <span class="overlay-field-value">2025-04 ~ 2026-04</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">样本量</span>
+              <span class="overlay-field-value">252 个交易日</span>
+            </div>
+
+            <h2>统计结果</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">指标差异</span>
+              <span class="overlay-field-value">+0.018</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">t 统计量</span>
+              <span class="overlay-field-value">3.12</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">p 值</span>
+              <span class="overlay-field-value">0.003</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">结论</span>
+              <span class="overlay-field-value">显著，可进入因子版本评审</span>
+            </div>
+
+            <h2>IC 分布对比</h2>
+            <div class="skeleton skeleton-chart"></div>
+
+            <div class="overlay-actions">
+              <label for="overlay-experiment-detail" class="overlay-btn overlay-btn-secondary ov-label-btn">关闭</label>
+              <button class="overlay-btn overlay-btn-primary">应用变更</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ States Gallery ═══ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="filter-bar">
+        <div class="gallery-group__label">筛选工具栏</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Default State</div>
+            <div class="gallery-card__preview">
+              <div class="filter-toolbar">
+                <div class="filter-group">
+                  <span class="filter-label">状态:</span>
+                  <button class="filter-chip active">全部</button>
+                  <button class="filter-chip">显著</button>
+                  <button class="filter-chip">运行中</button>
+                </div>
+                <div class="filter-spacer"></div>
+                <span class="filter-count">10 个实验</span>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+                <div class="state-empty-icon">0</div>
+                <div class="state-empty-title">无筛选结果</div>
+                <div class="state-empty-desc">调整状态、显著性或时间范围后重试</div>
+                <button class="state-empty-cta">清除筛选</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="filter-toolbar">
+                <div class="filter-group">
+                  <span class="filter-label">状态:</span>
+                  <button class="filter-chip">全部</button>
+                  <button class="filter-chip active">显著</button>
+                  <button class="filter-chip">运行中</button>
+                </div>
+                <div class="filter-spacer"></div>
+                <span class="filter-count">4 个显著实验</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="experiment-summary">
+        <div class="gallery-group__label">实验运行摘要</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Default State</div>
+            <div class="gallery-card__preview">
+              <div class="experiment-summary">
+                <div class="experiment-summary-item">
+                  <span class="es-label">显著可采纳</span>
+                  <span class="es-value positive">4</span>
+                </div>
+                <div class="experiment-summary-item">
+                  <span class="es-label">运行中</span>
+                  <span class="es-value">2</span>
+                </div>
+                <div class="experiment-summary-item">
+                  <span class="es-label">平均 uplift</span>
+                  <span class="es-value positive">+1.21pp</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Stale State</div>
+            <div class="gallery-card__preview">
+              <div class="stale-banner">
+                <span class="stale-dot-indicator"></span>
+                <span class="stale-banner-text">3 个实验结果超过 24 小时未刷新</span>
+                <button class="btn btn-sm">刷新</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="experiment-table">
+        <div class="gallery-group__label">实验表格</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Default State</div>
+            <div class="gallery-card__preview">
+              <table class="data-table" aria-label="实验表格默认状态">
+                <tbody>
+                  <tr class="row selected">
+                    <td class="cell-ticker">MOM 因子衰减测试</td>
+                    <td><span class="exp-status significant">显著</span></td>
+                    <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.018</td>
+                  </tr>
+                  <tr class="row">
+                    <td class="cell-ticker">换手率因子频率</td>
+                    <td><span class="exp-status running">运行中</span></td>
+                    <td class="right numeric metric-pending">--</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">🧪</div>
+                  <div class="state-empty-title">暂无实验</div>
+                  <div class="state-empty-desc">还没有创建任何实验，点击下方按钮开始验证你的假设</div>
+                  <button class="state-empty-cta">新建实验</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">实验列表加载失败</div>
+                  <div class="state-error-desc">无法获取实验数据，请稍后重试</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Stale State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="stale">
+                <div class="stale-banner">
+                  <span class="stale-dot-indicator"></span>
+                  <span class="stale-banner-text">实验结果可能已过期 · 运行中的实验状态需刷新</span>
+                  <button class="btn btn-sm">刷新</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="selected">
+                <div class="sv-bulk-card">
+                  <div class="sv-bulk-title">MOM因子衰减测试 · p=0.003</div>
+                  <label for="overlay-experiment-detail" class="row-action primary">打开详情</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Overlays Gallery ═══ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层设计</div>
+        <div class="gallery-cards">
+
+          <div class="gallery-card" data-overlay-ref="overlay-experiment-detail">
+            <div class="gallery-card__label">实验详情 (Drawer)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="实验详情">
+                <div class="overlay-header">
+                  <span class="overlay-title">实验详情：MOM因子衰减测试</span>
+                  <button class="overlay-close" aria-label="关闭">x</button>
+                </div>
+                <div class="overlay-body">
+                  <h2>实验配置</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">对照组</span>
+                    <span class="overlay-field-value">MOM_20D (当前)</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">实验组</span>
+                    <span class="overlay-field-value">MOM_20D_v2 (加权)</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">评估指标</span>
+                    <span class="overlay-field-value">IC Mean</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">样本区间</span>
+                    <span class="overlay-field-value">2025-04 ~ 2026-04</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">样本量</span>
+                    <span class="overlay-field-value">252 个交易日</span>
+                  </div>
+
+                  <h2>统计结果</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">指标差异</span>
+                    <span class="overlay-field-value">+0.018</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">t 统计量</span>
+                    <span class="overlay-field-value">3.12</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">p 值</span>
+                    <span class="overlay-field-value">0.003</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">效应量 (Cohen's d)</span>
+                    <span class="overlay-field-value">0.42</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">结论</span>
+                    <span class="overlay-field-value">显著，可进入因子版本评审</span>
+                  </div>
+
+                  <h2>IC 分布对比</h2>
+                  <div class="skeleton skeleton-chart"></div>
+
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">关闭</button>
+                    <button class="overlay-btn overlay-btn-primary">应用变更</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+  <script src="shared/theme-switcher.js"></script>
+</body>
+</html>

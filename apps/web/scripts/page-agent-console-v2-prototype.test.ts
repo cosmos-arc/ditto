@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-agent-console-v2.html",
+	"../prototype/page-agent-console-v2.html",
 );
 const railDomains = ["home", "markets", "research", "trading", "platform"] as const;
 

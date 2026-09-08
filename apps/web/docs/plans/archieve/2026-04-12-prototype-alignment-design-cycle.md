@@ -115,6 +115,6 @@
 
 ## 原型参考
 
-原型服务: `cd docs/designs/specs/prototypes && python3 -m http.server 8766 --bind 127.0.0.1`
+原型服务: `cd prototype && python3 -m http.server 8766 --bind 127.0.0.1`
 React 服务: `bun run dev --host 127.0.0.1`
 审计工具: `node scripts/visual-audit.mjs --prototype-base http://127.0.0.1:8766`

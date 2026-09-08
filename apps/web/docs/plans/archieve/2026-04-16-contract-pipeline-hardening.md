@@ -90,7 +90,7 @@ await page.setContent(html, { waitUntil: "networkidle" });
 
 ### 2.6 draft 合同能通过全量验证 — Medium
 
-**文件**: `docs/contracts/pages/home.contract.json:4`
+**文件**: `contracts/pages/home.contract.json:4`
 
 `"status": "draft"` 但 10 项检查无一涉及 status 字段。"验证通过" ≠ "可交付"。
 
@@ -173,7 +173,7 @@ YAGNI。当前核心问题是现有脚本有 bug，不是缺 skill。P0 不新�
 | 3 | validator 增加 console/page error 检查 | `contract-validator.mjs` | `page.on('console')` + `page.on('pageerror')` |
 | 4 | validator 增加 metrics 阈值检查 | `contract-validator.mjs` | 重采 metrics，对比 contract baseline |
 | 5 | visual audit 从报告型改为门禁型 | `scripts/visual-audit.mjs` | 超阈值 `process.exit(1)` |
-| 6 | home contract promote 到 contract-ready | `docs/contracts/pages/home.contract.json` | 跑完全流程后 promote |
+| 6 | home contract promote 到 contract-ready | `contracts/pages/home.contract.json` | 跑完全流程后 promote |
 
 ### P2 — 规模化
 

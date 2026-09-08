@@ -1,7 +1,7 @@
 # 原型冻结前 Polish 整改结果
 
 > 日期：2026-05-10
-> 范围：`docs/designs/specs/prototypes/` active route prototypes
+> 范围：`prototype/` active route prototypes
 > 上游：`docs/plans/2026-05-10-prototype-freeze-shape-brief.md`
 > 质量档位：冻结候选可交接
 
@@ -13,8 +13,8 @@
 
 - `PRODUCT.md`：克制、可信、敏锐；判断先于操作。
 - `DESIGN.md`：OKLCH token、L1/L2/L7 颜色语义、density preset、shell 尺寸、domain signature。
-- `docs/designs/specs/00_ditto_visual_constitution.md`：主工作面、导航退后、颜色双维表达、长期稳定感。
-- `docs/designs/specs/11_ditto_page_pattern_library.md`：每个 active prototype 只有一个 Primary Answer。
+- `design/specs/00_ditto_visual_constitution.md`：主工作面、导航退后、颜色双维表达、长期稳定感。
+- `design/specs/11_ditto_page_pattern_library.md`：每个 active prototype 只有一个 Primary Answer。
 - `.agents/skills/impeccable/reference/product.md` 和 `.agents/skills/impeccable/reference/polish.md`：product UI 以稳定、熟悉、可扫视为优先。
 
 Drift 处理原则：

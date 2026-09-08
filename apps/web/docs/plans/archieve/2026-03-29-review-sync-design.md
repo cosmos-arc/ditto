@@ -83,12 +83,12 @@ Phase 7 FINAL 自动执行，作为 report 生成的一部分。
 
 > 以下变更已通过验收，可使用 `/ditto-design-review <file> --sync` 同步到设计文档。
 
-### docs/designs/specs/01_product_information_architecture.md
+### design/specs/01_product_information_architecture.md
 | # | 变更类型 | 描述 | 来源 |
 |---|---------|------|------|
 | 1 | 修正 | Home Banner 优先事项配比从 3:2:1 改为 4:2:1 | P0-UI-03 |
 
-### docs/designs/specs/13_ditto_component_spec.md
+### design/specs/13_ditto_component_spec.md
 | # | 变更类型 | 描述 | 来源 |
 |---|---------|------|------|
 | 1 | 新增 | StatCard 组件新增紧凑模式规范 | P1-UX-02 |
@@ -171,5 +171,5 @@ Phase 9 SYNC（新增）: /ditto-design-review <file> --sync
 | 文件 | 改动内容 |
 |------|---------|
 | `.claude/commands/ditto-design-review.md` | 输入参数增加 `--sync`；Agent 输出格式增加方案对比；FINAL 增加待同步清单；新增 Phase 9 SYNC；更新流程图 |
-| `docs/designs/specs/*.md` | SYNC 的输出目标，不是输入，review 时不会被修改 |
+| `design/specs/*.md` | SYNC 的输出目标，不是输入，review 时不会被修改 |
 | `docs/designs/decisions/*.md` | SYNC 的输出目标（新增 ADR） |

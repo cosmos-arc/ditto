@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-factor-analysis.html",
+	"../prototype/page-factor-analysis.html",
 );
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -17,7 +17,7 @@ function loadPage() {
 describe("page-factor-analysis prototype", () => {
 	it("inherits the relaxed Object Hub header rhythm shared by detail pages", () => {
 		const layoutCss = readFileSync(
-			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-shell.css"),
+			resolve(import.meta.dirname, "../prototype/shared/layout-shell.css"),
 			"utf-8",
 		);
 

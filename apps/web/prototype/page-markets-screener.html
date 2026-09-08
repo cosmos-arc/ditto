@@ -1,0 +1,3629 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-markets-screener
+  Edition: v1
+  Generated: 2026-04-02
+
+  Tabs: 0 (Screener 无 tab 系统)
+
+  Overlays: 5
+  - overlay-save-preset (Sheet: 保存预设) [covered]
+  - overlay-column-manage (Sheet: 列管理) [covered]
+  - overlay-compare (Drawer: 对比 Drawer) [covered]
+  - overlay-generate-pool (Modal: 生成标的池确认) [covered]
+  - overlay-export (Sheet: 导出结果) [covered]
+
+  State Variants: 7 components × 3 states (empty/loading/error) + signal-pill stale + bulk
+  - filters: default[covered] loading[n/a] empty[covered] failed[covered] stale[n/a] selected[covered] bulk[n/a]
+  - results-table: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[covered]
+  - signal-pill: default[covered] stale[covered]
+  - compare-cart: default[covered] loading[n/a] empty[covered] failed[n/a] stale[n/a] selected[n/a] bulk[covered]
+  - compare-drawer: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[n/a]
+  - scoring-presets: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[covered] bulk[n/a]
+  - result-destinations: default[covered] loading[covered] empty[covered] failed[n/a] stale[n/a] selected[n/a] bulk[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="markets">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Markets / Screener</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> style) -->
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ── Style label for visual comparison ── */
+    .style-label {
+      position: fixed;
+      top: var(--space-8);
+      right: var(--space-8);
+      z-index: 999;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-3) var(--space-8);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Header subtitle (breadcrumb sub-text) ── */
+    .header-subtitle {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-tertiary);
+      margin-left: var(--space-8);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Header button group ── */
+    .header-btn-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-btn-group-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-btn-group-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .header-title-group {
+      display: flex;
+      align-items: baseline;
+    }
+
+    /* ── Catalog table wrapper ── */
+    .catalog-table-inner {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .catalog-table-inner .table-container {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--surface-app);
+    }
+
+    .catalog-table-inner .table-footer {
+      flex-shrink: 0;
+    }
+
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header    header"
+        "rail toolbar toolbar   toolbar"
+        "rail insight separator detail"
+        "rail modes   separator detail"
+        "rail table   separator detail";
+      contain: paint;
+    }
+
+    .screener-insight-strip {
+      grid-area: insight;
+      display: grid;
+      grid-template-columns: minmax(14rem, 1.1fr) repeat(4, minmax(0, 1fr));
+      gap: var(--space-8);
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-app);
+      min-height: 0;
+    }
+
+    .screener-insight-item {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+    }
+
+    .screener-insight-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .screener-insight-value {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .screener-legend-scale {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: var(--space-2);
+      margin-top: var(--space-2);
+      height: 4px;
+    }
+
+    .screener-legend-stop {
+      border-radius: var(--radius-2);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .screener-legend-stop[data-step="down-2"] {
+      background: color-mix(in oklch, var(--market-down-fg) 36%, transparent);
+    }
+
+    .screener-legend-stop[data-step="down-1"] {
+      background: color-mix(in oklch, var(--market-down-fg) 18%, transparent);
+    }
+
+    .screener-legend-stop[data-step="flat"] {
+      background: var(--surface-muted);
+    }
+
+    .screener-legend-stop[data-step="up-1"] {
+      background: color-mix(in oklch, var(--market-up-fg) 18%, transparent);
+    }
+
+    .screener-legend-stop[data-step="up-2"] {
+      background: color-mix(in oklch, var(--market-up-fg) 36%, transparent);
+    }
+
+    .view-tabs-bar {
+      grid-area: modes;
+      min-height: var(--density-action-height);
+      background: var(--surface-strip);
+    }
+
+    [data-tab-panel] {
+      grid-area: table;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    [data-tab-panel][aria-hidden="true"] {
+      display: none;
+    }
+
+    [data-tab-panel="filter"] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    [data-tab-panel="filter"] .catalog-table {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+    }
+
+    .filter-workbench {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.9fr) minmax(360px, 1.3fr) minmax(180px, 0.7fr);
+      gap: var(--space-8);
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-app);
+    }
+
+    .filter-workbench-section {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      padding: var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+    }
+
+    .filter-workbench-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .filter-workbench-title {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .active-conditions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      min-height: 24px;
+      align-items: center;
+    }
+
+    .condition-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      min-height: 22px;
+      padding: 0 var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 32%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 7%, transparent);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+    }
+
+    .condition-builder-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
+      gap: var(--space-6);
+      align-items: center;
+    }
+
+    .condition-builder-row .btn {
+      min-height: 26px;
+      padding-block: var(--space-3);
+    }
+
+    .condition-control {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-6);
+      height: 28px;
+      padding: 0 var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-muted);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+    }
+
+    .condition-control-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+
+    .filter-run-summary {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .filter-run-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    .sort-item {
+      cursor: pointer;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+    }
+
+    .sort-item:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .compare-add-btn {
+      min-width: 58px;
+      min-height: 26px;
+      height: 26px;
+      box-sizing: border-box;
+      padding: 0 var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .compare-add-btn:hover,
+    .compare-add-btn[aria-pressed="true"] {
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+    }
+
+    .catalog-detail[data-contract-slot="detail"] {
+      min-height: 0;
+    }
+
+    .score-compact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-6);
+    }
+
+    .score-compact-card {
+      min-width: 0;
+      padding: var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-muted);
+    }
+
+    .score-compact-card--wide {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .score-compact-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .score-compact-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    .score-compact-bar {
+      height: 3px;
+      margin-top: var(--space-4);
+      border-radius: var(--radius-2);
+      background: var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .score-compact-card--wide .score-compact-bar {
+      margin-top: 0;
+    }
+
+    .score-compact-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--brand-accent);
+    }
+
+    .score-compact-fill.ok {
+      background: var(--system-healthy-fg);
+    }
+
+    .score-compact-fill.warn {
+      background: var(--system-degraded-fg);
+    }
+
+    /* ── Signal pill badges ── */
+    .signal-pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-8);
+      border-radius: var(--radius-12);
+      white-space: nowrap;
+      font-feature-settings: 'kern' 1;
+      position: relative;
+    }
+
+    .signal-pill.buy {
+      background: var(--market-up-bg);
+      color: var(--market-up-fg);
+    }
+
+    .signal-pill.sell {
+      background: var(--market-down-bg);
+      color: var(--market-down-fg);
+    }
+
+    .signal-pill.hold {
+      background: transparent;
+      color: var(--text-tertiary);
+    }
+
+    /* ── Signal pill progressive confidence — s2 strong (>=0.80), s1 medium (0.60-0.79), s0 weak (<0.60) ── */
+    .signal-pill.buy.s2  { background: color-mix(in oklch, var(--market-up-bg) 25%, transparent); }
+    .signal-pill.buy.s1  { background: color-mix(in oklch, var(--market-up-bg) 18%, transparent); }
+    .signal-pill.buy.s0  { background: color-mix(in oklch, var(--market-up-bg) 12%, transparent); }
+    .signal-pill.sell.s2 { background: color-mix(in oklch, var(--market-down-bg) 25%, transparent); }
+    .signal-pill.sell.s1 { background: color-mix(in oklch, var(--market-down-bg) 18%, transparent); }
+    .signal-pill.sell.s0 { background: color-mix(in oklch, var(--market-down-bg) 12%, transparent); }
+
+    /* ── Signal pill stale state — desaturated + stale dot indicator ── */
+    .signal-pill.stale {
+      opacity: 0.6;
+      filter: saturate(0.4);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
+                  filter var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .signal-pill.stale:hover {
+      opacity: 0.85;
+      filter: saturate(0.6);
+    }
+    .signal-pill.stale::after {
+      content: '';
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      background: var(--system-stale-fg);
+      margin-left: var(--space-4);
+      flex-shrink: 0;
+    }
+
+    /* ── Sparkline stale state ── */
+    .sparkline-up.stale,
+    .sparkline-down.stale {
+      opacity: 0.35;
+      filter: saturate(0.3);
+    }
+
+    /* ── Risk dot stale state ── */
+    .risk-dot.stale {
+      opacity: 0.5;
+    }
+    .risk-dot.stale::before {
+      background: var(--text-disabled);
+    }
+
+    /* ── Risk dot indicator ── */
+    .risk-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .risk-dot::before {
+      content: '';
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .risk-dot.low::before    { background: var(--risk-low-fg); }
+    .risk-dot.medium::before { background: var(--risk-medium-fg); }
+    .risk-dot.high::before   { background: var(--risk-high-fg); }
+
+    /* ── Signal strength numeric value ── */
+    .signal-strength {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      opacity: 0.7;
+      margin-left: var(--space-4);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Signal pill hover: reveal full strength ── */
+    .signal-pill:hover .signal-strength {
+      opacity: 1;
+    }
+
+    /* ── Sparkline — SVG inline mini-chart with area fill ── */
+    :root {
+      --sparkline-w: 3rem;
+      --sparkline-h: 1.25rem;
+    }
+
+    .sparkline-up svg,
+    .sparkline-down svg,
+    .sparkline-flat svg {
+      width: var(--sparkline-w);
+      height: var(--sparkline-h);
+      display: block;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .sparkline-up svg polyline,
+    .sparkline-down svg polyline {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .sparkline-up svg polygon.spark-area,
+    .sparkline-down svg polygon.spark-area {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .sparkline-up {
+      color: var(--market-up-fg);
+    }
+    .sparkline-down {
+      color: var(--market-down-fg);
+    }
+    .sparkline-flat {
+      color: var(--text-tertiary);
+      opacity: 0.5;
+    }
+
+    /* ── Sector badge: subtle lift on row hover ── */
+    .data-table tr:hover .cell-badge.sector {
+      background: var(--interaction-hover-strong-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Risk dot: crisp on row hover ── */
+    .data-table tr:hover .risk-dot {
+      opacity: 0.9;
+    }
+    .risk-dot {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* Sparkline hover — reveal trend clarity + area fill lift on row hover */
+    .data-table tr:hover .sparkline-up svg,
+    .data-table tr:hover .sparkline-down svg {
+      opacity: 1;
+    }
+    .data-table tr:hover .sparkline-up svg polyline,
+    .data-table tr:hover .sparkline-down svg polyline {
+      stroke-width: 1.8;
+    }
+    .data-table tr:hover .sparkline-up svg polygon.spark-area,
+    .data-table tr:hover .sparkline-down svg polygon.spark-area {
+      opacity: 0.28;
+    }
+    .data-table tr:hover .sparkline-flat {
+      opacity: 0.8;
+    }
+
+    /* ── Detail Panel Sections ── */
+    .detail-actions {
+      position: relative;
+      padding: var(--space-12);
+      padding-bottom: var(--space-10);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .detail-actions .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    /* ── Preset card ── */
+    .preset-card {
+      padding: var(--space-10) var(--space-12);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      margin-bottom: var(--space-6);
+    }
+
+    .preset-card:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .preset-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .preset-card-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .preset-card-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.4;
+      margin-bottom: var(--space-4);
+      font-feature-settings: 'kern' 1;
+    }
+
+    .preset-card-match {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      font-feature-settings: 'tnum' 1;
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Score row ── */
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-4) 0;
+    }
+
+    .score-label {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      width: 2.25rem;
+      flex-shrink: 0;
+    }
+
+    .score-bar-wrap {
+      flex: 1;
+      height: 3px;
+      background: var(--border-subtle);
+      border-radius: var(--radius-2);
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-2);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      box-shadow: inset 0 1px 2px var(--overlay-6);
+    }
+
+    .score-bar-fill.brand { background: var(--brand-accent); }
+    .score-bar-fill.ok    { background: var(--system-healthy-fg); }
+    .score-bar-fill.warn  { background: var(--system-degraded-fg); }
+
+    .score-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      width: 2rem;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .score-row.composite .score-label {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .score-row.composite .score-value {
+      font-weight: var(--font-weight-semibold);
+      color: var(--brand-accent);
+      font-size: var(--font-size-13);
+    }
+
+    /* ── Compare basket items ── */
+    .compare-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .compare-item:last-of-type {
+      border-bottom: none;
+    }
+
+    .compare-item-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .compare-item-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .compare-item-code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-feature-settings: 'tnum' 1;
+    }
+
+    .compare-item-spark svg {
+      width: 2rem;
+      height: 0.75rem;
+      display: block;
+      opacity: 0.7;
+    }
+
+    .compare-item-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .compare-item-remove {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: var(--space-4);
+      border-radius: var(--radius-2);
+      min-width: 1.5rem;
+      min-height: var(--density-action-height);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .compare-item-remove:hover {
+      color: var(--market-down-fg);
+      background: var(--market-down-bg);
+    }
+
+    .compare-cta {
+      width: 100%;
+      margin-top: var(--space-8);
+      padding: var(--space-8);
+      text-align: center;
+    }
+
+    .row-action {
+      min-height: var(--density-action-height);
+      padding: var(--space-2) var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: transparent;
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: var(--font-size-12);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .row-action:hover {
+      color: var(--text-primary);
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Skip link ── */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    /* ── Screen reader only ── */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* ── Focus-visible ring system ── */
+    .rail-icon:focus-visible,
+    .btn:focus-visible,
+    .filter-chip:focus-visible,
+    .preset-card:focus-visible,
+    .compare-item-remove:focus-visible,
+    .row-action:focus-visible,
+    .pagination-btn:focus-visible,
+    .header-action-btn:focus-visible,
+    .header-avatar:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ── Focus-visible: per-element interaction parity ── */
+    .filter-chip:focus-visible {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .preset-card:focus-visible {
+      border-color: var(--border-default);
+    }
+    .pagination-btn:focus-visible {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .compare-item-remove:focus-visible {
+      color: var(--text-primary);
+    }
+
+    /* ── Frosted glass header ── */
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    /* ── Detail panel brand touchpoint ── */
+    .detail-actions-body {
+      display: flex;
+      gap: var(--space-6);
+      padding-top: var(--space-8);
+    }
+    .detail-actions::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--space-3);
+      height: 100%;
+      background: var(--brand-accent);
+      border-radius: 0 var(--radius-2) var(--radius-2) 0;
+      opacity: 0.6;
+    }
+
+    /* ── Overdrive: selection color matches brand ── */
+    .data-table ::selection {
+      background: var(--interaction-selected-bg);
+      color: var(--text-primary);
+    }
+
+    .direction-symbol {
+      display: inline-block;
+      width: 0.75rem;
+      margin-right: var(--space-2);
+      text-align: center;
+      color: currentColor;
+    }
+
+    /* ── Change cells: reinforce direction with weight ── */
+    .cell-change-up,
+    .cell-change-down {
+      font-weight: var(--font-weight-medium);
+      transition: font-weight var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Row hover: elevate change cells + brighten numeric data ── */
+    .data-table tr:hover .cell-change-up,
+    .data-table tr:hover .cell-change-down {
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .data-table tr:hover td.numeric {
+      color: color-mix(in oklch, var(--text-primary) 88%, var(--brand-accent) 12%);
+    }
+
+    /* ── Row selected: brand-accent tint + full-frame state ── */
+    .data-table tr.row.selected {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+    }
+    .data-table tr.row.selected td:first-child {
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
+    }
+
+    /* ── Row keyboard focus — brand-accent tint + full-frame state ── */
+    .data-table tr.row:focus-within {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--interaction-focus-ring);
+      background: color-mix(in oklch, var(--brand-accent) 4%, transparent);
+    }
+    .data-table tr.row:focus-within td:first-child {
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
+      border-radius: 0;
+    }
+
+    /* ── Focus + Selected 叠加：完整边框指示 ── */
+    .data-table tr.row.selected:focus-within td:first-child {
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border), 0 0 0 1px color-mix(in oklch, var(--interaction-selected-border) 60%, transparent);
+    }
+
+    /* ── Table empty state ── */
+    .table-empty {
+      display: none;
+      text-align: center;
+      padding: var(--space-32) var(--space-16);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+    .table-empty.visible { display: block; }
+
+    /* ── Pagination ellipsis ── */
+    .pagination-ellipsis {
+      color: var(--text-disabled);
+      padding: 0 var(--space-4);
+      user-select: none;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Score composite separator ── */
+    .score-row-composite-separator {
+      margin-top: var(--space-2);
+      padding-top: var(--space-6);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* ── Detail last section flex ── */
+    .catalog-detail .context-section:last-child {
+      flex: 1 0 auto;
+    }
+
+    /* ── Detail panel depth shadow ── */
+    .shell-catalog .catalog-detail {
+      box-shadow: none;
+    }
+
+    /* ── Overdrive: detail panel section header alignment ── */
+    .catalog-detail .context-section-header {
+      min-height: var(--density-header-height);
+      align-items: center;
+    }
+
+    /* ── Overdrive: filter count emphasis ── */
+    .filter-count {
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .score-bar-fill { transition: none !important; }
+      .preset-card { transition: none !important; }
+      .preset-card-match { transition: none !important; }
+      .signal-pill { transition: none !important; }
+      .signal-strength { transition: none !important; }
+      .filter-chip { transition: none !important; }
+      .pagination-btn { transition: none !important; }
+      .compare-item-remove { transition: none !important; }
+      .compare-item-spark svg { transition: none !important; }
+      .btn { transition: none !important; }
+      .risk-dot { transition: none !important; }
+      .sparkline-up svg,
+      .sparkline-down svg,
+      .sparkline-flat svg { transition: none !important; }
+      .sparkline-up svg polyline,
+      .sparkline-down svg polyline { transition: none !important; }
+      .signal-pill.stale { transition: none !important; }
+      .risk-dot.stale { transition: none !important; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation Rules (prototype-toggles.css)
+     * ══════════════════════════════════════════════ */
+
+    /* Overlay: 保存预设 Sheet */
+    :root:has(#overlay-save-preset:checked)
+      [data-overlay="overlay-save-preset"] { display: flex; }
+
+    /* Overlay: 列管理 Sheet */
+    :root:has(#overlay-column-manage:checked)
+      [data-overlay="overlay-column-manage"] { display: flex; }
+
+    /* Overlay: Compare Drawer */
+    :root:has(#overlay-compare:checked)
+      [data-overlay="overlay-compare"] { display: flex; }
+
+    /* Overlay: 生成标的池确认 Modal */
+    :root:has(#overlay-generate-pool:checked)
+      [data-overlay="overlay-generate-pool"] { display: flex; }
+
+    /* Overlay: 导出结果 Sheet */
+    :root:has(#overlay-export:checked)
+      [data-overlay="overlay-export"] { display: flex; }
+    .overlay-close {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-16);
+      padding: var(--space-2);
+      line-height: 1;
+    }
+    .overlay-close:hover { color: var(--text-secondary); }
+
+    /* State variant containers inherit page style */
+    .state-variant .state-variant-content {
+      background: var(--surface-app);
+    }
+
+
+    /* ══════════════════════════════════════════════
+     * Extracted Utility Classes (inline style → class)
+     * ══════════════════════════════════════════════ */
+
+    /* ── Overlay input fields ── */
+    .ov-input {
+      width: 100%;
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-default);
+      background: var(--surface-muted);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Tag / chip items (compare tags, preset tags) ── */
+    .ov-tag {
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-12);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+    .ov-tag--primary {
+      color: var(--text-primary);
+    }
+    .ov-tag .ov-tag-close {
+      color: var(--text-tertiary);
+      margin-left: var(--space-4);
+    }
+
+    /* ── Checkbox/radio labels (column manage, export options) ── */
+    .ov-check-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-4) 0;
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      cursor: pointer;
+    }
+    .ov-check-label--dim {
+      color: var(--text-tertiary);
+    }
+    .ov-check-label input[type="checkbox"],
+    .ov-check-label input[type="radio"] {
+      accent-color: var(--brand-accent);
+    }
+
+    /* ── Compare field cells ── */
+    .ov-compare-cell {
+      flex: 1;
+      text-align: center;
+    }
+
+    /* ── Overlay tab buttons ── */
+    .ov-tab {
+      padding: var(--space-4) var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .ov-tab--active {
+      border-bottom: 2px solid var(--brand-accent);
+      color: var(--text-primary);
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    /* ── Overlay action labels (cursor:pointer) ── */
+    .ov-label-btn { cursor: pointer; }
+
+    /* ── Compare drawer header row ── */
+    .ov-compare-header-row {
+      padding: var(--space-6) var(--space-10);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .ov-compare-header-row input[type="checkbox"] {
+      accent-color: var(--brand-accent);
+    }
+    .ov-compare-row {
+      padding: var(--space-6) var(--space-10);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .ov-compare-row input[type="checkbox"] {
+      accent-color: var(--brand-accent);
+    }
+    .ov-compare-row--selected {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+    }
+
+    /* ── Stale state containers ── */
+    .stale-banner {
+      padding: var(--space-12);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .stale-dot-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--system-degraded-fg);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .stale-banner-text {
+      font-size: var(--font-size-12);
+      color: var(--system-degraded-fg);
+    }
+
+    /* ── Signal stale showcase column ── */
+    .stale-signal-col {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      align-items: flex-start;
+    }
+    .stale-signal-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Gallery hint text ── */
+    .gallery-hint {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-top: var(--space-4);
+      display: block;
+    }
+    .gallery-hint--inline {
+      padding: var(--space-4);
+    }
+    .gallery-hint--sm {
+      font-size: var(--font-size-10);
+    }
+    .gallery-hint--mt8 {
+      margin-top: var(--space-8);
+    }
+
+    /* ── State variant containers ── */
+    .sv-pad-8 { padding: var(--space-8); }
+    .sv-pad-12 { padding: var(--space-12); }
+    .sv-flex-wrap { display: flex; gap: var(--space-6); flex-wrap: wrap; }
+    .sv-flex-wrap--mb12 { display: flex; gap: var(--space-6); flex-wrap: wrap; margin-bottom: var(--space-12); }
+    .sv-pad-section { padding: var(--space-4) 0 var(--space-8); }
+    .sv-pad-6-0 { padding: var(--space-6) 0; }
+    .sv-pad-8-0 { padding: var(--space-8) 0; }
+
+    /* ── Selected state card ── */
+    .sv-bulk-card {
+      border: 1px solid var(--brand-accent);
+      border-radius: var(--radius-4);
+      padding: var(--space-6);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      margin-bottom: var(--space-8);
+    }
+    .sv-bulk-title {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+    .sv-bordered-box {
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-4);
+      overflow: hidden;
+    }
+    .sv-bulk-toolbar {
+      padding: var(--space-6) var(--space-10);
+      background: var(--interaction-hover-subtle-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .sv-bulk-toolbar-actions {
+      display: flex;
+      gap: var(--space-6);
+    }
+    .sv-bulk-btn {
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-6);
+    }
+    .sv-bulk-btn--pointer { cursor: pointer; }
+
+    /* ── Filter active state ring ── */
+    .filter-chip--ring {
+      box-shadow: 0 0 0 2px var(--brand-accent);
+    }
+
+    /* ── Preset selected state ── */
+    .preset-card--selected {
+      border-color: var(--brand-accent);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+    }
+    .preset-card-match--selected {
+      color: var(--brand-accent);
+    }
+
+    /* ── Compare drawer selected row ── */
+    .sv-compare-highlight {
+      padding: var(--space-6) var(--space-10);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+    .sv-compare-highlight-name {
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Signal stale showcase wrapper ── */
+    .sv-signal-stale-wrap {
+      padding: var(--space-8);
+      display: flex;
+      gap: var(--space-12);
+      flex-wrap: wrap;
+    }
+
+    /* ── Generate pool description text ── */
+    .ov-desc-text {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      line-height: 1.6;
+      margin: 0 0 var(--space-12);
+    }
+
+    /* ── Column manage check list ── */
+    .ov-check-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* ── Tag list with bottom margin ── */
+    .ov-tag-list-mb12 {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Tab bar ── */
+    .ov-tab-bar {
+      display: flex;
+      gap: var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Radio groups for export ── */
+    .ov-radio-group {
+      display: flex;
+      gap: var(--space-6);
+      margin-bottom: var(--space-12);
+    }
+    .ov-radio-group--tight {
+      display: flex;
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Tag close icon ── */
+    .tag-close-icon {
+      color: var(--text-tertiary);
+      margin-left: var(--space-4);
+    }
+
+    /* ── Filter selected state wrapper ── */
+    .filter-selected-wrap {
+      padding: var(--space-8) 0;
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    /* ── Preset selected card in gallery ── */
+    .sv-preset-wrap { padding: var(--space-8); }
+
+    /* ── Bulk toolbar inner ── */
+    .sv-bulk-toolbar-inner {
+      padding: var(--space-6) var(--space-10);
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+    }
+
+    /* ── Text color utilities ── */
+    .text-up { color: var(--market-up-fg); }
+    .text-down { color: var(--market-down-fg); }
+    .text-tertiary { color: var(--text-tertiary); }
+    .text-brand { color: var(--brand-accent); }
+    .text-secondary { color: var(--text-secondary); }
+    .font-medium { font-weight: var(--font-weight-medium); }
+    .flex-1 { flex: 1; }
+
+    /* ══════════════════════════════════════════════
+     * Extracted Inline Style Utility Classes (v5 cleanup pass 2)
+     * ══════════════════════════════════════════════ */
+
+    /* ── Sector Heatmap Details ── */
+    .shm-details { margin: 0 var(--space-12); border-bottom: 1px solid var(--border-subtle); }
+    .shm-summary { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-secondary); padding: var(--space-6) 0; cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--space-6); }
+    .shm-summary .shm-arrow { transition: transform 0.2s; }
+    .shm-summary .shm-count { font-size: var(--font-size-12); color: var(--text-tertiary); font-weight: var(--font-weight-regular); }
+    .shm-body { padding: var(--space-8) 0 var(--space-10); display: flex; align-items: flex-start; gap: var(--space-12); }
+    .shm-legend { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--font-size-11); color: var(--text-tertiary); }
+    .shm-legend-row { display: flex; align-items: center; gap: var(--space-4); }
+    .shm-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .shm-swatch--down { background: color-mix(in oklch, var(--market-down-fg) 25%, transparent); }
+    .shm-swatch--flat { background: transparent; border: 1px solid var(--border-subtle); }
+    .shm-swatch--up { background: color-mix(in oklch, var(--market-up-fg) 25%, transparent); }
+
+    /* ── View Tabs Bar ── */
+    .view-tabs-bar { display: flex; gap: var(--space-2); padding: var(--space-6) var(--space-12) 0; border-bottom: 1px solid var(--border-subtle); }
+
+    /* ── Sort Panel ── */
+    .sort-panel { padding: var(--space-16) var(--space-12); }
+    .sort-panel-desc { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-12); }
+    .sort-list { display: flex; flex-direction: column; gap: var(--space-4); }
+    .sort-item { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-10); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); font-size: var(--font-size-12); color: var(--text-primary); }
+    .sort-item--active { border-color: var(--border-default); background: var(--interaction-hover-subtle-bg); }
+    .sort-item-rank { color: var(--brand-accent); font-weight: var(--font-weight-medium); }
+    .sort-item-name { flex: 1; }
+    .sort-item-dir { color: var(--text-tertiary); }
+    .sort-panel-actions { margin-top: var(--space-12); display: flex; gap: var(--space-6); justify-content: flex-end; }
+
+    /* ── Compare Panel ── */
+    .compare-panel { padding: var(--space-16) var(--space-12); }
+    .compare-panel-desc { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-12); }
+    .compare-list { display: flex; flex-direction: column; gap: var(--space-8); }
+    .compare-row { display: flex; align-items: center; gap: var(--space-10); padding: var(--space-8) var(--space-10); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); font-size: var(--font-size-12); }
+    .compare-row-ticker { font-weight: var(--font-weight-medium); color: var(--text-primary); width: 80px; }
+    .compare-row-name { flex: 1; color: var(--text-primary); }
+    .compare-panel-actions { margin-top: var(--space-12); display: flex; gap: var(--space-6); justify-content: flex-end; }
+
+    /* ── Stale gallery hint color override ── */
+    .gallery-hint--stale { color: var(--system-degraded-fg); }
+
+    /* ══════════════════════════════════════════════
+     * Information Visualization Enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Filter count badge — active count indicator ── */
+    .filter-count {
+      position: relative;
+    }
+    .filter-count::before {
+      content: '';
+      position: absolute;
+      left: calc(100% + var(--space-4));
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: var(--radius-12);
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--brand-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      pointer-events: none;
+    }
+    .filter-toolbar:has(.filter-chip.active:not(:only-child)) .filter-count::before {
+      content: '3';
+      opacity: 1;
+    }
+
+    /* ── Conditional row tint — subtle up/down background ── */
+    .data-table tr.row:has(.cell-change-up) td {
+      background: color-mix(in oklch, var(--market-up-fg) 2%, transparent);
+    }
+    .data-table tr.row:has(.cell-change-down) td {
+      background: color-mix(in oklch, var(--market-down-fg) 2%, transparent);
+    }
+    /* Override sorted column tint + row hover */
+    .data-table tr.row td.col-sorted {
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+    }
+    .data-table tr.row:hover td {
+      background: var(--interaction-hover-subtle-bg) !important;
+    }
+    /* Selected row overrides all */
+    .data-table tr.row.selected td {
+      background: color-mix(in oklch, var(--brand-accent) 5%, transparent) !important;
+    }
+
+    /* ── Ranking change bar — micro indicator in change cells ── */
+    .cell-change-up,
+    .cell-change-down {
+      position: relative;
+    }
+    .data-table tr:hover td.cell-change-up::after {
+      background: var(--market-up-fg);
+      opacity: 0.4;
+      width: 60%;
+    }
+    .data-table tr:hover td.cell-change-down::after {
+      background: var(--market-down-fg);
+      opacity: 0.4;
+      width: 60%;
+    }
+
+    /* ── Filter chip active pulse on interaction ── */
+    .filter-chip.active {
+      position: relative;
+    }
+    .filter-chip.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 1px;
+      background: var(--brand-accent);
+      opacity: 0.5;
+      border-radius: 1px;
+    }
+
+    /* ── Signal pill confidence micro-bar ── */
+    .signal-pill {
+      position: relative;
+      overflow: hidden;
+    }
+    .signal-pill::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 1.5px;
+      border-radius: 0 1px 0 0;
+      opacity: 0.4;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .signal-pill.s2::before { width: 90%; }
+    .signal-pill.s1::before { width: 65%; }
+    .signal-pill.s0::before { width: 40%; }
+    .signal-pill.buy::before { background: var(--market-up-fg); }
+    .signal-pill.sell::before { background: var(--market-down-fg); }
+    .signal-pill.hold::before { background: var(--text-tertiary); opacity: 0.2; }
+    .signal-pill:hover::before { opacity: 0.7; }
+
+    /* ── Filter toolbar interaction lift ── */
+    .filter-toolbar {
+      position: relative;
+    }
+    .filter-toolbar::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in oklch, var(--border-default) 60%, transparent) 20%,
+        color-mix(in oklch, var(--border-default) 60%, transparent) 80%,
+        transparent
+      );
+      pointer-events: none;
+    }
+
+    /* ── Detail panel scoring — value highlight on hover ── */
+    .score-row:hover .score-bar-fill {
+      filter: brightness(1.2);
+    }
+    .score-row:hover .score-value {
+      color: var(--text-secondary);
+    }
+    .score-row.composite:hover .score-value {
+      color: var(--brand-accent);
+    }
+
+    /* ── Preset card hover lift with brand tint ── */
+    .preset-card:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 40%, var(--border-default));
+    }
+    .preset-card:hover .preset-card-match {
+      opacity: 1;
+    }
+
+    /* ── Compare basket item entrance feel ── */
+    .compare-item {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .compare-item:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Compare chart label ── */
+    .compare-chart-label {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-4);
+    }
+
+    .compare-chart-section {
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Score donut layout ── */
+    .score-donut-row {
+      justify-content: center;
+      padding: var(--space-4) 0 var(--space-2);
+    }
+
+    .score-donut-sub {
+      margin-top: 1px;
+    }
+
+    /* ── Data table row selection checkbox area ── */
+    .data-table tr.row.selected td:first-child::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--brand-accent);
+      border-radius: 0 var(--radius-2) var(--radius-2) 0;
+    }
+    .data-table tr.row td:first-child {
+      position: relative;
+    }
+
+    /* ── Sector badge — subtle lift with industry color hint ── */
+    .cell-badge.sector {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .data-table tr:hover .cell-badge.sector {
+      box-shadow: 0 0 0 1px var(--border-subtle);
+    }
+
+    /* ── Row hover: smooth background transition ── */
+    .data-table tr.row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Sparkline container: consistent alignment ── */
+    .sparkline-up,
+    .sparkline-down,
+    .sparkline-flat {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Data-sparkline SVG: smooth rendering ── */
+    .sparkline-up svg,
+    .sparkline-down svg,
+    .sparkline-flat svg {
+      display: block;
+      flex-shrink: 0;
+    }
+
+    /* ── Filter toolbar: enhanced visual layer separation ── */
+    .filter-toolbar {
+      background: var(--surface-muted);
+      position: relative;
+    }
+
+    /* ── Filter chip: refined active state with subtle brand tint ── */
+    .filter-chip.active {
+      position: relative;
+    }
+    .filter-chip.active::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
+      pointer-events: none;
+    }
+
+    /* ── Filter label: subtle weight distinction ── */
+    .filter-label {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Cell badge sector: refined sizing ── */
+    .cell-badge.sector {
+      min-width: 2rem;
+      text-align: center;
+    }
+
+    /* ── Pagination: refined active state ── */
+    .pagination-btn.active {
+      background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Detail panel: section entry stagger ── */
+    .catalog-detail > .context-section:nth-child(2) {
+      animation-delay: 100ms;
+    }
+    .catalog-detail > .context-section:nth-child(3) {
+      animation-delay: 200ms;
+    }
+
+    /* ── Compare item: subtle full-frame accent on hover ── */
+    .compare-item:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+    }
+
+    /* ── Score row: hover value emphasis ── */
+    .score-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-2);
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+      margin-left: calc(-1 * var(--space-4));
+      margin-right: calc(-1 * var(--space-4));
+    }
+    .score-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Detail actions body: enhanced button spacing ── */
+    .detail-actions-body .btn {
+      min-width: 0;
+      flex: 1;
+      justify-content: center;
+      font-size: var(--font-size-12);
+      padding: var(--space-4) var(--space-6);
+    }
+
+    /* ── Reduced motion: disable new transitions ── */
+    @media (prefers-reduced-motion: reduce) {
+      .data-table tr.row { transition: none !important; }
+      .score-row { transition: none !important; }
+      .compare-item { transition: none !important; }
+      .sort-item { transition: none !important; }
+      .compare-row { transition: none !important; }
+      .pagination-btn:not(.active) { transition: none !important; }
+      .header-action-btn { transition: none !important; }
+      .shm-summary { transition: none !important; }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Deep Polish — Column widths, transitions, enhancements
+     * ══════════════════════════════════════════════ */
+
+    /* ── Table column widths (replacing inline style=width) ── */
+    .col-code   { width: 80px; }
+    .col-name   { width: 100px; }
+    .col-price  { width: 90px; }
+    .col-change { width: 80px; }
+    .col-delta  { width: 80px; }
+    .col-vol    { width: 80px; }
+    .col-mcap   { width: 90px; }
+    .col-sector { width: 60px; }
+    .col-signal { width: 80px; }
+    .col-risk   { width: 50px; }
+    .col-trend  { width: 56px; }
+    .col-action { width: 64px; }
+
+    /* ── Sort item hover ── */
+    .sort-item {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .sort-item:hover {
+      border-color: var(--border-default);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Compare row hover ── */
+    .compare-row {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .compare-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── View tab hover ── */
+    .ov-tab:not(.ov-tab--active) {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .ov-tab:not(.ov-tab--active):hover {
+      color: var(--text-secondary);
+    }
+
+    /* ── Pagination button hover ── */
+    .pagination-btn:not(.active) {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .pagination-btn:not(.active):hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Score bar value numeric alignment ── */
+    .score-value {
+      font-feature-settings: 'tnum' 1;
+    }
+
+    /* ── Header button hover ── */
+    .header-action-btn {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .header-action-btn:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Sector heatmap summary hover ── */
+    .shm-summary {
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .shm-summary:hover {
+      color: var(--text-primary);
+    }
+
+    /* ── Page-specific utilities ── */
+    .mb-8 { margin-bottom: var(--space-8); }
+    .ml-8 { margin-left: var(--space-8); }
+
+  </style>
+
+  <!-- Polishing Pass — Score bar fill animation + micro-refinements -->
+  <style>
+    /* ── Score bar: animated fill on load with stagger ── */
+    @keyframes scoreFillIn {
+      from { width: 0%; }
+    }
+    .score-bar-fill {
+      animation: scoreFillIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+    }
+    .score-row:nth-child(1) .score-bar-fill { animation-delay: 0.3s; }
+    .score-row:nth-child(2) .score-bar-fill { animation-delay: 0.4s; }
+    .score-row:nth-child(3) .score-bar-fill { animation-delay: 0.5s; }
+    .score-row:nth-child(4) .score-bar-fill { animation-delay: 0.6s; }
+    .score-row:nth-child(5) .score-bar-fill { animation-delay: 0.7s; }
+
+    /* ── Sort item: enhanced hover with brand tint ── */
+    .sort-item:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-default));
+      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 10%, transparent);
+    }
+
+    /* ── Pagination active: refined hover ── */
+    .pagination-btn.active:hover {
+      background: color-mix(in oklch, var(--brand-accent) 18%, transparent);
+    }
+
+    /* ── Score bar fill contrast on hover ── */
+    .score-row:hover .score-bar-fill.brand {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--interaction-selected-border) 72%, transparent);
+    }
+    .score-row:hover .score-bar-fill.ok {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 70%, transparent);
+    }
+    .score-row:hover .score-bar-fill.warn {
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 70%, transparent);
+    }
+
+    /* ── Preset card: subtle inner shadow on hover for depth ── */
+    .preset-card:hover {
+      box-shadow: 0 1px 4px -1px var(--overlay-4);
+    }
+
+    /* ── Context section header: hover emphasis ── */
+    .context-section-header {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border-radius: var(--radius-2);
+    }
+    .context-section-header:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Heatgrid cell: hover scale ── */
+    .heatgrid-cell {
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .heatgrid-cell:hover {
+      opacity: 0.85;
+      transform: scale(1.15);
+    }
+
+    /* ── Table footer: refined separator ── */
+    .table-footer {
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-muted);
+    }
+
+    /* ── View tab: underline transition ── */
+    .ov-tab {
+      position: relative;
+    }
+    .ov-tab::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--brand-accent);
+      transform: scaleX(0);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .ov-tab.active::after,
+    .ov-tab.ov-tab--active::after {
+      transform: scaleX(1);
+    }
+
+    /* ── Filter chip: refined hover micro-feedback ── */
+    .filter-chip {
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .filter-chip:hover {
+      background: var(--interaction-hover-strong-bg);
+      border-color: var(--border-default);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .score-bar-fill { animation: none !important; }
+      .sort-item { transition: none !important; }
+      .compare-row { transition: none !important; }
+      .pagination-btn:not(.active) { transition: none !important; }
+      .header-action-btn { transition: none !important; }
+      .ov-tab::after { transition: none !important; }
+      .heatgrid-cell { transition: none !important; }
+      .filter-chip { transition: none !important; }
+      .context-section-header { transition: none !important; }
+    }
+    /* Inline style cleanup */
+    .svg-sr-only { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .flow-w-65 { width: 65%; }
+    .flow-w-79 { width: 79%; }
+    .flow-w-91 { width: 91%; }
+  </style>
+</head>
+<body>
+  <!-- Shared SVG defs sprite — single source of truth for gradient ids -->
+  <svg class="svg-sr-only" aria-hidden="true">
+    <defs>
+      <linearGradient id="sparkUp" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="sparkDown" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+
+
+  <a class="skip-link" href="#main-content">跳至主要内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — 筛选器 · Compact · A股</div>
+
+  <div class="shell-catalog catalog-shell" data-tabs="screener-tabs" data-screener-workflow data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
+    <!-- ═══ Rail ═══ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon active" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+
+    </nav>
+
+    <!-- ═══ Header ═══ -->
+    <header class="shell-header" role="toolbar" aria-label="筛选器工具栏">
+      <div class="header-title-group">
+        <h1 class="header-title">筛选器</h1>
+        <span class="header-subtitle">Markets · Screener</span>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-btn-group-left" data-decision-cluster aria-label="筛选器首屏动作">
+        <label for="overlay-save-preset" class="btn ov-label-btn" data-decision-option data-action-tier="context">保存视图</label>
+        <label for="overlay-column-manage" class="btn ov-label-btn" data-decision-option data-action-tier="context">列管理</label>
+        <button class="btn btn-primary" data-filter-action="apply" data-decision-option data-action-tier="primary">执行筛选</button>
+        <details class="action-overflow">
+          <summary class="btn btn-ghost" data-decision-overflow data-action-tier="overflow" aria-haspopup="menu" aria-label="更多筛选器操作" title="更多">...</summary>
+          <div class="action-overflow-menu" role="menu" aria-label="更多筛选器操作">
+            <button class="action-overflow-item" type="button" role="menuitem" data-filter-action="reset" data-action-tier="overflow">重置条件</button>
+            <label for="overlay-export" class="action-overflow-item ov-label-btn" role="menuitem" tabindex="0" data-action-tier="overflow">导出结果</label>
+          </div>
+        </details>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" data-action-tier="overflow" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" data-action-tier="overflow" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" data-action-tier="overflow" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" data-action-tier="overflow" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" data-action-tier="overflow" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-action-tier="overflow" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══ Filter Toolbar ═══ -->
+    <div class="filter-toolbar" data-contract-slot="filter-panel" data-reveal="fade-up" data-reveal-delay="0" data-secondary-context>
+      <div class="filter-group">
+        <span class="filter-label">股票池:</span>
+        <button class="filter-chip active" data-tooltip="沪深300成分股，大盘蓝筹" data-action-tier="context">沪深300</button>
+        <button class="filter-chip" data-tooltip="中证500成分股，中盘成长" data-action-tier="context">中证500</button>
+        <button class="filter-chip" data-tooltip="全部A股上市公司" data-action-tier="context">全A</button>
+        <button class="filter-chip" data-tooltip="自定义股票池，支持导入" data-action-tier="context">自定义</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">行业:</span>
+        <button class="filter-chip active" aria-haspopup="listbox" aria-expanded="false" data-tooltip="按申万一级行业筛选" data-action-tier="context">
+          全部行业 <span aria-hidden="true">▾</span>
+        </button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">市值:</span>
+        <button class="filter-chip active" data-tooltip="不限市值范围" data-action-tier="context">全部</button>
+        <button class="filter-chip" data-tooltip="流通市值 > 500亿" data-action-tier="context">大盘</button>
+        <button class="filter-chip" data-tooltip="流通市值 100-500亿" data-action-tier="context">中盘</button>
+        <button class="filter-chip" data-tooltip="流通市值 < 100亿" data-action-tier="context">小盘</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-label">信号:</span>
+        <button class="filter-chip active" data-tooltip="不限信号类型" data-action-tier="context">全部</button>
+        <button class="filter-chip" data-tooltip="AI评分 >= 0.80 的买入信号" data-action-tier="context">买入信号</button>
+        <button class="filter-chip" data-tooltip="AI评分 >= 0.70 的卖出信号" data-action-tier="context">卖出信号</button>
+      </div>
+      <div class="filter-spacer"></div>
+      <span class="filter-count" role="status" aria-live="polite" data-active-filters-summary data-tooltip="当前筛选条件下的匹配标的数量">共 238 只</span>
+    </div>
+
+    <!-- State Variants: 筛选条件 / Filter Toolbar -->
+
+
+
+
+    <!-- State Variants: 筛选条件 selected 高亮 -->
+
+
+    <!-- ═══ Screener Reading Strip ═══ -->
+    <section class="screener-insight-strip" data-primary-answer-equivalent data-primary-weight="dominant" data-catalog-task="screener-result-routing" aria-label="影响范围：当前筛选条件下的 A 股标的集合" data-reveal="fade-up" data-reveal-delay="50">
+      <div class="screener-insight-item" data-screener-scope data-answer-evidence>
+        <span class="screener-insight-label">Scope</span>
+        <span class="screener-insight-value" data-answer-judgment data-answer-metric>沪深300 · A股 · 238 只</span>
+      </div>
+      <div class="screener-insight-item" data-screener-rank data-answer-evidence>
+        <span class="screener-insight-label">Rank</span>
+        <span class="screener-insight-value">排序: 涨跌幅 → 成交额 → 信号强度</span>
+      </div>
+      <div class="screener-insight-item" data-screener-color>
+        <span class="screener-insight-label">Color</span>
+        <span class="screener-insight-value">红涨绿跌 · 深浅表示强度</span>
+        <span class="screener-legend-scale" aria-hidden="true">
+          <span class="screener-legend-stop" data-step="down-2"></span>
+          <span class="screener-legend-stop" data-step="down-1"></span>
+          <span class="screener-legend-stop" data-step="flat"></span>
+          <span class="screener-legend-stop" data-step="up-1"></span>
+          <span class="screener-legend-stop" data-step="up-2"></span>
+        </span>
+      </div>
+      <div class="screener-insight-item" data-screener-filters data-answer-evidence>
+        <span class="screener-insight-label">Filters</span>
+        <span class="screener-insight-value">3 条激活 · 行业/市值/信号</span>
+      </div>
+      <div class="screener-insight-item" data-answer-action role="button" tabindex="0" aria-controls="main-content catalog-detail-panel" data-drilldown-target="catalog-detail-panel" aria-label="查看筛选结果去向" data-action-tier="context">
+        <span class="screener-insight-label">Destination</span>
+        <span class="screener-insight-value">观察 · 标的池 · 研究 · 对比</span>
+      </div>
+    </section>
+
+    <!-- ═══ View Tabs: 筛选 / 排序 / 对比 ═══ -->
+    <div class="view-tabs-bar" role="tablist" aria-label="筛选器视图">
+      <button class="ov-tab active" data-tab-target="filter" role="tab" id="tab-screener-filter" aria-selected="true" aria-controls="panel-screener-filter">筛选</button>
+      <button class="ov-tab" data-tab-target="sort" role="tab" id="tab-screener-sort" aria-selected="false" aria-controls="panel-screener-sort">排序</button>
+      <button class="ov-tab" data-tab-target="compare" role="tab" id="tab-screener-compare" aria-selected="false" aria-controls="panel-screener-compare">对比</button>
+    </div>
+    <div data-tab-panel="filter" id="panel-screener-filter" role="tabpanel" aria-labelledby="tab-screener-filter" data-contract-slot="main" aria-hidden="false">
+      <section class="filter-workbench" aria-label="筛选条件工作区" data-reveal="fade-up" data-reveal-delay="80">
+        <div class="filter-workbench-section">
+          <div class="filter-workbench-header">
+            <span class="filter-workbench-title">条件堆栈</span>
+            <span data-filter-status>草稿 1 条</span>
+          </div>
+          <div class="active-conditions" data-active-conditions>
+            <span class="condition-chip" data-condition-chip="universe">股票池 = 沪深300</span>
+          </div>
+        </div>
+        <div class="filter-workbench-section">
+          <div class="filter-workbench-header">
+            <span class="filter-workbench-title">条件构建</span>
+            <span data-filter-draft>股票池 = 沪深300 · PE &lt; 20</span>
+          </div>
+          <div class="condition-builder-row">
+            <span class="condition-control"><span class="condition-control-label">因子</span><span data-condition-field>PE</span></span>
+            <span class="condition-control"><span class="condition-control-label">关系</span><span data-condition-operator>&lt;</span></span>
+            <span class="condition-control"><span class="condition-control-label">阈值</span><span data-condition-value>20</span></span>
+            <button class="btn btn-ghost" data-filter-action="add-condition">添加条件</button>
+            <button class="btn" data-filter-action="apply" data-action-tier="context">预览匹配</button>
+          </div>
+        </div>
+        <div class="filter-workbench-section">
+          <div class="filter-workbench-header">
+            <span class="filter-workbench-title">执行结果</span>
+            <span data-filter-applied-at>待应用</span>
+          </div>
+          <div class="filter-run-summary">
+            <span>预估匹配</span>
+            <span class="filter-run-value" data-filter-preview-count>126 只</span>
+          </div>
+        </div>
+      </section>
+    <!-- ═══ Main Table Area ═══ -->
+    <div class="catalog-table" data-contract-slot="results-table" data-selected-object-region>
+      <div class="catalog-table-inner" id="main-content" data-reveal="fade-up" data-reveal-delay="100">
+        <div class="table-container">
+          <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="筛选结果" data-compare-source="screener-results">
+            <caption class="sr-only">筛选结果：共 238 只标的</caption>
+            <colgroup><col class="col-sorted"></colgroup>
+            <thead>
+              <tr>
+                <th scope="col" class="col-code sorted" data-tooltip="点击切换排序方向">代码 <span class="sort-icon">▲</span></th>
+                <th scope="col" class="col-name">名称</th>
+                <th scope="col" class="col-price right" data-tooltip="最新一笔成交价格">最新价 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-change right" data-tooltip="相对前收盘价涨跌百分比">涨跌幅 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-delta right" data-tooltip="相对前收盘价涨跌金额">涨跌额 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-vol right" data-tooltip="当日累计成交金额">成交额 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-mcap right" data-tooltip="当前流通市值">流通市值 <span class="sort-icon"></span></th>
+                <th scope="col" class="col-sector" data-tooltip="申万一级行业分类">行业</th>
+                <th scope="col" class="col-signal" data-tooltip="AI信号评级与置信度">信号</th>
+                <th scope="col" class="col-risk" data-tooltip="风险等级评估">风险</th>
+                <th scope="col" class="col-trend" data-tooltip="近期走势迷你图">趋势</th>
+                <th scope="col" class="col-action right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 600519 贵州茅台 -->
+              <tr class="row selected" data-row-selection-marker data-direction="up">
+                <td class="cell-ticker numeric" tabindex="0">600519</td>
+                <td>贵州茅台</td>
+                <td class="right numeric" data-tooltip="最新成交价">1,856.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 3.10%"><span class="direction-symbol" aria-hidden="true">▲</span>+3.10%</td>
+                <td class="right numeric cell-change-up">+55.86</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 82.3 亿元">82.3亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 2.3 万亿元">2.3万亿</td>
+                <td><span class="cell-badge sector" data-tooltip="消费行业板块">消费</span></td>
+                <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.92 · 强信号">买入 <span class="signal-strength">0.92</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[10,12,11,14,13,16,15,18,17,20],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 300750 宁德时代 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">300750</td>
+                <td>宁德时代</td>
+                <td class="right numeric" data-tooltip="最新成交价">218.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 5.20%"><span class="direction-symbol" aria-hidden="true">▲</span>+5.20%</td>
+                <td class="right numeric cell-change-up">+10.76</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 156.7 亿元">156.7亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 5,320 亿元">5,320亿</td>
+                <td><span class="cell-badge sector" data-tooltip="新能源行业板块">新能源</span></td>
+                <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.85 · 强信号">买入 <span class="signal-strength">0.85</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[8,9,7,11,10,14,12,17,16,21],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 002594 比亚迪 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">002594</td>
+                <td>比亚迪</td>
+                <td class="right numeric" data-tooltip="最新成交价">291.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 2.80%"><span class="direction-symbol" aria-hidden="true">▲</span>+2.80%</td>
+                <td class="right numeric cell-change-up">+7.90</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 98.4 亿元">98.4亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 8,450 亿元">8,450亿</td>
+                <td><span class="cell-badge sector" data-tooltip="新能源行业板块">新能源</span></td>
+                <td><span class="signal-pill buy s0" data-tooltip="AI买入信号 · 置信度 0.58 · 弱信号">买入 <span class="signal-strength">0.58</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[10,10,12,15,16,19,18],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 601318 中国平安 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">601318</td>
+                <td>中国平安</td>
+                <td class="right numeric" data-tooltip="最新成交价">53.80</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 3.46%"><span class="direction-symbol" aria-hidden="true">▲</span>+3.46%</td>
+                <td class="right numeric cell-change-up">+1.80</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 45.2 亿元">45.2亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 9,820 亿元">9,820亿</td>
+                <td><span class="cell-badge sector" data-tooltip="金融行业板块">金融</span></td>
+                <td><span class="signal-pill buy s1" data-tooltip="AI买入信号 · 置信度 0.78 · 中等信号">买入 <span class="signal-strength">0.78</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[8,10,9,12,12,16,18],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 000333 美的集团 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">000333</td>
+                <td>美的集团</td>
+                <td class="right numeric" data-tooltip="最新成交价">66.50</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 2.21%"><span class="direction-symbol" aria-hidden="true">▼</span>-2.21%</td>
+                <td class="right numeric cell-change-down">-1.50</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 32.1 亿元">32.1亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 4,560 亿元">4,560亿</td>
+                <td><span class="cell-badge sector" data-tooltip="制造行业板块">制造</span></td>
+                <td><span class="signal-pill sell s1" data-tooltip="AI卖出信号 · 置信度 0.71 · 中等信号">卖出 <span class="signal-strength">0.71</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[20,18,19,16,17,13,14,11,10,7],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 600900 长江电力 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">600900</td>
+                <td>长江电力</td>
+                <td class="right numeric" data-tooltip="最新成交价">28.90</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 3.21%"><span class="direction-symbol" aria-hidden="true">▲</span>+3.21%</td>
+                <td class="right numeric cell-change-up">+0.90</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 18.6 亿元">18.6亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 7,120 亿元">7,120亿</td>
+                <td><span class="cell-badge sector" data-tooltip="公用事业板块">公用</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.48 · 观望">持有 <span class="signal-strength">0.48</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[6,7,8,10,12,14,17],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 002475 立讯精密 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">002475</td>
+                <td>立讯精密</td>
+                <td class="right numeric" data-tooltip="最新成交价">35.60</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 6.32%"><span class="direction-symbol" aria-hidden="true">▼</span>-6.32%</td>
+                <td class="right numeric cell-change-down">-2.40</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 28.9 亿元">28.9亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 2,530 亿元">2,530亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill sell s2" data-tooltip="AI卖出信号 · 置信度 0.83 · 强信号">卖出 <span class="signal-strength">0.83</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[22,20,18,16,14,12,10,8,7,5],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 688981 中芯国际 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">688981</td>
+                <td>中芯国际</td>
+                <td class="right numeric" data-tooltip="最新成交价">51.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 6.25%"><span class="direction-symbol" aria-hidden="true">▲</span>+6.25%</td>
+                <td class="right numeric cell-change-up">+3.00</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 67.8 亿元">67.8亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 4,060 亿元">4,060亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.82 · 强信号">买入 <span class="signal-strength">0.82</span></span></td>
+                <td><span class="risk-dot high" data-tooltip="高风险等级 · 波动率较高">高</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[5,7,6,10,8,13,11,16,15,20],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 300760 迈瑞医疗 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">300760</td>
+                <td>迈瑞医疗</td>
+                <td class="right numeric" data-tooltip="最新成交价">268.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 1.52%"><span class="direction-symbol" aria-hidden="true">▲</span>+1.52%</td>
+                <td class="right numeric cell-change-up">+4.02</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 12.3 亿元">12.3亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 3,240 亿元">3,240亿</td>
+                <td><span class="cell-badge sector" data-tooltip="医药行业板块">医药</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.52 · 观望">持有 <span class="signal-strength">0.52</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-flat"><svg role="img" data-sparkline='{"data":[10,9,11,10,10,10,10],"series":"neutral","width":48,"height":18,"fill":false}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 002371 北方华创 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">002371</td>
+                <td>北方华创</td>
+                <td class="right numeric" data-tooltip="最新成交价">342.00</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 4.25%"><span class="direction-symbol" aria-hidden="true">▲</span>+4.25%</td>
+                <td class="right numeric cell-change-up">+13.94</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 56.2 亿元">56.2亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,780 亿元">1,780亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.88 · 强信号">买入 <span class="signal-strength">0.88</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[8,10,14,12,16,18,20],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 688012 中微公司 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">688012</td>
+                <td>中微公司</td>
+                <td class="right numeric" data-tooltip="最新成交价">185.00</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 1.60%"><span class="direction-symbol" aria-hidden="true">▼</span>-1.60%</td>
+                <td class="right numeric cell-change-down">-3.00</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 15.4 亿元">15.4亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,120 亿元">1,120亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.45 · 观望">持有 <span class="signal-strength">0.45</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[20,17,14,16,10,7,4],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 603259 药明康德 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">603259</td>
+                <td>药明康德</td>
+                <td class="right numeric" data-tooltip="最新成交价">42.50</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 3.41%"><span class="direction-symbol" aria-hidden="true">▼</span>-3.41%</td>
+                <td class="right numeric cell-change-down">-1.50</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 22.1 亿元">22.1亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,260 亿元">1,260亿</td>
+                <td><span class="cell-badge sector" data-tooltip="医药行业板块">医药</span></td>
+                <td><span class="signal-pill sell s1" data-tooltip="AI卖出信号 · 置信度 0.76 · 中等信号">卖出 <span class="signal-strength">0.76</span></span></td>
+                <td><span class="risk-dot high" data-tooltip="高风险等级 · 波动率较高">高</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[18,16,20,12,14,8,5],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 601888 中国中免 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">601888</td>
+                <td>中国中免</td>
+                <td class="right numeric" data-tooltip="最新成交价">78.30</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 2.12%"><span class="direction-symbol" aria-hidden="true">▼</span>-2.12%</td>
+                <td class="right numeric cell-change-down">-1.70</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 18.7 亿元">18.7亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,620 亿元">1,620亿</td>
+                <td><span class="cell-badge sector" data-tooltip="消费行业板块">消费</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.50 · 观望">持有 <span class="signal-strength">0.50</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[20,18,15,14,10,8,5],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 601012 隆基绿能 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">601012</td>
+                <td>隆基绿能</td>
+                <td class="right numeric" data-tooltip="最新成交价">22.80</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 1.72%"><span class="direction-symbol" aria-hidden="true">▼</span>-1.72%</td>
+                <td class="right numeric cell-change-down">-0.40</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 25.3 亿元">25.3亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,730 亿元">1,730亿</td>
+                <td><span class="cell-badge sector" data-tooltip="新能源行业板块">新能源</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.42 · 观望">持有 <span class="signal-strength">0.42</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[18,16,14,16,10,10,6],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 002049 紫光国微 (stale signal — 信号超过 5 分钟未更新) -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">002049</td>
+                <td>紫光国微</td>
+                <td class="right numeric" data-tooltip="最新成交价">98.50</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 2.07%"><span class="direction-symbol" aria-hidden="true">▲</span>+2.07%</td>
+                <td class="right numeric cell-change-up">+2.00</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 8.9 亿元">8.9亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 580 亿元">580亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill hold s0 stale" data-tooltip="持有信号 · 置信度 0.45 · 信号已过时（超过5分钟未更新）">持有 <span class="signal-strength">0.45</span></span></td>
+                <td><span class="risk-dot low stale">低</span></td>
+                <td><span class="sparkline-up stale"><svg role="img" data-sparkline='{"data":[8,10,9,11,13,15,17],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 600036 招商银行 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">600036</td>
+                <td>招商银行</td>
+                <td class="right numeric" data-tooltip="最新成交价">39.80</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 1.92%"><span class="direction-symbol" aria-hidden="true">▲</span>+1.92%</td>
+                <td class="right numeric cell-change-up">+0.75</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 41.6 亿元">41.6亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 8,940 亿元">8,940亿</td>
+                <td><span class="cell-badge sector" data-tooltip="金融行业板块">金融</span></td>
+                <td><span class="signal-pill buy s1" data-tooltip="AI买入信号 · 置信度 0.74 · 中等信号">买入 <span class="signal-strength">0.74</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[7,8,8,10,11,13,14],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 600276 恒瑞医药 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">600276</td>
+                <td>恒瑞医药</td>
+                <td class="right numeric" data-tooltip="最新成交价">46.20</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 0.86%"><span class="direction-symbol" aria-hidden="true">▼</span>-0.86%</td>
+                <td class="right numeric cell-change-down">-0.40</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 19.8 亿元">19.8亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 2,950 亿元">2,950亿</td>
+                <td><span class="cell-badge sector" data-tooltip="医药行业板块">医药</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.55 · 观望">持有 <span class="signal-strength">0.55</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[15,14,16,13,12,11,10],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 601899 紫金矿业 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">601899</td>
+                <td>紫金矿业</td>
+                <td class="right numeric" data-tooltip="最新成交价">18.35</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 2.63%"><span class="direction-symbol" aria-hidden="true">▲</span>+2.63%</td>
+                <td class="right numeric cell-change-up">+0.47</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 54.9 亿元">54.9亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 4,720 亿元">4,720亿</td>
+                <td><span class="cell-badge sector" data-tooltip="周期行业板块">周期</span></td>
+                <td><span class="signal-pill buy s1" data-tooltip="AI买入信号 · 置信度 0.77 · 中等信号">买入 <span class="signal-strength">0.77</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[8,9,11,10,14,15,18],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 000858 五粮液 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">000858</td>
+                <td>五粮液</td>
+                <td class="right numeric" data-tooltip="最新成交价">143.60</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 1.18%"><span class="direction-symbol" aria-hidden="true">▼</span>-1.18%</td>
+                <td class="right numeric cell-change-down">-1.72</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 31.2 亿元">31.2亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 5,570 亿元">5,570亿</td>
+                <td><span class="cell-badge sector" data-tooltip="消费行业板块">消费</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.51 · 观望">持有 <span class="signal-strength">0.51</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-down"><svg role="img" data-sparkline='{"data":[18,17,16,14,15,12,11],"series":"down","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 300124 汇川技术 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">300124</td>
+                <td>汇川技术</td>
+                <td class="right numeric" data-tooltip="最新成交价">62.40</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 3.84%"><span class="direction-symbol" aria-hidden="true">▲</span>+3.84%</td>
+                <td class="right numeric cell-change-up">+2.31</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 23.7 亿元">23.7亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,650 亿元">1,650亿</td>
+                <td><span class="cell-badge sector" data-tooltip="制造行业板块">制造</span></td>
+                <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.84 · 强信号">买入 <span class="signal-strength">0.84</span></span></td>
+                <td><span class="risk-dot medium" data-tooltip="中等风险等级">中</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[6,8,9,12,14,13,17],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 601088 中国神华 -->
+              <tr class="row" data-direction="down">
+                <td class="cell-ticker numeric">601088</td>
+                <td>中国神华</td>
+                <td class="right numeric" data-tooltip="最新成交价">38.90</td>
+                <td class="right numeric cell-change-down" data-tooltip="跌幅 0.61%"><span class="direction-symbol" aria-hidden="true">▼</span>-0.61%</td>
+                <td class="right numeric cell-change-down">-0.24</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 16.5 亿元">16.5亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 7,720 亿元">7,720亿</td>
+                <td><span class="cell-badge sector" data-tooltip="能源行业板块">能源</span></td>
+                <td><span class="signal-pill hold" data-tooltip="持有信号 · 置信度 0.57 · 观望">持有 <span class="signal-strength">0.57</span></span></td>
+                <td><span class="risk-dot low" data-tooltip="低风险等级">低</span></td>
+                <td><span class="sparkline-flat"><svg role="img" data-sparkline='{"data":[12,13,12,12,11,12,11],"series":"neutral","width":48,"height":18,"fill":false}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+              <!-- 603501 韦尔股份 -->
+              <tr class="row" data-direction="up">
+                <td class="cell-ticker numeric">603501</td>
+                <td>韦尔股份</td>
+                <td class="right numeric" data-tooltip="最新成交价">116.20</td>
+                <td class="right numeric cell-change-up" data-tooltip="涨幅 5.48%"><span class="direction-symbol" aria-hidden="true">▲</span>+5.48%</td>
+                <td class="right numeric cell-change-up">+6.03</td>
+                <td class="right numeric cell-volume" data-tooltip="今日累计成交 44.1 亿元">44.1亿</td>
+                <td class="right numeric cell-volume" data-tooltip="流通市值约 1,410 亿元">1,410亿</td>
+                <td><span class="cell-badge sector" data-tooltip="科技行业板块">科技</span></td>
+                <td><span class="signal-pill buy s2" data-tooltip="AI买入信号 · 置信度 0.86 · 强信号">买入 <span class="signal-strength">0.86</span></span></td>
+                <td><span class="risk-dot high" data-tooltip="高风险等级 · 波动率较高">高</span></td>
+                <td><span class="sparkline-up"><svg role="img" data-sparkline='{"data":[5,6,9,8,13,15,20],"series":"up","width":48,"height":18,"fill":true}' aria-label="走势"></svg></span></td>
+                <td class="right"><button class="row-action" type="button" data-action-tier="context">+ 对比</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Table Footer -->
+        <div class="table-footer">
+          <div class="table-footer-info">
+            <span>显示 1-22 / 共 238 只 · 第 1/11 页</span>
+          </div>
+          <div class="table-footer-actions">
+            <button class="pagination-btn active" data-action-tier="context">1</button>
+            <button class="pagination-btn" data-action-tier="context">2</button>
+            <button class="pagination-btn" data-action-tier="context">3</button>
+            <span class="pagination-ellipsis">···</span>
+            <button class="pagination-btn" data-action-tier="context">11</button>
+          </div>
+        </div>
+        <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
+      </div>
+    </div>
+
+    <!-- State Variants: Results Table -->
+
+
+
+
+
+
+    </div><!-- end data-tab-panel="filter" -->
+
+    <!-- Sort Panel -->
+    <div data-tab-panel="sort" id="panel-screener-sort" role="tabpanel" aria-labelledby="tab-screener-sort" aria-hidden="true" class="sort-panel" data-reveal="fade-up" data-reveal-delay="0">
+      <div class="sort-panel-desc">拖拽或点击调整排序优先级，已排序列：</div>
+      <div class="sort-list">
+        <button class="sort-item sort-item--active" type="button" data-sort-option="change" data-sort-label="涨跌幅" data-sort-target=".col-change" data-tooltip="当前首要排序条件，点击切换方向">
+          <span class="sort-item-rank">1</span>
+          <span class="sort-item-name">涨跌幅</span>
+          <span class="sort-item-dir">降序 ▼</span>
+        </button>
+        <button class="sort-item" type="button" data-sort-option="volume" data-sort-label="成交额" data-sort-target=".col-vol" data-tooltip="次要排序条件">
+          <span class="sort-item-rank">2</span>
+          <span class="sort-item-name">成交额</span>
+          <span class="sort-item-dir">降序 ▼</span>
+        </button>
+        <button class="sort-item" type="button" data-sort-option="signal" data-sort-label="信号强度" data-sort-target=".col-signal" data-tooltip="AI信号置信度排序">
+          <span class="sort-item-rank">3</span>
+          <span class="sort-item-name">信号强度</span>
+          <span class="sort-item-dir">降序 ▼</span>
+        </button>
+        <button class="sort-item" type="button" data-sort-option="marketcap" data-sort-label="流通市值" data-sort-target=".col-mcap" data-tooltip="按流通市值从小到大排列">
+          <span class="sort-item-rank">4</span>
+          <span class="sort-item-name">流通市值</span>
+          <span class="sort-item-dir">升序 ▲</span>
+        </button>
+      </div>
+      <div class="sort-panel-actions">
+        <button class="btn btn-ghost" data-sort-action="reset" data-action-tier="overflow">重置</button>
+        <button class="btn btn-primary" data-sort-action="apply" data-action-tier="context">应用排序</button>
+      </div>
+    </div><!-- end data-tab-panel="sort" -->
+
+    <!-- Compare Panel -->
+    <div data-tab-panel="compare" id="panel-screener-compare" role="tabpanel" aria-labelledby="tab-screener-compare" aria-hidden="true" class="compare-panel" data-reveal="fade-up" data-reveal-delay="0" data-secondary-context>
+      <div class="compare-panel-desc">快速对比已选标的，当前已选 <span data-compare-count>3</span> 只：</div>
+      <div class="compare-chart-section">
+        <div class="compare-chart-label">成交额占比</div>
+        <div data-flow='{"segments":[{"value":82.3,"label":"贵州茅台"},{"value":156.7,"label":"宁德时代"},{"value":67.8,"label":"中芯国际"}]}'></div>
+      </div>
+      <div class="compare-list">
+        <div class="compare-row" data-tooltip="贵州茅台 600519 · 涨幅 +3.10% · 成交额 82.3亿">
+          <span class="compare-row-ticker">600519</span>
+          <span class="compare-row-name">贵州茅台</span>
+          <span class="text-up dir-up">+3.10%</span>
+          <svg role="img" data-sparkline='{"data":[10,12,11,14,13,16,15,18,17,20],"series":"up","width":48,"height":18}' aria-label="走势"></svg>
+        </div>
+        <div class="compare-row" data-tooltip="宁德时代 300750 · 涨幅 +5.20% · 成交额 156.7亿">
+          <span class="compare-row-ticker">300750</span>
+          <span class="compare-row-name">宁德时代</span>
+          <span class="text-up dir-up">+5.20%</span>
+          <svg role="img" data-sparkline='{"data":[8,10,9,12,14,11,16,18,20,22],"series":"up","width":48,"height":18}' aria-label="走势"></svg>
+        </div>
+        <div class="compare-row" data-tooltip="中芯国际 688981 · 涨幅 +6.25% · 成交额 67.8亿">
+          <span class="compare-row-ticker">688981</span>
+          <span class="compare-row-name">中芯国际</span>
+          <span class="text-up dir-up">+6.25%</span>
+          <svg role="img" data-sparkline='{"data":[5,7,6,9,8,12,10,15,14,18],"series":"up","width":48,"height":18}' aria-label="走势"></svg>
+        </div>
+      </div>
+      <div class="compare-panel-actions">
+        <button class="btn btn-ghost" data-action-tier="overflow">清空</button>
+        <label for="overlay-compare" class="btn btn-primary ov-label-btn" data-action-tier="primary">开始对比 &rarr;</label>
+      </div>
+    </div><!-- end data-tab-panel="compare" -->
+
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320" aria-valuetext="调整详情面板宽度 320 像素"></div>
+
+    <!-- ═══ Detail Panel (320px right side) ═══ -->
+    <div class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
+      <!-- Section 1: 结果去向 -->
+      <div class="detail-actions" data-collapse-priority="l1" data-reveal="fade-up" data-reveal-delay="0">
+        <div class="context-section-header">
+          <span class="context-section-title">结果去向</span>
+          <span class="context-section-count">贵州茅台</span>
+        </div>
+        <div class="detail-actions-body">
+          <button class="btn" data-action-tier="context">加入观察</button>
+          <label for="overlay-generate-pool" class="btn ov-label-btn" data-action-tier="context">加入标的池</label>
+          <details class="action-overflow">
+            <summary class="btn btn-ghost" data-decision-overflow data-action-tier="overflow" aria-haspopup="menu" aria-label="更多结果去向" title="更多">...</summary>
+            <div class="action-overflow-menu" role="menu" aria-label="更多结果去向">
+              <button class="action-overflow-item" type="button" role="menuitem" data-action-tier="overflow">发送到研究</button>
+              <label for="overlay-compare" class="action-overflow-item ov-label-btn" role="menuitem" tabindex="0" data-action-tier="overflow">加入对比篮</label>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Section 2: 筛选预设 (默认折叠 — 低频) -->
+      <details class="context-section" data-collapse-priority="l3" data-secondary-context>
+        <summary class="context-section-header">
+          <span class="context-section-title">筛选预设</span>
+          <span class="collapse-count">3 预设</span>
+          <span class="collapse-summary">高ROE、动量、红利</span>
+        </summary>
+        <div class="context-section-body">
+          <!-- Preset 1 -->
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：高ROE低估值" data-reveal="fade-up" data-reveal-delay="0" data-tooltip="ROE > 15% 且 PE < 20 的标的" data-action-tier="context">
+            <div class="preset-card-title">高ROE低估值</div>
+            <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
+            <div class="preset-card-match">匹配 23 只</div>
+          </div>
+          <!-- Preset 2 -->
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：动量强势" data-reveal="fade-up" data-reveal-delay="80" data-tooltip="20日涨幅 > 10% 且成交额放大" data-action-tier="context">
+            <div class="preset-card-title">动量强势</div>
+            <div class="preset-card-desc">20日涨幅&gt;10%, 成交额放大</div>
+            <div class="preset-card-match">匹配 45 只</div>
+          </div>
+          <!-- Preset 3 -->
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：低波动红利" data-reveal="fade-up" data-reveal-delay="160" data-tooltip="波动率 < 15% 且股息率 > 3%" data-action-tier="context">
+            <div class="preset-card-title">低波动红利</div>
+            <div class="preset-card-desc">波动率&lt;15%, 股息率&gt;3%</div>
+            <div class="preset-card-match">匹配 18 只</div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Section 3: 多维评分 -->
+      <details class="context-section" data-collapse-priority="l2" open data-reveal="fade-up" data-reveal-delay="150" data-secondary-context>
+        <summary class="context-section-header">
+          <span class="context-section-title">多维评分</span>
+          <span class="collapse-count">5 项</span>
+        </summary>
+        <div class="context-section-body">
+          <div class="score-compact-grid" aria-label="多维评分摘要">
+            <div class="score-compact-card score-compact-card--wide" data-tooltip="多维度加权综合评分">
+              <span class="score-compact-label">综合评分</span>
+              <span class="score-compact-bar"><span class="score-compact-fill flow-w-79"></span></span>
+              <span class="score-compact-value">79</span>
+            </div>
+            <div class="score-compact-card" data-tooltip="PE/PB/PS相对估值评分">
+              <div class="score-compact-label">价值</div>
+              <div class="score-compact-value">78</div>
+              <div class="score-compact-bar"><span class="score-compact-fill ok flow-w-78"></span></div>
+            </div>
+            <div class="score-compact-card" data-tooltip="营收/利润增速评分">
+              <div class="score-compact-label">成长</div>
+              <div class="score-compact-value">65</div>
+              <div class="score-compact-bar"><span class="score-compact-fill warn flow-w-65"></span></div>
+            </div>
+            <div class="score-compact-card" data-tooltip="ROE/现金流/负债率评分">
+              <div class="score-compact-label">质量</div>
+              <div class="score-compact-value">82</div>
+              <div class="score-compact-bar"><span class="score-compact-fill ok flow-w-82"></span></div>
+            </div>
+            <div class="score-compact-card" data-tooltip="价格动量与技术形态评分">
+              <div class="score-compact-label">动量</div>
+              <div class="score-compact-value">91</div>
+              <div class="score-compact-bar"><span class="score-compact-fill ok flow-w-91"></span></div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Section 4: 对比篮 (默认展开 — 高频) -->
+      <details open class="context-section" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="220">
+        <summary class="context-section-header">
+          <span class="context-section-title">对比篮</span>
+          <span class="collapse-count"><span data-compare-count>3</span> 只</span>
+          <span class="context-section-action">已选 <span data-compare-count>3</span> 只</span>
+        </summary>
+        <div class="context-section-body" data-compare-basket-body>
+          <div class="compare-item">
+            <div class="compare-item-info">
+              <div>
+                <div class="compare-item-name">贵州茅台</div>
+                <div class="compare-item-code">600519</div>
+              </div>
+              <span class="compare-item-spark sparkline-up"><svg role="img" data-sparkline='{"data":[5,8,6,10,14,16,20],"series":"up","width":32,"height":12}' aria-label="走势"></svg></span>
+            </div>
+            <div class="compare-item-actions">
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除贵州茅台" data-action-tier="overflow">&times;</span>
+            </div>
+          </div>
+          <div class="compare-item">
+            <div class="compare-item-info">
+              <div>
+                <div class="compare-item-name">宁德时代</div>
+                <div class="compare-item-code">300750</div>
+              </div>
+              <span class="compare-item-spark sparkline-up"><svg role="img" data-sparkline='{"data":[6,8,14,10,18,16,22],"series":"up","width":32,"height":12}' aria-label="走势"></svg></span>
+            </div>
+            <div class="compare-item-actions">
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除宁德时代" data-action-tier="overflow">&times;</span>
+            </div>
+          </div>
+          <div class="compare-item">
+            <div class="compare-item-info">
+              <div>
+                <div class="compare-item-name">中芯国际</div>
+                <div class="compare-item-code">688981</div>
+              </div>
+              <span class="compare-item-spark sparkline-up"><svg role="img" data-sparkline='{"data":[4,6,8,10,16,14,20],"series":"up","width":32,"height":12}' aria-label="走势"></svg></span>
+            </div>
+            <div class="compare-item-actions">
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际" data-action-tier="overflow">&times;</span>
+            </div>
+          </div>
+          <label for="overlay-compare" class="btn compare-cta ov-label-btn" data-action-tier="context">开始对比 &rarr;</label>
+        </div>
+      </details>
+    </div>
+
+    <!-- State Variants: Compare Cart -->
+
+
+
+    <!-- State Variants: Scoring Presets -->
+
+
+
+
+    <!-- State Variants: Result Destinations -->
+
+
+
+
+    <!-- State Variants: Compare Drawer (Overlay) -->
+
+
+
+
+
+  </div>
+
+  <!-- ═══ Overlay Checkbox Triggers ═══ -->
+
+
+
+
+
+
+  <!-- ═══ Overlay Containers ═══ -->
+  <div class="overlays">
+
+    <!-- Overlay A: 保存预设 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-save-preset">
+      <label class="overlay-dismiss" for="overlay-save-preset" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存预设">
+        <div class="overlay-header">
+          <span class="overlay-title">保存筛选预设</span>
+          <label for="overlay-save-preset" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h2>预设名称</h2>
+          <div class="sv-pad-6-0">
+            <input type="text" placeholder="输入预设名称..." class="ov-input">
+          </div>
+
+          <h2>当前筛选条件摘要</h2>
+          <div class="overlay-field">
+            <span class="overlay-field-label">股票池</span>
+            <span class="overlay-field-value">沪深300</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">行业</span>
+            <span class="overlay-field-value">全部行业</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">市值</span>
+            <span class="overlay-field-value">全部</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">信号</span>
+            <span class="overlay-field-value">全部</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">匹配标的数</span>
+            <span class="overlay-field-value">238 只</span>
+          </div>
+
+          <h2>标签</h2>
+          <div class="sv-flex-wrap sv-pad-6-0">
+            <span class="ov-tag">价值</span>
+            <span class="ov-tag">A股</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-save-preset" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-save-preset" class="overlay-btn overlay-btn-primary ov-label-btn">保存</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay B: 列管理 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-column-manage">
+      <label class="overlay-dismiss" for="overlay-column-manage" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="列管理">
+        <div class="overlay-header">
+          <span class="overlay-title">列管理</span>
+          <label for="overlay-column-manage" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h2>搜索列</h2>
+          <div class="sv-pad-section">
+            <input type="text" placeholder="搜索列名..." class="ov-input">
+          </div>
+
+          <h2>已选列（拖拽排序）</h2>
+          <div class="ov-check-list">
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 代码
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 名称
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 最新价
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 涨跌幅
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 行业
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 信号
+            </label>
+            <label class="ov-check-label">
+              <input type="checkbox" checked > 风险
+            </label>
+            <label class="ov-check-label ov-check-label--dim">
+              <input type="checkbox" > 市盈率
+            </label>
+            <label class="ov-check-label ov-check-label--dim">
+              <input type="checkbox" > 市净率
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-secondary">重置默认</button>
+            <label for="overlay-column-manage" class="overlay-btn overlay-btn-primary ov-label-btn">确认</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay C: Compare Drawer (右侧滑入) -->
+    <div class="overlay-backdrop" data-overlay="overlay-compare">
+      <label class="overlay-dismiss" for="overlay-compare" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="标的对比">
+        <div class="overlay-header">
+          <span class="overlay-title">标的对比</span>
+          <label for="overlay-compare" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h2>已选标的</h2>
+          <div class="ov-tag-list-mb12">
+            <span class="ov-tag ov-tag--primary">贵州茅台 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">宁德时代 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">中芯国际 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+          </div>
+
+          <h2>对比维度</h2>
+          <div class="ov-tab-bar">
+            <button class="ov-tab ov-tab--active">概览</button>
+            <button class="ov-tab">技术面</button>
+            <button class="ov-tab">基本面</button>
+            <button class="ov-tab">风险</button>
+          </div>
+
+          <div class="overlay-field">
+            <span class="overlay-field-label"></span>
+            <span class="overlay-field-value ov-compare-cell">贵州茅台</span>
+            <span class="overlay-field-value ov-compare-cell">宁德时代</span>
+            <span class="overlay-field-value ov-compare-cell">中芯国际</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">最新价</span>
+            <span class="overlay-field-value ov-compare-cell">1,856.00</span>
+            <span class="overlay-field-value ov-compare-cell">218.00</span>
+            <span class="overlay-field-value ov-compare-cell">51.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">涨跌幅</span>
+            <span class="overlay-field-value ov-compare-cell text-up dir-up">+3.10%</span>
+            <span class="overlay-field-value ov-compare-cell text-up dir-up">+5.20%</span>
+            <span class="overlay-field-value ov-compare-cell text-up dir-up">+6.25%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">市值</span>
+            <span class="overlay-field-value ov-compare-cell">2.3万亿</span>
+            <span class="overlay-field-value ov-compare-cell">5,320亿</span>
+            <span class="overlay-field-value ov-compare-cell">4,060亿</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">PE(TTM)</span>
+            <span class="overlay-field-value ov-compare-cell">28.5</span>
+            <span class="overlay-field-value ov-compare-cell">32.1</span>
+            <span class="overlay-field-value ov-compare-cell">68.2</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary ov-label-btn">生成标的池</label>
+            <label for="overlay-compare" class="overlay-btn overlay-btn-secondary ov-label-btn">关闭</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay D: 生成标的池确认 (Modal 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-generate-pool">
+      <label class="overlay-dismiss" for="overlay-generate-pool" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="生成标的池确认">
+        <div class="overlay-header">
+          <span class="overlay-title">生成标的池</span>
+          <label for="overlay-generate-pool" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <p class="ov-desc-text">将当前筛选结果固化为标的池（Universe），后续可用于回测、策略构建和风控。</p>
+
+          <h2>标的池名称</h2>
+          <div class="sv-pad-section">
+            <input type="text" placeholder="输入标的池名称..." class="ov-input">
+          </div>
+
+          <div class="overlay-field">
+            <span class="overlay-field-label">包含标的数量</span>
+            <span class="overlay-field-value">238 只</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">筛选条件</span>
+            <span class="overlay-field-value">沪深300 · 全部行业</span>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-generate-pool" class="overlay-btn overlay-btn-primary ov-label-btn">确认创建</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay E: 导出结果 (Sheet 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-export">
+      <label class="overlay-dismiss" for="overlay-export" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="导出筛选结果">
+        <div class="overlay-header">
+          <span class="overlay-title">导出筛选结果</span>
+          <label for="overlay-export" class="overlay-close" aria-label="关闭">&#10005;</label>
+        </div>
+        <div class="overlay-body">
+          <h2>导出格式</h2>
+          <div class="ov-radio-group">
+            <label class="ov-check-label">
+              <input type="radio" name="export-format" checked > CSV
+            </label>
+            <label class="ov-check-label">
+              <input type="radio" name="export-format" > Excel
+            </label>
+          </div>
+
+          <h2>列范围</h2>
+          <div class="ov-radio-group">
+            <label class="ov-check-label">
+              <input type="radio" name="export-columns" checked > 当前列
+            </label>
+            <label class="ov-check-label">
+              <input type="radio" name="export-columns" > 全部列
+            </label>
+          </div>
+
+          <h2>数据范围</h2>
+          <div class="ov-radio-group--tight">
+            <label class="ov-check-label">
+              <input type="radio" name="export-scope" checked > 全部（238 只）
+            </label>
+            <label class="ov-check-label">
+              <input type="radio" name="export-scope" > 已选（1 只）
+            </label>
+          </div>
+
+          <div class="overlay-actions">
+            <label for="overlay-export" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+            <label for="overlay-export" class="overlay-btn overlay-btn-primary ov-label-btn">导出</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+  <script src="shared/screener-workflow.js"></script>
+
+  </section>
+
+<section id="states-gallery" class="proto-section">
+      <div class="gallery-grid">
+        <div class="gallery-group" data-component="other">
+          <div class="gallery-group__label">other</div>
+          <div class="gallery-cards">
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">🔍</div>
+          <div class="state-empty-title">筛选条件不可用</div>
+          <div class="state-empty-desc">筛选服务未返回可用条件，请检查网络连接或刷新页面重试</div>
+          <button class="state-empty-cta">重试加载</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-bar-md"></div>
+          <div class="skeleton skeleton-bar-md"></div>
+          <div class="skeleton skeleton-bar-md"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">筛选条件加载失败</div>
+          <div class="state-error-desc">无法获取筛选条件配置，可能是数据服务异常或网络中断</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Selected State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="selected">
+        <div class="filter-selected-wrap">
+          <span class="filter-chip active filter-chip--ring">沪深300</span>
+          <span class="filter-chip active filter-chip--ring">科技</span>
+          <span class="filter-chip active filter-chip--ring">买入信号</span>
+          <span class="gallery-hint gallery-hint--inline">↑ 激活筛选条件时高亮边框</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📋</div>
+          <div class="state-empty-title">暂无匹配标的</div>
+          <div class="state-empty-desc">当前筛选条件下没有匹配的标的，请尝试调整筛选条件或扩大股票池范围</div>
+          <button class="state-empty-cta">重置筛选条件</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">筛选结果加载失败</div>
+          <div class="state-error-desc">无法获取筛选结果数据，可能是数据服务异常或网络连接中断，请检查后重试</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="sv-pad-12 stale-banner">
+          <span class="stale-dot-indicator"></span>
+          <span class="gallery-hint gallery-hint--stale">数据更新于 3 分钟前，可能不是最新状态</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Signal Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="sv-signal-stale-wrap">
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">买入（过时）</span>
+            <span class="signal-pill buy s2 stale">买入 <span class="signal-strength">0.92</span></span>
+          </div>
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">卖出（过时）</span>
+            <span class="signal-pill sell s1 stale">卖出 <span class="signal-strength">0.71</span></span>
+          </div>
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">持有（过时）</span>
+            <span class="signal-pill hold stale">持有 <span class="signal-strength">0.45</span></span>
+          </div>
+          <div class="stale-signal-col">
+            <span class="gallery-hint gallery-hint--sm">风险（过时）</span>
+            <span class="risk-dot stale">低</span>
+          </div>
+        </div>
+        <div class="gallery-hint gallery-hint--sm gallery-hint--mt8">信号超过 5 分钟未更新 — 去饱和 + 橙色 stale dot</div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Selected State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="selected">
+        <div class="sv-pad-8">
+          <div class="sv-bordered-box">
+            <div class="ov-compare-header-row">
+              <input type="checkbox" checked >
+              <span class="flex-1">600519 贵州茅台</span>
+              <span class="text-up dir-up">+3.10%</span>
+            </div>
+            <div class="ov-compare-row">
+              <input type="checkbox" >
+              <span class="flex-1">300750 宁德时代</span>
+              <span class="text-up dir-up">+5.20%</span>
+            </div>
+          </div>
+          <span class="gallery-hint">↑ 选中行高亮 + 左侧蓝色指示条</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">⚖️</div>
+          <div class="state-empty-title">对比篮为空</div>
+          <div class="state-empty-desc">从筛选结果中勾选标的添加到对比篮，最多支持 6 个标的同时对比</div>
+          <button class="state-empty-cta">开始筛选</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Bulk Selected State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="bulk">
+        <div class="sv-pad-8">
+          <div class="sv-bulk-card">
+            <div class="sv-bulk-title">已选 5 只标的</div>
+          </div>
+          <div class="sv-flex-wrap">
+            <span class="ov-tag ov-tag--primary">贵州茅台 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">宁德时代 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">中芯国际 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">中国平安 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+            <span class="ov-tag ov-tag--primary">比亚迪 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+          </div>
+          <span class="gallery-hint">↑ 批量已选数量展示</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📊</div>
+          <div class="state-empty-title">暂无评分模型</div>
+          <div class="state-empty-desc">评分模型列表为空，请先在研究模块创建因子评分模型</div>
+          <button class="state-empty-cta">前往研究模块</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-bar--lg"></div>
+          <div class="skeleton skeleton-bar--lg"></div>
+          <div class="skeleton skeleton-bar--lg"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Selected State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="selected">
+        <div class="sv-pad-8">
+          <div class="preset-card preset-card--selected" data-row-selection-marker>
+            <div class="preset-card-title">高ROE低估值</div>
+            <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
+            <div class="preset-card-match preset-card-match--selected">匹配 23 只 ✓ 已应用</div>
+          </div>
+          <span class="gallery-hint">↑ 选中的预设卡片边框高亮</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">📤</div>
+          <div class="state-empty-title">暂无可选目标</div>
+          <div class="state-empty-desc">没有已创建的观察列表或标的池，请先创建目标分组</div>
+          <button class="state-empty-cta">创建标的池</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-bar--sm skeleton--w60"></div>
+          <div class="skeleton skeleton-bar--sm skeleton--w45"></div>
+          <div class="skeleton skeleton-bar--sm skeleton--w70"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Bulk State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="bulk">
+        <div class="sv-pad-8">
+          <div class="sv-bordered-box">
+            <div class="sv-bulk-toolbar">
+              <span>已选 15 只标的</span>
+              <div class="sv-bulk-toolbar-actions">
+                <button class="btn sv-bulk-btn">加入观察</button>
+                <button class="btn btn-primary sv-bulk-btn">加入标的池</button>
+                <label for="overlay-export" class="btn btn-ghost sv-bulk-btn sv-bulk-btn--pointer">导出</label>
+                <label for="overlay-compare" class="btn btn-ghost sv-bulk-btn sv-bulk-btn--pointer">Compare</label>
+              </div>
+            </div>
+          </div>
+          <span class="gallery-hint">↑ 批量操作栏: 观察/标的池/导出/Compare</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Compare Drawer Empty State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon">⚖️</div>
+          <div class="state-empty-title">请从结果表添加标的</div>
+          <div class="state-empty-desc">在筛选结果中勾选标的，点击"加入对比"即可开始对比分析</div>
+          <button class="state-empty-cta">查看结果</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Compare Drawer Loading State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="loading">
+        <div class="state-loading">
+          <div class="skeleton skeleton-heading"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-bar--xl"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Compare Drawer Error State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="failed">
+        <div class="state-error">
+          <div class="state-error-icon">!</div>
+          <div class="state-error-title">加载对比数据失败</div>
+          <div class="state-error-desc">无法获取标的对比数据，可能是数据服务异常或网络中断</div>
+          <button class="state-error-retry">重试</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Compare Drawer Stale State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="stale">
+        <div class="sv-pad-12 stale-banner">
+          <span class="stale-dot-indicator"></span>
+          <span class="gallery-hint gallery-hint--stale">对比数据更新于 5 分钟前</span>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Compare Drawer Selected State</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="selected">
+        <div class="sv-pad-8">
+          <div class="sv-bordered-box">
+            <div class="sv-compare-highlight">
+              <span class="sv-compare-highlight-name">贵州茅台</span>
+              <span class="text-up dir-up">1,856.00</span>
+              <span class="text-tertiary">|</span>
+              <span>PE 28.5</span>
+            </div>
+          </div>
+          <span class="gallery-hint">↑ 对比项高亮显示</span>
+        </div>
+      </div>
+      </div>
+    </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<section id="overlays-gallery" class="proto-section">
+      <div class="gallery-grid gallery-grid--overlays">
+        <div class="gallery-group" data-component="overlays">
+          <div class="gallery-group__label">弹层设计</div>
+          <div class="gallery-cards">
+
+    <div class="gallery-card" data-overlay-ref="overlay-save-preset">
+      <div class="gallery-card__label">保存筛选预设 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存预设">
+          <div class="overlay-header">
+            <span class="overlay-title">保存筛选预设</span>
+          </div>
+          <div class="overlay-body">
+            <h2>预设名称</h2>
+            <div class="sv-pad-6-0">
+              <input type="text" placeholder="输入预设名称..." class="ov-input">
+            </div>
+
+            <h2>当前筛选条件摘要</h2>
+            <div class="overlay-field">
+              <span class="overlay-field-label">股票池</span>
+              <span class="overlay-field-value">沪深300</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">行业</span>
+              <span class="overlay-field-value">全部行业</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">市值</span>
+              <span class="overlay-field-value">全部</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">信号</span>
+              <span class="overlay-field-value">全部</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">匹配标的数</span>
+              <span class="overlay-field-value">238 只</span>
+            </div>
+
+            <h2>标签</h2>
+            <div class="sv-flex-wrap sv-pad-6-0">
+              <span class="ov-tag">价值</span>
+              <span class="ov-tag">A股</span>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-column-manage">
+      <div class="gallery-card__label">列管理 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="列管理">
+          <div class="overlay-header">
+            <span class="overlay-title">列管理</span>
+          </div>
+          <div class="overlay-body">
+            <h2>搜索列</h2>
+            <div class="sv-pad-section">
+              <input type="text" placeholder="搜索列名..." class="ov-input">
+            </div>
+
+            <h2>已选列（拖拽排序）</h2>
+            <div class="ov-check-list">
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 代码
+              </label>
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 名称
+              </label>
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 最新价
+              </label>
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 涨跌幅
+              </label>
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 行业
+              </label>
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 信号
+              </label>
+              <label class="ov-check-label">
+                <input type="checkbox" checked > 风险
+              </label>
+              <label class="ov-check-label ov-check-label--dim">
+                <input type="checkbox" > 市盈率
+              </label>
+              <label class="ov-check-label ov-check-label--dim">
+                <input type="checkbox" > 市净率
+              </label>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">重置默认</button>
+              <button class="overlay-btn overlay-btn-primary">确认</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-compare">
+      <div class="gallery-card__label">标的对比 (Drawer)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="标的对比">
+          <div class="overlay-header">
+            <span class="overlay-title">标的对比</span>
+          </div>
+          <div class="overlay-body">
+            <h2>已选标的</h2>
+            <div class="ov-tag-list-mb12">
+              <span class="ov-tag ov-tag--primary">贵州茅台 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+              <span class="ov-tag ov-tag--primary">宁德时代 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+              <span class="ov-tag ov-tag--primary">中芯国际 <span class="tag-close-icon" aria-hidden="true">&times;</span></span>
+            </div>
+
+            <h2>对比维度</h2>
+            <div class="ov-tab-bar">
+              <button class="ov-tab ov-tab--active">概览</button>
+              <button class="ov-tab">技术面</button>
+              <button class="ov-tab">基本面</button>
+              <button class="ov-tab">风险</button>
+            </div>
+
+            <div class="overlay-field">
+              <span class="overlay-field-label"></span>
+              <span class="overlay-field-value ov-compare-cell">贵州茅台</span>
+              <span class="overlay-field-value ov-compare-cell">宁德时代</span>
+              <span class="overlay-field-value ov-compare-cell">中芯国际</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">最新价</span>
+              <span class="overlay-field-value ov-compare-cell">1,856.00</span>
+              <span class="overlay-field-value ov-compare-cell">218.00</span>
+              <span class="overlay-field-value ov-compare-cell">51.00</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">涨跌幅</span>
+              <span class="overlay-field-value ov-compare-cell text-up dir-up">+3.10%</span>
+              <span class="overlay-field-value ov-compare-cell text-up dir-up">+5.20%</span>
+              <span class="overlay-field-value ov-compare-cell text-up dir-up">+6.25%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">市值</span>
+              <span class="overlay-field-value ov-compare-cell">2.3万亿</span>
+              <span class="overlay-field-value ov-compare-cell">5,320亿</span>
+              <span class="overlay-field-value ov-compare-cell">4,060亿</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">PE(TTM)</span>
+              <span class="overlay-field-value ov-compare-cell">28.5</span>
+              <span class="overlay-field-value ov-compare-cell">32.1</span>
+              <span class="overlay-field-value ov-compare-cell">68.2</span>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-primary">生成标的池</button>
+              <button class="overlay-btn overlay-btn-secondary">关闭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-generate-pool">
+      <div class="gallery-card__label">生成标的池 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="生成标的池确认">
+          <div class="overlay-header">
+            <span class="overlay-title">生成标的池</span>
+          </div>
+          <div class="overlay-body">
+            <p class="ov-desc-text">将当前筛选结果固化为标的池（Universe），后续可用于回测、策略构建和风控。</p>
+
+            <h2>标的池名称</h2>
+            <div class="sv-pad-section">
+              <input type="text" placeholder="输入标的池名称..." class="ov-input">
+            </div>
+
+            <div class="overlay-field">
+              <span class="overlay-field-label">包含标的数量</span>
+              <span class="overlay-field-value">238 只</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">筛选条件</span>
+              <span class="overlay-field-value">沪深300 · 全部行业</span>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">确认创建</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-export">
+      <div class="gallery-card__label">导出筛选结果 (Sheet)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="导出筛选结果">
+          <div class="overlay-header">
+            <span class="overlay-title">导出筛选结果</span>
+          </div>
+          <div class="overlay-body">
+            <h2>导出格式</h2>
+            <div class="ov-radio-group">
+              <label class="ov-check-label">
+                <input type="radio" name="export-format" checked > CSV
+              </label>
+              <label class="ov-check-label">
+                <input type="radio" name="export-format" > Excel
+              </label>
+            </div>
+
+            <h2>列范围</h2>
+            <div class="ov-radio-group">
+              <label class="ov-check-label">
+                <input type="radio" name="export-columns" checked > 当前列
+              </label>
+              <label class="ov-check-label">
+                <input type="radio" name="export-columns" > 全部列
+              </label>
+            </div>
+
+            <h2>数据范围</h2>
+            <div class="ov-radio-group--tight">
+              <label class="ov-check-label">
+                <input type="radio" name="export-scope" checked > 全部（238 只）
+              </label>
+              <label class="ov-check-label">
+                <input type="radio" name="export-scope" > 已选（1 只）
+              </label>
+            </div>
+
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">导出</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-save-preset" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-column-manage" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-compare" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-generate-pool" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-export" class="overlay-radio sr-only">
+</body>
+</html>

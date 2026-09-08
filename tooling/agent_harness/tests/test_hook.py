@@ -414,6 +414,22 @@ class DiffClassificationTests(unittest.TestCase):
                 ["task", "pit"],
             ]
 
+    def test_relocated_machine_prose_runs_its_consumers(self) -> None:
+        for path in (
+            "apps/web/design/specs/04_interaction_state_spec.md",
+            "apps/web/contracts/prototype-chart-interactions.md",
+            "apps/web/contracts/pages/home.contract.json",
+            "apps/web/prototype/page-home.html",
+        ):
+            assert verification_commands(classify_diff([path]), [path]) == [
+                ["task", "check-web"],
+                ["task", "web-prototype"],
+            ]
+        path = "apps/backend/tests/fixtures/contracts/r3-v1-api-surface.md"
+        assert classify_diff([path]) == "backend-tests"
+        assert verification_commands(classify_diff([path]), [path])
+        assert verification_commands("docs", ["apps/web/docs/README.md"]) == []
+
     def test_monorepo_diff_classes(self) -> None:
         fixtures = {
             "docs": ["docs/architecture/overview.md"],

@@ -60,7 +60,7 @@ src/styles/
     light.css                 ← 保留 ([data-theme="light"] 覆盖)
     market-intl.css           ← 保留 ([data-market-region="intl"] 覆盖)
 
-docs/designs/specs/prototypes/
+prototype/
   shared/
     tokens-base.css           ← 删除或改为 @import 重定向
     tokens-semantic.css       ← 删除或改为 @import 重定向
@@ -163,13 +163,13 @@ Prototype 直接消费这些 `:root` 变量。React 通过 `@theme inline` 映�
 ### 删除的内容
 
 - `src/styles/tokens/` 目录（01-primitives.css → 08-density.css）— token 定义已迁移到 `src/styles/design-tokens/`
-- `docs/designs/specs/prototypes/shared/tokens-base.css` 等 — 或改为 `@import` 重定向
+- `prototype/shared/tokens-base.css` 等 — 或改为 `@import` 重定向
 
 ### 保留的内容
 
-- `docs/designs/specs/prototypes/shared/tokens-style.css` — Style B 个性层，引用共享 token
-- `docs/designs/specs/prototypes/shared/layout-base.css` — 布局 CSS，消费共享 token
-- `docs/designs/specs/prototypes/shared/` 中的非 token 文件 — fonts.css、prototype-toggles.css 等
+- `prototype/shared/tokens-style.css` — Style B 个性层，引用共享 token
+- `prototype/shared/layout-base.css` — 布局 CSS，消费共享 token
+- `prototype/shared/` 中的非 token 文件 — fonts.css、prototype-toggles.css 等
 - `src/styles/globals.css` 中的动画、全局样式 — 保持不变
 - `src/styles/themes/` — 保持不变
 - `src/styles/fonts.css` — 保持不变
@@ -209,7 +209,7 @@ bun run check  # biome + tsc + vitest + token-audit
 ### Phase 1: 创建共享 Token 目录
 
 1. 创建 `src/styles/design-tokens/` 目录
-2. 从 `docs/designs/specs/prototypes/shared/` 复制 8 个 token 文件到 `src/styles/design-tokens/`
+2. 从 `prototype/shared/` 复制 8 个 token 文件到 `src/styles/design-tokens/`
 3. 清理复制的文件：移除注释中的 "shared/" 路径引用
 
 ### Phase 2: 重写 globals.css

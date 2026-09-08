@@ -35,7 +35,7 @@
 
 ### 清理
 
-- 删除 `docs/designs/specs/prototypes/style-b-graphite-studio/.versions/` 整个目录
+- 删除 `prototype/style-b-graphite-studio/.versions/` 整个目录
 - 修改 `ditto-design-review.md` 的版本管理章节和 Phase 0/5/7
 
 ## 受影响文件
@@ -43,6 +43,6 @@
 | 文件 | 变更 |
 |------|------|
 | `.claude/commands/ditto-design-review.md` | 重写版本管理章节 + Phase 0/5/7 |
-| `docs/designs/specs/prototypes/style-b-graphite-studio/.versions/` | 删除整个目录 |
+| `prototype/style-b-graphite-studio/.versions/` | 删除整个目录 |
 | `docs/reviews/2026-03-29-product-review-cross-market.md` | 更新版本信息引用 |
 | `docs/reviews/2026-03-30-product-review-cross-market.md` | 更新版本信息引用 |

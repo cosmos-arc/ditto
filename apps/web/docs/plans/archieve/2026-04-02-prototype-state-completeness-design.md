@@ -111,12 +111,12 @@ ditto-product-arch --create/--iterate
 
 | # | 文件 | 改造内容 | 优先级 |
 |---|------|---------|--------|
-| 1 | `docs/designs/specs/prototypes/shared/prototype-toggles.css` | **新建**：共享 CSS 切换系统 | P0 |
+| 1 | `prototype/shared/prototype-toggles.css` | **新建**：共享 CSS 切换系统 | P0 |
 | 2 | `.claude/commands/ditto-design-cycle.md` | Phase 0.5 全状态生成 + State Coverage Index + Phase 1/3 状态覆盖检查 | P0 |
 | 3 | `.claude/design-review/templates.md` | Agent 输出增加「状态覆盖完整度」检查项 | P0 |
 | 4 | `.claude/commands/ditto-product-arch.md` | 蓝图产出格式要求（Tab/Overlay/Matrix）+ `--audit` 增加状态覆盖维度 | P1 |
-| 5 | `docs/designs/specs/02_core_page_blueprints.md` | 蓝图格式升级：17 个页面补充 tab 面板内容和状态矩阵 | P1 |
-| 6 | `docs/designs/specs/04_interaction_state_spec.md` | 增加「页面状态映射示例」章节 | P2 |
+| 5 | `design/specs/02_core_page_blueprints.md` | 蓝图格式升级：17 个页面补充 tab 面板内容和状态矩阵 | P1 |
+| 6 | `design/specs/04_interaction_state_spec.md` | 增加「页面状态映射示例」章节 | P2 |
 
 ## 不改什么
 

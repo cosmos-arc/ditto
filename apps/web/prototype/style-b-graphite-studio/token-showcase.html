@@ -1,0 +1,3193 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto Design Token Showcase — R1 Stabilization</title>
+
+  <!-- ── Design Token CSS (order matters) ── -->
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../tokens-style.css">
+  <link rel="stylesheet" href="../shared/layout-shell.css">
+  <link rel="stylesheet" href="../shared/layout-gallery.css">
+  <link rel="stylesheet" href="../shared/layout-components.css">
+  <link rel="stylesheet" href="../shared/layout-overlay.css">
+  <link rel="stylesheet" href="../shared/layout-state.css">
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="../shared/fonts.css">
+
+  <!-- ── Showcase-specific styles ── -->
+  <style>
+    /* ── Reset for showcase (override layout-base body overflow:hidden) ── */
+    body {
+      overflow-y: auto;
+      padding-top: var(--header-bar-height, 3.5rem);
+    }
+
+    /* ── Header Bar ── */
+    .header-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      height: var(--header-bar-height, 3.5rem);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-16);
+      background: var(--surface-panel-elevated);
+      border-bottom: 1px solid var(--border-default);
+      backdrop-filter: blur(12px);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-13);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+    }
+
+    .header-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-3);
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      letter-spacing: 0.02em;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2);
+      border-radius: var(--radius-6);
+      background: var(--surface-app);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .control-group-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-right: var(--space-4);
+      font-weight: var(--font-weight-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .control-btn {
+      padding: var(--space-2) var(--space-8);
+      border: none;
+      border-radius: var(--radius-4);
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+    }
+
+    .control-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .control-btn.active {
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+    }
+
+    .control-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .control-btn:disabled:hover {
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    /* ── Main Layout ── */
+    .showcase {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-24) var(--space-16) var(--space-48);
+    }
+
+    /* ── Sections ── */
+    .section {
+      margin-bottom: var(--space-32);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-8);
+      margin-bottom: var(--space-16);
+      padding-bottom: var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .section-number {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      background: var(--brand-accent-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-3);
+    }
+
+    .section-title {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .subsection {
+      margin-bottom: var(--space-24);
+    }
+
+    .subsection-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-12);
+    }
+
+    .subsection-title code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-2);
+    }
+
+    /* ── Color Swatches ── */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: var(--space-8);
+    }
+
+    .swatch-grid.compact {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    .swatch-group {
+      margin-bottom: var(--space-16);
+    }
+
+    .swatch-group-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-6);
+    }
+
+    .swatch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-8);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .swatch-color {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .swatch-info {
+      text-align: center;
+      width: 100%;
+    }
+
+    .swatch-name {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .swatch-value {
+      font-family: var(--font-family-numeric);
+      font-size: 9px;
+      color: var(--text-tertiary);
+      line-height: 1.3;
+      word-break: break-all;
+    }
+
+    /* ── Typography ── */
+    .type-scale {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .type-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 100px;
+      align-items: baseline;
+      gap: var(--space-16);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .type-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .type-sample {
+      color: var(--text-primary);
+      font-family: var(--font-family-ui);
+    }
+
+    .type-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-quaternary);
+      text-align: right;
+    }
+
+    /* ── Font Family Cards ── */
+    .font-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: var(--space-12);
+    }
+
+    .font-card {
+      padding: var(--space-16);
+      border-radius: var(--radius-8);
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .font-card-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: var(--space-8);
+    }
+
+    .font-card-family {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-12);
+    }
+
+    .font-card-sample {
+      color: var(--text-primary);
+      font-size: var(--font-size-16);
+      line-height: 1.6;
+      margin-bottom: var(--space-6);
+    }
+
+    .font-card-sample-2 {
+      color: var(--text-secondary);
+      font-size: var(--font-size-13);
+      line-height: 1.5;
+    }
+
+    /* ── Font Weights ── */
+    .weight-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    .weight-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 60px;
+      align-items: center;
+      gap: var(--space-16);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .weight-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .weight-sample {
+      font-size: var(--font-size-16);
+      color: var(--text-primary);
+    }
+
+    .weight-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-quaternary);
+      text-align: right;
+    }
+
+    /* ── Spacing Scale ── */
+    .spacing-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .spacing-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 80px;
+      align-items: center;
+      gap: var(--space-12);
+    }
+
+    .spacing-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .spacing-bar {
+      height: 8px;
+      border-radius: var(--radius-2);
+      background: var(--brand-accent);
+      opacity: 0.6;
+      min-width: 4px;
+      transform-origin: left center;
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard),
+                  opacity var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .spacing-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-quaternary);
+      text-align: right;
+    }
+
+    /* ── Radius Scale ── */
+    .radius-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: var(--space-12);
+    }
+
+    .radius-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .radius-box {
+      width: 56px;
+      height: 56px;
+      background: var(--brand-accent);
+      opacity: 0.7;
+      border: 1px solid var(--border-default);
+      transition: border-radius var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .radius-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Surface Elevation ── */
+    .elevation-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    .elevation-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 200px;
+      gap: var(--space-12);
+      align-items: stretch;
+    }
+
+    .elevation-label {
+      display: flex;
+      align-items: center;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .elevation-preview {
+      padding: var(--space-12) var(--space-16);
+      border-radius: var(--radius-6);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .elevation-preview-text {
+      color: var(--text-primary);
+      font-size: var(--font-size-13);
+    }
+
+    .elevation-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Text Hierarchy ── */
+    .text-hierarchy-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .text-hierarchy-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 180px;
+      align-items: center;
+      gap: var(--space-16);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .text-hierarchy-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .text-hierarchy-token {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-quaternary);
+    }
+
+    .text-hierarchy-inverse {
+      background: var(--text-primary);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      color: var(--text-inverse);
+      display: inline-block;
+    }
+
+    /* ── Border Hierarchy ── */
+    .border-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12);
+    }
+
+    .border-row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: var(--space-12);
+      align-items: center;
+    }
+
+    .border-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .border-line {
+      height: 1px;
+      transition: background var(--motion-duration-fast);
+    }
+
+    /* ── Brand Accent Demo ── */
+    .accent-demo {
+      display: flex;
+      gap: var(--space-12);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .accent-btn {
+      padding: var(--space-8) var(--space-16);
+      border: none;
+      border-radius: var(--radius-6);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .accent-btn-primary {
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+    }
+
+    .accent-btn-primary:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .accent-btn-ghost {
+      background: transparent;
+      color: var(--brand-accent);
+      border: 1px solid var(--brand-accent);
+    }
+
+    .accent-btn-subtle {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* ── Interaction States ── */
+    .state-demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: var(--space-8);
+    }
+
+    .state-btn {
+      padding: var(--space-8) var(--space-16);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      color: var(--text-primary);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      text-align: center;
+    }
+
+    .state-btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .state-btn:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    .state-btn.state-hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .state-btn.state-focus {
+      outline: 2px solid var(--interaction-focus-border);
+      outline-offset: 2px;
+    }
+
+    .state-btn.state-selected {
+      background: var(--interaction-selected-bg);
+      border-color: var(--interaction-selected-border);
+    }
+
+    .state-btn.state-active {
+      background: var(--interaction-active-bg);
+    }
+
+    .state-btn.state-disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ── Feedback Demos ── */
+    .feedback-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-16);
+    }
+
+    .feedback-toast {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-10) var(--space-16);
+      border-radius: var(--radius-6);
+      background: var(--feedback-toast-bg);
+      border: 1px solid var(--feedback-toast-border);
+      color: var(--text-primary);
+      font-size: var(--font-size-13);
+      max-width: 360px;
+    }
+
+    .feedback-toast-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      flex-shrink: 0;
+    }
+
+    .feedback-banner {
+      padding: var(--space-10) var(--space-16);
+      border-radius: var(--radius-6);
+      font-size: var(--font-size-13);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .feedback-banner-warning {
+      background: var(--feedback-banner-warning-bg);
+      border: 1px solid var(--feedback-banner-warning-border);
+      color: var(--text-primary);
+    }
+
+    .feedback-banner-critical {
+      background: var(--feedback-banner-critical-bg);
+      border: 1px solid var(--feedback-banner-critical-border);
+      color: var(--text-primary);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      border-radius: var(--radius-3);
+      background: var(--feedback-progress-track);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      width: 65%;
+      height: 100%;
+      border-radius: var(--radius-3);
+      background: var(--feedback-progress-fill);
+      transform-origin: left center;
+      transition: transform 0.6s var(--motion-easing-standard),
+                  opacity 0.6s var(--motion-easing-standard);
+    }
+
+    /* ── Domain Tokens ── */
+    .domain-section {
+      margin-bottom: var(--space-16);
+    }
+
+    .domain-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-8);
+    }
+
+    .domain-title code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-quaternary);
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-2);
+    }
+
+    .domain-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-6);
+    }
+
+    .domain-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .domain-badge-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+    }
+
+    /* ── Density Comparison Table ── */
+    .demo-table-wrapper {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-8);
+      overflow: hidden;
+    }
+
+    .demo-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-13);
+      font-family: var(--font-family-ui);
+      transition: background-color var(--motion-duration-normal) var(--motion-easing-standard),
+                  color var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .demo-table thead {
+      background: var(--surface-strip);
+    }
+
+    .demo-table th {
+      padding: var(--density-header-height-padding, var(--space-6)) var(--density-cell-padding-x);
+      text-align: left;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-default);
+      white-space: nowrap;
+      height: var(--density-header-height);
+      display: flex;
+      align-items: center;
+    }
+
+    .demo-table td {
+      padding: var(--density-cell-padding-y) var(--density-cell-padding-x);
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-family-numeric);
+      white-space: nowrap;
+      height: var(--density-row-height);
+      display: flex;
+      align-items: center;
+    }
+
+    .demo-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .demo-table tbody tr {
+      white-space: nowrap;
+      height: var(--density-row-height);
+      display: flex;
+      align-items: center;
+      transition: background-color var(--motion-duration-normal) var(--motion-easing-standard),
+                  color var(--motion-duration-normal) var(--motion-easing-standard);
+    }
+
+    .demo-table tbody tr:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Market Region Demo ── */
+    .market-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-16);
+    }
+
+    .market-card {
+      padding: var(--space-16);
+      border-radius: var(--radius-8);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel-base);
+    }
+
+    .market-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-12);
+    }
+
+    .market-card-symbol {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .market-card-name {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .market-card-price {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-24);
+      font-weight: var(--font-weight-semibold);
+      margin-bottom: var(--space-6);
+    }
+
+    .market-card-change {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-16);
+    }
+
+    .market-card-label {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: var(--space-6);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-3);
+      background: var(--brand-accent-subtle);
+      display: inline-block;
+    }
+
+    .market-card-detail {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--space-6) 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .market-card-detail-label {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+    }
+
+    .market-card-detail-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    /* ── Live Token Values (for interactive demo) ── */
+    .live-values {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-6);
+      margin-top: var(--space-12);
+    }
+
+    .live-value {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-3);
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+    }
+
+    .live-value-name {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--code-text);
+    }
+
+    .live-value-val {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .header-bar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: var(--space-8) var(--space-12);
+        gap: var(--space-8);
+      }
+
+      .header-controls {
+        flex-wrap: wrap;
+      }
+
+      .body {
+        padding-top: 6rem;
+      }
+
+      .type-row,
+      .weight-row,
+      .text-hierarchy-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+      }
+
+      .market-comparison {
+        grid-template-columns: 1fr;
+      }
+
+      .elevation-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Separator ── */
+    .separator {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: var(--space-32) 0;
+    }
+
+    /* ── Section 7: Data Visualization ── */
+    .freshness-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-8);
+    }
+
+    .freshness-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-12) var(--space-8);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      text-align: center;
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .freshness-cell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px oklch(0 0 0 / 0.15);
+    }
+
+    .freshness-label {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .freshness-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .freshness-timer {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .chart-preview {
+      position: relative;
+      height: 200px;
+      border-radius: var(--radius-8);
+      background: var(--chart-bg, var(--surface-app));
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      padding: var(--space-24) var(--space-16) var(--space-16);
+    }
+
+    .chart-preview-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .chart-grid-h {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--chart-grid, oklch(1 0 0 / 0.06));
+    }
+
+    .chart-grid-h.major {
+      background: var(--chart-grid-major, oklch(1 0 0 / 0.10));
+    }
+
+    .chart-grid-v {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--chart-grid, oklch(1 0 0 / 0.06));
+    }
+
+    .chart-grid-v.major {
+      background: var(--chart-grid-major, oklch(1 0 0 / 0.10));
+    }
+
+    .chart-zero-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--chart-zero-line, oklch(1 0 0 / 0.20));
+    }
+
+    .chart-crosshair-h,
+    .chart-crosshair-v {
+      position: absolute;
+      background: var(--chart-crosshair, oklch(1 0 0 / 0.25));
+    }
+
+    .chart-crosshair-h {
+      left: 0;
+      right: 0;
+      height: 1px;
+      top: 45%;
+    }
+
+    .chart-crosshair-v {
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      left: 62%;
+    }
+
+    .chart-crosshair-label {
+      position: absolute;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--chart-crosshair-label, var(--text-secondary));
+      background: var(--surface-overlay);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-2);
+      top: 42%;
+      left: 63%;
+      transform: translateY(-100%);
+    }
+
+    .chart-series-bar {
+      position: absolute;
+      bottom: 30px;
+      left: var(--space-16);
+      right: var(--space-16);
+      height: 80px;
+      display: flex;
+      gap: var(--space-2);
+      align-items: flex-end;
+    }
+
+    .chart-series-col {
+      flex: 1;
+      border-radius: var(--radius-2) var(--radius-2) 0 0;
+      min-height: 4px;
+    }
+
+    .chart-axis-label {
+      position: absolute;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--chart-axis-text, var(--text-tertiary));
+    }
+
+    .asset-class-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-8);
+    }
+
+    .asset-class-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-12);
+      border-radius: var(--radius-6);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel-elevated);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .asset-class-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+    }
+
+    .asset-class-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+      border-color: var(--border-default);
+    }
+
+    .asset-class-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .asset-class-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .heatmap-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-2);
+      border-radius: var(--radius-6);
+      overflow: hidden;
+    }
+
+    .heatmap-cell {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .heatmap-cell:hover {
+      transform: scaleY(1.15);
+    }
+
+    .status-led-row {
+      display: flex;
+      gap: var(--space-24);
+      align-items: center;
+    }
+
+    .status-led {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .status-led-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .status-led-dot::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      opacity: 0;
+    }
+
+    .status-led-dot.pulse {
+      animation: led-pulse var(--status-pulse-duration) var(--status-pulse-easing) infinite;
+    }
+
+    .status-led-dot.pulse::after {
+      animation: led-pulse-ring var(--status-pulse-duration) var(--status-pulse-easing) infinite;
+    }
+
+    .status-led-dot.solid {
+      animation: none;
+    }
+
+    .status-led-label {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+    }
+
+    .status-led-state {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    @keyframes led-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes led-pulse-ring {
+      0% { transform: scale(1); opacity: 0.4; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    @media (max-width: 768px) {
+      .freshness-row {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .asset-class-row {
+        flex-direction: column;
+      }
+
+      .status-led-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-12);
+      }
+    }
+
+    /* ── Token Swatch Grid (overlay / frosted) ── */
+    .token-swatch-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-8);
+    }
+
+    .token-swatch-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-12);
+    }
+
+    .token-swatch {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-4);
+    }
+
+    .token-swatch-item code {
+      font-family: var(--font-family-code);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+    }
+
+    .token-swatch-item .token-value {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .subsection-note {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      margin-top: var(--space-8);
+    }
+
+    .frosted-swatch {
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    /* ── Extracted: Component Token Demos ── */
+    .demo-btn-row {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-btn-sm {
+      padding: var(--btn-sm-padding-y) var(--btn-sm-padding-x);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: var(--btn-sm-font-size);
+      cursor: pointer;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-btn-sm:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .demo-btn-default {
+      padding: var(--btn-padding-y) var(--btn-padding-x);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: var(--btn-font-size);
+      cursor: pointer;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-btn-default:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .demo-btn-primary {
+      padding: var(--btn-padding-y) var(--btn-cta-padding-x);
+      border: 1px solid var(--brand-accent);
+      border-radius: var(--btn-radius);
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+      font-size: var(--btn-font-size);
+      cursor: pointer;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-btn-primary:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .demo-badge-row {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-badge-sm {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .demo-badge-md {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--badge-md-padding-y) var(--badge-md-padding-x);
+      border-radius: var(--badge-md-radius);
+      background: oklch(from var(--red-500) l c h / 0.12);
+      color: var(--red-500);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .demo-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--badge-md-padding-y) var(--space-8);
+      border-radius: var(--badge-pill-radius);
+      background: oklch(from var(--green-500) l c h / 0.12);
+      color: var(--green-500);
+      font-size: var(--badge-font-size);
+      font-weight: var(--badge-font-weight);
+    }
+
+    .demo-card-row {
+      display: flex;
+      gap: var(--space-16);
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .demo-card {
+      background: var(--surface-panel-base);
+      border: var(--card-border);
+      border-radius: var(--card-radius);
+      padding: var(--card-padding);
+      min-width: 180px;
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-card:hover {
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.15);
+    }
+
+    .demo-card-title {
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-6);
+      color: var(--text-primary);
+    }
+
+    .demo-card-detail {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .demo-panel {
+      background: var(--surface-panel-base);
+      border: var(--panel-border);
+      border-radius: var(--panel-radius);
+      min-width: 180px;
+      overflow: hidden;
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .demo-panel:hover {
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.15);
+    }
+
+    .demo-panel-header {
+      padding: var(--panel-header-padding);
+      border-bottom: var(--section-divider);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+
+    .demo-panel-body {
+      padding: var(--card-padding);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    .demo-status-row {
+      display: flex;
+      gap: var(--space-16);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-status-item {
+      display: flex;
+      gap: var(--space-8);
+      align-items: center;
+    }
+
+    .demo-status-dot {
+      width: var(--status-dot-size);
+      height: var(--status-dot-size);
+      border-radius: 50%;
+    }
+
+    .demo-status-dot-lg {
+      width: var(--status-dot-size-lg);
+      height: var(--status-dot-size-lg);
+      border-radius: 50%;
+    }
+
+    .demo-checkbox {
+      width: var(--checkbox-size);
+      height: var(--checkbox-size);
+      border-radius: var(--checkbox-radius);
+      border: var(--checkbox-border);
+      display: inline-block;
+    }
+
+    .demo-status-label {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+
+    /* ── Extracted: Table semantic cells ── */
+    .demo-table .cell-name {
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      font-family: var(--font-family-ui);
+    }
+
+    .demo-table .cell-status {
+      font-family: var(--font-family-ui);
+    }
+
+    /* ── Extracted: Description paragraphs ── */
+    .section-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-13);
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Extracted: Feedback sub-titles ── */
+    .feedback-sub-title {
+      margin-bottom: var(--space-6);
+    }
+
+    /* ── Extracted: Progress labels ── */
+    .progress-label-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: var(--space-6);
+    }
+
+    .progress-label-text {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    .progress-label-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Extracted: Market card label container ── */
+    .market-card-label-row {
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Extracted: Subsection spacing ── */
+    .subsection-gap-top {
+      margin-top: var(--space-16);
+    }
+
+    /* ── Extracted: Token swatch with border ── */
+    .token-swatch--bordered {
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* ── Extracted: Font card sample overrides ── */
+    .font-card-sample--ui {
+      font-family: var(--font-family-ui);
+    }
+
+    .font-card-sample-2--zh {
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+
+    .font-card-sample--numeric {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .font-card-sample-2--numeric {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    .font-card-sample--code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--font-size-13);
+    }
+
+    .font-card-sample-2--code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ── Code syntax colors (display: showcasing semantic color) ── */
+    .syntax-keyword { color: var(--brand-accent); }
+    .syntax-ident { color: var(--text-primary); }
+    .syntax-func { color: var(--green-500); }
+
+    /* ── Extracted: Swatch group label spacing ── */
+    .swatch-group-label--spaced {
+      margin-top: var(--space-8);
+    }
+
+    /* ── Section folding / collapse ── */
+    .section-fold {
+      position: relative;
+    }
+
+    .section-fold-toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      padding: var(--space-2) var(--space-8);
+      cursor: pointer;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      user-select: none;
+    }
+
+    .section-fold-toggle:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    .section-fold-body {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 0.3s var(--motion-easing-standard), opacity 0.2s ease;
+      overflow: hidden;
+    }
+
+    .section-fold-body > * {
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .section-fold-body.collapsed {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .section-fold-body.expanded {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+
+    /* ── Color scale gradient bar ── */
+    .color-gradient-bar {
+      height: 32px;
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .color-gradient-bar::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, var(--neutral-950), var(--neutral-500), var(--neutral-50));
+    }
+
+    .color-gradient-bar--brand::after {
+      background: linear-gradient(90deg, var(--brand-300), var(--brand-500), var(--brand-700));
+    }
+
+    .color-gradient-bar--green::after {
+      background: linear-gradient(90deg, var(--green-400), var(--green-500), var(--green-600));
+    }
+
+    .color-gradient-bar--red::after {
+      background: linear-gradient(90deg, var(--red-400), var(--red-500), var(--red-600));
+    }
+
+    .color-gradient-bar--amber::after {
+      background: linear-gradient(90deg, var(--amber-400), var(--amber-500), var(--amber-600));
+    }
+
+    .color-gradient-bar--heatmap::after {
+      background: linear-gradient(90deg, var(--heatmap-1-bg), var(--heatmap-3-bg), var(--heatmap-5-bg));
+    }
+
+    .gradient-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      margin-bottom: var(--space-8);
+    }
+
+    /* ── Hover effects for swatches ── */
+    .swatch {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .swatch:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px oklch(0 0 0 / 0.2);
+    }
+
+    .token-swatch-item {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .token-swatch-item:hover {
+      transform: translateY(-1px);
+    }
+
+    /* ── Hover badge interaction ── */
+    .domain-badge:hover {
+      transform: scale(1.02);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.15);
+    }
+
+    /* ── Keyboard shortcut hint ── */
+    .kbd-hint {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 var(--space-6);
+      min-width: 20px;
+      height: 18px;
+      border-radius: var(--radius-3);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-default);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
+    /* ── Quick Nav ── */
+    .quick-nav {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-24);
+      padding: var(--space-8) var(--space-12);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .quick-nav-link {
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .quick-nav-link:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-primary);
+    }
+
+    /* ── Enhanced spacing visualization ── */
+    .spacing-row:hover .spacing-bar {
+      opacity: 1;
+    }
+
+    /* ── Enhanced elevation preview ── */
+    .elevation-preview {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .elevation-row:hover .elevation-preview {
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+    }
+
+    /* ── Radius hover preview ── */
+    .radius-item:hover .radius-box {
+      opacity: 1;
+      transform: scale(1.1);
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .radius-box {
+      transition: transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    /* ── Font card hover ── */
+    .font-card {
+      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .font-card:hover {
+      box-shadow: 0 4px 16px oklch(0 0 0 / 0.15);
+      border-color: var(--border-default);
+    }
+
+    /* ── Section header enhancement ── */
+    .section-header {
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .section:hover .section-header {
+      border-color: var(--border-default);
+    }
+
+    /* ── Smooth scroll ── */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* ── Footer ── */
+    .showcase-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-16) 0;
+    }
+
+    .footer-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+    }
+
+    .footer-label {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .footer-version {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+
+    .footer-top {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-8) var(--space-16);
+      border-radius: var(--radius-6);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel-base);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      text-decoration: none;
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .footer-top:hover {
+      border-color: var(--border-default);
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* ── Font size 11 utility (used in quick-nav) ── */
+    :root {
+      --font-size-11: 0.6875rem;
+    }
+
+    /* ── Weight demo classes ── */
+    .weight-regular { font-weight: 400; }
+    .weight-medium { font-weight: 500; }
+    .weight-semibold { font-weight: 600; }
+
+    /* -- Tab button active state enhancement -- */
+    [data-tab-target].active {
+      color: var(--brand-accent) !important;
+      background: var(--brand-accent-subtle) !important;
+    }
+
+    /* ── Showcase tab modifier ── */
+    .tab-button.showcase-tab {
+      padding: var(--space-2) var(--space-12);
+      color: var(--text-secondary);
+      transition: background-color 0.15s ease,
+                  color 0.15s ease;
+    }
+    .tab-button.showcase-tab.active {
+      color: var(--brand-accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════
+       Header Bar (fixed)
+       ═══════════════════════════════════════════════════ -->
+  <header class="header-bar">
+    <div class="header-left">
+      <span class="header-title">Ditto Design Token Showcase</span>
+      <span class="header-badge">R1 Stabilization</span>
+    </div>
+    <div class="header-controls">
+      <!-- Density Switcher -->
+      <span class="control-group-label">Density</span>
+      <div class="control-group" id="densitySwitcher">
+        <button class="control-btn" data-density="dense">Dense</button>
+        <button class="control-btn active" data-density="compact">Compact</button>
+        <button class="control-btn" data-density="comfortable">Comfortable</button>
+      </div>
+
+      <!-- Market Region Switcher -->
+      <span class="control-group-label">Region</span>
+      <div class="control-group" id="regionSwitcher">
+        <button class="control-btn active" data-region="cn">CN 红涨绿跌</button>
+        <button class="control-btn" data-region="intl">Intl Green Up</button>
+      </div>
+
+      <!-- Theme Toggle (placeholder) -->
+      <button class="control-btn" id="themeToggle">Light</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════
+       Main Showcase Content
+       ═══════════════════════════════════════════════════ -->
+  <main class="showcase">
+
+    <!-- ── Quick Nav ── -->
+    <nav class="quick-nav">
+      <a class="quick-nav-link" href="#foundation">01 基础</a>
+      <a class="quick-nav-link" href="#semantic">02 语义</a>
+      <a class="quick-nav-link" href="#component">03 组件</a>
+      <a class="quick-nav-link" href="#interaction">04 交互</a>
+      <a class="quick-nav-link" href="#domain">05 领域</a>
+      <a class="quick-nav-link" href="#density">06 密度</a>
+      <a class="quick-nav-link" href="#market-region">07 市场</a>
+      <a class="quick-nav-link" href="#data-viz">08 数据</a>
+    </nav>
+
+    <!-- ───────────────────────────────────────────────
+         Section 1: Foundation Tokens
+         ─────────────────────────────────────────────── -->
+    <section class="section" id="foundation" data-reveal="fade-up" data-reveal-delay="0">
+      <div class="section-header">
+        <span class="section-number">01</span>
+        <h2 class="section-title">基础 Token (Foundation)</h2>
+      </div>
+
+      <!-- ── Tabs Navigation ── -->
+      <div data-tabs="token-tabs" style="margin-bottom: var(--space-16);">
+        <div style="display: flex; gap: var(--space-6); margin-bottom: var(--space-16); padding: var(--space-2); border-radius: var(--radius-6); background: var(--surface-app); border: 1px solid var(--border-subtle);">
+          <button data-tab-target="colors" class="tab-button showcase-tab active">色彩</button>
+          <button data-tab-target="typography" class="tab-button showcase-tab">字号 / 字体</button>
+          <button data-tab-target="spacing" class="tab-button showcase-tab">间距</button>
+          <button data-tab-target="radii" class="tab-button showcase-tab">圆角</button>
+        </div>
+
+        <!-- ── Tab Panel: Colors ── -->
+        <div data-tab-panel="colors">
+
+      <!-- 1.1 Color Primitives -->
+      <div class="subsection">
+        <h3 class="subsection-title">1.1 色彩原语 (Color Primitives)</h3>
+
+        <!-- Neutral gradient bar -->
+        <div class="color-gradient-bar"></div>
+        <div class="gradient-bar-label"><span>neutral-950</span><span>neutral-500</span><span>neutral-50</span></div>
+
+        <!-- Neutral 0–950 -->
+        <div class="swatch-group">
+          <div class="swatch-group-label">Neutral — 15 级灰度</div>
+          <div class="swatch-grid compact" id="neutralSwatches"></div>
+        </div>
+
+        <!-- Brand -->
+        <div class="swatch-group">
+          <div class="swatch-group-label">Brand — 品牌色</div>
+          <div class="color-gradient-bar color-gradient-bar--brand"></div>
+          <div class="gradient-bar-label"><span>brand-300</span><span>brand-500</span><span>brand-700</span></div>
+          <div class="swatch-grid" id="brandSwatches" data-mouse-glow="true"></div>
+        </div>
+
+        <!-- Functional Colors -->
+        <div class="swatch-group">
+          <div class="swatch-group-label">Functional — 功能色</div>
+          <div class="swatch-grid compact" id="functionalSwatches" data-mouse-glow="true"></div>
+        </div>
+      </div>
+
+        </div><!-- /data-tab-panel="colors" -->
+
+        <!-- ── Tab Panel: Typography ── -->
+        <div data-tab-panel="typography">
+
+      <!-- 1.2 Typography Scale -->
+      <div class="subsection">
+        <h3 class="subsection-title">1.2 字号阶梯 (Typography Scale)</h3>
+        <div class="type-scale" id="typeScale"></div>
+      </div>
+
+      <!-- 1.3 Font Families -->
+      <div class="subsection">
+        <h3 class="subsection-title">1.3 字体族 (Font Families)</h3>
+        <div class="font-cards">
+          <div class="font-card">
+            <div class="font-card-title">UI</div>
+            <div class="font-card-family">'Inter', 'Noto Sans SC'</div>
+            <div class="font-card-sample font-card-sample--ui">
+              量化交易系统 Graphite Studio
+            </div>
+            <div class="font-card-sample-2 font-card-sample-2--zh">
+              简体中文排版效果演示。支持中英混排，提供一致的阅读体验。
+            </div>
+          </div>
+          <div class="font-card">
+            <div class="font-card-title">Numeric</div>
+            <div class="font-card-family">'JetBrains Mono'</div>
+            <div class="font-card-sample font-card-sample--numeric">
+              3,847.52<br>
+              -12.34%<br>
+              1.23e+08
+            </div>
+            <div class="font-card-sample-2 font-card-sample-2--numeric">
+              等宽数字对齐，适用于表格与图表
+            </div>
+          </div>
+          <div class="font-card">
+            <div class="font-card-title">Code</div>
+            <div class="font-card-family">'JetBrains Mono'</div>
+            <div class="font-card-sample font-card-sample--code">
+              <span class="syntax-keyword">const</span> <span class="syntax-ident">signal</span> = <span class="syntax-func">computeAlpha</span>(data);
+            </div>
+            <div class="font-card-sample-2 font-card-sample-2--code">
+              代码片段、日志、终端输出
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1.4 Font Weights -->
+      <div class="subsection">
+        <h3 class="subsection-title">1.4 字重 (Font Weights)</h3>
+        <div class="weight-list">
+          <div class="weight-row">
+            <span class="weight-label">font-weight-regular</span>
+            <span class="weight-sample weight-regular">常规 Regular — 正文与描述性文字</span>
+            <span class="weight-value"><span data-ticker="400" data-decimals="0">400</span></span>
+          </div>
+          <div class="weight-row">
+            <span class="weight-label">font-weight-medium</span>
+            <span class="weight-sample weight-medium">中等 Medium — 标签、表格头部、导航</span>
+            <span class="weight-value"><span data-ticker="500" data-decimals="0">500</span></span>
+          </div>
+          <div class="weight-row">
+            <span class="weight-label">font-weight-semibold</span>
+            <span class="weight-sample weight-semibold">半粗 Semibold — 标题、强调、品牌</span>
+            <span class="weight-value"><span data-ticker="600" data-decimals="0">600</span></span>
+          </div>
+        </div>
+      </div>
+
+        </div><!-- /data-tab-panel="typography" -->
+
+        <!-- ── Tab Panel: Spacing ── -->
+        <div data-tab-panel="spacing">
+
+      <!-- 1.5 Spacing Scale -->
+      <div class="subsection">
+        <h3 class="subsection-title">1.5 间距阶梯 (Spacing Scale)</h3>
+        <div class="spacing-list" id="spacingScale"></div>
+      </div>
+
+        </div><!-- /data-tab-panel="spacing" -->
+
+        <!-- ── Tab Panel: Radii ── -->
+        <div data-tab-panel="radii">
+
+      <!-- 1.6 Radius Scale -->
+      <div class="subsection">
+        <h3 class="subsection-title">1.6 圆角阶梯 (Radius Scale)</h3>
+        <div class="radius-grid" id="radiusScale"></div>
+      </div>
+
+        </div><!-- /data-tab-panel="radii" -->
+
+      </div><!-- /data-tabs="token-tabs" -->
+    </section>
+
+    <div class="separator"></div>
+
+    <!-- ───────────────────────────────────────────────
+         Section 2: Semantic Tokens
+         ─────────────────────────────────────────────── -->
+    <section class="section" id="semantic" data-reveal="fade-up" data-reveal-delay="0">
+      <div class="section-header">
+        <span class="section-number">02</span>
+        <h2 class="section-title">语义 Token (Semantic)</h2>
+      </div>
+
+      <!-- 2.1 Surface Elevation -->
+      <div class="subsection">
+        <h3 class="subsection-title">2.1 表面层级 (Surface Elevation)</h3>
+        <div class="elevation-stack" id="elevationStack"></div>
+      </div>
+
+      <!-- 2.2 Text Hierarchy -->
+      <div class="subsection">
+        <h3 class="subsection-title">2.2 文本层级 (Text Hierarchy)</h3>
+        <div class="text-hierarchy-list" id="textHierarchy"></div>
+      </div>
+
+      <!-- 2.3 Border Hierarchy -->
+      <div class="subsection">
+        <h3 class="subsection-title">2.3 边框层级 (Border Hierarchy)</h3>
+        <div class="border-list" id="borderList"></div>
+      </div>
+
+      <!-- 2.4 Brand Accent -->
+      <div class="subsection">
+        <h3 class="subsection-title">2.4 品牌强调色 (Brand Accent)</h3>
+        <div class="accent-demo">
+          <button class="accent-btn accent-btn-primary">主要按钮</button>
+          <button class="accent-btn accent-btn-primary accent-btn-demo-hover">悬停效果</button>
+          <button class="accent-btn accent-btn-ghost">描边按钮</button>
+          <button class="accent-btn accent-btn-subtle">微妙背景</button>
+        </div>
+      </div>
+
+      <!-- 2.5 Overlay (white-at-controlled-opacity) -->
+      <div class="subsection">
+        <h3 class="subsection-title">2.5 Overlay (透明度分隔线 / 背景)</h3>
+        <div class="token-swatch-grid">
+          <div class="token-swatch-item" data-tooltip="--overlay-2: oklch(1 0 0 / 0.02)" data-tooltip-pos="bottom">
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-2);"></div>
+            <code>--overlay-2</code><span class="token-value">oklch(1 0 0 / 0.02)</span>
+          </div>
+          <div class="token-swatch-item" data-tooltip="--overlay-3: oklch(1 0 0 / 0.03)" data-tooltip-pos="bottom">
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-3);"></div>
+            <code>--overlay-3</code><span class="token-value">oklch(1 0 0 / 0.03)</span>
+          </div>
+          <div class="token-swatch-item" data-tooltip="--overlay-4: oklch(1 0 0 / 0.04)" data-tooltip-pos="bottom">
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-4);"></div>
+            <code>--overlay-4</code><span class="token-value">oklch(1 0 0 / 0.04)</span>
+          </div>
+          <div class="token-swatch-item" data-tooltip="--overlay-6: oklch(1 0 0 / 0.06)" data-tooltip-pos="bottom">
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-6);"></div>
+            <code>--overlay-6</code><span class="token-value">oklch(1 0 0 / 0.06)</span>
+          </div>
+          <div class="token-swatch-item" data-tooltip="--overlay-8: oklch(1 0 0 / 0.08)" data-tooltip-pos="bottom">
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-8);"></div>
+            <code>--overlay-8</code><span class="token-value">oklch(1 0 0 / 0.08)</span>
+          </div>
+          <div class="token-swatch-item" data-tooltip="--overlay-10: oklch(1 0 0 / 0.10)" data-tooltip-pos="bottom">
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-10);"></div>
+            <code>--overlay-10</code><span class="token-value">oklch(1 0 0 / 0.10)</span>
+          </div>
+          <div class="token-swatch-item" data-tooltip="--overlay-12: oklch(1 0 0 / 0.12)" data-tooltip-pos="bottom">
+            <div class="token-swatch token-swatch--bordered" style="background: var(--overlay-12);"></div>
+            <code>--overlay-12</code><span class="token-value">oklch(1 0 0 / 0.12)</span>
+          </div>
+        </div>
+        <p class="subsection-note">用于分隔线、进度条轨道、微妙背景等需要低对比度白色叠加的场景。</p>
+      </div>
+
+      <!-- 2.6 Frosted Glass -->
+      <div class="subsection">
+        <h3 class="subsection-title">2.6 毛玻璃效果 (Frosted Glass)</h3>
+        <div class="token-swatch-grid">
+          <div class="token-swatch-item" data-tooltip="--surface-frosted: surface-app @ 85% + backdrop-blur(12px)" data-tooltip-pos="bottom">
+            <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted);"></div>
+            <code>--surface-frosted</code><span class="token-value">surface-app @ 85%</span>
+          </div>
+          <div class="token-swatch-item" data-tooltip="--surface-frosted-subtle: surface-app @ 80% + backdrop-blur(8px)" data-tooltip-pos="bottom">
+            <div class="token-swatch frosted-swatch" style="background: var(--surface-frosted-subtle);"></div>
+            <code>--surface-frosted-subtle</code><span class="token-value">surface-app @ 80%</span>
+          </div>
+        </div>
+        <p class="subsection-note">用于 sticky header、context bar 等需要半透明背景的元素，配合 backdrop-filter 使用。</p>
+      </div>
+    </section>
+
+    <div class="separator"></div>
+
+    <!-- ───────────────────────────────────────────────
+         Section 3: Component Tokens (L5)
+         ─────────────────────────────────────────────── -->
+    <section class="section" id="component" data-reveal="fade-up" data-reveal-delay="100">
+      <div class="section-header">
+        <span class="section-number">03</span>
+        <h2 class="section-title">组件 Token (Component)</h2>
+      </div>
+
+      <!-- 3.1 Button Sizes -->
+      <div class="subsection">
+        <h3 class="subsection-title">3.1 按钮 (Button)</h3>
+        <div class="demo-btn-row">
+          <button class="demo-btn-sm">Small</button>
+          <button class="demo-btn-default">Default</button>
+          <button class="demo-btn-primary">Primary</button>
+        </div>
+        <p class="subsection-note">btn-sm: <code>--btn-sm-padding-y</code> 2px, <code>--btn-sm-padding-x</code> space-6 | btn: <code>--btn-padding-y</code> space-4, <code>--btn-padding-x</code> space-8 | cta: <code>--btn-cta-padding-x</code> space-10</p>
+      </div>
+
+      <!-- 3.2 Badge / Tag Sizes -->
+      <div class="subsection">
+        <h3 class="subsection-title">3.2 徽标 / 标签 (Badge / Tag)</h3>
+        <div class="demo-badge-row">
+          <span class="demo-badge-sm">SM Tag</span>
+          <span class="demo-badge-md">MD Badge</span>
+          <span class="demo-badge-pill">Pill Chip</span>
+        </div>
+        <p class="subsection-note">sm: <code>--badge-sm-padding-y</code> 1px, radius-2 | md: <code>--badge-md-padding-y</code> 2px, radius-4 | pill: radius-12</p>
+      </div>
+
+      <!-- 3.3 Card / Panel -->
+      <div class="subsection">
+        <h3 class="subsection-title">3.3 卡片 / 面板 (Card / Panel)</h3>
+        <div class="demo-card-row">
+          <div class="demo-card">
+            <div class="demo-card-title">Card</div>
+            <div class="demo-card-detail">radius: <code>--card-radius</code> (6)</div>
+            <div class="demo-card-detail">padding: <code>--card-padding</code></div>
+          </div>
+          <div class="demo-panel">
+            <div class="demo-panel-header">Panel Header</div>
+            <div class="demo-panel-body">radius: <code>--panel-radius</code> (8)</div>
+          </div>
+        </div>
+        <p class="subsection-note">card: radius-6 | panel: radius-8 | divider: <code>--section-divider</code> 1px solid border-subtle</p>
+      </div>
+
+      <!-- 3.4 Status Dots & Checkbox -->
+      <div class="subsection">
+        <h3 class="subsection-title">3.4 状态指示 & 表单 (Status Dot / Checkbox)</h3>
+        <div class="demo-status-row">
+          <div class="demo-status-item">
+            <span class="demo-status-dot" style="background: var(--green-500);"></span>
+            <span class="demo-status-label"><code>--status-dot-size</code> 6px</span>
+          </div>
+          <div class="demo-status-item">
+            <span class="demo-status-dot-lg" style="background: var(--amber-500);"></span>
+            <span class="demo-status-label"><code>--status-dot-size-lg</code> 8px</span>
+          </div>
+          <div class="demo-status-item">
+            <span class="demo-checkbox"></span>
+            <span class="demo-status-label"><code>--checkbox-size</code> 14px</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="separator"></div>
+
+    <!-- ───────────────────────────────────────────────
+         Section 4: Interaction Tokens
+         ─────────────────────────────────────────────── -->
+    <section class="section" id="interaction" data-reveal="fade-up" data-reveal-delay="200">
+      <div class="section-header">
+        <span class="section-number">04</span>
+        <h2 class="section-title">交互 Token (Interaction)</h2>
+      </div>
+
+      <!-- 3.1 State Demos -->
+      <div class="subsection">
+        <h3 class="subsection-title">4.1 状态演示 (State Demos)</h3>
+        <div class="state-demo-grid">
+          <button class="state-btn">Default</button>
+          <button class="state-btn state-hover">Hover</button>
+          <button class="state-btn state-focus">Focus</button>
+          <button class="state-btn state-selected">Selected</button>
+          <button class="state-btn state-active">Active</button>
+          <button class="state-btn state-disabled" disabled>Disabled</button>
+        </div>
+      </div>
+
+      <!-- 3.2 Feedback -->
+      <div class="subsection">
+        <h3 class="subsection-title">4.2 反馈 (Feedback)</h3>
+        <div class="feedback-section">
+          <!-- Toast -->
+          <div>
+            <div class="subsection-title feedback-sub-title">Toast</div>
+            <div class="feedback-toast">
+              <span class="feedback-toast-icon"></span>
+              <span>订单已成功提交，等待撮合引擎确认</span>
+            </div>
+          </div>
+
+          <!-- Banners -->
+          <div>
+            <div class="subsection-title feedback-sub-title">Banner</div>
+            <div class="feedback-banner feedback-banner-warning">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L15 14H1L8 1Z" fill="var(--amber-500)"/></svg>
+              <span>风控预警：持仓集中度接近限制阈值 (85%)</span>
+            </div>
+            <div class="feedback-banner feedback-banner-critical">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="var(--red-500)"/></svg>
+              <span>系统异常：行情数据连接中断，请检查网络</span>
+            </div>
+          </div>
+
+          <!-- Progress -->
+          <div>
+            <div class="subsection-title feedback-sub-title">Progress</div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-label-row">
+              <span class="progress-label-text">同步进度</span>
+              <span class="progress-label-value" id="progressLabel">65%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="separator"></div>
+
+    <!-- ───────────────────────────────────────────────
+         Section 4: Domain Semantic Tokens
+         ─────────────────────────────────────────────── -->
+    <section class="section" id="domain" data-reveal="fade-up" data-reveal-delay="300">
+      <div class="section-header">
+        <span class="section-number">05</span>
+        <h2 class="section-title">领域语义 Token (Domain Semantic)</h2>
+      </div>
+      <div id="domainTokens" data-mouse-glow="true"></div>
+    </section>
+
+    <div class="separator"></div>
+
+    <!-- ───────────────────────────────────────────────
+         Section 5: Density Comparison
+         ─────────────────────────────────────────────── -->
+    <section class="section" id="density" data-reveal="fade-up" data-reveal-delay="300">
+      <div class="section-header">
+        <span class="section-number">06</span>
+        <h2 class="section-title">密度对比 (Density Comparison)</h2>
+      </div>
+
+      <p class="section-desc">
+        切换顶部 Density 按钮，下方表格将实时响应变化。行高、内边距、字号均由 density token 驱动。
+      </p>
+
+      <div class="demo-table-wrapper">
+        <table class="demo-table">
+          <thead>
+            <tr>
+              <th>合约</th>
+              <th>最新价</th>
+              <th>涨跌幅</th>
+              <th>成交量</th>
+              <th>持仓量</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cell-name">IF2506</td>
+              <td>3,847.20</td>
+              <td class="market-up dir-up">+1.24%</td>
+              <td>128,456</td>
+              <td>89,234</td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">IC2506</td>
+              <td>5,612.80</td>
+              <td class="market-down dir-down">-0.87%</td>
+              <td>95,120</td>
+              <td>67,891</td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">IM2506</td>
+              <td>6,431.50</td>
+              <td class="market-flat">0.00%</td>
+              <td>72,340</td>
+              <td>45,678</td>
+              <td class="cell-status"><span style="color: var(--system-degraded-fg);">延迟</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">IH2506</td>
+              <td>2,356.40</td>
+              <td class="market-up dir-up">+0.52%</td>
+              <td>56,789</td>
+              <td>34,567</td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">T2506</td>
+              <td>106.350</td>
+              <td class="market-down dir-down">-0.19%</td>
+              <td>203,456</td>
+              <td>156,789</td>
+              <td class="cell-status"><span style="color: var(--system-healthy-fg);">正常</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">AU2506</td>
+              <td>568.42</td>
+              <td class="market-up dir-up">+2.15%</td>
+              <td>312,890</td>
+              <td>234,567</td>
+              <td class="cell-status"><span style="color: var(--system-down-fg);">中断</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Live density token values -->
+      <div class="subsection subsection-gap-top">
+        <h3 class="subsection-title">当前 Density Token 实时值</h3>
+        <div class="live-values" id="densityLiveValues"></div>
+      </div>
+    </section>
+
+    <div class="separator"></div>
+
+    <!-- ───────────────────────────────────────────────
+         Section 6: Market Region Demo
+         ─────────────────────────────────────────────── -->
+    <section class="section" id="market-region" data-reveal="fade-up" data-reveal-delay="350">
+      <div class="section-header">
+        <span class="section-number">07</span>
+        <h2 class="section-title">市场区域演示 (Market Region)</h2>
+      </div>
+
+      <p class="section-desc">
+        切换顶部 Region 按钮，对比 CN (红涨绿跌) 与 Intl (Green Up / Red Down) 的配色差异。
+      </p>
+
+      <div class="market-comparison">
+        <!-- CN Card -->
+        <div class="market-card" id="cnCard">
+          <div class="market-card-label-row">
+            <span class="market-card-label">CN 红涨绿跌</span>
+          </div>
+          <div class="market-card-header">
+            <div>
+              <div class="market-card-symbol">沪深300 IF2506</div>
+              <div class="market-card-name">CSI 300 Index Futures</div>
+            </div>
+          </div>
+          <div class="market-card-price" style="color: var(--market-up-fg);">3,847.20</div>
+          <div class="market-card-change" style="color: var(--market-up-fg);">
+            +47.20 (+1.24%) &nbsp;&#9650;
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">今开</span>
+            <span class="market-card-detail-value" style="color: var(--market-up-fg);">3,810.00</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">最高</span>
+            <span class="market-card-detail-value" style="color: var(--market-up-fg);">3,856.80</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">最低</span>
+            <span class="market-card-detail-value" style="color: var(--market-down-fg);">3,798.40</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">昨收</span>
+            <span class="market-card-detail-value">3,800.00</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">涨跌方向</span>
+            <span class="market-card-detail-value" style="color: var(--market-up-fg);">&#9650; 上涨</span>
+          </div>
+        </div>
+
+        <!-- Intl Card -->
+        <div class="market-card" id="intlCard">
+          <div class="market-card-label-row">
+            <span class="market-card-label">Intl Green Up</span>
+          </div>
+          <div class="market-card-header">
+            <div>
+              <div class="market-card-symbol">SPX ES2506</div>
+              <div class="market-card-name">S&P 500 E-mini Futures</div>
+            </div>
+          </div>
+          <div class="market-card-price" style="color: var(--market-up-fg);">5,234.80</div>
+          <div class="market-card-change" style="color: var(--market-up-fg);">
+            +32.60 (+0.63%) &nbsp;&#9650;
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">Open</span>
+            <span class="market-card-detail-value" style="color: var(--market-up-fg);">5,210.00</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">High</span>
+            <span class="market-card-detail-value" style="color: var(--market-up-fg);">5,248.20</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">Low</span>
+            <span class="market-card-detail-value" style="color: var(--market-down-fg);">5,198.60</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">Prev Close</span>
+            <span class="market-card-detail-value">5,202.20</span>
+          </div>
+          <div class="market-card-detail">
+            <span class="market-card-detail-label">Direction</span>
+            <span class="market-card-detail-value" style="color: var(--market-up-fg);">&#9650; Up</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="data-viz" data-reveal="fade-up" data-reveal-delay="400">
+      <div class="section-header">
+        <span class="section-number">08</span>
+        <h2 class="section-title">数据可视化 (Data Visualization)</h2>
+      </div>
+
+      <!-- 7.1 Data Freshness Scale -->
+      <div class="subsection">
+        <h3 class="subsection-title">8.1 Data Freshness Scale</h3>
+        <p class="section-desc">
+          Real-time data visually decays over time. Opacity-based time-fade helps users spot stale values at a glance.
+        </p>
+        <div class="freshness-row">
+          <div class="freshness-cell" data-tooltip="--data-freshness-live: opacity 1.0" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-live);">
+            <span class="freshness-label">Live</span>
+            <span class="freshness-value">3,847.20</span>
+            <span class="freshness-timer">&lt;1s ago</span>
+          </div>
+          <div class="freshness-cell" data-tooltip="--data-freshness-recent: opacity 0.85" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-recent);">
+            <span class="freshness-label">Recent</span>
+            <span class="freshness-value">3,847.20</span>
+            <span class="freshness-timer">12s ago</span>
+          </div>
+          <div class="freshness-cell" data-tooltip="--data-freshness-aging: opacity 0.65" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-aging);">
+            <span class="freshness-label">Aging</span>
+            <span class="freshness-value">3,847.20</span>
+            <span class="freshness-timer">2m ago</span>
+          </div>
+          <div class="freshness-cell" data-tooltip="--data-freshness-stale: opacity 0.45" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-stale);">
+            <span class="freshness-label">Stale</span>
+            <span class="freshness-value">3,847.20</span>
+            <span class="freshness-timer">18m ago</span>
+          </div>
+          <div class="freshness-cell" data-tooltip="--data-freshness-expired: opacity 0.25" data-tooltip-pos="bottom" style="opacity: var(--data-freshness-expired);">
+            <span class="freshness-label">Expired</span>
+            <span class="freshness-value">3,847.20</span>
+            <span class="freshness-timer">&gt;30m ago</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7.2 Chart Token Preview -->
+      <div class="subsection">
+        <h3 class="subsection-title">8.2 Chart Token Preview</h3>
+        <p class="section-desc">
+          Chart pane tokens: grid lines (minor/major), crosshair, zero line, axis text, and series area fills.
+        </p>
+        <div class="chart-preview">
+          <!-- Grid lines (horizontal) -->
+          <div class="chart-preview-grid">
+            <div class="chart-grid-h major" style="top: 15%;"></div>
+            <div class="chart-grid-h" style="top: 30%;"></div>
+            <div class="chart-grid-h" style="top: 45%;"></div>
+            <div class="chart-grid-h" style="top: 60%;"></div>
+            <div class="chart-grid-h major" style="top: 75%;"></div>
+            <div class="chart-grid-h" style="top: 90%;"></div>
+          </div>
+          <!-- Grid lines (vertical) -->
+          <div class="chart-preview-grid">
+            <div class="chart-grid-v" style="left: 10%;"></div>
+            <div class="chart-grid-v major" style="left: 25%;"></div>
+            <div class="chart-grid-v" style="left: 40%;"></div>
+            <div class="chart-grid-v major" style="left: 55%;"></div>
+            <div class="chart-grid-v" style="left: 70%;"></div>
+            <div class="chart-grid-v major" style="left: 85%;"></div>
+          </div>
+          <!-- Zero line -->
+          <div class="chart-zero-line" style="top: 60%;"></div>
+          <!-- Simulated series bars -->
+          <div class="chart-series-bar">
+            <div class="chart-series-col" style="height: 30%; background: var(--chart-series-down-area, var(--market-down-bg)); border-bottom: 2px solid var(--chart-series-down, var(--market-down-fg));"></div>
+            <div class="chart-series-col" style="height: 20%; background: var(--chart-series-down-area, var(--market-down-bg)); border-bottom: 2px solid var(--chart-series-down, var(--market-down-fg));"></div>
+            <div class="chart-series-col" style="height: 15%; background: var(--chart-series-neutral-area); border-bottom: 2px solid var(--chart-series-neutral, var(--market-flat-fg));"></div>
+            <div class="chart-series-col" style="height: 40%; background: var(--chart-series-up-area, var(--market-up-bg)); border-bottom: 2px solid var(--chart-series-up, var(--market-up-fg));"></div>
+            <div class="chart-series-col" style="height: 55%; background: var(--chart-series-up-area, var(--market-up-bg)); border-bottom: 2px solid var(--chart-series-up, var(--market-up-fg));"></div>
+            <div class="chart-series-col" style="height: 70%; background: var(--chart-series-up-area, var(--market-up-bg)); border-bottom: 2px solid var(--chart-series-up, var(--market-up-fg));"></div>
+            <div class="chart-series-col" style="height: 85%; background: var(--chart-series-up-area, var(--market-up-bg)); border-bottom: 2px solid var(--chart-series-up, var(--market-up-fg));"></div>
+            <div class="chart-series-col" style="height: 60%; background: var(--chart-series-up-area, var(--market-up-bg)); border-bottom: 2px solid var(--chart-series-up, var(--market-up-fg));"></div>
+            <div class="chart-series-col" style="height: 45%; background: var(--chart-series-up-area, var(--market-up-bg)); border-bottom: 2px solid var(--chart-series-up, var(--market-up-fg));"></div>
+            <div class="chart-series-col" style="height: 35%; background: var(--chart-series-neutral-area); border-bottom: 2px solid var(--chart-series-neutral, var(--market-flat-fg));"></div>
+            <div class="chart-series-col" style="height: 25%; background: var(--chart-series-down-area, var(--market-down-bg)); border-bottom: 2px solid var(--chart-series-down, var(--market-down-fg));"></div>
+            <div class="chart-series-col" style="height: 50%; background: var(--chart-series-up-area, var(--market-up-bg)); border-bottom: 2px solid var(--chart-series-up, var(--market-up-fg));"></div>
+          </div>
+          <!-- Crosshair -->
+          <div class="chart-crosshair-h"></div>
+          <div class="chart-crosshair-v"></div>
+          <div class="chart-crosshair-label">3,847.20</div>
+          <!-- Axis labels -->
+          <div class="chart-axis-label" style="bottom: 8px; left: 25%;">10:00</div>
+          <div class="chart-axis-label" style="bottom: 8px; left: 55%;">10:30</div>
+          <div class="chart-axis-label" style="bottom: 8px; left: 85%;">11:00</div>
+          <div class="chart-axis-label" style="top: 12%; right: 8px;">3,900</div>
+          <div class="chart-axis-label" style="top: 72%; right: 8px;">3,800</div>
+        </div>
+      </div>
+
+      <!-- 7.3 Asset Class Colors -->
+      <div class="subsection">
+        <h3 class="subsection-title">8.3 Asset Class Colors</h3>
+        <p class="section-desc">
+          7 qualitative colors based on Paul Tol bright scheme, colorblind-safe. Used in portfolio allocation, exposure charts, and legend keys.
+        </p>
+        <div class="asset-class-row">
+          <div class="asset-class-pill" data-tooltip="--asset-equity" data-tooltip-pos="bottom">
+            <span class="asset-class-dot" style="background: var(--asset-equity);"></span>
+            <span class="asset-class-name">Equity</span>
+          </div>
+          <div class="asset-class-pill" data-tooltip="--asset-fixed-income" data-tooltip-pos="bottom">
+            <span class="asset-class-dot" style="background: var(--asset-fixed-income);"></span>
+            <span class="asset-class-name">Fixed Income</span>
+          </div>
+          <div class="asset-class-pill" data-tooltip="--asset-crypto" data-tooltip-pos="bottom">
+            <span class="asset-class-dot" style="background: var(--asset-crypto);"></span>
+            <span class="asset-class-name">Crypto</span>
+          </div>
+          <div class="asset-class-pill" data-tooltip="--asset-commodity" data-tooltip-pos="bottom">
+            <span class="asset-class-dot" style="background: var(--asset-commodity);"></span>
+            <span class="asset-class-name">Commodity</span>
+          </div>
+          <div class="asset-class-pill" data-tooltip="--asset-fx" data-tooltip-pos="bottom">
+            <span class="asset-class-dot" style="background: var(--asset-fx);"></span>
+            <span class="asset-class-name">FX</span>
+          </div>
+          <div class="asset-class-pill" data-tooltip="--asset-volatility" data-tooltip-pos="bottom">
+            <span class="asset-class-dot" style="background: var(--asset-volatility);"></span>
+            <span class="asset-class-name">Volatility</span>
+          </div>
+          <div class="asset-class-pill" data-tooltip="--asset-alternative" data-tooltip-pos="bottom">
+            <span class="asset-class-dot" style="background: var(--asset-alternative);"></span>
+            <span class="asset-class-name">Alternative</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7.4 Heatmap Scale -->
+      <div class="subsection">
+        <h3 class="subsection-title">8.4 Heatmap Scale</h3>
+        <p class="section-desc">
+          Sequential 5-step heatmap derived from market up/down tokens. Single-direction magnitude scale with neutral midpoint.
+        </p>
+        <div class="color-gradient-bar color-gradient-bar--heatmap"></div>
+        <div class="gradient-bar-label"><span>-2.0%</span><span>0.0%</span><span>+2.0%</span></div>
+        <div class="heatmap-row">
+          <div class="heatmap-cell" data-tooltip="--heatmap-1-bg: strongly negative" data-tooltip-pos="bottom" style="background: var(--heatmap-1-bg);">-2.0%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-2-bg: mildly negative" data-tooltip-pos="bottom" style="background: var(--heatmap-2-bg);">-0.8%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-3-bg: neutral midpoint" data-tooltip-pos="bottom" style="background: var(--heatmap-3-bg);">0.0%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-4-bg: mildly positive" data-tooltip-pos="bottom" style="background: var(--heatmap-4-bg);">+0.8%</div>
+          <div class="heatmap-cell" data-tooltip="--heatmap-5-bg: strongly positive" data-tooltip-pos="bottom" style="background: var(--heatmap-5-bg);">+2.0%</div>
+        </div>
+      </div>
+
+      <!-- 7.5 Status Indicators -->
+      <div class="subsection">
+        <h3 class="subsection-title">8.5 Status Indicators</h3>
+        <p class="section-desc">
+          Connection/feed status LEDs with pulse animations. Connected pulses slowly, degraded pulses faster, error is solid.
+        </p>
+        <div class="status-led-row">
+          <div class="status-led">
+            <span class="status-led-dot pulse" style="background: var(--status-connected-color); box-shadow: 0 0 6px var(--status-connected-color);"></span>
+            <div>
+              <div class="status-led-label">Connected</div>
+              <div class="status-led-state">pulse: 2s ease-in-out</div>
+            </div>
+          </div>
+          <div class="status-led">
+            <span class="status-led-dot pulse" style="background: var(--status-degraded-color); box-shadow: 0 0 6px var(--status-degraded-color); animation-duration: 1s;"></span>
+            <div>
+              <div class="status-led-label">Degraded</div>
+              <div class="status-led-state">pulse: 1s ease-in-out</div>
+            </div>
+          </div>
+          <div class="status-led">
+            <span class="status-led-dot solid" style="background: var(--status-error-color); box-shadow: 0 0 6px var(--status-error-color);"></span>
+            <div>
+              <div class="status-led-label">Error</div>
+              <div class="status-led-state">solid (no pulse)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Footer ── -->
+    <div class="separator"></div>
+    <footer class="showcase-footer">
+      <div class="footer-info">
+        <span class="footer-label">Ditto Design Tokens</span>
+        <span class="footer-version">Graphite Studio / R1 Stabilization</span>
+      </div>
+      <a class="footer-top" href="#">&#8593; 回到顶部</a>
+    </footer>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════
+       JavaScript: Interactive Controls & Rendering
+       ═══════════════════════════════════════════════════ -->
+  <script>
+    // ── Density Switcher ──
+    const densitySwitcher = document.getElementById('densitySwitcher');
+    densitySwitcher.addEventListener('click', (e) => {
+      const btn = e.target.closest('.control-btn');
+      if (!btn || btn.disabled) return;
+
+      densitySwitcher.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.documentElement.setAttribute('data-density', btn.dataset.density);
+
+      updateMarketColors();
+      updateDensityLiveValues();
+    });
+
+    // ── Region Switcher ──
+    const regionSwitcher = document.getElementById('regionSwitcher');
+    regionSwitcher.addEventListener('click', (e) => {
+      const btn = e.target.closest('.control-btn');
+      if (!btn || btn.disabled) return;
+
+      regionSwitcher.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.documentElement.setAttribute('data-market-region', btn.dataset.region);
+
+      updateMarketColors();
+    });
+
+    // ── Theme Toggle ──
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeToggle.textContent = isDark ? 'Dark' : 'Light';
+      // Re-render dynamic values after theme change
+      setTimeout(() => {
+        updateMarketColors();
+        updateDensityLiveValues();
+      }, 50);
+    });
+
+    // ── Market Color Updates ──
+    function updateMarketColors() {
+      const style = getComputedStyle(document.documentElement);
+      const upFg = style.getPropertyValue('--market-up-fg').trim();
+      const downFg = style.getPropertyValue('--market-down-fg').trim();
+      const flatFg = style.getPropertyValue('--market-flat-fg').trim();
+
+      document.querySelectorAll('.market-up').forEach(el => {
+        el.style.color = upFg;
+      });
+      document.querySelectorAll('.market-down').forEach(el => {
+        el.style.color = downFg;
+      });
+      document.querySelectorAll('.market-flat').forEach(el => {
+        el.style.color = flatFg;
+      });
+    }
+
+    // ── Progress Animation ──
+    function animateProgress() {
+      const fill = document.getElementById('progressFill');
+      const label = document.getElementById('progressLabel');
+      let progress = 65;
+      const target = 95;
+
+      function step() {
+        if (progress < target) {
+          progress += Math.random() * 3;
+          if (progress > target) progress = target;
+          fill.style.width = progress + '%';
+          label.textContent = Math.round(progress) + '%';
+          requestAnimationFrame(step);
+        }
+      }
+      setTimeout(step, 500);
+    }
+
+    // ── Render: Neutral Swatches ──
+    function renderNeutralSwatches() {
+      const container = document.getElementById('neutralSwatches');
+      const neutrals = [
+        { name: 'neutral-0',   token: '--neutral-0' },
+        { name: 'neutral-25',  token: '--neutral-25' },
+        { name: 'neutral-50',  token: '--neutral-50' },
+        { name: 'neutral-75',  token: '--neutral-75' },
+        { name: 'neutral-100', token: '--neutral-100' },
+        { name: 'neutral-150', token: '--neutral-150' },
+        { name: 'neutral-200', token: '--neutral-200' },
+        { name: 'neutral-300', token: '--neutral-300' },
+        { name: 'neutral-400', token: '--neutral-400' },
+        { name: 'neutral-500', token: '--neutral-500' },
+        { name: 'neutral-600', token: '--neutral-600' },
+        { name: 'neutral-700', token: '--neutral-700' },
+        { name: 'neutral-800', token: '--neutral-800' },
+        { name: 'neutral-900', token: '--neutral-900' },
+        { name: 'neutral-950', token: '--neutral-950' },
+      ];
+
+      neutrals.forEach(n => {
+        const style = getComputedStyle(document.documentElement);
+        const value = style.getPropertyValue(n.token).trim();
+
+        container.innerHTML += `
+          <div class="swatch" data-tooltip="${n.token}: ${value}" data-tooltip-pos="bottom">
+            <div class="swatch-color" style="background: var(${n.token});"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">${n.name}</div>
+              <div class="swatch-value">${value}</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Brand Swatches ──
+    function renderBrandSwatches() {
+      const container = document.getElementById('brandSwatches');
+      const brands = [
+        { name: 'brand-300', token: '--brand-300' },
+        { name: 'brand-400', token: '--brand-400' },
+        { name: 'brand-500', token: '--brand-500' },
+        { name: 'brand-600', token: '--brand-600' },
+        { name: 'brand-700', token: '--brand-700' },
+      ];
+
+      brands.forEach(b => {
+        const style = getComputedStyle(document.documentElement);
+        const value = style.getPropertyValue(b.token).trim();
+
+        container.innerHTML += `
+          <div class="swatch" data-tooltip="${b.token}: ${value}" data-tooltip-pos="bottom">
+            <div class="swatch-color" style="background: var(${b.token});"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">${b.name}</div>
+              <div class="swatch-value">${value}</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Functional Swatches ──
+    function renderFunctionalSwatches() {
+      const container = document.getElementById('functionalSwatches');
+      const groups = [
+        { label: 'Green', colors: [
+          { name: 'green-400', token: '--green-400' },
+          { name: 'green-500', token: '--green-500' },
+          { name: 'green-600', token: '--green-600' },
+        ]},
+        { label: 'Red', colors: [
+          { name: 'red-400', token: '--red-400' },
+          { name: 'red-500', token: '--red-500' },
+          { name: 'red-600', token: '--red-600' },
+        ]},
+        { label: 'Amber', colors: [
+          { name: 'amber-400', token: '--amber-400' },
+          { name: 'amber-500', token: '--amber-500' },
+          { name: 'amber-600', token: '--amber-600' },
+        ]},
+        { label: 'Orange', colors: [
+          { name: 'orange-400', token: '--orange-400' },
+          { name: 'orange-500', token: '--orange-500' },
+          { name: 'orange-600', token: '--orange-600' },
+        ]},
+        { label: 'Cyan', colors: [
+          { name: 'cyan-400', token: '--cyan-400' },
+          { name: 'cyan-500', token: '--cyan-500' },
+          { name: 'cyan-600', token: '--cyan-600' },
+        ]},
+        { label: 'Purple', colors: [
+          { name: 'purple-400', token: '--purple-400' },
+          { name: 'purple-500', token: '--purple-500' },
+          { name: 'purple-600', token: '--purple-600' },
+        ]},
+      ];
+
+      groups.forEach(g => {
+        container.innerHTML += `<div class="swatch-group-label swatch-group-label--spaced">${g.label}</div>`;
+        g.colors.forEach(c => {
+          const style = getComputedStyle(document.documentElement);
+          const value = style.getPropertyValue(c.token).trim();
+
+          container.innerHTML += `
+            <div class="swatch" data-tooltip="${c.token}: ${value}" data-tooltip-pos="bottom">
+              <div class="swatch-color" style="background: var(${c.token});"></div>
+              <div class="swatch-info">
+                <div class="swatch-name">${c.name}</div>
+                <div class="swatch-value">${value}</div>
+              </div>
+            </div>
+          `;
+        });
+      });
+    }
+
+    // ── Render: Typography Scale ──
+    function renderTypeScale() {
+      const container = document.getElementById('typeScale');
+      const sizes = [
+        { name: 'font-size-10', px: '10px', rem: '0.625rem' },
+        { name: 'font-size-12', px: '12px', rem: '0.75rem' },
+        { name: 'font-size-13', px: '13px', rem: '0.8125rem' },
+        { name: 'font-size-14', px: '14px', rem: '0.875rem' },
+        { name: 'font-size-16', px: '16px', rem: '1rem' },
+        { name: 'font-size-24', px: '24px', rem: '1.5rem' },
+      ];
+
+      sizes.forEach(s => {
+        container.innerHTML += `
+          <div class="type-row" data-tooltip="${s.name}: ${s.rem} (${s.px})" data-tooltip-pos="right">
+            <span class="type-label">${s.name}</span>
+            <span class="type-sample" style="font-size: var(${s.name});">量化交易 Graphite Studio ${s.px}</span>
+            <span class="type-value">${s.rem} (${s.px})</span>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Spacing Scale ──
+    function renderSpacingScale() {
+      const container = document.getElementById('spacingScale');
+      const spacings = [
+        { name: 'space-2',  px: '2px',  factor: 1 },
+        { name: 'space-3',  px: '3px',  factor: 1.5 },
+        { name: 'space-4',  px: '4px',  factor: 2 },
+        { name: 'space-6',  px: '6px',  factor: 3 },
+        { name: 'space-8',  px: '8px',  factor: 4 },
+        { name: 'space-10', px: '10px', factor: 5 },
+        { name: 'space-12', px: '12px', factor: 6 },
+        { name: 'space-16', px: '16px', factor: 8 },
+        { name: 'space-20', px: '20px', factor: 10 },
+        { name: 'space-24', px: '24px', factor: 12 },
+        { name: 'space-32', px: '32px', factor: 16 },
+      ];
+
+      spacings.forEach(s => {
+        const numVal = parseInt(s.px, 10);
+        container.innerHTML += `
+          <div class="spacing-row" data-tooltip="${s.name}: ${s.px}" data-tooltip-pos="right">
+            <span class="spacing-label">${s.name}</span>
+            <div class="spacing-bar" style="width: ${s.factor * 8}px;"></div>
+            <span class="spacing-value"><span data-ticker="${numVal}" data-decimals="0" data-ticker-suffix="px">${s.px}</span></span>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Radius Scale ──
+    function renderRadiusScale() {
+      const container = document.getElementById('radiusScale');
+      const radii = [
+        { name: 'radius-2',  px: '2px' },
+        { name: 'radius-3',  px: '3px' },
+        { name: 'radius-4',  px: '4px' },
+        { name: 'radius-6',  px: '6px' },
+        { name: 'radius-8',  px: '8px' },
+        { name: 'radius-12', px: '12px' },
+      ];
+
+      radii.forEach(r => {
+        container.innerHTML += `
+          <div class="radius-item" data-tooltip="${r.name}: ${r.px}" data-tooltip-pos="bottom">
+            <div class="radius-box" style="border-radius: var(${r.name});"></div>
+            <span class="radius-label">${r.name}<br>${r.px}</span>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Surface Elevation ──
+    function renderElevationStack() {
+      const container = document.getElementById('elevationStack');
+      const surfaces = [
+        { name: 'surface-app',            level: 'L0 应用背景',   token: '--surface-app' },
+        { name: 'surface-panel-base',     level: 'L1 面板基础',   token: '--surface-panel-base' },
+        { name: 'surface-panel-elevated', level: 'L2 面板悬浮',   token: '--surface-panel-elevated' },
+        { name: 'surface-strip',          level: 'L3 工具条',     token: '--surface-strip' },
+        { name: 'surface-overlay',        level: 'L4 弹出层',     token: '--surface-overlay' },
+        { name: 'surface-modal',          level: 'L5 模态框',     token: '--surface-modal' },
+      ];
+
+      surfaces.forEach(s => {
+        const style = getComputedStyle(document.documentElement);
+        const value = style.getPropertyValue(s.token).trim();
+
+        container.innerHTML += `
+          <div class="elevation-row" data-tooltip="${s.token}: ${value}" data-tooltip-pos="right">
+            <span class="elevation-label">${s.level}</span>
+            <div class="elevation-preview" style="background: var(${s.token});">
+              <span class="elevation-preview-text">示例文本 Sample Text</span>
+              <span class="elevation-value">${value}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Text Hierarchy ──
+    function renderTextHierarchy() {
+      const container = document.getElementById('textHierarchy');
+      const texts = [
+        { name: '主要文本', token: '--text-primary',   isInverse: false },
+        { name: '次要文本', token: '--text-secondary',  isInverse: false },
+        { name: '三级文本', token: '--text-tertiary',   isInverse: false },
+        { name: '四级文本', token: '--text-quaternary', isInverse: false },
+        { name: '禁用文本', token: '--text-disabled',   isInverse: false },
+        { name: '反转文本', token: '--text-inverse',    isInverse: true },
+      ];
+
+      texts.forEach(t => {
+        const textContent = t.isInverse
+          ? `<span class="text-hierarchy-inverse">白色背景上的深色文字</span>`
+          : `<span style="color: var(${t.token}); font-size: var(--font-size-14);">这是${t.name}的显示效果 This is ${t.name}</span>`;
+
+        container.innerHTML += `
+          <div class="text-hierarchy-row" data-tooltip="${t.token}" data-tooltip-pos="right">
+            <span class="text-hierarchy-label">${t.name}</span>
+            ${textContent}
+            <span class="text-hierarchy-token">${t.token}</span>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Border Hierarchy ──
+    function renderBorderList() {
+      const container = document.getElementById('borderList');
+      const borders = [
+        { name: 'border-subtle',  token: '--border-subtle' },
+        { name: 'border-default', token: '--border-default' },
+        { name: 'border-strong',  token: '--border-strong' },
+      ];
+
+      borders.forEach(b => {
+        container.innerHTML += `
+          <div class="border-row" data-tooltip="${b.token}" data-tooltip-pos="right">
+            <span class="border-label">${b.name}</span>
+            <div class="border-line" style="background: var(${b.token});"></div>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Domain Tokens ──
+    function renderDomainTokens() {
+      const container = document.getElementById('domainTokens');
+      const domains = [
+        {
+          name: 'Market 市场',
+          tokens: [
+            { label: '涨/Up',      fg: '--market-up-fg',     bg: '--market-up-bg' },
+            { label: '跌/Down',     fg: '--market-down-fg',   bg: '--market-down-bg' },
+            { label: '平/Flat',     fg: '--market-flat-fg',   bg: '--market-flat-bg' },
+            { label: '强势/Strong', fg: '--market-strong-fg' },
+            { label: '弱势/Weak',   fg: '--market-weak-fg' },
+          ]
+        },
+        {
+          name: 'Risk 风控',
+          tokens: [
+            { label: '低/Low',          fg: '--risk-low-fg',       bg: '--risk-low-bg' },
+            { label: '中/Medium',       fg: '--risk-medium-fg',    bg: '--risk-medium-bg' },
+            { label: '高/High',         fg: '--risk-high-fg',      bg: '--risk-high-bg' },
+            { label: '严重/Critical',   fg: '--risk-critical-fg',  bg: '--risk-critical-bg' },
+            { label: '临近/Near Limit', fg: '--risk-near-limit-fg' },
+            { label: '突破/Breach',     fg: '--risk-breach-fg' },
+          ]
+        },
+        {
+          name: 'Execution 执行',
+          tokens: [
+            { label: '待定/Pending',  fg: '--execution-pending-fg',   bg: '--execution-pending-bg' },
+            { label: '部分/Partial',  fg: '--execution-partial-fg',   bg: '--execution-partial-bg' },
+            { label: '成交/Filled',   fg: '--execution-filled-fg',    bg: '--execution-filled-bg' },
+            { label: '取消/Cancelled',fg: '--execution-cancelled-fg' },
+            { label: '拒绝/Rejected', fg: '--execution-rejected-fg',  bg: '--execution-rejected-bg' },
+          ]
+        },
+        {
+          name: 'System 系统',
+          tokens: [
+            { label: '健康/Healthy',    fg: '--system-healthy-fg',   bg: '--system-healthy-bg' },
+            { label: '降级/Degraded',   fg: '--system-degraded-fg',  bg: '--system-degraded-bg' },
+            { label: '过期/Stale',      fg: '--system-stale-fg',     bg: '--system-stale-bg' },
+            { label: '中断/Down',       fg: '--system-down-fg',      bg: '--system-down-bg' },
+            { label: '恢复/Recovering', fg: '--system-recovering-fg' },
+          ]
+        },
+        {
+          name: 'Data Quality 数据质量',
+          tokens: [
+            { label: '新鲜/Fresh',   fg: '--data-quality-fresh-fg' },
+            { label: '延迟/Delayed', fg: '--data-quality-delayed-fg', bg: '--data-quality-delayed-bg' },
+            { label: '缺失/Missing', fg: '--data-quality-missing-fg', bg: '--data-quality-missing-bg' },
+            { label: '部分/Partial', fg: '--data-quality-partial-fg' },
+            { label: '修正/Revised', fg: '--data-quality-revised-fg' },
+          ]
+        },
+        {
+          name: 'Model 模型',
+          tokens: [
+            { label: '稳定/Stable',    fg: '--model-stable-fg',    bg: '--model-stable-bg' },
+            { label: '退化/Degrading', fg: '--model-degrading-fg', bg: '--model-degrading-bg' },
+            { label: '漂移/Drifting',  fg: '--model-drifting-fg',  bg: '--model-drifting-bg' },
+            { label: '无效/Invalid',   fg: '--model-invalid-fg',   bg: '--model-invalid-bg' },
+            { label: '候选/Candidate', fg: '--model-candidate-fg' },
+          ]
+        },
+        {
+          name: 'Agent 智能体',
+          tokens: [
+            { label: '空闲/Idle',              fg: '--agent-idle-fg' },
+            { label: '运行/Running',           fg: '--agent-running-fg',          bg: '--agent-running-bg' },
+            { label: '待审/Waiting Approval',  fg: '--agent-waiting-approval-fg', bg: '--agent-waiting-approval-bg' },
+            { label: '阻塞/Blocked',           fg: '--agent-blocked-fg',          bg: '--agent-blocked-bg' },
+            { label: '失败/Failed',            fg: '--agent-failed-fg',           bg: '--agent-failed-bg' },
+          ]
+        },
+      ];
+
+      domains.forEach(d => {
+        let badgesHtml = '';
+        d.tokens.forEach(t => {
+          const bgStyle = t.bg
+            ? `background: var(${t.bg});`
+            : `background: transparent; border: 1px dashed var(--border-default);`;
+
+          badgesHtml += `
+            <div class="domain-badge" style="color: var(${t.fg}); ${bgStyle}" data-tooltip="${t.fg}${t.bg ? ' → bg: ' + t.bg : ''}" data-tooltip-pos="bottom">
+              ${t.label}
+              <span class="domain-badge-label">${t.fg.replace(/^--/, '')}</span>
+            </div>
+          `;
+        });
+
+        container.innerHTML += `
+          <div class="domain-section">
+            <div class="domain-title">${d.name}</div>
+            <div class="domain-badges">${badgesHtml}</div>
+          </div>
+        `;
+      });
+    }
+
+    // ── Render: Density Live Values ──
+    function updateDensityLiveValues() {
+      const container = document.getElementById('densityLiveValues');
+      const tokens = [
+        '--density-row-height',
+        '--density-cell-padding-x',
+        '--density-cell-padding-y',
+        '--density-header-height',
+        '--density-input-height',
+        '--density-action-height',
+        '--density-panel-padding',
+        '--density-strip-height',
+        '--density-font-delta',
+      ];
+
+      const style = getComputedStyle(document.documentElement);
+      container.innerHTML = '';
+
+      tokens.forEach(t => {
+        const value = style.getPropertyValue(t).trim();
+        container.innerHTML += `
+          <div class="live-value">
+            <span class="live-value-name">${t}</span>
+            <span class="live-value-val">${value}</span>
+          </div>
+        `;
+      });
+    }
+
+    // ── Initialize (script at end of body, DOM already parsed) ──
+    (function init() {
+      renderNeutralSwatches();
+      renderBrandSwatches();
+      renderFunctionalSwatches();
+      renderTypeScale();
+      renderSpacingScale();
+      renderRadiusScale();
+      renderElevationStack();
+      renderTextHierarchy();
+      renderBorderList();
+      renderDomainTokens();
+      updateDensityLiveValues();
+      updateMarketColors();
+      animateProgress();
+    })();
+  </script>
+  <script src="../shared/prototype-interactions.js"></script>
+</body>
+</html>

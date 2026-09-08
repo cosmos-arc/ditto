@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const prototypesDir = join(root, "prototype");
 const actionTierScanTimeoutMs = 30_000;
 
 const highDensityPages = [

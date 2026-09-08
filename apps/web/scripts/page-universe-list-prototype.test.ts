@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-universe-list.html",
+	"../prototype/page-universe-list.html",
 );
 const navigationTimeoutMs = 10_000;
 

@@ -74,7 +74,7 @@ ditto-app-dev      → implemented / ship-ready
   "route": "/",                           // 路由路径
   "pagePattern": "global-command-center", // 来自 spec §11
   "shellFamily": "command-center",        // 来自 spec §10
-  "prototypeRef": "docs/designs/specs/prototypes/page-home.html",
+  "prototypeRef": "prototype/page-home.html",
   "blueprintRefs": ["02_core_page_blueprints.md#home-command-center"],
 
   // === 视口配置 ===
@@ -283,7 +283,7 @@ Phase T: THRESHOLD POLICY
 └─ 产出：visualThresholds + slot.threshold
 
 Phase W: WRITE
-├─ 组装 JSON → docs/contracts/pages/home.contract.json
+├─ 组装 JSON → contracts/pages/home.contract.json
 ├─ 生成报告 → docs/contracts/reports/home-contract-report.md
 ├─ 触发 generate-contracts
 └─ status: "draft"
@@ -356,7 +356,7 @@ Phase W: WRITE
 
 ### 7.2 范围
 
-1. 创建 `docs/contracts/pages/home.contract.json`
+1. 创建 `contracts/pages/home.contract.json`
 2. 实现 `scripts/contract-generator/generate.mjs`
 3. 实现 `/ditto-page-contract --create home`
 4. 验证产出物：

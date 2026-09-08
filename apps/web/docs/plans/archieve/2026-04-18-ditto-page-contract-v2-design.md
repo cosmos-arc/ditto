@@ -47,8 +47,8 @@ ditto-page-contract.md          ← 主文件（~80 行）：流程图 + 子命�
 | 检查 | 失败时修复步骤 |
 |------|---------------|
 | #1 JSON Schema | 读 schema 错误提示，补缺字段或修正类型 |
-| #2 Prototype 文件 | 确认 `prototypeRef` 路径正确，文件在 `docs/designs/specs/prototypes/` 下 |
-| #3 Blueprint refs | 确认 `blueprintRefs` 中的文件存在于 `docs/designs/specs/` |
+| #2 Prototype 文件 | 确认 `prototypeRef` 路径正确，文件在 `prototype/` 下 |
+| #3 Blueprint refs | 确认 `blueprintRefs` 中的文件存在于 `design/specs/` |
 | #4 prototypeSelector 缺失 | 重新运行 `create.mjs --prototype <path>` 或手动填写 |
 | #5 reactSelector 格式 | 修正为 `[data-slot='xxx']` 或 `[data-testid='xxx']` |
 | #6 metrics baseline 空 | 运行 `--refresh-metrics <page>` |
@@ -67,7 +67,7 @@ ditto-page-contract.md          ← 主文件（~80 行）：流程图 + 子命�
 ```markdown
 ### 合同示例
 
-参考 `docs/contracts/pages/home.contract.json`（唯一已创建的合同）。
+参考 `contracts/pages/home.contract.json`（唯一已创建的合同）。
 ```
 
 ### 1.4 Token 预算

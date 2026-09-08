@@ -2,7 +2,7 @@
 
 > **日期**：2026-04-10
 > **方法**：Chrome DevTools computed styles 提取 + 截图 AI 对比 + CSS 规则交叉验证
-> **原型基线**：`docs/designs/specs/prototypes/` 17 页 HTML + `shared/*.css`
+> **原型基线**：`prototype/` 17 页 HTML + `shared/*.css`
 > **实现基线**：`src/` 当前 feat/prototype-three-zone-architecture 分支
 
 ---

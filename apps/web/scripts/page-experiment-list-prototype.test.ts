@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-experiment-list.html",
+	"../prototype/page-experiment-list.html",
 );
 const navigationTimeoutMs = 10_000;
 
@@ -21,7 +21,7 @@ function loadPage() {
 describe("page-experiment-list prototype", () => {
 	it("inherits centered button content for primary and detail actions", () => {
 		const layoutCss = readFileSync(
-			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-components.css"),
+			resolve(import.meta.dirname, "../prototype/shared/layout-components.css"),
 			"utf-8",
 		);
 

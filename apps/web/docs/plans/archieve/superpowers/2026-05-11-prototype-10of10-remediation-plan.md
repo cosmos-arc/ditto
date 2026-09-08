@@ -1,7 +1,7 @@
 # 原型 10/10 满分整改计划
 
 > 日期：2026-05-11
-> 范围：`docs/designs/specs/prototypes/` active route prototypes
+> 范围：`prototype/` active route prototypes
 > 来源：冻结前最终评审追加要求
 > 注册类型：product
 > 目标：把当前 9.2 到 9.7 的高位冻结候选推进到每页接近 10/10 的可验证状态
@@ -165,7 +165,7 @@ manifest 当前 visual audit 状态仍是：
 验收：
 
 ```bash
-node -e 'const fs=require("fs"),path=require("path"); const dir="docs/designs/specs/prototypes"; const m=JSON.parse(fs.readFileSync(path.join(dir,".edition-manifest.json"),"utf8")); const archived=new Set(["ai-overview","ai-copilot"]); const active=m.pages.filter(p=>p.file?.startsWith("page-")&&p.file.endsWith(".html")&&p.id!=="token-showcase"&&p.status!=="archived-specimen"&&!archived.has(p.id)); const bad=active.filter(p=>p.landing?.visualAuditStatus!=="verified").map(p=>`${p.id}:${p.landing?.visualAuditStatus||"missing"}`); console.log(bad.length ? bad.join("\\n") : "all verified");'
+node -e 'const fs=require("fs"),path=require("path"); const dir="prototype"; const m=JSON.parse(fs.readFileSync(path.join(dir,".edition-manifest.json"),"utf8")); const archived=new Set(["ai-overview","ai-copilot"]); const active=m.pages.filter(p=>p.file?.startsWith("page-")&&p.file.endsWith(".html")&&p.id!=="token-showcase"&&p.status!=="archived-specimen"&&!archived.has(p.id)); const bad=active.filter(p=>p.landing?.visualAuditStatus!=="verified").map(p=>`${p.id}:${p.landing?.visualAuditStatus||"missing"}`); console.log(bad.length ? bad.join("\\n") : "all verified");'
 ```
 
 ### P1-2: 每页键盘和 ARIA 巡检证据
@@ -377,7 +377,7 @@ bun vitest run scripts/prototype-interaction-ux-contract.test.ts -t "reduced mot
 ### Step 1: 修 P0 基础设施
 
 ```text
-[$impeccable] harden docs/designs/specs/prototypes/page-agent-console-v2.html
+[$impeccable] harden prototype/page-agent-console-v2.html
 ```
 
 目标：
@@ -389,7 +389,7 @@ bun vitest run scripts/prototype-interaction-ux-contract.test.ts -t "reduced mot
 ### Step 2: 给全站新增满分门禁
 
 ```text
-[$impeccable] audit docs/designs/specs/prototypes/
+[$impeccable] audit prototype/
 ```
 
 目标：
@@ -401,7 +401,7 @@ bun vitest run scripts/prototype-interaction-ux-contract.test.ts -t "reduced mot
 ### Step 3: 处理低分页面
 
 ```text
-[$impeccable] layout docs/designs/specs/prototypes/page-home.html docs/designs/specs/prototypes/page-markets-screener.html
+[$impeccable] layout prototype/page-home.html prototype/page-markets-screener.html
 ```
 
 目标：
@@ -412,7 +412,7 @@ bun vitest run scripts/prototype-interaction-ux-contract.test.ts -t "reduced mot
 ### Step 4: 处理 Studio 和高风险交易页
 
 ```text
-[$impeccable] harden docs/designs/specs/prototypes/page-alpha-explorer.html docs/designs/specs/prototypes/page-agent-console-v2.html docs/designs/specs/prototypes/page-trading-overview.html docs/designs/specs/prototypes/page-signals-inbox.html docs/designs/specs/prototypes/page-orders-ledger.html docs/designs/specs/prototypes/page-risk-center.html
+[$impeccable] harden prototype/page-alpha-explorer.html prototype/page-agent-console-v2.html prototype/page-trading-overview.html prototype/page-signals-inbox.html prototype/page-orders-ledger.html prototype/page-risk-center.html
 ```
 
 目标：
@@ -423,7 +423,7 @@ bun vitest run scripts/prototype-interaction-ux-contract.test.ts -t "reduced mot
 ### Step 5: 处理材质预算和长期耐看
 
 ```text
-[$impeccable] quieter docs/designs/specs/prototypes/page-cross-market.html docs/designs/specs/prototypes/page-research.html docs/designs/specs/prototypes/page-markets-screener.html docs/designs/specs/prototypes/page-markets-intelligence.html docs/designs/specs/prototypes/page-a-shares.html
+[$impeccable] quieter prototype/page-cross-market.html prototype/page-research.html prototype/page-markets-screener.html prototype/page-markets-intelligence.html prototype/page-a-shares.html
 ```
 
 目标：
@@ -434,7 +434,7 @@ bun vitest run scripts/prototype-interaction-ux-contract.test.ts -t "reduced mot
 ### Step 6: 最终满分 polish
 
 ```text
-[$impeccable] polish docs/designs/specs/prototypes/
+[$impeccable] polish prototype/
 ```
 
 目标：
@@ -451,7 +451,7 @@ bunx biome check .
 bunx tsc -b
 bun vitest run --reporter=dot
 bun run prototype:gates
-timeout 60s npx impeccable --json --fast $(node -e 'const fs=require("fs"),path=require("path"); const dir="docs/designs/specs/prototypes"; const m=JSON.parse(fs.readFileSync(path.join(dir,".edition-manifest.json"),"utf8")); const archived=new Set(["ai-overview","ai-copilot"]); console.log(m.pages.filter(p=>p.file?.startsWith("page-")&&p.file.endsWith(".html")&&p.id!=="token-showcase"&&p.status!=="archived-specimen"&&!archived.has(p.id)).map(p=>path.join(dir,p.file)).join(" "));')
+timeout 60s npx impeccable --json --fast $(node -e 'const fs=require("fs"),path=require("path"); const dir="prototype"; const m=JSON.parse(fs.readFileSync(path.join(dir,".edition-manifest.json"),"utf8")); const archived=new Set(["ai-overview","ai-copilot"]); console.log(m.pages.filter(p=>p.file?.startsWith("page-")&&p.file.endsWith(".html")&&p.id!=="token-showcase"&&p.status!=="archived-specimen"&&!archived.has(p.id)).map(p=>path.join(dir,p.file)).join(" "));')
 ```
 
 最终必须执行项目标准门禁：

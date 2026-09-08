@@ -344,7 +344,7 @@ Tailwind utility class 的使用应遵循 DESIGN.md 中 Components 章节的 tok
 
 ### 4.4 Prompt Pack 更新
 
-**文件**：`docs/designs/specs/05_prompt_pack_for_ai_design_and_coding.md`
+**文件**：`design/specs/05_prompt_pack_for_ai_design_and_coding.md`
 
 **修改**：在 Section 9 (One-Line Usage) 中新增 DESIGN.md 引用：
 
@@ -529,10 +529,10 @@ src/styles/design-tokens/    ← SSOT（当前已有，不动）
 | 优先级用左侧色条 | Operational Blueprint | 仅组件级 |
 
 **Demo 文件**（归档参考）：
-- `docs/designs/specs/prototypes/style-comparison-00-baseline-graphite-studio.html`
-- `docs/designs/specs/prototypes/style-comparison-A-cinematic-data.html`
-- `docs/designs/specs/prototypes/style-comparison-B-operational-blueprint.html`
-- `docs/designs/specs/prototypes/style-comparison-C-precision-instrument.html`
+- `prototype/style-comparison-00-baseline-graphite-studio.html`
+- `prototype/style-comparison-A-cinematic-data.html`
+- `prototype/style-comparison-B-operational-blueprint.html`
+- `prototype/style-comparison-C-precision-instrument.html`
 
 ### 7.6 评估标准
 
@@ -614,8 +614,8 @@ src/styles/design-tokens/    ← SSOT（当前已有，不动）
 | 文件 | 用途 |
 |------|------|
 | `docs/DESIGN.md` | 待创建：AI 设计系统描述 |
-| `docs/designs/specs/00_ditto_visual_constitution.md` | 视觉宪法 |
-| `docs/designs/specs/05_prompt_pack_for_ai_design_and_coding.md` | AI Prompt Pack |
+| `design/specs/00_ditto_visual_constitution.md` | 视觉宪法 |
+| `design/specs/05_prompt_pack_for_ai_design_and_coding.md` | AI Prompt Pack |
 | `src/styles/design-tokens/tokens-base.css` | L1 基础 token |
 | `src/styles/design-tokens/tokens-semantic.css` | L2 语义 token |
 | `.claude/rules/design-tokens.md` | Token 架构规范 |

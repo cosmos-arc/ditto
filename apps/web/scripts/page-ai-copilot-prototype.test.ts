@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/archive/2026-04-30/page-ai-copilot.html",
+	"../prototype/archive/2026-04-30/page-ai-copilot.html",
 );
 const prototypeUrl = `file://${prototypePath}`;
 const navigationTimeoutMs = 10_000;

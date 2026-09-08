@@ -5,8 +5,8 @@ import { resolve } from "node:path";
 import { summarizePageCompletion } from "./product-recovery-core.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
-const CONTRACTS_DIR = resolve(ROOT, "docs/contracts/pages");
-const EDITION_MANIFEST_PATH = resolve(ROOT, "docs/designs/specs/prototypes/.edition-manifest.json");
+const CONTRACTS_DIR = resolve(ROOT, "contracts/pages");
+const EDITION_MANIFEST_PATH = resolve(ROOT, "prototype/.edition-manifest.json");
 const OUTPUT_PATH = resolve(ROOT, "docs/plans/2026-08-29-product-completion-board.md");
 
 const mark = (value) => (value === "verified" || value === "wired" ? "✅" : "⬜");

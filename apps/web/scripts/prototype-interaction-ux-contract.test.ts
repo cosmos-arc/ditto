@@ -4,8 +4,8 @@ import { JSDOM } from "jsdom";
 import { chromium, type Browser, type LaunchOptions } from "playwright";
 import { describe, expect, it } from "vitest";
 
-const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
-const contractsDir = resolve(import.meta.dirname, "../docs/contracts/pages");
+const prototypesDir = resolve(import.meta.dirname, "../prototype");
+const contractsDir = resolve(import.meta.dirname, "../contracts/pages");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const railDomains = ["home", "markets", "research", "trading", "platform"] as const;
 const railDomainSet = new Set<string>(railDomains);

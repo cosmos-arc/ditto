@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-factor-analysis
+  Edition: v1
+  Generated: 2026-04-12
+
+  Tabs: 4 (radio tab system)
+  - fact-ic (IC) [covered]
+  - fact-returns (收益) [covered]
+  - fact-dist (分布与相关) [covered]
+  - fact-turnover (换手) [covered]
+
+  Overlays: 4
+  - overlay-add-backtest (Sheet: 加入回测) [covered]
+  - overlay-add-experiment (Sheet: 加入实验) [covered]
+  - overlay-ai-analysis (Sheet: AI 解读) [covered]
+  - overlay-diagnostic-detail (Modal: 2x2 诊断详情) [covered]
+
+  State Variants: 5 components × multi-state
+  - factor-header: default[covered] loading[covered] failed[covered]
+  - kpi-strip: default[covered] loading[covered] empty[covered] failed[covered]
+  - ic-series: default[covered] loading[covered] empty[covered] failed[covered]
+  - diagnostics-2x2: default[covered] loading[covered] empty[covered] failed[covered]
+  - stats-table: default[covered] loading[covered] empty[covered] failed[covered]
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动量 (20D) — 因子分析 — Ditto</title>
+
+  <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
+  <link rel="stylesheet" href="shared/fonts.css">
+  <!-- Tokens (order matters: base -> semantic -> domain -> interaction -> density -> component -> data-viz -> style) -->
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-shell.css">
+  <link rel="stylesheet" href="shared/layout-gallery.css">
+  <link rel="stylesheet" href="shared/layout-components.css">
+  <link rel="stylesheet" href="shared/layout-overlay.css">
+  <link rel="stylesheet" href="shared/layout-state.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    /* ══════════════════════════════════════════════
+     * Object Hub Shell — Factor Analysis Page
+     * ══════════════════════════════════════════════ */
+
+    .style-label {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      z-index: 50;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+      color: var(--brand-signature-fg);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      pointer-events: none;
+    }
+
+    .skip-link {
+      position: absolute; left: -9999px; top: 0; z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
+
+    .btn:focus-visible,
+    .hub-tab:focus-visible,
+    .header-action-btn:focus-visible,
+    .meta-chip:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    .object-header {
+      display: flex; align-items: center; gap: var(--space-12);
+      flex: 1; min-width: 0;
+    }
+    .object-identity {
+      display: flex; flex-direction: column; gap: var(--space-2); min-width: 0;
+    }
+    .object-name-row {
+      display: flex; align-items: baseline; gap: var(--space-8);
+    }
+    .object-name {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary); white-space: nowrap;
+    }
+    .object-code {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-weight: var(--font-weight-regular);
+    }
+    .object-answer-row {
+      display: flex; align-items: center; gap: var(--space-8);
+      font-size: var(--font-size-12); color: var(--text-secondary); white-space: nowrap;
+    }
+    .object-answer-row strong {
+      font-family: var(--font-family-numeric); color: var(--text-primary); font-weight: var(--font-weight-semibold);
+    }
+    .object-status {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4); white-space: nowrap;
+    }
+    .object-status.active {
+      color: var(--system-healthy-fg);
+      background: var(--system-healthy-bg);
+    }
+    .object-status-dot {
+      width: var(--status-dot-size); height: var(--status-dot-size);
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .object-status.active .object-status-dot {
+      background: var(--system-healthy-fg);
+      animation: dot-pulse 3s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+    }
+
+    .header-ctas {
+      display: flex; align-items: center; gap: var(--space-6); flex-shrink: 0;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      height: var(--btn-height); padding: 0 var(--btn-padding-x);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size); font-weight: var(--font-weight-medium);
+      border: 1px solid var(--border-default);
+      border-radius: var(--btn-radius);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary); cursor: pointer; white-space: nowrap;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .btn:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+    .btn.btn-primary {
+      background: var(--brand-accent); border-color: var(--brand-accent); color: var(--text-inverse);
+    }
+    .btn.btn-primary:hover {
+      background: var(--brand-accent-hover); border-color: var(--brand-accent-hover);
+    }
+    .btn svg { width: var(--btn-icon-size); height: var(--btn-icon-size); flex-shrink: 0; }
+
+    /* ══════════════════════════════════════════════
+     * Meta Strip
+     * ══════════════════════════════════════════════ */
+    .hub-meta {
+      grid-area: meta;
+      background: var(--surface-strip);
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--neutral-0) 8%, transparent);
+      display: flex; align-items: center;
+      padding: 0 var(--space-16); gap: var(--space-8);
+      height: var(--density-strip-height); overflow: hidden;
+    }
+    .meta-chip {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-12); color: var(--text-secondary);
+      padding: 0 var(--space-8); white-space: nowrap; cursor: default;
+      border-radius: var(--radius-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .meta-chip:hover { background: var(--interaction-hover-subtle-bg); }
+    .meta-chip-label { color: var(--text-tertiary); }
+    .meta-chip-value { font-weight: var(--font-weight-medium); color: var(--text-secondary); }
+    .meta-chip-value.numeric { font-family: var(--font-family-numeric); }
+    .meta-separator { width: 1px; height: var(--meta-sep-height); background: var(--border-subtle); flex-shrink: 0; }
+    .meta-tag {
+      display: inline-flex; align-items: center;
+      font-size: var(--font-size-10); font-weight: var(--font-weight-medium);
+      padding: var(--badge-sm-padding-y) var(--badge-sm-padding-x);
+      border-radius: var(--badge-sm-radius);
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-tertiary); white-space: nowrap;
+    }
+    .meta-tag.brand {
+      background: var(--brand-accent-subtle); color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Tab Band
+     * ══════════════════════════════════════════════ */
+    .hub-tabs {
+      grid-area: tabs;
+      background: var(--surface-app);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center;
+      padding: 0 var(--space-16); gap: 0;
+      position: relative;
+    }
+    .hub-tabs::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 1px; background: var(--overlay-2); pointer-events: none;
+    }
+    .hub-tab {
+      font-size: var(--tab-font-size); font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--tab-underline-padding-x) var(--tab-pill-padding-x);
+      cursor: pointer;
+      border-bottom: var(--tab-indicator-width) solid transparent;
+      border-radius: var(--tab-pill-radius) var(--tab-pill-radius) 0 0;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+      display: flex; align-items: baseline; gap: var(--space-4);
+      position: relative; user-select: none;
+    }
+    .hub-tab:hover { color: var(--text-secondary); background: var(--interaction-hover-subtle-bg); }
+    .hub-tab.active { color: var(--text-primary); border-bottom-color: var(--brand-accent); }
+    .hub-tab {
+      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+    }
+    .hub-tab:nth-child(1) { animation-delay: 30ms; }
+    .hub-tab:nth-child(2) { animation-delay: 60ms; }
+    .hub-tab:nth-child(3) { animation-delay: 90ms; }
+    .hub-tab:nth-child(4) { animation-delay: 120ms; }
+    @keyframes tab-fade-in {
+      from { opacity: 0; transform: translateY(2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══════════════════════════════════════════════
+     * Main Content Area
+     * ══════════════════════════════════════════════ */
+    .hub-main {
+      grid-area: main;
+      display: grid;
+      grid-template-columns: 1fr var(--shell-detail-width);
+      gap: var(--rhythm-breath-gap);
+      padding: var(--density-gutter);
+      overflow: hidden; min-height: 0;
+    }
+    .hub-object-view {
+      display: flex; flex-direction: column; gap: 0;
+      overflow: hidden; min-height: 0;
+    }
+
+    /* ── KPI Strip ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-12);
+      flex-shrink: 0;
+    }
+    .metric-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      padding: var(--space-10) var(--space-12);
+      display: flex; flex-direction: column; gap: var(--space-4);
+      position: relative; overflow: hidden;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  transform var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card:hover {
+      border-color: var(--border-default);
+      background: var(--surface-panel-elevated);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--neutral-0) 12%, transparent), 0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+    }
+    .metric-label { font-size: var(--font-size-12); color: var(--text-tertiary); }
+    .metric-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-16); font-weight: var(--font-weight-semibold);
+      color: var(--text-primary); font-variant-numeric: tabular-nums;
+    }
+    .metric-change {
+      display: inline-flex; font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-3); align-self: flex-start;
+    }
+    .metric-change.up {
+      color: var(--market-up-fg);
+      background: color-mix(in oklch, var(--market-up-fg) 6%, transparent);
+    }
+    .metric-change.down {
+      color: var(--market-down-fg);
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+    }
+    .panel-header {
+      display: flex; align-items: center;
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      color: var(--text-secondary); flex: 1;
+    }
+    .diagnostic-detail-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 0 var(--space-6);
+      color: var(--brand-accent);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-3);
+      cursor: pointer;
+    }
+    .diagnostic-detail-trigger:hover { background: var(--interaction-hover-subtle-bg); }
+    .panel-body { flex: 1; overflow: auto; padding: var(--space-10) var(--space-12); }
+
+    /* ── 2x2 Diagnostics Grid ── */
+    .diagnostics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: var(--rhythm-breath-gap);
+      flex: 1; min-height: 0;
+    }
+    .diagnostics-grid .panel { cursor: pointer; }
+    .diagnostics-grid .panel:hover { border-color: var(--border-default); }
+    .data-table tr:hover td { background: var(--interaction-hover-subtle-bg); }
+    .data-table .numeric { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
+
+    /* ── Status Badge ── */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-10); font-weight: var(--font-weight-medium);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-3); white-space: nowrap;
+    }
+    .status-badge.success { color: var(--system-healthy-fg); background: var(--system-healthy-bg); }
+    .status-badge.warning { color: var(--system-degraded-fg); background: var(--system-degraded-bg); }
+    .status-badge.error { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 8%, transparent); }
+    .status-badge.neutral { color: var(--text-tertiary); background: var(--interaction-hover-subtle-bg); }
+
+    /* ── Sidebar ── */
+    .hub-sidebar {
+      border-left: 1px solid var(--border-subtle);
+      display: flex; flex-direction: column;
+      overflow: hidden; min-height: 0;
+    }
+    .sidebar-section {
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-10) var(--space-12);
+    }
+    .sidebar-section:last-child { border-bottom: none; flex: 1; }
+    .sidebar-title {
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary); margin-bottom: var(--space-8);
+    }
+
+    /* ── Tab Panels ── */
+    .tab-group { display: contents; }
+    .tab-panels { display: contents; }
+    .tab-panel {
+      display: none; flex-direction: column;
+      grid-area: main;
+      height: 100%; overflow: hidden; min-height: 0;
+    }
+    .tab-panel > .hub-main { flex: 1; }
+    @keyframes tab-panel-enter {
+      from { opacity: 0; transform: translateY(3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .tab-group:has(#fact-ic:checked) [data-panel="fact-ic"],
+    .tab-group:has(#fact-returns:checked) [data-panel="fact-returns"],
+    .tab-group:has(#fact-dist:checked) [data-panel="fact-dist"],
+    .tab-group:has(#fact-turnover:checked) [data-panel="fact-turnover"] {
+      display: flex;
+      animation: tab-panel-enter 180ms var(--motion-easing-emphasis) both;
+    }
+    .tab-group:has(#fact-ic:checked) [for="fact-ic"],
+    .tab-group:has(#fact-returns:checked) [for="fact-returns"],
+    .tab-group:has(#fact-dist:checked) [for="fact-dist"],
+    .tab-group:has(#fact-turnover:checked) [for="fact-turnover"] {
+      color: var(--text-primary);
+      border-bottom-color: var(--brand-accent);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Bottom Area
+     * ══════════════════════════════════════════════ */
+    .hub-bottom {
+      grid-area: bottom;
+      background: var(--surface-strip);
+      border-top: 1px solid var(--border-subtle);
+      display: flex; align-items: center;
+      padding: 0 var(--space-16); gap: var(--space-12);
+      height: var(--density-strip-height); overflow: hidden; flex-shrink: 0;
+    }
+    .bottom-item {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      font-size: var(--font-size-12); color: var(--text-secondary); white-space: nowrap;
+    }
+    .bottom-item-label { color: var(--text-tertiary); }
+    .bottom-item-value { font-weight: var(--font-weight-medium); font-family: var(--font-family-numeric); }
+
+    /* ══════════════════════════════════════════════
+     * Overlay Activation
+     * ══════════════════════════════════════════════ */
+    :root:has(#overlay-add-backtest:checked)
+      [data-overlay="overlay-add-backtest"] { display: flex; }
+    :root:has(#overlay-add-experiment:checked)
+      [data-overlay="overlay-add-experiment"] { display: flex; }
+    :root:has(#overlay-ai-analysis:checked)
+      [data-overlay="overlay-ai-analysis"] { display: flex; }
+    :root:has(#overlay-diagnostic-detail:checked)
+      [data-overlay="overlay-diagnostic-detail"] { display: flex; }
+
+    /* ══════════════════════════════════════════════
+     * Chart placeholder (SVG)
+     * ══════════════════════════════════════════════ */
+    .sparkline-placeholder {
+      width: 80px; height: 28px; opacity: 0.5;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .metric-card:hover .sparkline-placeholder { opacity: 0.8; }
+
+    /* ── Inline stats row ── */
+    .stats-row {
+      display: flex; gap: var(--space-12);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .stats-row:last-child { border-bottom: none; }
+    .stat-item { flex: 1; }
+    .stat-label { font-size: var(--font-size-10); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+    .stat-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14); font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    /* ── Inline style extraction ── */
+    .c-up { color: var(--market-up-fg); }
+    .c-down { color: var(--market-down-fg); }
+    .c-tertiary { color: var(--text-tertiary); }
+    .c-primary { color: var(--text-primary); }
+    .c-secondary { color: var(--text-secondary); }
+    .c-healthy { color: var(--system-healthy-fg); }
+    .c-degraded { color: var(--system-degraded-fg); }
+    .c-accent { color: var(--brand-accent); }
+    .heat-1 { color: var(--market-down-fg); background: var(--heatmap-1-bg); }
+    .heat-2 { color: var(--market-down-fg); background: var(--heatmap-2-bg); }
+    .heat-4 { color: var(--market-up-fg); background: var(--heatmap-4-bg); }
+    .heat-5 { color: var(--market-up-fg); background: var(--heatmap-5-bg); }
+    .heat-diag { background: color-mix(in oklch, var(--brand-accent) 15%, transparent); color: var(--brand-accent); }
+    .flex-between { display: flex; justify-content: space-between; }
+    .flex-between-center { display: flex; justify-content: space-between; align-items: center; }
+    .flex-between-12 { display: flex; justify-content: space-between; font-size: var(--font-size-12); }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .flex-center-end { display: flex; align-items: flex-end; justify-content: center; gap: var(--space-8); padding-bottom: var(--space-16); }
+    .flex-col-4 { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+    .flex-col-6 { display: flex; flex-direction: column; gap: var(--space-6); }
+    .flex-col-10 { display: flex; flex-direction: column; gap: var(--space-10); }
+    .flex-col-6-12 { display: flex; flex-direction: column; gap: var(--space-6); font-size: var(--font-size-12); }
+    .flex-col-8 { display: flex; flex-direction: column; gap: var(--space-8); }
+    .flex-wrap-gap { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-10); }
+    .panel-flex { flex: 1; }
+    .panel-shrink { flex-shrink: 0; }
+    .chart-svg { width: 100%; opacity: 0.8; }
+    .chart-svg-85 { width: 100%; opacity: 0.85; }
+    .numeric-secondary { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .numeric-up-12 { font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-up-fg); }
+    .numeric-down-12 { font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--market-down-fg); }
+    .numeric-tertiary-10 { font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .numeric-up-10 { font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-up-fg); }
+    .numeric-down-10 { font-family: var(--font-family-numeric); font-size: var(--font-size-10); color: var(--market-down-fg); }
+    .fs-10 { font-size: var(--font-size-10); }
+    .fs-12 { font-size: var(--font-size-12); }
+    .fs-10-px { font-size: var(--font-size-10); }
+    .bar-track-full { height: 6px; border-radius: 3px; background: var(--interaction-hover-subtle-bg); width: 100%; }
+    .bar-accent-63 { height: 6px; border-radius: 3px; background: var(--brand-accent); width: 63%; }
+    .bar-tertiary-37 { height: 6px; border-radius: 3px; background: var(--text-tertiary); width: 37%; }
+    .chart-legend { font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .config-row { display: flex; justify-content: space-between; }
+    .config-label { color: var(--text-tertiary); }
+    .config-value { color: var(--text-secondary); }
+    .config-value-numeric { font-family: var(--font-family-numeric); color: var(--text-secondary); }
+    .config-value-up { color: var(--market-up-fg); font-family: var(--font-family-numeric); }
+    .cursor-pointer { cursor: pointer; }
+    .fw-medium { font-weight: var(--font-weight-medium); }
+    .c-primary-fw { color: var(--text-primary); font-weight: var(--font-weight-medium); }
+    .stat-value-numeric { font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+
+    /* Table header visual separation */
+    .data-table thead th { border-bottom: 1px solid color-mix(in oklch, var(--border-subtle) 60%, transparent); }
+
+    /* Context strip above tabs */
+    .context-strip { grid-area: context; display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-12); font-size: var(--font-size-12); color: var(--text-tertiary); border-bottom: 1px solid color-mix(in oklch, var(--border-subtle) 40%, transparent); }
+    .context-strip-item { display: flex; align-items: center; gap: var(--space-4); }
+    .context-sep { color: var(--border-subtle); }
+
+    /* Mini ratio bar (continuous) */
+    .mini-bar { width: 48px; height: 3px; border-radius: 1px; background: color-mix(in oklch, var(--border-subtle) 50%, transparent); overflow: hidden; }
+    .mini-bar-fill { height: 100%; border-radius: 1px; background: var(--market-up-fg); opacity: 0.6; }
+    .tbl-primary td { color: var(--text-primary); }
+    .mt-4 { margin-top: var(--space-4); }
+    .mt-merge { margin-top: var(--rhythm-merge-gap); }
+    .mb-8 { margin-bottom: var(--space-8); }
+    .mt-8 { margin-top: var(--space-8); }
+    .mt-8-desc { margin-top: var(--space-8); font-size: var(--font-size-12); color: var(--text-tertiary); }
+    .mb-8-text { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8); }
+    .sparkline-box { width: 32px; height: 22px; background: var(--border-subtle); border-radius: var(--radius-2); }
+    .sparkline-up-70 { width: 32px; height: 72px; background: color-mix(in oklch, var(--market-up-fg) 70%, transparent); border-radius: var(--radius-2); }
+    .sparkline-down-70 { width: 32px; height: 55px; background: color-mix(in oklch, var(--market-down-fg) 70%, transparent); border-radius: var(--radius-2); }
+    .sparkline-up-40 { width: 32px; height: 45px; background: color-mix(in oklch, var(--market-up-fg) 40%, transparent); border-radius: var(--radius-2); }
+    .sparkline-down-40 { width: 32px; height: 38px; background: color-mix(in oklch, var(--market-down-fg) 40%, transparent); border-radius: var(--radius-2); }
+    .chart-min-h { width: 100%; min-height: 60px; }
+    .chart-mt-svg { width: 100%; margin-top: var(--space-8); opacity: 0.8; }
+    .overlay-surface { border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle)); }
+    .overlay-backdrop {
+      width: min(420px, calc(100vw - 32px));
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      box-shadow: 0 12px 40px color-mix(in oklch, black 45%, transparent);
+      padding: var(--space-16);
+      position: relative;
+    }
+    .gallery-card__preview--overlay .overlay-backdrop {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      max-height: none;
+    }
+    .form-textarea {
+      width: 100%;
+      resize: vertical;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+      color: var(--text-primary);
+      padding: var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+    }
+    .chart-decay-label {
+      fill: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+    .tbl-separator { border-top: 2px solid var(--border-subtle); }
+
+    /* ── Rail logo domain tint ── */
+    .rail-logo { color: var(--brand-accent); font-weight: var(--font-weight-semibold); }
+
+    /* ── dot-pulse ── */
+    @keyframes dot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+    /* ── Reduced motion ── */
+    @media (max-height: 820px) {
+      .context-strip { display: none; }
+      .hub-main {
+        gap: var(--space-10);
+        padding: var(--space-12) var(--space-16);
+      }
+      .metrics-grid { gap: var(--space-8); }
+      .metric-card { padding: var(--space-8) var(--space-10); }
+      .diagnostics-grid { gap: var(--space-10); }
+      .panel-header { padding: var(--space-6) var(--space-10); }
+      .panel-body { padding: var(--space-8) var(--space-10); }
+      .stats-row { padding: var(--space-6) 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .hub-tab, .meta-chip, .metric-card,
+      .factor-card, .data-table tr:hover td {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <!-- SVG noise filter -->
+  <svg class="noise-svg-source" aria-hidden="true">
+    <defs>
+      <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+    </defs>
+  </svg>
+
+  <!-- ═══ Zone Navigation Radios ═══ -->
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Factor Analysis · Compact · 动量</div>
+
+  <div class="object-shell shell-hub shell-hub--with-context">
+    <!-- ══════════════════════════════════════════════
+         Rail
+         ══════════════════════════════════════════════ -->
+    <nav class="shell-rail" aria-label="主导航">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-tooltip="首页" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-tooltip="市场" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon active" href="page-research.html" aria-label="研究" title="研究" data-tooltip="研究" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="research" data-icon="book-open" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+
+    </nav>
+
+    <!-- ══════════════════════════════════════════════
+         Factor Header
+         ══════════════════════════════════════════════ -->
+    <header class="shell-header shell-header--solid">
+      <nav class="header-breadcrumb" aria-label="面包屑导航"><a class="breadcrumb-item" href="page-home.html">Home</a><span class="breadcrumb-sep">/</span><a class="breadcrumb-item" href="#">Research</a><span class="breadcrumb-sep">/</span><span class="breadcrumb-item breadcrumb-item--current">Factor Analysis</span></nav>
+      <div class="object-header" data-primary-answer-equivalent data-primary-weight="dominant" role="banner" aria-label="影响范围：动量 20D 因子对象状态">
+        <div class="object-identity">
+          <div class="object-name-row">
+            <h1 class="object-name">动量 (20D)</h1>
+            <span class="object-code">动量因子 · 日频</span>
+            <span class="object-status active" role="status" aria-label="活跃">
+              <span class="object-status-dot"></span>
+              活跃
+            </span>
+          </div>
+          <div class="object-answer-row">
+            <span data-answer-judgment>因子可加入回测</span>
+            <span data-answer-metric>IC 均值 <strong>0.082</strong></span>
+            <span data-answer-evidence>IC IR <strong>1.45</strong></span>
+            <span data-answer-evidence>覆盖率 <strong>92.3%</strong></span>
+          </div>
+          <div class="object-answer-row" data-object-consequence-preview aria-label="动作后果预览">
+            <span data-consequence-impact>回测: TOP300 多空</span>
+            <span data-consequence-impact>实验矩阵: +1 变量</span>
+            <span data-consequence-destination-action>AI 解读 -> 解释卡</span>
+          </div>
+        </div>
+        <div class="spacer"></div>
+
+        <div class="header-actions" role="toolbar" aria-label="页面操作">
+          <div class="meta-sep-line"></div>
+
+        </div>
+
+        <div class="header-ctas">
+          <label for="overlay-add-backtest" class="btn btn-primary cursor-pointer" role="button" tabindex="0" aria-label="加入回测" data-answer-action>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            加入回测
+          </label>
+          <label for="overlay-add-experiment" class="btn cursor-pointer" aria-label="加入实验">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v10m5-5H5"/><circle cx="10" cy="10" r="7" stroke-dasharray="3 2"/></svg>
+            加入实验
+          </label>
+          <label for="overlay-ai-analysis" class="btn cursor-pointer" aria-label="AI 解读">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+            AI 解读
+          </label>
+        </div>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════
+         Meta Strip
+         ══════════════════════════════════════════════ -->
+    <div class="hub-meta" role="complementary" aria-label="因子元信息">
+      <div class="meta-chip">
+        <span class="meta-chip-label">家族</span>
+        <span class="meta-chip-value">动量</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">频率</span>
+        <span class="meta-chip-value">日频</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">Universe</span>
+        <span class="meta-chip-value numeric">沪深300</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-chip-label">数据区间</span>
+        <span class="meta-chip-value numeric">2020-01 → 2026-04</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="meta-chip">
+        <span class="meta-tag">动量</span>
+        <span class="meta-tag brand">量价</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         Context Strip
+         ══════════════════════════════════════════════ -->
+    <div class="context-strip">
+      <div class="context-strip-item"><span>动量 (20D)</span></div>
+      <span class="context-sep">|</span>
+      <div class="context-strip-item"><span>沪深300</span></div>
+      <span class="context-sep">|</span>
+      <div class="context-strip-item"><span>2020-01 → 2026-04</span></div>
+      <span class="context-sep">|</span>
+      <div class="context-strip-item"><span>日频</span></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         Tab Band
+         ══════════════════════════════════════════════ -->
+    <div class="tab-group" data-tab-group="fact">
+      <div class="hub-tabs" role="tablist" aria-label="因子分析导航" data-tabs="fact-tabs">
+        <input type="radio" name="fact" id="fact-ic" checked class="tab-radio sr-only">
+        <label for="fact-ic" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-ic" id="tab-fact-ic" aria-selected="true" aria-controls="panel-fact-ic">IC</label>
+        <input type="radio" name="fact" id="fact-returns" class="tab-radio sr-only">
+        <label for="fact-returns" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-returns" id="tab-fact-returns" aria-selected="false" aria-controls="panel-fact-returns">收益</label>
+        <input type="radio" name="fact" id="fact-dist" class="tab-radio sr-only">
+        <label for="fact-dist" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-dist" id="tab-fact-dist" aria-selected="false" aria-controls="panel-fact-dist">分布与相关</label>
+        <input type="radio" name="fact" id="fact-turnover" class="tab-radio sr-only">
+        <label for="fact-turnover" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-turnover" id="tab-fact-turnover" aria-selected="false" aria-controls="panel-fact-turnover">换手</label>
+      </div>
+
+      <div class="tab-panels" id="main-content">
+
+        <!-- ══════════════════════════════════════════════
+             Tab 1: IC (信息系数)
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-ic" data-tab-panel="fact-ic" id="panel-fact-ic" role="tabpanel" aria-labelledby="tab-fact-ic" aria-hidden="false">
+          <div class="object-main hub-main" data-contract-slot="main" data-secondary-context>
+            <div class="hub-object-view">
+
+              <!-- KPI Strip: 5 metrics -->
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <span class="metric-label">IC 均值</span>
+                  <span class="metric-value">0.082</span>
+                  <span class="metric-change up">▲ +0.012</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">IC IR</span>
+                  <span class="metric-value">1.45</span>
+                  <span class="metric-change up">▲ +0.08</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">IC 衰减</span>
+                  <span class="metric-value">5.2D</span>
+                  <span class="metric-change down">▲ +0.3D</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">换手率</span>
+                  <span class="metric-value">0.35</span>
+                  <span class="metric-change up">▲ +0.02</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">覆盖率</span>
+                  <span class="metric-value">92.3%</span>
+                  <span class="metric-change up">▲ +0.5%</span>
+                </div>
+              </div>
+
+              <!-- 2x2 Diagnostics -->
+              <div class="diagnostics-grid mt-merge">
+
+                <!-- Quadrant 1: IC 时间序列 -->
+                <div class="panel" aria-label="IC 时间序列图（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 时间序列</span>
+                    <span class="chart-legend" data-viz-legend><span class="viz-sign-marker" data-viz-sign="positive">+ IC</span><span class="viz-sign-marker" data-viz-sign="negative">− IC</span><span class="viz-threshold-label" data-viz-threshold-label>|IC| ≥ 0.05</span></span>
+                    <span class="fs-10 c-tertiary">日频 · 250D</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
+                  </div>
+                  <div class="panel-body flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg" role="img" aria-label="因子分析图表">
+                      <defs>
+                        <linearGradient id="ic-area" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.12"/>
+                          <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+                        </linearGradient>
+                      </defs>
+                      <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <line x1="0" y1="75" x2="280" y2="75" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <path d="M0 55 L10 48 L20 52 L30 42 L40 38 L50 45 L60 35 L70 30 L80 40 L90 28 L100 32 L110 25 L120 35 L130 30 L140 22 L150 28 L160 20 L170 25 L180 32 L190 28 L200 22 L210 18 L220 25 L230 20 L240 15 L250 22 L260 18 L270 20 L280 15" fill="none" stroke="var(--brand-accent)" stroke-width="1.2"/>
+                      <path d="M0 55 L10 48 L20 52 L30 42 L40 38 L50 45 L60 35 L70 30 L80 40 L90 28 L100 32 L110 25 L120 35 L130 30 L140 22 L150 28 L160 20 L170 25 L180 32 L190 28 L200 22 L210 18 L220 25 L230 20 L240 15 L250 22 L260 18 L270 20 L280 15 L280 100 L0 100 Z" fill="url(#ic-area)"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Quadrant 2: IC 分位数分布 -->
+                <div class="panel" aria-label="IC 分位数分布（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 分位数分布</span>
+                    <span class="fs-10 c-tertiary">Q1-Q5 分组</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
+                  </div>
+                  <div class="panel-body flex-center-end">
+                    <div class="flex-col-4">
+                      <div class="sparkline-down-70"></div>
+                      <span class="fs-10 c-tertiary">Q1</span>
+                      <span class="numeric-down-10">-0.042</span>
+                    </div>
+                    <div class="flex-col-4">
+                      <div class="sparkline-down-40"></div>
+                      <span class="fs-10 c-tertiary">Q2</span>
+                      <span class="numeric-tertiary-10">-0.008</span>
+                    </div>
+                    <div class="flex-col-4">
+                      <div class="sparkline-box"></div>
+                      <span class="fs-10 c-tertiary">Q3</span>
+                      <span class="numeric-tertiary-10">+0.001</span>
+                    </div>
+                    <div class="flex-col-4">
+                      <div class="sparkline-up-40"></div>
+                      <span class="fs-10 c-tertiary">Q4</span>
+                      <span class="numeric-up-10">+0.035</span>
+                    </div>
+                    <div class="flex-col-4">
+                      <div class="sparkline-up-70"></div>
+                      <span class="fs-10 c-tertiary">Q5</span>
+                      <span class="numeric-up-10">+0.078</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Quadrant 3: IC 滚动窗口 -->
+                <div class="panel" aria-label="IC 滚动窗口分析（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 滚动窗口</span>
+                    <span class="fs-10 c-tertiary">60D / 120D / 250D</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
+                  </div>
+                  <div class="panel-body flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg" role="img" aria-label="因子分析图表">
+                      <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <!-- 250D line (blue) -->
+                      <path d="M0 60 L20 58 L40 55 L60 52 L80 48 L100 45 L120 42 L140 40 L160 38 L180 36 L200 34 L220 32 L240 30 L260 28 L280 26" fill="none" stroke="var(--brand-accent)" stroke-width="1.2"/>
+                      <!-- 120D line (muted) -->
+                      <path d="M0 55 L20 52 L40 48 L60 50 L80 45 L100 42 L120 38 L140 42 L160 36 L180 34 L200 30 L220 28 L240 32 L260 26 L280 24" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/>
+                      <!-- 60D line (muted) -->
+                      <path d="M0 50 L20 42 L40 55 L60 38 L80 48 L100 35 L120 52 L140 40 L160 45 L180 32 L200 48 L220 36 L240 42 L260 30 L280 38" fill="none" stroke="color-mix(in oklch, var(--text-tertiary) 60%, transparent)" stroke-width="0.8" stroke-dasharray="2"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Quadrant 4: IC 统计摘要 -->
+                <div class="panel" aria-label="IC 统计摘要（点击放大）">
+                  <div class="panel-header">
+                    <span class="panel-title">IC 统计摘要</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
+                  </div>
+                  <div class="panel-body">
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <div class="stat-label">IC 均值</div>
+                        <div class="stat-value c-up dir-up">0.082</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC 标准差</div>
+                        <div class="stat-value">0.057</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC IR</div>
+                        <div class="stat-value c-up dir-up">1.45</div>
+                      </div>
+                    </div>
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <div class="stat-label">IC > 0 占比</div>
+                        <div class="stat-value">62.8%</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC 偏度</div>
+                        <div class="stat-value">0.23</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">IC 峰度</div>
+                        <div class="stat-value">3.42</div>
+                      </div>
+                    </div>
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <div class="stat-label">Rank IC</div>
+                        <div class="stat-value c-up dir-up">0.091</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">Rank IC IR</div>
+                        <div class="stat-value c-up dir-up">1.62</div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-label">单调性 t 值</div>
+                        <div class="stat-value">8.75</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div><!-- /diagnostics-grid -->
+
+            </div>
+
+            <!-- Sidebar -->
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">IC 分析概况</div>
+                <div class="flex-col-6-12">
+                  <div class="flex-between">
+                    <span class="c-tertiary">最新 IC</span>
+                    <span class="numeric-up-12">+0.035</span>
+                  </div>
+                  <div class="flex-between">
+                    <span class="c-tertiary">IC 均值</span>
+                    <span class="numeric-up-12">+0.042</span>
+                  </div>
+                  <div class="flex-between">
+                    <span class="c-tertiary">IC 标准差</span>
+                    <span class="numeric-secondary">0.158</span>
+                  </div>
+                  <div class="flex-between">
+                    <span class="c-tertiary">ICIR</span>
+                    <div class="flex-center-end">
+                      <span class="numeric-up-12">0.266</span>
+                      <div class="mini-bar"><div class="mini-bar-fill flow-w-27"></div></div>
+                    </div>
+                  </div>
+                  <div class="flex-between">
+                    <span class="c-tertiary">IC > 0 占比</span>
+                    <div class="flex-center-end">
+                      <span class="c-secondary">68.2%</span>
+                      <div class="mini-bar"><div class="mini-bar-fill flow-w-68"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">相关因子</div>
+                <div class="flex-col-6">
+                  <div class="flex-between-center">
+                    <span class="fs-12 c-secondary">动量 (60D)</span>
+                    <span class="numeric-up-12">0.075</span>
+                  </div>
+                  <div class="flex-between-center">
+                    <span class="fs-12 c-secondary">反转 (5D)</span>
+                    <span class="numeric-up-12">0.054</span>
+                  </div>
+                  <div class="flex-between-center">
+                    <span class="fs-12 c-secondary">波动率</span>
+                    <span class="numeric-down-12">-0.031</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">预处理管道</div>
+                <div class="flex-col-6">
+                  <div class="flex-wrap-gap">
+                    <span class="status-badge success fs-10-px">1</span>
+                    <span class="c-secondary">去极值</span>
+                    <span class="c-tertiary">· MAD 法</span>
+                  </div>
+                  <div class="flex-wrap-gap">
+                    <span class="status-badge success fs-10-px">2</span>
+                    <span class="c-secondary">标准化</span>
+                    <span class="c-tertiary">· Z-Score</span>
+                  </div>
+                  <div class="flex-wrap-gap">
+                    <span class="status-badge success fs-10-px">3</span>
+                    <span class="c-secondary">中性化</span>
+                    <span class="c-tertiary">· 行业中性</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 2: 收益 (Returns)
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-returns" data-tab-panel="fact-returns" id="panel-fact-returns" role="tabpanel" aria-labelledby="tab-fact-returns" aria-hidden="true">
+          <div class="object-main hub-main" data-contract-slot="main">
+            <div class="hub-object-view">
+
+              <!-- Factor Group Returns -->
+              <div class="panel panel-flex">
+                <div class="panel-header flex-between">
+                  <span class="panel-title">因子分组收益</span>
+                  <span class="fs-10 c-tertiary">5 分组 · 月度调仓</span>
+                </div>
+                <div class="panel-body flex-center">
+                  <svg viewBox="0 0 400 120" class="chart-svg" role="img" aria-label="因子分析走势对比图">
+                    <defs>
+                      <linearGradient id="ret-q5" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.1"/>
+                        <stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <!-- Q1 (worst) -->
+                    <path d="M0 70 L40 72 L80 75 L120 78 L160 76 L200 80 L240 82 L280 85 L320 84 L360 88 L400 90" fill="none" stroke="var(--market-down-fg)" stroke-width="0.8" opacity="0.6"/>
+                    <!-- Q3 (middle) -->
+                    <path d="M0 58 L40 56 L80 55 L120 54 L160 56 L200 53 L240 52 L280 50 L320 51 L360 49 L400 48" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/>
+                    <!-- Q5 (best) -->
+                    <path d="M0 50 L40 45 L80 42 L120 38 L160 40 L200 35 L240 32 L280 28 L320 30 L360 25 L400 22" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5"/>
+                    <path d="M0 50 L40 45 L80 42 L120 38 L160 40 L200 35 L240 32 L280 28 L320 30 L360 25 L400 22 L400 120 L0 120 Z" fill="url(#ret-q5)"/>
+                    <!-- Long-short -->
+                    <path d="M0 60 L40 55 L80 48 L120 42 L160 44 L200 38 L240 35 L280 30 L320 32 L360 28 L400 24" fill="none" stroke="var(--brand-accent)" stroke-width="1.2" stroke-dasharray="4"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Monthly Return Heatmap -->
+              <div class="panel panel-shrink">
+                <div class="panel-header">
+                  <span class="panel-title">月度收益热力图（多空）</span>
+                </div>
+                <div class="panel-body">
+                  <table class="data-table fs-10">
+                    <thead>
+                      <tr>
+                        <th></th><th>1月</th><th>2月</th><th>3月</th><th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th><th>11月</th><th>12月</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="c-tertiary">2024</td>
+                        <td class="numeric heat-4 viz-cell-strong" aria-label="因子相关性强正向 +2.1" data-viz-sign="positive" data-viz-cell-strength="strong" data-viz-cell-selected>+2.1</td>
+                        <td class="numeric heat-1">-0.8</td>
+                        <td class="numeric heat-5">+3.2</td>
+                        <td class="numeric heat-4">+1.5</td>
+                        <td class="numeric heat-2">-0.3</td>
+                        <td class="numeric heat-4">+2.8</td>
+                        <td class="numeric heat-4">+1.1</td>
+                        <td class="numeric heat-1">-1.5</td>
+                        <td class="numeric heat-4">+2.0</td>
+                        <td class="numeric heat-5">+3.5</td>
+                        <td class="numeric heat-1">-0.9</td>
+                        <td class="numeric heat-4">+1.2</td>
+                      </tr>
+                      <tr>
+                        <td class="c-tertiary">2025</td>
+                        <td class="numeric heat-4">+2.5</td>
+                        <td class="numeric heat-1">-1.2</td>
+                        <td class="numeric heat-4">+2.0</td>
+                        <td class="numeric heat-5">+4.1</td>
+                        <td class="numeric heat-4">+1.8</td>
+                        <td class="numeric heat-1">-1.0</td>
+                        <td class="numeric heat-5">+3.0</td>
+                        <td class="numeric heat-2">-0.5</td>
+                        <td class="numeric heat-4">+1.6</td>
+                        <td class="numeric heat-4">+2.2</td>
+                        <td class="numeric heat-4">+2.8</td>
+                        <td class="numeric heat-2">-0.2</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Return Stats Table -->
+              <div class="panel panel-shrink">
+                <div class="panel-header">
+                  <span class="panel-title">收益统计</span>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr><th>分组</th><th class="numeric">年化收益</th><th class="numeric">年化波动</th><th class="numeric">Sharpe</th><th class="numeric">最大回撤</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Q1 (最差)</td><td class="numeric c-down dir-down">-8.2%</td><td class="numeric">22.1%</td><td class="numeric">-0.37</td><td class="numeric">-32.5%</td></tr>
+                    <tr><td>Q2</td><td class="numeric c-down dir-down">-2.1%</td><td class="numeric">18.5%</td><td class="numeric">-0.11</td><td class="numeric">-25.8%</td></tr>
+                    <tr><td>Q3</td><td class="numeric">+4.8%</td><td class="numeric">16.2%</td><td class="numeric">0.30</td><td class="numeric">-18.2%</td></tr>
+                    <tr><td>Q4</td><td class="numeric c-up dir-up">+12.5%</td><td class="numeric">17.8%</td><td class="numeric">0.70</td><td class="numeric">-15.6%</td></tr>
+                    <tr><td>Q5 (最佳)</td><td class="numeric c-up dir-up">+22.1%</td><td class="numeric">19.5%</td><td class="numeric">1.13</td><td class="numeric">-14.2%</td></tr>
+                    <tr class="fw-medium tbl-primary tbl-separator"><td>多空 (Q5-Q1)</td><td class="numeric c-up dir-up fw-medium">+30.3%</td><td class="numeric">12.8%</td><td class="numeric c-up dir-up">2.37</td><td class="numeric">-11.5%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">分组配置</div>
+                <div class="fs-12 c-secondary">5 分组 · 等权</div>
+                <div class="mt-8-desc">月度调仓 · T+1 执行</div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">收益稳定性</div>
+                <div class="flex-col-6">
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">月度胜率</span>
+                    <span class="c-up dir-up numeric-secondary">68.2%</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">季度胜率</span>
+                    <span class="c-up dir-up numeric-secondary">75.0%</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">年度胜率</span>
+                    <span class="c-up dir-up numeric-secondary">100%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">风险调整</div>
+                <div class="flex-col-6">
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">信息比率</span>
+                    <span class="numeric-up-12">2.37</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">Calmar 比率</span>
+                    <span class="numeric-up-12">2.64</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">最大回撤</span>
+                    <span class="numeric-down-12">-11.5%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 3: 分布与相关
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-dist" data-tab-panel="fact-dist" id="panel-fact-dist" role="tabpanel" aria-labelledby="tab-fact-dist" aria-hidden="true">
+          <div class="object-main hub-main" data-contract-slot="main">
+            <div class="hub-object-view">
+
+              <div class="diagnostics-grid">
+                <!-- Factor Value Distribution -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">因子值分布</span>
+                    <span class="fs-10 c-tertiary">正态拟合叠加</span>
+                  </div>
+                  <div class="panel-body flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg" role="img" aria-label="因子分析图表">
+                      <line x1="0" y1="80" x2="280" y2="80" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3"/>
+                      <!-- Histogram bars -->
+                      <rect x="20" y="72" width="15" height="8" fill="color-mix(in oklch, var(--brand-accent) 30%, transparent)" rx="1"/>
+                      <rect x="38" y="60" width="15" height="20" fill="color-mix(in oklch, var(--brand-accent) 40%, transparent)" rx="1"/>
+                      <rect x="56" y="42" width="15" height="38" fill="color-mix(in oklch, var(--brand-accent) 50%, transparent)" rx="1"/>
+                      <rect x="74" y="25" width="15" height="55" fill="color-mix(in oklch, var(--brand-accent) 60%, transparent)" rx="1"/>
+                      <rect x="92" y="15" width="15" height="65" fill="color-mix(in oklch, var(--brand-accent) 70%, transparent)" rx="1"/>
+                      <rect x="110" y="10" width="15" height="70" fill="color-mix(in oklch, var(--brand-accent) 75%, transparent)" rx="1"/>
+                      <rect x="128" y="18" width="15" height="62" fill="color-mix(in oklch, var(--brand-accent) 65%, transparent)" rx="1"/>
+                      <rect x="146" y="30" width="15" height="50" fill="color-mix(in oklch, var(--brand-accent) 55%, transparent)" rx="1"/>
+                      <rect x="164" y="45" width="15" height="35" fill="color-mix(in oklch, var(--brand-accent) 45%, transparent)" rx="1"/>
+                      <rect x="182" y="58" width="15" height="22" fill="color-mix(in oklch, var(--brand-accent) 35%, transparent)" rx="1"/>
+                      <rect x="200" y="68" width="15" height="12" fill="color-mix(in oklch, var(--brand-accent) 30%, transparent)" rx="1"/>
+                      <!-- Normal fit curve -->
+                      <path d="M20 75 Q60 68 92 15 Q110 8 128 15 Q160 68 200 75" fill="none" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.8"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Correlation Matrix -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">因子相关性矩阵</span>
+                    <span class="fs-10 c-tertiary">|corr| > 0.3 高亮</span>
+                  </div>
+                  <div class="panel-body">
+                    <table class="data-table fs-10">
+                      <thead>
+                        <tr><th></th><th>动量20D</th><th>动量60D</th><th>反转5D</th><th>波动率</th><th>换手率</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="c-primary-fw">动量20D</td>
+                          <td class="numeric heat-diag">1.00</td>
+                          <td class="numeric heat-4">0.72</td>
+                          <td class="numeric c-tertiary">-0.15</td>
+                          <td class="numeric c-tertiary">-0.08</td>
+                          <td class="numeric c-tertiary">0.12</td>
+                        </tr>
+                        <tr>
+                          <td class="c-primary">动量60D</td>
+                          <td class="numeric heat-4">0.72</td>
+                          <td class="numeric heat-diag">1.00</td>
+                          <td class="numeric c-tertiary">-0.22</td>
+                          <td class="numeric c-tertiary">-0.11</td>
+                          <td class="numeric c-tertiary">0.18</td>
+                        </tr>
+                        <tr>
+                          <td class="c-primary">反转5D</td>
+                          <td class="numeric c-tertiary">-0.15</td>
+                          <td class="numeric c-tertiary">-0.22</td>
+                          <td class="numeric heat-diag">1.00</td>
+                          <td class="numeric c-down dir-down">-0.35</td>
+                          <td class="numeric c-up dir-up">0.42</td>
+                        </tr>
+                        <tr>
+                          <td class="c-primary">波动率</td>
+                          <td class="numeric c-tertiary">-0.08</td>
+                          <td class="numeric c-tertiary">-0.11</td>
+                          <td class="numeric c-down dir-down">-0.35</td>
+                          <td class="numeric heat-diag">1.00</td>
+                          <td class="numeric c-up dir-up">0.55</td>
+                        </tr>
+                        <tr>
+                          <td class="c-primary">换手率</td>
+                          <td class="numeric c-tertiary">0.12</td>
+                          <td class="numeric c-tertiary">0.18</td>
+                          <td class="numeric c-up dir-up">0.42</td>
+                          <td class="numeric c-up dir-up">0.55</td>
+                          <td class="numeric heat-diag">1.00</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Factor-Return Scatter -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">因子-收益散点图</span>
+                    <span class="fs-10 c-tertiary">回归线叠加</span>
+                  </div>
+                  <div class="panel-body flex-center">
+                    <svg viewBox="0 0 280 100" class="chart-svg" role="img" aria-label="因子分析图表">
+                      <line x1="0" y1="50" x2="280" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <line x1="0" y1="75" x2="280" y2="75" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/>
+                      <line x1="140" y1="0" x2="140" y2="100" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                      <!-- Scatter dots -->
+                      <circle cx="35" cy="65" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="55" cy="58" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="70" cy="50" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="90" cy="42" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="105" cy="48" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="120" cy="35" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="135" cy="38" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="155" cy="30" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="170" cy="25" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="185" cy="28" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="200" cy="22" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="220" cy="18" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="240" cy="15" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <circle cx="255" cy="12" r="2" fill="var(--text-tertiary)" opacity="0.5"/>
+                      <!-- Regression line -->
+                      <line x1="25" y1="68" x2="265" y2="10" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.8"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Decay Analysis -->
+                <div class="panel">
+                  <div class="panel-header">
+                    <span class="panel-title">衰减分析</span>
+                    <span class="fs-10 c-tertiary">IC 半衰期</span>
+                  </div>
+                  <div class="panel-body">
+                    <div class="flex-col-10">
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">IC 半衰期</span>
+                        <span class="stat-value-numeric">5.2 天</span>
+                      </div>
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">IC 衰减至 50%</span>
+                        <span class="numeric-secondary fs-12">T+3</span>
+                      </div>
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">IC 衰减至 0</span>
+                        <span class="numeric-secondary fs-12">T+8</span>
+                      </div>
+                      <div class="flex-between-center">
+                        <span class="fs-12 c-tertiary">建议调仓频率</span>
+                        <span class="fs-12 c-up dir-up">周度</span>
+                      </div>
+                    </div>
+                    <svg viewBox="0 0 280 50" class="chart-mt-svg" role="img" aria-label="多空收益走势">
+                      <path d="M0 8 L40 12 L80 18 L120 25 L160 32 L200 38 L240 42 L280 45" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
+                      <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3"/>
+                      <text x="130" y="22" class="chart-decay-label">50%</text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">分布特征</div>
+                <div class="flex-col-6">
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">偏度</span>
+                    <span class="numeric-secondary">0.15</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">峰度</span>
+                    <span class="numeric-secondary">3.28</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">JB 正态检验</span>
+                    <span class="fs-12 c-degraded">拒绝</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">尾部风险</div>
+                <div class="flex-col-6">
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">左尾 (5%)</span>
+                    <span class="numeric-down-12">-2.14σ</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">右尾 (95%)</span>
+                    <span class="numeric-up-12">+1.87σ</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">极值占比</span>
+                    <span class="numeric-secondary">3.2%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">相关性概览</div>
+                <div class="flex-col-6">
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">最高相关</span>
+                    <span class="numeric-up-12">动量60D 0.72</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">最低相关</span>
+                    <span class="numeric-down-12">波动率 -0.08</span>
+                  </div>
+                  <div class="flex-between-12">
+                    <span class="c-tertiary">|corr|>0.3 因子</span>
+                    <span class="c-secondary">3 / 5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             Tab 4: 换手 (Turnover)
+             ══════════════════════════════════════════════ -->
+        <div class="tab-panel" data-panel="fact-turnover" data-tab-panel="fact-turnover" id="panel-fact-turnover" role="tabpanel" aria-labelledby="tab-fact-turnover" aria-hidden="true">
+          <div class="object-main hub-main" data-contract-slot="main">
+            <div class="hub-object-view">
+
+              <!-- Turnover Time Series -->
+              <div class="panel panel-flex">
+                <div class="panel-header flex-between">
+                  <span class="panel-title">换手率时间序列</span>
+                  <span class="fs-10 c-tertiary">日频</span>
+                </div>
+                <div class="panel-body flex-center">
+                  <svg viewBox="0 0 400 120" class="chart-svg" role="img" aria-label="因子分析走势对比图">
+                    <defs>
+                      <linearGradient id="turnover-area" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.12"/>
+                        <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
+                    <path d="M0 45 L20 48 L40 42 L60 50 L80 55 L100 40 L120 35 L140 45 L160 50 L180 42 L200 38 L220 45 L240 50 L260 40 L280 35 L300 42 L320 48 L340 38 L360 42 L380 35 L400 38" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
+                    <path d="M0 45 L20 48 L40 42 L60 50 L80 55 L100 40 L120 35 L140 45 L160 50 L180 42 L200 38 L220 45 L240 50 L260 40 L280 35 L300 42 L320 48 L340 38 L360 42 L380 35 L400 38 L400 120 L0 120 Z" fill="url(#turnover-area)"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Turnover Breakdown -->
+              <div class="panel panel-shrink">
+                <div class="panel-header">
+                  <span class="panel-title">换手率分解</span>
+                </div>
+                <div class="panel-body">
+                  <div class="flex-col-10">
+                    <div class="flex-between-center">
+                      <span class="fs-12 c-secondary">进入换手</span>
+                      <span class="stat-value-numeric">0.22</span>
+                    </div>
+                    <div class="bar-track-full">
+                      <div class="bar-accent-63"></div>
+                    </div>
+                    <div class="flex-between-center">
+                      <span class="fs-12 c-secondary">退出换手</span>
+                      <span class="stat-value-numeric">0.13</span>
+                    </div>
+                    <div class="bar-track-full">
+                      <div class="bar-tertiary-37"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Holding Stability -->
+              <div class="panel panel-shrink">
+                <div class="panel-header">
+                  <span class="panel-title">持仓稳定性</span>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr><th>指标</th><th class="numeric">值</th><th>评价</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td class="c-primary">平均持仓周期</td><td class="numeric">18.5 天</td><td><span class="status-badge success">良好</span></td></tr>
+                    <tr><td class="c-primary">30D 持仓留存率</td><td class="numeric">72.3%</td><td><span class="status-badge success">良好</span></td></tr>
+                    <tr><td class="c-primary">换手成本估算</td><td class="numeric">0.42%/年</td><td><span class="status-badge success">可控</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            <div class="hub-sidebar" data-contract-slot="sidebar">
+              <div class="sidebar-section">
+                <div class="sidebar-title">换手统计</div>
+                <div class="flex-col-6">
+                  <div class="flex-between"><span class="config-label">日换手率</span><span class="numeric-secondary">0.35</span></div>
+                  <div class="flex-between"><span class="config-label">年化换手</span><span class="numeric-secondary">4.2x</span></div>
+                  <div class="flex-between"><span class="config-label">成本侵蚀</span><span class="c-down dir-down">-0.42%/年</span></div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">频率切换</div>
+                <div class="flex-col-6">
+                  <div class="flex-between"><span class="config-label">当前</span><span class="config-value">日频</span></div>
+                  <div class="flex-between"><span class="config-label">可选</span><span class="config-value">周频 / 月频</span></div>
+                </div>
+              </div>
+              <div class="sidebar-section">
+                <div class="sidebar-title">换手-IC 关系</div>
+                <div class="flex-col-6">
+                  <div class="flex-between"><span class="config-label">高换月 IC</span><span class="numeric-up-12">+0.058</span></div>
+                  <div class="flex-between"><span class="config-label">低换月 IC</span><span class="numeric-down-12">+0.021</span></div>
+                  <div class="flex-between"><span class="config-label">相关性</span><span class="numeric-up-12">0.42</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-panels -->
+    </div><!-- /tab-group -->
+
+    <!-- ══════════════════════════════════════════════
+         Bottom Area
+         ══════════════════════════════════════════════ -->
+    <div class="hub-bottom">
+      <div class="bottom-item">
+        <span class="bottom-item-label">数据区间</span>
+        <span class="bottom-item-value">2020-01 → 2026-04</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="bottom-item">
+        <span class="bottom-item-label">最后更新</span>
+        <span class="bottom-item-value">2026-04-11 15:00</span>
+      </div>
+      <span class="meta-separator"></span>
+      <div class="bottom-item">
+        <span class="bottom-item-label">数据质量</span>
+        <span class="bottom-item-value c-healthy">正常</span>
+      </div>
+    </div>
+
+  </div><!-- /shell-hub -->
+
+  <div class="overlay-backdrop" data-overlay="overlay-add-backtest">
+    <label class="overlay-dismiss" for="overlay-add-backtest" aria-label="关闭加入回测"></label>
+    <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入回测">
+      <div class="overlay-header">
+        <span class="overlay-title">加入回测</span>
+        <label for="overlay-add-backtest" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <h2>目标回测</h2>
+        <div class="overlay-field">
+          <span class="overlay-field-label">回测选择</span>
+          <span class="overlay-field-value">新建回测</span>
+        </div>
+        <h2>权重配置</h2>
+        <div class="overlay-field">
+          <span class="overlay-field-label">因子权重</span>
+          <span class="overlay-field-value numeric">0.20</span>
+        </div>
+        <div class="overlay-field">
+          <span class="overlay-field-label">排名方式</span>
+          <span class="overlay-field-value">等权</span>
+        </div>
+        <div class="overlay-actions">
+          <label for="overlay-add-backtest" class="overlay-btn overlay-btn-secondary">取消</label>
+          <button class="overlay-btn overlay-btn-primary">确认加入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-backdrop" data-overlay="overlay-add-experiment">
+    <label class="overlay-dismiss" for="overlay-add-experiment" aria-label="关闭加入实验"></label>
+    <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入实验">
+      <div class="overlay-header">
+        <span class="overlay-title">加入实验</span>
+        <label for="overlay-add-experiment" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <h2>目标实验</h2>
+        <div class="overlay-field">
+          <span class="overlay-field-label">实验选择</span>
+          <span class="overlay-field-value">新建实验</span>
+        </div>
+        <h2>变量角色</h2>
+        <div class="overlay-field">
+          <span class="overlay-field-label">角色分配</span>
+          <span class="overlay-field-value">实验组</span>
+        </div>
+        <div class="overlay-actions">
+          <label for="overlay-add-experiment" class="overlay-btn overlay-btn-secondary">取消</label>
+          <button class="overlay-btn overlay-btn-primary">确认加入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-backdrop" data-overlay="overlay-ai-analysis">
+    <label class="overlay-dismiss" for="overlay-ai-analysis" aria-label="关闭 AI 解读"></label>
+    <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读">
+      <div class="overlay-header">
+        <span class="overlay-title">AI 因子解读</span>
+        <label for="overlay-ai-analysis" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <h2>解读维度</h2>
+        <div class="flex-wrap-gap">
+          <span class="meta-tag brand cursor-pointer">IC 分析</span>
+          <span class="meta-tag cursor-pointer">收益分析</span>
+          <span class="meta-tag cursor-pointer">风险分析</span>
+          <span class="meta-tag cursor-pointer">综合评估</span>
+        </div>
+        <h2>附加上下文</h2>
+        <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea chart-min-h"></textarea>
+        <div class="overlay-actions">
+          <label for="overlay-ai-analysis" class="overlay-btn overlay-btn-secondary">取消</label>
+          <button class="overlay-btn overlay-btn-primary">发送解读</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-backdrop" data-overlay="overlay-diagnostic-detail">
+    <label class="overlay-dismiss" for="overlay-diagnostic-detail" aria-label="关闭 2x2 诊断详情"></label>
+    <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="2x2 诊断详情">
+      <div class="overlay-header">
+        <span class="overlay-title">IC 时间序列 · 详情</span>
+        <label for="overlay-diagnostic-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <p class="mb-8-text">
+          IC 均值 <strong class="c-primary">0.082</strong> · IR <strong class="c-primary">1.45</strong> · 正占比 <strong class="c-primary">62.8%</strong>
+        </p>
+        <table class="data-table">
+          <thead><tr><th>时段</th><th class="numeric">IC 均值</th><th class="numeric">IC IR</th><th class="numeric">正占比</th></tr></thead>
+          <tbody>
+            <tr><td>最近 60D</td><td class="numeric c-up dir-up">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
+            <tr><td>最近 120D</td><td class="numeric c-up dir-up">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
+            <tr><td>最近 250D</td><td class="numeric c-up dir-up">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
+            <tr><td>全样本</td><td class="numeric c-up dir-up">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
+          </tbody>
+        </table>
+        <div class="overlay-actions">
+          <button class="overlay-btn overlay-btn-default">导出 CSV</button>
+          <label for="overlay-diagnostic-detail" class="overlay-btn overlay-btn-primary">关闭</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Zone 2: States Gallery
+       ══════════════════════════════════════════════ -->
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-grid">
+
+      <!-- Group: Factor Header -->
+      <div class="gallery-group" data-component="factor-header">
+        <div class="gallery-group__label">因子标题</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">因子标题 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">因子标题 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">因子信息加载失败</div>
+                  <div class="state-error-desc">无法获取因子元数据</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: KPI Strip -->
+      <div class="gallery-group" data-component="kpi-strip">
+        <div class="gallery-group__label">KPI 指标条</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📊</div>
+                  <div class="state-empty-title">暂无 KPI 数据</div>
+                  <div class="state-empty-desc">因子计算完成后将在此显示</div>
+                  <button class="state-empty-cta">重新计算</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">KPI · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">KPI 加载失败</div>
+                  <div class="state-error-desc">因子指标数据获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: IC Series -->
+      <div class="gallery-group" data-component="ic-series">
+        <div class="gallery-group__label">IC 时间序列</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">IC 序列 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">IC 序列 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📈</div>
+                  <div class="state-empty-title">暂无 IC 数据</div>
+                  <div class="state-empty-desc">请确认因子已正确计算</div>
+                  <button class="state-empty-cta">重新计算 IC</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">IC 序列 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">IC 数据加载失败</div>
+                  <div class="state-error-desc">信息系数计算结果获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: 2x2 Diagnostics -->
+      <div class="gallery-group" data-component="diagnostics-2x2">
+        <div class="gallery-group__label">2x2 诊断面板</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">诊断 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">诊断 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">🔬</div>
+                  <div class="state-empty-title">暂无诊断数据</div>
+                  <div class="state-empty-desc">因子分析完成后将自动生成</div>
+                  <button class="state-empty-cta">运行分析</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">诊断 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">诊断数据加载失败</div>
+                  <div class="state-error-desc">请检查因子引擎状态</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group: Stats Table -->
+      <div class="gallery-group" data-component="stats-table">
+        <div class="gallery-group__label">统计表格</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">统计 · Loading</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">统计 · Empty</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-icon">📋</div>
+                  <div class="state-empty-title">暂无统计数据</div>
+                  <div class="state-empty-desc">因子统计将在计算完成后生成</div>
+                  <button class="state-empty-cta">刷新统计</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">统计 · Error</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">统计数据加载失败</div>
+                  <div class="state-error-desc">统计计算结果获取失败</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       Zone 3: Overlays Gallery
+       ══════════════════════════════════════════════ -->
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层设计</div>
+        <div class="gallery-cards">
+
+          <!-- Overlay 1: Add to Backtest (Sheet) -->
+          <div class="gallery-card" data-overlay-ref="overlay-add-backtest">
+            <div class="gallery-card__label">加入回测 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入回测">
+                <div class="overlay-header">
+                  <span class="overlay-title">加入回测</span>
+                </div>
+                <div class="overlay-body">
+                  <h2>目标回测</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">回测选择</span>
+                    <span class="overlay-field-value">新建回测</span>
+                  </div>
+                  <h2>权重配置</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">因子权重</span>
+                    <span class="overlay-field-value numeric">0.20</span>
+                  </div>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">排名方式</span>
+                    <span class="overlay-field-value">等权</span>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">确认加入</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 2: Add to Experiment (Sheet) -->
+          <div class="gallery-card" data-overlay-ref="overlay-add-experiment">
+            <div class="gallery-card__label">加入实验 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入实验">
+                <div class="overlay-header">
+                  <span class="overlay-title">加入实验</span>
+                </div>
+                <div class="overlay-body">
+                  <h2>目标实验</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">实验选择</span>
+                    <span class="overlay-field-value">新建实验</span>
+                  </div>
+                  <h2>变量角色</h2>
+                  <div class="overlay-field">
+                    <span class="overlay-field-label">角色分配</span>
+                    <span class="overlay-field-value">实验组</span>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">确认加入</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 3: AI Analysis (Sheet) -->
+          <div class="gallery-card" data-overlay-ref="overlay-ai-analysis">
+            <div class="gallery-card__label">AI 解读 (Sheet)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读">
+                <div class="overlay-header">
+                  <span class="overlay-title">AI 因子解读</span>
+                </div>
+                <div class="overlay-body">
+                  <h2>解读维度</h2>
+                  <div class="flex-wrap-gap">
+                    <span class="meta-tag brand cursor-pointer">IC 分析</span>
+                    <span class="meta-tag cursor-pointer">收益分析</span>
+                    <span class="meta-tag cursor-pointer">风险分析</span>
+                    <span class="meta-tag cursor-pointer">综合评估</span>
+                  </div>
+                  <h2>附加上下文</h2>
+                  <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea chart-min-h"></textarea>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary">取消</button>
+                    <button class="overlay-btn overlay-btn-primary">发送解读</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay 4: Diagnostic Detail (Modal) -->
+          <div class="gallery-card" data-overlay-ref="overlay-diagnostic-detail">
+            <div class="gallery-card__label">2x2 诊断详情 (Modal)</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="2x2 诊断详情">
+                <div class="overlay-header">
+                  <span class="overlay-title">IC 时间序列 · 详情</span>
+                </div>
+                <div class="overlay-body">
+                  <p class="mb-8-text">
+                    IC 均值 <strong class="c-primary">0.082</strong> · IR <strong class="c-primary">1.45</strong> · 正占比 <strong class="c-primary">62.8%</strong>
+                  </p>
+                  <table class="data-table">
+                    <thead><tr><th>时段</th><th class="numeric">IC 均值</th><th class="numeric">IC IR</th><th class="numeric">正占比</th></tr></thead>
+                    <tbody>
+                      <tr><td>最近 60D</td><td class="numeric c-up dir-up">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
+                      <tr><td>最近 120D</td><td class="numeric c-up dir-up">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
+                      <tr><td>最近 250D</td><td class="numeric c-up dir-up">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
+                      <tr><td>全样本</td><td class="numeric c-up dir-up">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
+                    </tbody>
+                  </table>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-default">导出 CSV</button>
+                    <button class="overlay-btn overlay-btn-primary">关闭</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ Overlay Trigger Checkboxes ═══ -->
+  <input type="checkbox" id="overlay-add-backtest" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-add-experiment" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-ai-analysis" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-diagnostic-detail" class="overlay-radio sr-only">
+
+  <!-- Scripts -->
+  <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
+</body>
+</html>

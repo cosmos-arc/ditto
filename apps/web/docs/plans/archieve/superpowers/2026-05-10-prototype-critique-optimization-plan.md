@@ -1,8 +1,8 @@
 # 原型 Critique 后优化计划
 
 > 日期：2026-05-10
-> 范围：`docs/designs/specs/prototypes/`
-> 来源：`impeccable critique docs/designs/specs/prototypes/`
+> 范围：`prototype/`
+> 来源：`impeccable critique prototype/`
 > 注册类型：product
 > 目标：把当前高保真原型从“冻结候选”推进到“可稳定交接的实现锚点”
 
@@ -65,7 +65,7 @@
 推荐命令：
 
 ```bash
-bunx impeccable adapt docs/designs/specs/prototypes/
+bunx impeccable adapt prototype/
 ```
 
 ### P1: 默认态与状态画廊隔离
@@ -83,7 +83,7 @@ Home 默认视图里可以看到 stale / selected 样例块继续出现在主滚
 推荐命令：
 
 ```bash
-bunx impeccable distill docs/designs/specs/prototypes/
+bunx impeccable distill prototype/
 ```
 
 ### P2: 顶部工具和 tab 收敛
@@ -101,7 +101,7 @@ bunx impeccable distill docs/designs/specs/prototypes/
 推荐命令：
 
 ```bash
-bunx impeccable layout docs/designs/specs/prototypes/
+bunx impeccable layout prototype/
 ```
 
 ### P2: 侧边强调线收敛
@@ -119,7 +119,7 @@ bunx impeccable layout docs/designs/specs/prototypes/
 推荐命令：
 
 ```bash
-bunx impeccable quieter docs/designs/specs/prototypes/
+bunx impeccable quieter prototype/
 ```
 
 ### P2: 材质语言预算
@@ -137,7 +137,7 @@ frosted、gradient、glow 的使用已经偏多。桌面观感仍然专业，但
 推荐命令：
 
 ```bash
-bunx impeccable polish docs/designs/specs/prototypes/
+bunx impeccable polish prototype/
 ```
 
 ## 4. 建议执行路线
@@ -145,7 +145,7 @@ bunx impeccable polish docs/designs/specs/prototypes/
 推荐先执行一条主命令：
 
 ```bash
-bunx impeccable adapt docs/designs/specs/prototypes/
+bunx impeccable adapt prototype/
 ```
 
 原因：
@@ -155,16 +155,16 @@ bunx impeccable adapt docs/designs/specs/prototypes/
 完成 adapt 后再按顺序执行：
 
 ```bash
-bunx impeccable distill docs/designs/specs/prototypes/
-bunx impeccable layout docs/designs/specs/prototypes/
-bunx impeccable quieter docs/designs/specs/prototypes/
-bunx impeccable polish docs/designs/specs/prototypes/
+bunx impeccable distill prototype/
+bunx impeccable layout prototype/
+bunx impeccable quieter prototype/
+bunx impeccable polish prototype/
 ```
 
 如果通过 Codex skill 调用，而不是直接跑 CLI，请使用：
 
 ```text
-[$impeccable] adapt docs/designs/specs/prototypes/
+[$impeccable] adapt prototype/
 ```
 
 ## 5. 验收标准

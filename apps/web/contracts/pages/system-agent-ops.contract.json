@@ -1,0 +1,349 @@
+{
+  "id": "system-agent-ops",
+  "version": 7,
+  "status": "contract-ready",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-09-05",
+  "route": "/system/agent",
+  "pagePattern": "studio-builder",
+  "shellFamily": "studio",
+  "prototypeRef": "prototype/page-agent-console-v2.html",
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#15-agent-console"
+  ],
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/system",
+    "contractStatus": "verified",
+    "overlayStatus": "triggerable",
+    "prototypeVerified": true,
+    "reactParityVerified": true,
+    "reactTestRefs": [
+      "src/features/agent/components/agent-console-page.test.tsx",
+      "src/features/agent/components/agent-overlays.test.tsx",
+      "src/workflows/system-agent-ops/system-agent-ops-page.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "SystemAgentOpsPage"
+    ]
+  },
+  "liveData": {
+    "readPaths": [
+      "/api/v1/agent/capabilities",
+      "/api/v1/agent/sessions",
+      "/api/v1/agent/runs",
+      "/api/v1/agent/runs/{run_id}",
+      "/api/v1/agent/runs/{run_id}/events",
+      "/api/v1/agent/approvals",
+      "/api/v1/agent/approvals/{approval_id}",
+      "/api/v1/agent/campaigns",
+      "/api/v1/agent/campaigns/{campaign_id}",
+      "/api/v1/agent/campaigns/{campaign_id}/events"
+    ],
+    "writePaths": [
+      "/api/v1/agent/sessions",
+      "/api/v1/agent/runs",
+      "/api/v1/agent/runs/{run_id}/cancel",
+      "/api/v1/agent/approvals/{approval_id}/decision",
+      "/api/v1/agent/campaigns/validation",
+      "/api/v1/agent/campaigns",
+      "/api/v1/agent/campaigns/{campaign_id}/approve",
+      "/api/v1/agent/campaigns/{campaign_id}/cancel"
+    ],
+    "mockFallback": false
+  },
+  "security": {
+    "browserCredentialInputs": [],
+    "browserPersistence": [],
+    "providerConfiguration": "server-only",
+    "forbiddenClientFields": [
+      "api_key",
+      "authorization",
+      "base_url",
+      "model_id"
+    ]
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "shell",
+      "required": true,
+      "prototypeSelector": ".agent-shell",
+      "reactSelector": "[data-slot='app-shell']",
+      "a11yRole": "region",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "header",
+      "required": true,
+      "prototypeSelector": ".agent-header",
+      "reactSelector": "[data-slot='header']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "tabs",
+      "required": true,
+      "prototypeSelector": ".agent-tabs",
+      "reactSelector": "[data-slot='task-toolbar']",
+      "a11yRole": "tablist",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "source",
+      "required": true,
+      "prototypeSelector": ".list-panel",
+      "reactSelector": "[data-slot='source']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".main-panel",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "inspector",
+      "required": true,
+      "prototypeSelector": ".inspector",
+      "reactSelector": "[data-slot='inspector']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "disabled",
+      "degraded",
+      "running",
+      "partial",
+      "blocked",
+      "waiting-approval",
+      "approval-expired",
+      "guardrail-blocked",
+      "cancelled",
+      "failed",
+      "completed",
+      "reconnecting"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "health": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1110,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "detail": {
+        "width": 360,
+        "height": 720,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.05
+  },
+  "overlays": [
+    {
+      "id": "agent-console.run-create",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-run-create",
+      "reactComponent": "AgentRunCreateSheet",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.run-cancel",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-run-cancel",
+      "reactComponent": "AgentRunCancelDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.approval-exact-action",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-approval-exact-action",
+      "reactComponent": "AgentApprovalExactActionDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.evidence-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-evidence-detail",
+      "reactComponent": "AgentEvidenceDetailDrawer",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.artifact-preview",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "inspector",
+        "action": "open-artifact"
+      },
+      "prototypeSelector": "#overlay-artifact-preview",
+      "reactComponent": "AgentArtifactPreviewDrawer",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.guardrail-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "inspector",
+        "action": "open-guardrail"
+      },
+      "prototypeSelector": "#overlay-guardrail-detail",
+      "reactComponent": "AgentGuardrailDetailDrawer",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.campaign-draft",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "create-campaign"
+      },
+      "prototypeSelector": "#overlay-campaign-draft",
+      "reactComponent": "AgentCampaignDraftSheet",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.campaign-approval",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "approve-campaign"
+      },
+      "prototypeSelector": "#overlay-campaign-approval",
+      "reactComponent": "AgentCampaignApprovalDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "agent-console.campaign-cancel",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "cancel-campaign"
+      },
+      "prototypeSelector": "#overlay-campaign-cancel",
+      "reactComponent": "AgentCampaignCancelDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

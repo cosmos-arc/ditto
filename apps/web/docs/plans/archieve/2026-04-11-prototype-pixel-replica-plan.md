@@ -6,7 +6,7 @@
 
 **Architecture:** Treat HTML prototypes as visual contracts, not inspiration. Add a visual audit harness that normalizes prototype tooling, captures bounding rects and screenshots for each route, then fix pages one at a time from shell geometry to section rhythm to micro styles. Keep production components in `src/`; keep audit selectors and generated evidence outside runtime code.
 
-**Tech Stack:** Bun, Vite, React 19, TanStack Router, Tailwind CSS v4 tokens, Vitest/RTL, Playwright, existing HTML prototypes in `docs/designs/specs/prototypes`.
+**Tech Stack:** Bun, Vite, React 19, TanStack Router, Tailwind CSS v4 tokens, Vitest/RTL, Playwright, existing HTML prototypes in `prototype`.
 
 ---
 
@@ -170,7 +170,7 @@ Fix `/ai` to include the prototype sidebar if the team confirms that `page-ai-ov
   pagePattern: "global-command-center",
   shellFamily: "command-center",
   prototypeSource: "prototype-backed",
-  prototypeRef: "docs/designs/specs/prototypes/page-ai-overview.html",
+  prototypeRef: "prototype/page-ai-overview.html",
   requiredSlots: ["pulse", "main", "sidebar"],
   requiredStates: [...UNIVERSAL_STATES, "no-agents", "has-pending"],
 }
@@ -592,7 +592,7 @@ Completion criteria:
 ## Execution Notes
 
 - Start React dev server with `bun run dev --host 127.0.0.1`; use the printed port.
-- Start prototype server from `docs/designs/specs/prototypes` with `python3 -m http.server 8766 --bind 127.0.0.1`.
+- Start prototype server from `prototype` with `python3 -m http.server 8766 --bind 127.0.0.1`.
 - Keep generated visual artifacts in `docs/review/visual-audit/`.
 - If a page needs a shared layout change, stop and review blast radius before touching the layout.
 - The first real implementation decision is whether to remove or page-scope the global `StatusBar`; without that, Home and Platform cannot be pixel-perfect.

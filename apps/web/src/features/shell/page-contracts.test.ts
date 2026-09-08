@@ -49,7 +49,7 @@ const GENERATED_SOURCE = readFileSync(
 	"utf-8",
 );
 const EDITION_MANIFEST = JSON.parse(
-	readFileSync(resolve(process.cwd(), "docs/designs/specs/prototypes/.edition-manifest.json"), "utf-8"),
+	readFileSync(resolve(process.cwd(), "prototype/.edition-manifest.json"), "utf-8"),
 ) as { readonly reactOnlyRoutes?: readonly { readonly route: string }[] };
 
 type LandingWithComponentRefs = {
@@ -77,7 +77,7 @@ type R1R5Contract = {
 };
 
 const readR1R5Contract = (id: string): R1R5Contract =>
-	JSON.parse(readFileSync(resolve(process.cwd(), `docs/contracts/pages/${id}.contract.json`), "utf-8")) as R1R5Contract;
+	JSON.parse(readFileSync(resolve(process.cwd(), `contracts/pages/${id}.contract.json`), "utf-8")) as R1R5Contract;
 
 describe("Generated page contracts", () => {
 	it("exports the generated contract dictionaries", () => {

@@ -20,7 +20,7 @@
     "deps:check": "bun scripts/check-leaf-dependencies.ts",
 		"arch:check": "bun run deps:check && bun test ../../tooling/quality/tests/*.test.mjs && bun ../../tooling/quality/frontend_architecture.mjs",
     "gen:api": "bash scripts/gen-api.sh",
-    "visual:audit": "bun scripts/visual-audit/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/docs/designs/specs/prototypes",
+    "visual:audit": "bun scripts/visual-audit/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/prototype",
     "visual:audit:cli": "bun scripts/visual-audit/visual-audit.mjs",
     "acceptance:r1-trading": "bun scripts/r1-trading-acceptance.ts",
     "acceptance:r3-research": "bun scripts/r3-research-acceptance.ts",

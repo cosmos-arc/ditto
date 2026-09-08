@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-const prototypePath = resolve(import.meta.dirname, "../docs/designs/specs/prototypes/page-home.html");
+const prototypePath = resolve(import.meta.dirname, "../prototype/page-home.html");
 const navigationTimeoutMs = 10_000;
 let browser: Browser;
 

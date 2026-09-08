@@ -16,7 +16,7 @@
 
 ### Step 0: Domain bg 提取（纯 DRY 重构，零视觉变化）
 
-**文件**: [tokens-domain.css](docs/designs/specs/prototypes/shared/tokens-domain.css)
+**文件**: [tokens-domain.css](prototype/shared/tokens-domain.css)
 
 在 `:root` 顶部新增 5 个中间变量：
 
@@ -41,7 +41,7 @@ oklch(from var(--domain-bg-green) l c h / 0.20)
 
 ### Step 1: 更新 neutral primitive scale
 
-**文件**: [tokens-base.css](docs/designs/specs/prototypes/shared/tokens-base.css) 第 9-23 行
+**文件**: [tokens-base.css](prototype/shared/tokens-base.css) 第 9-23 行
 
 将 15 级 neutral primitive 替换为 V1 候选值（hue 统一到 253，chroma 降低）：
 
@@ -69,7 +69,7 @@ oklch(from var(--domain-bg-green) l c h / 0.20)
 
 ### Step 2: 更新 brand primitive scale
 
-**文件**: [tokens-base.css](docs/designs/specs/prototypes/shared/tokens-base.css) 第 26-30 行
+**文件**: [tokens-base.css](prototype/shared/tokens-base.css) 第 26-30 行
 
 整体迁移到 hue 255-258 区间：
 
@@ -93,7 +93,7 @@ oklch(from var(--domain-bg-green) l c h / 0.20)
 
 ### Step 3: 更新 semantic surface / text / border
 
-**文件**: [tokens-semantic.css](docs/designs/specs/prototypes/shared/tokens-semantic.css)
+**文件**: [tokens-semantic.css](prototype/shared/tokens-semantic.css)
 
 #### 3a. Surface tokens — 改用 var() 引用
 
@@ -155,7 +155,7 @@ oklch(from var(--domain-bg-green) l c h / 0.20)
 
 ### Step 4: 更新 interaction tokens
 
-**文件**: [tokens-interaction.css](docs/designs/specs/prototypes/shared/tokens-interaction.css)
+**文件**: [tokens-interaction.css](prototype/shared/tokens-interaction.css)
 
 将硬编码的旧 brand hue 263 值改为引用 `var(--brand-500)` 或使用 `oklch(from var(--brand-500) ...)`：
 
@@ -172,7 +172,7 @@ oklch(from var(--domain-bg-green) l c h / 0.20)
 
 ### Step 5: 新增 Signature Brass tokens
 
-**文件**: [tokens-semantic.css](docs/designs/specs/prototypes/shared/tokens-semantic.css)
+**文件**: [tokens-semantic.css](prototype/shared/tokens-semantic.css)
 
 在 `:root` 中新增（放在 brand-accent 之后）：
 
