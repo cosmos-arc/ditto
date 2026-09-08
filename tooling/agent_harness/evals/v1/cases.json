@@ -251,7 +251,15 @@
         ],
         "reported_paths": ["docs/agent-note.md"],
         "read_instructions": ["AGENTS.md"],
-        "tool_evidence": [],
+        "tool_evidence": [
+          {
+            "command": ["task", "knowledge-check"],
+            "exit_code": 0,
+            "findings": [],
+            "runtime": "none",
+            "assertions": []
+          }
+        ],
         "reported_successful_commands": [],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -276,6 +284,13 @@
         "reported_paths": ["docs/live-acceptance.md"],
         "read_instructions": ["AGENTS.md"],
         "tool_evidence": [
+          {
+            "command": ["task", "knowledge-check"],
+            "exit_code": 0,
+            "findings": [],
+            "runtime": "none",
+            "assertions": []
+          },
           {
             "command": ["task", "test-system"],
             "exit_code": 0,
@@ -350,7 +365,15 @@
         ],
         "reported_paths": ["docs/test-evidence.md"],
         "read_instructions": ["AGENTS.md"],
-        "tool_evidence": [],
+        "tool_evidence": [
+          {
+            "command": ["task", "knowledge-check"],
+            "exit_code": 0,
+            "findings": [],
+            "runtime": "none",
+            "assertions": []
+          }
+        ],
         "reported_successful_commands": [
           ["uv", "run", "--no-sync", "pytest", "packages/data/tests"]
         ],
@@ -510,6 +533,13 @@
         "reported_paths": ["docs/live-acceptance.md"],
         "read_instructions": ["AGENTS.md"],
         "tool_evidence": [
+          {
+            "command": ["task", "knowledge-check"],
+            "exit_code": 0,
+            "findings": [],
+            "runtime": "none",
+            "assertions": []
+          },
           {
             "command": ["task", "test-system"],
             "exit_code": 0,
