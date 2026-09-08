@@ -23,9 +23,21 @@ runs:
     - name: Install locked Bun workspace
       shell: bash
       run: task bun-install
+      if: ${{ inputs.workspace != 'python' }}
     - name: Install locked Python workspace
       shell: bash
       run: task python-install
+      if: ${{ inputs.workspace != 'web' }}
+    - name: Prepare Python interpreter for Web-only jobs
+      if: ${{ inputs.workspace == 'web' }}
+      shell: bash
+      run: uv venv --python "$(cat .python-version)" .venv
+      env:
+        UV_PYTHON_DOWNLOADS: automatic
     - name: Validate runtime versions
       shell: bash
       run: task toolchain-check
+inputs:
+  workspace:
+    description: 'Dependency preparation: both, python, or web (runtimes always pinned)'
+    default: both

@@ -497,12 +497,19 @@ def _gate_id(command: tuple[str, ...]) -> str:
 def _gate_covers(actual: str, required: str) -> bool:
     if actual in {required, "ci"}:
         return True
-    return actual == "check" and required in {
-        "check-backend",
-        "check-contract",
-        "check-web",
-        "harness-check",
-    }
+    return actual == "check" and (
+        required
+        in {
+            "check-backend",
+            "check-contract",
+            "check-web",
+            "harness-check",
+            "task lint",
+            "task fmt-check",
+            "task type-all",
+        }
+        or required.startswith("task test -- --fast ")
+    )
 
 
 def _required_gates(root: Path, paths: tuple[str, ...]) -> frozenset[str]:

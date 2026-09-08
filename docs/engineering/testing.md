@@ -48,7 +48,7 @@ uv run --no-sync pytest -m pit
 task type -- --tests
 ```
 
-仅测试 diff 仍需 Ruff format-check/lint 和测试类型检查。生产 Python、依赖、架构或配置 diff 运行 `task check`。
+仅测试 diff 仍需 Ruff format-check/lint 和测试类型检查。普通单包生产改动运行对应包测试、Ruff 与类型检查；跨包、契约、依赖、架构或工具链改动运行 `task check`。远端 CI 是权威合并门，本地通过不替代 CI。
 
 ## 覆盖率与证据
 

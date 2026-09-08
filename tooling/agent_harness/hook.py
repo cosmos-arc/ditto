@@ -763,6 +763,25 @@ def _backend_test_commands(
     return commands
 
 
+def _backend_source_commands(
+    paths: Sequence[str], *, high_risk: bool
+) -> list[list[str]]:
+    owners = {
+        "/".join(path.split("/")[:2])
+        for path in paths
+        if path.endswith(".py") and path.startswith(("packages/", "apps/backend/"))
+    }
+    if high_risk or len(owners) != 1:
+        return [["task", "check"]]
+    owner = next(iter(owners))
+    return [
+        ["task", "lint"],
+        ["task", "fmt-check"],
+        ["task", "type-all"],
+        ["task", "test", "--", "--fast", f"{owner}/tests"],
+    ]
+
+
 def verification_commands(
     level: str, paths: Sequence[str], *, root: Path | None = None
 ) -> list[list[str]]:
@@ -793,7 +812,9 @@ def verification_commands(
     elif "web" in active_classes:
         commands.append(["task", "check-web"])
     elif active_classes & {"backend", "high-risk"}:
-        commands.append(["task", "check-backend"])
+        commands.extend(
+            _backend_source_commands(paths, high_risk="high-risk" in active_classes)
+        )
 
     if needs_system:
         commands.append(["task", "test-system"])

@@ -3,7 +3,7 @@
 task test 命令包装脚本
 
 简化测试命令，支持参数驱动：
-- task test --              # 默认：单元测试（并行）+ 集成测试（串行）
+- task test --              # 默认：非 snapshot/sandbox 测试（并行）
 - task test -- --unit       # 只跑单元测试（并行）
 - task test -- --integration # 只跑集成测试（串行）
 - task test -- --fast       # 快速测试（跳过 slow/integration）
@@ -33,21 +33,23 @@ def build_pytest_command() -> list[str]:
     has_cov = "--cov" in args
     has_cov_xml = "--cov-xml" in args
 
-    # 过滤掉我们的自定义参数，保留路径参数
-    paths = [
-        arg
-        for arg in args
-        if arg.startswith("-") is False
-        and arg
-        not in ["--snapshot", "--unit", "--integration", "--fast", "--cov", "--cov-xml"]
-    ]
+    # Consume wrapper flags only; preserve pytest options and their values.
+    wrapper_flags = {
+        "--snapshot",
+        "--unit",
+        "--integration",
+        "--fast",
+        "--cov",
+        "--cov-xml",
+    }
+    forwarded = [arg for arg in args if arg not in wrapper_flags]
 
     # Snapshot 模式：只运行 snapshot 测试（串行）
     if has_snapshot:
-        cmd.append("--snapshot-update")
+        cmd.extend(["--snapshot-update", "-n", "0"])
         cmd.extend(["-m", "snapshot"])
-        if paths:
-            cmd.extend(paths)
+        if forwarded:
+            cmd.extend(forwarded)
         return cmd
 
     # 覆盖率相关
@@ -85,8 +87,8 @@ def build_pytest_command() -> list[str]:
         cmd.extend(["-m", "not snapshot and not sandbox_live", "-n", "auto"])
 
     # 添加路径参数
-    if paths:
-        cmd.extend(paths)
+    if forwarded:
+        cmd.extend(forwarded)
 
     return cmd
 

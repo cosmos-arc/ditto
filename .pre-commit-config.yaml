@@ -61,11 +61,11 @@ repos:
       # pytest (pre-push 阶段)
       # --------------------------------------------------------
       - id: pytest-fast
-        name: pytest (fast)
-        entry: task test -- --fast
+        name: verify changed scope
+        entry: uv run --no-sync python -m tooling.agent_harness.pre_push
         language: system
         pass_filenames: false
-        types: [python]
+        always_run: true
         stages: [pre-push]
 
   # ==========================================================

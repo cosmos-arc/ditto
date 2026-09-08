@@ -285,3 +285,36 @@ def test_runtime_config_uses_the_validated_production_schema(tmp_path: Path) -> 
         "runtime": "live",
         "apiOrigin": "http://127.0.0.1:18111",
     }
+
+
+@pytest.mark.parametrize(
+    "field",
+    [None, "gitSha", "productVersion", "apiContractVersion", "apiContractSha256"],
+)
+def test_reused_production_build_requires_exact_cohort(
+    tmp_path: Path, field: str | None
+) -> None:
+    from tooling.dev.system_tests import _verify_reused_web_build
+
+    environment = {
+        "DITTO_GIT_SHA": "a" * 40,
+        "DITTO_PRODUCT_VERSION": "1.0.0",
+        "DITTO_API_CONTRACT_VERSION": "v1",
+        "DITTO_API_CONTRACT_SHA256": "b" * 64,
+    }
+    metadata = {
+        "gitSha": "a" * 40,
+        "productVersion": "1.0.0",
+        "apiContractVersion": "v1",
+        "apiContractSha256": "b" * 64,
+    }
+    if field:
+        metadata[field] = "stale"
+    dist = tmp_path / "apps/web/dist"
+    dist.mkdir(parents=True)
+    (dist / "ditto-build-metadata.json").write_text(json.dumps(metadata))
+    if field:
+        with pytest.raises(ValueError, match="current cohort"):
+            _verify_reused_web_build(tmp_path, environment)
+    else:
+        _verify_reused_web_build(tmp_path, environment)

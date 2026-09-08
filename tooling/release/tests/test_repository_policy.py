@@ -78,7 +78,7 @@ def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
 
     for job_name, step_name in (
         ("backend-tests", "Upload coverage evidence"),
-        ("web-quality", "Upload Web build"),
+        ("web-build", "Upload Web build"),
     ):
         step = next(
             item
@@ -98,7 +98,9 @@ def test_backend_coverage_fetches_history_and_selects_every_event_base() -> None
     assert checkout["with"]["fetch-depth"] == 0
 
     coverage_step = next(
-        step for step in backend["steps"] if step.get("run") == "task backend-coverage"
+        step
+        for step in backend["steps"]
+        if "backend-coverage-combine" in step.get("run", "")
     )
     base_ref = coverage_step["env"]["COVERAGE_BASE_REF"]
     assert "github.event.pull_request.base.sha" in base_ref
@@ -256,7 +258,7 @@ def test_workflows_have_read_only_defaults_and_no_top_level_path_filters() -> No
 def test_security_workflow_covers_both_stacks_and_required_scanners() -> None:
     workflow = _workflow("security.yml")
     matrix = workflow["jobs"]["codeql"]["strategy"]["matrix"]["language"]
-    assert set(matrix) == {"python", "javascript-typescript"}
+    assert set(matrix) == {"python", "javascript-typescript", "actions"}
     content = (
         (WORKFLOWS / "security.yml").read_text()
         + (ROOT / "tooling/release/artifact_gate.py").read_text()
@@ -729,7 +731,7 @@ def test_container_readiness_smoke_uses_runtime_only_offline_credential() -> Non
         step.get("run") == "uv run --no-sync python -m tooling.release.artifact_gate"
         for step in steps
     )
-    assert "web-quality" in workflow["jobs"]["container-smoke"]["needs"]
+    assert "web-build" in workflow["jobs"]["container-smoke"]["needs"]
     # Runtime credentials, exact identity and immutable build/export/smoke binding
     # are exercised by test_artifact_gate, rather than duplicated shell snippets.
     dockerfile = (ROOT / "deploy" / "docker" / "Dockerfile").read_text()
@@ -806,7 +808,7 @@ def test_web_ci_uses_the_canonical_root_task() -> None:
         for reference in uses
     )
     commands = {step.get("run") for step in web_job["steps"]}
-    assert "task web-ci" in commands
+    assert "task web-quality" in commands
     assert "bun --cwd apps/web run ci" not in commands
 
 

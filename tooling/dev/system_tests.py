@@ -390,6 +390,21 @@ def _run_fixture_acceptance(
             terminate_managed(api_process)
 
 
+def _verify_reused_web_build(root: Path, environment: dict[str, str]) -> None:
+    """Accept an independently built artifact only for the exact current cohort."""
+    metadata = json.loads(
+        (root / "apps/web/dist/ditto-build-metadata.json").read_text()
+    )
+    expected = {
+        "gitSha": environment["DITTO_GIT_SHA"],
+        "productVersion": environment["DITTO_PRODUCT_VERSION"],
+        "apiContractVersion": environment["DITTO_API_CONTRACT_VERSION"],
+        "apiContractSha256": environment["DITTO_API_CONTRACT_SHA256"],
+    }
+    if any(metadata.get(key) != value for key, value in expected.items()):
+        raise ValueError("reused Web build does not match current cohort")
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[2]
     web_root = root / "apps" / "web"
@@ -415,7 +430,10 @@ def main() -> int:
                 output_root=browser_output_root,
             )
             environment.update(_cohort_environment(root))
-            _run([bun, "run", "build"], web_root, environment)
+            if os.environ.get("DITTO_REUSE_WEB_BUILD") == "1":
+                _verify_reused_web_build(root, environment)
+            else:
+                _run([bun, "run", "build"], web_root, environment)
             _write_runtime_config(web_root, api_port)
             _run_primary_cohort(root, web_root, node, api_port, web_port, environment)
 

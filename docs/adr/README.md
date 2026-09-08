@@ -32,6 +32,8 @@ ADR 记录项目中的重要架构决策，每个 ADR 包含：
 | [0009](0009-impact-model-governance.md) | 影响模型 ImpactModel 治理 | Accepted | 2026-04-13 | 非法值统一抛 ValueError，合法值限定为 none 和 volume_share |
 | [0010](0010-polyglot-monorepo.md) | 联邦式双技术栈 Monorepo | Accepted | 2026-09-04 | uv 根任务图、Bun workspace、OpenAPI 契约与完整前端历史导入 |
 
+| [0011](0011-ci-verification-scope.md) | 分层验证与 CI 证明范围 | Accepted | 2026-09-08 | 普通 PR 按粗粒度影响范围验证，高风险与未知全量；同提交完整覆盖率证明 |
+
 ## ADR 编号规则
 
 - 格式：`NNNN-title.md`

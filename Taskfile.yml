@@ -107,7 +107,7 @@ tasks:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
-    - uv run --no-sync python -m unittest discover -s tooling/agent_harness/tests -v {{.CLI_ARGS}}
+    - uv run --no-sync python -m pytest tooling/agent_harness/tests -q -n0 --no-cov {{.CLI_ARGS}}
   tooling-test:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
@@ -226,10 +226,13 @@ tasks:
     cmds:
     - task: web-static
     - task: web-test
-  web-ci:
+  web-quality:
     cmds:
     - task: web-static
     - task: web-coverage
+  web-ci:
+    cmds:
+    - task: web-quality
     - task: web-prototype
     - task: web-build
   contract-static:
@@ -308,7 +311,7 @@ tasks:
     - task: package-contract-check
     - task: lint
     - task: fmt-check
-    - task: type
+    - task: type-all
     - task: test-fast
     - task: arch-check
   check:
@@ -405,3 +408,15 @@ tasks:
     cmds:
     - task: python-environment-check
     - uv run --no-sync pytest packages/portfolio/tests/unit/rebalancing/test_cvxpy_optimizer_unit.py packages/data/tests/integration/runtime/test_sql_engine_integration.py -q -n 0 --no-cov {{.CLI_ARGS}}
+  backend-test-shard:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.test_shards run {{.CLI_ARGS}}
+  backend-coverage-combine:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.test_shards combine {{.CLI_ARGS}}

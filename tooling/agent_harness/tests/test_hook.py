@@ -468,7 +468,7 @@ class DiffClassificationTests(unittest.TestCase):
 
         assert level == "high-risk"
         assert commands == [
-            "task check-backend",
+            "task check",
             "task pit",
         ]
 
@@ -478,15 +478,15 @@ class DiffClassificationTests(unittest.TestCase):
         fixtures = {
             "packages/application/src/ditto_application/commands/trade.py": (
                 "high-risk",
-                ("check-backend", "task pit"),
+                ("check", "task pit"),
             ),
             "packages/application/src/ditto_application/queries/factor_ic_report.py": (
                 "high-risk",
-                ("check-backend", "task pit"),
+                ("check", "task pit"),
             ),
             "apps/backend/src/ditto_apps/jobs/flows/backtest.py": (
                 "high-risk",
-                ("check-backend", "task pit"),
+                ("check", "task pit"),
             ),
             "apps/backend/src/ditto_apps/api/routes/trade_command_routes.py": (
                 "contract-high-risk",
@@ -547,11 +547,11 @@ class DiffClassificationTests(unittest.TestCase):
 
     def test_stack_specific_and_fail_closed_commands(self) -> None:
         fixtures = {
-            "backend": ["check-backend"],
+            "backend": ["check"],
             "web": ["check-web"],
             "contract": ["check", "test-system"],
             "contract-high-risk": ["check", "test-system", "task pit"],
-            "high-risk": ["check-backend", "task pit"],
+            "high-risk": ["check", "task pit"],
             "cross-stack": ["check", "test-system"],
             "root": ["check"],
             "unknown": ["check"],
@@ -997,3 +997,13 @@ class LifecycleLatencyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_single_package_local_checks_and_cross_package_escalation() -> None:
+    path = "packages/platform/src/ditto_platform/foundation/logging.py"
+    commands = verification_commands("backend", [path])
+    assert ["task", "test", "--", "--fast", "packages/platform/tests"] in commands
+    assert ["task", "type-all"] in commands
+    assert verification_commands(
+        "backend", [path, "packages/kernel/src/ditto_kernel/errors.py"]
+    ) == [["task", "check"]]

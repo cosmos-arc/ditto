@@ -37,6 +37,7 @@ class CiTests(unittest.TestCase):
     def test_scope_preserves_shared_and_risk_checks(self) -> None:
         assert required_jobs(["packages/data/AGENTS.md"]) == {
             "repository-policy",
+            "delivery-policy",
             "security-supply-chain",
         }
         assert "backend-tests" in required_jobs(
@@ -96,7 +97,11 @@ class CiTests(unittest.TestCase):
                 assert set(selected) == (
                     REQUIRED_JOBS
                     if executable
-                    else {"repository-policy", "security-supply-chain"}
+                    else {
+                        "repository-policy",
+                        "delivery-policy",
+                        "security-supply-chain",
+                    }
                 )
 
     def test_gate_accepts_only_explicitly_unneeded_skips(self) -> None:
@@ -116,3 +121,36 @@ class CiTests(unittest.TestCase):
         assert gate_failures(required, results)
         assert gate_failures(set(), {})
         assert gate_failures({"unknown-job"}, results)
+
+
+def test_ordinary_scopes_keep_required_cross_stack_proof() -> None:
+    web = required_jobs(["apps/web/src/features/watchlist/card.tsx"])
+    assert {
+        "web-build",
+        "web-quality",
+        "web-prototype",
+        "api-contract",
+        "system-e2e",
+    } <= web
+    assert "backend-shards" not in web
+    backend = required_jobs(
+        ["packages/platform/src/ditto_platform/foundation/logging.py"]
+    )
+    assert {
+        "backend-shards",
+        "backend-tests",
+        "api-contract",
+        "system-e2e",
+        "platform-smoke",
+    } <= backend
+    assert "container-smoke" not in backend
+    for path in [
+        "apps/web/package.json",
+        "apps/web/vite.config.ts",
+        "apps/web/tsconfig.json",
+        "uv.lock",
+        "packages/platform/pyproject.toml",
+        "deploy/docker/Dockerfile",
+        ".github/workflows/ci.yml",
+    ]:
+        assert required_jobs([path]) == REQUIRED_JOBS

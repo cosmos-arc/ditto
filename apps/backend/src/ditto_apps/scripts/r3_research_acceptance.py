@@ -239,7 +239,9 @@ def deterministic_commands() -> tuple[CommandSpec, ...]:
         ),
         CommandSpec(
             "scheduler-literal-128",
-            _pytest("apps/backend/tests/e2e/test_r3_scheduler_capacity.py"),
+            _pytest(
+                "packages/application/tests/integration/test_r3_scheduler_capacity.py"
+            ),
         ),
         CommandSpec(
             "isolated-backup-restore",

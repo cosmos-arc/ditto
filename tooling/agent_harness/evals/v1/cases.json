@@ -84,7 +84,7 @@
         "read_instructions": ["AGENTS.md", "packages/application/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["task", "check-backend"],
+            "command": ["task", "check"],
             "exit_code": 1,
             "findings": ["python_import_boundary"],
             "runtime": "none",
@@ -311,7 +311,7 @@
         "read_instructions": ["AGENTS.md", "packages/features/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["task", "check-backend"],
+            "command": ["task", "check"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
@@ -326,7 +326,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["task", "check-backend"]
+          ["task", "check"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -415,7 +415,7 @@
         ],
         "tool_evidence": [
           {
-            "command": ["task", "check-backend"],
+            "command": ["task", "check"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
@@ -423,7 +423,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["task", "check-backend"]
+          ["task", "check"]
         ],
         "generated_artifacts": [],
         "claims_live_behavior": false
@@ -542,7 +542,7 @@
         "read_instructions": ["AGENTS.md", "packages/data/AGENTS.md"],
         "tool_evidence": [
           {
-            "command": ["task", "check-backend"],
+            "command": ["task", "check"],
             "exit_code": 0,
             "findings": [],
             "runtime": "none",
@@ -557,7 +557,7 @@
           }
         ],
         "reported_successful_commands": [
-          ["task", "check-backend"],
+          ["task", "check"],
           ["task", "pit"]
         ],
         "generated_artifacts": [],
