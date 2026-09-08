@@ -33,3 +33,40 @@ CSV 记录目标文件身份；它不是新的运行时配置或生成器输入�
 
 其余设计、被引用计划、评审、证据、发布材料及机器基线保留。清单是历史身份记录，后续对
 仍活跃文档的正常引用修复不会回写第二批的旧 hash。敏感本地处置清单只保存在本机，不提交仓库。
+
+## 保留材料快照
+
+[2026-09-08 保留清单](2026-09-08-retained-materials.csv)记录 `fd8cd17a` 中根 docs、
+Web docs/design/prototype/contracts、Backend/Data/Features owner 文档、根 artifacts
+及知识政策声明的机器输入。每行包含路径、用途分类、SHA-256、同字节文件数量、
+字面引用候选、Git 保存基线与保留决定。不包含工作区未提交文件或个人运行状态。
+
+分类用于分流核查，不以目录名证明过时。`literal_reference_candidates` 是 tracked
+文本中的完整路径或长文件名命中，不是已证明的调用关系；空值也不证明无消费者，
+因为目录枚举、相对路径和动态生成可能不出现文件名。同 hash 只证明快照中字节相同，
+不证明上下文可互换。所有条目继续保留，未假定存在外部长期副本。
+
+| 材料族 | 实际用途与消费者 | 本次处置 |
+| --- | --- | --- |
+| 根 artifacts/acceptance 与 docs/evidence | R2/R3 验收读取前置报告、manifest 和内容身份；后端 scripts 下的验收测试覆盖消费者 | 保留现有 tracked 输入；新普通输出由忽略规则隔离 |
+| Web contracts、prototype 与冻结记录 | 页面合同生成器、原型测试、capture-prototype-baseline 实际读取 | 保留；不以截图替代可编辑源 |
+| 根/Web 验收 JSON、图片及发布证明索引 | 固定提交的人工/机器验收记录；部分只供历史复核 | 保留；未上传或删除唯一材料 |
+| DOCX、设计 Markdown、ADR | 编辑源及取舍语境，未证明跨格式等价 | 分别保留 |
+| 其余历史、owner 材料与引用不明项 | 当前入口/历史解释或待进一步核查，逐文件候选见 CSV | 保留；不作为失效入口执行 |
+
+`.github/workflows/release.yml` 已将完整 cohort 和关联证明发布为 Release 附件，
+其中 release staging artifact 为 1 天，release 证明 artifact 为 90 天；CI 中覆盖率、
+系统测试、分片与 Web 构建输出按 PR/非 PR 分别为 14/30 天，CI cohort 为 14 天。
+这些短期 artifact 均不等同 Release 附件。这里记录实现的保存机制，不声称本次
+已发布 Release、验证所有历史远端副本或获得永久可用保证。
+
+## Web 失效工具退役
+
+[2026-09-08 Web 退役清单](2026-09-08-web-retirements.csv)只包含
+`apps/web/scripts/audit-tokens.mjs`。该历史提取脚本读取不存在的原型和 token 目录，
+输出旧计划目录下的原始报告。tracked 文本核查未发现活跃调用；除自身用法注释外，
+历史 `2026-05-03-prototype-uiux-audit-remediation-plan.md` 第 432 行曾建议修改该
+脚本，该建议不是当前执行依赖，原历史语境保留。现行
+`audit:tokens` 使用独立的 WCAG 和 token dead-link 工具，保留不变。
+此处不是将历史原始报告生成能力移交给现行审计，也没有删除其他视觉工具或材料。
+按 CSV 中固定提交与源路径可恢复原字节。
