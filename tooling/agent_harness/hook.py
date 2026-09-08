@@ -580,7 +580,12 @@ _BACKEND_TEST_PREFIX = ("apps", "backend", "tests")
 
 def _path_classes(paths: Sequence[str], *, root: Path | None = None) -> set[str]:
     classes = {category for path in paths for category in _path_categories(path)}
-    prose = [path for path in paths if _path_categories(path) in ({"docs"}, {"skills"})]
+    prose = [
+        path
+        for path in paths
+        if path.endswith((".md", ".rst"))
+        or _path_categories(path) in ({"docs"}, {"skills"})
+    ]
     if root is not None and prose:
         # Executable/symlink prose is an execution change, including deletions
         # and staged mode changes whose old form only survives in HEAD/index.
