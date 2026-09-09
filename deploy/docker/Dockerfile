@@ -39,6 +39,8 @@ RUN rm -rf /tmp/runtime-lib/python3.13 \
       -o -name 'libtinfo.so*' \
       -o -name 'libsqlite3.so*' \
       -o -name 'libuuid.so*' \
+      -o -name 'libexpat.so*' \
+      -o -name 'libexpatw.so*' \
       -o -name 'libpython3.13.so*' \
     \) -delete \
     && for destination in /tmp/runtime-lib /tmp/runtime-lib/x86_64-linux-gnu; do \
@@ -46,6 +48,7 @@ RUN rm -rf /tmp/runtime-lib/python3.13 \
                /tmp/chainguard-lib/libncurses*.so* \
                /tmp/chainguard-lib/libtinfo.so* \
                /tmp/chainguard-lib/libuuid.so* \
+               /tmp/chainguard-lib/libexpat.so* \
                /tmp/chainguard-lib/libc.so* \
                /tmp/chainguard-lib/libm.so* \
                /tmp/chainguard-lib/libgcc_s.so* \

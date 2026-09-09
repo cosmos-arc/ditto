@@ -633,7 +633,7 @@ def test_backend_library_sources_are_bound_to_release_dockerfile() -> None:
         ),
         (
             "debian-libraries",
-            "gcr.io/distroless/python3-debian13@sha256:f3d5ddc6c64a019fe520e7f005f2880be21e6afc461b10a3c15ef2e4edc71e33",
+            "gcr.io/distroless/python3-debian13@sha256:f2b206661cee3edb44f132d7f054a9ced96f671d8a973de0db750895c9acb2fb",
         ),
     )
 
