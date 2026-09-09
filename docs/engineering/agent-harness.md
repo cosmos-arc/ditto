@@ -120,6 +120,24 @@ task integrator-lease -- release
 伪造 live 证据、PIT 哨兵缺失及验证范围不足等反例，不代表模型实测能力。
 不再作为独立门重复执行；真实 agent 效果应以实际任务结果和工具日志判断。
 
+## 分支保护
+
+main 由仓库 ruleset `ditto-main` 保护：要求 PR（审批数为 0，但未归因变更需额外批准）、
+required check `CI gate`（strict）、阻断 force push 与删除并要求线性历史；bypass 名单
+为空——「限制 direct push」由 require PR 加空 bypass 隐含覆盖。「不在 main 直接
+commit/push、不 force push」由该 ruleset 在服务端强制，本地 pre-commit 与共享
+PreToolUse hook 只是第一道反馈。仓库级 rulesets API 没有 description 字段，留痕与
+预期变更要求以本节为事实源：修改 ruleset 的审批数、bypass 或规则集合，属于需要
+显式授权的 CI 权限类变更，并在 ruleset history 端点留有审计记录。
+
+`tooling/agent_harness/branch_protection.py` 是同一预期的机器断言：CI 的
+repository-policy job 与本地 `task branch-protection-check`（含于 `harness-check`）
+读取 live rulesets API，保护缺失、停用、少规则、放宽 strict 或新增 bypass 都会失败；
+畸形 conditions 按 fail closed 处理，不计入保护。rulesets 端点对 public 仓库匿名可读
+（已实测），CI 传入 token 仅为限流；若未来不可读，两层均按设计变红而不是退化放行。
+修改 ruleset 必须在同一变更内更新探针预期；required check 名称与 `ci.yml` 的
+job `name` 由测试互相锁定。
+
 ## 本地与 CI 的验证分工
 
 普通提交只检查 staged 文件，Ruff 不展开到全库；部分暂存由 pre-commit 的 stash
@@ -151,7 +169,8 @@ git diff --check
 task pre-commit-run
 ```
 
-`harness-check` 执行 validator、policy/Harness 回归、开发/契约/质量工具测试和类型检查。
+`harness-check` 执行 validator、policy/Harness 回归、开发/契约/质量工具测试、类型检查
+和分支保护探针。
 validator 检查可发现 skill 与 registry、完整镜像、wrapper 和必要 hook 覆盖，
 不锁死 skill 数量、插件集合或合法 hook 组合。
 
