@@ -9,6 +9,7 @@ expectations here in the same change.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import os
 import sys
@@ -21,25 +22,50 @@ from typing import Any, NamedTuple
 REPO = "cosmos-arc/ditto"
 API_BASE = f"https://api.github.com/repos/{REPO}/rulesets"
 REQUIRED_CHECK = "CI gate"
+EXPECTED_APPROVING_REVIEWS = 0
 REQUIRED_RULES = frozenset(
-    {"pull_request", "required_status_checks", "non_fast_forward", "deletion"}
+    {
+        "pull_request",
+        "required_status_checks",
+        "non_fast_forward",
+        "deletion",
+        "required_linear_history",
+    }
 )
-_MAIN_REFS = frozenset({"~DEFAULT_BRANCH", "refs/heads/main", "main"})
+
+
+def _pattern_matches_main(pattern: str) -> bool:
+    """Ref-name patterns use GitHub's glob semantics against the full ref."""
+    return pattern == "~DEFAULT_BRANCH" or fnmatch.fnmatchcase(
+        "refs/heads/main", pattern
+    )
+
+
+def _ref_targets_main(ref_name: object) -> bool:
+    if not isinstance(ref_name, Mapping):
+        return False
+    include = ref_name.get("include")
+    exclude = ref_name.get("exclude")
+    if not isinstance(include, list) or not isinstance(exclude, list):
+        return False
+    if any(not isinstance(pattern, str) for pattern in (*include, *exclude)):
+        return False
+    return any(_pattern_matches_main(pattern) for pattern in include) and not any(
+        _pattern_matches_main(pattern) for pattern in exclude
+    )
 
 
 def _targets_main(ruleset: Mapping[str, Any]) -> bool:
     """Fail closed: malformed or empty ref filters never count as covering main."""
     conditions = ruleset.get("conditions")
-    if not isinstance(conditions, Mapping):
+    if conditions is None:
         return True
+    if not isinstance(conditions, Mapping):
+        return False
     ref_name = conditions.get("ref_name")
     if ref_name is None:
         return True
-    if not isinstance(ref_name, Mapping):
-        return False
-    include = ref_name.get("include") or []
-    exclude = ref_name.get("exclude") or []
-    return bool(set(include) & _MAIN_REFS) and not set(exclude) & _MAIN_REFS
+    return _ref_targets_main(ref_name)
 
 
 def _active_main_rulesets(
@@ -80,6 +106,7 @@ class _RulesScan(NamedTuple):
     present: set[str]
     checks: set[str]
     strict: bool
+    approval_counts: list[int]
 
 
 def _scan_rules(active: Sequence[Mapping[str, Any]]) -> _RulesScan:
@@ -87,16 +114,21 @@ def _scan_rules(active: Sequence[Mapping[str, Any]]) -> _RulesScan:
     present: set[str] = set()
     checks: set[str] = set()
     strict = False
+    approval_counts: list[int] = []
     for ruleset in active:
         for rule in ruleset.get("rules") or []:
             rule_type = rule.get("type")
             if not isinstance(rule_type, str):
                 continue
             present.add(rule_type)
-            if rule_type != "required_status_checks":
-                continue
             parameters = rule.get("parameters")
             if not isinstance(parameters, Mapping):
+                continue
+            if rule_type == "pull_request":
+                count = parameters.get("required_approving_review_count")
+                if isinstance(count, int):
+                    approval_counts.append(count)
+            if rule_type != "required_status_checks":
                 continue
             contexts = {
                 entry["context"]
@@ -108,7 +140,9 @@ def _scan_rules(active: Sequence[Mapping[str, Any]]) -> _RulesScan:
                     parameters.get("strict_required_status_checks_policy")
                 )
             checks |= contexts
-    return _RulesScan(present=present, checks=checks, strict=strict)
+    return _RulesScan(
+        present=present, checks=checks, strict=strict, approval_counts=approval_counts
+    )
 
 
 def evaluate(rulesets: Sequence[Mapping[str, Any]]) -> list[str]:
@@ -127,11 +161,22 @@ def evaluate(rulesets: Sequence[Mapping[str, Any]]) -> list[str]:
     violations.extend(
         f"missing rule: {rule}" for rule in sorted(REQUIRED_RULES - scan.present)
     )
+    unexpected = sorted(scan.checks - {REQUIRED_CHECK})
+    if unexpected:
+        violations.append(f"unexpected required status checks: {', '.join(unexpected)}")
     if REQUIRED_CHECK not in scan.checks:
         violations.append(f"required status check {REQUIRED_CHECK!r} is not required")
     elif not scan.strict:
         violations.append(
             "required status checks are not strict (branch must be up to date)"
+        )
+    surplus_reviews = sorted(
+        {count for count in scan.approval_counts if count != EXPECTED_APPROVING_REVIEWS}
+    )
+    if surplus_reviews:
+        violations.append(
+            f"pull_request rule requires {max(surplus_reviews)} approving reviews; "
+            + f"declared gate expects {EXPECTED_APPROVING_REVIEWS}"
         )
     return violations
 

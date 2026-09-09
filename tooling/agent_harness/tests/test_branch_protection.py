@@ -68,6 +68,7 @@ def status_checks_rules(context: str | None, strict: bool) -> list[dict[str, obj
         {"type": "non_fast_forward"},
         {"type": "pull_request"},
         {"type": "required_status_checks", "parameters": parameters},
+        {"type": "required_linear_history"},
     ]
 
 
@@ -111,26 +112,32 @@ class EvaluateTests(unittest.TestCase):
             ]
         ) == ["no active branch ruleset protects the default branch"]
         for conditions in (
+            "malformed-conditions",
             {"ref_name": "refs/heads/*"},
             {"ref_name": {"include": [], "exclude": []}},
+            {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": ["refs/heads/*"]}},
+            {"ref_name": {"include": [7], "exclude": []}},
+            {"ref_name": {"include": "~DEFAULT_BRANCH", "exclude": []}},
         ):
             with self.subTest(conditions=conditions):
                 assert evaluate([active_ruleset(conditions=conditions)]) == [
                     "no active branch ruleset protects the default branch"
                 ]
 
+    def test_wildcard_include_patterns_cover_main(self) -> None:
+        for include in ("refs/heads/*", "refs/heads/ma*", "refs/heads/main"):
+            with self.subTest(include=include):
+                ruleset = active_ruleset(
+                    conditions={"ref_name": {"include": [include], "exclude": []}}
+                )
+                assert evaluate([ruleset]) == []
+
     def test_each_missing_rule_is_reported(self) -> None:
         rules = default_rules()
         for missing in REQUIRED_RULES:
             with self.subTest(missing=missing):
                 pruned = [rule for rule in rules if rule["type"] != missing]
-                violations = evaluate(
-                    [
-                        active_ruleset(
-                            rules=[*pruned, {"type": "required_linear_history"}]
-                        )
-                    ]
-                )
+                violations = evaluate([active_ruleset(rules=pruned)])
                 expected = [f"missing rule: {missing}"]
                 if missing == "required_status_checks":
                     expected.append(
@@ -153,11 +160,52 @@ class EvaluateTests(unittest.TestCase):
     def test_required_check_and_strict_policy_are_reported(self) -> None:
         wrong_context = active_ruleset(rules=status_checks_rules("other job", False))
         assert evaluate([wrong_context]) == [
-            f"required status check {REQUIRED_CHECK!r} is not required"
+            "unexpected required status checks: other job",
+            f"required status check {REQUIRED_CHECK!r} is not required",
         ]
         lax_strict = active_ruleset(rules=status_checks_rules(REQUIRED_CHECK, False))
         assert evaluate([lax_strict]) == [
             "required status checks are not strict (branch must be up to date)"
+        ]
+
+    def test_extra_required_check_is_reported(self) -> None:
+        extra = active_ruleset(
+            rules=[
+                {"type": "deletion"},
+                {"type": "non_fast_forward"},
+                {
+                    "type": "pull_request",
+                    "parameters": {"required_approving_review_count": 0},
+                },
+                {
+                    "type": "required_status_checks",
+                    "parameters": {
+                        "required_status_checks": [
+                            {"context": REQUIRED_CHECK},
+                            {"context": "other job"},
+                        ],
+                        "strict_required_status_checks_policy": True,
+                    },
+                },
+                {"type": "required_linear_history"},
+            ]
+        )
+        assert evaluate([extra]) == ["unexpected required status checks: other job"]
+
+    def test_nonzero_approval_count_is_reported(self) -> None:
+        reviewed = active_ruleset(
+            rules=[
+                {"type": "deletion"},
+                {"type": "non_fast_forward"},
+                {
+                    "type": "pull_request",
+                    "parameters": {"required_approving_review_count": 1},
+                },
+                *[rule for rule in default_rules() if rule["type"] != "pull_request"],
+            ]
+        )
+        assert evaluate([reviewed]) == [
+            "pull_request rule requires 1 approving reviews; declared gate expects 0"
         ]
 
     def test_bypass_actors_are_reported(self) -> None:
