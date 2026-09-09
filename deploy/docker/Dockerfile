@@ -22,7 +22,7 @@ RUN rm -rf /usr/local/lib/python3.13/ensurepip \
 
 FROM cgr.dev/chainguard/python@sha256:c23539f80289046e2fa734d3f3fc418833fc22d064a50cc43fa9a6edc28c1615 AS runtime-libraries
 
-FROM gcr.io/distroless/python3-debian13@sha256:f3d5ddc6c64a019fe520e7f005f2880be21e6afc461b10a3c15ef2e4edc71e33 AS debian-libraries
+FROM gcr.io/distroless/python3-debian13@sha256:f2b206661cee3edb44f132d7f054a9ced96f671d8a973de0db750895c9acb2fb AS debian-libraries
 
 FROM docker.io/library/python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8 AS runtime-inventory
 COPY --from=debian-libraries /usr/lib /tmp/runtime-lib
@@ -54,7 +54,7 @@ RUN rm -rf /tmp/runtime-lib/python3.13 \
        done \
     && cp -a /tmp/runtime-lib/x86_64-linux-gnu/*.so* /tmp/runtime-lib/
 
-FROM gcr.io/distroless/base-debian13@sha256:d199d20fb09c898d8822ae5cbd5cf3c6d424e9b5e1fc2eb9a719a7752cd9d861 AS runtime
+FROM gcr.io/distroless/base-debian13@sha256:9ef50bca108839d5986e4d84b7f7b2d79024c9293b7c35b162c6c55485bd5868 AS runtime
 
 ARG DITTO_PRODUCT_VERSION=0+unknown
 ARG DITTO_GIT_SHA=unknown
