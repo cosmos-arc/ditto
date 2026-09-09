@@ -1,6 +1,6 @@
 # Ditto 对齐业界 AI Coding 最佳实践：分维度对比与评分
 
-后续状态（2026-09-09）：仓库实测为 public 且账号具 admin，下文 P0「套餐受限」的保留不成立；维护者已配置 ruleset `ditto-main`，[#131](https://github.com/cosmos-arc/ditto/issues/131) 为其补齐 fail-closed 探针并完成行为验收。其余事项对应 [#132](https://github.com/cosmos-arc/ditto/issues/132)–[#134](https://github.com/cosmos-arc/ditto/issues/134)。正文保留评估时点结论。
+后续状态（2026-09-09）：仓库实测为 public 且账号具 admin，下文 P0「套餐受限」的保留不成立。更正：rulesets 审计历史显示 `ditto-main` 创建于 2026-09-07 20:51，早于本报告；评估时「rulesets 为空」是查询误读——经典分支保护端点对 ruleset 保护的分支本就返回 404。真实缺口是保护状态没有机器断言与行为验证，[#131](https://github.com/cosmos-arc/ditto/issues/131) 已补齐 fail-closed 探针；行为验收：direct push 实测被服务端拒绝，force push 由本地 PreToolUse hook 阻断、服务端 non_fast_forward 规则以 API 断言覆盖。其余事项对应 [#132](https://github.com/cosmos-arc/ditto/issues/132)–[#134](https://github.com/cosmos-arc/ditto/issues/134)。正文保留评估时点结论。
 
 - 评估日期：2026-09-08。仓库基线：`fd8cd17a`（#111 三批全部合并后的 main）。
 - 业界基准取自同日一手调研：[业界 AI Coding 最佳实践调研](2026-09-08-industry-ai-coding-best-practices-sources.md)（下称「调研」）；项目现状取自本轮仓库盘点、`gh` 只读查询与 [2026-09-06 评估](2026-09-06-ditto-harness-assessment.md)后的实施记录。

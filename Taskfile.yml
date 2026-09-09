@@ -108,6 +108,12 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python -m pytest tooling/agent_harness/tests -q -n0 --no-cov {{.CLI_ARGS}}
+  branch-protection-check:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.agent_harness.branch_protection check
   tooling-test:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
@@ -140,6 +146,7 @@ tasks:
     - task: harness-type
     - task: large-file-check
     - task: knowledge-check
+    - task: branch-protection-check
   check-changed:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
