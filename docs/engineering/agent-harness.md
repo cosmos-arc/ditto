@@ -166,6 +166,10 @@ PR 复用 changed-scope 选择检查；仅 skill 文本和镜像选择 `skill-va
 - Hook 保持标准库实现和窄策略，不做宽泛 shell 语义判断。
 - 自动修复只发生在 PostToolUse 的明确 Python 文件；Stop、`check` 和 `ci` 必须只读。
 - `docs/archive`、`docs/plans/archive` 等历史目录不参加活跃 workflow 依赖扫描。
+- 会话内禁止 `cd`：宿主按会话工作目录展开 `${ZCODE_PROJECT_DIR}` 等项目变量，一次
+  `cd` 即可使共享 hook 路径失效并阻断该会话的 Bash/Edit/Write，且仓库侧无法兜底
+  （变量在任何仓库代码运行之前展开）。访问仓库外路径用工具的绝对路径参数
+  （`git -C`、`gh --repo` 等）。
 
 ## 验收
 
