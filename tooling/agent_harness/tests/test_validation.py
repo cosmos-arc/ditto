@@ -13,12 +13,76 @@ from unittest.mock import patch
 import tooling.agent_harness.validate as validate_module
 from tooling.agent_harness.sync_skills import TreeEntry, compare_trees
 from tooling.agent_harness.validate import (
+    _validate_skill,
     load_skill_registry,
     parse_frontmatter,
     validate,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def write_skill(
+    directory: Path, name: str, *, description: str, body_lines: int = 3
+) -> None:
+    skill = directory / name
+    skill.mkdir(parents=True)
+    frontmatter = f"---\nname: {name}\ndescription: {description}\n---\n"
+    body = "\n".join(f"line {index}" for index in range(body_lines))
+    (skill / "SKILL.md").write_text(frontmatter + body + "\n", encoding="utf-8")
+
+
+class AgentSkillsComplianceTests(unittest.TestCase):
+    def test_compliant_skill_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            write_skill(
+                source, "ditto-pit-safety", description="Use for x. Triggers on y."
+            )
+            errors: list[str] = []
+            _validate_skill("ditto-pit-safety", source, errors)
+            assert errors == []
+
+    def test_noncompliant_name_is_rejected(self) -> None:
+        for name in (
+            "PIT_Safety",
+            "pit--safety",
+            "-pit-safety",
+            "pit-safety-",
+            "a" * 65,
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory)
+                write_skill(source, name, description="Use for x. Triggers on y.")
+                errors: list[str] = []
+                _validate_skill(name, source, errors)
+                expected = (
+                    f"{name}: name must be lowercase alphanumeric words joined by "
+                    "single hyphens, at most 64 characters (agentskills.io)"
+                )
+                assert errors == [expected]
+
+    def test_overlong_description_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            write_skill(source, "ditto-pit-safety", description="x" * 1025)
+            errors: list[str] = []
+            _validate_skill("ditto-pit-safety", source, errors)
+            assert errors == [
+                "ditto-pit-safety: description exceeds 1024 characters (agentskills.io)"
+            ]
+
+    def test_oversized_skill_body_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            write_skill(
+                source, "ditto-pit-safety", description="Use for x.", body_lines=600
+            )
+            errors: list[str] = []
+            _validate_skill("ditto-pit-safety", source, errors)
+            assert errors == [
+                "ditto-pit-safety: SKILL.md reaches 500 lines (agentskills.io)"
+            ]
 
 
 class SkillMirrorTests(unittest.TestCase):

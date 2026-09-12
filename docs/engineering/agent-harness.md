@@ -37,6 +37,9 @@ task harness-check
 
 `sync_skills.py --check` 和 validator 比较完整文件集与字节内容，镜像缺失、额外文件或漂移都会失败。
 Claude 使用生成并提交的 `.claude/skills` 镜像；ZCode 直接读取 `.agents/skills`，无需镜像。
+validator 同时执行 [Agent Skills 开放规范](https://agentskills.io/specification)的硬性形状检查：
+name 为小写字母数字单词以单连字符连接（≤64 字符）、description ≤1024 字符、SKILL.md 不足 500 行；
+这是跨宿主可移植性的开放标准要求，不属于仓库私有格式门。
 
 ## Hook 矩阵
 
