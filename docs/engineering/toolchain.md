@@ -44,6 +44,10 @@ UV_PROJECT_ENVIRONMENT="$PWD/.cache/production-venv" \
 
 通过 run [34100716341](https://github.com/cosmos-arc/ditto/actions/runs/34100716341) 中，`Backend tests and coverage` 约 31 分 44 秒，整轮 CI 约 33 分 18 秒；16,501 个测试通过、74 个跳过。最慢的真实测试组为 scheduler capacity `[2]` 345.70 秒、capacity `[4]` 300.20 秒和 128-candidate backend e2e wrapper 303.20 秒。它们在 job 内并发，但合计占据主要窗口；这不是 public repo quota、`TUSHARE_TOKEN` 或 release scanner 造成的。release 扫描共享 Trivy DB volume，避免最终镜像与来源镜像扫描重复下载漏洞库。
 
+2026-09-12 的排队/执行分解结论（15 个 PR runs）：排队中位数约 3 秒，full 门执行中位数
+16.4 分钟（分片后 backend-shards ~14 分钟为关键路径，后置阶段串行叠加），docs 类 0.4
+分钟；详见 [PR 验证时长诊断](../research/2026-09-12-pr-duration-diagnosis.md)。
+
 
 ### 2026-09-08 有限反馈诊断
 
