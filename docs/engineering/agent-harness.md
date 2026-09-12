@@ -37,6 +37,9 @@ task harness-check
 
 `sync_skills.py --check` 和 validator 比较完整文件集与字节内容，镜像缺失、额外文件或漂移都会失败。
 Claude 使用生成并提交的 `.claude/skills` 镜像；ZCode 直接读取 `.agents/skills`，无需镜像。
+validator 同时执行 [Agent Skills 开放规范](https://agentskills.io/specification)的硬性形状检查：
+name 为小写字母数字单词以单连字符连接（≤64 字符）、description ≤1024 字符、SKILL.md 不足 500 行；
+这是跨宿主可移植性的开放标准要求，不属于仓库私有格式门。
 
 ## Hook 矩阵
 
@@ -54,7 +57,10 @@ Stop 3 秒。格式化使用 已准备 `.venv` 中的 `ruff format <files>`，�
 
 Stop 不把已有脏文件推断为本任务编辑，不返回 `decision: block` 续跑；遇到
 `stop_hook_active=true` 直接结束。它不读取或写入验证收据，因此没有收据不等于失败，
-Stop 成功也不等于质量门通过。以下显式命令和根 CI 仍负责验证：
+Stop 成功也不等于质量门通过。「维持仅提示」的再评估条件（#130 确认）：当效果度量
+出现完成声明与验证状态脱节的真实案例（如 Stop 通过但合并门拦截了未验证变更）时，
+先立条件阻断提案并附案例证据，再改实现；不按业界潮流直接升级。以下显式命令和根 CI
+仍负责验证：
 
 ```bash
 task check-changed
