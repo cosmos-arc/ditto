@@ -214,6 +214,33 @@ def load_skill_registry(path: Path = SKILL_REGISTRY) -> dict[str, str]:
     return registry
 
 
+_SKILL_NAME_LIMIT = 64
+_SKILL_DESCRIPTION_LIMIT = 1024
+_SKILL_LINE_LIMIT = 500
+_SKILL_NAME_PATTERN = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
+
+
+def _agentskills_violations(
+    name: str, frontmatter: dict[str, object], skill_file: Path
+) -> list[str]:
+    """Hard shape requirements from the Agent Skills open specification."""
+    violations: list[str] = []
+    if len(name) > _SKILL_NAME_LIMIT or not _SKILL_NAME_PATTERN.fullmatch(name):
+        violations.append(
+            f"{name}: name must be lowercase alphanumeric words joined by "
+            + f"single hyphens, at most {_SKILL_NAME_LIMIT} characters (agentskills.io)"
+        )
+    description = frontmatter.get("description")
+    if isinstance(description, str) and len(description) > _SKILL_DESCRIPTION_LIMIT:
+        message = f"{name}: description exceeds {_SKILL_DESCRIPTION_LIMIT}"
+        violations.append(message + " characters (agentskills.io)")
+    if len(skill_file.read_text(encoding="utf-8").splitlines()) >= _SKILL_LINE_LIMIT:
+        violations.append(
+            f"{name}: SKILL.md reaches {_SKILL_LINE_LIMIT} lines (agentskills.io)"
+        )
+    return violations
+
+
 def _validate_skill(name: str, source: Path, errors: list[str]) -> None:
     skill = source / name
     skill_file = skill / "SKILL.md"
@@ -228,6 +255,7 @@ def _validate_skill(name: str, source: Path, errors: list[str]) -> None:
         return
     if frontmatter.get("name") != name:
         errors.append(f"{name}: frontmatter name does not match directory")
+    errors.extend(_agentskills_violations(name, frontmatter, skill_file))
     description = frontmatter.get("description")
     if not isinstance(description, str) or not description.strip():
         errors.append(f"{name}: description must be non-empty text")
