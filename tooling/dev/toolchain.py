@@ -63,6 +63,27 @@ def node_executable(root: Path) -> str:
     return executable
 
 
+def _version_tuple(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def _uv_requirement_satisfied(found: str, requirement: str) -> bool:
+    """Evaluate a comma-separated uv requirement with ==, >=, and < clauses."""
+    for raw_clause in requirement.split(","):
+        clause = raw_clause.strip()
+        if clause.startswith(">="):
+            satisfied = _version_tuple(found) >= _version_tuple(clause[2:])
+        elif clause.startswith("<"):
+            satisfied = _version_tuple(found) < _version_tuple(clause[1:])
+        elif clause.startswith("=="):
+            satisfied = found == clause[2:]
+        else:
+            raise ToolchainError(f"unsupported uv required-version clause: {clause!r}")
+        if not satisfied:
+            return False
+    return True
+
+
 def validate_toolchain(root: Path, *, actual: dict[str, str] | None = None) -> None:
     """Validate installed tools against root manifests without mutating anything."""
     package = json.loads((root / "package.json").read_text(encoding="utf-8"))
@@ -76,7 +97,6 @@ def validate_toolchain(root: Path, *, actual: dict[str, str] | None = None) -> N
         .read_text(encoding="utf-8")
         .strip()
         .removeprefix("cpython-"),
-        "uv": project["tool"]["uv"]["required-version"].removeprefix("=="),
         "task": (root / ".task-version").read_text(encoding="utf-8").strip(),
     }
     versions = installed_toolchains() if actual is None else actual
@@ -87,6 +107,14 @@ def validate_toolchain(root: Path, *, actual: dict[str, str] | None = None) -> N
             raise ToolchainError(
                 f"{label} mismatch: expected {version}, got {versions.get(name)!r}"
             )
+    uv_found = VERSION_PATTERN.search(versions.get("uv", ""))
+    uv_requirement = project["tool"]["uv"]["required-version"]
+    if not uv_found or not _uv_requirement_satisfied(
+        uv_found.group("version"), uv_requirement
+    ):
+        raise ToolchainError(
+            f"uv mismatch: required {uv_requirement}, got {versions.get('uv')!r}"
+        )
     validate_node(root, versions.get("node", ""))
 
 

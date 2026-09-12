@@ -99,7 +99,7 @@
         "/^pyproject\\.toml$/"
       ],
       "matchStrings": [
-        "required-version = \"==(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+        "required-version = \">=(?<currentValue>\\d+\\.\\d+\\.\\d+),<"
       ],
       "depNameTemplate": "astral-sh/uv",
       "datasourceTemplate": "github-releases"
