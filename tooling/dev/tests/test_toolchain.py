@@ -15,7 +15,7 @@ def _workspace(tmp_path: Path) -> Path:
     (tmp_path / ".python-version").write_text("cpython-3.13.14\n", encoding="utf-8")
     (tmp_path / ".task-version").write_text("3.53.1\n", encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
-        '[tool.uv]\nrequired-version = "==0.12.7"\n', encoding="utf-8"
+        '[tool.uv]\nrequired-version = ">=0.12.7,<0.13"\n', encoding="utf-8"
     )
     return tmp_path
 
@@ -35,7 +35,26 @@ def test_declared_and_actual_toolchains_match(tmp_path: Path) -> None:
     )
 
 
-def test_uv_version_mismatch_fails_closed(tmp_path: Path) -> None:
+@pytest.mark.parametrize("uv_version", ["uv 0.12.7", "uv 0.12.10"])
+def test_uv_versions_inside_the_declared_range_pass(
+    tmp_path: Path, uv_version: str
+) -> None:
+    root = _workspace(tmp_path)
+
+    validate_toolchain(
+        root,
+        actual={
+            "bun": "1.3.14",
+            "python": "3.13.14",
+            "uv": uv_version,
+            "task": "3.53.1",
+            "node": "v24.20.0",
+        },
+    )
+
+
+@pytest.mark.parametrize("uv_version", ["uv 0.12.6", "uv 0.11.30", "uv 0.13.0"])
+def test_uv_version_mismatch_fails_closed(tmp_path: Path, uv_version: str) -> None:
     root = _workspace(tmp_path)
 
     with pytest.raises(ToolchainError, match="uv mismatch"):
@@ -44,7 +63,7 @@ def test_uv_version_mismatch_fails_closed(tmp_path: Path) -> None:
             actual={
                 "bun": "1.3.14",
                 "python": "3.13.14",
-                "uv": "uv 0.12.8",
+                "uv": uv_version,
                 "task": "3.53.1",
             },
         )

@@ -1,6 +1,6 @@
 # 开发与发布工具链
 
-Task 是根任务图；uv 管理 13 个 Python distribution；Bun 保留 Web 安装与专用 API，Node 执行 Node CLI。版本声明分别在 `.task-version`、`pyproject.toml` 的 `tool.uv.required-version`、`.python-version`、`package.json` 的 `packageManager` 和 `.node-version`。
+Task 是根任务图；uv 管理 13 个 Python distribution；Bun 保留 Web 安装与专用 API，Node 执行 Node CLI。版本声明分别在 `.task-version`、`pyproject.toml` 的 `tool.uv.required-version`、`.python-version`、`package.json` 的 `packageManager` 和 `.node-version`。uv 为范围声明 `>=0.12.7,<0.13`：下界由 Renovate 跟进，上界是主版本闸门（uv 0.13 发布时人工评估抬升）；本机任意满足范围的 uv（含 Homebrew 安装）均可工作，`.cache/toolchains/bin` 保留 0.12.7 精确入口；CI 经 setup-uv 的 `resolution-strategy: highest` 在范围内取最高版；Docker 构建镜像继续按 digest 固定。
 
 ## 准备与只读检查
 
