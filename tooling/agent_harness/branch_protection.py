@@ -12,6 +12,7 @@ import argparse
 import fnmatch
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -34,11 +35,30 @@ REQUIRED_RULES = frozenset(
 )
 
 
-def _pattern_matches_main(pattern: str) -> bool:
-    """Ref-name patterns use GitHub's glob semantics against the full ref."""
-    return pattern == "~DEFAULT_BRANCH" or fnmatch.fnmatchcase(
-        "refs/heads/main", pattern
+def _strict_match(pattern: str) -> bool:
+    """Path-aware glob where ``*`` and ``?`` never cross a slash."""
+
+    expression = "".join(
+        "[^/]*" if char == "*" else "[^/]" if char == "?" else re.escape(char)
+        for char in pattern
     )
+    return re.fullmatch(expression, "refs/heads/main") is not None
+
+
+def _covers_main(pattern: str) -> bool:
+    """Only patterns matching main under both glob readings count as coverage."""
+
+    if pattern == "~DEFAULT_BRANCH":
+        return True
+    return fnmatch.fnmatchcase("refs/heads/main", pattern) and _strict_match(pattern)
+
+
+def _excludes_main(pattern: str) -> bool:
+    """A pattern matching main under either reading disqualifies the ruleset."""
+
+    if pattern == "~DEFAULT_BRANCH":
+        return True
+    return fnmatch.fnmatchcase("refs/heads/main", pattern) or _strict_match(pattern)
 
 
 def _ref_targets_main(ref_name: object) -> bool:
@@ -50,8 +70,8 @@ def _ref_targets_main(ref_name: object) -> bool:
         return False
     if any(not isinstance(pattern, str) for pattern in (*include, *exclude)):
         return False
-    return any(_pattern_matches_main(pattern) for pattern in include) and not any(
-        _pattern_matches_main(pattern) for pattern in exclude
+    return any(_covers_main(pattern) for pattern in include) and not any(
+        _excludes_main(pattern) for pattern in exclude
     )
 
 
@@ -106,6 +126,7 @@ class _RulesScan(NamedTuple):
     present: set[str]
     checks: set[str]
     strict: bool
+    pull_request_rules: int
     approval_counts: list[int]
 
 
@@ -114,6 +135,7 @@ def _scan_rules(active: Sequence[Mapping[str, Any]]) -> _RulesScan:
     present: set[str] = set()
     checks: set[str] = set()
     strict = False
+    pull_request_rules = 0
     approval_counts: list[int] = []
     for ruleset in active:
         for rule in ruleset.get("rules") or []:
@@ -122,13 +144,16 @@ def _scan_rules(active: Sequence[Mapping[str, Any]]) -> _RulesScan:
                 continue
             present.add(rule_type)
             parameters = rule.get("parameters")
-            if not isinstance(parameters, Mapping):
-                continue
             if rule_type == "pull_request":
-                count = parameters.get("required_approving_review_count")
-                if isinstance(count, int):
-                    approval_counts.append(count)
+                pull_request_rules += 1
+                if isinstance(parameters, Mapping):
+                    count = parameters.get("required_approving_review_count")
+                    if isinstance(count, int):
+                        approval_counts.append(count)
+                continue
             if rule_type != "required_status_checks":
+                continue
+            if not isinstance(parameters, Mapping):
                 continue
             contexts = {
                 entry["context"]
@@ -141,7 +166,11 @@ def _scan_rules(active: Sequence[Mapping[str, Any]]) -> _RulesScan:
                 )
             checks |= contexts
     return _RulesScan(
-        present=present, checks=checks, strict=strict, approval_counts=approval_counts
+        present=present,
+        checks=checks,
+        strict=strict,
+        pull_request_rules=pull_request_rules,
+        approval_counts=approval_counts,
     )
 
 
@@ -161,6 +190,9 @@ def evaluate(rulesets: Sequence[Mapping[str, Any]]) -> list[str]:
     violations.extend(
         f"missing rule: {rule}" for rule in sorted(REQUIRED_RULES - scan.present)
     )
+    unexpected_rules = sorted(scan.present - REQUIRED_RULES)
+    if unexpected_rules:
+        violations.append(f"unexpected rules: {', '.join(unexpected_rules)}")
     unexpected = sorted(scan.checks - {REQUIRED_CHECK})
     if unexpected:
         violations.append(f"unexpected required status checks: {', '.join(unexpected)}")
@@ -169,6 +201,10 @@ def evaluate(rulesets: Sequence[Mapping[str, Any]]) -> list[str]:
     elif not scan.strict:
         violations.append(
             "required status checks are not strict (branch must be up to date)"
+        )
+    if len(scan.approval_counts) != scan.pull_request_rules:
+        violations.append(
+            "pull_request rule lacks integer required_approving_review_count"
         )
     surplus_reviews = sorted(
         {count for count in scan.approval_counts if count != EXPECTED_APPROVING_REVIEWS}

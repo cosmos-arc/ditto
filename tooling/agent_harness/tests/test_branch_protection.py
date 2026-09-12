@@ -66,7 +66,10 @@ def status_checks_rules(context: str | None, strict: bool) -> list[dict[str, obj
     return [
         {"type": "deletion"},
         {"type": "non_fast_forward"},
-        {"type": "pull_request"},
+        {
+            "type": "pull_request",
+            "parameters": {"required_approving_review_count": 0},
+        },
         {"type": "required_status_checks", "parameters": parameters},
         {"type": "required_linear_history"},
     ]
@@ -118,6 +121,8 @@ class EvaluateTests(unittest.TestCase):
             {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": ["refs/heads/*"]}},
             {"ref_name": {"include": [7], "exclude": []}},
             {"ref_name": {"include": "~DEFAULT_BRANCH", "exclude": []}},
+            {"ref_name": {"include": ["refs/*"], "exclude": []}},
+            {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": ["refs/*"]}},
         ):
             with self.subTest(conditions=conditions):
                 assert evaluate([active_ruleset(conditions=conditions)]) == [
@@ -207,6 +212,23 @@ class EvaluateTests(unittest.TestCase):
         assert evaluate([reviewed]) == [
             "pull_request rule requires 1 approving reviews; declared gate expects 0"
         ]
+
+    def test_missing_approval_count_is_reported(self) -> None:
+        uncounted = active_ruleset(
+            rules=[
+                rule if rule["type"] != "pull_request" else {"type": "pull_request"}
+                for rule in default_rules()
+            ]
+        )
+        assert evaluate([uncounted]) == [
+            "pull_request rule lacks integer required_approving_review_count"
+        ]
+
+    def test_unexpected_rule_type_is_reported(self) -> None:
+        extra = active_ruleset(
+            rules=[*default_rules(), {"type": "required_signatures"}]
+        )
+        assert evaluate([extra]) == ["unexpected rules: required_signatures"]
 
     def test_bypass_actors_are_reported(self) -> None:
         bypassed = active_ruleset(

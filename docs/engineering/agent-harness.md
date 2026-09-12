@@ -132,12 +132,13 @@ PreToolUse hook 只是第一道反馈。仓库级 rulesets API 没有 descriptio
 
 `tooling/agent_harness/branch_protection.py` 是同一预期的机器断言：CI 的
 repository-policy job 与本地 `task branch-protection-check`（含于 `harness-check`）
-读取 live rulesets API，保护缺失、停用、少规则（含线性历史）、放宽 strict、新增 bypass、
-审批数偏离声明值或要求未声明的 status check 都会失败；ref-name 条件按 GitHub 通配符
-语义匹配 main，畸形或不认识的形状一律 fail closed 不计入保护。rulesets 端点对 public
-仓库匿名可读（已实测），CI 传入 token 仅为限流；若未来不可读，两层均按设计变红而不是
-退化放行。修改 ruleset 必须在同一变更内更新探针预期；required check 名称与 `ci.yml`
-的 job `name` 由测试互相锁定。
+读取 live rulesets API，保护缺失、停用、少规则（含线性历史）、**多出未声明的规则**、
+放宽 strict、新增 bypass、审批数缺失或偏离声明值、要求未声明的 status check 都会失败；
+ref-name 通配符按保守双语义匹配（计入覆盖需路径感知与 fnmatch 两种读法都命中，
+任一读法命中即视为排除），畸形或不认识的形状一律 fail closed 不计入保护。rulesets
+端点对 public 仓库匿名可读（已实测），CI 传入 token 仅为限流；若未来不可读，两层均按
+设计变红而不是退化放行。修改 ruleset 必须在同一变更内更新探针预期；required check
+名称与 `ci.yml` 的 job `name` 由测试互相锁定。
 
 ## 本地与 CI 的验证分工
 
