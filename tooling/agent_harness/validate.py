@@ -438,6 +438,13 @@ def _validate_structured_configs(errors: list[str]) -> None:
             errors.append(f"invalid TOML {path.relative_to(ROOT)}: {error}")
     for path in (ROOT / "package.json", ROOT / "apps" / "web" / "package.json"):
         _load_json(path, errors)
+    root_version = _load_json(ROOT / "package.json", errors)
+    web_version = _load_json(ROOT / "apps" / "web" / "package.json", errors)
+    if root_version and web_version:
+        if root_version.get("version") != web_version.get("version"):
+            errors.append(
+                "root package.json and apps/web/package.json versions must match"
+            )
 
 
 def _validate_machine_inputs(errors: list[str]) -> None:
@@ -459,8 +466,12 @@ def _validate_machine_inputs(errors: list[str]) -> None:
         matches = list(ROOT.glob(pattern))
         if not matches:
             errors.append(f"machine input missing: {pattern}")
-        elif not all(path.is_file() for path in matches):
-            errors.append(f"machine input is not a regular file: {pattern}")
+            continue
+        for path in matches:
+            if path.is_symlink() or not path.is_file():
+                errors.append(f"machine input is not a regular file: {path}")
+            elif not path.resolve().is_relative_to(ROOT):
+                errors.append(f"machine input escapes the repository: {path}")
 
 
 def _validate_workspace_membership(errors: list[str]) -> None:
