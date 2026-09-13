@@ -8,8 +8,7 @@ Ditto 只维护 Codex 与 ZCode 两个宿主（Claude Code 于 2026-09 退役，
 AGENTS.md                    跨宿主共享根指令
 packages/*/AGENTS.md         包级约束
 .agents/skills/              Skills 唯一编辑源
-tooling/agent_harness/       验证、hooks、确定性 eval 和测试
-  evals/v1/cases.json        版本化 adversarial case registry
+tooling/agent_harness/       验证、hooks 和测试
   lease.py                   common-dir 单写者 lease
 .codex/hooks.json            Codex 薄适配
 .zcode/config.json           ZCode 薄适配（hooks 嵌套于 hooks.events，且需 enabled: true）
@@ -115,10 +114,10 @@ task integrator-lease -- release
 
 ## Policy 回归
 
-`tooling/agent_harness/evals/v1/cases.json` 的预填 attempt/expected 是普通 policy/grader
-测试数据，由 `harness-test` 执行。它覆盖漏报 changed set、非法依赖、契约漂移、
-伪造 live 证据、PIT 哨兵缺失及验证范围不足等反例，不代表模型实测能力。
-不再作为独立门重复执行；真实 agent 效果应以实际任务结果和工具日志判断。
+adversarial case registry(`evals/v1/cases.json`)与 grader 已于 2026-09-13 退役:
+其路径→策略维度由 `tests/test_hook.py` 的 `classify_diff` 断言覆盖(含 cross-stack
+fail-closed、契约、PIT、unknown),行为维度(live 证据、指令层级)不再单独执行。
+真实 agent 效果以实际任务结果和工具日志判断。
 
 ## 分支保护
 
