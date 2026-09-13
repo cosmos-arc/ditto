@@ -45,7 +45,7 @@ type EvidenceRecord = EvidenceCase & {
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const DEFAULT_OPTIONS: AcceptanceOptions = {
 	reactBase: "http://127.0.0.1:5173",
-	outDir: "docs/review/r1-trading-acceptance",
+	outDir: "../../docs/archive/web/reviews/r1-trading-acceptance",
 };
 export const ACCEPTANCE_SCOPE = {
 	runtime: "VITE_USE_MOCK=false",

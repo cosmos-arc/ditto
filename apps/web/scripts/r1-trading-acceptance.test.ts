@@ -73,7 +73,7 @@ describe("R1 trading visual acceptance contract", () => {
 
 		expect(parseAcceptanceArgs([])).toEqual({
 			reactBase: "http://127.0.0.1:5173",
-			outDir: "docs/review/r1-trading-acceptance",
+			outDir: "../../docs/archive/web/reviews/r1-trading-acceptance",
 		});
 		expect(parseAcceptanceArgs(["--react-base", "http://127.0.0.1:4173", "--out-dir", "tmp/r1"])).toEqual({
 			reactBase: "http://127.0.0.1:4173",

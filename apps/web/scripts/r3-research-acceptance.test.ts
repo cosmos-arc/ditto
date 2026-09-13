@@ -30,7 +30,7 @@ describe("R3 research deterministic acceptance contract", () => {
 		expect(() => parseAcceptanceArgs([])).toThrow("exactly one");
 		expect(parseAcceptanceArgs(["--fixture"])).toEqual({
 			fixture: true,
-			outDir: "docs/review/r3-research-acceptance/deterministic",
+			outDir: "../../docs/archive/web/reviews/r3-research-acceptance/deterministic",
 		});
 		expect(parseAcceptanceArgs(["--fixture", "--out-dir", "tmp/r3-ui"])).toEqual({
 			fixture: true,
@@ -46,7 +46,7 @@ describe("R3 research deterministic acceptance contract", () => {
 			realData: true,
 			reactBase: "http://127.0.0.1:5173",
 			apiBase: "http://127.0.0.1:8000",
-			outDir: "docs/review/r3-research-acceptance/live",
+			outDir: "../../docs/archive/web/reviews/r3-research-acceptance/live",
 			planningFile: "/tmp/stock-planning.json",
 			timeoutMs: 300_000,
 		});

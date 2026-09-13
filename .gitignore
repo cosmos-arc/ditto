@@ -82,6 +82,9 @@ packages/*/data/
 /data
 /datasets/
 /models/
+
+# Visual audit 运行输出（writer 默认写入归档树内，报告可按需 git add -f 提交）
+docs/archive/web/reviews/visual-audit/
 /.tmp/
 
 # 大型数据文件
