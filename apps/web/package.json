@@ -18,7 +18,7 @@
     "test:coverage": "bun run routes:generate && node --import ../../tooling/dev/node-runtime.mjs node_modules/vitest/vitest.mjs run src --coverage",
     "routes:generate": "bun scripts/generate-route-tree.mjs",
     "deps:check": "bun scripts/run-dependency-cruise.mjs",
-    "arch:check": "bun run deps:check && bun test ../../tooling/quality/tests/*.test.mjs && bun ../../tooling/quality/frontend_gates.mjs",
+    "arch:check": "bun run deps:check && bun run lint && bun test ../../tooling/quality/tests/*.test.mjs && bun ../../tooling/quality/frontend_gates.mjs",
     "gen:api": "bash scripts/gen-api.sh",
     "acceptance:r1-trading": "bun scripts/r1-trading-acceptance.ts",
     "acceptance:r3-research": "bun scripts/r3-research-acceptance.ts",
