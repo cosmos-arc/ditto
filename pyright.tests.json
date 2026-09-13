@@ -1,6 +1,6 @@
 {
   "include": ["packages/*/tests", "apps/backend/tests", "tooling/**/tests"],
-  "exclude": ["**/__pycache__", ".pixi", ".venv"],
+  "exclude": ["**/__pycache__", ".venv"],
   "pythonVersion": "3.13",
   "pythonPlatform": "All",
   "stubPath": "typings",

@@ -3,7 +3,7 @@
 > 日期：2026-05-04
 > 状态：Accepted
 > 适用对象：后续 agent、个人开发者、架构审查者
-> 关联材料：`CLAUDE.md`、各包 `CLAUDE.md`、`.importlinter`、`docs/reviews/audit/2026-04-24-current-full-project-audit.md`
+> 关联材料：`AGENTS.md`、各包 `AGENTS.md`、`.importlinter`、`docs/reviews/audit/2026-04-24-current-full-project-audit.md`
 
 ## 1. 目的
 
@@ -392,7 +392,7 @@ application 编排能力包；agent 只消费 application 叶级合同；apps �
 
 建议规则：
 
-- 只有包 `__all__`、`public.py` 或包级 `CLAUDE.md` 明确列出的符号算稳定 API。
+- 只有包 `__all__`、`public.py` 或包级 `AGENTS.md` 明确列出的符号算稳定 API。
 - `_internal`、`_runtime`、`_adapters`、下划线模块不允许跨包导入。
 - 跨包导入应优先导入叶模块，不依赖深层 re-export 链。
 - `__init__.py` 不应混合内联定义与大量 re-export。
@@ -589,7 +589,7 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 
 - 运行 `task arch-check`。
 - 对涉及的包运行对应测试或全量快速验证。
-- 若新增公共入口，更新包级 `CLAUDE.md` 或本目录文档。
+- 若新增公共入口，更新包级 `AGENTS.md` 或本目录文档。
 - 若接受架构偏离，新增 ADR 或在审计报告中记录。
 
 ## 13. 当前最值得收敛的模糊点

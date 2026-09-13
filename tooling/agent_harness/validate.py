@@ -13,19 +13,34 @@ import yaml
 
 try:
     from .repository_policy import forbidden_package_manager_paths, repository_paths
-    from .sync_skills import compare_trees
 except ImportError:  # Direct script execution.
     from repository_policy import forbidden_package_manager_paths, repository_paths
-    from sync_skills import compare_trees
 
 
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_REGISTRY = ROOT / ".agents" / "skills" / "registry.toml"
 LEGACY_PATHS = (
+    ".claude",
     ".claude/rules",
     ".claude/commands",
     ".claude/checklists",
     ".factory",
+    "CLAUDE.md",
+    "apps/backend/CLAUDE.md",
+    "apps/web/CLAUDE.md",
+    "contracts/CLAUDE.md",
+    "packages/agent/CLAUDE.md",
+    "packages/analysis/CLAUDE.md",
+    "packages/application/CLAUDE.md",
+    "packages/backtest/CLAUDE.md",
+    "packages/data/CLAUDE.md",
+    "packages/execution/CLAUDE.md",
+    "packages/features/CLAUDE.md",
+    "packages/kernel/CLAUDE.md",
+    "packages/platform/CLAUDE.md",
+    "packages/portfolio/CLAUDE.md",
+    "packages/risk/CLAUDE.md",
+    "packages/strategy/CLAUDE.md",
 )
 BANNED_WORKFLOW = re.compile(
     "|".join(
@@ -60,11 +75,6 @@ _HOOK_EVENT_ARGUMENTS = {
     "Stop": "stop",
 }
 _HOST_MATCHERS = {
-    "claude": {
-        "PreToolUse": {"Bash", "Edit", "Write"},
-        "PostToolUse": {"Edit", "Write"},
-        "Stop": set(),
-    },
     "codex": {
         "PreToolUse": {"Bash", "Edit", "Write", "apply_patch"},
         "PostToolUse": {"Edit", "Write", "apply_patch"},
@@ -77,7 +87,6 @@ _HOST_MATCHERS = {
     },
 }
 _HOST_COMMAND_BASE = {
-    "claude": 'python3 "$CLAUDE_PROJECT_DIR/tooling/agent_harness/hook.py"',
     "codex": (
         '/usr/bin/env python3 "$(git rev-parse --show-toplevel)/'
         + 'tooling/agent_harness/hook.py"'
@@ -106,14 +115,8 @@ def parse_frontmatter(path: Path) -> dict[str, object]:
 
 def _validate_local_instruction(directory: Path, errors: list[str]) -> None:
     agents = directory / "AGENTS.md"
-    wrapper = directory / "CLAUDE.md"
     if not agents.is_file():
         errors.append(f"missing local instructions: {agents.relative_to(ROOT)}")
-    if (
-        not wrapper.is_file()
-        or wrapper.read_text(encoding="utf-8").strip() != "@AGENTS.md"
-    ):
-        errors.append(f"{wrapper.relative_to(ROOT)} is not an @AGENTS.md wrapper")
 
 
 def _text_files() -> list[Path]:
@@ -134,24 +137,7 @@ def _text_files() -> list[Path]:
 
 
 def _validate_instruction_files(errors: list[str]) -> None:
-    root_wrapper = (ROOT / "CLAUDE.md").read_text(encoding="utf-8").strip()
-    if root_wrapper != "@AGENTS.md":
-        errors.append("root CLAUDE.md must be a thin @AGENTS.md wrapper")
-
     _validate_capability_inventory(ROOT, errors)
-    packages = [
-        ROOT / "packages" / name
-        for name in sorted(EXPECTED_CAPABILITIES)
-        if (ROOT / "packages" / name / "AGENTS.md").is_file()
-    ]
-    for package in packages:
-        wrapper = package / "CLAUDE.md"
-        if (
-            not wrapper.is_file()
-            or wrapper.read_text(encoding="utf-8").strip() != "@AGENTS.md"
-        ):
-            errors.append(f"{wrapper.relative_to(ROOT)} is not an @AGENTS.md wrapper")
-
     local_rules = (
         ROOT / "apps" / "backend",
         ROOT / "apps" / "web",
@@ -283,8 +269,6 @@ def _validate_skills(errors: list[str]) -> None:
     for name in sorted(skill_names):
         _validate_skill(name, source, errors)
 
-    errors.extend(compare_trees())
-
 
 def _validate_legacy_content(errors: list[str]) -> None:
     for relative in LEGACY_PATHS:
@@ -297,8 +281,8 @@ def _validate_legacy_content(errors: list[str]) -> None:
         # sources, host configuration and executable inputs declare dependencies.
         if (
             path.suffix in {".md", ".rst"}
-            and path.name not in {"AGENTS.md", "CLAUDE.md", "SKILL.md"}
-            and relative.parts[0] not in {".agents", ".claude", ".codex", ".zcode"}
+            and path.name not in {"AGENTS.md", "SKILL.md"}
+            and relative.parts[0] not in {".agents", ".codex", ".zcode"}
             and not path.stat().st_mode & 0o111
         ):
             continue
@@ -413,27 +397,10 @@ def _validate_host_hook_contract(
 
 
 def _validate_host_configs(errors: list[str]) -> None:
-    settings_path = ROOT / ".claude" / "settings.json"
     codex_path = ROOT / ".codex" / "hooks.json"
     zcode_path = ROOT / ".zcode" / "config.json"
-    settings = _load_json(settings_path, errors)
     codex = _load_json(codex_path, errors)
     zcode = _load_json(zcode_path, errors)
-
-    if settings is not None:
-        plugins = settings.get("enabledPlugins")
-        if plugins is not None and (
-            not isinstance(plugins, dict)
-            or any(not isinstance(value, bool) for value in plugins.values())
-        ):
-            errors.append("Claude enabledPlugins must map names to booleans")
-        permissions = settings.get("permissions")
-        if (
-            not isinstance(permissions, dict)
-            or permissions.get("defaultMode") != "default"
-        ):
-            errors.append("Claude permissions.defaultMode must be default")
-        _validate_host_hook_contract(settings, "claude", errors)
 
     if codex is not None:
         _validate_host_hook_contract(codex, "codex", errors)
@@ -444,7 +411,6 @@ def _validate_host_configs(errors: list[str]) -> None:
     if zcode is not None:
         _validate_host_hook_contract(zcode, "zcode", errors)
 
-    _validate_hook_target(settings_path, errors)
     _validate_hook_target(codex_path, errors)
     _validate_hook_target(zcode_path, errors)
     hook_script = ROOT / "tooling" / "agent_harness" / "hook.py"

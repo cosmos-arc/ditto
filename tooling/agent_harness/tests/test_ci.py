@@ -37,7 +37,6 @@ class CiTests(unittest.TestCase):
     def test_skill_changes_select_lightweight_validation(self) -> None:
         for path in (
             ".agents/skills/ditto-pit-safety/SKILL.md",
-            ".claude/skills/ditto-pit-safety/SKILL.md",
             ".agents/skills/registry.toml",
         ):
             with self.subTest(path=path):

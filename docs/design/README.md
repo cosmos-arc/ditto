@@ -1,5 +1,5 @@
 > **⚠️ Historical Document**: 本目录（除 `unified-feature-factor-engine/` 子目录）为旧架构（engine/analytics/infra/interfaces）时期的设计文档，已于 2026-07-15 归档至 [`archive/`](archive/)。
-> **当前架构**请参阅各包 `CLAUDE.md` 与 [`docs/architecture/`](../architecture/README.md)。
+> **当前架构**请参阅各包 `AGENTS.md` 与 [`docs/architecture/`](../architecture/README.md)。
 
 # Ditto 设计文档索引
 

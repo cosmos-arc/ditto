@@ -1,1 +1,1 @@
-"""Ditto's shared Claude Code and Codex harness."""
+"""Ditto's shared Codex and ZCode harness."""
