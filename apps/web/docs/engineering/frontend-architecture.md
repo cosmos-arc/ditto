@@ -74,9 +74,11 @@ Inline style 不是一律禁止：图表坐标、虚拟列表尺寸、拖拽位�
   网络访问只属于传输层与测试。
 - `tooling/quality/frontend_gates.mjs` 正则门：`VITE_API_BASE_URL`（生产 API 路由必须来自
   runtime config）、`navigator.sendBeacon` 越区（含计算访问）、`window.`/`globalThis[]` 等
-  限定或常量折叠计算形式的网络全局访问（Biome 只识别裸标识符；非静态可解析的计算访问不在
-  范围内）、`@ts-ignore`/`@ts-expect-error`，以及复用 `frontend_color_policy.mjs` 的裸色
-  原语扫描；回归测试位于 `tooling/quality/tests/frontend_gates.test.mjs`。
+  限定、可选链或常量折叠计算形式的网络全局访问（Biome 只识别裸标识符；匹配前剥离注释，
+  字符串字面量保留以维持带引号计算键可见，正文误报按 fail-closed 处理；非静态可解析的
+  计算访问不在范围内）、`@ts-ignore`/`@ts-expect-error`，以及复用
+  `frontend_color_policy.mjs` 的裸色原语扫描；回归测试位于
+  `tooling/quality/tests/frontend_gates.test.mjs`。
 
 ## 审查清单
 

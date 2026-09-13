@@ -37,6 +37,10 @@ describe("frontend regex gates", () => {
 			"src/lib/h/h.ts": "export const c = globalThis[\"fet\" + \"ch\"](\"/api\");\n",
 			"src/lib/j/j.ts": "export const b = navigator[\"sendBeacon\"](\"/x\", {});\n",
 			"src/lib/k/k.ts": "export const b = navigator[\"send\" + \"Beacon\"](\"/x\", {});\n",
+			"src/lib/n/n.ts": "export const w = window?.fetch(\"/x\");\n",
+			"src/lib/o/o.ts": "export const s = globalThis?.[\"WebSocket\"];\n",
+			"src/lib/p/p.ts": "export const f = window[`fetch`](\"/x\");\n",
+			"src/lib/r/r.ts": "export const note = \"use window.fetch only in src/api\";\n",
 		});
 		const errors = await runFrontendGates(root);
 		expect(errors.some((error) => error.includes("a.ts") && error.includes("suppression"))).toBe(true);
@@ -61,6 +65,20 @@ describe("frontend regex gates", () => {
 		expect(errors.some((error) => error.includes("k.ts") && error.includes("qualified network global"))).toBe(
 			true,
 		);
+		expect(errors.some((error) => error.includes("n.ts") && error.includes("qualified network global"))).toBe(
+			true,
+		);
+		expect(errors.some((error) => error.includes("o.ts") && error.includes("qualified network global"))).toBe(
+			true,
+		);
+		expect(errors.some((error) => error.includes("p.ts") && error.includes("qualified network global"))).toBe(
+			true,
+		);
+		// Fail-closed by design: prose inside string literals keeps quoted computed keys
+		// visible, so it is reported and resolved by rewording.
+		expect(errors.some((error) => error.includes("r.ts") && error.includes("qualified network global"))).toBe(
+			true,
+		);
 	});
 
 	test("canonical token css, tests and network capability zones are exempt", async () => {
@@ -71,6 +89,7 @@ describe("frontend regex gates", () => {
 			"src/mocks/handlers/mock-api.ts": "export const w = globalThis[\"WebSocket\"];\nexport const b = navigator.sendBeacon;\n",
 			"src/lib/i/i.ts": "export const n = globalThis[dynamicName];\n",
 			"src/lib/m/m.ts": "export const c = globalThis[\"crypto\"];\n",
+			"src/lib/q/q.ts": "// window.fetch is restricted to src/api\n// navigator.sendBeacon belongs to transport\n/* globalThis[\"WebSocket\"] docs */\nexport const fine = 1;\n",
 		});
 		expect(await runFrontendGates(root)).toEqual([]);
 	});

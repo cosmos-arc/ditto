@@ -13,25 +13,42 @@ const SUPPRESSION = /@ts-ignore|@ts-expect-error/u;
 const VITE_BASE_URL = /\bVITE_API_BASE_URL\b/u;
 const NETWORK_GLOBAL_NAMES = new Set(["fetch", "EventSource", "XMLHttpRequest", "WebSocket"]);
 const SEND_BEACON = /\bnavigator\.sendBeacon\b/u;
-// Biome's noRestrictedGlobals only sees bare identifier references. Qualified access
-// (window.fetch, navigator.sendBeacon) and computed access are caught here. Computed
-// access is folded by stripping quotes/plus/whitespace from the bracket expression and
-// requiring an exact match against a network capability name, so constant concatenations
-// like globalThis["fet" + "ch"] are flagged while globalThis["crypto"] is not.
-const QUALIFIED_NETWORK_ACCESS = /\b(?:window|globalThis|self)\.(?:fetch|EventSource|XMLHttpRequest|WebSocket)\b/u;
-const COMPUTED_NETWORK_ACCESS = /\b(?:window|globalThis|self|navigator)\[([^\]]*)\]/gu;
+// Comments are stripped before the network matchers run so prose like
+// "// window.fetch is restricted to src/api" cannot trip the gate; string and
+// template tokens are matched first (leftmost alternative wins, so "//" inside a
+// quoted URL is consumed by the string token, not treated as a comment). String
+// and template contents are deliberately KEPT: quoted computed keys such as
+// globalThis["WebSocket"] must stay visible, so prose inside string literals can
+// still trip the gate — a fail-closed false positive, resolved by rewording.
+const CODE_TOKEN = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`|\/\/[^\n]*|\/\*[\s\S]*?\*\//gu;
 const NETWORK_CAPABILITY_ZONE = /^src\/(?:api|mocks|test|tests)\//u;
+// Biome's noRestrictedGlobals only sees bare identifier references. Qualified access
+// (window.fetch, window?.fetch, navigator.sendBeacon) and computed access are caught
+// here. Computed access is folded by stripping quotes/backticks/plus/whitespace from
+// the bracket expression and requiring an exact match against a network capability
+// name, so constant concatenations like globalThis["fet" + "ch"] and globalThis?.[`WebSocket`]
+// are flagged while globalThis["crypto"] is not.
+const QUALIFIED_NETWORK_ACCESS = /\b(?:window|globalThis|self)\??\.(?:fetch|EventSource|XMLHttpRequest|WebSocket)\b/u;
+const COMPUTED_NETWORK_ACCESS = /\b(?:window|globalThis|self|navigator)\??\.?\[\s*([^\]]*)\]/gu;
+
+function stripComments(text) {
+	return text.replace(CODE_TOKEN, (token) => (token.startsWith("/") ? "" : token));
+}
 
 function foldsToNetworkGlobal(fragment) {
-	const folded = fragment.replace(/["'\s+]/gu, "");
+	const folded = fragment.replace(/["'`\s+]/gu, "");
 	return folded === "sendBeacon" || NETWORK_GLOBAL_NAMES.has(folded);
 }
 
-function reportsQualifiedNetworkAccess(text) {
-	if (QUALIFIED_NETWORK_ACCESS.test(text)) return true;
-	for (const match of text.matchAll(COMPUTED_NETWORK_ACCESS)) {
+function containsStringLiteral(fragment) {
+	return fragment.includes('"') || fragment.includes("'") || fragment.includes("`");
+}
+
+function reportsQualifiedNetworkAccess(code) {
+	if (QUALIFIED_NETWORK_ACCESS.test(code)) return true;
+	for (const match of code.matchAll(COMPUTED_NETWORK_ACCESS)) {
 		const fragment = match[1] ?? "";
-		if ((fragment.includes('"') || fragment.includes("'")) && foldsToNetworkGlobal(fragment)) return true;
+		if (containsStringLiteral(fragment) && foldsToNetworkGlobal(fragment)) return true;
 	}
 	return false;
 }
@@ -60,10 +77,11 @@ export async function runFrontendGates(webRoot = WEB_ROOT) {
 			errors.push(`${location}: production API routing must come from runtime config`);
 		}
 		const inNetworkZone = NETWORK_CAPABILITY_ZONE.test(relativeWebPath) || TEST_MODULE.test(file);
-		if (SEND_BEACON.test(text) && !inNetworkZone) {
+		const codeOnly = stripComments(text);
+		if (SEND_BEACON.test(codeOnly) && !inNetworkZone) {
 			errors.push(`${location}: sendBeacon access is restricted to src/api and test scaffolding`);
 		}
-		if (reportsQualifiedNetworkAccess(text) && !inNetworkZone) {
+		if (reportsQualifiedNetworkAccess(codeOnly) && !inNetworkZone) {
 			errors.push(`${location}: qualified network global access is restricted to src/api and test scaffolding`);
 		}
 		if (TEST_MODULE.test(file)) continue;
