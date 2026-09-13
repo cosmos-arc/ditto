@@ -1,12 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium, type Browser, type LaunchOptions, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../prototype");
-const projectRoot = resolve(import.meta.dirname, "..");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
-const visualMatrixScriptPath = join(projectRoot, "scripts/prototype-visual-matrix.ts");
 const visualMatrixPages = [
 	"page-a-shares.html",
 	"page-platform-settings.html",
@@ -118,17 +116,6 @@ describe("prototype view preferences", () => {
 
 	afterAll(async () => {
 		await closeBrowserIfOpen(browser);
-	});
-
-	it("wires the light and density visual matrix audit command", () => {
-		const packageJson = JSON.parse(readFileSync(join(projectRoot, "package.json"), "utf8")) as {
-			scripts?: Record<string, string>;
-		};
-
-		expect(packageJson.scripts?.["prototype:visual-matrix"]).toBe(
-			"bun scripts/prototype-visual-matrix.ts",
-		);
-		expect(existsSync(visualMatrixScriptPath)).toBe(true);
 	});
 
 	it("renders representative light and comfortable direct preference toggles without menu chrome", async () => {

@@ -51,7 +51,7 @@ const metrics = await page.evaluate(() => {
   return items;
 });
 console.log('\nLayout metrics:');
-metrics.forEach(m => console.log(`  ${m.sel}: ${m.w}x${m.h} at (${m.x},${m.y})`));
+metrics.forEach(m => { console.log(`  ${m.sel}: ${m.w}x${m.h} at (${m.x},${m.y})`); });
 
 // Inline styles check
 const inlineCount = await page.evaluate(() => document.querySelectorAll('[style]').length);

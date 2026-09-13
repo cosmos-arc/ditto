@@ -107,6 +107,62 @@ export default {
 			to: { path: "^src/features/" },
 		},
 		{
+			name: "transport-implementation-is-confined-to-core-api",
+			comment: "openapi-fetch may only be imported by the src/api transport implementation.",
+			severity: "error",
+			from: { path: "^src/", pathNot: ["^src/api/", "^src/(?:mocks|test|tests)/", testModule] },
+			to: { path: "^node_modules/openapi-fetch" },
+		},
+		{
+			// Type-contract modules under src/api (e.g. market-contract.ts) stay reachable
+			// from view-model code; only the client barrel is a transport surface.
+			// dependency-cruiser works at module level, so zones that legitimately consume
+			// non-client barrel exports are exempted and tracked as a follow-up: workflow
+			// pages and feature components/hooks import the ApiError class, and the app
+			// bootstrap (main.tsx) imports runtime-config initializers. The retired AST
+			// gate tracked apiClient aliases instead; that precision is documented as lost.
+			name: "core-api-client-surface-stays-in-transport-zones",
+			comment: "Only src/api, per-feature api adapters and test scaffolding may import the core API client barrel.",
+			severity: "error",
+			from: {
+				path: "^src/",
+				pathNot: [
+					"^src/api/",
+					"^src/features/[^/]+/api(?:/|\\.ts$)",
+					"^src/features/[^/]+/(?:components|hooks)/",
+					"^src/(?:mocks|test|tests)/",
+					"^src/workflows/",
+					"^src/main\\.tsx$",
+					testModule,
+				],
+			},
+			to: { path: "^src/api/index" },
+		},
+		{
+			name: "generated-schema-imports-stay-in-transport-zones",
+			comment: "The generated schema may only be consumed inside src/api and feature api adapters.",
+			severity: "error",
+			from: {
+				path: "^src/",
+				pathNot: ["^src/api/", "^src/features/[^/]+/api(?:/|\\.ts$)", "^src/(?:mocks|test|tests)/", testModule],
+			},
+			to: { path: "^src/api/generated/schema" },
+		},
+		{
+			name: "generated-runtime-contracts-stay-in-core-api",
+			comment: "Generated runtime contracts are restricted to src/api.",
+			severity: "error",
+			from: { path: "^src/", pathNot: ["^src/api/", "^src/(?:mocks|test|tests)/", testModule] },
+			to: { path: "^src/api/generated/operation-contracts" },
+		},
+		{
+			name: "legacy-api-client-is-forbidden",
+			comment: "The arbitrary legacy API client must not be imported anywhere.",
+			severity: "error",
+			from: { pathNot: ["^src/(?:mocks|test|tests)/", testModule] },
+			to: { path: "^src/lib/api-client" },
+		},
+		{
 			name: "features-do-not-depend-on-composition-roots",
 			comment: "Features must stay reusable below routes and cross-feature workflows.",
 			severity: "error",

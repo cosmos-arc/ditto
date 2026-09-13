@@ -27,17 +27,6 @@ SYSTEM_AGENT_OPS_CONTRACT = (
 
 
 class PageContractGeneratorPathTests(unittest.TestCase):
-    def test_visual_audit_public_cli_can_load_its_generated_configuration(self) -> None:
-        result = subprocess.run(
-            ["bun", "run", "visual:audit:cli", "--help"],
-            cwd=ROOT / "apps/web",
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert result.returncode == 0, result.stdout + result.stderr
-        assert "--route" in result.stdout
-
     def test_generator_targets_web_workspace_from_either_working_directory(
         self,
     ) -> None:

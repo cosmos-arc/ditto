@@ -21,7 +21,7 @@ tooling/agent_harness/       验证、hooks 和测试
 项目只保留 `ditto-pit-safety`，承载时间可见性与未来哨兵知识。API 兼容规则见
 [OpenAPI 文档](../../contracts/openapi/README.md)，架构和测试规则由根 AGENTS 路由；
 产品、设计和页面合同由 [Web AGENTS](../../apps/web/AGENTS.md) 按任务路由。
-Web 工具位于 `apps/web/scripts/{page-contract,prototype,visual-audit}`，与 Bun 依赖一起运行。
+Web 工具位于 `apps/web/scripts/{page-contract,prototype}`，与 Bun 依赖一起运行。
 
 编辑 `.agents/skills` 后运行：
 

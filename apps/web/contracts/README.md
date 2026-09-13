@@ -9,7 +9,6 @@
 - `bun run generate-contracts`：从全部页面 JSON 生成 shell 与视觉配置。
 - `bun scripts/page-contract/create.mjs --prototype <html>`：采集原型 DOM 与度量，按目标页面更新合同。
 - `bun run prototype:gates -- --prototype <html>`：检查目标原型；可传 `--viewport NAME=WIDTHxHEIGHT` 指定视口。
-- `bun run visual:audit:cli --help`：显示 React/原型服务地址、路由、输出及视觉比较参数。
 
 validator 的公开接口位于 `scripts/page-contract/validators/contract-validator.mjs`：`validateContract(contract, {root})` 与 `validateAllContracts({root, contractsDir})`。这里 root 是 Web workspace，contractsDir 是其下的页面合同目录；脚本使用者将 `passed`/`allPassed` 的 false 映射为非零退出码。
 
