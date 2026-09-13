@@ -22,7 +22,7 @@
     "status": "verified",
     "activeRoutePrototypeCount": 28,
     "scope": "prototype freeze recommended route",
-    "resultRecord": "docs/plans/2026-05-10-prototype-freeze-polish-results.md",
+    "resultRecord": "../../docs/archive/web/plans/archive/superpowers/2026-05-10-prototype-freeze-polish-results.md",
     "checks": {
       "prototypeDesignConsistency": "PASS: 102 tests",
       "fullCheck": "PASS: biome check, tsc -b, 1768 vitest tests"
@@ -1328,7 +1328,7 @@
       }
     ],
     "artifacts": {
-      "report": "docs/reviews/2026-04-27-edition-v1-review.md",
+      "report": "../../docs/archive/web/reviews/2026-04-27-edition-v1-review.md",
       "gateOutputDir": "test-results/ditto-design-cycle-gates/edition-v1-2026-04-27",
       "vpStandardContactSheet": "test-results/ditto-design-cycle-gates/edition-v1-2026-04-27/edition-v1-vp-standard-contact-sheet.png",
       "vpCompactContactSheet": "test-results/ditto-design-cycle-gates/edition-v1-2026-04-27/edition-v1-vp-compact-contact-sheet.png"
