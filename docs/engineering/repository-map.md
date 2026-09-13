@@ -80,7 +80,7 @@ IDE 抑制语义依赖「一个 pyright 项目只有一个配置文件」的机�
 | `.cache/` | dev supervisor / system tests / 工具链缓存 | 无运行中服务时可删 |
 | `logs/` | 后端日志默认目录 | 可删（空态） |
 | `.tmp/` | 验收脚本与 lease 的临时区 | **删除前甄别**：历史上混有个人 scratch（planning-*.json、closure 草稿） |
-| `.pixi/` | 无（工具链已统一 uv） | 残留，直接删 |
+| `.pixi/` | 无（工具链已统一 uv） | 已退役；忽略规则保留——旧 worktree 更新后残留目录不进入 untracked 变更集 |
 | `data/` | 行情可重下；**state 不可再生** | **不可随手删**：含 `evidence-signing.key` 与个人验收 sqlite |
 | `node_modules/`、`.venv/` | `task bun-install` / `task python-install` | 可再生，重装耗时 |
 
@@ -90,6 +90,6 @@ IDE 抑制语义依赖「一个 pyright 项目只有一个配置文件」的机�
   `sync-agent-skills` 生成链与 validator 镜像校验一并移除；宿主集合收敛为 Codex + ZCode，
   `.agents/skills` 成为唯一技能源。validator `LEGACY_PATHS` 收录被删路径防倒退。历史归档文档中的
   Claude 记载不改写。
-- **Pixi（2026-09，#97 决议统一 uv）**：`.gitignore`/`.dockerignore`/`.pre-commit-config.yaml`/pyproject
-  的 pixi 排除与注释、runtime-path 测试的 `pixi.toml` checkout 标记已清理；历史文档中 `pixi run`
-  记载属历史事实，不改写。
+- **Pixi（2026-09，#97 决议统一 uv）**：pyproject 的 pixi 排除与注释、runtime-path 测试的
+  `pixi.toml` checkout 标记已清理；`.gitignore`/`.dockerignore` 保留 `.pixi`
+  忽略条目（旧 worktree 残留目录防噪）；历史文档中 `pixi run` 记载属历史事实，不改写。

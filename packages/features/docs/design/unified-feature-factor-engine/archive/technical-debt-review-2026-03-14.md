@@ -1,5 +1,5 @@
 > **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
-> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
+> 当前架构请参考 `AGENTS.md` 和 `docs/architecture/` 下的活跃文档。
 # Unified Feature/Factor Engine 技术债务记录
 
 **Review 日期**: 2026-03-14（初版） / 2026-03-16（深度代码审查更新）
@@ -208,7 +208,7 @@ _DATASET_SPEC_VERSION = 1  # 硬编码
 - `research.py:184+` 直接操作文件系统持久化 snapshot
 - `publication.py:44+` 直接处理 artifact metadata 持久化
 
-**违反规范**：CLAUDE.md 规定 Port 编排、DataHub 持久化。
+**违反规范**：AGENTS.md 规定 Port 编排、DataHub 持久化。
 
 **Q-RESP-01 拆分建议**：
 1. `DerivedMaterializationOrchestrator`：流程编排

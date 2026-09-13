@@ -1,6 +1,6 @@
 # ADR 0006: Hybrid Plane v2 — 已接受的设计偏离
 
-> **[历史参考]** 本文档记录架构演进过程中的决策，包名引用可能已过时。当前包名请参考 CLAUDE.md。
+> **[历史参考]** 本文档记录架构演进过程中的决策，包名引用可能已过时。当前包名请参考 AGENTS.md。
 
 **状态**: 已接受
 **日期**: 2026-04-03
@@ -41,7 +41,7 @@ Hybrid Plane v2 架构重构（Phase 0-5）已落地。实施过程中，7 处�
 |------|---------|---------|
 | Analytics 隔离 | 不依赖 Data | 仅 import `ditto_data.errors` 的 `DerivedNotImplementedError` |
 
-**接受理由**：Analytics 的表达式编译器需要检测衍生因子尚未实现的情况。将这 2 个错误类移入 Kernel 会违反 Kernel "零业务行为" 原则 — 这些错误带有因子特定的语义。当前设计在 `CLAUDE.md` 和 `.importlinter` 中已记录为允许范围。
+**接受理由**：Analytics 的表达式编译器需要检测衍生因子尚未实现的情况。将这 2 个错误类移入 Kernel 会违反 Kernel "零业务行为" 原则 — 这些错误带有因子特定的语义。当前设计在 `AGENTS.md` 和 `.importlinter` 中已记录为允许范围。
 
 ### D4: `ditto_data/provider.py` 而非 `kernel/provider.py`
 
@@ -91,7 +91,7 @@ from ditto_platform.foundation import logger
 
 **评估**：Analysis → Platform 是跨层依赖，但 Platform（技术基础设施）不包含业务逻辑，所有业务层均可安全使用。`.importlinter` 的 `analysis-isolation` 规则未将 `ditto_platform` 列为 forbidden，因此该依赖未被阻止。
 
-**行动**：在 `CLAUDE.md` 架构原则中补充 Analysis 可依赖 Platform 的说明。当前不阻塞。
+**行动**：在 `AGENTS.md` 架构原则中补充 Analysis 可依赖 Platform 的说明。当前不阻塞。
 
 ---
 
