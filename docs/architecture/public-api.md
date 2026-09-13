@@ -1,7 +1,7 @@
 # Public API Manifest
 
 > Status: backend architecture fitness source for root package surfaces.
-> Scope: root `ditto_*.__all__` exports only; leaf-module public APIs remain owned by package-local modules and package `CLAUDE.md` guidance.
+> Scope: root `ditto_*.__all__` exports only; leaf-module public APIs remain owned by package-local modules and package `AGENTS.md` guidance.
 
 This manifest makes root package imports reviewer-visible. A symbol listed here is a stable root convenience API. Symbols not listed here must be imported from their owning leaf module or treated as internal/reserved unless another package-level manifest explicitly promotes them.
 

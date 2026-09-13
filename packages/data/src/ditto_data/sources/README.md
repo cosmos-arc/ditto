@@ -235,4 +235,4 @@ uv run --no-sync pytest packages/data/tests/unit/sources/tdx/ -v
 
 - Tushare 详细文档：[`tushare/README.md`](./tushare/README.md)
 - 数据层设计文档：`docs/design/02_data_design.md`
-- 数据层架构规范：[`packages/data/CLAUDE.md`](../../CLAUDE.md)
+- 数据层架构规范：[`packages/data/AGENTS.md`](../../AGENTS.md)

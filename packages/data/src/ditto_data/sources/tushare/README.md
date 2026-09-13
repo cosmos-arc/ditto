@@ -354,4 +354,4 @@ source = container.get(TdxSource)
 - [Tushare 官方文档](https://tushare.pro/)
 - [Sources 层文档](../README.md)
 - 数据层设计文档：`docs/design/02_data_design.md`
-- 数据层架构规范：[`packages/data/CLAUDE.md`](../../../CLAUDE.md)
+- 数据层架构规范：[`packages/data/AGENTS.md`](../../../AGENTS.md)

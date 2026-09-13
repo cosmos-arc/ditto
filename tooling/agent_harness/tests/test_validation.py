@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import tooling.agent_harness.validate as validate_module
-from tooling.agent_harness.sync_skills import TreeEntry, compare_trees
 from tooling.agent_harness.validate import (
     _validate_skill,
     load_skill_registry,
@@ -85,53 +84,6 @@ class AgentSkillsComplianceTests(unittest.TestCase):
             ]
 
 
-class SkillMirrorTests(unittest.TestCase):
-    def test_missing_and_drifted_skill_files_fail_comparison(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            source = root / "source"
-            mirror = root / "mirror"
-            source.mkdir()
-            mirror.mkdir()
-            (source / "SKILL.md").write_text("canonical\n", encoding="utf-8")
-
-            assert compare_trees(source, mirror) == [
-                "missing from Claude mirror: SKILL.md"
-            ]
-
-            (mirror / "SKILL.md").write_text("drift\n", encoding="utf-8")
-            assert compare_trees(source, mirror) == ["content drift: SKILL.md"]
-
-    def test_equal_skill_trees_pass(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            source = root / "source"
-            mirror = root / "mirror"
-            source.mkdir()
-            mirror.mkdir()
-            for tree in (source, mirror):
-                (tree / "SKILL.md").write_text("same\n", encoding="utf-8")
-            assert compare_trees(source, mirror) == []
-
-    def test_file_kind_and_executable_mode_must_match(self) -> None:
-        source = Path("source")
-        mirror = Path("mirror")
-        symlink = {"SKILL.md": TreeEntry("symlink", b"target", False)}
-        regular = {"SKILL.md": TreeEntry("file", b"same", False)}
-        executable = {"SKILL.md": TreeEntry("file", b"same", True)}
-
-        with patch(
-            "tooling.agent_harness.sync_skills.tree_files",
-            side_effect=(symlink, regular),
-        ):
-            assert compare_trees(source, mirror) == ["kind drift: SKILL.md"]
-        with patch(
-            "tooling.agent_harness.sync_skills.tree_files",
-            side_effect=(executable, regular),
-        ):
-            assert compare_trees(source, mirror) == ["executable mode drift: SKILL.md"]
-
-
 class SkillRegistryTests(unittest.TestCase):
     def test_registry_is_the_skill_inventory_source_of_truth(self) -> None:
         registry = load_skill_registry(ROOT / ".agents" / "skills" / "registry.toml")
@@ -146,12 +98,10 @@ class SkillRegistryTests(unittest.TestCase):
 def _copy_harness_fixture(root: Path) -> None:
     for relative in (
         "AGENTS.md",
-        "CLAUDE.md",
         "pyproject.toml",
         "bunfig.toml",
         "package.json",
         "apps/web/package.json",
-        ".claude/settings.json",
         ".codex/hooks.json",
         ".zcode/config.json",
     ):
@@ -161,7 +111,6 @@ def _copy_harness_fixture(root: Path) -> None:
     for relative in (
         "tooling/agent_harness",
         ".agents/skills",
-        ".claude/skills",
     ):
         shutil.copytree(ROOT / relative, root / relative)
     for path in [
@@ -173,7 +122,6 @@ def _copy_harness_fixture(root: Path) -> None:
         target = root / path.relative_to(ROOT)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
-        shutil.copyfile(path.with_name("CLAUDE.md"), target.with_name("CLAUDE.md"))
 
 
 class FormatFixtureTests(unittest.TestCase):
@@ -181,26 +129,15 @@ class FormatFixtureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             _copy_harness_fixture(root)
-            for tree in (".agents", ".claude"):
-                skill = root / tree / "skills/ditto-pit-safety/SKILL.md"
-                skill.write_text(
-                    skill.read_text().replace(
-                        "name: ditto-pit-safety",
-                        "name: ditto-pit-safety\nlicense: MIT\n"
-                        "metadata:\n  revision: 1\n  tags:\n    - pit",
-                    )
+            skill = root / ".agents/skills/ditto-pit-safety/SKILL.md"
+            skill.write_text(
+                skill.read_text().replace(
+                    "name: ditto-pit-safety",
+                    "name: ditto-pit-safety\nlicense: MIT\n"
+                    "metadata:\n  revision: 1\n  tags:\n    - pit",
                 )
-            for tree in (".agents", ".claude"):
-                (root / tree / "skills/ditto-pit-safety/agents/openai.yaml").unlink()
-            settings = root / ".claude/settings.json"
-            config = json.loads(settings.read_text())
-            config["enabledPlugins"]["another-supported-plugin@example"] = True
-            # Splitting the same required event coverage is a valid host composition.
-            entries = config["hooks"]["PreToolUse"]
-            original = entries.pop()
-            for matcher in original["matcher"].split("|"):
-                entries.append({**original, "matcher": matcher})
-            settings.write_text(json.dumps(config))
+            )
+            (root / ".agents/skills/ditto-pit-safety/agents/openai.yaml").unlink()
             research = root / "docs/research/skill-history.md"
             research.parent.mkdir(parents=True)
             research.write_text("Historical discussion of super" + "powers: usage.\n")
@@ -228,31 +165,8 @@ class FormatFixtureTests(unittest.TestCase):
             assert legacy.returncode != 0
             assert "legacy workflow dependency in AGENTS.md" in legacy.stdout
             instructions.write_text(original_instructions)
-            # A prose-only skill edit must fail the same CLI used by the PR job.
-            skill = root / ".agents/skills/ditto-pit-safety/SKILL.md"
-            original_skill = skill.read_text()
-            skill.write_text(original_skill + "\nA new PIT instruction.\n")
-            drifted = subprocess.run(
-                [sys.executable, str(root / "tooling/agent_harness/validate.py")],
-                cwd=root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            assert drifted.returncode != 0
-            assert "content drift" in drifted.stdout + drifted.stderr
-            skill.write_text(original_skill)
-            restored = subprocess.run(
-                [sys.executable, str(root / "tooling/agent_harness/validate.py")],
-                cwd=root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            assert restored.returncode == 0, restored.stdout + restored.stderr
             for relative in (
                 ".codex/hooks.json",
-                ".claude/settings.json",
                 ".zcode/config.json",
             ):
                 config_path = root / relative
@@ -347,12 +261,10 @@ class FormatFixtureTests(unittest.TestCase):
 
     def test_all_hosts_pre_tool_hooks_cover_structured_writes(self) -> None:
         expected = {
-            "claude": {"Bash", "Edit", "Write"},
             "codex": {"Bash", "Edit", "Write", "apply_patch"},
             "zcode": {"Bash", "Edit", "Write"},
         }
         paths = {
-            "claude": ROOT / ".claude" / "settings.json",
             "codex": ROOT / ".codex" / "hooks.json",
             "zcode": ROOT / ".zcode" / "config.json",
         }

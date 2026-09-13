@@ -47,6 +47,21 @@ Python 的 13 个 distribution 使用同一产品版本但不独立发布。包�
 `.importlinter` 机器强制；目录合并没有放宽 `kernel`、`platform`、`application`、
 `agent` 或 composition root 的边界。
 
+根级配置文件速查（完整作用与引用关系见 [仓库文件地图](docs/engineering/repository-map.md)）：
+
+| 文件 | 作用 |
+| --- | --- |
+| `pyproject.toml` + `uv.lock` | Python workspace、Ruff/basedpyright/pytest 配置与环境锁 |
+| `package.json` + `bun.lock` + `bunfig.toml` | Bun workspace、版本钉死与安装策略 |
+| `Taskfile.yml` | 唯一跨栈任务 DAG |
+| `.github/codecov.yml` | Codecov 覆盖率门禁 |
+| `.importlinter` / `.pre-commit-config.yaml` | 依赖边界契约 / 提交前质量钩子 |
+| `.gitleaks.toml` + `.gitleaksignore` | 秘密扫描配置与已审计误报指纹 |
+| `.knowledge-policy.toml` / `.large-files.toml` / `.redocly.yaml` | 活跃文档哨兵 / 文件大小门 / OpenAPI lint |
+| `.python-version` / `.node-version` / `.task-version` | 解释器与工具版本钉死 |
+| `pyright.tests.json` | 测试代码独立类型检查配置（理由见文件地图） |
+| `.agents` / `.codex` / `.zcode` | 技能源与 Codex/ZCode 宿主 hook 适配 |
+
 Web 依赖方向由 alias-aware dependency graph 强制：
 
 ```text

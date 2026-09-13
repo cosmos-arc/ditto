@@ -38,7 +38,6 @@ build/
 # Documentation and non-runtime monorepo surfaces
 docs/
 .agents/
-.claude/
 .codex/
 .github/
 apps/web/

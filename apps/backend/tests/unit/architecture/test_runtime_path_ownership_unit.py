@@ -12,7 +12,7 @@ _RUNTIME_SOURCE_ROOTS = (
     _WORKSPACE_ROOT / "apps" / "backend" / "src" / "ditto_apps" / "config",
     _WORKSPACE_ROOT / "apps" / "backend" / "src" / "ditto_apps" / "registry",
 )
-_CHECKOUT_MARKERS = frozenset({".git", "pixi.toml", "pyproject.toml"})
+_CHECKOUT_MARKERS = frozenset({".git", "pyproject.toml"})
 
 
 def _checkout_discovery_violations(path: Path) -> list[str]:

@@ -77,7 +77,7 @@ def _fixture_manifest(
 
 
 class PathExtractionTests(unittest.TestCase):
-    def test_claude_edit_and_write_paths(self) -> None:
+    def test_edit_and_write_paths(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             fixtures = (
@@ -407,7 +407,6 @@ class DiffClassificationTests(unittest.TestCase):
     def test_skill_scope_preserves_lightweight_and_mixed_checks(self) -> None:
         for path in (
             ".agents/skills/ditto-pit-safety/SKILL.md",
-            ".claude/skills/ditto-pit-safety/agents/openai.yaml",
             ".agents/skills/registry.toml",
         ):
             selected = [path, "docs/guide.md"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared repository hook policy for Claude Code, Codex, and ZCode."""
+"""Shared repository hook policy for Codex and ZCode."""
 
 from __future__ import annotations
 
@@ -387,7 +387,7 @@ def extract_edited_paths(payload: dict[str, Any], root: Path) -> list[str]:
 
 
 def extract_python_paths(payload: dict[str, Any], root: Path) -> list[Path]:
-    """Extract edited Python files from Claude Edit/Write or Codex apply_patch."""
+    """Extract edited Python files from host Edit/Write or Codex apply_patch."""
     return [
         root / path
         for path in extract_edited_paths(payload, root)
@@ -470,16 +470,14 @@ def post_edit(payload: dict[str, Any], root: Path) -> VerificationResult:
 
 def _is_harness(path: str) -> bool:
     return (
-        path in {"AGENTS.md", "CLAUDE.md", "Taskfile.yml", ".pre-commit-config.yaml"}
+        path in {"AGENTS.md", "Taskfile.yml", ".pre-commit-config.yaml"}
         or bool(
             re.fullmatch(
-                r"(?:packages/[^/]+|apps/(?:backend|web)|contracts)/(?:AGENTS|CLAUDE)\.md",
+                r"(?:packages/[^/]+|apps/(?:backend|web)|contracts)/AGENTS\.md",
                 path,
             )
         )
-        or path.startswith(
-            (".agents/", ".claude/", ".codex/", ".zcode/", "tooling/agent_harness/")
-        )
+        or path.startswith((".agents/", ".codex/", ".zcode/", "tooling/agent_harness/"))
         or path == "docs/engineering/agent-harness.md"
     )
 
@@ -645,7 +643,7 @@ def _prototype_commands(paths: Sequence[str]) -> list[list[str]]:
 
 def _material_category(path: str) -> str | None:
     """Classify authored materials before generic source-code path rules."""
-    if path.startswith((".agents/skills/", ".claude/skills/")) and path.endswith(
+    if path.startswith(".agents/skills/") and path.endswith(
         (".md", ".rst", ".yaml", ".yml", ".toml", ".json", ".txt")
     ):
         return "skills"
@@ -1121,7 +1119,7 @@ def main() -> int:
         required=True,
         choices=("pre-tool", "post-tool", "stop", "check-changed"),
     )
-    parser.add_argument("--host", choices=("claude", "codex", "zcode"), default="codex")
+    parser.add_argument("--host", choices=("codex", "zcode"), default="codex")
     args = parser.parse_args()
 
     root = git_root(Path.cwd())
