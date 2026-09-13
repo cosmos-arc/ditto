@@ -146,7 +146,7 @@ ref-name 通配符按保守双语义匹配（计入覆盖需路径感知与 fnma
 机制保护。重检查由显式 `check-changed` 和 CI 承担。
 普通 Markdown/RST（包含近端 AGENTS）走文档范围；可执行文件、符号链接、模式变化、
 schema、脚本和配置仍保守分类。页面设计源 `apps/web/DESIGN.md` 保留生成物检查。
-`web-manifest-check` 作为明确要求的文档 freshness 审计保留，不阻断普通 UI 修改。
+文档 freshness 审计已随 `web-manifest-check` 退役（2026-09-13 工程审计,#159）。
 
 PR 复用 changed-scope 选择检查；仅 skill 文本选择 `skill-validation`，使用固定工具链执行 `harness-validate`，汇总门要求成功。根配置、共享工具和未知范围选择完整检查。
 主分支、merge queue 和定期 CI 执行全套类型、行为、边界、平台、安全与制品验证。

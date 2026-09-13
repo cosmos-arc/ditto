@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-本文件解释机器门禁背后的架构意图。当前源码和配置优先于历史审计；`.arch-manifest.json`、页面合同、`PRODUCT.md`、`DESIGN.md` 与 token 源分别承担产品、页面和视觉事实。
+本文件解释机器门禁背后的架构意图。当前源码和配置优先于历史审计；页面合同、`PRODUCT.md`、`DESIGN.md` 与 token 源分别承担产品、页面和视觉事实。
 
 ## 依赖方向
 
