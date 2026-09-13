@@ -47,8 +47,9 @@ blob-report/
 
 # ──────────────────────────────────────────────
 # Visual audit (screenshots, reports, metrics)
+# 输出已迁至仓库级 docs/archive/web/reviews/visual-audit/，
+# 忽略规则由根 .gitignore 接管
 # ──────────────────────────────────────────────
-docs/review/visual-audit/
 
 # ──────────────────────────────────────────────
 # Contract generator (auto-generated)

@@ -166,8 +166,8 @@ type RawJsonNumber = { readonly [RAW_JSON_NUMBER]: string };
 const rawJsonFieldsByPlanning = new WeakMap<object, LivePlanningJsonFields>();
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
-const DEFAULT_FIXTURE_OUT_DIR = "docs/review/r3-research-acceptance/deterministic";
-const DEFAULT_LIVE_OUT_DIR = "docs/review/r3-research-acceptance/live";
+const DEFAULT_FIXTURE_OUT_DIR = "../../docs/archive/web/reviews/r3-research-acceptance/deterministic";
+const DEFAULT_LIVE_OUT_DIR = "../../docs/archive/web/reviews/r3-research-acceptance/live";
 const DEFAULT_REACT_BASE = "http://127.0.0.1:5173";
 const DEFAULT_API_BASE = "http://127.0.0.1:8000";
 const OUTPUT_LIMIT = 12_000;

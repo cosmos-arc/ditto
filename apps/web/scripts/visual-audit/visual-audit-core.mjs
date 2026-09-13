@@ -1,7 +1,7 @@
 import pixelmatch from "pixelmatch";
 
 export const DEFAULT_VIEWPORT = { width: 1536, height: 900 };
-export const DEFAULT_OUT_DIR = "docs/review/visual-audit";
+export const DEFAULT_OUT_DIR = "../../docs/archive/web/reviews/visual-audit";
 export const NAVIGATION_WAIT_UNTIL = "load";
 
 export function isSuccessfulResponseStatus(status) {
@@ -31,7 +31,7 @@ Options:
   --react-base <url>       Base URL for the React app.
   --prototype-base <url>   Base URL for prototype HTML files.
   --viewport <WxH>         Viewport size. Default: 1536x900.
-  --out-dir <path>         Output directory. Default: docs/review/visual-audit.
+  --out-dir <path>         Output directory. Default: ../../docs/archive/web/reviews/visual-audit.
   --help                   Show this help.
 `;
 
