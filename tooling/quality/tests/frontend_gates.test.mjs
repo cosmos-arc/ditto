@@ -35,6 +35,8 @@ describe("frontend regex gates", () => {
 			"src/lib/f/f.ts": "export const s = globalThis[\"WebSocket\"];\n",
 			"src/components/g/g.ts": "export const h = self.EventSource;\n",
 			"src/lib/h/h.ts": "export const c = globalThis[\"fet\" + \"ch\"](\"/api\");\n",
+			"src/lib/j/j.ts": "export const b = navigator[\"sendBeacon\"](\"/x\", {});\n",
+			"src/lib/k/k.ts": "export const b = navigator[\"send\" + \"Beacon\"](\"/x\", {});\n",
 		});
 		const errors = await runFrontendGates(root);
 		expect(errors.some((error) => error.includes("a.ts") && error.includes("suppression"))).toBe(true);
@@ -53,6 +55,12 @@ describe("frontend regex gates", () => {
 		expect(errors.some((error) => error.includes("h.ts") && error.includes("qualified network global"))).toBe(
 			true,
 		);
+		expect(errors.some((error) => error.includes("j.ts") && error.includes("qualified network global"))).toBe(
+			true,
+		);
+		expect(errors.some((error) => error.includes("k.ts") && error.includes("qualified network global"))).toBe(
+			true,
+		);
 	});
 
 	test("canonical token css, tests and network capability zones are exempt", async () => {
@@ -60,8 +68,9 @@ describe("frontend regex gates", () => {
 			"src/styles/design-tokens/tokens.css": ":root { --bg: #ffffff; }\n",
 			"src/features/e/e.test.ts": "export const color = \"#ff0000\";\nexport const w = window.fetch;\n",
 			"src/api/transport.ts": "export const f = () => fetch(\"/x\");\nexport const w = window.fetch;\n",
-			"src/mocks/handlers/mock-api.ts": "export const w = globalThis[\"WebSocket\"];\n",
+			"src/mocks/handlers/mock-api.ts": "export const w = globalThis[\"WebSocket\"];\nexport const b = navigator.sendBeacon;\n",
 			"src/lib/i/i.ts": "export const n = globalThis[dynamicName];\n",
+			"src/lib/m/m.ts": "export const c = globalThis[\"crypto\"];\n",
 		});
 		expect(await runFrontendGates(root)).toEqual([]);
 	});

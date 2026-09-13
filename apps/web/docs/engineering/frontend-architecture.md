@@ -73,10 +73,10 @@ Inline style 不是一律禁止：图表坐标、虚拟列表尺寸、拖拽位�
   `XMLHttpRequest`/`WebSocket` 出现在 `src/api`、`src/mocks`、`src/test` 与测试模块之外——
   网络访问只属于传输层与测试。
 - `tooling/quality/frontend_gates.mjs` 正则门：`VITE_API_BASE_URL`（生产 API 路由必须来自
-  runtime config）、`navigator.sendBeacon` 越区、`window.`/`globalThis[]` 等限定或计算形式的
-  网络全局访问（含 `"fet" + "ch"` 这类常量拼接；Biome 只识别裸标识符）、
-  `@ts-ignore`/`@ts-expect-error`，以及复用 `frontend_color_policy.mjs` 的裸色原语扫描；回归
-  测试位于 `tooling/quality/tests/frontend_gates.test.mjs`。
+  runtime config）、`navigator.sendBeacon` 越区（含计算访问）、`window.`/`globalThis[]` 等
+  限定或常量折叠计算形式的网络全局访问（Biome 只识别裸标识符；非静态可解析的计算访问不在
+  范围内）、`@ts-ignore`/`@ts-expect-error`，以及复用 `frontend_color_policy.mjs` 的裸色
+  原语扫描；回归测试位于 `tooling/quality/tests/frontend_gates.test.mjs`。
 
 ## 审查清单
 
