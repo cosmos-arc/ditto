@@ -13,11 +13,10 @@ const SUPPRESSION = /@ts-ignore|@ts-expect-error/u;
 const VITE_BASE_URL = /\bVITE_API_BASE_URL\b/u;
 const SEND_BEACON = /\bnavigator\.sendBeacon\b/u;
 // Biome's noRestrictedGlobals only sees bare identifier references, so qualified
-// and computed access (window.fetch, globalThis["WebSocket"]) is caught here.
-const QUALIFIED_NETWORK_ACCESS = new RegExp(
-	"\\b(?:window|globalThis|self)(?:\\.(?:fetch|EventSource|XMLHttpRequest|WebSocket)\\b|\\[\\s*[\"'](?:fetch|EventSource|XMLHttpRequest|WebSocket)[\"']\\s*\\])",
-	"u",
-);
+// and computed access (window.fetch, globalThis["WebSocket"], and constant-folded
+// forms such as globalThis["fet" + "ch"]) is caught here: any computed access on
+// a network-capable receiver whose bracket expression contains a string literal.
+const QUALIFIED_NETWORK_ACCESS = /\b(?:window|globalThis|self)(?:\.(?:fetch|EventSource|XMLHttpRequest|WebSocket)\b|\[\s*[^\]]*["'][^\]]*\])/u;
 const NETWORK_CAPABILITY_ZONE = /^src\/(?:api|mocks|test|tests)\//u;
 
 async function sourceFiles(directory) {

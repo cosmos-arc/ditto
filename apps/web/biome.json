@@ -2,7 +2,16 @@
 	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
 	"files": {
 		"maxSize": 2097152,
-		"includes": ["src/**", "scripts/**", "index.html", "*.config.*", "tsconfig*.json", "biome.json"]
+		"includes": [
+			"src/**",
+			"scripts/**",
+			"copilot-baseline.mjs",
+			"final-verify.mjs",
+			"index.html",
+			"*.config.*",
+			"tsconfig*.json",
+			"biome.json"
+		]
 	},
 	"assist": {
 		"actions": {
@@ -125,7 +134,7 @@
 			}
 		},
 		{
-			"includes": ["scripts/**"],
+			"includes": ["scripts/**", "copilot-baseline.mjs", "final-verify.mjs"],
 			"assist": {
 				"actions": {
 					"source": {
