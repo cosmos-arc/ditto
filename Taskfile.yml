@@ -213,12 +213,6 @@ tasks:
     cmds:
     - bun run test:prototype {{.CLI_ARGS}}
     dir: apps/web
-  web-manifest-check:
-    preconditions:
-    - sh: 'test -f "{{.VENV_PYTHON}}"'
-      msg: Python environment is missing; run task python-install explicitly.
-    cmds:
-    - uv run --no-sync python tooling/quality/web_manifest_freshness.py {{.CLI_ARGS}}
   web-static:
     cmds:
     - task: web-environment-check

@@ -8,8 +8,7 @@ Ditto 只维护 Codex 与 ZCode 两个宿主（Claude Code 于 2026-09 退役，
 AGENTS.md                    跨宿主共享根指令
 packages/*/AGENTS.md         包级约束
 .agents/skills/              Skills 唯一编辑源
-tooling/agent_harness/       验证、hooks、确定性 eval 和测试
-  evals/v1/cases.json        版本化 adversarial case registry
+tooling/agent_harness/       验证、hooks 和测试
   lease.py                   common-dir 单写者 lease
 .codex/hooks.json            Codex 薄适配
 .zcode/config.json           ZCode 薄适配（hooks 嵌套于 hooks.events，且需 enabled: true）
@@ -115,10 +114,10 @@ task integrator-lease -- release
 
 ## Policy 回归
 
-`tooling/agent_harness/evals/v1/cases.json` 的预填 attempt/expected 是普通 policy/grader
-测试数据，由 `harness-test` 执行。它覆盖漏报 changed set、非法依赖、契约漂移、
-伪造 live 证据、PIT 哨兵缺失及验证范围不足等反例，不代表模型实测能力。
-不再作为独立门重复执行；真实 agent 效果应以实际任务结果和工具日志判断。
+adversarial case registry(`evals/v1/cases.json`)与 grader 已于 2026-09-13 退役:
+其路径→策略维度由 `tests/test_hook.py` 的 `classify_diff` 断言覆盖(含 cross-stack
+fail-closed、契约、PIT、unknown),行为维度(live 证据、指令层级)不再单独执行。
+真实 agent 效果以实际任务结果和工具日志判断。
 
 ## 分支保护
 
@@ -146,7 +145,7 @@ ref-name 通配符按保守双语义匹配（计入覆盖需路径感知与 fnma
 机制保护。重检查由显式 `check-changed` 和 CI 承担。
 普通 Markdown/RST（包含近端 AGENTS）走文档范围；可执行文件、符号链接、模式变化、
 schema、脚本和配置仍保守分类。页面设计源 `apps/web/DESIGN.md` 保留生成物检查。
-`web-manifest-check` 作为明确要求的文档 freshness 审计保留，不阻断普通 UI 修改。
+文档 freshness 审计已随 `web-manifest-check` 退役（2026-09-13 工程审计,#159）。
 
 PR 复用 changed-scope 选择检查；仅 skill 文本选择 `skill-validation`，使用固定工具链执行 `harness-validate`，汇总门要求成功。根配置、共享工具和未知范围选择完整检查。
 主分支、merge queue 和定期 CI 执行全套类型、行为、边界、平台、安全与制品验证。

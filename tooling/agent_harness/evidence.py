@@ -60,8 +60,6 @@ _FINGERPRINT_CONFIGS = (
     ".task-version",
     "pyproject.toml",
     "tests/system/playwright.config.ts",
-    "tooling/agent_harness/agent_eval.py",
-    "tooling/agent_harness/evals/v1/cases.json",
     "tooling/agent_harness/hook.py",
     "tooling/agent_harness/lease.py",
     "tooling/agent_harness/repository_policy.py",
