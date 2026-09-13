@@ -149,7 +149,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Check documentation links
-        run: echo bisect
+        run: >-
+          docker run --rm --user "$(id -u):$(id -g)"
+          --volume "$PWD:/src:ro" --workdir /src
+          docker.io/lycheeverse/lychee:0.24.2-alpine@sha256:1be4e42004cf5303d9604cced85a3e2835afe450e493e47924db24156cff491b
+          --no-progress README.md AGENTS.md docs contracts
+          apps/web/docs apps/web/design apps/backend/docs
+          'packages/*/docs'
 
   security-gate:
     name: Security gate
