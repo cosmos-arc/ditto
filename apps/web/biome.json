@@ -2,19 +2,15 @@
 	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
 	"files": {
 		"maxSize": 2097152,
-		"includes": [
-			"src/**",
-			"scripts/agent_harness/**",
-			"scripts/generate-route-tree.mjs",
-			"scripts/dependency-cruiser-typescript-loader.mjs",
-			"scripts/run-dependency-cruise.mjs",
-			"index.html",
-			"*.config.*",
-			"tsconfig*.json",
-			"biome.json"
-		]
+		"includes": ["src/**", "scripts/**", "index.html", "*.config.*", "tsconfig*.json", "biome.json"]
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -83,8 +79,12 @@
 				"src/api/generated/schema.d.ts",
 				"src/api/generated/operation-contracts.ts"
 			],
-			"linter": { "enabled": false },
-			"formatter": { "enabled": false }
+			"linter": {
+				"enabled": false
+			},
+			"formatter": {
+				"enabled": false
+			}
 		},
 		{
 			"includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/__tests__/**"],
@@ -120,6 +120,60 @@
 				"rules": {
 					"correctness": {
 						"noUndeclaredDependencies": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["scripts/**"],
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			},
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "off"
+					},
+					"style": {
+						"noRestrictedGlobals": "off"
+					},
+					"suspicious": {
+						"noAssignInExpressions": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"scripts/agent_harness/**",
+				"scripts/generate-route-tree.mjs",
+				"scripts/dependency-cruiser-typescript-loader.mjs",
+				"scripts/run-dependency-cruise.mjs"
+			],
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "on"
+					}
+				}
+			},
+			"formatter": {
+				"enabled": true
+			},
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "error"
+					},
+					"suspicious": {
+						"noAssignInExpressions": "error"
 					}
 				}
 			}

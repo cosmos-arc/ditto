@@ -66,11 +66,14 @@ Inline style 不是一律禁止：图表坐标、虚拟列表尺寸、拖拽位�
   `generated-runtime-contracts-stay-in-core-api` 与 `legacy-api-client-is-forbidden`。module 级
   规则不追踪 named binding：workflow 页面与 feature components/hooks 对 barrel 中 `ApiError`、
   `main.tsx` 对 runtime-config 初始化函数的合法消费以显式 `pathNot` 豁免（收窄为后续项）。
-- Biome：`correctness/noUndeclaredDependencies` 禁止使用未在 `package.json` 声明的依赖；
-  `style/noRestrictedGlobals` 禁止 `fetch`/`EventSource`/`XMLHttpRequest`/`WebSocket` 出现在
-  `src/api`、`src/mocks`、`src/test` 与测试模块之外——网络访问只属于传输层与测试。
+- Biome：`correctness/noUndeclaredDependencies` 禁止使用未在 `package.json` 声明的依赖，覆盖
+  `src` 与全部 `scripts`（遗留脚本豁免 formatting/organizeImports 等既有积压，声明检查不豁免；
+  `scripts/agent_harness/**` 与三个门禁脚本保持完整 lint）；`style/noRestrictedGlobals` 禁止
+  `fetch`/`EventSource`/`XMLHttpRequest`/`WebSocket` 出现在 `src/api`、`src/mocks`、`src/test`
+  与测试模块之外——网络访问只属于传输层与测试。
 - `tooling/quality/frontend_gates.mjs` 正则门：`VITE_API_BASE_URL`（生产 API 路由必须来自
-  runtime config）、`navigator.sendBeacon` 越区、`@ts-ignore`/`@ts-expect-error`，以及复用
+  runtime config）、`navigator.sendBeacon` 越区、`window.`/`globalThis[]` 等限定或计算形式的
+  网络全局访问（Biome 只识别裸标识符）、`@ts-ignore`/`@ts-expect-error`，以及复用
   `frontend_color_policy.mjs` 的裸色原语扫描；回归测试位于
   `tooling/quality/tests/frontend_gates.test.mjs`。
 

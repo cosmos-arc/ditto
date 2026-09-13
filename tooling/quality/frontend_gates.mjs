@@ -12,6 +12,13 @@ const TEST_MODULE = /\.(?:test|spec)\.(?:js|jsx|ts|tsx)$/u;
 const SUPPRESSION = /@ts-ignore|@ts-expect-error/u;
 const VITE_BASE_URL = /\bVITE_API_BASE_URL\b/u;
 const SEND_BEACON = /\bnavigator\.sendBeacon\b/u;
+// Biome's noRestrictedGlobals only sees bare identifier references, so qualified
+// and computed access (window.fetch, globalThis["WebSocket"]) is caught here.
+const QUALIFIED_NETWORK_ACCESS = new RegExp(
+	"\\b(?:window|globalThis|self)(?:\\.(?:fetch|EventSource|XMLHttpRequest|WebSocket)\\b|\\[\\s*[\"'](?:fetch|EventSource|XMLHttpRequest|WebSocket)[\"']\\s*\\])",
+	"u",
+);
+const NETWORK_CAPABILITY_ZONE = /^src\/(?:api|mocks|test|tests)\//u;
 
 async function sourceFiles(directory) {
 	const files = [];
@@ -38,6 +45,13 @@ export async function runFrontendGates(webRoot = WEB_ROOT) {
 		}
 		if (SEND_BEACON.test(text) && !relativeWebPath.startsWith("src/api/")) {
 			errors.push(`${location}: sendBeacon access is restricted to src/api`);
+		}
+		if (
+			QUALIFIED_NETWORK_ACCESS.test(text) &&
+			!NETWORK_CAPABILITY_ZONE.test(relativeWebPath) &&
+			!TEST_MODULE.test(file)
+		) {
+			errors.push(`${location}: qualified network global access is restricted to src/api and test scaffolding`);
 		}
 		if (TEST_MODULE.test(file)) continue;
 		if (SUPPRESSION.test(text)) {
