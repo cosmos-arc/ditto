@@ -102,7 +102,8 @@ def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
         if "backend-coverage-combine" in step.get("run", "")
     )
     assert "--count 4" in coverage_step["run"]
-    assert "--fail-under=90" in coverage_step["run"]
+    assert "covered_lines" in coverage_step["run"]
+    assert "0.90" in coverage_step["run"]
 
 
 def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
