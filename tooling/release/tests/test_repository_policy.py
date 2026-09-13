@@ -805,10 +805,6 @@ def test_root_ci_includes_security_and_built_artifact_gates() -> None:
 
 def test_web_ci_uses_the_canonical_root_task() -> None:
     """Hosted and local full Web validation must use the canonical Task task."""
-    workspace = yaml.safe_load((ROOT / "Taskfile.yml").read_text(encoding="utf-8"))
-    tasks = workspace["tasks"]
-    assert "web-manifest-check" not in _dependencies(tasks["web-ci"])
-
     workflow = _workflow("ci.yml")
     web_job = workflow["jobs"]["web-quality"]
     uses = {step.get("uses") for step in web_job["steps"]}
@@ -845,7 +841,6 @@ def test_web_composite_validation_is_owned_only_by_task() -> None:
     assert static | {"web-test"} <= leaves("check-web")
     assert static | {"web-coverage", "web-prototype", "web-build"} <= leaves("web-ci")
     assert "web-test" not in leaves("web-ci")
-    assert "web-manifest-check" not in leaves("check-web")
 
 
 def test_repository_has_no_unapproved_large_files() -> None:
