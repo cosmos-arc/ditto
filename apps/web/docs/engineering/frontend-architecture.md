@@ -53,6 +53,27 @@ Instrument catalog。当前唯一保留的目标域 peer edge 是 `markets → d
 
 Inline style 不是一律禁止：图表坐标、虚拟列表尺寸、拖拽位移等运行时几何可以使用，但静态颜色、字号、间距、圆角和阴影应来自 Tailwind/token。检查 light/dark、compact/comfortable、色觉无障碍与非颜色编码。
 
+## 机器门禁布局
+
+`bun run arch:check` 由三层组成（自定义 TS-AST 网络扫描器、leaf-dependency 与 visual-audit 已随 #155 退役）：
+
+- `bun run deps:check`（`scripts/run-dependency-cruise.mjs`）：运行 dependency-cruiser 并校验
+  汇总——巡航必须覆盖源码、TypeScript parser 必须加载、不允许 error 级违规。zone 规则除
+  feature/workflow 隔离（见上）外，还包括 `transport-implementation-is-confined-to-core-api`
+  （openapi-fetch 只能出现在 `src/api`）、`core-api-client-surface-stays-in-transport-zones`
+  （`src/api/index` client barrel 只能被 `src/api`、feature api adapter 与测试脚手架导入；
+  type-contract 模块如 `market-contract.ts` 保持可达）、`generated-schema-imports-stay-in-transport-zones`、
+  `generated-runtime-contracts-stay-in-core-api` 与 `legacy-api-client-is-forbidden`。module 级
+  规则不追踪 named binding：workflow 页面与 feature components/hooks 对 barrel 中 `ApiError`、
+  `main.tsx` 对 runtime-config 初始化函数的合法消费以显式 `pathNot` 豁免（收窄为后续项）。
+- Biome：`correctness/noUndeclaredDependencies` 禁止使用未在 `package.json` 声明的依赖；
+  `style/noRestrictedGlobals` 禁止 `fetch`/`EventSource`/`XMLHttpRequest`/`WebSocket` 出现在
+  `src/api`、`src/mocks`、`src/test` 与测试模块之外——网络访问只属于传输层与测试。
+- `tooling/quality/frontend_gates.mjs` 正则门：`VITE_API_BASE_URL`（生产 API 路由必须来自
+  runtime config）、`navigator.sendBeacon` 越区、`@ts-ignore`/`@ts-expect-error`，以及复用
+  `frontend_color_policy.mjs` 的裸色原语扫描；回归测试位于
+  `tooling/quality/tests/frontend_gates.test.mjs`。
+
 ## 审查清单
 
 - 低层模块是否反向依赖 feature，feature 深层依赖是否有稳定契约。

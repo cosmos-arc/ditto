@@ -12,15 +12,11 @@ async function loadAcceptance(): Promise<typeof import("./r1-trading-acceptance"
 }
 
 describe("R1 trading visual acceptance contract", () => {
-	it("keeps a zero-argument R1 visual audit alongside the generic CLI", () => {
+	it("keeps the zero-argument R1 acceptance entry point", () => {
 		const packageJson = JSON.parse(readFileSync(join(projectRoot, "package.json"), "utf8")) as {
 			scripts?: Record<string, string>;
 		};
 
-		expect(packageJson.scripts?.["visual:audit"]).toBe(
-			"bun scripts/visual-audit/visual-audit.mjs --route /portfolio/model --react-base http://127.0.0.1:5173 --prototype-base http://127.0.0.1:8888/prototype",
-		);
-		expect(packageJson.scripts?.["visual:audit:cli"]).toBe("bun scripts/visual-audit/visual-audit.mjs");
 		expect(packageJson.scripts?.["acceptance:r1-trading"]).toBe("bun scripts/r1-trading-acceptance.ts");
 	});
 

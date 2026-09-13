@@ -5,10 +5,9 @@
 		"includes": [
 			"src/**",
 			"scripts/agent_harness/**",
-			"scripts/check-leaf-dependencies.test.ts",
-			"scripts/check-leaf-dependencies.ts",
 			"scripts/generate-route-tree.mjs",
 			"scripts/dependency-cruiser-typescript-loader.mjs",
+			"scripts/run-dependency-cruise.mjs",
 			"index.html",
 			"*.config.*",
 			"tsconfig*.json",
@@ -25,11 +24,23 @@
 				"useMaxParams": "warn"
 			},
 			"correctness": {
+				"noUndeclaredDependencies": "error",
 				"noUnusedVariables": "error",
 				"useExhaustiveDependencies": "warn"
 			},
 			"style": {
-				"noNonNullAssertion": "off"
+				"noNonNullAssertion": "off",
+				"noRestrictedGlobals": {
+					"level": "error",
+					"options": {
+						"deniedGlobals": {
+							"EventSource": "network access is restricted to src/api and tests",
+							"XMLHttpRequest": "network access is restricted to src/api and tests",
+							"WebSocket": "network access is restricted to src/api and tests",
+							"fetch": "network access is restricted to src/api and tests"
+						}
+					}
+				}
 			},
 			"suspicious": {
 				"noConsole": "warn",
@@ -86,6 +97,19 @@
 					"suspicious": {
 						"noConsole": "off",
 						"noExplicitAny": "off"
+					},
+					"style": {
+						"noRestrictedGlobals": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/api/**", "src/mocks/**", "src/test/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedGlobals": "off"
 					}
 				}
 			}

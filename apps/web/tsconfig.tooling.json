@@ -9,7 +9,6 @@
 	"exclude": [
 		"scripts/page-*.test.ts",
 		"scripts/prototype-*.test.ts",
-		"scripts/prototype-visual-matrix.ts",
 		"scripts/q*-live-ui-acceptance.ts",
 		"scripts/r*-*-acceptance.ts",
 		"scripts/r*-*-acceptance.test.ts"
