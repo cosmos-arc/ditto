@@ -160,7 +160,7 @@ jobs:
   security-gate:
     name: Security gate
     if: ${{ always() }}
-    needs: [codeql, gitleaks, osv, mutation-critical]
+    needs: [codeql, gitleaks, osv, mutation-critical, docs-links]
     permissions: {}
     runs-on: ubuntu-latest
     steps:
@@ -172,6 +172,7 @@ jobs:
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
           OSV_RESULT: ${{ needs.osv.result }}
           MUTATION_RESULT: ${{ needs.mutation-critical.result }}
+          DOCS_LINKS_RESULT: ${{ needs.docs-links.result }}
         run: |
           test "$GITLEAKS_RESULT" = success
           for result in "$CODEQL_RESULT" "$OSV_RESULT"; do
@@ -183,6 +184,8 @@ jobs:
           done
           if test "$WEEKLY" = true; then
             test "$MUTATION_RESULT" = success
+            test "$DOCS_LINKS_RESULT" = success
           else
             test "$MUTATION_RESULT" = skipped
+            test "$DOCS_LINKS_RESULT" = skipped
           fi
