@@ -8,8 +8,8 @@
 
 通用方法来自 [mattpocock/skills](https://github.com/mattpocock/skills/tree/3cca18b368ae95cdbdebbff572ccafa662551015)，
 固定核查版本为 `3cca18b368ae95cdbdebbff572ccafa662551015`（Issue 111 的 2026-09-08 核查基线）。
-该版本是可复现来源，并非自动升级通道。项目 skill 的唯一编辑源及镜像规则见
-[Harness](agent-harness.md#skills)。通用 skills 不复制到项目中。
+该版本是可复现来源，并非自动升级通道。项目 skill 的唯一编辑源是 `.agents/skills`（Codex 与 ZCode
+直读，无镜像），规则见 [Harness](agent-harness.md#skills)。通用 skills 不复制到项目中。
 
 需要安装或核查通用技能时，在独立临时目录检出固定来源，选择用户要求的 skill：
 
@@ -38,7 +38,7 @@ diff -r /tmp/ditto-matt-skills/skills/engineering/implement /path/to/installed/i
 | 通用步骤 | Ditto 执行约定 |
 |---|---|
 | 自动探测包管理器/测试命令 | 使用根 Task DAG、uv/Python 与 Bun/Web；版本及准备见[工具链](toolchain.md) |
-| 安装 Husky、lint-staged 等 hooks | 先核对现有 pre-commit 和三个宿主 hooks；当前任务未要求更换时继续使用现有入口 |
+| 安装 Husky、lint-staged 等 hooks | 先核对现有 pre-commit 和两个宿主（Codex、ZCode）hooks；当前任务未要求更换时继续使用现有入口 |
 | tdd 选择测试 seam | 复用已确认的 Issue 测试边界；新增边界才需要澄清，纯移动和文档通过真实消费者验收 |
 | implement → code-review → commit | 先形成已提交实现范围再审查，遵循下文提交与交付流程 |
 | 宿主不存在的 Skill/子代理命令 | 读取实际可用技能内容；使用可用能力，未执行的独立审查明确报告 |
