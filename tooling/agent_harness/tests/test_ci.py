@@ -166,8 +166,10 @@ def test_ordinary_scopes_keep_required_cross_stack_proof() -> None:
         "backend-tests",
         "api-contract",
         "system-e2e",
-        "platform-smoke",
     } <= backend
+    # platform-smoke runs weekly, on demand, and on platform-sensitive paths
+    # (pyproject/Dockerfile/deploy select the full gate below), not per PR.
+    assert "platform-smoke" not in backend
     assert "container-smoke" not in backend
     for path in [
         "apps/web/package.json",

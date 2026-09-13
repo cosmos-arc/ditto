@@ -72,7 +72,6 @@ def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
             "api-contract",
             "system-e2e",
             "web-build",
-            "platform-smoke",
         }
     # Contracts, toolchain, security, unknown and high-risk paths use all gates.
     return set(REQUIRED_JOBS)

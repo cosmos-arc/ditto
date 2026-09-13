@@ -225,6 +225,13 @@ jobs:
         with:
           name: web-dist-${{ github.run_id }}
           path: apps/web/dist
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
       - name: Prepare system browser
         run: node node_modules/@playwright/test/cli.js install --with-deps chromium
       - name: Run supervised system test
@@ -455,6 +462,13 @@ jobs:
       - uses: ./.github/actions/setup-toolchain
         with:
           workspace: web
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
       - name: Prepare browser
         run: task browser-install -- --with-deps
       - name: Prototype coverage of product flows
