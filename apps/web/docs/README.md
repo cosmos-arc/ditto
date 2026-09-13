@@ -9,6 +9,7 @@
 - [历史冻结记录说明](../prototype/baselines/README.md)：保留迁移前的字节与提交身份。
 - [前端架构](engineering/frontend-architecture.md)、[Web 测试](engineering/testing.md)。
 
-`archive/`、`review/`、计划与审计材料只提供其记录时的背景。
+历史 plans/review/designs 归档已集中迁至根 [docs/archive/web/](../../../docs/archive/web/)，
+只提供其记录时的背景。
 任务规格与进度以 [GitHub Issues](https://github.com/cosmos-arc/ditto/issues) 为准；
 跨项目规范从[仓库文档入口](../../../docs/README.md)进入。

@@ -330,7 +330,7 @@ Markets 同时覆盖环境扫描与 A 股下钻，但全球市场只作为参照
 - `/markets/a-shares` → 中国 A 股总览，核心动词 structure scan
 - 全球参照优先作为 `/markets` 的矩阵和下钻视图，不建立全球证券交易、外币账户或结算心智
 
-详见 [全市场总览设计文档](../../docs/plans/archieve/2026-03-29-cross-market-overview-design.md)。
+详见 [全市场总览设计文档](../../../../docs/archive/web/plans/archive/2026-03-29-cross-market-overview-design.md)。
 
 **v2.0 调整**：
 
