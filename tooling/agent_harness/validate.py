@@ -440,11 +440,12 @@ def _validate_structured_configs(errors: list[str]) -> None:
         _load_json(path, errors)
     root_version = _load_json(ROOT / "package.json", errors)
     web_version = _load_json(ROOT / "apps" / "web" / "package.json", errors)
-    if root_version and web_version:
-        if root_version.get("version") != web_version.get("version"):
-            errors.append(
-                "root package.json and apps/web/package.json versions must match"
-            )
+    if (
+        root_version
+        and web_version
+        and root_version.get("version") != web_version.get("version")
+    ):
+        errors.append("root package.json and apps/web/package.json versions must match")
 
 
 def _validate_machine_inputs(errors: list[str]) -> None:
