@@ -301,6 +301,7 @@ tasks:
     - task: lint
     - task: fmt-check
     - task: type-all
+    - task: test-fast
     - task: pit
     - task: arch-check
   ci:

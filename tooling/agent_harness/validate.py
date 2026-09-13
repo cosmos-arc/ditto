@@ -463,6 +463,25 @@ def _validate_machine_inputs(errors: list[str]) -> None:
             errors.append(f"machine input is not a regular file: {pattern}")
 
 
+def _validate_workspace_membership(errors: list[str]) -> None:
+    root_manifest = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    members = set(
+        (root_manifest.get("tool", {}).get("uv", {}).get("workspace", {}) or {}).get(
+            "members", []
+        )
+    )
+    for manifest_path in sorted(ROOT.glob("packages/*/pyproject.toml")):
+        try:
+            name = tomllib.loads(manifest_path.read_text(encoding="utf-8"))["project"][
+                "name"
+            ]
+        except (tomllib.TOMLDecodeError, KeyError) as error:
+            errors.append(f"unreadable package manifest {manifest_path.name}: {error}")
+            continue
+        if manifest_path.parent.relative_to(ROOT).as_posix() not in members:
+            errors.append(f"package {name} is missing from the uv workspace members")
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     _validate_instruction_files(errors)
@@ -472,6 +491,7 @@ def validate() -> list[str]:
     _validate_bun_only(ROOT, errors)
     _validate_structured_configs(errors)
     _validate_machine_inputs(errors)
+    _validate_workspace_membership(errors)
     return errors
 
 
