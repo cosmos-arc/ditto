@@ -139,6 +139,24 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  docs-links:
+    name: Weekly documentation links
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check documentation links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --no-progress README.md AGENTS.md docs contracts
+            apps/web/docs apps/web/design apps/backend/docs
+            'packages/*/docs'
+          fail: true
+
   security-gate:
     name: Security gate
     if: ${{ always() }}
