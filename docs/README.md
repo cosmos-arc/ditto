@@ -24,10 +24,10 @@
 - [数据集晋级治理](../packages/data/docs/dataset-promotion.md) · [因子 IC 诊断](../packages/features/docs/factor-ic-diagnosis.md)
 
 ### 工程约定
-- [测试指南](engineering/testing.md) · [Claude/Codex/ZCode Agent Harness](engineering/agent-harness.md)
+- [测试指南](engineering/testing.md) · [Codex/ZCode Agent Harness](engineering/agent-harness.md)
 
 - [开发工具链](engineering/toolchain.md) · [任务交付与技能适配](engineering/development-workflow.md)
-- [知识归属与生命周期](engineering/knowledge-lifecycle.md)
+- [知识归属与生命周期](engineering/knowledge-lifecycle.md) · [仓库文件地图](engineering/repository-map.md)
 
 ### 产品路线与设计来源
 
