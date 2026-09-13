@@ -166,6 +166,8 @@ type RawJsonNumber = { readonly [RAW_JSON_NUMBER]: string };
 const rawJsonFieldsByPlanning = new WeakMap<object, LivePlanningJsonFields>();
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
+// ponytail: manifest 条目由后端收集器按 workspace_root 解析并拒绝越界，必须是仓库根相对
+const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "../..");
 const DEFAULT_FIXTURE_OUT_DIR = "../../docs/archive/web/reviews/r3-research-acceptance/deterministic";
 const DEFAULT_LIVE_OUT_DIR = "../../docs/archive/web/reviews/r3-research-acceptance/live";
 const DEFAULT_REACT_BASE = "http://127.0.0.1:5173";
@@ -544,8 +546,8 @@ export async function runFixtureAcceptance(
 			version: 1,
 			entries: [
 				{
-					relative_path: relative(PROJECT_ROOT, reportPath),
-					sha256: sha256(canonicalJson(report)),
+				relative_path: relative(WORKSPACE_ROOT, reportPath),
+				sha256: sha256(canonicalJson(report)),
 					mode: report.mode,
 					generated_at: report.generated_at,
 					source_commit: report.source_commit,
@@ -1182,7 +1184,7 @@ export async function runLiveAcceptance(options: LiveAcceptanceOptions): Promise
 			mode: report.mode,
 			entries: await Promise.all(
 				evidencePaths.map(async (path) => ({
-					relative_path: relative(PROJECT_ROOT, path),
+					relative_path: relative(WORKSPACE_ROOT, path),
 					sha256: await sha256File(path),
 				})),
 			),
