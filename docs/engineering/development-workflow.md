@@ -27,7 +27,6 @@ diff -r /tmp/ditto-matt-skills/skills/engineering/implement /path/to/installed/i
 
 | 宿主 | 项目技能与调用 |
 |---|---|
-| Claude Code | 发现 `.claude/skills` 生成镜像；使用宿主支持的技能调用入口 |
 | Codex | 发现 `.agents/skills`；有技能工具则调用，否则按已解析路径读取 `SKILL.md` 与引用并执行 |
 | ZCode | 直接发现 `.agents/skills`；按实际可用调用能力执行，hooks 使用 `hooks.events` |
 

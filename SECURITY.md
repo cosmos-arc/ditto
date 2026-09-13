@@ -15,7 +15,7 @@ from `deploy/docker/Dockerfile`.
 ## Agent session boundaries
 
 Development on this repository routinely happens through agent sessions
-(Claude Code, Codex, ZCode). Their boundaries are machine-enforced, not advisory:
+(Codex, ZCode). Their boundaries are machine-enforced, not advisory:
 
 - Sessions run inside the host sandbox by default; bypass-permission and
   full-access modes are not used on this repository. Dangerous commands and

@@ -47,7 +47,6 @@ e109a8c6765e7fbde2aa3262e2389601941a0e75:packages/apps/tests/integration/test_ag
 3539739abeb4ece1c32c7b21fd53b26868536340:apps/web/src/mocks/fixtures/strategy-live.ts:generic-api-key:145
 3539739abeb4ece1c32c7b21fd53b26868536340:apps/web/src/mocks/fixtures/strategy-live.ts:generic-api-key:223
 3539739abeb4ece1c32c7b21fd53b26868536340:apps/web/src/mocks/fixtures/strategy-live.ts:generic-api-key:235
-d5658a866cae6ecffadbdd290f18da613642f317:.claude/rules/backend/observability.md:generic-api-key:128
 d5658a866cae6ecffadbdd290f18da613642f317:docs/design/05_observability.md:generic-api-key:267
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/evidence/r3/20260803T142442Z-live/manifest.json:generic-api-key:282
 46e2865e1081eb0ac6250b91fb770d795cf2bf05:docs/evidence/r3/20260803T142442Z-live/manifest.json:generic-api-key:296

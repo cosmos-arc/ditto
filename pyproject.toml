@@ -134,14 +134,12 @@ src = ["packages", "apps/backend", "scripts", "tooling"]
 # 全局排除不需要检查的文件和目录。
 exclude = [
     ".bzr",
-    ".claude",
     ".direnv",
     ".eggs",
     ".git",
     ".hg",
     ".nox",
     ".pants.d",
-    ".pixi",
     ".ruff_cache",
     ".svn",
     ".tox",
@@ -311,7 +309,7 @@ pythonVersion = "3.13"
 pythonPlatform = "All"
 stubPath = "typings"
 
-# 显式指定 pixi 虚拟环境，确保 VS Code 扩展和 pixi shell 都能正确定位
+# 显式指定 uv 管理的虚拟环境，确保 VS Code 扩展和 CLI 都能正确定位
 venvPath = "."
 venv = ".venv"
 
@@ -325,7 +323,6 @@ include = ["packages/**/src"]
 exclude = [
     "**/__pycache__",
     "**/node_modules",
-    ".pixi",
     ".venv",
     "build",
     "dist",

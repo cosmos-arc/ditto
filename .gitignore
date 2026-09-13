@@ -37,11 +37,6 @@ ENV/
 .direnv/
 
 # ===================================================================
-#                    Pixi 包管理 (Pixi Package Manager)
-# ===================================================================
-.pixi/
-
-# ===================================================================
 #                    缓存目录 (Cache Directories)
 # ===================================================================
 .pytest_cache/
@@ -80,8 +75,6 @@ packages/*/data/
 *.sqlite-journal
 *.sqlite-wal
 
-# Pixi 锁文件备份
-pixi.lock.backup
 /data
 /datasets/
 /models/
@@ -128,7 +121,6 @@ db.sqlite3-journal
 .idea/
 .vscode/
 *.code-workspace
-tmpclaude-*-cwd
 
 # 本地配置
 .env

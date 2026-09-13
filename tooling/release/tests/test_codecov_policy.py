@@ -17,7 +17,7 @@ def _yaml(path: Path) -> dict[str, Any]:
 
 
 def test_codecov_flags_cover_current_backend_and_web_trees() -> None:
-    config = _yaml(ROOT / "codecov.yml")
+    config = _yaml(ROOT / ".github" / "codecov.yml")
     flags = config["flags"]
     assert flags["backend"]["paths"] == ["apps/backend/src/", "packages/"]
     assert set(flags["backend-critical"]["paths"]) == {
@@ -27,7 +27,7 @@ def test_codecov_flags_cover_current_backend_and_web_trees() -> None:
         "packages/risk/src/",
     }
     assert flags["web"]["paths"] == ["apps/web/src/"]
-    serialized = (ROOT / "codecov.yml").read_text(encoding="utf-8")
+    serialized = (ROOT / ".github" / "codecov.yml").read_text(encoding="utf-8")
     for removed in ("packages/engine", "packages/infra", "interfaces/src"):
         assert removed not in serialized
 

@@ -33,7 +33,6 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 
 _FINGERPRINT_CONFIGS = (
     ".agents/skills/registry.toml",
-    ".claude/settings.json",
     ".codex/hooks.json",
     ".importlinter",
     ".pre-commit-config.yaml",

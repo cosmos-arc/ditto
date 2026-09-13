@@ -9,7 +9,6 @@ __pycache__/
 *.egg
 
 # Virtual environments
-.pixi/
 venv/
 .venv/
 env/
@@ -38,7 +37,6 @@ build/
 # Documentation and non-runtime monorepo surfaces
 docs/
 .agents/
-.claude/
 .codex/
 .github/
 apps/web/
