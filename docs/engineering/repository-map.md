@@ -10,8 +10,8 @@
 
 | 文件 | 作用 | 机器引用 |
 |---|---|---|
-| `AGENTS.md` | 仓库级 agent 指南：事实入口、关键不变量、授权边界 | knowledge-policy `active_documents`；hook `_is_harness` 保护 |
-| `README.md` | 项目门面：定位、仓库地图、快速开始 | knowledge-policy `active_documents` |
+| `AGENTS.md` | 仓库级 agent 指南：事实入口、关键不变量、授权边界 | hook `_is_harness` 保护；每周 lychee 链接扫描 |
+| `README.md` | 项目门面：定位、仓库地图、快速开始 | 每周 lychee 链接扫描 |
 | `CHANGELOG.md` | 版本变更记录（发布历史） | GitHub 门面惯例，无机器引用 |
 | `SECURITY.md` | 安全策略与 agent 会话边界 | GitHub 门面惯例，无机器引用 |
 | `LICENSE` | 许可证 | 法律必需 |
@@ -27,8 +27,7 @@
 | `.pre-commit-config.yaml` | pre-commit 钩子：ruff、gitleaks、conventional commits、pre-push | `task pre-commit-install/run/update`；evidence 指纹 |
 | `.gitleaks.toml` | gitleaks 配置（extend 默认规则集） | security workflow 双版本容器扫描；pre-commit gitleaks hook |
 | `.gitleaksignore` | 已审计误报指纹（commit:path:rule:line 精确到行） | security workflow 扫描必须全过；策略测试禁止宽泛排除 |
-| `.knowledge-policy.toml` | 活跃文档清单 + 机器输入位置哨兵 | `task knowledge-check`（tooling/quality/knowledge） |
-| `.large-files.toml` | 仓库文件大小上限与例外哈希 | `task large-file-check`（tooling/quality/large_files） |
+| `.knowledge-policy.toml` | 机器输入位置哨兵 | `task harness-validate`(tooling/agent_harness/validate) |
 | `.redocly.yaml` | OpenAPI lint 配置 | `task contract-static`；integrator lease 单写路径 |
 | `.ignore` | ripgrep/fd 检索排除：历史材料对人开放、对 agent 检索隐藏 | 检索工具行为，无门禁 |
 | `.gitattributes` | 生成物标记：eol=lf + linguist-generated（契约、schema 等） | 契约配置测试；hook `_ROOT_GATE_PATHS` |
@@ -60,7 +59,7 @@ IDE 抑制语义依赖「一个 pyright 项目只有一个配置文件」的机�
 | `tests/` | 根级 Playwright 系统 E2E + fixture app | `task test-system`（tooling/dev/system_tests） |
 | `typings/` | 第三方 pyright stub（annotationlib、dishka、opentelemetry） | pyproject `stubPath` |
 | `artifacts/` | tracked 历史验收证据（r2/r3/rc1 报告），不可当死数据删除 | r3 验收脚本 `--r2-evidence`；gitleaks 指纹；pre-commit 排除 |
-| `docs/` | 文档域：architecture / adr / engineering / agents + archive 历史区 | knowledge-policy；`.ignore` 隐藏 archive |
+| `docs/` | 文档域：architecture / adr / engineering / agents + archive 历史区 | `.ignore` 隐藏 archive；每周 lychee |
 | `.github/` | workflows、composite actions、CODEOWNERS、PR 模板、renovate、codecov.yml | `uses: ./.github/actions/...` |
 
 ## scripts/ 内的游离工具

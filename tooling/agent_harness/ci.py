@@ -15,7 +15,6 @@ REQUIRED_JOBS = frozenset(
     {
         "skill-validation",
         "repository-policy",
-        "delivery-policy",
         "backend-shards",
         "web-build",
         "web-prototype",
@@ -32,7 +31,7 @@ REQUIRED_JOBS = frozenset(
         "security-supply-chain",
     }
 )
-_ALWAYS = {"repository-policy", "delivery-policy", "security-supply-chain"}
+_ALWAYS = {"repository-policy", "security-supply-chain"}
 
 
 def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:

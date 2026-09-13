@@ -429,6 +429,7 @@ def _validate_structured_configs(errors: list[str]) -> None:
     for path in (
         ROOT / "pyproject.toml",
         ROOT / "bunfig.toml",
+        ROOT / ".knowledge-policy.toml",
         SKILL_REGISTRY,
     ):
         try:
@@ -439,6 +440,29 @@ def _validate_structured_configs(errors: list[str]) -> None:
         _load_json(path, errors)
 
 
+def _validate_machine_inputs(errors: list[str]) -> None:
+    try:
+        policy = tomllib.loads(
+            (ROOT / ".knowledge-policy.toml").read_text(encoding="utf-8")
+        )
+    except (FileNotFoundError, tomllib.TOMLDecodeError) as error:
+        errors.append(f"invalid knowledge policy: {error}")
+        return
+    machine_inputs = policy.get("machine_inputs")
+    if not isinstance(machine_inputs, list) or not machine_inputs:
+        errors.append("knowledge policy machine_inputs must be a nonempty list")
+        return
+    for pattern in machine_inputs:
+        if not isinstance(pattern, str) or not pattern:
+            errors.append(f"invalid machine_inputs pattern: {pattern!r}")
+            continue
+        matches = list(ROOT.glob(pattern))
+        if not matches:
+            errors.append(f"machine input missing: {pattern}")
+        elif not all(path.is_file() for path in matches):
+            errors.append(f"machine input is not a regular file: {pattern}")
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     _validate_instruction_files(errors)
@@ -447,6 +471,7 @@ def validate() -> list[str]:
     _validate_host_configs(errors)
     _validate_bun_only(ROOT, errors)
     _validate_structured_configs(errors)
+    _validate_machine_inputs(errors)
     return errors
 
 

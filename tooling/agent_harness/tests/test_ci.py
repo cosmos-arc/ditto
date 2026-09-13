@@ -42,7 +42,6 @@ class CiTests(unittest.TestCase):
             with self.subTest(path=path):
                 assert required_jobs([path, "docs/guide.md"]) == {
                     "repository-policy",
-                    "delivery-policy",
                     "security-supply-chain",
                     "skill-validation",
                 }
@@ -50,7 +49,6 @@ class CiTests(unittest.TestCase):
     def test_scope_preserves_shared_and_risk_checks(self) -> None:
         assert required_jobs(["packages/data/AGENTS.md"]) == {
             "repository-policy",
-            "delivery-policy",
             "security-supply-chain",
         }
         assert "backend-tests" in required_jobs(
@@ -119,7 +117,6 @@ class CiTests(unittest.TestCase):
                     if kind == "executable"
                     else {
                         "repository-policy",
-                        "delivery-policy",
                         "security-supply-chain",
                     }
                     | ({"skill-validation"} if kind == "skills" else set())

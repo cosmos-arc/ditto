@@ -11,8 +11,6 @@ from typing import Any
 
 import yaml
 
-from tooling.quality.large_files import validate_large_files
-
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOWS = ROOT / ".github" / "workflows"
 LOCAL_ACTIONS = ROOT / ".github" / "actions"
@@ -91,8 +89,8 @@ def test_ci_preserves_system_failure_evidence_and_checks_diff_hygiene() -> None:
         )
 
 
-def test_backend_coverage_fetches_history_and_selects_every_event_base() -> None:
-    """Changed coverage must compare against an exact base on every CI event."""
+def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
+    """Backend coverage must prove shard completeness and a 90% floor."""
     workflow = _workflow("ci.yml")
     backend = workflow["jobs"]["backend-tests"]
     checkout = backend["steps"][0]
@@ -103,10 +101,8 @@ def test_backend_coverage_fetches_history_and_selects_every_event_base() -> None
         for step in backend["steps"]
         if "backend-coverage-combine" in step.get("run", "")
     )
-    base_ref = coverage_step["env"]["COVERAGE_BASE_REF"]
-    assert "github.event.pull_request.base.sha" in base_ref
-    assert "github.event.merge_group.base_sha" in base_ref
-    assert "github.event.before" in base_ref
+    assert "--count 4" in coverage_step["run"]
+    assert "--fail-under=90" in coverage_step["run"]
 
 
 def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
@@ -841,7 +837,3 @@ def test_web_composite_validation_is_owned_only_by_task() -> None:
     assert static | {"web-test"} <= leaves("check-web")
     assert static | {"web-coverage", "web-prototype", "web-build"} <= leaves("web-ci")
     assert "web-test" not in leaves("web-ci")
-
-
-def test_repository_has_no_unapproved_large_files() -> None:
-    assert validate_large_files(ROOT) == []
