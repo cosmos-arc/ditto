@@ -108,6 +108,10 @@ def _copy_harness_fixture(root: Path) -> None:
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, target)
+    (root / ".knowledge-policy.toml").write_text(
+        'schema_version = 1\nmachine_inputs = ["AGENTS.md"]\n',
+        encoding="utf-8",
+    )
     for relative in (
         "tooling/agent_harness",
         ".agents/skills",

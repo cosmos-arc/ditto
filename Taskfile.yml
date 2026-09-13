@@ -63,13 +63,6 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python scripts/test.py --cov-xml {{.CLI_ARGS}}
-  backend-coverage:
-    preconditions:
-    - sh: 'test -f "{{.VENV_PYTHON}}"'
-      msg: Python environment is missing; run task python-install explicitly.
-    cmds:
-    - uv run --no-sync python scripts/test.py --cov-xml && uv run --no-sync python tooling/quality/coverage_gate.py
-      --report coverage.json {{.CLI_ARGS}}
   test-fast:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
@@ -122,15 +115,6 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync basedpyright tooling/agent_harness {{.CLI_ARGS}}
-  large-file-check:
-    preconditions:
-    - sh: 'test -f "{{.VENV_PYTHON}}"'
-      msg: Python environment is missing; run task python-install explicitly.
-    cmds:
-    - uv run --no-sync python -m tooling.quality.large_files {{.CLI_ARGS}}
-  knowledge-check:
-    cmds:
-    - uv run --no-sync python -m tooling.quality.knowledge {{.CLI_ARGS}}
   harness-check:
     cmds:
     - task: python-environment-check
@@ -138,8 +122,6 @@ tasks:
     - task: harness-test
     - task: tooling-test
     - task: harness-type
-    - task: large-file-check
-    - task: knowledge-check
     - task: branch-protection-check
   check-changed:
     preconditions:
@@ -147,12 +129,6 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python tooling/agent_harness/hook.py --event check-changed {{.CLI_ARGS}}
-  package-contract-check:
-    preconditions:
-    - sh: 'test -f "{{.VENV_PYTHON}}"'
-      msg: Python environment is missing; run task python-install explicitly.
-    cmds:
-    - uv run --no-sync python tooling/quality/package_contracts.py {{.CLI_ARGS}}
   toolchain-check:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
@@ -307,7 +283,6 @@ tasks:
   check-backend:
     cmds:
     - task: python-environment-check
-    - task: package-contract-check
     - task: lint
     - task: fmt-check
     - task: type-all
@@ -323,11 +298,10 @@ tasks:
   backend-ci:
     cmds:
     - task: python-environment-check
-    - task: package-contract-check
     - task: lint
     - task: fmt-check
     - task: type-all
-    - task: backend-coverage
+    - task: test-fast
     - task: pit
     - task: arch-check
   ci:

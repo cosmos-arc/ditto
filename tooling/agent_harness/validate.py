@@ -429,6 +429,7 @@ def _validate_structured_configs(errors: list[str]) -> None:
     for path in (
         ROOT / "pyproject.toml",
         ROOT / "bunfig.toml",
+        ROOT / ".knowledge-policy.toml",
         SKILL_REGISTRY,
     ):
         try:
@@ -437,6 +438,60 @@ def _validate_structured_configs(errors: list[str]) -> None:
             errors.append(f"invalid TOML {path.relative_to(ROOT)}: {error}")
     for path in (ROOT / "package.json", ROOT / "apps" / "web" / "package.json"):
         _load_json(path, errors)
+    root_version = _load_json(ROOT / "package.json", errors)
+    web_version = _load_json(ROOT / "apps" / "web" / "package.json", errors)
+    if (
+        root_version
+        and web_version
+        and root_version.get("version") != web_version.get("version")
+    ):
+        errors.append("root package.json and apps/web/package.json versions must match")
+
+
+def _validate_machine_inputs(errors: list[str]) -> None:
+    try:
+        policy = tomllib.loads(
+            (ROOT / ".knowledge-policy.toml").read_text(encoding="utf-8")
+        )
+    except (FileNotFoundError, tomllib.TOMLDecodeError) as error:
+        errors.append(f"invalid knowledge policy: {error}")
+        return
+    machine_inputs = policy.get("machine_inputs")
+    if not isinstance(machine_inputs, list) or not machine_inputs:
+        errors.append("knowledge policy machine_inputs must be a nonempty list")
+        return
+    for pattern in machine_inputs:
+        if not isinstance(pattern, str) or not pattern:
+            errors.append(f"invalid machine_inputs pattern: {pattern!r}")
+            continue
+        matches = list(ROOT.glob(pattern))
+        if not matches:
+            errors.append(f"machine input missing: {pattern}")
+            continue
+        for path in matches:
+            if path.is_symlink() or not path.is_file():
+                errors.append(f"machine input is not a regular file: {path}")
+            elif not path.resolve().is_relative_to(ROOT):
+                errors.append(f"machine input escapes the repository: {path}")
+
+
+def _validate_workspace_membership(errors: list[str]) -> None:
+    root_manifest = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    members = set(
+        (root_manifest.get("tool", {}).get("uv", {}).get("workspace", {}) or {}).get(
+            "members", []
+        )
+    )
+    for manifest_path in sorted(ROOT.glob("packages/*/pyproject.toml")):
+        try:
+            name = tomllib.loads(manifest_path.read_text(encoding="utf-8"))["project"][
+                "name"
+            ]
+        except (tomllib.TOMLDecodeError, KeyError) as error:
+            errors.append(f"unreadable package manifest {manifest_path.name}: {error}")
+            continue
+        if manifest_path.parent.relative_to(ROOT).as_posix() not in members:
+            errors.append(f"package {name} is missing from the uv workspace members")
 
 
 def validate() -> list[str]:
@@ -447,6 +502,8 @@ def validate() -> list[str]:
     _validate_host_configs(errors)
     _validate_bun_only(ROOT, errors)
     _validate_structured_configs(errors)
+    _validate_machine_inputs(errors)
+    _validate_workspace_membership(errors)
     return errors
 
 

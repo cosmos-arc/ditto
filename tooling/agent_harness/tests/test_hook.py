@@ -391,9 +391,7 @@ class DiffClassificationTests(unittest.TestCase):
             "AGENTS.md",
         ]
         assert classify_diff(prose) == "docs"
-        assert verification_commands(classify_diff(prose), prose) == [
-            ["task", "knowledge-check"]
-        ]
+        assert verification_commands(classify_diff(prose), prose) == []
         for path in (
             ".codex/hooks.json",
             "tooling/contracts/check_contract.py",
@@ -413,7 +411,6 @@ class DiffClassificationTests(unittest.TestCase):
             assert classify_diff(selected) == "skills"
             assert verification_commands(classify_diff(selected), selected) == [
                 ["task", "harness-validate"],
-                ["task", "knowledge-check"],
             ]
             selected.append("packages/risk/src/ditto_risk/rules.py")
             assert verification_commands(classify_diff(selected), selected) == [
@@ -435,9 +432,7 @@ class DiffClassificationTests(unittest.TestCase):
         path = "apps/backend/tests/fixtures/contracts/r3-v1-api-surface.md"
         assert classify_diff([path]) == "backend-tests"
         assert verification_commands(classify_diff([path]), [path])
-        assert verification_commands("docs", ["apps/web/docs/README.md"]) == [
-            ["task", "knowledge-check"]
-        ]
+        assert verification_commands("docs", ["apps/web/docs/README.md"]) == []
 
     def test_monorepo_diff_classes(self) -> None:
         fixtures = {

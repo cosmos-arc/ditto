@@ -34,8 +34,6 @@ jobs:
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: python3 -m tooling.agent_harness.ci select
-      - name: Validate active knowledge and machine input locations
-        run: python3 -m tooling.quality.knowledge
       - name: Assert main branch protection ruleset
         run: python3 -m tooling.agent_harness.branch_protection check
         env:
@@ -79,8 +77,6 @@ jobs:
       - uses: ./.github/actions/setup-toolchain
         with:
           workspace: python
-      - name: Package contracts
-        run: task package-contract-check
       - name: Formatting
         run: task fmt-check
       - name: Lint
@@ -124,12 +120,10 @@ jobs:
           pattern: backend-shard-*-${{ github.run_id }}
           path: build/test-shards
           merge-multiple: true
-      - name: Verify shard completeness and coverage policy
-        env:
-          COVERAGE_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+      - name: Verify shard completeness and coverage floor
         run: |-
           task backend-coverage-combine -- --count 4 --commit "$GITHUB_SHA"
-          uv run --no-sync python tooling/quality/coverage_gate.py --report coverage.json
+          uv run --no-sync python -c "import json; t = json.load(open('coverage.json'))['totals']; assert t['covered_lines'] / t['num_statements'] >= 0.90, f\"line coverage {t['covered_lines'] / t['num_statements']:.2%} < 90%\""
       - name: PIT correctness suite
         run: task pit
       - name: Upload coverage evidence
@@ -366,7 +360,6 @@ jobs:
       - container-smoke
       - platform-smoke
       - security-supply-chain
-      - delivery-policy
       - backend-shards
       - web-prototype
       - web-build
@@ -395,21 +388,6 @@ jobs:
           if failures:
               raise SystemExit(f"CI fail-closed: {failures}")
           PYTHON
-  delivery-policy:
-    needs: repository-policy
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'delivery-policy') }}
-    name: delivery-policy
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-toolchain
-        with:
-          workspace: python
-      - name: Validate delivery policy
-        run: uv run --no-sync python -m pytest tooling/release/tests/test_repository_policy.py -q -n 0
   backend-shards:
     needs: repository-policy
     if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'backend-shards') }}

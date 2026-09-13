@@ -139,10 +139,29 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  docs-links:
+    name: Weekly documentation links
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check documentation links
+        run: >-
+          docker run --rm --user "$(id -u):$(id -g)"
+          --volume "$PWD:/src:ro" --workdir /src
+          docker.io/lycheeverse/lychee:0.24.2-alpine@sha256:1be4e42004cf5303d9604cced85a3e2835afe450e493e47924db24156cff491b
+          --no-progress README.md AGENTS.md docs/README.md docs/adr
+          docs/agents docs/architecture docs/engineering
+          'docs/plans/README.md' apps/web/docs apps/web/design/specs
+          apps/backend/docs 'packages/*/docs' contracts
+
   security-gate:
     name: Security gate
     if: ${{ always() }}
-    needs: [codeql, gitleaks, osv, mutation-critical]
+    needs: [codeql, gitleaks, osv, mutation-critical, docs-links]
     permissions: {}
     runs-on: ubuntu-latest
     steps:
@@ -154,6 +173,7 @@ jobs:
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
           OSV_RESULT: ${{ needs.osv.result }}
           MUTATION_RESULT: ${{ needs.mutation-critical.result }}
+          DOCS_LINKS_RESULT: ${{ needs.docs-links.result }}
         run: |
           test "$GITLEAKS_RESULT" = success
           for result in "$CODEQL_RESULT" "$OSV_RESULT"; do
@@ -165,6 +185,8 @@ jobs:
           done
           if test "$WEEKLY" = true; then
             test "$MUTATION_RESULT" = success
+            test "$DOCS_LINKS_RESULT" = success
           else
             test "$MUTATION_RESULT" = skipped
+            test "$DOCS_LINKS_RESULT" = skipped
           fi
