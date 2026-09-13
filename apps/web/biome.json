@@ -114,7 +114,7 @@
 			}
 		},
 		{
-			"includes": ["src/api/**", "src/mocks/**", "src/test/**"],
+			"includes": ["src/api/**", "src/mocks/**", "src/test/**", "src/tests/**"],
 			"linter": {
 				"rules": {
 					"style": {

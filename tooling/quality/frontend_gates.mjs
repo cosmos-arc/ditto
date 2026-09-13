@@ -12,7 +12,7 @@ const TEST_MODULE = /\.(?:test|spec)\.(?:js|jsx|ts|tsx)$/u;
 const SUPPRESSION = /@ts-ignore|@ts-expect-error/u;
 const VITE_BASE_URL = /\bVITE_API_BASE_URL\b/u;
 const NETWORK_GLOBAL_NAMES = new Set(["fetch", "EventSource", "XMLHttpRequest", "WebSocket"]);
-const SEND_BEACON = /\bnavigator\.sendBeacon\b/u;
+const SEND_BEACON = /\bnavigator\??\.sendBeacon\b/u;
 // Comments are stripped before the network matchers run so prose like
 // "// window.fetch is restricted to src/api" cannot trip the gate; string and
 // template tokens are matched first (leftmost alternative wins, so "//" inside a

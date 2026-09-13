@@ -30,6 +30,7 @@ describe("frontend regex gates", () => {
 			"src/lib/a.ts": "// @ts-expect-error\nexport const a = 1;\n",
 			"src/features/b/b.ts": "export const u = import.meta.env.VITE_API_BASE_URL;\n",
 			"src/features/c/c.ts": "export const s = navigator.sendBeacon;\n",
+			"src/features/c2/c2.ts": "export const s2 = navigator?.sendBeacon(\"/x\", {});\n",
 			"src/features/d/d.tsx": "export const color = \"#ff0000\";\n",
 			"src/features/e/e.ts": "export const w = window.fetch(\"/x\");\n",
 			"src/lib/f/f.ts": "export const s = globalThis[\"WebSocket\"];\n",
@@ -46,6 +47,7 @@ describe("frontend regex gates", () => {
 		expect(errors.some((error) => error.includes("a.ts") && error.includes("suppression"))).toBe(true);
 		expect(errors.some((error) => error.includes("b.ts") && error.includes("runtime config"))).toBe(true);
 		expect(errors.some((error) => error.includes("c.ts") && error.includes("sendBeacon"))).toBe(true);
+		expect(errors.some((error) => error.includes("c2.ts") && error.includes("sendBeacon"))).toBe(true);
 		expect(errors.some((error) => error.includes("d.tsx") && error.includes("raw hex"))).toBe(true);
 		expect(errors.some((error) => error.includes("e.ts") && error.includes("qualified network global"))).toBe(
 			true,
