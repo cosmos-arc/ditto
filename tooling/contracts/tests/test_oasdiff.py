@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import shutil
 import subprocess
 from collections.abc import Iterator
@@ -12,16 +11,6 @@ from pathlib import Path
 
 import pytest
 from tooling.contracts import oasdiff
-
-_LEGACY_BACKEND_COMMIT = "0b0b61f17df972989de79e212fc1982f05388495"
-_LEGACY_BASELINE_SHA256 = (
-    "acaf611b4ae849f9adea6c13ea17139103f839ef94caa3a3f167f331a65f8a2e"
-)
-_HTTP_VALIDATION_ERROR_REF = "#/components/schemas/HTTPValidationError"
-_ERROR_RESPONSE_REF = "#/components/schemas/ErrorResponse"
-_HTTP_METHODS = frozenset(
-    {"delete", "get", "head", "options", "patch", "post", "put", "trace"}
-)
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -35,160 +24,6 @@ def _git(repo: Path, *args: str) -> str:
         text=True,
     )
     return result.stdout.strip()
-
-
-def _legacy_baseline() -> bytes:
-    git = shutil.which("git")
-    assert git is not None
-    result = subprocess.run(  # noqa: S603 -- immutable in-repository fixture
-        [
-            git,
-            "show",
-            f"{_LEGACY_BACKEND_COMMIT}:docs/openapi/v1.json",
-        ],
-        cwd=oasdiff._REPO_ROOT,
-        check=True,
-        capture_output=True,
-    )
-    assert hashlib.sha256(result.stdout).hexdigest() == _LEGACY_BASELINE_SHA256
-    return result.stdout
-
-
-def _operation_response_refs(schema: object, *, status: str) -> list[str]:
-    assert isinstance(schema, dict)
-    paths = schema["paths"]
-    assert isinstance(paths, dict)
-    refs: list[str] = []
-    for path_item in paths.values():
-        assert isinstance(path_item, dict)
-        for method, operation in path_item.items():
-            if method not in _HTTP_METHODS:
-                continue
-            assert isinstance(operation, dict)
-            responses = operation.get("responses", {})
-            assert isinstance(responses, dict)
-            response = responses.get(status)
-            if not isinstance(response, dict):
-                continue
-            content = response.get("content")
-            if not isinstance(content, dict):
-                continue
-            media_type = content.get("application/json")
-            if not isinstance(media_type, dict):
-                continue
-            response_schema = media_type.get("schema")
-            if not isinstance(response_schema, dict):
-                continue
-            ref = response_schema.get("$ref")
-            if isinstance(ref, str):
-                refs.append(ref)
-    return refs
-
-
-def test_exact_legacy_validation_erratum_is_narrow_and_auditable() -> None:
-    payload = _legacy_baseline()
-    before = json.loads(payload)
-
-    prepared = oasdiff.prepare_baseline_contract(payload)
-
-    assert prepared.source_sha256 == _LEGACY_BASELINE_SHA256
-    assert prepared.applied_erratum_id == "legacy-runtime-error-envelope-v1"
-    assert prepared.corrected_responses == 169
-    assert prepared.contract_bytes != payload
-    after = json.loads(prepared.contract_bytes)
-    assert (
-        _operation_response_refs(before, status="422")
-        == [_HTTP_VALIDATION_ERROR_REF] * 169
-    )
-    assert _operation_response_refs(after, status="422") == [_ERROR_RESPONSE_REF] * 169
-    before_schemas = before["components"]["schemas"]
-    after_schemas = after["components"]["schemas"]
-    assert "ErrorResponse" not in before_schemas
-    assert "ErrorResponse" in after_schemas
-    assert "HTTPValidationError" not in after_schemas
-    assert "ValidationError" not in after_schemas
-    error_response_bytes = json.dumps(
-        after_schemas["ErrorResponse"],
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode()
-    assert hashlib.sha256(error_response_bytes).hexdigest() == (
-        "3cd5c1437465d27460e2efe67c8d9221b364629a12678b2d9204bae71daf2613"
-    )
-    unchanged_before = dict(before_schemas)
-    unchanged_after = dict(after_schemas)
-    del unchanged_before["HTTPValidationError"]
-    del unchanged_before["ValidationError"]
-    del unchanged_after["ErrorResponse"]
-    assert unchanged_after == unchanged_before
-    audit = prepared.erratum_audit_result()
-    assert audit is not None
-    assert audit["sourceSha256"] == _LEGACY_BASELINE_SHA256
-    assert audit["corrected422Responses"] == 169
-    assert audit["effectiveSha256"] == prepared.effective_sha256
-    assert "runtime" in str(audit["reason"])
-
-
-def test_unknown_baseline_hash_is_not_modified() -> None:
-    payload = b'{"openapi":"3.1.0","info":{"title":"T","version":"1"},"paths":{}}\n'
-
-    prepared = oasdiff.prepare_baseline_contract(payload)
-
-    assert prepared.contract_bytes == payload
-    assert prepared.applied_erratum_id is None
-    assert prepared.corrected_responses == 0
-    assert prepared.erratum_audit_result() is None
-
-
-def test_known_legacy_hash_with_structural_drift_fails_closed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    schema = json.loads(_legacy_baseline())
-    del schema["paths"]["/api/v1/agent/approvals"]["get"]["responses"]["422"]
-    drifted = json.dumps(schema, sort_keys=True).encode()
-    monkeypatch.setattr(
-        oasdiff,
-        "_payload_sha256",
-        lambda _payload: _LEGACY_BASELINE_SHA256,
-    )
-
-    with pytest.raises(oasdiff.OasdiffError, match=r"erratum.*169"):
-        oasdiff.prepare_baseline_contract(drifted)
-
-
-def test_known_legacy_hash_with_operation_path_drift_fails_closed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    schema = json.loads(_legacy_baseline())
-    schema["paths"]["/api/v1/drifted-approvals"] = schema["paths"].pop(
-        "/api/v1/agent/approvals"
-    )
-    drifted = json.dumps(schema, sort_keys=True).encode()
-    monkeypatch.setattr(
-        oasdiff,
-        "_payload_sha256",
-        lambda _payload: _LEGACY_BASELINE_SHA256,
-    )
-
-    with pytest.raises(oasdiff.OasdiffError, match=r"operation-set mismatch"):
-        oasdiff.prepare_baseline_contract(drifted)
-
-
-def test_known_legacy_hash_with_component_schema_drift_fails_closed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    schema = json.loads(_legacy_baseline())
-    schema["components"]["schemas"]["HTTPValidationError"]["title"] = "Drifted"
-    drifted = json.dumps(schema, sort_keys=True).encode()
-    monkeypatch.setattr(
-        oasdiff,
-        "_payload_sha256",
-        lambda _payload: _LEGACY_BASELINE_SHA256,
-    )
-
-    with pytest.raises(oasdiff.OasdiffError, match=r"schema mismatch"):
-        oasdiff.prepare_baseline_contract(drifted)
 
 
 def test_merge_base_without_canonical_contract_is_explicit_no_baseline(
@@ -209,6 +44,32 @@ def test_merge_base_without_canonical_contract_is_explicit_no_baseline(
     assert resolution.status == "no-baseline"
     assert resolution.contract_bytes is None
     assert "contracts/openapi/v1.json" in resolution.reason
+
+
+def test_merge_base_ignores_legacy_contract_path(
+    tmp_path: Path,
+) -> None:
+    # The pre-migration docs/openapi fallback was retired with the erratum:
+    # baselines only resolve from the canonical contracts/openapi path.
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "config", "user.name", "Contract Test")
+    _git(tmp_path, "config", "user.email", "contract@example.invalid")
+    legacy = tmp_path / "docs/openapi/v1.json"
+    legacy.parent.mkdir(parents=True)
+    payload = (
+        b'{"openapi":"3.1.0","info":{"title":"Legacy","version":"1"},"paths":{}}\n'
+    )
+    legacy.write_bytes(payload)
+    _git(tmp_path, "add", "docs/openapi/v1.json")
+    _git(tmp_path, "commit", "-qm", "legacy contract")
+
+    resolution = oasdiff.resolve_merge_base(
+        repo_root=tmp_path,
+        base_ref="HEAD",
+    )
+
+    assert resolution.status == "no-baseline"
+    assert resolution.contract_bytes is None
 
 
 def test_merge_base_without_common_ancestor_fails_closed(tmp_path: Path) -> None:
@@ -267,32 +128,7 @@ def test_merge_base_command_failure_fails_closed(
         oasdiff.resolve_merge_base(repo_root=tmp_path, base_ref="HEAD")
 
 
-def test_merge_base_uses_approved_legacy_contract_during_path_migration(
-    tmp_path: Path,
-) -> None:
-    _git(tmp_path, "init", "-q")
-    _git(tmp_path, "config", "user.name", "Contract Test")
-    _git(tmp_path, "config", "user.email", "contract@example.invalid")
-    legacy = tmp_path / "docs/openapi/v1.json"
-    legacy.parent.mkdir(parents=True)
-    payload = (
-        b'{"openapi":"3.1.0","info":{"title":"Legacy","version":"1"},"paths":{}}\n'
-    )
-    legacy.write_bytes(payload)
-    _git(tmp_path, "add", "docs/openapi/v1.json")
-    _git(tmp_path, "commit", "-qm", "legacy contract")
-
-    resolution = oasdiff.resolve_merge_base(
-        repo_root=tmp_path,
-        base_ref="HEAD",
-    )
-
-    assert resolution.status == "found"
-    assert resolution.contract_bytes == payload
-    assert "docs/openapi/v1.json" in resolution.reason
-
-
-def test_release_uses_approved_legacy_contract_during_path_migration(
+def test_release_ignores_legacy_contract_path(
     tmp_path: Path,
 ) -> None:
     _git(tmp_path, "init", "-q")
@@ -310,10 +146,9 @@ def test_release_uses_approved_legacy_contract_during_path_migration(
 
     resolution = oasdiff.resolve_release(repo_root=tmp_path)
 
-    assert resolution.status == "found"
+    assert resolution.status == "no-baseline"
     assert resolution.ref == "v0.9.0"
-    assert resolution.contract_bytes == payload
-    assert "docs/openapi/v1.json" in resolution.reason
+    assert resolution.contract_bytes is None
 
 
 def test_release_uses_latest_reachable_tag_without_stale_fallback(
@@ -401,6 +236,7 @@ def test_breaking_check_fails_on_warnings_without_loading_repo_config(
     ) -> subprocess.CompletedProcess[bytes]:
         observed["command"] = command
         observed["cwd"] = options["cwd"]
+        observed["baseline"] = Path(command[2]).read_bytes()
         return subprocess.CompletedProcess(command, returncode=0)
 
     monkeypatch.setattr(oasdiff, "verified_oasdiff", fake_verified_oasdiff)
@@ -419,56 +255,7 @@ def test_breaking_check_fails_on_warnings_without_loading_repo_config(
     assert isinstance(command, list)
     assert command[command.index("--fail-on") + 1] == "WARN"
     assert observed["cwd"] != oasdiff._REPO_ROOT
-
-
-def test_breaking_check_compares_the_erratum_normalized_baseline(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    legacy = _legacy_baseline()
-    current = tmp_path / "current.json"
-    current.write_bytes(legacy)
-    resolution = oasdiff.BaselineResolution(
-        kind="merge-base",
-        status="found",
-        ref="main",
-        commit=_LEGACY_BACKEND_COMMIT,
-        reason="legacy baseline",
-        contract_bytes=legacy,
-    )
-    observed: dict[str, bytes] = {}
-
-    @contextmanager
-    def fake_verified_oasdiff(_dist_dir: Path) -> Iterator[Path]:
-        yield tmp_path / "oasdiff"
-
-    def fake_run(
-        command: list[str],
-        **_options: object,
-    ) -> subprocess.CompletedProcess[bytes]:
-        observed["baseline"] = Path(command[2]).read_bytes()
-        return subprocess.CompletedProcess(command, returncode=0)
-
-    monkeypatch.setattr(oasdiff, "verified_oasdiff", fake_verified_oasdiff)
-    monkeypatch.setattr(oasdiff.subprocess, "run", fake_run)
-
-    assert (
-        oasdiff.run_breaking_check(
-            resolution=resolution,
-            current_path=current,
-            dist_dir=tmp_path,
-        )
-        == 0
-    )
-
-    compared = json.loads(observed["baseline"])
-    assert (
-        _operation_response_refs(compared, status="422") == [_ERROR_RESPONSE_REF] * 169
-    )
-    audit = capsys.readouterr().err
-    assert '"event": "openapi-baseline-erratum"' in audit
-    assert f'"sourceSha256": "{_LEGACY_BASELINE_SHA256}"' in audit
+    assert observed["baseline"] == schema
 
 
 @pytest.mark.parametrize(
