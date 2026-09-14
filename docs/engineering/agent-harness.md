@@ -49,7 +49,7 @@ Stop 3 秒。格式化使用 已准备 `.venv` 中的 `ruff format <files>`，�
 的原始结果。命令策略和受保护写入仍在 PreToolUse 阻断。
 
 Stop 不把已有脏文件推断为本任务编辑，不返回 `decision: block` 续跑；遇到
-`stop_hook_active=true` 直接结束。它不读取或写入验证收据，因此没有收据不等于失败，
+`stop_hook_active=true` 直接结束。它不读取或写入验证收据（该机制已退役），因此没有收据不等于失败，
 Stop 成功也不等于质量门通过。「维持仅提示」的再评估条件（#130 确认）：当效果度量
 出现完成声明与验证状态脱节的真实案例（如 Stop 通过但合并门拦截了未验证变更）时，
 先立条件阻断提案并附案例证据，再改实现；不按业界潮流直接升级。以下显式命令和根 CI
@@ -74,13 +74,13 @@ task check-changed
   同时属于 API 契约的路径保留契约、system 与 PIT 三类证据。
 - 根 toolchain、未知路径或混合 Harness 变更：fail closed 到只读 `check`。
 
-显式验证失败返回非零退出码，不写成功收据。最终答复必须报告实际执行的检查和失败；
+显式验证失败返回非零退出码。最终答复必须报告实际执行的检查和失败；
 不能以 Stop 没有阻断作为通过证据。普通讨论和只读任务不应因已有改动自动运行全库门禁。
 
-摘要包含 base/HEAD SHA、每个路径的 mode 与内容 hash、未跟踪文件内容，以及相关
-tool/config/lockfile 和实际工具版本。成功 receipt 写入当前 worktree 自己的 Git metadata
-`<git-dir>/ditto-agent-harness/receipts/`；不同 worktree 不共享 mutable receipt。完全相同
-的证据通过显式 `check-changed` 不重复验证，任一字节或工具事实变化都会失效。
+字节级 change manifest 与成功 receipt 机制已随 2026-09 harness 分层退役
+（#156）：`check-changed` 每次直接对完整 changed set 跑 scope 阶梯，不再写入或
+复用 `<git-dir>/ditto-agent-harness/receipts/`；CI 本来就全量复验。回加条件：
+agent 循环重复验证延迟真实可感时，先加 mtime/hash 级缓存。
 
 hooks 定义或 timeout 修改后，Codex 会要求重新审阅相应定义。代码更新不改写用户的
 enabled/trust 状态；不要使用 bypass 参数代替审阅。官方事件语义和设计依据见
@@ -129,15 +129,9 @@ PreToolUse hook 只是第一道反馈。仓库级 rulesets API 没有 descriptio
 预期变更要求以本节为事实源：修改 ruleset 的审批数、bypass 或规则集合，属于需要
 显式授权的 CI 权限类变更，并在 ruleset history 端点留有审计记录。
 
-`tooling/agent_harness/branch_protection.py` 是同一预期的机器断言：CI 的
-repository-policy job 与本地 `task branch-protection-check`（含于 `harness-check`）
-读取 live rulesets API，保护缺失、停用、少规则（含线性历史）、**多出未声明的规则**、
-放宽 strict、新增 bypass、审批数缺失或偏离声明值、要求未声明的 status check 都会失败；
-ref-name 通配符按保守双语义匹配（计入覆盖需路径感知与 fnmatch 两种读法都命中，
-任一读法命中即视为排除），畸形或不认识的形状一律 fail closed 不计入保护。rulesets
-端点对 public 仓库匿名可读（已实测），CI 传入 token 仅为限流；若未来不可读，两层均按
-设计变红而不是退化放行。修改 ruleset 必须在同一变更内更新探针预期；required check
-名称与 `ci.yml` 的 job `name` 由测试互相锁定。
+对 live rulesets API 形状的机器断言（`branch_protection.py`）已随 2026-09 harness
+分层退役（#156）：GitHub 服务端强制已是唯一权威，CI 断言只增加 live API 脆性；
+ruleset 的预期形状以上段文字为准。
 
 ## 本地与 CI 的验证分工
 
@@ -174,8 +168,7 @@ git diff --check
 task pre-commit-run
 ```
 
-`harness-check` 执行 validator、policy/Harness 回归、开发/契约/质量工具测试、类型检查
-和分支保护探针。
+`harness-check` 执行 validator、policy/Harness 回归、开发/契约/质量工具测试和类型检查。
 validator 检查可发现 skill 与 registry 一致性、本地指令文件存在性和必要 hook 覆盖，
 不锁死 skill 数量或合法 hook 组合。
 

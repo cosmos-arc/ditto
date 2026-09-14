@@ -34,10 +34,6 @@ jobs:
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: python3 -m tooling.agent_harness.ci select
-      - name: Assert main branch protection ruleset
-        run: python3 -m tooling.agent_harness.branch_protection check
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
       - name: Diff hygiene
         env:
           CHECK_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}

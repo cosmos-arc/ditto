@@ -11,7 +11,6 @@ import shlex
 import signal
 import subprocess
 import sys
-import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,31 +18,16 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .evidence import (
-        change_manifest,
-        changed_paths,
-        manifest_digest,
-        manifest_paths,
-    )
     from .lease import authorize_paths, generator_write_targets, protected_resources
+    from .repository_policy import forbidden_package_manager_paths
 except ImportError:  # Direct script execution.
     from lease import authorize_paths, generator_write_targets, protected_resources
+    from repository_policy import forbidden_package_manager_paths
 
-    from evidence import change_manifest, changed_paths, manifest_digest, manifest_paths
-
-CACHE_DIR = Path(".cache/ditto-agent-harness")
 MAX_FEEDBACK = 6_000
 PACKAGE_TEST_PARTS = 3
-RECEIPT_SCHEMA_VERSION = 1
 APPEND_REDIRECT_PREFIX_LENGTH = len(">>")
 FORMAT_TIMEOUT_SECONDS = 5
-
-try:
-    from datetime import UTC as _UTC
-except ImportError:  # Python 3.9/3.10 host fallback; project runtime is 3.13.
-    from datetime import timezone
-
-    _UTC = timezone.utc  # noqa: UP017 - compatibility with host Python 3.9/3.10.
 
 
 @dataclass(frozen=True)
@@ -52,6 +36,37 @@ class VerificationResult:
 
     ok: bool
     summary: str
+
+
+def changed_paths(root: Path) -> list[str]:
+    """Return every staged, unstaged, deleted, renamed, or untracked path."""
+    result = subprocess.run(
+        [
+            "git",
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+            "--no-renames",
+            "--",
+        ],
+        cwd=root,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            result.stderr.decode(errors="replace").strip()
+            or "unable to capture git status"
+        )
+    paths: list[str] = []
+    for raw in result.stdout.split(b"\0"):
+        if not raw:
+            continue
+        if len(raw) < len(b"XY path") or raw[2:3] != b" ":
+            raise RuntimeError("git status returned an unsupported record")
+        paths.append(os.fsdecode(raw[3:]))
+    return sorted(paths)
 
 
 def git_root(start: Path | None = None) -> Path:
@@ -883,125 +898,17 @@ def run_verification(
     return VerificationResult(True, "\n\n".join(transcripts)[-MAX_FEEDBACK:])
 
 
-def receipt_path(root: Path, digest: str) -> Path:
-    result = subprocess.run(
-        ["git", "rev-parse", "--git-dir"],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode == 0 and result.stdout.strip():
-        raw_git_dir = Path(result.stdout.strip())
-        git_dir = raw_git_dir if raw_git_dir.is_absolute() else root / raw_git_dir
-        return git_dir.resolve() / "ditto-agent-harness" / "receipts" / f"{digest}.json"
-    return root / CACHE_DIR / f"{digest}.json"
-
-
-def _is_valid_receipt_timestamp(value: object) -> bool:
-    if not isinstance(value, str):
-        return False
-    try:
-        datetime.fromisoformat(value)
-    except ValueError:
-        return False
-    return True
-
-
-def _receipt_is_valid(
-    path: Path,
-    *,
-    digest: str,
-    level: str,
-    paths: Sequence[str],
-    manifest: dict[str, object],
-) -> bool:
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return False
-    if not isinstance(loaded, dict):
-        return False
-    required_keys = {
-        "digest",
-        "evidence",
-        "level",
-        "paths",
-        "schema_version",
-        "verification_summary",
-        "verified_at",
-    }
-    if set(loaded) != required_keys:
-        return False
-    expected = {
-        "schema_version": RECEIPT_SCHEMA_VERSION,
-        "digest": digest,
-        "level": level,
-        "paths": list(paths),
-        "evidence": manifest,
-    }
-    if any(loaded.get(key) != value for key, value in expected.items()):
-        return False
-    summary = loaded.get("verification_summary")
-    verified_at = loaded.get("verified_at")
-    if (
-        not isinstance(summary, str)
-        or not summary
-        or not _is_valid_receipt_timestamp(verified_at)
-    ):
-        return False
-    return manifest_digest(manifest) == digest
-
-
-def _atomic_write_json(path: Path, value: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
-    )
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(
-            descriptor, "w", encoding="utf-8", errors="surrogateescape"
-        ) as stream:
-            json.dump(value, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        temporary.replace(path)
-    finally:
-        temporary.unlink(missing_ok=True)
-
-
-def _manifest_policy_violations(manifest: dict[str, object]) -> tuple[str, ...]:
-    policy = manifest.get("repository_policy")
-    if not isinstance(policy, dict):
-        raise RuntimeError("Harness manifest repository_policy must be an object")
-    raw_paths = policy.get("forbidden_package_manager_paths")
-    if not isinstance(raw_paths, list) or not all(
-        isinstance(path, str) for path in raw_paths
-    ):
-        raise RuntimeError(
-            "Harness manifest package-manager policy must be a path list"
-        )
-    return tuple(path for path in raw_paths if isinstance(path, str))
-
-
 def verification_decision(
     root: Path,
-    manifest: dict[str, object],
+    paths: Sequence[str],
     verifier: Callable[
         [Path, str, Sequence[str]], VerificationResult
     ] = run_verification,
     *,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Verify explicit requests once per exact diff, preserving failure evidence."""
-    try:
-        paths = manifest_paths(manifest)
-        violations = _manifest_policy_violations(manifest)
-    except RuntimeError as error:
-        reason = f"Harness manifest is invalid: {error}"
-        return {"decision": "block", "reason": reason[-MAX_FEEDBACK:]}
+    """Block policy violations, enforce the lease, then run the scope ladder."""
+    violations = forbidden_package_manager_paths(root)
     if violations:
         reason = (
             "Bun-only repository policy failed; remove forbidden package-manager "
@@ -1016,70 +923,35 @@ def verification_decision(
             "decision": "block",
             "reason": lease_decision.reason[-MAX_FEEDBACK:],
         }
-    digest = manifest_digest(manifest)
-
     level = classify_diff(paths, root=root)
-    cached = receipt_path(root, digest)
-    if _receipt_is_valid(
-        cached,
-        digest=digest,
-        level=level,
-        paths=paths,
-        manifest=manifest,
-    ):
-        return {}
-
     result = verifier(root, level, paths)
     if result.ok:
-        _atomic_write_json(
-            cached,
-            {
-                "schema_version": RECEIPT_SCHEMA_VERSION,
-                "digest": digest,
-                "level": level,
-                "paths": list(paths),
-                "evidence": manifest,
-                "verification_summary": result.summary,
-                "verified_at": datetime.now(_UTC).isoformat(),
-            },
-        )
-        response: dict[str, Any] = {}
-    else:
-        reason = (
-            f"Changed-scope verification ({level}) failed. Fix it and retry.\n\n"
-            f"{result.summary}"
-        )
-        response = {"decision": "block", "reason": reason[-MAX_FEEDBACK:]}
-    return response
+        return {}
+    reason = (
+        f"Changed-scope verification ({level}) failed. Fix it and retry.\n\n"
+        f"{result.summary}"
+    )
+    return {"decision": "block", "reason": reason[-MAX_FEEDBACK:]}
 
 
 def emit(value: dict[str, Any]) -> None:
     print(json.dumps(value, ensure_ascii=False))
 
 
-def _evidence_capture_failure(event: str, error: Exception) -> int:
-    message = f"Harness evidence capture failed closed: {error}"[-MAX_FEEDBACK:]
-    if event == "check-changed":
-        print(message)
-        return 1
-    emit({"decision": "block", "reason": message})
-    return 0
+def _capture_failure(error: Exception) -> int:
+    print(f"Harness change capture failed closed: {error}"[-MAX_FEEDBACK:])
+    return 1
 
 
-def _run_check_changed(
-    root: Path, manifest: dict[str, object], paths: Sequence[str]
-) -> int:
-    response = verification_decision(root, manifest, verifier=run_verification)
+def _run_check_changed(root: Path, paths: Sequence[str]) -> int:
+    response = verification_decision(root, paths, verifier=run_verification)
     if response.get("decision") == "block":
         print(response["reason"])
         return 1
     print(
-        f"Changed-scope verification ({classify_diff(paths, root=root)}) passed"
-        + (
-            "; exact evidence receipt recorded or reused."
-            if paths
-            else "; no pending changes."
-        )
+        "Changed-scope verification passed; no pending changes."
+        if not paths
+        else "Changed-scope verification passed."
     )
     return 0
 
@@ -1155,11 +1027,10 @@ def main() -> int:
         return 0
 
     try:
-        manifest = change_manifest(root)
-        paths = manifest_paths(manifest)
+        paths = changed_paths(root)
     except (OSError, RuntimeError) as error:
-        return _evidence_capture_failure(args.event, error)
-    return _run_check_changed(root, manifest, paths)
+        return _capture_failure(error)
+    return _run_check_changed(root, paths)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ uv run --no-sync pytest path/to/test.py -q -n 0
 
 Bun 安装显式指定 npmjs registry，避免宿主 `.npmrc` 镜像覆盖仓库配置；保留 isolated、空提升、空 `trustedDependencies`。只有显式安装流程下载依赖和浏览器。Ruff hook 直接调用本 worktree `.venv` 中已安装的工具；Stop 不查询版本、运行项目工具或写收据。
 
-Task 的组合任务顺序调用前置任务，失败立即传播；构建完成后才能消费其输出。验证没有结果缓存。`.venv`、`.cache`、构建输出和 Git receipts 属于各自 worktree；uv/Bun 下载缓存和校验后的 oasdiff 归档可共享。
+Task 的组合任务顺序调用前置任务，失败立即传播；构建完成后才能消费其输出。验证没有结果缓存。`.venv`、`.cache` 和构建输出属于各自 worktree；uv/Bun 下载缓存和校验后的 oasdiff 归档可共享。
 
 ## Python 迁移记录
 

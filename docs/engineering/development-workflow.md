@@ -53,7 +53,7 @@ diff -r /tmp/ditto-matt-skills/skills/engineering/implement /path/to/installed/i
    `git diff <base>...HEAD` 非空、`git log <base>..HEAD --oneline` 包含待交付实现；
    确认无遗漏的未提交实现后，执行需求与规范两轴审查。空差异不能证明未提交实现已被审查。
 4. 处理有效发现，提交修复并检查新增差异。验证记录绑定 SHA、路径范围、命令、结果和
-   关键工具版本；本地 receipt 仅复用完全相同证据，CI/发布证明仍需当前提交身份。
+   关键工具版本；CI/发布证明仍需当前提交身份。
 5. 创建关联 Issue 的 PR，核对 PR HEAD 与成功 CI 的 SHA 一致，适用检查全部通过后
    标记待维护者合并。有效门失败则修复或记录精确阻断；不以跳过门禁取得绿灯。
 6. 维护者决定合并。分批任务等待前置 PR 合并再开始依赖批，全部验收成立后才关闭任务。

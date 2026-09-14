@@ -12,19 +12,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import tooling.agent_harness.evidence as evidence_module
 import tooling.agent_harness.hook as hook_module
-from tooling.agent_harness.evidence import (
-    change_manifest,
-    changed_paths,
-    diff_digest,
-)
 from tooling.agent_harness.hook import (
     VerificationResult,
+    changed_paths,
     classify_diff,
     extract_python_paths,
     policy_violation,
-    receipt_path,
     verification_commands,
     verification_decision,
 )
@@ -47,33 +41,6 @@ def _commit_file(root: Path, relative: str, content: str) -> Path:
     subprocess.run(["git", "add", relative], cwd=root, check=True)
     subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
     return target
-
-
-def _fixture_manifest(
-    paths: tuple[str, ...], *, forbidden: tuple[str, ...] = ()
-) -> dict[str, object]:
-    return {
-        "schema_version": 2,
-        "base_sha": "base",
-        "head_sha": "head",
-        "git_object_format": "sha1",
-        "changes": {
-            path: {
-                "status": {"index": "?", "worktree": "?"},
-                "index": {"state": "absent"},
-                "worktree": {
-                    "state": "present",
-                    "kind": "file",
-                    "mode": "0644",
-                    "sha256": "0" * 64,
-                },
-            }
-            for path in paths
-        },
-        "configs": {},
-        "repository_policy": {"forbidden_package_manager_paths": list(forbidden)},
-        "tools": {"project_python": "Python fixture"},
-    }
 
 
 class PathExtractionTests(unittest.TestCase):
@@ -170,154 +137,6 @@ class PathExtractionTests(unittest.TestCase):
             subprocess.run(["git", "mv", "old.py", "new.py"], cwd=root, check=True)
 
             assert changed_paths(root) == ["new.py", "old.py"]
-
-    def test_untracked_content_change_invalidates_digest(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(
-                ["git", "config", "user.email", "fixture@example.com"],
-                cwd=root,
-                check=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Fixture"], cwd=root, check=True
-            )
-            tracked = root / "tracked.txt"
-            tracked.write_text("tracked\n", encoding="utf-8")
-            subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
-            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
-            untracked = root / "new-source.ts"
-            untracked.write_text("export const value = 1;\n", encoding="utf-8")
-            before = diff_digest(root)
-
-            untracked.write_text("export const value = 2;\n", encoding="utf-8")
-
-            assert diff_digest(root) != before
-
-    def test_index_and_worktree_are_both_bound_into_digest(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            _initialize_repository(root)
-            tracked = _commit_file(root, "tracked.py", "VALUE = 1\n")
-
-            with patch(
-                "tooling.agent_harness.evidence._tool_versions",
-                return_value={"project_python": "Python fixture"},
-            ):
-                tracked.write_text("VALUE = 2\n", encoding="utf-8")
-                subprocess.run(["git", "add", "tracked.py"], cwd=root, check=True)
-                tracked.write_text("VALUE = 3\n", encoding="utf-8")
-                before = diff_digest(root)
-                changes = change_manifest(root)["changes"]
-                assert isinstance(changes, dict)
-                before_change = changes["tracked.py"]
-
-                tracked.write_text("VALUE = 4\n", encoding="utf-8")
-                subprocess.run(["git", "add", "tracked.py"], cwd=root, check=True)
-                tracked.write_text("VALUE = 3\n", encoding="utf-8")
-                after = diff_digest(root)
-
-            assert before != after
-            assert set(before_change) >= {"index", "worktree"}
-            assert before_change["index"]["mode"] == "100644"
-
-    def test_index_mode_change_invalidates_digest(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            _initialize_repository(root)
-            tracked = _commit_file(root, "tool.py", "VALUE = 1\n")
-            with patch(
-                "tooling.agent_harness.evidence._tool_versions",
-                return_value={"project_python": "Python fixture"},
-            ):
-                before = diff_digest(root)
-                tracked.chmod(0o755)
-                subprocess.run(["git", "add", "tool.py"], cwd=root, check=True)
-                manifest = change_manifest(root)
-                assert diff_digest(root) != before
-            changes = manifest["changes"]
-            assert isinstance(changes, dict)
-            assert changes["tool.py"]["index"]["mode"] == "100755"
-
-    def test_tool_manifest_names_the_project_verifiers(self) -> None:
-        commands = evidence_module.TOOL_VERSION_COMMANDS
-        project_distributions = evidence_module.PROJECT_TOOL_DISTRIBUTIONS
-        package_manifests = evidence_module.INSTALLED_TOOL_PACKAGE_MANIFESTS
-
-        assert set(commands) >= {"bun", "node", "git", "host_python", "uv", "task"}
-        assert set(project_distributions) >= {
-            "basedpyright",
-            "coverage",
-            "import_linter",
-            "pytest",
-            "ruff",
-        }
-        assert set(package_manifests) >= {
-            "biome",
-            "dependency_cruiser",
-            "openapi_typescript",
-            "playwright",
-            "redocly",
-            "typescript",
-            "vite",
-            "vitest",
-        }
-
-    def test_installed_tool_package_versions_are_bound_without_execution(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            package = root / "node_modules" / "fixture" / "package.json"
-            package.parent.mkdir(parents=True)
-            package.write_text('{"version": "1.2.3"}\n', encoding="utf-8")
-            with (
-                patch.object(
-                    evidence_module, "_project_tool_versions", return_value={}
-                ),
-                patch.object(evidence_module, "TOOL_VERSION_COMMANDS", {}),
-                patch.object(
-                    evidence_module,
-                    "INSTALLED_TOOL_PACKAGE_MANIFESTS",
-                    {
-                        "fixture": "node_modules/fixture/package.json",
-                        "missing": "node_modules/missing/package.json",
-                    },
-                ),
-            ):
-                versions = evidence_module._tool_versions(root)
-
-        assert versions == {"fixture": "1.2.3", "missing": "unavailable"}
-
-    def test_project_tool_versions_use_one_stable_metadata_query(self) -> None:
-        expected = {
-            **{
-                name: f"{index}.0"
-                for index, name in enumerate(
-                    evidence_module.PROJECT_TOOL_DISTRIBUTIONS, start=1
-                )
-            },
-            "project_python": "3.13.14",
-        }
-        completed = subprocess.CompletedProcess(
-            args=(),
-            returncode=0,
-            stdout=json.dumps(expected),
-            stderr="",
-        )
-        with patch.object(
-            evidence_module.subprocess, "run", return_value=completed
-        ) as run_mock:
-            versions = evidence_module._project_tool_versions(Path("/workspace"))
-
-        assert versions["project_python"] == "3.13.14"
-        assert versions["basedpyright"] == expected["basedpyright"]
-        assert set(versions) == {
-            *evidence_module.PROJECT_TOOL_DISTRIBUTIONS,
-            "project_python",
-        }
-        assert run_mock.call_count == 1
-        assert Path(run_mock.call_args.args[0][0]).name in {"python", "python.exe"}
-        assert ".venv" in run_mock.call_args.args[0][0]
 
 
 class CommandPolicyTests(unittest.TestCase):
@@ -651,13 +470,8 @@ class DiffClassificationTests(unittest.TestCase):
 
 
 class StopGateTests(unittest.TestCase):
-    def test_incomplete_path_evidence_fails_closed_before_verification(self) -> None:
+    def test_no_pending_paths_passes_without_verification(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
-            changes = manifest["changes"]
-            assert isinstance(changes, dict)
-            changes["AGENTS.md"] = {}
             calls = 0
 
             def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
@@ -665,146 +479,29 @@ class StopGateTests(unittest.TestCase):
                 calls += 1
                 return VerificationResult(True, "ok")
 
-            result = verification_decision(root, manifest, succeed)
+            result = verification_decision(Path(directory), (), succeed)
 
-            assert result["decision"] == "block"
-            assert "manifest" in result["reason"].lower()
+            assert result == {}
             assert calls == 0
 
-    def test_unknown_manifest_schema_fails_closed_before_verification(self) -> None:
+    def test_failed_explicit_verification_blocks_with_summary(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
-            manifest["schema_version"] = 999
-            calls = 0
-
-            def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
-                nonlocal calls
-                calls += 1
-                return VerificationResult(True, "ok")
-
-            result = verification_decision(root, manifest, succeed)
-
-            assert result["decision"] == "block"
-            assert "manifest" in result["reason"].lower()
-            assert calls == 0
-
-    def test_stop_gate_derives_paths_and_digest_from_one_manifest(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
-
-            def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
-                return VerificationResult(True, "ok")
-
-            assert verification_decision(root, manifest, succeed) == {}
-            digest = evidence_module.manifest_digest(manifest)
-            assert receipt_path(root, digest).is_file()
-
-    def test_failed_explicit_verification_is_not_cached_as_success(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
 
             def fail(_root: Path, _level: str, _paths: object) -> VerificationResult:
                 return VerificationResult(False, "expected fixture failure")
 
-            first = verification_decision(root, manifest, fail)
-            second = verification_decision(root, manifest, fail)
+            result = verification_decision(Path(directory), ("AGENTS.md",), fail)
 
-            assert first["decision"] == "block"
-            assert "expected fixture failure" in first["reason"]
-            assert second["decision"] == "block"
-            assert not receipt_path(
-                root, evidence_module.manifest_digest(manifest)
-            ).exists()
+            assert result["decision"] == "block"
+            assert "expected fixture failure" in result["reason"]
 
-    def test_success_writes_receipt_and_skips_identical_diff(self) -> None:
+    def test_successful_verification_passes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
-            calls = 0
-
-            def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
-                nonlocal calls
-                calls += 1
-                return VerificationResult(True, "ok")
-
-            first = verification_decision(root, manifest, succeed)
-            second = verification_decision(root, manifest, succeed)
-
-            assert first == {}
-            assert second == {}
-            assert calls == 1
-            digest = evidence_module.manifest_digest(manifest)
-            assert receipt_path(root, digest).is_file()
-
-    def test_tampered_receipt_is_not_trusted(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
-            digest = evidence_module.manifest_digest(manifest)
-            calls = 0
-
-            def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
-                nonlocal calls
-                calls += 1
-                return VerificationResult(True, "ok")
-
-            verification_decision(root, manifest, succeed)
-            receipt_path(root, digest).write_text("{}\n", encoding="utf-8")
-
-            assert verification_decision(root, manifest, succeed) == {}
-            assert calls == 2
-
-    def test_receipt_evidence_must_match_its_digest(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            _initialize_repository(root)
-            tracked = _commit_file(root, "AGENTS.md", "baseline\n")
-            tracked.write_text("changed\n", encoding="utf-8")
-            calls = 0
-
-            def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
-                nonlocal calls
-                calls += 1
-                return VerificationResult(True, "ok")
-
-            with patch(
-                "tooling.agent_harness.evidence._tool_versions",
-                return_value={"project_python": "Python fixture"},
-            ):
-                manifest = change_manifest(root)
-            digest = evidence_module.manifest_digest(manifest)
-            verification_decision(root, manifest, succeed)
-            cached = receipt_path(root, digest)
-            receipt = json.loads(cached.read_text(encoding="utf-8"))
-            receipt["evidence"]["tools"] = {"project_python": "tampered"}
-            cached.write_text(json.dumps(receipt), encoding="utf-8")
-
-            verification_decision(root, manifest, succeed)
-
-            assert calls == 2
-
-    def test_successful_receipt_is_replaced_atomically(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
-            digest = evidence_module.manifest_digest(manifest)
 
             def succeed(_root: Path, _level: str, _paths: object) -> VerificationResult:
                 return VerificationResult(True, "ok")
 
-            cached = receipt_path(root, digest)
-            cached.parent.mkdir(parents=True)
-            cached.write_text("{}\n", encoding="utf-8")
-            previous_inode = cached.stat().st_ino
-
-            verification_decision(root, manifest, succeed)
-
-            assert cached.stat().st_ino != previous_inode
-            loaded = json.loads(cached.read_text(encoding="utf-8"))
-            assert loaded["digest"] == digest
+            assert verification_decision(Path(directory), ("AGENTS.md",), succeed) == {}
 
     def test_forbidden_package_manager_file_blocks_before_verification(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -821,29 +518,15 @@ class StopGateTests(unittest.TestCase):
                 calls += 1
                 return VerificationResult(True, "ok")
 
-            with patch(
-                "tooling.agent_harness.evidence._tool_versions",
-                return_value={"project_python": "Python fixture"},
-            ):
-                manifest = change_manifest(root)
-            result = verification_decision(root, manifest, succeed)
+            result = verification_decision(root, ("AGENTS.md",), succeed)
 
             assert result["decision"] == "block"
             assert "pnpm-workspace.yaml" in result["reason"]
             assert calls == 0
 
-    def test_no_tracked_diff_passes_without_receipt(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(())
-            result = verification_decision(root, manifest)
-            assert result == {}
-            digest = evidence_module.manifest_digest(manifest)
-            assert not receipt_path(root, digest).exists()
-
 
 class HostEntryPointTests(unittest.TestCase):
-    def test_explicit_check_fails_when_repository_evidence_cannot_be_captured(
+    def test_explicit_check_fails_when_changed_paths_cannot_be_captured(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -854,7 +537,7 @@ class HostEntryPointTests(unittest.TestCase):
                 patch.object(hook_module, "git_root", return_value=root),
                 patch.object(
                     hook_module,
-                    "change_manifest",
+                    "changed_paths",
                     side_effect=RuntimeError("git status failed"),
                 ),
             ):
@@ -958,28 +641,6 @@ class LifecycleLatencyTests(unittest.TestCase):
                 assert process.returncode == 0, errors
                 assert "decision" not in json.loads(output)
                 assert not (root / ".git/ditto-agent-harness/receipts").exists()
-
-    def test_explicit_check_records_and_reuses_successful_verification(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            manifest = _fixture_manifest(("AGENTS.md",))
-            with (
-                patch.object(sys, "argv", ["hook.py", "--event", "check-changed"]),
-                patch.object(sys, "stdout", io.StringIO()),
-                patch.object(hook_module, "git_root", return_value=root),
-                patch.object(hook_module, "change_manifest", return_value=manifest),
-                patch.object(
-                    hook_module,
-                    "run_verification",
-                    return_value=VerificationResult(True, "passed"),
-                ) as verify,
-            ):
-                assert hook_module.main() == 0
-                assert hook_module.main() == 0
-            assert verify.call_count == 1
-            assert receipt_path(
-                root, evidence_module.manifest_digest(manifest)
-            ).is_file()
 
     def test_post_edit_does_not_solve_or_install_an_environment(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
