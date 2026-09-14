@@ -476,7 +476,8 @@ def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
         "from ditto_analysis.experiments import FoldPersistenceSpec",
         near_miss,
     ) == [
-        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist (production-package ban: import-linter production-no-analysis)"
+        f"{near_miss}: application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 
@@ -493,7 +494,8 @@ def test_creation_identity_is_exactly_allowed_to_wire_analysis_contracts():
 
     assert check_application_analysis_import_allowlist(source, rel_path) == []
     assert check_application_analysis_import_allowlist(source, near_miss) == [
-        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist (production-package ban: import-linter production-no-analysis)"
+        f"{near_miss}: application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 
@@ -529,7 +531,8 @@ def test_experiment_runtime_wiring_allowances_are_exact_paths(filename: str) -> 
 
     assert check_application_analysis_import_allowlist(source, rel_path) == []
     assert check_application_analysis_import_allowlist(source, near_miss) == [
-        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist (production-package ban: import-linter production-no-analysis)"
+        f"{near_miss}: application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 
@@ -543,7 +546,8 @@ def test_walk_forward_collection_allows_analysis_only_at_exact_path() -> None:
 
     assert check_application_analysis_import_allowlist(source, rel_path) == []
     assert check_application_analysis_import_allowlist(source, near_miss) == [
-        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist (production-package ban: import-linter production-no-analysis)"
+        f"{near_miss}: application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 
@@ -569,8 +573,8 @@ def test_application_provider_near_miss_cannot_import_analysis():
 
     assert errors == [
         "packages/application/src/ditto_application/providers_extra.py: "
-        "application imports ditto_analysis outside the wiring allowlist "
-        "(production-package ban: import-linter production-no-analysis)"
+        "application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 
@@ -582,8 +586,8 @@ def test_application_provider_directory_near_miss_cannot_import_analysis():
 
     assert errors == [
         "packages/application/src/ditto_application/providers/extra.py: "
-        "application imports ditto_analysis outside the wiring allowlist "
-        "(production-package ban: import-linter production-no-analysis)"
+        "application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 
@@ -595,8 +599,8 @@ def test_ordinary_application_query_cannot_import_analysis():
 
     assert errors == [
         "packages/application/src/ditto_application/queries/market.py: "
-        "application imports ditto_analysis outside the wiring allowlist "
-        "(production-package ban: import-linter production-no-analysis)"
+        "application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 
@@ -608,8 +612,8 @@ def test_research_query_near_miss_cannot_import_analysis():
 
     assert errors == [
         "packages/application/src/ditto_application/queries/research_extra.py: "
-        "application imports ditto_analysis outside the wiring allowlist "
-        "(production-package ban: import-linter production-no-analysis)"
+        "application imports ditto_analysis "
+        "outside the wiring allowlist"
     ]
 
 

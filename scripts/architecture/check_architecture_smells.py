@@ -1721,9 +1721,8 @@ def check_application_analysis_import_allowlist(
         return []
     if _has_import(source, "ditto_analysis"):
         msg = (
-            f"{rel_path}: application imports ditto_analysis outside the "
-            "wiring allowlist (production-package ban: import-linter "
-            "production-no-analysis)"
+            f"{rel_path}: application imports ditto_analysis "
+            "outside the wiring allowlist"
         )
         return [msg]
     return []
