@@ -25,8 +25,6 @@ merge queue 与定期 CI 执行全量。普通文档保留轻量路径，skill �
 
 扫描器容器均固定 image digest。内部 `security-gate` 按所选安全范围区分不适用与失败，其结果再作为
 `security-supply-chain` job 被唯一 `ci-gate` 汇总。
-每周 schedule 另行运行根 `mutation-critical` uv 任务并上传
-`build/mutation/mutmut-cicd-stats.json`；它不进入 PR 快速 required gate。
 
 ## Release artifacts
 

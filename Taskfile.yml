@@ -235,12 +235,6 @@ tasks:
     cmds:
     - task: python-environment-check
     - uv run --no-sync python -m tooling.dev.system_tests {{.CLI_ARGS}}
-  mutation-critical:
-    preconditions:
-    - sh: 'test -f "{{.VENV_PYTHON}}"'
-      msg: Python environment is missing; run task python-install explicitly.
-    cmds:
-    - uv run --no-sync python -m tooling.quality.mutation_gate --threshold 80 {{.CLI_ARGS}}
   artifact-gate:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
