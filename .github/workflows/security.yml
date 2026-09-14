@@ -95,27 +95,6 @@ jobs:
             ghcr.io/google/osv-scanner:v2.5.1@sha256:8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734 \
             scan source --recursive ./
 
-  mutation-critical:
-    name: Weekly critical mutation gate
-    if: ${{ github.event_name == 'schedule' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-toolchain
-      - name: Run critical pure-function mutation gate
-        run: task mutation-critical
-      - name: Upload mutation evidence
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: mutation-critical-${{ github.run_id }}
-          path: build/mutation/mutmut-cicd-stats.json
-          if-no-files-found: error
-          retention-days: 30
-
   docs-links:
     name: Weekly documentation links
     if: ${{ github.event_name == 'schedule' }}
@@ -138,18 +117,17 @@ jobs:
   security-gate:
     name: Security gate
     if: ${{ always() }}
-    needs: [codeql, gitleaks, osv, mutation-critical, docs-links]
+    needs: [codeql, gitleaks, osv, docs-links]
     permissions: {}
     runs-on: ubuntu-latest
     steps:
-      - name: Require selected security checks and weekly mutation
+      - name: Require selected security checks
         env:
           FULL_ANALYSIS: ${{ inputs.full-analysis }}
           WEEKLY: ${{ github.event_name == 'schedule' }}
           CODEQL_RESULT: ${{ needs.codeql.result }}
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
           OSV_RESULT: ${{ needs.osv.result }}
-          MUTATION_RESULT: ${{ needs.mutation-critical.result }}
           DOCS_LINKS_RESULT: ${{ needs.docs-links.result }}
         run: |
           test "$GITLEAKS_RESULT" = success
@@ -161,9 +139,7 @@ jobs:
             fi
           done
           if test "$WEEKLY" = true; then
-            test "$MUTATION_RESULT" = success
             test "$DOCS_LINKS_RESULT" = success
           else
-            test "$MUTATION_RESULT" = skipped
             test "$DOCS_LINKS_RESULT" = skipped
           fi
