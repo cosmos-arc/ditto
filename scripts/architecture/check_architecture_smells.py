@@ -33,16 +33,10 @@ MIN_BACKEND_SOURCE_PATH_PARTS = 4
 
 # Known safe metric/config names in platform that contain business prefixes.
 
-PRODUCTION_PACKAGES = (
-    "ditto_data",
-    "ditto_features",
-    "ditto_strategy",
-    "ditto_portfolio",
-    "ditto_risk",
-    "ditto_execution",
-    "ditto_backtest",
-    "ditto_application",
-)
+# The production-package ditto_analysis ban (data/features/strategy/portfolio/
+# risk/execution/backtest) is owned solely by the import-linter contract
+# `production-no-analysis`; this script only polices the application wiring
+# allowlist below.
 
 
 @dataclass(frozen=True)
@@ -54,7 +48,7 @@ class CompositionImportAllowance:
 
 
 @dataclass(frozen=True)
-class ProductionAnalysisWiringAllowance:
+class ApplicationAnalysisWiringAllowance:
     path: str
     owner: str
     reason: str
@@ -693,8 +687,8 @@ APPS_REGISTRY_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
     for allowance in APPS_REGISTRY_COMPOSITION_ALLOWANCES
 }
 
-PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
-    ProductionAnalysisWiringAllowance(
+APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/providers.py",
         owner="application DI providers",
         reason=(
@@ -703,7 +697,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "directly depend on analysis."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/providers_market.py",
         owner="application DI providers",
         reason=(
@@ -712,7 +706,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "not directly depend on analysis."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/providers_portfolio.py",
         owner="application DI providers",
         reason=(
@@ -721,7 +715,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "on analysis."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/providers_strategy.py",
         owner="application DI providers",
         reason=(
@@ -730,7 +724,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "on analysis."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/providers_process.py",
         owner="application research process DI provider",
         reason=(
@@ -738,7 +732,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "ports into the application research planning boundary."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/providers_research_memory.py"
         ),
@@ -748,7 +742,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "persistence ports into PIT read and governed mutation facades."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/commands/campaign_manifest.py"
         ),
@@ -758,7 +752,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "Analysis-owned immutable Campaign values without storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=("packages/application/src/ditto_application/commands/research_memory.py"),
         owner="R5 governed research-memory command boundary",
         reason=(
@@ -766,7 +760,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "before append-only writes; Agent consumers use pure leaf contracts."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=("packages/application/src/ditto_application/queries/research_memory.py"),
         owner="R5 PIT research-memory query boundary",
         reason=(
@@ -774,7 +768,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "content-addressed Application read model."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/research_memory_contracts.py"
         ),
@@ -784,7 +778,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "scope and content-hash value types at the governed write boundary."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/execution/"
             "_research_replay_artifacts.py"
@@ -796,7 +790,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "performs no storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "evidence.py"
@@ -808,7 +802,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_selection_evidence_artifact.py"
@@ -820,7 +814,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "storage access remains behind approved reader and artifact ports."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "selection_evidence_reader.py"
@@ -833,7 +827,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "it performs no storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "comparison_reader.py"
@@ -846,7 +840,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "performs no storage writes or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/strategy/promotion.py"
         ),
@@ -857,7 +851,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "it performs no direct storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "coordinator.py"
@@ -869,7 +863,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "store; it owns no persistence implementation."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_coordinator_stage_drivers.py"
@@ -882,7 +876,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "coordinator; they perform no direct storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_coordinator_vocabulary.py"
@@ -895,7 +889,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "result builder; it performs no storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_scheduler_models.py"
@@ -908,7 +902,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "store, coordinator and worker; they perform no storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/queries/"
             "_experiment_review_read_models.py"
@@ -921,7 +915,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "perform no storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/commands/strategy_governance.py"
         ),
@@ -932,7 +926,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "promotion process; it performs no direct storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_control_runtime.py"
@@ -945,7 +939,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "execution_bundle.py"
@@ -957,7 +951,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "it performs no storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_comparison_evidence.py"
@@ -968,7 +962,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "identity, and persistence value types without storage writes."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_factor_diagnostics_evidence.py"
@@ -979,7 +973,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "fold, snapshot, and content identities to a diagnostics projection."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_oos_fold_registration.py"
@@ -990,7 +984,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "value contracts for the approved walk-forward protocol."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_persisted_execution_evidence.py"
@@ -1001,7 +995,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "fold and terminal-attempt projections loaded through the reader port."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_report_evidence.py"
@@ -1012,7 +1006,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "the complete result fields consumed by R3 metrics."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_report_artifact_validation.py"
@@ -1024,7 +1018,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "pure and performs no storage or file I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_walk_forward_evidence.py"
@@ -1035,7 +1029,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "identities without persistence or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_walk_forward_evidence_collection.py"
@@ -1047,7 +1041,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "through a narrow reader port; it performs no writes or execution."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_walk_forward_execution_semantics.py"
@@ -1059,7 +1053,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "no storage writes or execution."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "comparison.py"
@@ -1070,7 +1064,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "to versioned analysis-owned metric projections."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "trial_evidence_bridge.py"
@@ -1081,7 +1075,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "analysis-owned logical trial outcomes without persistence I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "walk_forward.py"
@@ -1092,7 +1086,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "from validated out-of-sample result evidence."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_execution_resolution_evidence.py"
@@ -1104,7 +1098,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "moving-state fallback."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "lease_authority.py"
@@ -1115,7 +1109,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "and normalizes lease and integrity failures before application writes."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "scheduler_store.py"
@@ -1126,7 +1120,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "writer, revision, and lease-fence contracts for first-run scheduling."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/worker.py"
         ),
@@ -1136,7 +1130,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "and failure contracts while delegating numerical work to BacktestService."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "planning.py"
@@ -1147,7 +1141,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "that is frozen into the approved launch contract; it performs no I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "planning_process.py"
@@ -1158,7 +1152,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "identities and delegates persistence through narrow protocols."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "planning_contracts.py"
@@ -1169,7 +1163,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "policy selected by the operator; it contains no orchestration or I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_executor_probe.py"
@@ -1180,7 +1174,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "before and after calling an untrusted executor adapter."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_launch_material.py"
@@ -1191,7 +1185,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "before computing the operator-confirmed content hash."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_creation_identity.py"
@@ -1202,7 +1196,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "revision-zero event and reader projection before planning probes."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_launch_saga.py"
@@ -1213,7 +1207,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "analysis experiment reader and writer protocols."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_launch_contracts.py"
@@ -1224,7 +1218,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "rows shared by compilation, strict replay, and persistence."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_launch_durable_reconstruction.py"
@@ -1235,7 +1229,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "gate, and fold rows before any durable enqueue can be replayed."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_launch_idempotency.py"
@@ -1246,7 +1240,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "analysis-owned experiment event and projection contracts."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_mutation_receipts.py"
@@ -1257,7 +1251,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "and persists control responses through the approved scheduler port."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_planning_launch.py"
@@ -1268,7 +1262,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "experiment launch contracts after read-only preflight planning."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_scheduler_mutations.py"
@@ -1279,7 +1273,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "and fold retry operations over the approved analysis persistence ports."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_launch_reconstruction.py"
@@ -1290,7 +1284,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "gate, and fold value rows before the saga's first writer call."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_preflight_codec.py"
@@ -1301,7 +1295,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "window, failure-policy, and canonical payload identities."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/research_validation_windows.py"
         ),
@@ -1311,7 +1305,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "and fold-role value contracts without storage or runtime I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/queries/experiments.py",
         owner="application experiment query facade",
         reason=(
@@ -1319,7 +1313,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "for durable analysis control-plane reads."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/queries/research.py",
         owner="application research query facade",
         reason=(
@@ -1328,7 +1322,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "instead of importing analysis directly."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/queries/"
             "research_certification.py"
@@ -1339,7 +1333,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "research snapshot through the approved analysis catalog boundary."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/queries/research_helpers.py",
         owner="application research query facade (extracted helpers)",
         reason=(
@@ -1347,7 +1341,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "analysis import allowance as the parent facade module."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/builders/"
             "research_input_resolver.py"
@@ -1359,7 +1353,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "frozen input trust boundary; it performs no storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/builders/"
             "research_artifact_loader.py"
@@ -1372,7 +1366,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "no storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/providers_research_execution.py"
         ),
@@ -1384,7 +1378,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "ports that are already registered in the host container."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_evidence_inputs.py"
@@ -1396,7 +1390,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "CandidateFoldEvidence rows; it performs no storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "evidence_collector.py"
@@ -1410,7 +1404,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "ExperimentReaderProtocol and ExperimentWriterProtocol."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_fold_selection_trace_artifacts.py"
@@ -1424,7 +1418,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "it performs no storage or execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_fold_selection_trace_artifact_validation.py"
@@ -1438,7 +1432,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "execution I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/builders/"
             "fold_selection_trace_artifact_adapter.py"
@@ -1453,7 +1447,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "and reader ports and the adapter performs no direct storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_autonomous_campaign_contracts.py"
@@ -1465,7 +1459,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "scheduler ports consumed by the host coordinator; they perform no I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_autonomous_campaign_authorization.py"
@@ -1477,7 +1471,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "persistence remains behind injected protocols."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "_autonomous_campaign_support.py"
@@ -1489,7 +1483,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "injected reader and writer protocols; it owns no storage implementation."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "autonomous_campaign.py"
@@ -1501,7 +1495,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "campaign facts through narrow injected ports."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "campaign_scheduler.py"
@@ -1513,7 +1507,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "application scheduler-store protocol."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "candidate_sandbox_port.py"
@@ -1525,7 +1519,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "it performs no sandbox or storage I/O."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "generated_candidate_evaluator.py"
@@ -1537,7 +1531,7 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "consumes analysis-owned campaign identities without storage access."
         ),
     ),
-    ProductionAnalysisWiringAllowance(
+    ApplicationAnalysisWiringAllowance(
         path=(
             "packages/application/src/ditto_application/processes/experiments/"
             "generated_candidate_pit.py"
@@ -1710,31 +1704,26 @@ def check_missing_dunder_all(root: Path = ROOT) -> list[str]:
     return errors
 
 
-def _matches_production_analysis_wiring_allowance(rel_path: str) -> bool:
+def _matches_application_analysis_wiring_allowance(rel_path: str) -> bool:
     return any(
         rel_path == allowance.path
-        for allowance in PRODUCTION_ANALYSIS_WIRING_ALLOWANCES
+        for allowance in APPLICATION_ANALYSIS_WIRING_ALLOWANCES
     )
 
 
-def check_production_no_analysis(source: str, rel_path: str) -> list[str]:
-    """Check production packages do not import ditto_analysis."""
-    if not _is_package_source(rel_path, *PRODUCTION_PACKAGES):
+def check_application_analysis_import_allowlist(
+    source: str, rel_path: str
+) -> list[str]:
+    """Check application imports ditto_analysis only at approved wiring paths."""
+    if not _is_package_source(rel_path, "ditto_application"):
         return []
-    if _matches_production_analysis_wiring_allowance(rel_path):
+    if _matches_application_analysis_wiring_allowance(rel_path):
         return []
     if _has_import(source, "ditto_analysis"):
-        msg = f"{rel_path}: production imports ditto_analysis (check import-linter)"
-        return [msg]
-    return []
-
-
-def check_kernel_no_platform(source: str, rel_path: str) -> list[str]:
-    """Check kernel does not import ditto_platform."""
-    if not _is_package_source(rel_path, "ditto_kernel"):
-        return []
-    if _has_import(source, "ditto_platform"):
-        msg = f"{rel_path}: kernel imports ditto_platform (must be platform-free)"
+        msg = (
+            f"{rel_path}: application imports ditto_analysis "
+            "outside the wiring allowlist"
+        )
         return [msg]
     return []
 
@@ -2128,8 +2117,7 @@ def _check_per_file() -> list[str]:
             continue
 
         rel_path = str(path.relative_to(ROOT))
-        errors.extend(check_production_no_analysis(source, rel_path))
-        errors.extend(check_kernel_no_platform(source, rel_path))
+        errors.extend(check_application_analysis_import_allowlist(source, rel_path))
         errors.extend(check_execution_no_simulation_ownership(source, rel_path))
         errors.extend(check_execution_sqlite_legacy_not_extension_point(rel_path))
         errors.extend(check_apps_non_registry_capability_imports(source, rel_path))

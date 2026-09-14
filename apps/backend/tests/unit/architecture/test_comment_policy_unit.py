@@ -19,7 +19,7 @@ def test_comments_and_size_do_not_invent_dependency_violations(
     monkeypatch.setattr(checker, "ROOT", tmp_path)
     monkeypatch.setattr(checker, "iter_source_files", lambda: [source])
     assert checker._check_per_file() == []
-    assert checker.check_production_no_analysis(
+    assert checker.check_application_analysis_import_allowlist(
         "from ditto_analysis import actual_api",
-        "packages/execution/src/ditto_execution/example.py",
+        "packages/application/src/ditto_application/example.py",
     )
