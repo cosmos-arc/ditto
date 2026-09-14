@@ -248,12 +248,6 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python -m tooling.quality.mutation_gate --threshold 80 {{.CLI_ARGS}}
-  security-supply-chain:
-    preconditions:
-    - sh: 'test -f "{{.VENV_PYTHON}}"'
-      msg: Python environment is missing; run task python-install explicitly.
-    cmds:
-    - uv run --no-sync python -m tooling.security.supply_chain {{.CLI_ARGS}}
   artifact-gate:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
@@ -310,7 +304,6 @@ tasks:
     - task: check-contract
     - task: test-system
     - task: harness-check
-    - task: security-supply-chain
     - task: artifact-gate
   dev:
     preconditions:

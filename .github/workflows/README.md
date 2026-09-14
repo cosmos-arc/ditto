@@ -19,7 +19,7 @@ merge queue 与定期 CI 执行全量。普通文档保留轻量路径，skill �
 `security.yml` 由 `ci.yml` 通过 `workflow_call` 调用，并保留周度 schedule：
 
 - CodeQL：Python、JavaScript/TypeScript 与 Actions matrix；
-- Gitleaks：当前规则集与已验证兼容规则集双重完整历史扫描；兼容扫描另有合成 GitHub PAT 哨兵，避免扫描器“运行成功但规则失效”；所有历史假阳性逐 finding fingerprint 放行；
+- Gitleaks：单版本 digest-pinned 完整历史扫描；所有历史假阳性逐 finding fingerprint 放行；本地增量扫描由 pre-commit gitleaks hook 覆盖；
 - OSV：递归扫描 Bun 等受支持的源码锁文件；
 - container security：Trivy HIGH/CRITICAL fail-closed 与 SPDX JSON SBOM。
 

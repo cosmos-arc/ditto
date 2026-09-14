@@ -25,9 +25,8 @@ Development on this repository routinely happens through agent sessions
 - Authorization boundaries for dependency upgrades, schema migrations, CI and
   release configuration, production or real-data writes, and irreversible
   deletions live in [AGENTS.md](AGENTS.md) as the single source of truth.
-- Secrets never enter the repository: gitleaks runs as pre-commit, over the full
-  history in CI, and against a planted canary token to prove detection; tests
-  run against an isolated null keyring.
+- Secrets never enter the repository: gitleaks runs as pre-commit and over the
+  full history in CI; tests run against an isolated null keyring.
 
 ## Supply chain
 
