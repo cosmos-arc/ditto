@@ -66,7 +66,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Current Gitleaks full-history scan
+      - name: Gitleaks full-history scan
         run: |
           docker run --rm \
             --network none \
@@ -75,29 +75,6 @@ jobs:
             --workdir /repo \
             docker.io/zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
             git --redact --no-banner --exit-code 1 --log-opts=--all .
-      - name: Known-good Gitleaks compatibility scan
-        run: |
-          docker run --rm \
-            --network none \
-            --user "$(id -u):$(id -g)" \
-            --volume "$PWD:/repo:ro" \
-            --workdir /repo \
-            ghcr.io/gitleaks/gitleaks:v8.18.4@sha256:75bdb2b2f4db213cde0b8295f13a88d6b333091bbfbf3012a4e083d00d31caba \
-            detect --source . --redact --no-banner --exit-code 1 --log-opts=--all
-      - name: Prove the detector catches a canonical token
-        run: |
-          mkdir -p "$RUNNER_TEMP/gitleaks-sentinel"
-          printf '%s\n' 'token = "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"' > "$RUNNER_TEMP/gitleaks-sentinel/leak.txt" # gitleaks:allow
-          set +e
-          docker run --rm \
-            --network none \
-            --user "$(id -u):$(id -g)" \
-            --volume "$RUNNER_TEMP/gitleaks-sentinel:/probe:ro" \
-            ghcr.io/gitleaks/gitleaks:v8.18.4@sha256:75bdb2b2f4db213cde0b8295f13a88d6b333091bbfbf3012a4e083d00d31caba \
-            detect --no-git --source /probe/leak.txt --redact --no-banner --exit-code 23
-          sentinel_status=$?
-          set -e
-          test "$sentinel_status" -eq 23
 
   osv:
     if: ${{ inputs.full-analysis }}

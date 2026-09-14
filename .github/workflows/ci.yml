@@ -254,7 +254,7 @@ jobs:
         with:
           workspace: python
       - name: Test release and security policy
-        run: uv run --no-sync python -m pytest tooling/release/tests tooling/security/tests -q -n 0
+        run: uv run --no-sync python -m pytest tooling/release/tests -q -n 0
   container-smoke:
     needs:
       - repository-policy

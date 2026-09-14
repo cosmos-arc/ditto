@@ -25,7 +25,7 @@
 | `pyright.tests.json` | 测试代码独立 basedpyright 配置（basic 模式 + extraPaths） | `scripts/type.py` 以 `--project pyright.tests.json` 显式调用 |
 | `.importlinter` | import-linter 架构契约：依赖边界的机器权威 | `task lint-imports`（import-linter 默认读根路径） |
 | `.pre-commit-config.yaml` | pre-commit 钩子：ruff、gitleaks、conventional commits、pre-push | `task pre-commit-install/run/update`；evidence 指纹 |
-| `.gitleaks.toml` | gitleaks 配置（extend 默认规则集） | security workflow 双版本容器扫描；pre-commit gitleaks hook |
+| `.gitleaks.toml` | gitleaks 配置（extend 默认规则集） | security workflow 单版本容器扫描；pre-commit gitleaks hook |
 | `.gitleaksignore` | 已审计误报指纹（commit:path:rule:line 精确到行） | security workflow 扫描必须全过；策略测试禁止宽泛排除 |
 | `.knowledge-policy.toml` | 机器输入位置哨兵 | `task harness-validate`(tooling/agent_harness/validate) |
 | `.redocly.yaml` | OpenAPI lint 配置 | `task contract-static`；integrator lease 单写路径 |
@@ -52,7 +52,7 @@ IDE 抑制语义依赖「一个 pyright 项目只有一个配置文件」的机�
 | `packages/` | 13 个能力包（kernel 零依赖核心 → application 编排 → agent 消费者），各含 AGENTS.md | `.importlinter` 契约；pytest testpaths |
 | `apps/` | `backend`（唯一 Python composition root，FastAPI/CLI/Jobs）与 `web`（React SPA） | Taskfile、release workflow |
 | `contracts/` | 跨栈契约：`openapi/v1.json` 快照、`cohorts/` 兼容策略 | `task check-contract`；release cohort 验证 |
-| `tooling/` | 内部工具包：agent_harness / contracts / dev / quality / release / security | Taskfile 全量；CI 各 job |
+| `tooling/` | 内部工具包：agent_harness / contracts / dev / quality / release | Taskfile 全量；CI 各 job |
 | `scripts/` | 任务图辅助脚本（type/test/architecture/analyze-slow-tests）+ 验收与证据工具 | 见下节 |
 | `config/` | 运行时配置：`default/` DQ 规则与环境 `.env` 域文件 | platform config loader `config/{environment}/*.env` |
 | `deploy/` | docker / observability / agent-sandbox 三分支部署材料 | release workflow；sandbox 验收脚本 |
