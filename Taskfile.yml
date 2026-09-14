@@ -180,7 +180,7 @@ tasks:
     dir: apps/web
   web-prototype:
     cmds:
-    - bun run test:prototype {{.CLI_ARGS}}
+    - bun run test:prototype-dom {{.CLI_ARGS}}
     dir: apps/web
   web-static:
     cmds:

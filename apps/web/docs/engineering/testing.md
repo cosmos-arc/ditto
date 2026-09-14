@@ -4,7 +4,7 @@
 
 ## 入口与环境
 
-从 Web workspace 执行 `bun run test:unit` 验证 src 单元行为，`bun run test:coverage` 同时生成覆盖证据，`bun run test:prototype` 验证 scripts 下的原型、视觉和工具合同。覆盖阈值以 `vitest.config.ts` 为准，保留独立的高风险分支阈值。
+从 Web workspace 执行 `bun run test:unit` 验证 src 单元行为，`bun run test:coverage` 同时生成覆盖证据，`bun run test:prototype-dom` 验证 scripts 下的原型、视觉和工具合同。覆盖阈值以 `vitest.config.ts` 为准，保留独立的高风险分支阈值。
 
 从仓库根执行 `task check-web` 做日常 Web 验证，`task web-ci` 做 Web 完整验证，`task test-system` 验证 production Web 与隔离 API。Bun 不再有独立 check/ci 编排。
 

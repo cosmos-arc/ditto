@@ -14,7 +14,6 @@
     "test": "node --import ../../tooling/dev/node-runtime.mjs node_modules/vitest/vitest.mjs",
     "test:run": "bun run test:unit",
     "test:unit": "node --import ../../tooling/dev/node-runtime.mjs node_modules/vitest/vitest.mjs run src",
-    "test:prototype": "node --import ../../tooling/dev/node-runtime.mjs node_modules/vitest/vitest.mjs run scripts",
     "test:coverage": "bun run routes:generate && node --import ../../tooling/dev/node-runtime.mjs node_modules/vitest/vitest.mjs run src --coverage",
     "routes:generate": "bun scripts/generate-route-tree.mjs",
     "deps:check": "bun scripts/run-dependency-cruise.mjs",
@@ -35,7 +34,8 @@
     "build:tokens": "bun scripts/export-tokens.ts",
     "build:tokens:check": "bun scripts/export-tokens.ts --check",
     "audit:tokens:diff": "bun scripts/audit-token-diff.mjs",
-    "generate-contracts": "bun scripts/page-contract/generate.mjs"
+    "generate-contracts": "bun scripts/page-contract/generate.mjs",
+    "test:prototype-dom": "node --import ../../tooling/dev/node-runtime.mjs node_modules/vitest/vitest.mjs run scripts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",

@@ -290,6 +290,17 @@ def _run_primary_cohort(
         )
         _run_playwright(root, node, "cohort.spec.ts", environment)
 
+        # Real product flows through the actual UI: research and portfolio
+        # views, then paper onboarding to order readback, all against the
+        # same isolated real backend before the failure-mode specs tear it down.
+        _run_playwright(
+            root,
+            node,
+            "product-research-portfolio.spec.ts",
+            environment,
+        )
+        _run_playwright(root, node, "product-paper-trading.spec.ts", environment)
+
         # A refused connection proves the built Web does not fall back to mocks.
         terminate_managed(api_process)
         api_process = None
