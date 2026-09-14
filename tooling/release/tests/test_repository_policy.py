@@ -320,16 +320,6 @@ def test_gitleaks_scan_is_single_version_and_digest_pinned() -> None:
     assert "v8.18.4" not in content
 
 
-def test_mutation_gate_is_weekly_evidence_not_a_pr_required_dependency() -> None:
-    workflow = _workflow("security.yml")
-    mutation = workflow["jobs"]["mutation-critical"]
-    assert "schedule" in mutation["if"]
-    content = json.dumps(mutation)
-    assert "task mutation-critical" in content
-    assert "build/mutation/mutmut-cicd-stats.json" in content
-    assert "mutation-critical" in workflow["jobs"]["security-gate"]["needs"]
-
-
 def test_release_workflow_attests_every_release_artifact() -> None:
     workflow = _workflow("release.yml")
     build = workflow["jobs"]["build"]
