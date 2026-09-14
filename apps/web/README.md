@@ -44,7 +44,7 @@ task test-system
 bun run lint
 bun run type
 bun run test:unit
-bun run test:prototype
+bun run test:prototype-dom
 bun run build
 ```
 
