@@ -366,29 +366,12 @@ class HookLeaseTests(unittest.TestCase):
                 calls += 1
                 raise AssertionError("verifier must not run")
 
-            manifest = {
-                "schema_version": 2,
-                "base_sha": "base",
-                "head_sha": "head",
-                "git_object_format": "sha1",
-                "changes": {
-                    "contracts/openapi/v1.json": {
-                        "status": {"index": "?", "worktree": "?"},
-                        "index": {"state": "absent"},
-                        "worktree": {
-                            "state": "present",
-                            "kind": "file",
-                            "mode": "0644",
-                            "sha256": "0" * 64,
-                        },
-                    }
-                },
-                "configs": {},
-                "repository_policy": {"forbidden_package_manager_paths": []},
-                "tools": {"project_python": "Python fixture"},
-            }
-
-            result = verification_decision(root, manifest, verifier=verifier, now=now)
+            result = verification_decision(
+                root,
+                ("contracts/openapi/v1.json",),
+                verifier=verifier,
+                now=now,
+            )
 
             assert result["decision"] == "block"
             assert "lease" in result["reason"].lower()

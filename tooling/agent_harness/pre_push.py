@@ -43,7 +43,7 @@ def push_commands(
 
 
 def main() -> int:
-    """Run the selected local checks without issuing remote verification receipts."""
+    """Run the selected local checks for the committed push range."""
     root = Path.cwd()
     commands = push_commands(
         root,
