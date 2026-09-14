@@ -24,8 +24,8 @@ def _load_checker() -> object:
 _MOD = _load_checker()
 APPS_CAPABILITY_IMPORT_ROOTS = _MOD.APPS_CAPABILITY_IMPORT_ROOTS  # type: ignore[attr-defined]
 check_application_analysis_import_allowlist = (
-    _MOD.check_application_analysis_import_allowlist
-)  # type: ignore[attr-defined]
+    _MOD.check_application_analysis_import_allowlist  # type: ignore[attr-defined]
+)
 
 
 def test_task8_experiment_sources_forbid_type_checking_cycle_hides():
@@ -476,8 +476,7 @@ def test_launch_reconstruction_is_exactly_allowed_to_wire_analysis_contracts():
         "from ditto_analysis.experiments import FoldPersistenceSpec",
         near_miss,
     ) == [
-        f"{near_miss}: application imports ditto_analysis "
-        "outside the wiring allowlist"
+        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist"
     ]
 
 
@@ -494,8 +493,7 @@ def test_creation_identity_is_exactly_allowed_to_wire_analysis_contracts():
 
     assert check_application_analysis_import_allowlist(source, rel_path) == []
     assert check_application_analysis_import_allowlist(source, near_miss) == [
-        f"{near_miss}: application imports ditto_analysis "
-        "outside the wiring allowlist"
+        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist"
     ]
 
 
@@ -531,8 +529,7 @@ def test_experiment_runtime_wiring_allowances_are_exact_paths(filename: str) -> 
 
     assert check_application_analysis_import_allowlist(source, rel_path) == []
     assert check_application_analysis_import_allowlist(source, near_miss) == [
-        f"{near_miss}: application imports ditto_analysis "
-        "outside the wiring allowlist"
+        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist"
     ]
 
 
@@ -546,8 +543,7 @@ def test_walk_forward_collection_allows_analysis_only_at_exact_path() -> None:
 
     assert check_application_analysis_import_allowlist(source, rel_path) == []
     assert check_application_analysis_import_allowlist(source, near_miss) == [
-        f"{near_miss}: application imports ditto_analysis "
-        "outside the wiring allowlist"
+        f"{near_miss}: application imports ditto_analysis outside the wiring allowlist"
     ]
 
 
