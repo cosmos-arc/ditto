@@ -1,29 +1,21 @@
-"""Validate and advance the checked-in current/previous cohort policy."""
+"""Validate the checked-in current/previous cohort policy consumed by the Web build."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import os
 import re
-import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict, cast
-
-from tooling.release.cohort_verify import (
-    CohortVerificationError,
-    verify_cohort_manifest,
-)
 
 __all__ = [
     "CompatibilityPolicy",
     "CompatibilityPolicyError",
     "load_compatibility_policy",
     "main",
-    "register_previous_release",
 ]
 
 POLICY_SCHEMA = "ditto.cohort-compatibility-policy"
@@ -124,52 +116,6 @@ def load_compatibility_policy(
         sha256=actual_sha256,
         document=document,
     )
-
-
-def register_previous_release(
-    policy_path: Path,
-    digest_path: Path,
-    release_manifest_path: Path,
-    output_policy_path: Path,
-    output_digest_path: Path,
-    *,
-    workspace_root: Path | None = None,
-) -> CompatibilityPolicy:
-    """Materialize a policy whose sole previous entry is one proven release."""
-    base = load_compatibility_policy(policy_path, digest_path)
-    verification_root = (
-        workspace_root
-        if workspace_root is not None
-        else release_manifest_path.expanduser().absolute().parent
-    )
-    try:
-        verified_manifest = verify_cohort_manifest(
-            workspace_root=verification_root,
-            manifest_path=release_manifest_path,
-        )
-    except CohortVerificationError as error:
-        raise CompatibilityPolicyError(
-            f"release manifest verification failed: {error}"
-        ) from error
-    release_identity = _cohort_identity(
-        verified_manifest["release"],
-        label="release manifest identity",
-    )
-    document: PolicyDocument = {
-        "api_contract_version": base.api_contract_version,
-        "current": {"source": "web_build"},
-        "previous": [release_identity],
-        "schema": POLICY_SCHEMA,
-        "schema_version": POLICY_SCHEMA_VERSION,
-    }
-    payload = _canonical_policy_bytes(document)
-    digest = hashlib.sha256(payload).hexdigest()
-    _write_atomic(output_policy_path, payload)
-    _write_atomic(
-        output_digest_path,
-        f"{digest}  {output_policy_path.name}\n".encode(),
-    )
-    return load_compatibility_policy(output_policy_path, output_digest_path)
 
 
 def _parse_policy_document(payload: bytes) -> PolicyDocument:
@@ -283,29 +229,6 @@ def _read_regular_file(path: Path, *, label: str) -> bytes:
         raise CompatibilityPolicyError(f"could not read {label}: {path}") from error
 
 
-def _write_atomic(path: Path, payload: bytes) -> None:
-    destination = path.expanduser().resolve(strict=False)
-    if path.is_symlink():
-        raise CompatibilityPolicyError("policy output cannot be a symlink")
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            dir=destination.parent,
-            prefix=f".{destination.name}.",
-            delete=False,
-        ) as stream:
-            temporary = Path(stream.name)
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        temporary.chmod(0o644)
-        temporary.replace(destination)
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
-
-
 def _canonical_policy_bytes(document: PolicyDocument) -> bytes:
     return (
         json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True).encode()
@@ -315,41 +238,25 @@ def _canonical_policy_bytes(document: PolicyDocument) -> bytes:
 
 def _parser() -> argparse.ArgumentParser:
     root = Path(__file__).resolve().parents[2]
-    default_policy = root / "contracts" / "cohorts" / "compatibility-policy.json"
-    default_digest = root / "contracts" / "cohorts" / "compatibility-policy.sha256"
     parser = argparse.ArgumentParser(description=__doc__)
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    validate = subparsers.add_parser("validate")
-    validate.add_argument("--policy", type=Path, default=default_policy)
-    validate.add_argument("--digest", type=Path, default=default_digest)
-
-    register = subparsers.add_parser("register-previous")
-    register.add_argument("--policy", type=Path, default=default_policy)
-    register.add_argument("--digest", type=Path, default=default_digest)
-    register.add_argument("--release-manifest", type=Path, required=True)
-    register.add_argument("--workspace-root", type=Path)
-    register.add_argument("--output-policy", type=Path, default=default_policy)
-    register.add_argument("--output-digest", type=Path, default=default_digest)
+    parser.add_argument(
+        "--policy",
+        type=Path,
+        default=root / "contracts" / "cohorts" / "compatibility-policy.json",
+    )
+    parser.add_argument(
+        "--digest",
+        type=Path,
+        default=root / "contracts" / "cohorts" / "compatibility-policy.sha256",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Validate the checked policy or register one proven previous release."""
+    """Validate the checked-in compatibility policy and its digest sidecar."""
     arguments = _parser().parse_args(argv)
-    if arguments.command == "validate":
-        load_compatibility_policy(arguments.policy, arguments.digest)
-        return 0
-    if arguments.command == "register-previous":
-        register_previous_release(
-            arguments.policy,
-            arguments.digest,
-            arguments.release_manifest,
-            arguments.output_policy,
-            arguments.output_digest,
-            workspace_root=arguments.workspace_root,
-        )
-        return 0
-    raise CompatibilityPolicyError(f"unsupported command: {arguments.command}")
+    load_compatibility_policy(arguments.policy, arguments.digest)
+    return 0
 
 
 if __name__ == "__main__":

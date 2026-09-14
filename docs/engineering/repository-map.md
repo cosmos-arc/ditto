@@ -17,7 +17,7 @@
 | `LICENSE` | 许可证 | 法律必需 |
 | `Taskfile.yml` | 唯一跨栈任务 DAG；所有 `task` 入口 | CI workflows 全量调用；evidence `FINGERPRINT_CONFIGS`；hook `_is_harness` |
 | `pyproject.toml` | uv workspace 根 + Ruff/basedpyright/pytest 全家配置 | `task type/lint/test`；evidence 指纹 |
-| `uv.lock` | Python 环境锁（uv） | `task python-install --locked`；release workflow cohort input |
+| `uv.lock` | Python 环境锁（uv） | `task python-install --locked`；Dockerfile 构建输入 |
 | `bun.lock` | Web 依赖唯一锁文件 | `task bun-install --frozen-lockfile`；repository_policy Bun-only 断言 |
 | `bunfig.toml` | Bun 安装策略（isolated linker、禁 hoist、registry） | validate `_validate_structured_configs`；release 策略测试 |
 | `package.json` | Bun workspace manifest，`packageManager` 钉死 Bun 版本 | `.github/actions/setup-bun` 解析 packageManager；release 版本比对 |
@@ -51,7 +51,7 @@ IDE 抑制语义依赖「一个 pyright 项目只有一个配置文件」的机�
 | `.zcode/` | ZCode 宿主薄适配：hooks 嵌套 `hooks.events` 且要求 `enabled: true` | validator `_validate_host_configs` |
 | `packages/` | 13 个能力包（kernel 零依赖核心 → application 编排 → agent 消费者），各含 AGENTS.md | `.importlinter` 契约；pytest testpaths |
 | `apps/` | `backend`（唯一 Python composition root，FastAPI/CLI/Jobs）与 `web`（React SPA） | Taskfile、release workflow |
-| `contracts/` | 跨栈契约：`openapi/v1.json` 快照、`cohorts/` 兼容策略 | `task check-contract`；release cohort 验证 |
+| `contracts/` | 跨栈契约：`openapi/v1.json` 快照、`cohorts/` 兼容策略 | `task check-contract`；Web 构建内嵌 policy |
 | `tooling/` | 内部工具包：agent_harness / contracts / dev / quality / release | Taskfile 全量；CI 各 job |
 | `scripts/` | 任务图辅助脚本（type/test/architecture/analyze-slow-tests）+ 验收与证据工具 | 见下节 |
 | `config/` | 运行时配置：`default/` DQ 规则与环境 `.env` 域文件 | platform config loader `config/{environment}/*.env` |

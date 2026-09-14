@@ -25,7 +25,7 @@ REQUIRED_JOBS = frozenset(
         "web-quality",
         "api-contract",
         "system-e2e",
-        "release-cohort",
+        "release-policy",
         "container-smoke",
         "platform-smoke",
         "security-supply-chain",
