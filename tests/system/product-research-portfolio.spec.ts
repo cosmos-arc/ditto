@@ -48,10 +48,11 @@ test.describe("real product flow: research query into portfolio view", () => {
 
 	test("portfolio view requires an exact identity and never falls back", async ({ page }) => {
 		const errors = captureBrowserErrors(page);
-		const comparisonPath = "/api/v1/portfolio/comparison";
+		const comparisonEndpoint = new URL("/api/v1/portfolio/comparison", apiOrigin);
 		const comparisonRequests: string[] = [];
 		page.on("request", (request) => {
-			if (request.url() === `${apiOrigin}${comparisonPath}`) {
+			const url = new URL(request.url());
+			if (url.origin === comparisonEndpoint.origin && url.pathname === comparisonEndpoint.pathname) {
 				comparisonRequests.push(request.url());
 			}
 		});
@@ -67,7 +68,7 @@ test.describe("real product flow: research query into portfolio view", () => {
 		await expect(page.getByRole("alert")).toContainText("缺少精确组合身份");
 		expect(
 			comparisonRequests,
-			`${comparisonPath} must not be queried while the exact identity is missing`,
+			`${comparisonEndpoint.pathname} must not be queried while the exact identity is missing`,
 		).toEqual([]);
 		expect(errors).toEqual([]);
 	});
