@@ -71,7 +71,6 @@ dev = [
     "basedpyright>=1.29,<2",
     "coverage>=7.6,<8",
     "schemathesis==4.25.2",
-    "mutmut==3.7.0",
     "import-linter>=2.6,<3"
 ]
 
