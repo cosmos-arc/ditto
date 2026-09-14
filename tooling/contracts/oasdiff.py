@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import json
 import os
@@ -20,17 +19,12 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 from tooling.contracts.generate_web_schema import load_local_schema
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CONTRACT_RELATIVE_PATH = Path("contracts/openapi/v1.json")
-_LEGACY_CONTRACT_RELATIVE_PATH = Path("docs/openapi/v1.json")
-_APPROVED_CONTRACT_RELATIVE_PATHS = (
-    _CONTRACT_RELATIVE_PATH,
-    _LEGACY_CONTRACT_RELATIVE_PATH,
-)
 _DEFAULT_CURRENT = _REPO_ROOT / _CONTRACT_RELATIVE_PATH
 OASDIFF_VERSION = "1.28.0"
 OASDIFF_CHECKSUMS_SHA256 = (
@@ -39,74 +33,6 @@ OASDIFF_CHECKSUMS_SHA256 = (
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 _CHECKSUM_FIELD_COUNT = 2
 _GIT = shutil.which("git")
-_HTTP_METHODS = frozenset(
-    {"delete", "get", "head", "options", "patch", "post", "put", "trace"}
-)
-_LEGACY_VALIDATION_ERRATUM_ID = "legacy-runtime-error-envelope-v1"
-_LEGACY_VALIDATION_ERRATUM_REASON = (
-    "the legacy FastAPI snapshot auto-documented validation failures as "
-    "HTTPValidationError even though the runtime returned ErrorResponse"
-)
-_LEGACY_VALIDATION_BASELINE_SHA256 = (
-    "acaf611b4ae849f9adea6c13ea17139103f839ef94caa3a3f167f331a65f8a2e"
-)
-_LEGACY_VALIDATION_RESPONSE_COUNT = 169
-_LEGACY_VALIDATION_LOCATIONS_SHA256 = (
-    "1bebe99f98760842f89f6ba7137c6353e869d51f10d256f96e385e96edb963da"
-)
-_LEGACY_HTTP_VALIDATION_SCHEMA_SHA256 = (
-    "7373c21f1389312367e27e440140ba11d587693c56d8aa27249b36d3f58c10c6"
-)
-_LEGACY_VALIDATION_ERROR_SCHEMA_SHA256 = (
-    "ca285d0c0e64c42844efd2e860edb239e77cc49d87f065c5ccb7d2f55331b862"
-)
-_HTTP_VALIDATION_ERROR_REF = "#/components/schemas/HTTPValidationError"
-_VALIDATION_ERROR_REF = "#/components/schemas/ValidationError"
-_ERROR_RESPONSE_REF = "#/components/schemas/ErrorResponse"
-_LEGACY_422_RESPONSE: dict[str, object] = {
-    "description": "Validation Error",
-    "content": {
-        "application/json": {
-            "schema": {"$ref": _HTTP_VALIDATION_ERROR_REF},
-        }
-    },
-}
-_RUNTIME_ERROR_RESPONSE_SCHEMA: dict[str, object] = {
-    "description": (
-        "Standard error response model for API errors.\n\n"
-        "Used for external API responses, so using Pydantic BaseModel "
-        "(not frozen dataclass)."
-    ),
-    "properties": {
-        "detail": {
-            "anyOf": [{"type": "string"}, {"type": "null"}],
-            "title": "Detail",
-        },
-        "error": {"title": "Error", "type": "string"},
-        "error_code": {
-            "anyOf": [{"type": "string"}, {"type": "null"}],
-            "title": "Error Code",
-        },
-        "request_id": {
-            "anyOf": [{"type": "string"}, {"type": "null"}],
-            "title": "Request Id",
-        },
-        "status_code": {"title": "Status Code", "type": "integer"},
-        "success": {
-            "const": False,
-            "default": False,
-            "title": "Success",
-            "type": "boolean",
-        },
-        "timestamp": {
-            "anyOf": [{"type": "number"}, {"type": "null"}],
-            "title": "Timestamp",
-        },
-    },
-    "required": ["status_code", "error"],
-    "title": "ErrorResponse",
-    "type": "object",
-}
 
 
 class OasdiffError(RuntimeError):
@@ -136,30 +62,6 @@ class BaselineResolution:
             "ref": self.ref,
             "commit": self.commit,
             "reason": self.reason,
-        }
-
-
-@dataclass(frozen=True)
-class PreparedBaseline:
-    """Validated baseline bytes plus any narrowly applied historical erratum."""
-
-    contract_bytes: bytes
-    source_sha256: str
-    effective_sha256: str
-    applied_erratum_id: str | None
-    corrected_responses: int
-
-    def erratum_audit_result(self) -> dict[str, object] | None:
-        """Return deterministic audit evidence when an erratum was applied."""
-        if self.applied_erratum_id is None:
-            return None
-        return {
-            "event": "openapi-baseline-erratum",
-            "id": self.applied_erratum_id,
-            "reason": _LEGACY_VALIDATION_ERRATUM_REASON,
-            "sourceSha256": self.source_sha256,
-            "effectiveSha256": self.effective_sha256,
-            "corrected422Responses": self.corrected_responses,
         }
 
 
@@ -203,13 +105,13 @@ def _resolve_commit(repo_root: Path, reference: str) -> str:
 def _contract_at_commit(
     repo_root: Path, commit: str
 ) -> tuple[Path | None, bytes | None]:
-    for relative_path in _APPROVED_CONTRACT_RELATIVE_PATHS:
-        object_name = f"{commit}:{relative_path.as_posix()}"
-        exists = _git(repo_root, "cat-file", "-e", object_name, check=False)
-        if exists.returncode == 0:
-            return relative_path, _git(
-                repo_root, "cat-file", "blob", object_name
-            ).stdout
+    object_name = f"{commit}:{_CONTRACT_RELATIVE_PATH.as_posix()}"
+    exists = _git(repo_root, "cat-file", "-e", object_name, check=False)
+    if exists.returncode == 0:
+        return (
+            _CONTRACT_RELATIVE_PATH,
+            _git(repo_root, "cat-file", "blob", object_name).stdout,
+        )
     return None, None
 
 
@@ -239,10 +141,8 @@ def resolve_merge_base(*, repo_root: Path, base_ref: str) -> BaselineResolution:
             ref=base_ref,
             commit=commit,
             reason=(
-                f"no approved OpenAPI contract exists at merge base {commit}; checked "
-                + ", ".join(
-                    path.as_posix() for path in _APPROVED_CONTRACT_RELATIVE_PATHS
-                )
+                f"no approved OpenAPI contract exists at merge base {commit}; "
+                + f"checked {_CONTRACT_RELATIVE_PATH.as_posix()}"
             ),
             contract_bytes=None,
         )
@@ -304,8 +204,8 @@ def resolve_release(
         ref=reference,
         commit=commit,
         reason=(
-            f"no approved OpenAPI contract exists at release {reference!r}; checked "
-            + ", ".join(path.as_posix() for path in _APPROVED_CONTRACT_RELATIVE_PATHS)
+            f"no approved OpenAPI contract exists at release {reference!r}; "
+            + f"checked {_CONTRACT_RELATIVE_PATH.as_posix()}"
         ),
         contract_bytes=None,
     )
@@ -422,309 +322,6 @@ def _read_binary_from_archive(archive: Path) -> tuple[str, bytes]:
     raise SupplyChainError(f"unsupported oasdiff archive format: {archive}")
 
 
-def _payload_sha256(payload: bytes) -> str:
-    return hashlib.sha256(payload).hexdigest()
-
-
-def _canonical_json_bytes(value: object) -> bytes:
-    return (
-        json.dumps(
-            value,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode()
-        + b"\n"
-    )
-
-
-def _object_sha256(value: object) -> str:
-    canonical = _canonical_json_bytes(value).removesuffix(b"\n")
-    return hashlib.sha256(canonical).hexdigest()
-
-
-def _as_object_mapping(value: object, *, location: str) -> dict[str, object]:
-    if not isinstance(value, dict):
-        raise OasdiffError(f"legacy OpenAPI erratum expected an object at {location}")
-    return cast("dict[str, object]", value)
-
-
-def _child_mapping(
-    parent: dict[str, object],
-    key: str,
-    *,
-    location: str,
-) -> dict[str, object]:
-    try:
-        value = parent[key]
-    except KeyError as error:
-        raise OasdiffError(
-            f"legacy OpenAPI erratum expected {location}.{key}"
-        ) from error
-    return _as_object_mapping(value, location=f"{location}.{key}")
-
-
-def _reference_locations(
-    value: object,
-    *,
-    reference: str,
-    location: tuple[str | int, ...] = (),
-) -> list[tuple[str | int, ...]]:
-    matches: list[tuple[str | int, ...]] = []
-    if isinstance(value, dict):
-        mapping = cast("dict[object, object]", value)
-        for key, child in mapping.items():
-            if not isinstance(key, str):
-                raise OasdiffError(
-                    "legacy OpenAPI erratum encountered a non-string object key"
-                )
-            child_location = (*location, key)
-            if key == "$ref" and child == reference:
-                matches.append(child_location)
-            matches.extend(
-                _reference_locations(
-                    child,
-                    reference=reference,
-                    location=child_location,
-                )
-            )
-    elif isinstance(value, list):
-        for index, child in enumerate(value):
-            matches.extend(
-                _reference_locations(
-                    child,
-                    reference=reference,
-                    location=(*location, index),
-                )
-            )
-    return matches
-
-
-def _operation_response(
-    operation: dict[str, object],
-    *,
-    status_code: str,
-    location: str,
-) -> dict[str, object] | None:
-    responses_value = operation.get("responses")
-    if not isinstance(responses_value, dict):
-        return None
-    response_value = cast("dict[str, object]", responses_value).get(status_code)
-    if response_value is None:
-        return None
-    return _as_object_mapping(
-        response_value,
-        location=f"{location}.responses.{status_code}",
-    )
-
-
-def _application_json_schema_ref(response: dict[str, object]) -> object:
-    content = response.get("content")
-    if not isinstance(content, dict):
-        return None
-    media_type = cast("dict[str, object]", content).get("application/json")
-    if not isinstance(media_type, dict):
-        return None
-    response_schema = cast("dict[str, object]", media_type).get("schema")
-    if not isinstance(response_schema, dict):
-        return None
-    return cast("dict[str, object]", response_schema).get("$ref")
-
-
-def _legacy_validation_locations(
-    schema: dict[str, object],
-) -> list[tuple[str, str]]:
-    paths = _child_mapping(schema, "paths", location="root")
-    locations: list[tuple[str, str]] = []
-    for path, path_item_value in paths.items():
-        path_item = _as_object_mapping(
-            path_item_value,
-            location=f"paths[{path!r}]",
-        )
-        for method, operation_value in path_item.items():
-            if method not in _HTTP_METHODS:
-                continue
-            operation = _as_object_mapping(
-                operation_value,
-                location=f"paths[{path!r}].{method}",
-            )
-            response = _operation_response(
-                operation,
-                status_code="422",
-                location=f"paths[{path!r}].{method}",
-            )
-            if (
-                response is None
-                or _application_json_schema_ref(response) != _HTTP_VALIDATION_ERROR_REF
-            ):
-                continue
-            if response != _LEGACY_422_RESPONSE:
-                raise OasdiffError(
-                    "legacy OpenAPI erratum found a non-canonical 422 response at "
-                    + f"{method.upper()} {path}"
-                )
-            locations.append((path, method))
-    return sorted(locations)
-
-
-def _validate_legacy_validation_erratum(
-    schema: dict[str, object],
-) -> list[tuple[str, str]]:
-    locations = _legacy_validation_locations(schema)
-    if len(locations) != _LEGACY_VALIDATION_RESPONSE_COUNT:
-        raise OasdiffError(
-            "legacy OpenAPI erratum expected exactly "
-            + f"{_LEGACY_VALIDATION_RESPONSE_COUNT} canonical 422 responses, "
-            + f"found {len(locations)}"
-        )
-    locations_sha256 = _object_sha256(locations)
-    if locations_sha256 != _LEGACY_VALIDATION_LOCATIONS_SHA256:
-        raise OasdiffError(
-            "legacy OpenAPI erratum 422 operation-set mismatch: expected SHA-256 "
-            + f"{_LEGACY_VALIDATION_LOCATIONS_SHA256}, found {locations_sha256}"
-        )
-
-    components = _child_mapping(schema, "components", location="root")
-    schemas = _child_mapping(components, "schemas", location="components")
-    if "ErrorResponse" in schemas:
-        raise OasdiffError(
-            "legacy OpenAPI erratum refuses to overwrite an existing ErrorResponse"
-        )
-    http_validation_schema = schemas.get("HTTPValidationError")
-    validation_error_schema = schemas.get("ValidationError")
-    if _object_sha256(http_validation_schema) != _LEGACY_HTTP_VALIDATION_SCHEMA_SHA256:
-        raise OasdiffError("legacy OpenAPI erratum HTTPValidationError schema mismatch")
-    if (
-        _object_sha256(validation_error_schema)
-        != _LEGACY_VALIDATION_ERROR_SCHEMA_SHA256
-    ):
-        raise OasdiffError("legacy OpenAPI erratum ValidationError schema mismatch")
-
-    expected_http_locations = {
-        (
-            "paths",
-            path,
-            method,
-            "responses",
-            "422",
-            "content",
-            "application/json",
-            "schema",
-            "$ref",
-        )
-        for path, method in locations
-    }
-    actual_http_locations = set(
-        _reference_locations(schema, reference=_HTTP_VALIDATION_ERROR_REF)
-    )
-    if actual_http_locations != expected_http_locations:
-        raise OasdiffError(
-            "legacy OpenAPI erratum HTTPValidationError reference-set mismatch"
-        )
-    expected_validation_location = {
-        (
-            "components",
-            "schemas",
-            "HTTPValidationError",
-            "properties",
-            "detail",
-            "items",
-            "$ref",
-        )
-    }
-    actual_validation_locations = set(
-        _reference_locations(schema, reference=_VALIDATION_ERROR_REF)
-    )
-    if actual_validation_locations != expected_validation_location:
-        raise OasdiffError(
-            "legacy OpenAPI erratum ValidationError reference-set mismatch"
-        )
-    return locations
-
-
-def _apply_legacy_validation_erratum(
-    schema: dict[str, object],
-    locations: list[tuple[str, str]],
-) -> bytes:
-    normalized = copy.deepcopy(schema)
-    paths = _child_mapping(normalized, "paths", location="root")
-    for path, method in locations:
-        path_item = _child_mapping(paths, path, location="paths")
-        operation = _child_mapping(path_item, method, location=f"paths[{path!r}]")
-        responses = _child_mapping(
-            operation,
-            "responses",
-            location=f"paths[{path!r}].{method}",
-        )
-        response = _child_mapping(
-            responses,
-            "422",
-            location=f"paths[{path!r}].{method}.responses",
-        )
-        content = _child_mapping(
-            response,
-            "content",
-            location=f"paths[{path!r}].{method}.responses.422",
-        )
-        media_type = _child_mapping(
-            content,
-            "application/json",
-            location=f"paths[{path!r}].{method}.responses.422.content",
-        )
-        response_schema = _child_mapping(
-            media_type,
-            "schema",
-            location=(
-                f"paths[{path!r}].{method}.responses.422.content.application/json"
-            ),
-        )
-        response_schema["$ref"] = _ERROR_RESPONSE_REF
-
-    components = _child_mapping(normalized, "components", location="root")
-    schemas = _child_mapping(components, "schemas", location="components")
-    del schemas["HTTPValidationError"]
-    del schemas["ValidationError"]
-    schemas["ErrorResponse"] = copy.deepcopy(_RUNTIME_ERROR_RESPONSE_SCHEMA)
-    if _reference_locations(normalized, reference=_HTTP_VALIDATION_ERROR_REF):
-        raise OasdiffError(
-            "legacy OpenAPI erratum left an HTTPValidationError reference behind"
-        )
-    if _reference_locations(normalized, reference=_VALIDATION_ERROR_REF):
-        raise OasdiffError(
-            "legacy OpenAPI erratum left a ValidationError reference behind"
-        )
-    return _canonical_json_bytes(normalized)
-
-
-def prepare_baseline_contract(payload: bytes) -> PreparedBaseline:
-    """Apply only the hash-bound legacy runtime-envelope correction, if eligible."""
-    source_sha256 = _payload_sha256(payload)
-    if source_sha256 != _LEGACY_VALIDATION_BASELINE_SHA256:
-        return PreparedBaseline(
-            contract_bytes=payload,
-            source_sha256=source_sha256,
-            effective_sha256=source_sha256,
-            applied_erratum_id=None,
-            corrected_responses=0,
-        )
-    try:
-        loaded: object = json.loads(payload)
-    except json.JSONDecodeError as error:
-        raise OasdiffError(
-            f"legacy OpenAPI erratum baseline is invalid JSON: {error}"
-        ) from error
-    schema = _as_object_mapping(loaded, location="root")
-    locations = _validate_legacy_validation_erratum(schema)
-    corrected = _apply_legacy_validation_erratum(schema, locations)
-    return PreparedBaseline(
-        contract_bytes=corrected,
-        source_sha256=source_sha256,
-        effective_sha256=_payload_sha256(corrected),
-        applied_erratum_id=_LEGACY_VALIDATION_ERRATUM_ID,
-        corrected_responses=len(locations),
-    )
-
-
 @contextmanager
 def verified_oasdiff(dist_dir: Path) -> Iterator[Path]:
     """Yield the verified pinned binary from a temporary extraction directory."""
@@ -770,14 +367,9 @@ def run_breaking_check(
         raise OasdiffError("cannot run oasdiff without a found baseline")
     load_local_schema(current_path)
     _validate_baseline_json(resolution.contract_bytes)
-    prepared = prepare_baseline_contract(resolution.contract_bytes)
-    _validate_baseline_json(prepared.contract_bytes)
-    erratum_audit = prepared.erratum_audit_result()
-    if erratum_audit is not None:
-        sys.stderr.write(json.dumps(erratum_audit, sort_keys=True) + "\n")
     with tempfile.TemporaryDirectory(prefix="ditto-oasdiff-baseline-") as directory:
         baseline = Path(directory) / "v1.json"
-        baseline.write_bytes(prepared.contract_bytes)
+        baseline.write_bytes(resolution.contract_bytes)
         with verified_oasdiff(dist_dir) as binary:
             result = subprocess.run(  # noqa: S603 -- binary came from verified archive
                 [
