@@ -48,6 +48,13 @@ test.describe("real product flow: research query into portfolio view", () => {
 
 	test("portfolio view requires an exact identity and never falls back", async ({ page }) => {
 		const errors = captureBrowserErrors(page);
+		const comparisonPath = "/api/v1/portfolio/comparison";
+		const comparisonRequests: string[] = [];
+		page.on("request", (request) => {
+			if (request.url() === `${apiOrigin}${comparisonPath}`) {
+				comparisonRequests.push(request.url());
+			}
+		});
 
 		await page.goto("/portfolio/", { waitUntil: "networkidle" });
 
@@ -58,6 +65,10 @@ test.describe("real product flow: research query into portfolio view", () => {
 		// The PIT identity gate is fail-closed: without an exact cohort the page
 		// refuses to guess instead of rendering latest-or-fabricated data.
 		await expect(page.getByRole("alert")).toContainText("缺少精确组合身份");
+		expect(
+			comparisonRequests,
+			`${comparisonPath} must not be queried while the exact identity is missing`,
+		).toEqual([]);
 		expect(errors).toEqual([]);
 	});
 });
