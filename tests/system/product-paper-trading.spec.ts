@@ -30,15 +30,19 @@ test.describe("real product flow: paper onboarding, order, and readback", () => 
 		page,
 		request,
 	}) => {
-		const runId = Date.now().toString(36);
-		const accountId = `flow-paper-${runId}`;
-		const sessionId = `flow-session-${runId}`;
+		// Fixed identity + pinned as_of keeps every run deterministic and consistent
+		// with the shared cohort fixtures; each run uses a fresh isolated state root.
+		const accountId = "flow-paper-e2e";
+		const sessionId = "flow-session-e2e";
 		const errors = captureBrowserErrors(page);
 
-		await page.goto("/portfolio/paper", { waitUntil: "networkidle" });
+		await page.goto("/portfolio/paper?as_of=2026-09-04", { waitUntil: "networkidle" });
 		await expect(
 			page.getByRole("heading", { name: "创建隔离的模拟账户" }),
 		).toBeVisible();
+		// The pinned as_of must drive both the onboarding form's 交易日 and the
+		// order composer's trade date so the fill cannot hit a date mismatch.
+		await expect(page.getByLabel("交易日")).toHaveValue("2026-09-04");
 
 		await page.getByLabel("Paper 账户 ID").fill(accountId);
 		await page.getByLabel("Paper 账户名称").fill("产品流验收账户");
@@ -79,6 +83,7 @@ test.describe("real product flow: paper onboarding, order, and readback", () => 
 			ledger_event_id: expect.any(String),
 		});
 		const orderId = receiptData["order_id"] as string;
+		const ledgerEventId = receiptData["ledger_event_id"] as string;
 		await expect(page.getByText(/模拟成交已持久化/u).first()).toBeVisible();
 		await expect(page.getByText("1 / 1", { exact: true }).first()).toBeVisible();
 
@@ -115,7 +120,9 @@ test.describe("real product flow: paper onboarding, order, and readback", () => 
 		await expect(ledger.json()).resolves.toMatchObject({
 			data: {
 				account: { account_id: accountId },
-				events: expect.arrayContaining([expect.anything()]),
+				events: expect.arrayContaining([
+					expect.objectContaining({ event_id: ledgerEventId }),
+				]),
 			},
 		});
 
