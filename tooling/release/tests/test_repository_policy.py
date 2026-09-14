@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import json
 import re
 import tomllib
@@ -172,7 +171,7 @@ def test_contract_job_uses_the_complete_root_contract_gate() -> None:
 
 def test_required_ci_executes_all_release_policy_tests() -> None:
     workflow = _workflow("ci.yml")
-    steps = workflow["jobs"]["release-cohort"]["steps"]
+    steps = workflow["jobs"]["release-policy"]["steps"]
     test_step = next(
         step for step in steps if step.get("name") == "Test release and security policy"
     )
@@ -331,18 +330,17 @@ def test_mutation_gate_is_weekly_evidence_not_a_pr_required_dependency() -> None
     assert "mutation-critical" in workflow["jobs"]["security-gate"]["needs"]
 
 
-def test_release_workflow_attests_the_complete_cohort() -> None:
+def test_release_workflow_attests_every_release_artifact() -> None:
     workflow = _workflow("release.yml")
-    build = workflow["jobs"]["release-cohort"]
-    publish = workflow["jobs"]["publish-cohort"]
+    build = workflow["jobs"]["build"]
+    publish = workflow["jobs"]["publish"]
     assert build["permissions"] == {
         "actions": "read",
         "contents": "read",
     }
-    assert publish["needs"] == "release-cohort"
+    assert publish["needs"] == "build"
     assert publish["permissions"] == {
         "actions": "read",
-        "artifact-metadata": "write",
         "attestations": "write",
         "contents": "write",
         "id-token": "write",
@@ -363,265 +361,40 @@ def test_release_workflow_attests_the_complete_cohort() -> None:
     content = (WORKFLOWS / "release.yml").read_text()
     for required in (
         "actions/attest-build-provenance@",
-        "--api-contract-sha256",
         "dist/ditto-image.tar",
         "dist/ditto-backend.spdx.json",
         "dist/ditto-web.tar",
         "dist/ditto-web.spdx.json",
-        "--backend-artifact ditto-image.tar",
-        "--web-artifact ditto-web.tar",
-        "dist/release-cohort.json",
         "dist/SHA256SUMS",
-        "dist/ditto-release-cohort.attestation.json",
+        "dist/ditto-release.attestation.json",
         "gh release create",
         "github.event_name == 'push'",
     ):
         assert required in content
-
-
-def test_release_scans_and_publishes_backend_library_provenance() -> None:
-    workflow = _workflow("release.yml")
-    steps = workflow["jobs"]["release-cohort"]["steps"]
-    verification = next(
-        step["run"]
-        for step in steps
-        if step.get("name") == "Verify and export the release image"
-    )
-    sbom = next(
-        step["run"]
-        for step in steps
-        if step.get("name") == "Generate SPDX SBOM from release subject"
-    )
-    cohort = next(
-        step["run"]
-        for step in steps
-        if step.get("name") == "Generate and verify release cohort manifest"
-    )
-    publish = workflow["jobs"]["publish-cohort"]["steps"]
-    immutable = next(
-        step["with"]["path"]
-        for step in publish
-        if step.get("name") == "Upload immutable release cohort"
-    )
-    evidence = next(
-        step["run"]
-        for step in publish
-        if step.get("name") == "Publish long-lived release evidence"
-    )
-
-    assert "scan-backend-sources" in verification
-    assert '--final-image "$IMAGE"' in verification
-    assert "_bind_backend_source_provenance" in sbom
-    python = sbom.split("python3 - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
-    for node in ast.walk(ast.parse(python)):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "_verify_scanner_source"
-        ):
-            assert any(keyword.arg == "image_id" for keyword in node.keywords)
-    for relative in (
-        "ditto-backend-source-provenance.spdx.json",
-        "trivy-backend-source-runtime-libraries.json",
-        "trivy-backend-source-debian-libraries.json",
+    for retired in (
+        "scan-backend-sources",
+        "ditto-backend-source-provenance",
+        "release-cohort.json",
+        "ditto-release-cohort.tar",
+        "register-previous",
+        "next-cohort-policy",
     ):
-        assert f"--artifact {relative}" in cohort
-        assert relative in cohort[cohort.index("sha256sum") :]
-        assert f"dist/{relative}#" in evidence
-    assert "dist/ditto-backend-source-provenance.spdx.json" in immutable
+        assert retired not in content
 
 
-def test_release_cohort_is_self_contained_and_verified_before_distribution() -> None:
-    """Downloaded evidence must verify without the repository checkout."""
-    workflow = _workflow("release.yml")
-    steps = workflow["jobs"]["release-cohort"]["steps"]
-    stage = next(step for step in steps if step.get("name") == "Stage release inputs")
-    generation = next(
-        step["run"]
-        for step in steps
-        if step.get("name") == "Generate and verify release cohort manifest"
-    )
-    required_inputs = (
-        "dist/release-inputs/contracts/openapi/v1.json",
-        "dist/release-inputs/uv.lock",
-        "dist/release-inputs/bun.lock",
-    )
-    for source, destination in (
-        ("contracts/openapi/v1.json", required_inputs[0]),
-        ("uv.lock", required_inputs[1]),
-        ("bun.lock", required_inputs[2]),
-    ):
-        assert source in stage["run"]
-        assert destination in stage["run"]
-
-    assert "--workspace-root dist" in generation
-    assert "cd dist" in generation
-    for relative in (
-        "release-inputs/contracts/openapi/v1.json",
-        "release-inputs/uv.lock",
-        "release-inputs/bun.lock",
-    ):
-        assert f"--artifact {relative}" in generation
-    assert "--backend-artifact ditto-image.tar" in generation
-    assert "--web-artifact ditto-web.tar" in generation
-    assert "--output release-cohort.json" in generation
-    generator = generation.index("tooling.release.cohort_manifest")
-    verifier = generation.index("tooling.release.cohort_verify")
-    checksums = generation.index("sha256sum")
-    assert generator < verifier < checksums
-
-    publish_steps = workflow["jobs"]["publish-cohort"]["steps"]
-    attest = next(
-        step
-        for step in publish_steps
-        if step.get("name") == "Attest release provenance"
-    )
-    upload = next(
-        step
-        for step in publish_steps
-        if step.get("name") == "Upload immutable release cohort"
-    )
-    publish = next(
-        step
-        for step in publish_steps
-        if step.get("name") == "Publish long-lived release evidence"
-    )
-    for required in required_inputs:
-        assert required.removeprefix("dist/") in generation
-        assert required in attest["with"]["subject-path"]
-        assert required in upload["with"]["path"]
-        assert required in publish["run"]
-
-
-def test_release_ships_a_non_recursive_deterministic_offline_bundle() -> None:
-    workflow = _workflow("release.yml")
-    steps = workflow["jobs"]["release-cohort"]["steps"]
-    stage = next(step for step in steps if step.get("name") == "Stage release inputs")
-    generation = next(
-        step["run"]
-        for step in steps
-        if step.get("name") == "Generate and verify release cohort manifest"
-    )
-    required_tools = (
-        "release-tools/tooling/__init__.py",
-        "release-tools/tooling/release/__init__.py",
-        "release-tools/tooling/release/cohort_manifest.py",
-        "release-tools/tooling/release/cohort_verify.py",
-        "release-tools/verify-cohort.py",
-    )
-    assert "tooling.release.cohort_bundle stage-tools" in stage["run"]
-    for relative in required_tools:
-        assert f"--artifact {relative}" in generation
-
-    bundle_command = "tooling.release.cohort_bundle create"
-    assert bundle_command in generation
-    assert "--output ditto-release-cohort.tar" in generation
-    assert "--source-date-epoch" in generation
-    assert generation.index(
-        "compatibility_policy register-previous"
-    ) < generation.index(bundle_command)
-    assert generation.index(bundle_command) < generation.index("sha256sum")
-    assert "--artifact ditto-release-cohort.tar" not in generation
-
-    publish_steps = workflow["jobs"]["publish-cohort"]["steps"]
-    attest = next(
-        step
-        for step in publish_steps
-        if step.get("name") == "Attest release provenance"
-    )
-    upload = next(
-        step
-        for step in publish_steps
-        if step.get("name") == "Upload immutable release cohort"
-    )
-    publish = next(
-        step["run"]
-        for step in publish_steps
-        if step.get("name") == "Publish long-lived release evidence"
-    )
-    bundle = "dist/ditto-release-cohort.tar"
-    assert "ditto-release-cohort.tar" in generation[generation.index("sha256sum") :]
-    assert bundle in attest["with"]["subject-path"]
-    assert bundle in upload["with"]["path"]
-    assert bundle in publish
-    assert "--workspace-root dist" in generation
-
-    documentation = (WORKFLOWS / "README.md").read_text(encoding="utf-8")
-    for required in (
-        "gh attestation verify ditto-release-cohort.tar",
-        "--bundle ditto-release-cohort.attestation.json",
-        "--custom-trusted-root /trusted/github-attestation-root.jsonl",
-        "--repo cosmos-arc/ditto",
-        "--signer-workflow github.com/cosmos-arc/ditto/.github/workflows/release.yml",
-        '--source-digest "$expected_git_sha"',
-        '--source-ref "refs/tags/$release_tag"',
-        "sha256sum --check --ignore-missing SHA256SUMS",
-        "tar -xf ditto-release-cohort.tar",
-        "python3 release-tools/verify-cohort.py",
-        "--workspace-root .",
-        "--manifest release-cohort.json",
-    ):
-        assert required in documentation
-    attestation = documentation.index("gh attestation verify ditto-release-cohort.tar")
-    checksums = documentation.index("sha256sum --check --ignore-missing SHA256SUMS")
-    extraction = documentation.index("tar -xf ditto-release-cohort.tar")
-    bundled_verifier = documentation.index("python3 release-tools/verify-cohort.py")
-    assert attestation < checksums < extraction < bundled_verifier
-
-    attestation_step = next(
-        step
-        for step in publish_steps
-        if step.get("name") == "Attest release provenance"
-    )
-    assert attestation_step["id"] == "attest"
-    export_step = next(
-        step
-        for step in publish_steps
-        if step.get("name") == "Export and verify attestation bundle"
-    )
-    assert (
-        "steps.attest.outputs.bundle-path" in export_step["env"]["ATTESTATION_BUNDLE"]
-    )
-    export_script = export_step["run"]
-    for required in (
-        "dist/ditto-release-cohort.attestation.json",
-        "gh attestation verify",
-        '--repo "$GITHUB_REPOSITORY"',
-        '--source-digest "$GITHUB_SHA"',
-        '--source-ref "$GITHUB_REF"',
-        "--deny-self-hosted-runners",
-    ):
-        assert required in export_script
-    assert "--signer-workflow" in export_script
-
-    for step in (upload,):
-        assert "dist/ditto-release-cohort.attestation.json" in step["with"]["path"]
-    assert "dist/ditto-release-cohort.attestation.json" in publish
-
-
-def test_contract_gate_validates_policy_and_release_emits_next_policy() -> None:
-    """Each release must validate today's allowlist and emit a real next one."""
+def test_contract_gate_validates_the_checked_in_policy() -> None:
     workspace = yaml.safe_load((ROOT / "Taskfile.yml").read_text(encoding="utf-8"))
     tasks = workspace["tasks"]
-    assert "python -m tooling.release.compatibility_policy validate" in _command(
+    assert "python -m tooling.release.compatibility_policy" in _command(
         tasks["cohort-compatibility-check"]
     )
     assert "cohort-compatibility-check" in _dependencies(tasks["check-contract"])
-
-    content = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
-    for required in (
-        "tooling.release.compatibility_policy register-previous",
-        "--release-manifest dist/release-cohort.json",
-        "dist/next-cohort-policy/compatibility-policy.json",
-        "dist/next-cohort-policy/compatibility-policy.sha256",
-    ):
-        assert required in content
 
 
 def test_release_requires_main_ci_and_verifies_the_exact_runtime_subject() -> None:
     """A tag must not turn an unverified commit or unstarted image into a release."""
     workflow = _workflow("release.yml")
-    steps = workflow["jobs"]["release-cohort"]["steps"]
+    steps = workflow["jobs"]["build"]["steps"]
     provenance = next(
         step["run"]
         for step in steps
@@ -669,7 +442,7 @@ def test_release_requires_main_ci_and_verifies_the_exact_runtime_subject() -> No
     sbom = next(
         step["run"]
         for step in steps
-        if step.get("name") == "Generate SPDX SBOM from release subject"
+        if step.get("name") == "Generate SPDX SBOMs and verify release evidence"
     )
     for required in (
         "_verify_web_artifact_metadata",
@@ -683,7 +456,7 @@ def test_release_requires_main_ci_and_verifies_the_exact_runtime_subject() -> No
 
 
 def test_release_injects_exact_research_code_and_environment_lock() -> None:
-    """The backend image must bind research evidence to the cohort commit and lock."""
+    """The backend image must bind research evidence to the release commit and lock."""
     dockerfile = (ROOT / "deploy" / "docker" / "Dockerfile").read_text()
     assert "DITTO_RESEARCH_CODE_VERSION=${DITTO_GIT_SHA}" in dockerfile
     assert "ARG DITTO_RESEARCH_ENVIRONMENT_LOCK_HASH" in dockerfile
@@ -693,7 +466,7 @@ def test_release_injects_exact_research_code_and_environment_lock() -> None:
     )
 
     workflow = _workflow("release.yml")
-    steps = workflow["jobs"]["release-cohort"]["steps"]
+    steps = workflow["jobs"]["build"]["steps"]
     identity_script = next(
         step["run"] for step in steps if step.get("id") == "identity"
     )

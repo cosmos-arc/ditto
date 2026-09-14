@@ -228,7 +228,7 @@ tasks:
     - sh: 'test -f "{{.VENV_PYTHON}}"'
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
-    - uv run --no-sync python -m tooling.release.compatibility_policy validate {{.CLI_ARGS}}
+    - uv run --no-sync python -m tooling.release.compatibility_policy {{.CLI_ARGS}}
   check-contract:
     cmds:
     - task: python-environment-check

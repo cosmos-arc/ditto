@@ -19,7 +19,7 @@ def environment_identity(root: Path, *, platform: str = "linux/amd64") -> str:
 
 
 def identity_from_hashes(inputs: Mapping[str, str], *, platform: str) -> str:
-    """Use the same canonical input identity in builds and offline verification."""
+    """Use the same canonical input identity in builds."""
     payload = {"schema_version": 1, "platform": platform, "inputs": dict(inputs)}
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()

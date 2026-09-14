@@ -9,8 +9,10 @@ not hand-edited sources.
 
 `contracts/cohorts/compatibility-policy.json` is the release compatibility
 allowlist. Its SHA-256 sidecar is mandatory; `current` is materialized from the
-exact Web build identity and `previous` may only be registered from a verified
-release cohort manifest. Same-major inference is forbidden.
+exact Web build identity. The release-cohort registration chain was retired in
+2026-09 (issue #152), so `previous` stays empty until a real attested release
+identity is hand-registered under the documented re-add condition. Same-major
+inference is forbidden.
 
 ## Required flow
 

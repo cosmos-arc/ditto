@@ -240,10 +240,10 @@ jobs:
           path: build/system-e2e
           if-no-files-found: warn
           retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
-  release-cohort:
+  release-policy:
     needs: repository-policy
-    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'release-cohort') }}
-    name: Release cohort policy
+    if: ${{ contains(fromJSON(needs.repository-policy.outputs.required || '[]'), 'release-policy') }}
+    name: Release policy
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -280,7 +280,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: cohort-${{ github.run_id }}
+          name: release-evidence-${{ github.run_id }}
           path: dist
           if-no-files-found: error
           retention-days: 14
@@ -356,7 +356,7 @@ jobs:
       - web-quality
       - api-contract
       - system-e2e
-      - release-cohort
+      - release-policy
       - container-smoke
       - platform-smoke
       - security-supply-chain

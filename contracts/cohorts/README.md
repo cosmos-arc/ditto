@@ -30,24 +30,9 @@ current backend；回滚顺序相反。若未来必须允许任意顺序的“�
 需要另行设计受签名的 runtime policy 或可追溯的 transition Web 制品，不能用
 same-major wildcard 伪装成已验证兼容。
 
-## 登记上一 release
+## 登记 previous release
 
-当前还没有可验证的 prior release，因此 checked-in `previous` 必须为空。每次
-正式发布会把该次经过 attestation 的 `release-cohort.json` 转成：
-
-```text
-dist/next-cohort-policy/compatibility-policy.json
-dist/next-cohort-policy/compatibility-policy.sha256
-```
-
-准备下一 release 时，只能使用可信 release 下载的 manifest，通过命令生成并
-评审变更：
-
-```bash
-python -m tooling.release.compatibility_policy register-previous \
-  --release-manifest /absolute/path/to/release-cohort.json
-```
-
-命令会复算 `cohort_id`、验证 schema、SemVer、完整 Git/OpenAPI hash、`v1`，
-再以 canonical JSON 和匹配 sidecar 原子写入根 policy。不得手工添加推测的历史
-identity。
+release cohort 注册链已随 2026-09 的 release 简化退役（issue #152）；当前
+checked-in `previous` 保持为空。若出现外部用户或需要回加发布链路，`previous`
+只能手工登记有 attestation 凭证的真实 release identity，并以 canonical JSON
+与匹配 sidecar 同步更新；不得添加推测的历史 identity。
