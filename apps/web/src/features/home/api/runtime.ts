@@ -1,4 +1,4 @@
-import { isMockRuntime } from "@/api";
+import { isMockRuntime } from "@/api/runtime-config";
 
 export function shouldUseHomePrototypeMocks(): boolean {
 	return isMockRuntime();

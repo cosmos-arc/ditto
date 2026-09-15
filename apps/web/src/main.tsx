@@ -1,7 +1,8 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { initializeRuntimeConfig, verifyBackendCompatibility } from "@/api";
+import { verifyBackendCompatibility } from "@/api/bootstrap";
+import { initializeRuntimeConfig } from "@/api/runtime-config";
 import { QueryProvider } from "@/providers";
 import {
 	type BootstrapStage,

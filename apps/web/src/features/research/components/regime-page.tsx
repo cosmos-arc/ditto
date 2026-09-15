@@ -1,6 +1,6 @@
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";

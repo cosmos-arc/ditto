@@ -5,8 +5,8 @@
  * query graph 由 experiment workbench adapter 扩展。
  */
 
-import { apiClient, preserveExactJson } from "@/api";
 import type { components, operations } from "@/api/generated/schema";
+import { apiClient, preserveExactJson } from "@/api/transport";
 import type { ExperimentListItem } from "@/types";
 
 export type ExperimentSummaryResponse = components["schemas"]["ExperimentSummaryResponse"];

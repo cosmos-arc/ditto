@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { FillLedgerEntry } from "@/types";

@@ -61,11 +61,11 @@ Inline style 不是一律禁止：图表坐标、虚拟列表尺寸、拖拽位�
   汇总——巡航必须覆盖源码、TypeScript parser 必须加载、不允许 error 级违规。zone 规则除
   feature/workflow 隔离（见上）外，还包括 `transport-implementation-is-confined-to-core-api`
   （openapi-fetch 只能出现在 `src/api`）、`core-api-client-surface-stays-in-transport-zones`
-  （`src/api/index` client barrel 只能被 `src/api`、feature api adapter 与测试脚手架导入；
-  type-contract 模块如 `market-contract.ts` 保持可达）、`generated-schema-imports-stay-in-transport-zones`、
-  `generated-runtime-contracts-stay-in-core-api` 与 `legacy-api-client-is-forbidden`。module 级
-  规则不追踪 named binding：workflow 页面与 feature components/hooks 对 barrel 中 `ApiError`、
-  `main.tsx` 对 runtime-config 初始化函数的合法消费以显式 `pathNot` 豁免（收窄为后续项）。
+  （真实 `src/api/transport` 及重建的 `src/api/index` 只允许 core API、feature API adapters 和测试消费；
+  组件、hooks、workflows 与 main 均无豁免）。错误统一来自无传输依赖的 `src/api/errors`，
+  启动经 `bootstrap`，配置来自 `runtime-config`；type-contract 模块如 `market-contract.ts` 保持可达。
+  其余规则为 `generated-schema-imports-stay-in-transport-zones`、
+  `generated-runtime-contracts-stay-in-core-api` 与 `legacy-api-client-is-forbidden`。
 - Biome：`correctness/noUndeclaredDependencies` 禁止使用未在 `package.json` 声明的依赖，覆盖
   `src`、全部 `scripts` 与根级 `copilot-baseline.mjs`/`final-verify.mjs`（遗留脚本豁免
   formatting/organizeImports 等既有积压，声明检查不豁免；`scripts/agent_harness/**` 与三个门禁

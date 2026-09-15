@@ -1,4 +1,4 @@
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { useStrategyEvents } from "../hooks/use-strategy-events";
 
 interface StrategyGovernanceAuditProps {

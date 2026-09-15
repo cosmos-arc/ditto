@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { strategyKeys } from "../api/query-keys";
 import {
 	approveStrategyReview,

@@ -1,4 +1,4 @@
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { ContextActions } from "@/providers";
 import type { CandidateEvidenceResourceKind } from "../api/candidate-evidence";
 import { useCandidateEvidence } from "../hooks";

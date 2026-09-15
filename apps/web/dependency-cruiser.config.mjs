@@ -114,29 +114,15 @@ export default {
 			to: { path: "^node_modules/openapi-fetch" },
 		},
 		{
-			// Type-contract modules under src/api (e.g. market-contract.ts) stay reachable
-			// from view-model code; only the client barrel is a transport surface.
-			// dependency-cruiser works at module level, so zones that legitimately consume
-			// non-client barrel exports are exempted and tracked as a follow-up: workflow
-			// pages and feature components/hooks import the ApiError class, and the app
-			// bootstrap (main.tsx) imports runtime-config initializers. The retired AST
-			// gate tracked apiClient aliases instead; that precision is documented as lost.
 			name: "core-api-client-surface-stays-in-transport-zones",
-			comment: "Only src/api, per-feature api adapters and test scaffolding may import the core API client barrel.",
+			comment:
+				"Only src/api, per-feature api adapters and test scaffolding may import transport or a rebuilt client barrel.",
 			severity: "error",
 			from: {
 				path: "^src/",
-				pathNot: [
-					"^src/api/",
-					"^src/features/[^/]+/api(?:/|\\.ts$)",
-					"^src/features/[^/]+/(?:components|hooks)/",
-					"^src/(?:mocks|test|tests)/",
-					"^src/workflows/",
-					"^src/main\\.tsx$",
-					testModule,
-				],
+				pathNot: ["^src/api/", "^src/features/[^/]+/api(?:/|\\.ts$)", "^src/(?:mocks|test|tests)/", testModule],
 			},
-			to: { path: "^src/api/index" },
+			to: { path: "^src/api/(?:transport|index)\\.[cm]?[jt]sx?$" },
 		},
 		{
 			name: "generated-schema-imports-stay-in-transport-zones",

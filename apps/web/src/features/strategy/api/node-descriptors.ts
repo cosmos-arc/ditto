@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 
 /** 流水线节点描述符（只读调色板数据源）DTO。 */
 export type NodeDescriptorResponse = components["schemas"]["NodeDescriptorResponse"];

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { useReviewPacket } from "@/features/research";
 import {
 	GovernanceActions,

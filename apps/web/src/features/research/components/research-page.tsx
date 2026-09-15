@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { AnalyticalLayout, ShellHeaderExtension } from "@/features/shell";
 import type { ExperimentListItem } from "@/types";
 import type { ReviewQueueEntry } from "@/types/review";

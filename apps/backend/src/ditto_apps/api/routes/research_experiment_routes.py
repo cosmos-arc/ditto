@@ -27,9 +27,6 @@ from ditto_application.processes.experiments.comparison_reader import (
 from ditto_application.processes.experiments.planning_process import (
     ExperimentPlanningProcess,
 )
-from ditto_application.processes.experiments.planning_request_builder import (
-    build_experiment_planning_request,
-)
 from ditto_application.processes.experiments.selection_evidence_reader import (
     ExperimentSelectionEvidenceReader,
 )
@@ -75,33 +72,6 @@ router = APIRouter(prefix="/research/experiments", tags=["research"])
 P = ParamSpec("P")
 R = TypeVar("R")
 
-# Compatibility names retained for existing route-level consumers while transport
-# projection ownership lives in the focused sibling module.
-_raise_planning_error = _transport.raise_planning_error
-_to_launch_response = _transport.to_launch_response
-_to_preflight_response = _transport.to_preflight_response
-_to_summary_response = _transport.to_summary_response
-to_artifact_response = _transport.to_artifact_response
-to_candidate_response = _transport.to_candidate_response
-to_comparison_response = _transport.to_comparison_response
-to_experiment_response = _transport.to_experiment_response
-to_fold_response = _transport.to_fold_response
-to_gate_response = _transport.to_gate_response
-to_review_gate_outcome_response = _transport.to_review_gate_outcome_response
-to_review_packet_response = _transport.to_review_packet_response
-to_selection_evidence_response = _transport.to_selection_evidence_response
-to_selection_trace_ref_response = _transport.to_selection_trace_ref_response
-
-
-def _build_transport_planning_request(
-    request: ExperimentPlanningRequest | ExperimentLaunchRequest,
-) -> _transport.ApplicationExperimentPlanningRequest:
-    """Decode via the route-level builder seam used by adapter tests."""
-    return _transport.build_transport_planning_request(
-        request,
-        builder=build_experiment_planning_request,
-    )
-
 
 async def run_blocking[**P, R](
     func: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs
@@ -127,12 +97,12 @@ async def preflight_experiment(
             "path experiment_id must equal planning document experiment_id",
             error_code="SPEC_INVALID",
         )
-    planning_request = _build_transport_planning_request(request)
+    planning_request = _transport.build_transport_planning_request(request)
     try:
         report = await run_blocking(process.preflight, planning_request)
     except AppError as exc:
-        _raise_planning_error(exc)
-    return APIResponse(data=_to_preflight_response(report))
+        _transport.raise_planning_error(exc)
+    return APIResponse(data=_transport.to_preflight_response(report))
 
 
 @router.post(
@@ -147,7 +117,7 @@ async def launch_experiment(
     idempotency_key: IdempotencyKeyHeader,
 ) -> APIResponse[ExperimentLaunchResponse]:
     """Rebuild and launch one exact operator-confirmed planning document."""
-    planning_request = _build_transport_planning_request(request)
+    planning_request = _transport.build_transport_planning_request(request)
     try:
         receipt = await run_blocking(
             handler.handle,
@@ -158,8 +128,8 @@ async def launch_experiment(
             ),
         )
     except AppError as exc:
-        _raise_planning_error(exc)
-    return APIResponse(data=_to_launch_response(receipt))
+        _transport.raise_planning_error(exc)
+    return APIResponse(data=_transport.to_launch_response(receipt))
 
 
 @router.get(
@@ -173,7 +143,7 @@ async def list_research_experiments(
 ) -> APIResponse[list[ExperimentSummaryResponse]]:
     """列出研究实验（newest first，不含候选/fold 展开）."""
     summaries = await run_blocking(facade.list_experiments)
-    return APIResponse(data=[_to_summary_response(s) for s in summaries])
+    return APIResponse(data=[_transport.to_summary_response(s) for s in summaries])
 
 
 @router.get(
@@ -190,7 +160,7 @@ async def get_experiment(
     detail = await run_blocking(facade.get, experiment_id)
     if detail is None:
         raise NotFoundError(f"Experiment not found: {experiment_id}")
-    return APIResponse(data=to_experiment_response(detail))
+    return APIResponse(data=_transport.to_experiment_response(detail))
 
 
 @router.get(
@@ -208,7 +178,10 @@ async def list_experiment_candidates(
     if detail is None:
         raise NotFoundError(f"Experiment not found: {experiment_id}")
     return APIResponse(
-        data=[to_candidate_response(candidate) for candidate in detail.candidates]
+        data=[
+            _transport.to_candidate_response(candidate)
+            for candidate in detail.candidates
+        ]
     )
 
 
@@ -224,7 +197,7 @@ async def list_experiment_gates(
 ) -> APIResponse[list[ExperimentGateResponse]]:
     """列出实验的门禁评估."""
     gates = await run_blocking(facade.list_gate_evaluations, experiment_id)
-    return APIResponse(data=[to_gate_response(gate) for gate in gates])
+    return APIResponse(data=[_transport.to_gate_response(gate) for gate in gates])
 
 
 @router.get(
@@ -242,7 +215,9 @@ async def list_experiment_artifacts(
     if detail is None:
         raise NotFoundError(f"Experiment not found: {experiment_id}")
     artifacts = await run_blocking(facade.list_artifacts, experiment_id)
-    return APIResponse(data=[to_artifact_response(artifact) for artifact in artifacts])
+    return APIResponse(
+        data=[_transport.to_artifact_response(artifact) for artifact in artifacts]
+    )
 
 
 @router.get(
@@ -261,7 +236,7 @@ async def get_experiment_selection_evidence(
         raise NotFoundError(
             f"Selection evidence not found for experiment: {experiment_id}"
         )
-    return APIResponse(data=to_selection_evidence_response(view))
+    return APIResponse(data=_transport.to_selection_evidence_response(view))
 
 
 @router.get(
@@ -282,7 +257,7 @@ async def get_experiment_comparison(
     view = await run_blocking(reader.load_comparison, experiment_id)
     if view is None:
         raise NotFoundError(f"Experiment not found: {experiment_id}")
-    return APIResponse(data=to_comparison_response(view))
+    return APIResponse(data=_transport.to_comparison_response(view))
 
 
 @router.get(
@@ -303,7 +278,7 @@ async def get_research_experiment_review_packet(
     packet = await run_blocking(facade.get_review_packet, experiment_id)
     if packet is None:
         raise NotFoundError(f"Review packet not found for experiment: {experiment_id}")
-    return APIResponse(data=to_review_packet_response(packet))
+    return APIResponse(data=_transport.to_review_packet_response(packet))
 
 
 @router.post(

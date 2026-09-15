@@ -6,8 +6,8 @@
  * camelCase view-model（`@/types/review`），组件只认 view-model。
  */
 
-import { apiClient } from "@/api";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 import type { ReviewQueueEntry } from "@/types/review";
 
 export type StrategyVersionResponse = components["schemas"]["StrategyVersionResponse"];

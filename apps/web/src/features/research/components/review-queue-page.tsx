@@ -1,7 +1,7 @@
 /** Review queue catalog. Rows remain selectable even when a packet is missing so the rail can explain why review is blocked. */
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";

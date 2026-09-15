@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components, operations } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 
 type FactorDiagnosticsOperation = operations["design_research_factor_diagnostics"];
 type FactorDiagnosticsPath = FactorDiagnosticsOperation["parameters"]["path"];

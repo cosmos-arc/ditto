@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { isMockRuntime } from "@/api";
+import { isMockRuntime } from "@/api/runtime-config";
 import { type FactorDiagnosticsScope, fetchFactorDiagnostics, mapFactorDiagnostics } from "../api/factor-diagnostics";
 
 export function useFactorDetail(id: string) {

@@ -1,4 +1,3 @@
-import { ApiError, apiClient, type EventStreamRequest } from "@/api";
 import {
 	type AgentCampaignSsePayload,
 	type AgentRunSsePayload,
@@ -6,6 +5,8 @@ import {
 	isTerminalAgentSsePayload,
 	parseAgentSsePayload,
 } from "@/api/agent-validation";
+import { ApiError } from "@/api/errors";
+import { apiClient, type EventStreamRequest } from "@/api/transport";
 
 export type AgentStreamState =
 	| "connecting"

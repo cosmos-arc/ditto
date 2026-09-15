@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components, operations } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 
 export type PortfolioComparisonIdentity = operations["portfolio_get_comparison"]["parameters"]["query"];
 export type PortfolioScenarioRequest = components["schemas"]["PortfolioScenarioBody"];

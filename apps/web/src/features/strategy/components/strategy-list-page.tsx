@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { LoadingSkeleton } from "@/components/data";
 import { Button } from "@/components/ui/button";
 import { CatalogLayout, ShellHeaderExtension } from "@/features/shell";

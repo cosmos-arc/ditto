@@ -8,4 +8,4 @@ export function shouldUsePrototypeMocks(): boolean {
 	return isMockRuntime();
 }
 
-import { isMockRuntime } from "@/api";
+import { isMockRuntime } from "@/api/runtime-config";

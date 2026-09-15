@@ -1,4 +1,4 @@
-import { apiClient } from "@/api";
+import { apiClient } from "@/api/transport";
 
 export type SystemRuntimeStatus = {
 	readonly environment: string;

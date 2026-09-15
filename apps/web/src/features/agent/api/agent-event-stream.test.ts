@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EventStreamRequest } from "@/api";
+import type { EventStreamRequest } from "@/api/transport";
 import { createApiClient } from "@/api/transport";
 import { createRecoverableAgentEventStream, parseAgentSse } from "./agent-event-stream";
 
