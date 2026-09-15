@@ -30,7 +30,7 @@ def backup(
         ..., "--destination", help="新建且不与源目录重叠的备份目录"
     ),
 ) -> None:
-    """Atomically capture every data, research, trading, and Agent store."""
+    """Copy six SQLite stores after stopping all writers; excludes artifact trees."""
     try:
         manifest = backup_workstation(source_root, destination)
     except WorkstationBackupError as error:

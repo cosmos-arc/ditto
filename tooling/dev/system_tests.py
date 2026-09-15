@@ -448,6 +448,22 @@ def main() -> int:
             _write_runtime_config(web_root, api_port)
             _run_primary_cohort(root, web_root, node, api_port, web_port, environment)
 
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.portfolio_agent_app:app", api_port
+                    ),
+                    prefix="ditto-system-portfolio-agent-",
+                    spec="portfolio-agent.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The normal product profile keeps Agent disabled. This fixture
             # mounts the production router over real SQLite and pre-issued,
             # fictional actions without a model, credentials, or write tool.
