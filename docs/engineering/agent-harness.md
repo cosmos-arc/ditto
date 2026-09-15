@@ -182,6 +182,10 @@ validator 检查可发现 skill 与 registry 一致性、本地指令文件存�
 
 pre-push 使用 pre-commit 选定的一组提交范围选择检查，覆盖已提交且工作区干净的变更；不以未提交差异代替推送范围。待推送提交必须是当前 HEAD，工作区必须干净，缺少基线历史时执行 `task check`。纯 Web 推送和文件删除同样进入范围选择。
 
+检查子进程启动前按 [Git 官方说明](https://git-scm.com/docs/githooks#_description)
+清除 `git rev-parse --local-env-vars` 列出的仓库环境变量。范围选择仍使用原推送上下文；
+测试创建临时仓库时不得继承 `GIT_DIR`、`GIT_INDEX_FILE` 等变量并误写当前仓库。
+
 常规使用单分支推送；上游 pre-commit 不承诺逐一验收一次 push 的所有 ref。本地结果只覆盖
 选定范围，合并/发布仍以目标提交上的 CI 与服务端规则为准。若未来明确要求所有 ref 在本地
 通过，须在 Git 原始 stdin 边界另行实现合同，不能仅从单组环境变量推断全覆盖。
