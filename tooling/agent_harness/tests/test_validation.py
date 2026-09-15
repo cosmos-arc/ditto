@@ -194,6 +194,27 @@ class FormatFixtureTests(unittest.TestCase):
                     "single quotes disable required shell expansion"
                 )
                 config_path.write_text(original_text)
+                for asynchronous in (True, False):
+                    configured = json.loads(original_text)
+                    events = configured["hooks"]
+                    if relative == ".zcode/config.json":
+                        events = events["events"]
+                    entry = events["PreToolUse"][0]
+                    entry["matcher"] = "^(" + entry["matcher"] + ")$"
+                    entry["hooks"][0]["async"] = asynchronous
+                    config_path.write_text(json.dumps(configured))
+                    checked = subprocess.run(
+                        [
+                            sys.executable,
+                            str(root / "tooling/agent_harness/validate.py"),
+                        ],
+                        cwd=root,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    assert (checked.returncode != 0) is asynchronous, checked.stdout
+                config_path.write_text(original_text)
 
     def test_root_workspace_manifest_is_not_ignored(self) -> None:
         result = subprocess.run(
