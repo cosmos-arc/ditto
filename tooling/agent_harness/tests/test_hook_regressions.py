@@ -37,6 +37,7 @@ def test_shell_context_regressions_from_independent_review(tmp_path: Path) -> No
     acquire_lease(other, owner="fixture", task="review-regression")
     try:
         assert bash(f"bun run --cwd {other} generate-contracts") == {}
+        assert bash(f"bun --cwd {other} run example > uv.lock")["decision"] == "block"
         assert bash(f"bun --cwd {root} run generate-contracts")["decision"] == "block"
     finally:
         release_lease(other)
@@ -44,6 +45,7 @@ def test_shell_context_regressions_from_independent_review(tmp_path: Path) -> No
     try:
         assert bash(f"bun --cwd {other} run generate-contracts")["decision"] == "block"
         assert bash(f"bun run --cwd {root} generate-contracts") == {}
+        assert bash(f"bun --cwd {other} run example > uv.lock") == {}
     finally:
         release_lease(root)
 

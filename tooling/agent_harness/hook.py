@@ -465,12 +465,7 @@ def _mutates_bun_lock(tokens: Sequence[str]) -> bool:
 
 def _known_command_write_targets(tokens: Sequence[str], root: Path) -> tuple[str, ...]:
     targets: set[str] = set()
-    for raw in _redirection_targets(tokens):
-        normalized = _normalize_repository_path(raw, root)
-        if normalized is not None:
-            targets.add(normalized)
     targets.update(_codegen_write_targets(tokens))
-    targets.update(_direct_write_targets(tokens, root))
     if _mutates_bun_lock(tokens):
         targets.add("bun.lock")
     uv_command = _command_after_executable(tokens, "uv")
@@ -553,7 +548,7 @@ def shell_commands(payload: dict[str, Any], root: Path) -> list[tuple[list[str],
                 raise ValueError("Use cd with one explicit directory")
             directory = (directory / tokens[1]).resolve()
         else:
-            commands.append(_runner_directory(tokens, directory))
+            commands.append((tokens, directory))
     return commands
 
 
@@ -578,19 +573,20 @@ def _git_directory(tokens: Sequence[str], directory: Path) -> Path:
 
 def _bash_write_paths(payload: dict[str, Any], root: Path) -> list[str]:
     paths: list[str] = []
-    for tokens, directory in shell_commands(payload, root):
-        targets = _known_command_write_targets(tokens, directory)
-        if not targets:
-            continue
-        command_root = git_root(directory)
-        generated = set(_codegen_write_targets(tokens))
-        generated.update(
-            target for target in targets if target in {"uv.lock", "bun.lock"}
-        )
+    for tokens, shell_directory in shell_commands(payload, root):
+        # The shell opens redirects before the runner applies its own cwd.
         paths.extend(
-            str((command_root if target in generated else directory) / target)
-            for target in targets
+            str(shell_directory / target) for target in _redirection_targets(tokens)
         )
+        invocation, directory = _runner_directory(tokens, shell_directory)
+        paths.extend(
+            str(directory / target)
+            for target in _direct_write_targets(invocation, directory)
+        )
+        generated = _known_command_write_targets(invocation, directory)
+        if generated:
+            command_root = git_root(directory)
+            paths.extend(str(command_root / target) for target in generated)
     return paths
 
 
