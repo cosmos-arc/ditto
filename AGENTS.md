@@ -1,6 +1,6 @@
 # Ditto Agent 指南
 
-Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决策、Paper Trading 和手工账户管理工作站，不连接券商下单。Python/uv 与 React/TypeScript/Bun 独立构建，以同一提交、跨栈契约和 release cohort 验收。
+Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决策、Paper Trading 和手工账户管理工作站，不连接券商下单。Python/uv 与 React/TypeScript/Bun 独立构建，以同一提交、跨栈契约和发布制品身份验收；Web/API 兼容仍要求精确身份匹配。
 
 ## 事实与阅读入口
 
@@ -25,6 +25,12 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决
 - 运行时 config/state/cache 显式定位；`workspace_root` 仅用于开发工具与测试。
 - PIT 查询 fail closed，knowledge date、publication cutoff 和 source snapshot 必须传播。涉及查询、窗口、join、修订、因子或回测时间语义时使用 `ditto-pit-safety`。
 - 不通过 type ignore、宽泛 noqa、跳过 hooks 或 no-verify 规避有效质量门；只报告实际运行结果。
+
+## 简洁与必要性
+
+选择满足已确认产品、研究和 Agent 需求的最小设计。新增抽象、配置、工具或流程应说明当前消费者或可验证的研究问题、收益及维护成本；仅为假想扩展预留的机制延后到需求出现。
+
+优先复用现有能力和成熟工具，让同一规则有一个权威实现。删除或合并前核对真实消费者与独有保障；PIT、资金与账本一致性、审批隔离、契约和恢复所需的复杂度予以保留。验证和交付按风险选取最小充分范围。
 
 ## 工作与授权
 

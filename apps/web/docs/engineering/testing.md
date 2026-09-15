@@ -8,12 +8,12 @@
 
 从仓库根执行 `task check-web` 做日常 Web 验证，`task web-ci` 做 Web 完整验证，`task test-system` 验证 production Web 与隔离 API。Bun 不再有独立 check/ci 编排。
 
-首次运行浏览器测试时，在实际调用 Playwright 的 workspace 用锁定依赖执行 `bunx playwright install chromium`。浏览器缓存可通过 PLAYWRIGHT_BROWSERS_PATH 隔离；环境准备失败不代表产品断言失败。类型、coverage 和 build 的现有入口会生成 route tree，不手写生成文件。
+首次运行浏览器测试时，从仓库根执行 `task browser-install`，使用已安装的锁定 Playwright 依赖。浏览器缓存可通过 PLAYWRIGHT_BROWSERS_PATH 隔离；环境准备失败不代表产品断言失败。类型、coverage 和 build 的现有入口会生成 route tree，不手写生成文件。
 
 ## 视觉与合同
 
 工具和操作说明见 [页面合同](../../contracts/README.md)。按实际影响检查对应路由、交互、可访问性、主题/密度与视口；普通局部改动不运行完整原型生命周期。
 
-视觉不稳定先核对服务、字体、数据、viewport 和 selector；集中超时先排查资源争用，不直接增加 timeout 或重试。测试只收集真实工程工具，Claude skill 镜像不重复运行。
+视觉不稳定先核对服务、字体、数据、viewport 和 selector；集中超时先排查资源争用，不直接增加 timeout 或重试。测试只收集真实工程工具。
 
 普通 `web-product-check` 只执行实际路由覆盖检查。原型 freeze、完成看板和 `audit:product-recovery` 保留为显式历史审计，不进入普通 UI 的必经验证。

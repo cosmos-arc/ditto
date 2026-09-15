@@ -596,13 +596,12 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 
 按架构清晰度优先级排序：
 
-1. 明确 `application` 的 composition root 边界，把 provider 从”可能做事”收紧为”只 wiring”。
+1. 沿用 `apps/backend` 唯一 Python composition root；provider 负责 wiring，`application` 负责用例编排。
 2. 将 dataset 语义从 enum/string 迁向 catalog/spec。
 3. 将消费者 port 放回消费者侧，减少实现方定义上游接口。
 4. 给 Features 和各能力包增加包内部 import-linter 合约。
-5. 把 `apps.registry` 的 composition root 豁免逐步迁到 `application.bootstrap` 或 `application.composition`。
-6. 限制 `Manager`、`helpers`、`utils` 的新增。
-7. 为每个包建立稳定 public API 清单。
+5. 限制 `Manager`、`helpers`、`utils` 的新增。
+6. 为每个包建立稳定 public API 清单。
 
 ## 14. 结论
 
@@ -614,18 +613,10 @@ Ditto 当前已经有较强的分层和门禁。下一阶段要解决的是“�
 
 > 机器可读的架构快速参考卡: [agent-context-pack.md](agent-context-pack.md)
 
-## 16. T0 Architecture Clarity Acceptance Checklist
+## 16. 架构验证入口
 
-以下命令构成 T0 gate 的验收标准（所有项必须通过）：
-
-```bash
-# 代码架构门禁
-python scripts/architecture/check_architecture_smells.py   # passes (0 issues)
-task lint-imports --                                # 34 kept, 0 broken
-task type --                                        # 0 errors, 0 warnings, 0 notes
-task test -- --fast                                 # all pass, 0 fail
-task arch-check --                                  # passes
-```
+架构检查使用根 [Taskfile.yml](../../Taskfile.yml) 的 `task arch-check`；类型和行为验证
+按[测试指南](../engineering/testing.md)选择。以当前执行结果为准，不复用旧 T0 通过计数。
 
 **功能性检查**：
 - Tracing: `@traced` in `kernel.tracing` defaults to no-op; `install_trace_handler()` accepts handler; composition root wires OTel bridge

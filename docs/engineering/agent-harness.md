@@ -146,7 +146,8 @@ schema、脚本和配置仍保守分类。页面设计源 `apps/web/DESIGN.md` �
 
 PR 复用 changed-scope 选择检查；仅 skill 文本选择 `skill-validation`，使用固定工具链执行 `harness-validate`，汇总门要求成功。根配置、共享工具和未知范围选择完整检查。
 主分支、merge queue 和定期 CI 执行全套类型、行为、边界、平台、安全与制品验证。
-每周 mutation 证据任务已退役（2026-09-14 工程审计,#169）；发布仍要求对应提交完整 CI 与 cohort 验证。
+每周 mutation 证据任务已退役（2026-09-14 工程审计,#169）；发布仍要求对应提交完整 CI 与发布制品身份验证；Web/API 兼容继续遵守
+[精确身份策略](../../contracts/openapi/README.md)。
 稳定 CI gate 始终运行，显式区分不适用与失败导致的跳过，缺失结果不会通过。
 
 ## 维护规则
