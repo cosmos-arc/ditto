@@ -1,11 +1,10 @@
 #!/usr/bin/env bun
 /**
- * Contract Generator — 读取 JSON 合同 → 产出 TS + mjs
+ * Contract Generator — 读取 JSON 合同 → 产出 shell TS
  *
  * 输入：contracts/pages/*.contract.json
  * 产出：
  *   - src/features/shell/page-contracts.generated.ts
- *   - scripts/visual-audit.config.generated.mjs
  *
  * Usage: bun run generate-contracts
  */
@@ -13,6 +12,7 @@
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateContractSchema } from "./validators/contract-validator.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(__dirname, "../../../..");
@@ -20,7 +20,6 @@ const WEB_ROOT = resolve(WORKSPACE_ROOT, "apps/web");
 
 const CONTRACTS_DIR = resolve(WEB_ROOT, "contracts/pages");
 const OUTPUT_TS = resolve(WEB_ROOT, "src/features/shell/page-contracts.generated.ts");
-const OUTPUT_MJS = resolve(WEB_ROOT, "scripts/visual-audit.config.generated.mjs");
 
 /* ------------------------------------------------------------------ */
 /*  1. Load contracts                                                  */
@@ -39,6 +38,8 @@ async function loadContracts() {
   for (const file of jsonFiles.sort()) {
     const raw = await readFile(resolve(CONTRACTS_DIR, file), "utf-8");
     const contract = JSON.parse(raw);
+    const validation = await validateContractSchema(contract);
+    if (!validation.pass) throw new Error(`${file}: ${validation.message}`);
     contracts.push(contract);
   }
 
@@ -241,217 +242,6 @@ function pushJsonProperty(lines, propertyName, value) {
   lines[lines.length - 1] = `${lines.at(-1)},`;
 }
 
-/* ------------------------------------------------------------------ */
-/*  3. Generate MJS (.generated.mjs) for visual-audit                  */
-/* ------------------------------------------------------------------ */
-
-function generateMJS(contracts) {
-  const lines = [
-    "// AUTO-GENERATED — do not edit manually",
-    "// Run: bun run generate-contracts",
-    "",
-  ];
-
-  // PROTOTYPE_NORMALIZE_CSS
-  lines.push("export const PROTOTYPE_NORMALIZE_CSS = `");
-  lines.push("  .proto-nav { display: none !important; }");
-  lines.push("  #default-view {");
-  lines.push("    height: 100vh !important;");
-  lines.push("    min-height: 100vh !important;");
-  lines.push("    overflow: hidden !important;");
-  lines.push("  }");
-  lines.push("  #default-view > [class*=\"shell\"],");
-  lines.push("  #default-view > .ai-shell,");
-  lines.push("  #default-view > .intel-shell,");
-  lines.push("  #default-view > .risk-shell {");
-  lines.push("    height: 100vh !important;");
-  lines.push("    min-height: 0 !important;");
-  lines.push("    flex: 0 0 auto !important;");
-  lines.push("  }");
-	lines.push("  #default-view > .shell-radar {");
-	lines.push("    align-items: stretch !important;");
-	lines.push("    overflow: hidden !important;");
-	lines.push("  }");
-	lines.push("  #default-view > .shell-radar > .shell-body {");
-	lines.push("    height: 100% !important;");
-	lines.push("    min-height: 0 !important;");
-	lines.push("    overflow: hidden !important;");
-	lines.push("  }");
-	lines.push("  #default-view > .shell-radar > .shell-body > .shell-header,");
-	lines.push("  #default-view > .shell-radar > .shell-body > .context-bar,");
-	lines.push("  #default-view > .shell-radar > .shell-body > .scope-strip,");
-	lines.push("  #default-view > .shell-radar > .shell-body > .status-bar {");
-	lines.push("    flex-shrink: 0 !important;");
-	lines.push("  }");
-	lines.push("  #default-view > .shell-radar > .shell-body > .shell-workspace {");
-	lines.push("    flex: 1 1 auto !important;");
-	lines.push("    min-height: 0 !important;");
-	lines.push("    overflow: hidden !important;");
-	lines.push("  }");
-	lines.push("  #default-view > .shell-radar .shell-workspace > .main-content,");
-	lines.push("  #default-view > .shell-radar .shell-workspace > .right-rail {");
-	lines.push("    height: 100% !important;");
-	lines.push("    min-height: 0 !important;");
-	lines.push("    overflow: auto !important;");
-	lines.push("  }");
-	lines.push("  #default-view > .shell-hub {");
-	lines.push("    padding-bottom: 0 !important;");
-	lines.push("  }");
-	lines.push('  #default-view > .shell-hub .tab-panel[aria-hidden="false"] {');
-	lines.push("    grid-area: main !important;");
-	lines.push("    height: 100% !important;");
-	lines.push("    min-height: 0 !important;");
-	lines.push("  }");
-	lines.push("  #default-view > .shell-studio > .studio-logs {");
-	lines.push("    height: 132px !important;");
-	lines.push("    min-height: 132px !important;");
-	lines.push("  }");
-	lines.push("  #default-view:has(> .shell-studio) > .status-bar {");
-	lines.push("    width: calc(100% - 56px) !important;");
-	lines.push("    margin-left: 56px !important;");
-	lines.push("  }");
-	lines.push("  @media (max-width: 1280px) {");
-	lines.push("    #default-view > .shell-studio {");
-	lines.push("      --prototype-studio-source-width: 200px !important;");
-	lines.push("      --prototype-studio-inspector-width: 280px !important;");
-	lines.push("    }");
-	lines.push("  }");
-	lines.push('  #default-view > [class*="shell"] > .danger-confirmation-summary {');
-	lines.push("    display: none !important;");
-	lines.push("  }");
-  lines.push("  #default-view > .status-bar {");
-  lines.push("    height: 24px !important;");
-  lines.push("    flex: 0 0 auto !important;");
-  lines.push("  }");
-	lines.push('  #default-view:has(> .status-bar) > [class*="shell"],');
-	lines.push("  #default-view:has(> .status-bar) > .ai-shell,");
-	lines.push("  #default-view:has(> .status-bar) > .intel-shell,");
-	lines.push("  #default-view:has(> .status-bar) > .risk-shell {");
-	lines.push("    height: calc(100vh - 24px) !important;");
-	lines.push("  }");
-  lines.push("`;");
-  lines.push("");
-
-  // Prototype app-level targets
-  lines.push("const PROTOTYPE_APP_TARGETS = {");
-  lines.push('  rail: ".shell-rail",');
-  lines.push('  header: ".shell-header, .studio-header, .object-header",');
-  lines.push("};");
-  lines.push("");
-
-  lines.push("const PROTOTYPE_WITH_STATUS_BAR = {");
-  lines.push('  status: ".status-bar",');
-  lines.push("};");
-  lines.push("");
-
-  lines.push("const REACT_NO_STATUS_BAR = {");
-  lines.push("  status: undefined,");
-  lines.push("};");
-  lines.push("");
-
-  // VISUAL_AUDIT_PAGES
-  lines.push("export const VISUAL_AUDIT_PAGES = [");
-
-  for (const c of contracts) {
-    const filename = c.prototypeRef.split("/").pop();
-
-    // Build prototype targets from contract slots + subSlots
-    const protoTargets = { ...PROTOTYPE_APP_TARGETS_raw(c) };
-    for (const slot of c.slots) {
-      protoTargets[slot.name] = slot.prototypeSelector;
-    }
-    for (const sub of c.subSlots ?? []) {
-      protoTargets[sub.name] = sub.prototypeSelector;
-    }
-    if (c.flags?.hasStatusBar) {
-      protoTargets.status = ".status-bar";
-    }
-
-    // Build react targets from contract slots + subSlots
-    const reactTargets = {};
-    reactTargets.shell = "#root > div";
-    reactTargets.rail = "nav[aria-label='主导航']";
-    reactTargets.header = "header";
-    for (const slot of c.slots) {
-      reactTargets[slot.name] = slot.reactSelector;
-    }
-    for (const sub of c.subSlots ?? []) {
-      reactTargets[sub.name] = sub.reactSelector;
-    }
-    if (c.flags?.hasStatusBar) {
-      reactTargets.status = "[data-slot='status-bar']";
-    }
-
-    const shellThreshold = { x: 4, y: 4, widthRatio: 0.03, heightRatio: 0.05 };
-    const contentThreshold = { x: 8, y: 8, widthRatio: 0.03, heightRatio: 0.03 };
-    const targetThresholds = {};
-    for (const key of Object.keys(protoTargets)) {
-      targetThresholds[key] = shellThreshold;
-    }
-    for (const slot of c.slots) {
-      targetThresholds[slot.name] = { ...shellThreshold, ...(slot.threshold ?? {}) };
-    }
-    for (const sub of c.subSlots ?? []) {
-      targetThresholds[sub.name] = { ...contentThreshold, ...(sub.threshold ?? {}) };
-    }
-
-    lines.push("  {");
-    lines.push(`    route: "${c.route}",`);
-		if (c.resolvedRoute) {
-			lines.push(`    resolvedRoute: ${JSON.stringify(c.resolvedRoute)},`);
-		}
-    lines.push(`    name: "${c.id}",`);
-    lines.push(`    prototype: "${filename}",`);
-
-    // prototypeTargets
-    lines.push("    prototypeTargets: {");
-    for (const [key, val] of Object.entries(protoTargets)) {
-      lines.push(`      '${key}': "${val}",`);
-    }
-    lines.push("    },");
-
-    // reactTargets
-    lines.push("    reactTargets: {");
-    for (const [key, val] of Object.entries(reactTargets)) {
-      lines.push(`      '${key}': "${val}",`);
-    }
-    lines.push("    },");
-
-    pushJsonProperty(lines, "targetThresholds", targetThresholds);
-    pushJsonProperty(lines, "visualThresholds", c.visualThresholds);
-
-    lines.push("  },");
-  }
-
-  lines.push("];");
-  lines.push("");
-
-  return lines.join("\n");
-}
-
-/**
- * Build prototype app-level targets for a contract
- */
-function PROTOTYPE_APP_TARGETS_raw(c) {
-  const targets = {
-    shell: "#default-view > [class*='shell']",
-    rail: ".shell-rail",
-    header: ".shell-header",
-  };
-
-  // Studio prototypes use a distinct top-level header. Object hubs retain
-  // `.shell-header`; `.object-header` is only the nested identity block.
-  if (c.shellFamily === "studio") {
-    targets.header = ".studio-header";
-  }
-
-  return targets;
-}
-
-/* ------------------------------------------------------------------ */
-/*  4. Main                                                            */
-/* ------------------------------------------------------------------ */
-
 async function main() {
   console.log("[generate] Loading contracts from", CONTRACTS_DIR);
   const contracts = await loadContracts();
@@ -463,17 +253,11 @@ async function main() {
 
   console.log(`[generate] Found ${contracts.length} contract(s)`);
 
-  // Complete both transformations before touching either generated file.
+  // Validate all inputs and finish serialization before replacing the shell output.
   const tsContent = generateTS(contracts);
-  const mjsContent = generateMJS(contracts);
   await mkdir(dirname(OUTPUT_TS), { recursive: true });
   await writeFile(OUTPUT_TS, tsContent, "utf-8");
   console.log("[generate] Wrote", OUTPUT_TS);
-
-  // Write the already validated MJS content.
-  await mkdir(dirname(OUTPUT_MJS), { recursive: true });
-  await writeFile(OUTPUT_MJS, mjsContent, "utf-8");
-  console.log("[generate] Wrote", OUTPUT_MJS);
 
   console.log("[generate] Done.");
 }

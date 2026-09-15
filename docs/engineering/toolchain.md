@@ -38,7 +38,9 @@ UV_PROJECT_ENVIRONMENT="$PWD/.cache/production-venv" \
   uv sync --locked --all-packages --no-dev --no-editable
 ```
 
-生产容器仅复制非 editable 环境、固定 Python 运行时、必要系统库与配置，不复制源码 checkout、uv 或 Bun。两个复制库来源镜像在 release cohort 中均有按 amd64 digest/config 绑定的原始 Trivy 报告；报告保留全部 package inventory，来源镜像中带 HIGH/CRITICAL 的 installed file 必须在最终镜像中不存在，或与来源字节不同（即已被干净来源替换），否则失败。独立的 copied-library source provenance SPDX 通过 external document reference 挂到最终 backend SPDX，原始来源报告也直接发布为 release evidence。环境身份是版本化摘要，绑定 `uv.lock`、`.python-version`、Dockerfile 的固定来源及目标 `linux/amd64`；release inputs 携带全部输入，新 bundle 携带对应 stdlib verifier。历史 cohort 与其自带 verifier 不改写。
+生产容器仅复制非 editable 环境、固定 Python 运行时、必要系统库与配置，不复制源码 checkout、uv 或 Bun。当前发布按 [.github/workflows/release.yml](../../.github/workflows/release.yml) 和 [artifact gate](../../tooling/release/artifact_gate.py) 验证镜像/Web 制品身份、扫描对象、SPDX SBOM 绑定与 checksum。环境摘要的输入由 [environment_identity.py](../../tooling/release/environment_identity.py) 定义。
+
+release-cohort 注册链、copied-library source provenance SPDX、release inputs 和 bundle stdlib verifier 已退役，历史 cohort 与其自带 verifier 保留原提交语境。活跃的 [Web/API 兼容策略](../../contracts/openapi/README.md) 仍校验 allowlist 字节身份，要求精确匹配并拒绝隐式兼容。
 
 ## CI 时长基线
 

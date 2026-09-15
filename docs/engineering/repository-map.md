@@ -15,16 +15,16 @@
 | `CHANGELOG.md` | 版本变更记录（发布历史） | GitHub 门面惯例，无机器引用 |
 | `SECURITY.md` | 安全策略与 agent 会话边界 | GitHub 门面惯例，无机器引用 |
 | `LICENSE` | 许可证 | 法律必需 |
-| `Taskfile.yml` | 唯一跨栈任务 DAG；所有 `task` 入口 | CI workflows 全量调用；evidence `FINGERPRINT_CONFIGS`；hook `_is_harness` |
-| `pyproject.toml` | uv workspace 根 + Ruff/basedpyright/pytest 全家配置 | `task type/lint/test`；evidence 指纹 |
+| `Taskfile.yml` | 唯一跨栈任务 DAG；所有 `task` 入口 | CI workflows 全量调用；hook `_is_harness` |
+| `pyproject.toml` | uv workspace 根 + Ruff/basedpyright/pytest 全家配置 | `task type/lint/test` |
 | `uv.lock` | Python 环境锁（uv） | `task python-install --locked`；Dockerfile 构建输入 |
 | `bun.lock` | Web 依赖唯一锁文件 | `task bun-install --frozen-lockfile`；repository_policy Bun-only 断言 |
 | `bunfig.toml` | Bun 安装策略（isolated linker、禁 hoist、registry） | validate `_validate_structured_configs`；release 策略测试 |
 | `package.json` | Bun workspace manifest，`packageManager` 钉死 Bun 版本 | `.github/actions/setup-bun` 解析 packageManager；release 版本比对 |
-| `.github/codecov.yml` | Codecov 云端覆盖率门禁（backend 90% 等阈值） | codecov-action 自动发现；`tooling/release/tests/test_codecov_policy.py` 策略断言 |
+| `.github/codecov.yml` | Codecov 云端覆盖率门禁（阈值以该文件为准） | codecov-action 自动发现；`tooling/release/tests/test_codecov_policy.py` 策略断言 |
 | `pyright.tests.json` | 测试代码独立 basedpyright 配置（basic 模式 + extraPaths） | `scripts/type.py` 以 `--project pyright.tests.json` 显式调用 |
 | `.importlinter` | import-linter 架构契约：依赖边界的机器权威 | `task lint-imports`（import-linter 默认读根路径） |
-| `.pre-commit-config.yaml` | pre-commit 钩子：ruff、gitleaks、conventional commits、pre-push | `task pre-commit-install/run/update`；evidence 指纹 |
+| `.pre-commit-config.yaml` | pre-commit 钩子：ruff、gitleaks、conventional commits、pre-push | `task pre-commit-install/run/update` |
 | `.gitleaks.toml` | gitleaks 配置（extend 默认规则集） | security workflow 单版本容器扫描；pre-commit gitleaks hook |
 | `.gitleaksignore` | 已审计误报指纹（commit:path:rule:line 精确到行） | security workflow 扫描必须全过；策略测试禁止宽泛排除 |
 | `.knowledge-policy.toml` | 机器输入位置哨兵 | `task harness-validate`(tooling/agent_harness/validate) |
@@ -67,7 +67,7 @@ IDE 抑制语义依赖「一个 pyright 项目只有一个配置文件」的机�
 - `scripts/analyze_slow_tests.py`、`type.py`、`test.py`、`architecture/`：Taskfile 活跃引用，保留。
 - `scripts/acceptance/`：rc1/wave1/r2 验收可重放工具链；r3 验收链仍读 `artifacts/acceptance/` 前置报告。保留。
 - `scripts/evidence/`：个人工作站证据文档的「可重放命令」载体。保留。
-- `scripts/benchmarks/`：手动基准入口，无 Taskfile/CI 引用（去向见地图 #142 待定项）。
+- `scripts/benchmarks/`：保留的手动基准入口，无 Taskfile/CI 自动执行；仅在对应研究问题需要测量时使用。
 
 ## 本地运行时目录（gitignored，不进仓库）
 

@@ -77,7 +77,6 @@ class ProtectedPathTests(unittest.TestCase):
             "apps/web/src/features/shell/page-contracts.generated.ts": (
                 "generator-config",
             ),
-            "apps/web/scripts/visual-audit.config.generated.mjs": ("generator-config",),
             "apps/web/src/routeTree.gen.ts": ("generator-config",),
             "tooling/agent_harness/hook.py": (),
             "docs/migrations/2026-09-04/README.md": (),
@@ -327,7 +326,6 @@ class HookLeaseTests(unittest.TestCase):
             "cp fixture.ts apps/web/src/features/shell/page-contracts.generated.ts",
             "mv fixture.ts apps/web/src/routeTree.gen.ts",
             "sed -i.bak 's/a/b/' apps/web/scripts/generate-route-tree.mjs",
-            "tee apps/web/scripts/visual-audit.config.generated.mjs",
         )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "main"

@@ -13,7 +13,6 @@
 import { readFile, access, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
-import { execSync } from "node:child_process";
 
 const WORKSPACE_ROOT = resolve(import.meta.dirname, "../../../../..");
 const requireFromWeb = createRequire(resolve(WORKSPACE_ROOT, "apps/web/package.json"));
@@ -56,7 +55,7 @@ async function loadSchema() {
 /**
  * #1 JSON Schema 验证（ajv）
  */
-async function checkSchema(contract) {
+export async function validateContractSchema(contract) {
   const schema = await loadSchema();
   const validate = ajv.compile(schema);
   const valid = validate(contract);
@@ -462,16 +461,13 @@ function checkOverlayContracts(contract) {
 }
 
 /**
- * #13 generated artifact 语法检查
- *
- * 对 generate.mjs 产出的 .generated.mjs 和 .generated.ts 文件
- * 执行 node --check / tsc --noEmit 确保语法正确。
+ * Generated shell output must be a regular file when present.
+ * TypeScript syntax and types are checked by tsc -b.
  */
 async function checkGeneratedArtifacts(contract, ctx) {
   const root = ctx.root;
   const artifacts = [
-    { path: resolve(root, "scripts/visual-audit.config.generated.mjs"), check: "node" },
-    { path: resolve(root, "src/features/shell/page-contracts.generated.ts"), check: "syntax" },
+    { path: resolve(root, "src/features/shell/page-contracts.generated.ts") },
   ];
 
   const errors = [];
@@ -486,29 +482,19 @@ async function checkGeneratedArtifacts(contract, ctx) {
       // artifact 不存在 — 不是错误，可能尚未生成
       continue;
     }
-
-    if (artifact.check === "node") {
-      try {
-        execSync(`node --check "${artifact.path}"`, { stdio: "pipe" });
-      } catch (e) {
-        errors.push(`${artifact.path}: ${e.stderr?.toString().trim() ?? "syntax error"}`);
-      }
-    }
-    // .ts artifact — 只检查文件可解析为合法 JSON/JS（不含类型）
-    // full tsc check 由 tsc -b 覆盖，这里只确认文件存在且非空
   }
 
   if (errors.length > 0) {
     return {
       pass: false,
-      message: `Generated artifact syntax errors:\n${errors.join("\n")}`,
+      message: `Generated artifact errors:\n${errors.join("\n")}`,
       level: "BLOCK",
     };
   }
 
   return {
     pass: true,
-    message: "Generated artifacts passed syntax checks",
+    message: "Generated artifact file checks passed",
     level: "BLOCK",
   };
 }
@@ -669,7 +655,7 @@ async function checkDesignMdToken(_contract, ctx) {
  */
 export async function validateContract(contract, ctx) {
   const checks = [
-    await checkSchema(contract),
+    await validateContractSchema(contract),
     await checkPrototypeExists(contract, ctx),
     await checkBlueprintRefs(contract, ctx),
     checkPrototypeSelectorFormat(contract),

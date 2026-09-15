@@ -36,41 +36,20 @@ class PageContractGeneratorPathTests(unittest.TestCase):
                 root / "apps" / "web" / "scripts" / "page-contract" / "generate.mjs"
             )
             script.parent.mkdir(parents=True)
-            shutil.copy2(CANONICAL_GENERATOR, script)
+            shutil.copytree(
+                CANONICAL_GENERATOR.parent, script.parent, dirs_exist_ok=True
+            )
+            (root / "apps/web/node_modules").symlink_to(
+                ROOT / "apps/web/node_modules", target_is_directory=True
+            )
 
             web_root = root / "apps" / "web"
             contracts = web_root / "contracts" / "pages"
             contracts.mkdir(parents=True)
+            contract = json.loads(SYSTEM_AGENT_OPS_CONTRACT.read_text())
+            contract["route"] = "/fixture"
             (contracts / "fixture.contract.json").write_text(
-                json.dumps(
-                    {
-                        "id": "fixture",
-                        "route": "/fixture",
-                        "pagePattern": "object-hub",
-                        "shellFamily": "object-hub",
-                        "prototypeRef": "docs/prototypes/fixture.html",
-                        "slots": [
-                            {
-                                "name": "main",
-                                "prototypeSelector": ".main",
-                                "reactSelector": "[data-contract-slot='main']",
-                            }
-                        ],
-                        "states": {"universal": ["loading", "empty", "error", "stale"]},
-                        "flags": {
-                            "hasStatusBar": False,
-                            "sidebarCollapsible": False,
-                        },
-                        "visualThresholds": {
-                            "consoleErrors": 0,
-                            "pageErrors": 0,
-                            "missingSelectors": 0,
-                            "targetMismatch": 0,
-                            "pixelDiffRatio": 0,
-                        },
-                    }
-                ),
-                encoding="utf-8",
+                json.dumps(contract), encoding="utf-8"
             )
 
             from_root = subprocess.run(
@@ -82,11 +61,13 @@ class PageContractGeneratorPathTests(unittest.TestCase):
             )
 
             assert from_root.returncode == 0, from_root.stderr
-            generated = (
-                web_root / "src" / "features" / "shell" / "page-contracts.generated.ts",
-                web_root / "scripts" / "visual-audit.config.generated.mjs",
-            )
-            first_contents = tuple(path.read_bytes() for path in generated)
+            generated = web_root / "src/features/shell/page-contracts.generated.ts"
+            first_contents = generated.read_bytes()
+            assert b'route: "/fixture"' in first_contents
+
+            retired_output = web_root / "scripts" / "visual-audit.config.generated.mjs"
+            assert not retired_output.exists()
+            retired_output.write_text("local historical output")
 
             from_web = subprocess.run(
                 ["bun", str(script)],
@@ -97,16 +78,25 @@ class PageContractGeneratorPathTests(unittest.TestCase):
             )
 
             assert from_web.returncode == 0, from_web.stderr
-            assert tuple(path.read_bytes() for path in generated) == first_contents
+            assert retired_output.read_text() == "local historical output"
+            assert generated.read_bytes() == first_contents
             assert not (root / "docs" / "contracts" / "pages").exists()
             assert not (root / "src" / "features" / "shell").exists()
             assert not (root / "scripts" / "visual-audit.config.generated.mjs").exists()
             fixture = contracts / "fixture.contract.json"
             original = fixture.read_text()
-            for missing in ("prototypeRef", "visualThresholds"):
+            for field in (
+                "prototypeRef",
+                "visualThresholds",
+                "pixelDiffRatio",
+                "consoleErrors",
+            ):
                 invalid = json.loads(original)
-                invalid["id"] = "must-not-persist"
-                del invalid[missing]
+                invalid["route"] = "/must-not-persist"
+                if field in ("prototypeRef", "visualThresholds"):
+                    del invalid[field]
+                else:
+                    invalid["visualThresholds"][field] = -1
                 fixture.write_text(json.dumps(invalid))
                 rejected = subprocess.run(
                     ["bun", str(script)],
@@ -116,7 +106,9 @@ class PageContractGeneratorPathTests(unittest.TestCase):
                     text=True,
                 )
                 assert rejected.returncode != 0
-                assert tuple(path.read_bytes() for path in generated) == first_contents
+                assert "JSON Schema validation failed" in rejected.stderr
+                assert field in rejected.stderr
+                assert generated.read_bytes() == first_contents
                 fixture.write_text(original)
 
     def test_validator_loads_isolated_web_dependencies_without_node_path(self) -> None:

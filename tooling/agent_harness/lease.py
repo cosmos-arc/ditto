@@ -50,7 +50,6 @@ _GENERATOR_PATH_REGISTRY = (
         "name": "page-contract",
         "paths": frozenset(
             {
-                "apps/web/scripts/visual-audit.config.generated.mjs",
                 "apps/web/src/features/shell/page-contracts.generated.ts",
             }
         ),
@@ -106,10 +105,7 @@ _GENERATOR_COMMAND_REGISTRY = (
             }
         ),
         "requires_write_flag": False,
-        "targets": (
-            "apps/web/scripts/visual-audit.config.generated.mjs",
-            "apps/web/src/features/shell/page-contracts.generated.ts",
-        ),
+        "targets": ("apps/web/src/features/shell/page-contracts.generated.ts",),
     },
 )
 _GENERATED_CONTRACT_PREFIXES = ("apps/web/src/api/generated/",)
