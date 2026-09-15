@@ -24,6 +24,30 @@ def git(root: Path, *arguments: str) -> None:
     subprocess.run(["git", *arguments], cwd=root, check=True, capture_output=True)
 
 
+def test_shell_context_regressions_from_independent_review(tmp_path: Path) -> None:
+    root, other = tmp_path / "main", tmp_path / "other"
+    repository(root)
+    git(root, "worktree", "add", "-b", "feature", str(other))
+
+    def bash(command: str) -> dict[str, object]:
+        return invoke(root, {"tool_name": "Bash", "tool_input": {"command": command}})
+
+    assert bash("cat <<-'EOF'\n\tdata\n\tEOF\ngit reset --hard")["decision"] == "block"
+    assert bash(f"cd {other} | cat; printf x > uv.lock")["decision"] == "block"
+    acquire_lease(other, owner="fixture", task="review-regression")
+    try:
+        assert bash(f"bun run --cwd {other} generate-contracts") == {}
+        assert bash(f"bun --cwd {root} run generate-contracts")["decision"] == "block"
+    finally:
+        release_lease(other)
+    acquire_lease(root, owner="fixture", task="review-regression")
+    try:
+        assert bash(f"bun --cwd {other} run generate-contracts")["decision"] == "block"
+        assert bash(f"bun run --cwd {root} generate-contracts") == {}
+    finally:
+        release_lease(root)
+
+
 def repository(root: Path) -> None:
     root.mkdir()
     git(root, "init", "-b", "main")
@@ -138,6 +162,7 @@ def test_ruff_formats_only_successful_edit_at_effective_directory(
     assert (root / "same.py").read_text() == original
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX executable boundary probe")
 def test_verification_children_receive_isolated_keyring(tmp_path: Path) -> None:
     target = tmp_path / "tests/test_environment.py"
     target.parent.mkdir()

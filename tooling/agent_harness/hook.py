@@ -125,9 +125,11 @@ def _shell_source(command: str) -> str:
     """Quoted heredoc bodies are data, not shell invocations."""
     source: list[str] = []
     delimiter: str | None = None
+    strip_tabs = False
     for line in command.splitlines(keepends=True):
         if delimiter is not None:
-            if line.rstrip("\r\n") == delimiter:
+            ending = line.rstrip("\r\n")
+            if (ending.lstrip("\t") if strip_tabs else ending) == delimiter:
                 delimiter = None
             continue
         source.append(line)
@@ -140,6 +142,7 @@ def _shell_source(command: str) -> str:
                     "Use a quoted heredoc delimiter for reliable hook analysis"
                 )
             delimiter = shlex.split(words[index + 1])[0]
+            strip_tabs = word == "<<-"
     return "".join(source)
 
 
@@ -162,6 +165,11 @@ def _tokenized_segments(command: str) -> list[list[str]]:
                 tokens.append(token)
     if tokens:
         segments.append(tokens)
+    syntax = words[:-1] if words and words[-1] == "\n" else words
+    if any(segment[0] == "cd" for segment in segments) and any(
+        word in {"|", "&", "||", ";", "\n"} for word in syntax
+    ):
+        raise ValueError("Use cd only in an && chain, or set tool workdir explicitly")
     return segments
 
 
@@ -489,6 +497,52 @@ def _known_command_write_targets(tokens: Sequence[str], root: Path) -> tuple[str
     return tuple(sorted(targets))
 
 
+def _runner_directory(tokens: list[str], directory: Path) -> tuple[list[str], Path]:
+    index = next(
+        (
+            value
+            for name in ("bun", "uv")
+            if (value := _executable_index(tokens, name)) is not None
+        ),
+        None,
+    )
+    if index is None:
+        return tokens, directory
+    normalized = tokens[: index + 1]
+    mutation = False
+    index += 1
+    while index < len(tokens):
+        argument = tokens[index]
+        if argument in {"--cwd", "--directory", "-C"}:
+            if index + 1 >= len(tokens):
+                raise ValueError(f"{argument} needs an explicit directory")
+            directory = (directory / tokens[index + 1]).resolve()
+            index += 2
+            continue
+        if argument.startswith(("--cwd=", "--directory=")):
+            directory = (directory / argument.split("=", 1)[1]).resolve()
+            index += 1
+            continue
+        if argument.startswith("--project"):
+            raise ValueError(
+                "Use tool workdir instead of an ambiguous project override"
+            )
+        normalized.append(argument)
+        index += 1
+        mutation = mutation or argument in {
+            "add",
+            "install",
+            "remove",
+            "update",
+            "sync",
+            "lock",
+        }
+        if not mutation and argument != "run" and not argument.startswith("-"):
+            break
+    normalized.extend(tokens[index:])
+    return normalized, directory
+
+
 def shell_commands(payload: dict[str, Any], root: Path) -> list[tuple[list[str], Path]]:
     """Recognize explicit directory changes; retain each invocation's directory."""
     directory = effective_cwd(payload, root)
@@ -499,7 +553,7 @@ def shell_commands(payload: dict[str, Any], root: Path) -> list[tuple[list[str],
                 raise ValueError("Use cd with one explicit directory")
             directory = (directory / tokens[1]).resolve()
         else:
-            commands.append((tokens, directory))
+            commands.append(_runner_directory(tokens, directory))
     return commands
 
 
