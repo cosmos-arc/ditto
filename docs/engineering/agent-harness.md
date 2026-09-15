@@ -159,6 +159,9 @@ PR 复用 changed-scope 选择检查；仅 skill 文本选择 `skill-validation`
 - hook 以 payload 的会话目录与工具目录解析目标；文件绝对路径按实际目标 worktree 授权。
   `cd` 与 `git -C` 的明确目录调用可识别。shell 策略只覆盖已识别语法；宿主专用工具和
   后续 `write_stdin` 可能不触发 PreToolUse，完整执行权限仍由宿主权限机制负责。
+  2026-09-15 当前 Codex 实测：`exec_command` 映射为 Bash 时 `tool_input` 仅包含
+  `command`，没有透传工具的 `workdir`；payload `cwd` 仍是会话目录。跨目录操作应在命令
+  中显式使用 `git -C`、支持的 `cd ... && ...` 或绝对目标；不能把未知工具目录当成已验证。
 - 实际状态分开记录：配置校验、宿主发现、信任、事件触发、行为验收。静态通过不证明已部署。
 
 ## 验收
