@@ -117,7 +117,9 @@ uv run --no-sync python -m ditto_apps.scripts.q5_live_portfolio_diagnostic \
 
 ## 四域备份与隔离恢复
 
-恢复单位包含 data、research、trading 和 Agent 三个物理库，共六个 SQLite 文件。manifest 认证文件路径、大小、逐表行数、integrity check 与 SHA-256。
+恢复单位包含 data、research、trading 各一个库及 Agent 三个库，共六个 SQLite 文件。manifest 认证文件路径、大小、逐表行数、integrity check 与 SHA-256。
+
+备份前停止全部 API、jobs、Agent 和其他 writer，保持停写直到备份与验证结束。各库逐次复制，不构成自动跨库原子快照。工作站备份不包含 research artifact tree 或外部市场数据文件；研究库和 pinned artifacts 使用 [R3 恢复流程](../runbooks/backup-restore.md)，两种恢复分别进入全新目标，不能覆盖同一个根。
 
 ```bash
 uv run --no-sync python -m ditto_apps.cli.main ops workstation backup \
@@ -133,6 +135,10 @@ uv run --no-sync python -m ditto_apps.cli.main ops workstation restore \
 ```
 
 源、备份和恢复目录不得重叠，destination 必须不存在。恢复永不覆盖活动运行时。先在隔离根启动并执行完整性、schema、read-only smoke、reconcile 和 SSE cursor 检查；切换活动根属于单独变更，必须再次明确批准。
+
+确定性工作站恢复用例通过实际账本查询与 Agent runtime 回读非空账户、run、事件和 cursor，并检查重复读取没有新增业务副作用：`apps/backend/tests/integration/operations/test_workstation_backup_restore.py`。R3 领域恢复继续由既有 `test_r3_backup_restore.py` 验证 governance、holdout、pinned packet 与 artifact bytes。
+
+组合/Agent 的 `tests/system/portfolio-agent.spec.ts` 验证精确身份 URL 下三类组合、实际工具 evidence 和刷新回读，仅模型边界使用确定性替身。它不证明 LIVE 模型质量。研究页面到组合的日常导航、普通 UI 审批后的写入恢复仍未接通，不属于这项工程验收。
 
 ## 恢复演练
 

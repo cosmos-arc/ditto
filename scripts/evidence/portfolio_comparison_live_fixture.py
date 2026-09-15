@@ -350,6 +350,9 @@ def seed(root: Path) -> dict[str, object]:
     database = root / "metadata" / "metadata.sqlite"
     database.parent.mkdir(parents=True, exist_ok=True)
     pool = SQLitePool(str(database))
+    trading_database = root / "trading" / "trading.sqlite"
+    trading_database.parent.mkdir(parents=True, exist_ok=True)
+    trading_pool = SQLitePool(str(trading_database))
     client = SQLiteClient(pool)
     try:
         snapshot_store = SQLiteProviderSnapshotStore(client)
@@ -362,8 +365,9 @@ def seed(root: Path) -> dict[str, object]:
             writer=artifact_writer,
         )
         artifact = _signal_package(artifacts, snapshot.snapshot_id)
-        journal = SqliteAccountEventJournal(client)
-        sessions = SqlitePaperSessionStore(client)
+        trading_client = SQLiteClient(trading_pool)
+        journal = SqliteAccountEventJournal(trading_client)
+        sessions = SqlitePaperSessionStore(trading_client)
         _accounts(journal, sessions)
         request = PortfolioComparisonRequest(
             strategy_id=STRATEGY_ID,
@@ -427,9 +431,10 @@ def seed(root: Path) -> dict[str, object]:
                 comparison.model_vs_manual.attribution.user_choice_bps
             ),
             "scenario_turnover": scenario.risk.turnover,
-            "frontend_path": f"/trading/portfolio?{urlencode(query_params)}",
+            "frontend_path": f"/portfolio/?{urlencode(query_params)}",
         }
     finally:
+        trading_pool.close_all()
         pool.close()
 
 

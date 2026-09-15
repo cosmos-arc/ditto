@@ -71,7 +71,11 @@ def backup_workstation(
     source_root: Path,
     backup_root: Path,
 ) -> WorkstationBackupManifest:
-    """Back up every canonical store into one new authenticated directory."""
+    """
+    Copy canonical SQLite stores sequentially; callers must stop all writers.
+
+    This is not an atomic cross-database snapshot and excludes artifact trees.
+    """
     source = source_root.expanduser().resolve(strict=False)
     destination = backup_root.expanduser().resolve(strict=False)
     _validate_new_destination(source, destination)
