@@ -115,16 +115,12 @@ export default {
 		},
 		{
 			name: "core-api-client-surface-stays-in-transport-zones",
-			comment: "Only src/api, per-feature api adapters and test scaffolding may import transport or a rebuilt client barrel.",
+			comment:
+				"Only src/api, per-feature api adapters and test scaffolding may import transport or a rebuilt client barrel.",
 			severity: "error",
 			from: {
 				path: "^src/",
-				pathNot: [
-					"^src/api/",
-					"^src/features/[^/]+/api(?:/|\\.ts$)",
-					"^src/(?:mocks|test|tests)/",
-					testModule,
-				],
+				pathNot: ["^src/api/", "^src/features/[^/]+/api(?:/|\\.ts$)", "^src/(?:mocks|test|tests)/", testModule],
 			},
 			to: { path: "^src/api/(?:transport|index)\\.[cm]?[jt]sx?$" },
 		},
