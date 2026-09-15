@@ -44,6 +44,21 @@ def _commit_file(root: Path, relative: str, content: str) -> Path:
 
 
 class PathExtractionTests(unittest.TestCase):
+    def test_relative_edit_uses_tool_directory_and_retains_external_targets(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            payload = {
+                "cwd": str(root / "sub"),
+                "tool_input": {"file_path": "sample.py"},
+            }
+            assert extract_python_paths(payload, root) == [root / "sub/sample.py"]
+            payload["tool_input"] = {"file_path": str(root.parent / "other/sample.py")}
+            assert extract_python_paths(payload, root) == [
+                root.parent / "other/sample.py"
+            ]
+
     def test_edit_and_write_paths(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -140,6 +155,25 @@ class PathExtractionTests(unittest.TestCase):
 
 
 class CommandPolicyTests(unittest.TestCase):
+    def test_command_text_is_not_execution(self) -> None:
+        for command in (
+            "printf '%s ' git reset --hard",
+            "printf 'hello; git reset --hard'",
+            "rg 'pip install' .",
+            "cat apps/web/scripts/page-contract/generate.mjs",
+            "printf '>' uv.lock",
+            "python3 -c 'print(1)' apps/web/scripts/page-contract/generate.mjs",
+        ):
+            assert policy_violation(command, "main") is None
+            assert (
+                hook_module.pre_tool_decision(
+                    {"tool_name": "Bash", "tool_input": {"command": command}},
+                    Path("/not/a/repository"),
+                    "main",
+                )
+                == {}
+            )
+
     def test_dangerous_commands_are_blocked(self) -> None:
         fixtures = {
             "git commit -m change": "main",
@@ -526,6 +560,41 @@ class StopGateTests(unittest.TestCase):
 
 
 class HostEntryPointTests(unittest.TestCase):
+    def test_cli_rejects_invalid_input_and_uses_payload_worktree(self) -> None:
+        script = Path(hook_module.__file__).resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _initialize_repository(root)
+            other = root / "other"
+            other.mkdir()
+            _initialize_repository(other)
+            subprocess.run(["git", "checkout", "-qb", "feature"], cwd=other, check=True)
+            for payload, blocked in (
+                ("[]", True),
+                ("{", True),
+                (json.dumps({"tool_name": "Write", "tool_input": {}}), True),
+                (
+                    json.dumps(
+                        {
+                            "cwd": str(other),
+                            "tool_name": "Bash",
+                            "tool_input": {"command": "git commit -m ok"},
+                        }
+                    ),
+                    False,
+                ),
+            ):
+                result = subprocess.run(
+                    [sys.executable, str(script), "--event", "pre-tool"],
+                    cwd=root,
+                    input=payload,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                assert result.returncode == 0, result.stderr
+                assert (json.loads(result.stdout).get("decision") == "block") is blocked
+
     def test_explicit_check_fails_when_changed_paths_cannot_be_captured(
         self,
     ) -> None:

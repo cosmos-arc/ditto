@@ -55,6 +55,11 @@ def main() -> int:
         **os.environ,
         "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
     }
+    # Git exports repository selectors to hooks. Tests create foreign repositories.
+    for name in subprocess.check_output(
+        ["git", "rev-parse", "--local-env-vars"], cwd=root, text=True
+    ).splitlines():
+        environment.pop(name, None)
     for command in commands:
         print("pre-push:", " ".join(command), flush=True)
         subprocess.run(command, cwd=root, env=environment, check=True)

@@ -7,7 +7,6 @@ import argparse
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,11 +18,19 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path, PurePosixPath
 
+if sys.platform == "win32":
+    import msvcrt
+
+    fcntl = None
+else:
+    import fcntl
+
+    msvcrt = None
+
 LEASE_SCHEMA_VERSION = 1
 DEFAULT_TTL = timedelta(minutes=30)
 MAX_TTL = timedelta(hours=4)
 _GUARD_TIMEOUT_SECONDS = 5.0
-_STALE_GUARD_SECONDS = 60.0
 _LEASE_SCOPE = "protected-write"
 _LEASE_ID = re.compile(r"[0-9a-f]{32}")
 _PROTECTED_RESOURCE_ORDER = (
@@ -174,6 +181,7 @@ def _git_absolute_path(root: Path, argument: str) -> Path:
     result = subprocess.run(
         ("git", "rev-parse", "--path-format=absolute", argument),
         cwd=root,
+        timeout=0.5,
         capture_output=True,
         text=True,
         check=False,
@@ -213,7 +221,11 @@ def _is_migration_path(path: str) -> bool:
 
 def _resources_for_path(path: str) -> set[str]:
     resources: set[str] = set()
-    if path.startswith("contracts/") or path.startswith(_GENERATED_CONTRACT_PREFIXES):
+    if (
+        path == "contracts"
+        or path.startswith("contracts/")
+        or path.startswith(_GENERATED_CONTRACT_PREFIXES)
+    ):
         resources.add("contract")
     if path in _LOCKFILES:
         resources.add("lockfile")
@@ -235,7 +247,7 @@ def generator_write_targets(tokens: Sequence[str]) -> tuple[str, ...]:
         markers = registration["markers"]
         if not any(
             token in markers or any(token.endswith(f"/{marker}") for marker in markers)
-            for token in tokens
+            for token in tokens[:1]
         ):
             continue
         if registration["requires_write_flag"] and "--write" not in token_set:
@@ -346,53 +358,44 @@ def _atomic_write(path: Path, value: dict[str, object]) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def _reclaim_stale_guard(guard: Path) -> None:
-    try:
-        age = time.time() - guard.stat().st_mtime
-    except FileNotFoundError:
-        return
-    if age <= _STALE_GUARD_SECONDS:
-        return
-    stale = guard.with_name(f".guard.stale.{uuid.uuid4().hex}")
-    try:
-        guard.rename(stale)
-    except FileNotFoundError:
-        return
-    shutil.rmtree(stale, ignore_errors=True)
-
-
 @contextmanager
 def _shared_guard(paths: GitLeasePaths) -> Iterator[None]:
+    """Lock lease metadata with an OS-owned lock, released even after a crash."""
     paths.guard_path.parent.mkdir(parents=True, exist_ok=True)
+    if paths.guard_path.is_dir():
+        raise LeaseError(
+            "legacy lease guard directory exists; stop old lease writers and "
+            + "inspect the guard before migrating all worktrees to this version"
+        )
     deadline = time.monotonic() + _GUARD_TIMEOUT_SECONDS
-    token = uuid.uuid4().hex
-    while True:
-        try:
-            paths.guard_path.mkdir()
-        except FileExistsError:
-            _reclaim_stale_guard(paths.guard_path)
-            if time.monotonic() >= deadline:
-                raise LeaseError("timed out acquiring the shared lease guard") from None
-            time.sleep(0.01)
-            continue
-        break
-    token_path = paths.guard_path / "owner"
-    try:
-        token_path.write_text(token, encoding="ascii")
-        yield
-    finally:
-        try:
-            owns_guard = token_path.read_text(encoding="ascii") == token
-        except (FileNotFoundError, OSError):
-            owns_guard = False
-        if owns_guard:
-            released = paths.guard_path.with_name(f".guard.released.{token}")
+    with paths.guard_path.open("a+b") as guard:
+        if msvcrt is not None and guard.tell() == 0:
+            guard.write(b"0")
+            guard.flush()
+        while True:
             try:
-                paths.guard_path.rename(released)
-            except FileNotFoundError:
-                pass
+                if msvcrt is not None:
+                    guard.seek(0)
+                    msvcrt.locking(guard.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    assert fcntl is not None
+                    fcntl.flock(guard.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as error:
+                if time.monotonic() >= deadline:
+                    raise LeaseError(
+                        "timed out acquiring the shared lease guard"
+                    ) from error
+                time.sleep(0.01)
+        try:
+            yield
+        finally:
+            if msvcrt is not None:
+                guard.seek(0)
+                msvcrt.locking(guard.fileno(), msvcrt.LK_UNLCK, 1)
             else:
-                shutil.rmtree(released, ignore_errors=True)
+                assert fcntl is not None
+                fcntl.flock(guard.fileno(), fcntl.LOCK_UN)
 
 
 def _validated_ttl(ttl: timedelta) -> timedelta:
@@ -486,7 +489,7 @@ def authorize_paths(
             raise _lease_conflict(shared)
         if identity != shared or shared.worktree != metadata.worktree.as_posix():
             raise _lease_conflict(shared)
-    except LeaseError as error:
+    except (LeaseError, OSError, subprocess.SubprocessError) as error:
         return LeaseDecision(False, f"Protected write lease denied: {error}", resources)
     return LeaseDecision(True, "", resources)
 
@@ -538,7 +541,7 @@ def main(argv: list[str] | None = None) -> int:
             record = _read_record(paths.lease_path, "shared lease", optional=False)
             if record is None:
                 raise LeaseError("missing shared lease")
-    except LeaseError as error:
+    except (LeaseError, OSError, subprocess.SubprocessError) as error:
         print(f"Integrator lease failed: {error}", file=sys.stderr)
         return 1
     _print_record(record)

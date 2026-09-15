@@ -333,6 +333,7 @@ class HookLeaseTests(unittest.TestCase):
             root = Path(directory) / "main"
             _initialize_repository(root)
 
+            (root / "apps/web").mkdir(parents=True)
             for command in commands:
                 with self.subTest(command=command):
                     decision = pre_tool_decision(

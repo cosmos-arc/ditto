@@ -95,10 +95,13 @@ enabled/trust 状态；不要使用 bypass 参数代替审阅。官方事件语�
 - 非 `docs/**` 的 migration 目录或 `migration_*` 源文件；
 - `.redocly.yaml`、`tooling/contracts/**` 和 Web OpenAPI generator script。
 
-共享 lease 与原子 guard 位于 Git common-dir，因此同一仓库的所有 worktree 竞争同一
-把锁；owner/task/worktree/lease ID/acquired/expiry 的本地 identity 位于各自 git-dir，
+共享 lease 与原子 guard 位于 Git common-dir，因此同一仓库的所有 worktree 共享协作授权；元数据更新使用 OS 文件锁；owner/task/worktree/lease ID/acquired/expiry 的本地 identity 位于各自 git-dir，
 不会在 worktree 间共享。活动 lease 冲突、身份缺失、metadata 损坏或已过期都会
 fail closed；格式正确的过期 lease 可由新 integrator 原子回收。TTL 最大四小时。
+
+OS 锁只保护 lease 元数据更新，进程退出后释放；不把操作前授权描述为业务写入全程互斥。
+升级 guard 实现前停止所有旧版 lease writer，并在所有参与 worktree 更新实现。旧版 `.guard`
+目录存在时新实现拒绝迁移；确认没有存活 writer 后再人工处理遗留目录。不要同时运行两版 guard。
 
 ```bash
 task integrator-lease -- acquire \
@@ -153,10 +156,13 @@ PR 复用 changed-scope 选择检查；仅 skill 文本选择 `skill-validation`
 - Hook 保持标准库实现和窄策略，不做宽泛 shell 语义判断。
 - 自动修复只发生在 PostToolUse 的明确 Python 文件；Stop、`check` 和 `ci` 必须只读。
 - `docs/archive`、`docs/plans/archive` 等历史目录不参加活跃 workflow 依赖扫描。
-- 会话内禁止 `cd`：宿主按会话工作目录展开 `${ZCODE_PROJECT_DIR}` 等项目变量，一次
-  `cd` 即可使共享 hook 路径失效并阻断该会话的 Bash/Edit/Write，且仓库侧无法兜底
-  （变量在任何仓库代码运行之前展开）。访问仓库外路径用工具的绝对路径参数
-  （`git -C`、`gh --repo` 等）。
+- hook 以 payload 的会话目录与工具目录解析目标；文件绝对路径按实际目标 worktree 授权。
+  `cd` 与 `git -C` 的明确目录调用可识别。shell 策略只覆盖已识别语法；宿主专用工具和
+  后续 `write_stdin` 可能不触发 PreToolUse，完整执行权限仍由宿主权限机制负责。
+  2026-09-15 当前 Codex 实测：`exec_command` 映射为 Bash 时 `tool_input` 仅包含
+  `command`，没有透传工具的 `workdir`；payload `cwd` 仍是会话目录。跨目录操作应在命令
+  中显式使用 `git -C`、支持的 `cd ... && ...` 或绝对目标；不能把未知工具目录当成已验证。
+- 实际状态分开记录：配置校验、宿主发现、信任、事件触发、行为验收。静态通过不证明已部署。
 
 ## 验收
 
@@ -177,4 +183,15 @@ validator 检查可发现 skill 与 registry 一致性、本地指令文件存�
 
 ### 推送范围验证
 
-pre-push 使用 pre-commit 提供的提交范围选择检查，覆盖已提交且工作区干净的变更；不以未提交差异代替推送范围。待推送提交必须是当前 HEAD，工作区必须干净，缺少基线历史时执行 `task check`。纯 Web 推送和文件删除同样进入范围选择。
+pre-push 使用 pre-commit 选定的一组提交范围选择检查，覆盖已提交且工作区干净的变更；不以未提交差异代替推送范围。待推送提交必须是当前 HEAD，工作区必须干净，缺少基线历史时执行 `task check`。纯 Web 推送和文件删除同样进入范围选择。
+
+检查子进程启动前按 [Git 官方说明](https://git-scm.com/docs/githooks#_description)
+清除 `git rev-parse --local-env-vars` 列出的仓库环境变量。范围选择仍使用原推送上下文；
+测试创建临时仓库时不得继承 `GIT_DIR`、`GIT_INDEX_FILE` 等变量并误写当前仓库。
+
+常规使用单分支推送；上游 pre-commit 不承诺逐一验收一次 push 的所有 ref。本地结果只覆盖
+选定范围，合并/发布仍以目标提交上的 CI 与服务端规则为准。若未来明确要求所有 ref 在本地
+通过，须在 Git 原始 stdin 边界另行实现合同，不能仅从单组环境变量推断全覆盖。
+
+本地与 CI 使用 gitleaks 8.30.1；staged 扫描与历史扫描的范围仍不同。远端 hook 版本 tag
+沿用 pre-commit 官方工作流；固定 SHA 是可独立选择的可重复性增强，不与版本升级混用。

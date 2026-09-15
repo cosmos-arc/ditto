@@ -336,6 +336,35 @@ def _host_event_entries(hooks: dict[object, object], host: str, event: str) -> o
     return container.get(event)
 
 
+def _shared_hook_matcher(
+    command_hook: dict[object, object],
+    host: str,
+    event: str,
+    matcher: str,
+    errors: list[str],
+) -> re.Pattern[str] | None:
+    timeout = command_hook.get("timeout")
+    if (
+        not isinstance(timeout, (int, float))
+        or isinstance(timeout, bool)
+        or timeout <= 0
+    ):
+        errors.append(f"{host} {event} shared hook needs a positive timeout")
+        return None
+    if command_hook.get("async") is True:
+        errors.append(f"{host} {event} shared hook must run synchronously")
+        return None
+    if host == "zcode" and (command_hook.get("enabled") is False):
+        errors.append(f"{host} {event} shared hook must be enabled")
+        return None
+    try:
+        expression = re.compile(matcher)
+    except re.error:
+        errors.append(f"{host} {event} has invalid matcher regex")
+        return None
+    return expression
+
+
 def _validate_host_event(
     hooks: dict[object, object], host: str, event: str, errors: list[str]
 ) -> None:
@@ -369,16 +398,19 @@ def _validate_host_event(
                 or command != expected_command
             ):
                 continue
-            timeout = command_hook.get("timeout")
-            if (
-                not isinstance(timeout, (int, float))
-                or isinstance(timeout, bool)
-                or timeout <= 0
+            expression = _shared_hook_matcher(
+                command_hook, host, event, matcher, errors
+            )
+            if expression is None or (
+                host == "zcode" and entry.get("enabled") is False
             ):
-                errors.append(f"{host} {event} shared hook needs a positive timeout")
                 continue
             active = True
-            covered.update(matcher.split("|"))
+            covered.update(
+                tool
+                for tool in _HOST_MATCHERS[host][event]
+                if not matcher or expression.search(tool)
+            )
     if not active or not _HOST_MATCHERS[host][event].issubset(covered):
         errors.append(f"{host} {event} must invoke the shared hook for required tools")
 
@@ -404,9 +436,6 @@ def _validate_host_configs(errors: list[str]) -> None:
 
     if codex is not None:
         _validate_host_hook_contract(codex, "codex", errors)
-        post_matchers = _event_matchers(codex, "PostToolUse")
-        if not any("apply_patch" in matcher.split("|") for matcher in post_matchers):
-            errors.append("Codex PostToolUse must match apply_patch")
 
     if zcode is not None:
         _validate_host_hook_contract(zcode, "zcode", errors)

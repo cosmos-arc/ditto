@@ -23,7 +23,7 @@ describe("IndustryRotationPage", () => {
 		render(<IndustryRotationPage initialSnapshotId={selectionRotationFixture.snapshot_id} />, { wrapper: wrapper() });
 
 		await expect(screen.findByText("电子")).resolves.toBeInTheDocument();
-		expect(screen.getByText("relative_strength_20d")).toBeInTheDocument();
+		await expect(screen.findByText("relative_strength_20d")).resolves.toBeInTheDocument();
 		await user.click(screen.getByRole("button", { name: "检查 传媒" }));
 		expect(screen.getByRole("heading", { name: "传媒" })).toBeInTheDocument();
 		expect(screen.getByText("fundamental_score")).toBeInTheDocument();
