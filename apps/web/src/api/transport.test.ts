@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, createApiClient, mediaTypeSatisfiesContract, preserveExactJson } from "./transport";
+import { ApiError } from "./errors";
+import { createApiClient, mediaTypeSatisfiesContract, preserveExactJson } from "./transport";
 
 describe("typed API transport", () => {
 	it("unwraps the generated API envelope and serializes generated parameters", async () => {

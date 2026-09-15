@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Panel, PanelBody, PanelHeader } from "@/features/shell";
 import type { FactorCatalogItem } from "../api/factor-catalog";

@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 import { DEFAULT_STRATEGY_ID } from "./query-keys";
 import { assertFillAdjustment } from "./runtime-validation";
 

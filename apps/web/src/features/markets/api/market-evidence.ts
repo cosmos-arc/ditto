@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 
 export type MacroIndicator = components["schemas"]["Indicator"];
 export type MarketContext = components["schemas"]["MarketContextResponse"];

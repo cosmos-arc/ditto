@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";

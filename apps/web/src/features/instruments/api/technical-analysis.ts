@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 
 export type TechnicalAnalysisQueryBody = components["schemas"]["TechnicalAnalysisQueryBody"];
 export type TechnicalAnalysisSnapshot = components["schemas"]["TechnicalAnalysisSnapshotResponse"];

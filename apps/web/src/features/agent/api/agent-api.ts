@@ -1,4 +1,3 @@
-import { apiClient } from "@/api";
 import {
 	assertAgentApproval,
 	assertAgentApprovalDecision,
@@ -7,6 +6,7 @@ import {
 	assertAgentRunList,
 } from "@/api/agent-validation";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 import type {
 	AgentApprovalFilters,
 	AgentApprovalView,

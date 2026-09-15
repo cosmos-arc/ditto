@@ -1,4 +1,4 @@
-import { isMockRuntime } from "@/api";
+import { isMockRuntime } from "@/api/runtime-config";
 import type {
 	DecisionBannerResponse,
 	FactorAnalysisResponse,

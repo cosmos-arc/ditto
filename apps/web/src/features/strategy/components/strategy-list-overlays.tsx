@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useRef } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,

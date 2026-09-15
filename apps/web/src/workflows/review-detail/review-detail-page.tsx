@@ -1,7 +1,7 @@
 /** Governed review packet workbench for one exact experiment and strategy version. */
 import type { ReactElement, ReactNode } from "react";
 import { useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";

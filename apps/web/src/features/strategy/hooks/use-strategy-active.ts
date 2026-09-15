@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { strategyKeys } from "../api/query-keys";
 import { fetchActive } from "../api/strategies";
 

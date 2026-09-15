@@ -1,4 +1,4 @@
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 
 export type MutationFailureKind = "none" | "conflict" | "unknown" | "definite";
 

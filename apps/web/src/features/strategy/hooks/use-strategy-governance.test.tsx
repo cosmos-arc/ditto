@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { server } from "@/mocks/server";
 import { strategyKeys } from "../api/query-keys";
 import { useStrategyGovernance } from "./use-strategy-governance";

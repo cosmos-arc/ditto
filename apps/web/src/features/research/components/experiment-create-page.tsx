@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { Button } from "@/components/ui/button";
 import { ShellHeaderExtension, StatusBar, StudioLayout } from "@/features/shell";
 import { ContextActions } from "@/providers";

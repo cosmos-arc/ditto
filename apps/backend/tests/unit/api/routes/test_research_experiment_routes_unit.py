@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from functools import partial
 from types import MappingProxyType
 from typing import Any, cast
 from unittest.mock import MagicMock
@@ -59,7 +60,10 @@ from ditto_apps.api.errors import (
     NotFoundError,
     UnprocessableEntityError,
 )
-from ditto_apps.api.routes import research_experiment_routes
+from ditto_apps.api.routes import (
+    research_experiment_routes,
+    research_experiment_transport,
+)
 from ditto_apps.api.routes.research_experiment_routes import (
     get_experiment,
     get_experiment_comparison,
@@ -69,7 +73,11 @@ from ditto_apps.api.routes.research_experiment_routes import (
     pause_experiment,
     preflight_experiment,
     retry_fold_experiment,
+)
+from ditto_apps.api.routes.research_experiment_transport import (
+    build_transport_planning_request,
     to_artifact_response,
+    to_candidate_response,
     to_comparison_response,
     to_experiment_response,
     to_gate_response,
@@ -446,7 +454,7 @@ def test_candidate_mapping_rejects_non_string_keys_without_coercion() -> None:
     )
 
     with pytest.raises(TypeError, match="mapping key must be str"):
-        research_experiment_routes.to_candidate_response(candidate)
+        to_candidate_response(candidate)
 
 
 async def test_get_experiment_returns_detail() -> None:
@@ -485,9 +493,9 @@ async def test_preflight_builds_canonical_request_and_maps_every_typed_field(
     application_request = MagicMock()
     builder = MagicMock(return_value=application_request)
     monkeypatch.setattr(
-        research_experiment_routes,
-        "build_experiment_planning_request",
-        builder,
+        research_experiment_transport,
+        "build_transport_planning_request",
+        partial(build_transport_planning_request, builder=builder),
     )
     process = MagicMock(spec=ExperimentPlanningProcess)
     process.preflight.return_value = _preflight_report()
@@ -526,9 +534,9 @@ async def test_preflight_rejects_path_body_experiment_identity_drift(
     request = ExperimentPlanningRequest.model_validate(_planning_payload())
     builder = MagicMock()
     monkeypatch.setattr(
-        research_experiment_routes,
-        "build_experiment_planning_request",
-        builder,
+        research_experiment_transport,
+        "build_transport_planning_request",
+        partial(build_transport_planning_request, builder=builder),
     )
     process = MagicMock(spec=ExperimentPlanningProcess)
     route = getattr(preflight_experiment, "__dishka_orig_func__", preflight_experiment)
@@ -546,13 +554,19 @@ async def test_preflight_maps_typed_builder_failure_to_unprocessable(
 ) -> None:
     request = ExperimentPlanningRequest.model_validate(_planning_payload())
     monkeypatch.setattr(
-        research_experiment_routes,
-        "build_experiment_planning_request",
-        MagicMock(
-            side_effect=AppProcessError(
-                "canonical planning document is invalid",
-                details={"code": "SPEC_INVALID", "reason": "strategy_hash_mismatch"},
-            )
+        research_experiment_transport,
+        "build_transport_planning_request",
+        partial(
+            build_transport_planning_request,
+            builder=MagicMock(
+                side_effect=AppProcessError(
+                    "canonical planning document is invalid",
+                    details={
+                        "code": "SPEC_INVALID",
+                        "reason": "strategy_hash_mismatch",
+                    },
+                )
+            ),
         ),
     )
     process = MagicMock(spec=ExperimentPlanningProcess)
@@ -587,9 +601,9 @@ async def test_launch_rebuilds_same_document_and_returns_exact_receipt(
     application_request = MagicMock()
     builder = MagicMock(return_value=application_request)
     monkeypatch.setattr(
-        research_experiment_routes,
-        "build_experiment_planning_request",
-        builder,
+        research_experiment_transport,
+        "build_transport_planning_request",
+        partial(build_transport_planning_request, builder=builder),
     )
     handler = MagicMock(spec=LaunchExperimentHandler)
     handler.handle.return_value = ExperimentLaunchReceipt(
@@ -644,9 +658,12 @@ async def test_launch_maps_only_typed_planning_error_codes(
     payload = {**_planning_payload(), "confirmed_plan_hash": "d" * 64}
     request = ExperimentLaunchRequest.model_validate(payload)
     monkeypatch.setattr(
-        research_experiment_routes,
-        "build_experiment_planning_request",
-        MagicMock(return_value=MagicMock()),
+        research_experiment_transport,
+        "build_transport_planning_request",
+        partial(
+            build_transport_planning_request,
+            builder=MagicMock(return_value=MagicMock()),
+        ),
     )
     handler = MagicMock(spec=LaunchExperimentHandler)
     handler.handle.side_effect = AppCommandError(
@@ -674,9 +691,12 @@ async def test_launch_maps_unrecognized_typed_errors_to_stable_internal_error(
     payload = {**_planning_payload(), "confirmed_plan_hash": "d" * 64}
     request = ExperimentLaunchRequest.model_validate(payload)
     monkeypatch.setattr(
-        research_experiment_routes,
-        "build_experiment_planning_request",
-        MagicMock(return_value=MagicMock()),
+        research_experiment_transport,
+        "build_transport_planning_request",
+        partial(
+            build_transport_planning_request,
+            builder=MagicMock(return_value=MagicMock()),
+        ),
     )
     handler = MagicMock(spec=LaunchExperimentHandler)
     handler.handle.side_effect = AppCommandError(

@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components, operations } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 
 export type RegimeDiagnosticsDto = components["schemas"]["RegimeDiagnosticsResponse"];
 type RegimeObservationDto = components["schemas"]["RegimeObservationResponse"];

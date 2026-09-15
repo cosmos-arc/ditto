@@ -6,8 +6,8 @@
  * adapter 返回解封后的 generated DTO，mapper 翻译为 camelCase view-model。
  */
 
-import { apiClient } from "@/api";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 import type { ReviewGate, ReviewPacket, ReviewSelectionExposure, SelectionTraceRef } from "@/types/review";
 
 export type ExperimentReviewPacketResponse = components["schemas"]["ExperimentReviewPacketResponse"];

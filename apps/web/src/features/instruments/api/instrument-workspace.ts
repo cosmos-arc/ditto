@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 
 export type InstrumentIdentity = components["schemas"]["Instrument"];
 export type InstrumentBar = components["schemas"]["Bar"];

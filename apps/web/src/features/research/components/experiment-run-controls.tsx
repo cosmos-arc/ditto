@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import type {
 	ExperimentControlAction,
 	ExperimentControlReceiptResponse,

@@ -1,4 +1,4 @@
-import { ApiError } from "@/api";
+import { ApiError } from "@/api/errors";
 import { AreaChart } from "@/components/chart/area-chart";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";

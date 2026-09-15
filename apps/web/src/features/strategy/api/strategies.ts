@@ -1,5 +1,5 @@
-import { apiClient } from "@/api";
 import type { components, operations } from "@/api/generated/schema";
+import { apiClient } from "@/api/transport";
 import type { StrategyGovernanceEvent } from "@/types/strategy";
 
 export type StrategyResponse = components["schemas"]["StrategyResponse"];
