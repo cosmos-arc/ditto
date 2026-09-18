@@ -420,6 +420,7 @@ markers = [
     "e2e: Mark test as an end-to-end test",
     "slow: Mark test as slow running (skip with -m 'not slow')",
     "serial: Mark test that must run serially",
+    "capacity: Mark scheduler-capacity slow-lane test (dedicated CI job)",
     "snapshot: Mark test that uses inline-snapshot (must run serially)",
     "pit: Mark test as Point-in-Time validation (no future data leak)",
     "sandbox_live: Physical OCI sandbox acceptance requiring the approved runtime",

@@ -367,6 +367,12 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python -m tooling.quality.test_shards run {{.CLI_ARGS}}
+  backend-test-capacity:
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.quality.test_shards capacity {{.CLI_ARGS}}
   backend-coverage-combine:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'

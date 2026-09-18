@@ -76,7 +76,8 @@ def test_real_shards_preserve_serial_lane_and_merge_coverage(tmp_path: Path) -> 
 
     repo = Path(__file__).resolve().parents[3]
     (tmp_path / "pyproject.toml").write_text(
-        '[tool.pytest.ini_options]\nmarkers=["serial: process isolated"]\n'
+        '[tool.pytest.ini_options]\nmarkers=["serial: process isolated", '
+        '"capacity: slow lane"]\n'
         '[tool.coverage.run]\nbranch=true\nsource=["calc"]\n'
     )
     (tmp_path / "calc.py").write_text(
@@ -88,6 +89,8 @@ def test_real_shards_preserve_serial_lane_and_merge_coverage(tmp_path: Path) -> 
         "@pytest.mark.serial\ndef test_serial():\n"
         '    assert "PYTEST_XDIST_WORKER" not in os.environ\n'
         '    assert classify(0) == "other"\n'
+        "@pytest.mark.capacity\ndef test_capacity_lane():\n"
+        '    assert classify(2) == "positive"\n'
     )
     environment = {
         **{
@@ -100,7 +103,7 @@ def test_real_shards_preserve_serial_lane_and_merge_coverage(tmp_path: Path) -> 
         "PYTEST_PLUGINS": "pytest_cov.plugin,xdist.plugin",
     }
     output = tmp_path / "build" / "test-shards"
-    for mode, index in [("run", 0), ("run", 1), ("combine", 0)]:
+    for mode, index in [("run", 0), ("run", 1), ("capacity", 0), ("combine", 0)]:
         subprocess.run(  # noqa: S603 - fixed modules over an isolated synthetic suite
             [
                 sys.executable,
