@@ -162,6 +162,12 @@ def _auto_source_keys(services: CoordinatorServices) -> tuple[Source, ...]:
         protocol=MacroFetcher,
     ):
         source_keys.append(Source.FRED)
+    if _has_registered_fetcher(
+        registry=services.source_registry,
+        source_name=Source.FUYAO.value,
+        protocol=MarketFetcher,
+    ):
+        source_keys.append(Source.FUYAO)
     return tuple(source_keys)
 
 

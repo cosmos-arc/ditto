@@ -31,7 +31,7 @@ from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
-    TdxSourceProtocol,
+    SecondaryBarsSourceProtocol,
 )
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.contracts import (
@@ -283,7 +283,7 @@ class AppCommandProvider(Provider):
     def reconcile_sources_handler(
         self,
         dq_engine: QualityEngine,
-        tdx_source: TdxSourceProtocol,
+        secondary_source: SecondaryBarsSourceProtocol,
         comparison_store: ComparisonStoreProtocol,
         instrument_store: InstrumentStoreProtocol,
         golden_dataset: GoldenDatasetSpec | None = None,
@@ -291,7 +291,7 @@ class AppCommandProvider(Provider):
         """数据源对账 Handler."""
         return ReconcileSourcesHandler(
             engine=dq_engine,
-            tdx_source=tdx_source,
+            secondary_source=secondary_source,
             comparison_store=comparison_store,
             instrument_store=instrument_store,
             golden_dataset=golden_dataset,

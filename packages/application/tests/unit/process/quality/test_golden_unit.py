@@ -95,7 +95,7 @@ class TestGoldenDatasetFilter:
         """带黄金数据集的对账 handler."""
         return ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
             golden_dataset=golden_spec,
@@ -112,7 +112,7 @@ class TestGoldenDatasetFilter:
         """不带黄金数据集的对账 handler."""
         return ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
             golden_dataset=None,
@@ -188,7 +188,7 @@ class TestGoldenDatasetFilter:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
             golden_dataset=golden_spec,
@@ -245,7 +245,7 @@ class TestGoldenDatasetFilter:
 
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
             golden_dataset=golden_spec,

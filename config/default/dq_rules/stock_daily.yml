@@ -81,11 +81,11 @@ statistical:
     threshold_days: 3
     message: "价格连续 3 日无变化（停牌或异常）"
 
-  # 跨源对比：Tushare vs 通达信
-  # 使用 symbol 作为对比 key_column（统一格式，不依赖数据源）
+  # 跨源对比：主源 vs 辅源（fuyao / TDX）
+  # 对账帧两侧均为 ticker 裸码（enrich_with_ticker / fetch_stock_daily_bars）
   - rule: cross_source_compare
-    key_columns: [symbol, trade_date]
-    fields: [open, high, low, close, vol, amount]
+    key_columns: [ticker, trade_date]
+    fields: [open, high, low, close, volume, amount]
     tolerance_rules:
       # 价格类：严格 Tick 对齐（0.001 元）
       open:
@@ -101,7 +101,7 @@ statistical:
         method: tick_aligned
         tick_size: 0.001
       # 成交量：相对容差 0.1%（数量级差异大，用相对容差）
-      vol:
+      volume:
         method: relative
         relative_tol: 0.001
       # 成交额：相对容差 0.1%

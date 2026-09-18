@@ -10,7 +10,7 @@ from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
     QualityEngineProtocol,
-    TdxSourceProtocol,
+    SecondaryBarsSourceProtocol,
 )
 from ditto_data.quality.quality_types import DQResult
 from ditto_platform.foundation import logger
@@ -32,20 +32,20 @@ class ReconcileSourcesHandler:
     """
     数据源对账 Command Handler — 跨源一致性校验.
 
-    直接依赖 Protocol 实现（QualityEngine、TdxSource、ComparisonStore、
+    直接依赖 Protocol 实现（QualityEngine、辅源、ComparisonStore、
     InstrumentStore），编排 enrich → filter → compare → write 的完整对账流程。
     """
 
     def __init__(
         self,
         engine: QualityEngineProtocol,
-        tdx_source: TdxSourceProtocol,
+        secondary_source: SecondaryBarsSourceProtocol,
         comparison_store: ComparisonStoreProtocol,
         instrument_store: InstrumentStoreProtocol,
         golden_dataset: GoldenDatasetSpec | None = None,
     ) -> None:
         self._engine = engine
-        self._tdx_source = tdx_source
+        self._secondary_source = secondary_source
         self._comparison_store = comparison_store
         self._instrument_store = instrument_store
         self._golden_dataset = golden_dataset
@@ -180,11 +180,13 @@ class ReconcileSourcesHandler:
         dataset: str,
     ) -> pl.DataFrame | ReconciliationResult:
         """获取辅助数据源。返回 DataFrame 或跳过结果."""
-        secondary_df = self._tdx_source.fetch_stock_daily_bars(tickers, trade_date)
+        secondary_df = self._secondary_source.fetch_stock_daily_bars(
+            tickers, trade_date
+        )
 
         if secondary_df.height == 0:
             logger.warning(
-                "No TDX data found for comparison",
+                "No secondary data found for comparison",
                 event="reconciliation_no_secondary",
                 trade_date=trade_date,
             )

@@ -45,7 +45,9 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
         "apps/backend/src/ditto_apps/registry/infra/protocol_adapters.py": frozenset(
             {
                 "ditto_data.quality.protocols",
+                "ditto_data.services.deps",
                 "ditto_data.services.source_accessor",
+                "ditto_data.sources.fuyao.source",
                 "ditto_data.sources.tdx.source",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",

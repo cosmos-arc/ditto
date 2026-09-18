@@ -31,12 +31,16 @@ from ditto_application.queries.source import SourceDataPort
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
-    TdxSourceProtocol,
+    SecondaryBarsSourceProtocol,
 )
+from ditto_data.services.deps import MarketReaders
 from ditto_data.services.source_accessor import SourceAccessor
+from ditto_data.sources.fuyao.source import FuyaoSource
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
+
+__all__ = ["FuyaoSource", "MarketReaders"]
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_platform.foundation import SQLiteClient
 
@@ -120,9 +124,15 @@ class ProtocolAdapterProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def tdx_source_protocol(self, source: TdxSource) -> TdxSourceProtocol:
-        """TDX source → TdxSourceProtocol."""
-        return source
+    def secondary_bars_source_protocol(
+        self,
+        fuyao_source: FuyaoSource | None,
+        tdx_source: TdxSource,
+    ) -> SecondaryBarsSourceProtocol:
+        """对账辅源：fuyao（已配置时优先，跨平台可用）否则 TDX."""
+        if fuyao_source is not None:
+            return fuyao_source
+        return tdx_source
 
     @provide
     def comparison_store_protocol(

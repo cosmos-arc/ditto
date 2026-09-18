@@ -121,7 +121,7 @@ from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
-    TdxSourceProtocol,
+    SecondaryBarsSourceProtocol,
 )
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -275,8 +275,10 @@ class _ProtocolAdapterProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def tdx_source_protocol(self, source: TdxSource) -> TdxSourceProtocol:
-        return source
+    def secondary_bars_source_protocol(
+        self, tdx_source: TdxSource
+    ) -> SecondaryBarsSourceProtocol:
+        return tdx_source
 
     @provide
     def comparison_store_protocol(self) -> ComparisonStoreProtocol:

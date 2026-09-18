@@ -8,6 +8,7 @@ from ditto_apps.cli.commands.agent import app as agent_app
 from ditto_apps.cli.commands.backfill import app as backfill_app
 from ditto_apps.cli.commands.data_products import app as data_products_app
 from ditto_apps.cli.commands.experiments import app as experiments_app
+from ditto_apps.cli.commands.fuyao import app as fuyao_app
 from ditto_apps.cli.commands.ingest import app as ingest_app
 from ditto_apps.cli.commands.init import app as init_app
 from ditto_apps.cli.commands.ops import app as ops_app
@@ -32,6 +33,7 @@ app.add_typer(query_app, name="query")
 app.add_typer(research_app, name="research")
 app.add_typer(strategy_app, name="strategy")
 app.add_typer(ops_app, name="ops")
+app.add_typer(fuyao_app, name="fuyao")
 app.add_typer(agent_app, name="agent")
 
 

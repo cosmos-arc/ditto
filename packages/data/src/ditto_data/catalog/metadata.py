@@ -596,6 +596,9 @@ def _resolve_supported_sources(dataset_id: str) -> tuple[str, ...]:
         return ()
     if dataset_id == "macro_indicators":
         return ("tushare", "fred")
+    if dataset_id == "stock_daily":
+        # fuyao 冗余源：原始价日线，source=auto 故障日降级（ADR dual-source）
+        return ("tushare", "fuyao")
     return ("tushare",)
 
 

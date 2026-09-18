@@ -7,7 +7,7 @@ __all__ = [
     "InstrumentStoreProtocol",
     "QualityEngineProtocol",
     "QuarantineWriterProtocol",
-    "TdxSourceProtocol",
+    "SecondaryBarsSourceProtocol",
 ]
 
 from typing import Any, Literal, Protocol
@@ -63,13 +63,13 @@ class InstrumentStoreProtocol(Protocol):
         ...
 
 
-class TdxSourceProtocol(Protocol):
-    """通达信数据源协议."""
+class SecondaryBarsSourceProtocol(Protocol):
+    """对账辅源协议 — 日线值跨源对比的次源取数（TDX / fuyao）."""
 
     def fetch_stock_daily_bars(
         self, tickers: list[str], trade_date: str
     ) -> pl.DataFrame:
-        """获取通达信股票日线数据."""
+        """获取辅源股票日线数据 [ticker, trade_date, OHLCV, amount]."""
         ...
 
 

@@ -272,7 +272,7 @@ class ConfigProvider(Provider):
     def data_source_settings(self, config_loader: ConfigLoader) -> DataSourceSettings:
         """加载数据源配置。"""
         data_source_values = load_env_file(config_loader, "data_source")
-        for secret_key in ("tushare_token", "fred_api_key"):
+        for secret_key in ("tushare_token", "fred_api_key", "fuyao_api_key"):
             if data_source_values.get(secret_key) is None:
                 data_source_values.pop(secret_key, None)
 
@@ -292,6 +292,13 @@ class ConfigProvider(Provider):
         )
         if fred_api_key:
             data_source_values["fred_api_key"] = fred_api_key
+
+        # fuyao API Key（冗余源；未配置则源不创建）
+        fuyao_api_key: str | None = os.getenv("FUYAO_API_KEY") or _load_keyring_secret(
+            "fuyao", "api_key"
+        )
+        if fuyao_api_key:
+            data_source_values["fuyao_api_key"] = fuyao_api_key
 
         return DataSourceSettings.model_validate(data_source_values)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -22,7 +23,8 @@ def create_executor(
     然后创建 CLIExecutor。
 
     Args:
-        source_name: 数据源名称，默认为 "tushare"
+        source_name: 数据源名称；缺省读环境变量 DITTO_INGEST_SOURCE
+            （如 "fuyao" / "auto"），最终回退 "tushare"
         data_root: 数据根目录（预留参数，未来用于显式传递）
 
     Yields:
@@ -34,7 +36,8 @@ def create_executor(
         显式参数传递。
 
     """
-    with create_ingestion_bundle(source=source_name) as bundle:
+    resolved_source = source_name or os.environ.get("DITTO_INGEST_SOURCE", "tushare")
+    with create_ingestion_bundle(source=resolved_source) as bundle:
         yield CLIExecutor(
             coordinator=bundle.coordinator,
             backfill_manager=bundle.backfill_manager,

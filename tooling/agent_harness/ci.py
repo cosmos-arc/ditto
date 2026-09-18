@@ -16,6 +16,7 @@ REQUIRED_JOBS = frozenset(
         "skill-validation",
         "repository-policy",
         "backend-shards",
+        "backend-capacity",
         "web-build",
         "web-prototype",
         "backend-quality",
@@ -66,6 +67,7 @@ def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
             "backend-quality",
             "backend-types",
             "backend-shards",
+            "backend-capacity",
             "backend-tests",
             "architecture-harness",
             "api-contract",
@@ -76,11 +78,28 @@ def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
     return set(REQUIRED_JOBS)
 
 
+def _emit(required: set[str]) -> None:
+    analysis = bool(required - _ALWAYS - {"skill-validation"})
+    output = (
+        f"required={json.dumps(sorted(required))}\nanalysis={str(analysis).lower()}\n"
+        f"full={str(required == set(REQUIRED_JOBS)).lower()}\n"
+    )
+    with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
+        stream.write(output)
+    print(output, end="")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("select",))
     parser.parse_args()
-    full = os.environ.get("GITHUB_EVENT_NAME") != "pull_request"
+    event = os.environ.get("GITHUB_EVENT_NAME", "")
+    if event == "push":
+        # push 到 main 信任 PR 已验证的等价内容；仅补跑跨平台 full 门与常驻安全检查。
+        required = _ALWAYS | {"platform-smoke"}
+        _emit(required)
+        return 0
+    full = event != "pull_request"
     paths: list[str] = []
     if not full:
         # Disable rename folding so both sides and both modes are checked.
@@ -105,15 +124,7 @@ def main() -> int:
             modes = header.split()[:2]
             if any(mode.lstrip(":") not in {"100644", "000000"} for mode in modes):
                 full = True
-    required = required_jobs(paths, full=full)
-    analysis = bool(required - _ALWAYS - {"skill-validation"})
-    output = (
-        f"required={json.dumps(sorted(required))}\nanalysis={str(analysis).lower()}\n"
-        f"full={str(required == set(REQUIRED_JOBS)).lower()}\n"
-    )
-    with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
-        stream.write(output)
-    print(output, end="")
+    _emit(required_jobs(paths, full=full))
     return 0
 
 

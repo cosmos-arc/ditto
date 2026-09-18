@@ -219,7 +219,7 @@ def _make_handler(
 
     handler = ReconcileSourcesHandler(
         engine=mock_engine,
-        tdx_source=mock_tdx,
+        secondary_source=mock_tdx,
         comparison_store=mock_comparison,
         instrument_store=mock_instrument,
     )
@@ -401,7 +401,7 @@ class TestReconcileSourcesHandler:
 
         handler = ReconcileSourcesHandler(
             engine=MagicMock(),
-            tdx_source=MagicMock(),
+            secondary_source=MagicMock(),
             comparison_store=MagicMock(),
             instrument_store=MagicMock(),
         )
