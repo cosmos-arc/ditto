@@ -26,7 +26,13 @@ def push_commands(
     if not target or git("rev-parse", target) != git("rev-parse", "HEAD"):
         raise ValueError("pre-push requires the pushed commit to be checked out")
     if not base or not base.strip("0"):
-        return [["task", "check"]]
+        # New branch: no remote ref yet, so diff against the fork point with
+        # the remote default branch instead of degrading to the full gate
+        # (which idles the push SSH connection long enough to be dropped).
+        try:
+            base = git("merge-base", target, "origin/main")
+        except subprocess.CalledProcessError:
+            return [["task", "check"]]
     try:
         raw = git("diff", "--raw", "-z", "--no-renames", base, target).split("\0")
     except subprocess.CalledProcessError:
