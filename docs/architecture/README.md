@@ -28,6 +28,7 @@ Python 包含 `agent` 在内共 13 个 distribution，Web 独立构建。
 
 | 文档 | 主题 |
 |---|---|
+| [adr-datasource-dual-source.md](adr-datasource-dual-source.md) | 数据源双源架构（Tushare 主源 + fuyao 冗余源，#191） |
 | [adr-eventname-vs-event-type.md](adr-eventname-vs-event-type.md) | EventName catalog vs 硬编码 event_type |
 | [adr-kernel-trading-types.md](adr-kernel-trading-types.md) | Kernel trading 域类型归属 |
 | [adr-reconciliation-recovery.md](adr-reconciliation-recovery.md) | 对账修复策略 |
