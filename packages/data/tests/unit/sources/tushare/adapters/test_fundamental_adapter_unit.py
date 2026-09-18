@@ -49,6 +49,36 @@ def _patch_transform(
 class TestFundamentalAdapterFetchFinancial:
     """Shared financial fetch helper behavior."""
 
+    @pytest.mark.parametrize(
+        ("method_name", "client_api"),
+        [
+            ("fetch_balance_sheet", "balancesheet"),
+            ("fetch_income_statement", "income"),
+            ("fetch_cash_flow", "cashflow"),
+            ("fetch_balance_sheet_vip", "balancesheet_vip"),
+            ("fetch_income_statement_vip", "income_vip"),
+            ("fetch_cash_flow_vip", "cashflow_vip"),
+        ],
+    )
+    def test_statement_fields_request_f_ann_date(
+        self,
+        mocker: pytest_mock.MockFixture,
+        method_name: str,
+        client_api: str,
+    ) -> None:
+        """三大报表（标准 + VIP）请求字段以 f_ann_date 为披露锚（ADR 红线 4）。"""
+        adapter, client = _adapter_with_client()
+        _patch_transform(mocker)
+        client.query.return_value = pl.DataFrame({"raw": ["value"]})
+
+        getattr(adapter, method_name)()
+
+        call_kwargs = client.query.call_args.kwargs
+        assert call_kwargs["api_name"] == client_api
+        requested = call_kwargs["fields"].split(",")
+        assert "f_ann_date" in requested
+        assert "ann_date" not in requested
+
     def test_fetch_financial_filters_empty_params_and_adds_pit_columns(
         self,
         mocker: pytest_mock.MockFixture,

@@ -24,20 +24,22 @@ from ditto_data.sources.tushare.processors.transformer import (
 )
 
 # ── 财务报表字段定义 ──────────────────────────────────────────────
+# 披露锚 = f_ann_date（实际公告日，ADR 红线 4）；ann_date 可被 Tushare
+# 事后加工改写，不作为 PIT knowledge date。
 _BALANCE_SHEET_FIELDS = (
-    "ts_code,end_date,ann_date,total_assets,total_liab,"
+    "ts_code,end_date,f_ann_date,total_assets,total_liab,"
     "total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab,"
     "inventory,fixed_assets,cash_equivalents,accounts_receivable,"
     "short_term_debt,long_term_debt,money_cap,total_share"
 )
 _INCOME_STATEMENT_FIELDS = (
-    "ts_code,end_date,ann_date,total_revenue,"
+    "ts_code,end_date,f_ann_date,total_revenue,"
     "operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,"
     "operate_profit,total_profit,income_tax,n_income,"
     "basic_eps,diluted_eps"
 )
 _CASH_FLOW_FIELDS = (
-    "ts_code,end_date,ann_date,n_cashflow_act,"
+    "ts_code,end_date,f_ann_date,n_cashflow_act,"
     "n_cash_flows_inv_act,n_cash_flows_fnc_act,"
     "depreciation,interest_paid,tax_paid"
 )

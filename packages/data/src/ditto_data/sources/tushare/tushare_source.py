@@ -13,6 +13,9 @@ from ditto_data.sources.tushare._announcement_range import (
 from ditto_data.sources.tushare._announcement_range import (
     fetch_dividend_range as _fetch_dividend_range,
 )
+from ditto_data.sources.tushare._fundamental import (
+    fetch_disclosure_range as _fetch_disclosure_range,
+)
 from ditto_data.sources.tushare._macro_facade import MacroFacade as _MacroFacade
 from ditto_data.sources.tushare._market_facades import (
     EtfIndexFacade as _EtfIndexFacade,
@@ -219,26 +222,29 @@ class _FundamentalFacade:
         return fetch_corporate_actions(self._fundamental, trade_date)
 
     def fetch_balance_sheet_range(self, start_date: str, end_date: str) -> pl.DataFrame:
-        """Fetch all balance-sheet announcements in one bounded interval."""
-        return self._fundamental.fetch_balance_sheet_vip(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
+        """Fetch balance-sheet disclosure events in a bounded f_ann_date interval."""
+        return _fetch_disclosure_range(
+            self._fundamental.fetch_balance_sheet_vip,
+            start_date,
+            end_date,
         )
 
     def fetch_income_statement_range(
         self, start_date: str, end_date: str
     ) -> pl.DataFrame:
-        """Fetch all income-statement announcements in one bounded interval."""
-        return self._fundamental.fetch_income_statement_vip(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
+        """Fetch income-statement disclosure events in a bounded f_ann_date interval."""
+        return _fetch_disclosure_range(
+            self._fundamental.fetch_income_statement_vip,
+            start_date,
+            end_date,
         )
 
     def fetch_cash_flow_range(self, start_date: str, end_date: str) -> pl.DataFrame:
-        """Fetch all cash-flow announcements in one bounded interval."""
-        return self._fundamental.fetch_cash_flow_vip(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
+        """Fetch cash-flow disclosure events in a bounded f_ann_date interval."""
+        return _fetch_disclosure_range(
+            self._fundamental.fetch_cash_flow_vip,
+            start_date,
+            end_date,
         )
 
     def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
@@ -618,27 +624,20 @@ class TushareSource:
         return fetch_corporate_actions(self._fundamental, trade_date)
 
     def fetch_balance_sheet_range(self, start_date: str, end_date: str) -> pl.DataFrame:
-        """Fetch all balance-sheet announcements in a bounded interval."""
-        return self._fundamental.fetch_balance_sheet_vip(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
-        )
+        """Fetch balance-sheet disclosure events in a bounded f_ann_date interval."""
+        return self._fundamental_facade.fetch_balance_sheet_range(start_date, end_date)
 
     def fetch_income_statement_range(
         self, start_date: str, end_date: str
     ) -> pl.DataFrame:
-        """Fetch all income-statement announcements in a bounded interval."""
-        return self._fundamental.fetch_income_statement_vip(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
+        """Fetch income-statement disclosure events in a bounded f_ann_date interval."""
+        return self._fundamental_facade.fetch_income_statement_range(
+            start_date, end_date
         )
 
     def fetch_cash_flow_range(self, start_date: str, end_date: str) -> pl.DataFrame:
-        """Fetch all cash-flow announcements in a bounded interval."""
-        return self._fundamental.fetch_cash_flow_vip(
-            start_date=start_date.replace("-", ""),
-            end_date=end_date.replace("-", ""),
-        )
+        """Fetch cash-flow disclosure events in a bounded f_ann_date interval."""
+        return self._fundamental_facade.fetch_cash_flow_range(start_date, end_date)
 
     def fetch_dividend_range(self, start_date: str, end_date: str) -> pl.DataFrame:
         """Fetch dividend announcements in a bounded natural-day interval."""

@@ -1,6 +1,7 @@
 """Tests for TushareClient."""
 
 import httpx
+import orjson
 import pytest
 import pytest_mock
 from ditto_data.config import DataSourceSettings
@@ -101,6 +102,62 @@ class TestTushareClientQuery:
             "cal_date": ["20240101", "20240102"],
             "is_open": [0, 1],
         }
+
+    def test_full_page_follows_offset_pagination(
+        self,
+        respx_mock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """单页达到上限时自动携带 offset 翻页，避免静默截断。"""
+        monkeypatch.setattr("ditto_data.sources.tushare.client._PAGE_SIZE", 2)
+        pages = [
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [["1"], ["2"]]},
+                },
+            ),
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [["3"]]},
+                },
+            ),
+        ]
+        route = respx_mock.post("http://api.tushare.pro").mock(side_effect=pages)
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date")
+
+        assert result["cal_date"].to_list() == ["1", "2", "3"]
+        assert route.call_count == 2
+        second_body = orjson.loads(respx_mock.calls[1].request.content)["params"]
+        assert second_body["offset"] == 2
+        assert second_body["limit"] == 2
+
+    def test_caller_managed_limit_stays_single_page(
+        self,
+        respx_mock,
+    ) -> None:
+        """调用方自带 limit/offset 时保持单页语义，不自动翻页。"""
+        full_page = {
+            "code": 0,
+            "msg": None,
+            "data": {"fields": ["cal_date"], "items": [["1"], ["2"]]},
+        }
+        route = respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(200, json=full_page)
+        )
+
+        client = TushareClient(token="test_token", settings=_settings())
+        result = client.query("trade_cal", "cal_date", limit=2, offset=0)
+
+        assert result.height == 2
+        assert route.call_count == 1
 
     def test_rate_limit_before_request(
         self, respx_mock, mocker: pytest_mock.MockFixture

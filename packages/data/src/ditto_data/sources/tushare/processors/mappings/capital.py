@@ -158,12 +158,13 @@ CORPORATE_ACTIONS_MAPPING = ColumnMapping(
 )
 
 # Balance Sheet - PIT data (simplified fields)
+# 披露锚 = f_ann_date（实际公告日，ADR 红线 4）
 BALANCE_SHEET_MAPPING = ColumnMapping(
     rename={
         "ts_code": "source_ticker",
         "total_liab": "total_liabilities",
     },
-    date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
+    date_columns={"end_date": "%Y%m%d", "f_ann_date": "%Y%m%d"},
     float_columns=[
         "total_assets",
         "total_liabilities",  # After rename
@@ -181,7 +182,7 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
-        "knowledge_date": pl.col("ann_date"),
+        "knowledge_date": pl.col("f_ann_date"),
         "net_assets": pl.col("total_hldr_eqy_exc_min_int"),
         "current_assets": pl.col("total_cur_assets"),
         "current_liabilities": pl.col("total_cur_liab"),
@@ -210,7 +211,7 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
 # Note: Tushare API fields are: total_revenue, operate_profit, n_income, basic_eps
 INCOME_STATEMENT_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker"},
-    date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
+    date_columns={"end_date": "%Y%m%d", "f_ann_date": "%Y%m%d"},
     float_columns=[
         "total_revenue",
         "operate_cost",
@@ -227,7 +228,7 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
-        "knowledge_date": pl.col("ann_date"),
+        "knowledge_date": pl.col("f_ann_date"),
         "revenue": pl.col("total_revenue"),
         "operating_profit": pl.col("operate_profit"),
         "net_profit": pl.col("n_income"),
@@ -255,7 +256,7 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
 # Cash Flow - PIT data (simplified fields)
 CASH_FLOW_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker"},
-    date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
+    date_columns={"end_date": "%Y%m%d", "f_ann_date": "%Y%m%d"},
     float_columns=[
         "n_cashflow_act",
         "n_cash_flows_inv_act",
@@ -266,7 +267,7 @@ CASH_FLOW_MAPPING = ColumnMapping(
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
-        "knowledge_date": pl.col("ann_date"),
+        "knowledge_date": pl.col("f_ann_date"),
         "operating_cash_flow": pl.col("n_cashflow_act"),
         "investing_cash_flow": pl.col("n_cash_flows_inv_act"),
         "financing_cash_flow": pl.col("n_cash_flows_fnc_act"),
