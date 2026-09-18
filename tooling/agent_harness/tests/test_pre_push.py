@@ -53,6 +53,23 @@ def test_push_uses_committed_range_and_rejects_unchecked_state(tmp_path: Path) -
     assert push_commands(tmp_path, target, deleted) == [["task", "check"]]
 
 
+def test_new_branch_push_scopes_via_merge_base_with_remote_default(
+    tmp_path: Path,
+) -> None:
+    _git(tmp_path, "init", "--quiet")
+    _git(tmp_path, "config", "user.name", "Test")
+    _git(tmp_path, "config", "user.email", "test@example.invalid")
+    source = tmp_path / "apps/web/src/app.tsx"
+    source.parent.mkdir(parents=True)
+    source.write_text("first\n")
+    base = _commit(tmp_path)
+    _git(tmp_path, "update-ref", "refs/remotes/origin/main", base)
+    source.write_text("second\n")
+    target = _commit(tmp_path)
+    assert push_commands(tmp_path, "", target) == [["task", "check-web"]]
+    assert push_commands(tmp_path, "0" * 40, target) == [["task", "check-web"]]
+
+
 def test_verifier_cannot_inherit_push_repository_into_foreign_git(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
