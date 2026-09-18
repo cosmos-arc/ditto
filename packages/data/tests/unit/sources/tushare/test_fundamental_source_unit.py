@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import date
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -27,19 +28,31 @@ class TestFundamentalSourceWrappers:
             (fundamental_source.fetch_cash_flow, "fetch_cash_flow_vip"),
         ],
     )
-    def test_financial_statement_trade_date_delegates_to_vip_api(
+    def test_financial_statement_trade_date_pulls_quarter_periods(
         self,
         fetch_fn: Callable[..., pl.DataFrame],
         vip_method: str,
     ) -> None:
-        """Financial statement wrappers compact trade_date before delegation."""
+        """Financial statement wrappers pull trailing quarter periods on trade_date."""
         fundamental = MagicMock()
-        getattr(fundamental, vip_method).return_value = _frame("vip")
+        frame = pl.DataFrame({"dataset": ["vip"], "knowledge_date": [date(2024, 5, 6)]})
+        getattr(fundamental, vip_method).return_value = frame
 
         result = fetch_fn(fundamental, trade_date="2024-05-06")
 
-        assert result["dataset"].item() == "vip"
-        getattr(fundamental, vip_method).assert_called_once_with(ann_date="20240506")
+        assert result["dataset"].unique().to_list() == ["vip"]
+        assert result.height == 8  # 8 个报告期超集拼接
+        calls = getattr(fundamental, vip_method).call_args_list
+        assert [call.kwargs["period"] for call in calls] == [
+            "20240331",
+            "20231231",
+            "20230930",
+            "20230630",
+            "20230331",
+            "20221231",
+            "20220930",
+            "20220630",
+        ]
 
     def test_dividend_trade_date_delegates_with_compact_ex_date(self) -> None:
         """Dividend wrapper compacts trade_date to ex_date."""

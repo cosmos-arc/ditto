@@ -30,6 +30,9 @@ from ditto_data.sources.tushare.utils.rate_limiter import (
     TushareRateLimiter,
 )
 
+# Tushare 单次提取上限；命中即翻页
+_PAGE_SIZE = 9000
+
 
 def _get_tushare_token(token: str | None) -> str:
     """Resolve Tushare token from explicit input/settings."""
@@ -224,7 +227,9 @@ class TushareClient:
         **params: str | int,
     ) -> pl.DataFrame:
         """
-        Query Tushare API with rate limiting and retry.
+        Query Tushare API with rate limiting, retry and offset pagination.
+
+        单页达到 Tushare 上限时自动翻页，避免大结果集被静默截断。
 
         Args:
             api_name: API name (e.g., "trade_cal", "daily").
@@ -240,11 +245,27 @@ class TushareClient:
             SourceFetchError: If query fails after retries.
 
         """
-        # 调用内部 _query 方法获取原始数据
-        data = self._query(api_name, fields, **params)
+        page_size = _PAGE_SIZE
+        if "limit" in params or "offset" in params:
+            # 调用方自管分页时保持单页语义
+            data = self._query(api_name, fields, **params)
+            return response_to_dataframe(data)
 
-        # 转换为 polars DataFrame
-        return response_to_dataframe(data)
+        pages: list[pl.DataFrame] = []
+        offset = 0
+        while True:
+            data = self._query(
+                api_name, fields, limit=page_size, offset=offset, **params
+            )
+            page = response_to_dataframe(data)
+            pages.append(page)
+            if len(page) < page_size:
+                break
+            offset += len(page)
+
+        if len(pages) == 1:
+            return pages[0]
+        return pl.concat(pages, how="vertical_relaxed")
 
     def close(self) -> None:
         """

@@ -46,4 +46,4 @@ Baostock（不支持 ETF/基金）；TdxQuant（Windows 终端常驻）；TDX gp
 - 数据源子域新增 fuyao（复制 TushareSource 适配器模式；`.importlinter` 数据源子域两两互斥契约同步扩展）。
 - DQ cross_source 对账新增三项：日线值、复权因子事件流、财务报表值。
 - 单主源风险消除；Tushare 故障日可降级拉 fuyao（source=auto 逐日选源）。
-- **披露锚迁移项**：当前 Tushare fundamental 摄取只请求 `ann_date` 并映射为 `knowledge_date`（adapters/fundamental.py），与红线 4 的 `f_ann_date` 唯一锚尚不一致。落地时须迁移 adapter 字段为 `f_ann_date`，含 schema/存量回填与 future-sentinel 边界测试；迁移完成前现有 `ann_date` 锚继续生效，不得对外宣称已完成 `f_ann_date` 锚定。
+- **披露锚迁移（已完成，#219）**：财务三表摄取字段与映射已从 `ann_date` 迁移为 `f_ann_date`（adapters/fundamental.py + mappings/capital.py），红线 4 生效。迁移时无存量财务数据，故无回填项；新旧锚差异经多期 DQ 审计量化（2016 年后漂移 0.3–4.8%，最大 3287 天，方向恒为更晚披露）。因数据代理不支持 `f_ann_date` 过滤参数，披露增量与稀疏回填统一改为"近 8 个报告期超集拉取 + 本地按披露锚过滤"，future-sentinel 边界测试见 `task pit`；更早报告期（>2 年）的更正披露不在增量可见范围，属已知上限。
