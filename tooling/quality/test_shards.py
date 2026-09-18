@@ -105,7 +105,7 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
         "--collect-only",
         "-q",
         "-m",
-        "not snapshot and not sandbox_live",
+        "not snapshot and not sandbox_live and not capacity",
     )
     inventory = _inventory(json.loads(inventory_path.read_text()))
     selected = partition(inventory, index, count)
@@ -140,7 +140,7 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
             "addopts=",
             "--import-mode=importlib",
             "-n",
-            "0" if serial else "2",
+            "0" if serial else "4",
             "--dist=loadfile",
             "-q",
             "--strict-markers",
@@ -167,10 +167,62 @@ def run_shard(output: Path, commit: str, index: int, count: int) -> None:
     report_path.write_text(json.dumps(report) + "\n")
 
 
+def _verify_capacity(directory: Path, commit: str) -> list[Path]:
+    """Require the capacity slow-lane evidence when shard evidence is present."""
+    report_path = directory / "capacity.json"
+    if not report_path.is_file():
+        raise ShardError("missing capacity slow-lane evidence")
+    report = json.loads(report_path.read_text())
+    data = directory / ".coverage.capacity"
+    if (
+        report["commit"] != commit
+        or report["status"] != "passed"
+        or not data.is_file()
+        or hashlib.sha256(data.read_bytes()).hexdigest() != report["coverage_sha256"]
+    ):
+        raise ShardError("capacity slow-lane evidence is stale or changed")
+    return [data]
+
+
+def run_capacity(output: Path, commit: str) -> None:
+    """Run the scheduler-capacity slow lane serially with coverage evidence."""
+    output.mkdir(parents=True, exist_ok=True)
+    data = output.resolve() / ".coverage.capacity"
+    data.unlink(missing_ok=True)
+    os.environ["COVERAGE_FILE"] = str(data)
+    report = {"commit": commit, "status": "failed"}
+    report_path = output / "capacity.json"
+    report_path.write_text(json.dumps(report) + "\n")
+    _run(
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "--import-mode=importlib",
+        "-n",
+        "0",
+        "-q",
+        "--strict-markers",
+        "--strict-config",
+        "--durations=25",
+        "-m",
+        "capacity",
+        "--cov",
+        "--cov-report=",
+        "--junitxml=" + str(output / "junit-capacity.xml"),
+    )
+    if not data.is_file():
+        raise ShardError("capacity lane produced no coverage")
+    report.update(
+        status="passed", coverage_sha256=hashlib.sha256(data.read_bytes()).hexdigest()
+    )
+    report_path.write_text(json.dumps(report) + "\n")
+
+
 def main() -> int:
     """Run a shard or combine authenticated complete coverage."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("run", "combine"))
+    parser.add_argument("mode", choices=("run", "combine", "capacity"))
     parser.add_argument("--output", type=Path, default=Path("build/test-shards"))
     parser.add_argument("--commit", required=True)
     parser.add_argument("--count", type=int, default=4)
@@ -180,8 +232,11 @@ def main() -> int:
     os.environ["_TYPER_FORCE_DISABLE_TERMINAL"] = "1"
     if args.mode == "run":
         run_shard(args.output, args.commit, args.index, args.count)
+    elif args.mode == "capacity":
+        run_capacity(args.output, args.commit)
     else:
         data = verify_manifests(args.output, args.commit, args.count)
+        data += _verify_capacity(args.output, args.commit)
         _run("-m", "coverage", "combine", "--keep", *map(str, data))
         _run("-m", "coverage", "json", "-o", "coverage.json")
         _run("-m", "coverage", "xml", "-o", "coverage.xml")

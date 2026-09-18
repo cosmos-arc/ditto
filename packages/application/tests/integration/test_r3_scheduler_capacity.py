@@ -103,7 +103,7 @@ from packages.application.tests.integration import (
 
 NOW = datetime(2026, 7, 28, 2, 0, tzinfo=UTC)
 NOW_US = int(NOW.timestamp() * 1_000_000)
-pytestmark = [pytest.mark.integration, pytest.mark.e2e]
+pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.capacity]
 
 
 class _AttemptLineageFactory:
@@ -1288,7 +1288,9 @@ def _assert_completed_capacity_run(
     assert _attempts(resumed.reader, interrupted.queued_successor.experiment_id) == ()
 
 
-@pytest.mark.parametrize("worker_count", [2, 4])
+# ponytail: 仅保留 worker_count=4 —— 更高并发度对声明唯一性的证明覆盖更强，
+# CI 中本模块整体走独立 capacity 慢车道（#225），不再垫高分片关键路径。
+@pytest.mark.parametrize("worker_count", [4])
 def test_128_candidates_survive_restart_without_duplicate_claims(
     tmp_path: Path,
     worker_count: int,

@@ -126,6 +126,43 @@ class CiTests(unittest.TestCase):
                     in output.read_text()
                 )
 
+    def test_push_event_narrows_to_platform_smoke_only(self) -> None:
+        """push 到 main 信任 PR 等价验证，仅保留跨平台门与常驻安全检查."""
+        repo = Path(__file__).resolve().parents[3]
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "ci-output.txt"
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "tooling.agent_harness.ci",
+                    "select",
+                ],
+                cwd=repo,
+                env={
+                    **os.environ,
+                    "GITHUB_EVENT_NAME": "push",
+                    "GITHUB_SHA": "0" * 40,
+                    "GITHUB_OUTPUT": str(output),
+                },
+                check=True,
+                capture_output=True,
+            )
+            selected = json.loads(
+                output.read_text().splitlines()[0].removeprefix("required=")
+            )
+            assert selected == [
+                "platform-smoke",
+                "repository-policy",
+                "security-supply-chain",
+            ]
+            assert "full=false" in output.read_text()
+
+    def test_backend_scope_selects_capacity_lane(self) -> None:
+        required = required_jobs(["packages/application/src/ditto_application/x.py"])
+        assert "backend-capacity" in required
+        assert "backend-shards" in required
+
     def test_gate_accepts_only_explicitly_unneeded_skips(self) -> None:
         required = {"repository-policy", "security-supply-chain", "web-quality"}
         results = {

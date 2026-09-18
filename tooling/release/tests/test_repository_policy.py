@@ -100,9 +100,13 @@ def test_backend_coverage_merges_shards_and_enforces_the_floor() -> None:
         for step in backend["steps"]
         if "backend-coverage-combine" in step.get("run", "")
     )
-    assert "--count 4" in coverage_step["run"]
+    assert "--count 6" in coverage_step["run"]
     assert "covered_lines" in coverage_step["run"]
     assert "0.90" in coverage_step["run"]
+    # 分片证据 + capacity 慢车道证据都必须参与合并（#225）
+    artifact_downloads = json.dumps(backend["steps"])
+    assert "backend-shard-" in artifact_downloads
+    assert "backend-capacity-" in artifact_downloads
 
 
 def test_ci_has_explicit_pit_and_supported_platform_gates() -> None:
