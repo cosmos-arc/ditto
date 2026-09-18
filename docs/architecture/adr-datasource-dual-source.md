@@ -46,3 +46,4 @@ Baostock（不支持 ETF/基金）；TdxQuant（Windows 终端常驻）；TDX gp
 - 数据源子域新增 fuyao（复制 TushareSource 适配器模式；`.importlinter` 数据源子域两两互斥契约同步扩展）。
 - DQ cross_source 对账新增三项：日线值、复权因子事件流、财务报表值。
 - 单主源风险消除；Tushare 故障日可降级拉 fuyao（source=auto 逐日选源）。
+- **披露锚迁移项**：当前 Tushare fundamental 摄取只请求 `ann_date` 并映射为 `knowledge_date`（adapters/fundamental.py），与红线 4 的 `f_ann_date` 唯一锚尚不一致。落地时须迁移 adapter 字段为 `f_ann_date`，含 schema/存量回填与 future-sentinel 边界测试；迁移完成前现有 `ann_date` 锚继续生效，不得对外宣称已完成 `f_ann_date` 锚定。

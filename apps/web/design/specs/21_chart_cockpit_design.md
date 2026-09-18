@@ -20,7 +20,7 @@
 - **跨 pane 联动**：主图+副图共享时间轴，十字线与 tooltip 同步；区间框选缩放，双击回全区间。
 - **as_of 水位线（本产品特有）**：图表右缘显示 knowledge cutoff 竖线 + stale 徽标；与数据新鲜度透明度时变（live 1.0 → recent 0.85 → aging 0.65 → stale 0.40 → expired 0.25）合并为同一新鲜度体系，不另造第二套。
 - **状态语义**：loading（带坐标轴占位骨架）/ empty（引导入口）/ error（重试）/ stale（水位线+badge）/ partial（区间缺失渲染断口，标注缺口范围）映射进 04 号 spec 的 15 状态语义与页面合同 requiredStates。
-- **导出**：PNG（footer 溯源五字段：as_of、source snapshot id 截断、数据源名、导出时间、产品版本）+ CSV（同名列附带）。
+- **导出**：PNG（footer：as_of、完整 source snapshot id（不截断）、knowledge/publication cutoff（随数据语义传播时一并携带）、数据源名、导出时间、产品版本）+ CSV（同名列附带）。导出物必须可区分同 as_of 下不同可见性 cutoff / 修订宇宙的版本。
 
 ## 三、视觉令牌
 
@@ -35,7 +35,7 @@
 
 ### 标的页图表 tab（M1）
 
-K 线主图 + 成交量副图；指标叠加首期 MA(5/20/60)、BOLL、MACD、RSI、ATR（取自技术分析 registry 既有 18 指标，无新指标实现），可多开副图；控制条含周期切换（日/周/月）与复权切换（原始/前复权/后复权，复权价一律本地自算结果）；ETF 特化叠加净值线（数据可得时，不可得时显式降级提示）；指标选择页面级持久化。
+K 线主图 + 成交量副图；指标叠加首期 MA(5/20/60)、MACD、RSI、ATR——全部取自技术分析 registry 既有 18 指标，无新指标实现（BOLL 不在 registry 现有输出中，如需须先经 registry/合同扩展，列为后续项；轨道类需求可先用既有的 Donchian 上下轨）；可多开副图；控制条含周期切换（日/周/月）与复权切换（原始/前复权/后复权，复权价一律本地自算结果）；ETF 特化叠加净值线（数据可得时，不可得时显式降级提示）；指标选择页面级持久化。
 
 ### 回测详情页（M2）
 
@@ -43,7 +43,7 @@ K 线主图 + 成交量副图；指标叠加首期 MA(5/20/60)、BOLL、MACD、R
 
 ### 研究图表（M3）
 
-因子详情：IC 时序 + 滚动 IR 双轴、Q1–Q5 分位分层净值、LS spread、月度 IC 热力图；组合对比页：三组合净值曲线 + 差异可视化（数据来自既有 comparison query，零新后端语义）。
+因子详情：IC 时序 + 滚动 IR 双轴、Q1–Q5 分位分层净值、LS spread、月度 IC 热力图；组合对比页：**首期为单时点三组合对比与 drift 可视化**（数据来自既有 comparison query——它是单 `as_of` 快照读模型，无历史 NAV 序列）；三组合**净值曲线**需要新增 PIT-safe 的 NAV 历史查询/DTO（合同扩展，走 contracts 单写者流程，且不得用重复解析漂移快照身份的方式伪造历史），作为 M3 的后续前置项。
 
 ## 五、数值纪律与 Primary Answer
 
@@ -62,6 +62,6 @@ K 线主图 + 成交量副图；指标叠加首期 MA(5/20/60)、BOLL、MACD、R
 ## 七、裁决记录（2026-09-17，默认裁决可推翻）
 
 1. 红涨绿跌确认 + 切换入口在 View Preferences。
-2. 指标首期 6 个确认（MA/BOLL/MACD/RSI/ATR + 量）。
+2. 指标首期确认：MA/MACD/RSI/ATR + 量（全部 registry 既有）；BOLL 延后（需 registry 扩展）。
 3. 回测下钻流确认（报告→证据→K 线定位高亮）。
-4. PNG footer 溯源五字段确认。
+4. PNG/CSV 导出携带完整 PIT 身份（完整 snapshot id + 传播中的 cutoff 字段，不截断唯一修订标识）。
