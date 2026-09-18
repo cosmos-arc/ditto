@@ -8,6 +8,7 @@
 | 文档 | 用途 |
 |------|------|
 | [unified-feature-factor-engine/](../../packages/features/docs/design/unified-feature-factor-engine/README.md) | 统一因子/特征引擎设计（表达式编译、物化、IC、PIT 一致性） |
+| [2026-09-17-design-queue-decisions.md](2026-09-17-design-queue-decisions.md) | 2026-09 全景评审设计队列裁决（图表/交互/Screener/D17 会话/ML/文本因子，跟踪 epic #192） |
 
 ## 归档设计（旧架构时期）
 
