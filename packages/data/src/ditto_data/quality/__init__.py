@@ -16,7 +16,7 @@ from ditto_data.quality.protocols import (
     InstrumentStoreProtocol,
     QualityEngineProtocol,
     QuarantineWriterProtocol,
-    TdxSourceProtocol,
+    SecondaryBarsSourceProtocol,
 )
 from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_data.quality.report import DQReportGenerator
@@ -42,7 +42,7 @@ __all__ = [
     "QualityEngine",
     "QualityEngineProtocol",
     "QuarantineWriterProtocol",
+    "SecondaryBarsSourceProtocol",
     "StatisticalChecker",
-    "TdxSourceProtocol",
     "TechnicalChecker",
 ]

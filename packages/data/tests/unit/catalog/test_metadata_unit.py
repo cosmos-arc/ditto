@@ -396,7 +396,7 @@ class TestDefaultMetadataSourceCapabilities:
         meta = default_dataset_metadata()["stock_daily"]
 
         assert meta.default_source == "tushare"
-        assert meta.supported_sources == ("tushare",)
+        assert meta.supported_sources == ("tushare", "fuyao")
         assert meta.auxiliary_sources == ()
         assert meta.ingestion_granularities == ("date", "instrument")
         assert meta.freshness_sla_hours == 36

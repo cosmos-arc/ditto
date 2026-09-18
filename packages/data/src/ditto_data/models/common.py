@@ -231,6 +231,7 @@ class Source(StrEnum):
     TUSHARE = "tushare"
     AKSHARE = "akshare"  # 预留，未来支持
     FRED = "fred"  # Federal Reserve Economic Data (美国宏观数据)
+    FUYAO = "fuyao"  # 同花顺开源金融数据（冗余源）
 
 
 _RANGES: dict[AssetClassType, tuple[int, int]] = {

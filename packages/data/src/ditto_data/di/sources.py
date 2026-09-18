@@ -7,6 +7,8 @@ from dishka import Provider, Scope, provide
 from ditto_data.config import DataSourceSettings
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.fred.fred_source import FredSource
+from ditto_data.sources.fuyao.client import FuyaoClient
+from ditto_data.sources.fuyao.source import FuyaoSource
 from ditto_data.sources.protocols import (
     CapitalFetcher,
     FundamentalFetcher,
@@ -33,6 +35,12 @@ _TUSHARE_PROTOCOLS: list[type] = [
 
 _FRED_PROTOCOLS: list[type] = [
     MacroFetcher,
+]
+
+# fuyao 仅实现 stock_daily 摄取能力（MarketFetcher 协议子集），
+# 数据集级白名单（catalog metadata supported_sources）负责精确门禁。
+_FUYAO_PROTOCOLS: list[type] = [
+    MarketFetcher,
 ]
 
 
@@ -82,6 +90,26 @@ class SourcesProvider(Provider):
         return FredSource(api_key=api_key)
 
     @provide
+    def fuyao_source(
+        self,
+        data_source_settings: DataSourceSettings,
+    ) -> Iterator[FuyaoSource | None]:
+        """Fuyao 冗余源 — 仅在配置了 fuyao_api_key 时创建."""
+        api_key = data_source_settings.fuyao_api_key
+        if not api_key:
+            yield None
+            return
+        source = FuyaoSource(
+            client=FuyaoClient(
+                base_url=data_source_settings.fuyao_base_url,
+                api_key=api_key,
+                timeout=data_source_settings.http_timeout,
+            )
+        )
+        yield source
+        source.close()
+
+    @provide
     def data_sources(
         self,
         tushare_source: TushareSource,
@@ -102,6 +130,7 @@ class SourcesProvider(Provider):
         self,
         tushare_source: TushareSource,
         fred_source: FredSource | None,
+        fuyao_source: FuyaoSource | None,
     ) -> SourceRegistry:
         """
         SourceRegistry — 按 Protocol 能力注册和查找数据源.
@@ -115,6 +144,9 @@ class SourcesProvider(Provider):
         if fred_source is not None:
             for proto in _FRED_PROTOCOLS:
                 registry.register("fred", proto, fred_source)
+        if fuyao_source is not None:
+            for proto in _FUYAO_PROTOCOLS:
+                registry.register("fuyao", proto, fuyao_source)
         return registry
 
     @provide

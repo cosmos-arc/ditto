@@ -20,14 +20,14 @@ class TestReconcileSourcesHandlerInit:
         # Act
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
         # Assert
         assert handler._engine is mock_quality_engine
-        assert handler._tdx_source is mock_tdx_source
+        assert handler._secondary_source is mock_tdx_source
         assert handler._comparison_store is mock_comparison_writer
         assert handler._instrument_store is mock_instrument_store
 
@@ -50,7 +50,7 @@ class TestDailyReconciliationSuccess:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -104,7 +104,7 @@ class TestDailyReconciliationSuccess:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -151,7 +151,7 @@ class TestDailyReconciliationSuccess:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -198,7 +198,7 @@ class TestDailyReconciliationWithIssues:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -245,7 +245,7 @@ class TestDailyReconciliationWithIssues:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -289,7 +289,7 @@ class TestDailyReconciliationEdgeCases:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -333,7 +333,7 @@ class TestDailyReconciliationEdgeCases:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -379,7 +379,7 @@ class TestDailyReconciliationEdgeCases:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -431,7 +431,7 @@ class TestConvertResultToDf:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -457,7 +457,7 @@ class TestConvertResultToDf:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -486,7 +486,7 @@ class TestConvertResultToDf:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
@@ -529,7 +529,7 @@ class TestSendAlerts:
         # Arrange
         handler = ReconcileSourcesHandler(
             engine=mock_quality_engine,
-            tdx_source=mock_tdx_source,
+            secondary_source=mock_tdx_source,
             comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )

@@ -121,7 +121,9 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
         allowed_modules=frozenset(
             {
                 "ditto_data.quality.protocols",
+                "ditto_data.services.deps",
                 "ditto_data.services.source_accessor",
+                "ditto_data.sources.fuyao.source",
                 "ditto_data.sources.tdx.source",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",
@@ -457,7 +459,9 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         allowed_modules=frozenset(
             {
                 "ditto_data.quality.protocols",
+                "ditto_data.services.deps",
                 "ditto_data.services.source_accessor",
+                "ditto_data.sources.fuyao.source",
                 "ditto_data.sources.tdx.source",
                 "ditto_data.storage.metadata.instrument",
                 "ditto_data.storage.runtime.quality",

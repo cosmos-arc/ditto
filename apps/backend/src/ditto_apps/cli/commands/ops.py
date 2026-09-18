@@ -15,6 +15,10 @@ from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
     RevokeDatasetMaturityPromotionHandler,
 )
+from ditto_application.commands.quality_reconciliation import (
+    ReconcileSourcesCommand,
+    ReconcileSourcesHandler,
+)
 from ditto_application.config import get_all_datasets
 from ditto_application.exceptions import AppError
 from ditto_application.processes.quality.patrol import QualityPatrolService
@@ -60,10 +64,10 @@ type MaturityPromotionRevocationReason = Literal[
     "evidence_invalidated",
 ]
 
-# 从 Dataset StrEnum 派生，保证单一事实来源（自动包含 index_weight）
+# 从 Dataset StrEnum 派生, 保证单一事实来源(自动包含 index_weight)
 _KNOWN_DATASETS = [dataset.value for dataset in get_all_datasets()]
 
-# 核心数据集 (dq 默认检查范围)，从 Dataset 枚举派生避免硬编码
+# 核心数据集 (dq 默认检查范围), 从 Dataset 枚举派生避免硬编码
 _CORE_DATASET_NAMES = {"etf_daily", "stock_daily", "index_daily", "adj_factor"}
 _CORE_DATASETS = [
     dataset.value
@@ -129,7 +133,7 @@ def restore_sqlite(
         help="独立恢复库路径; 已存在时拒绝覆盖",
     ),
 ) -> None:
-    """把备份恢复到新路径，禁止覆盖原库，并再次验证。"""
+    """把备份恢复到新路径, 禁止覆盖原库, 并再次验证。"""
     try:
         report = restore_database(backup, destination)
     except SQLiteBackupError as error:
@@ -194,6 +198,59 @@ def reattest_sparse_pit(
     output_json_dict(result)
     if result.get("passed") is not True:
         raise typer.Exit(1)
+
+
+@app.command("reconcile")
+def reconcile(
+    date: str = typer.Argument(..., help="对账交易日 (YYYY-MM-DD)"),
+    dataset: str = typer.Option(
+        "stock_daily", "--dataset", help="对账数据集(当前支持 stock_daily)"
+    ),
+) -> None:
+    """跨源对账: 主源存量 vs 辅源(fuyao 已配置时优先, 否则 TDX)."""
+    from ditto_apps.registry.infra.protocol_adapters import (  # noqa: PLC0415
+        MarketReaders,
+    )
+
+    if dataset != "stock_daily":
+        typer.secho(f"暂不支持 {dataset} 对账", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    container: Container = make_app_container()
+    try:
+        handler = container.get(ReconcileSourcesHandler)
+        stock_bars_reader = container.get(MarketReaders).stock_bars
+        data_root = stock_bars_reader.data_root
+        primary_df = stock_bars_reader.read(start_date=date, end_date=date)
+        if primary_df.is_empty():
+            typer.secho(
+                f"主源 {dataset} 在 {date} 无存量数据(先摄取再对账)",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(1)
+        typer.echo(f"主源行数: {primary_df.height}")
+        result = handler.handle(
+            ReconcileSourcesCommand(
+                primary_df=primary_df, trade_date=date, dataset=dataset
+            )
+        )
+        skipped = f" (skipped: {result.skip_reason})" if result.skipped else ""
+        color = typer.colors.GREEN if result.passed else typer.colors.RED
+        typer.secho(
+            f"对账结果: passed={result.passed} issues={result.issue_count}{skipped}",
+            fg=color,
+        )
+        if not result.passed:
+            typer.secho(
+                f"error: {result.error}"
+                if result.error
+                else f"存在跨源差异, 详见 {data_root}/quarantine/quality_comparison/",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(1)
+    finally:
+        container.close()
 
 
 def _status_color(status: str | None) -> str:
@@ -651,7 +708,7 @@ def promotion_collect(
         None, "--output", help="写入文件路径 (默认输出到 stdout)"
     ),
 ) -> None:
-    """收集数据集晋级证据，生成 Markdown 证据报告。"""
+    """收集数据集晋级证据, 生成 Markdown 证据报告。"""
     container, collector = _fetch_promotion_evidence_collector()
     try:
         report = collector.collect(dataset_id)
