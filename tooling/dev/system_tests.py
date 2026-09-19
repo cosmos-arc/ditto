@@ -501,6 +501,24 @@ def main() -> int:
                     web_port=web_port,
                 ),
             )
+
+            # Real market parquet over a seeded isolated store drives the
+            # instrument candlestick chart through the production API.
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.instrument_chart_app:app", api_port
+                    ),
+                    prefix="ditto-system-instrument-chart-",
+                    spec="instrument-chart.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
     except (OSError, RuntimeError, TimeoutError, ValueError) as error:
         print(f"System tests failed: {error}", file=sys.stderr)
         return 1

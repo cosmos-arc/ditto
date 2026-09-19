@@ -1,4 +1,4 @@
-import type { HistogramData, LineData, Time, WhitespaceData } from "lightweight-charts";
+import type { CandlestickData, HistogramData, LineData, Time, WhitespaceData } from "lightweight-charts";
 
 /**
  * Chart Cockpit 数据变换层：bars → lightweight-charts 序列的纯函数映射。
@@ -30,12 +30,15 @@ export function freshnessBucket(ageMs: number): FreshnessBucket {
 
 /**
  * 单根 bar：time 为 Unix 秒；close / volume 为 null 表示该时点数据缺失，
- * 渲染为断口（不插值、不补零）。
+ * 渲染为断口（不插值、不补零）。open/high/low 供蜡烛图（缺失时以 close 退化）。
  */
 export type CockpitBar = {
 	readonly time: number;
 	readonly close: number | null;
 	readonly volume: number | null;
+	readonly open?: number | null;
+	readonly high?: number | null;
+	readonly low?: number | null;
 };
 
 /** 涨跌方向（CN 默认红涨绿跌，颜色映射经 chart 层 token，不在此耦合）。 */
@@ -99,6 +102,84 @@ export function toLineSeriesData(bars: readonly CockpitBar[]): LinePoint[] {
 	return [...bars]
 		.sort((a, b) => a.time - b.time)
 		.map((bar) => (bar.close === null ? { time: bar.time as Time } : { time: bar.time as Time, value: bar.close }));
+}
+
+export type CandlePoint = CandlestickData<Time> | WhitespaceData<Time>;
+
+/** 蜡烛图映射：close 缺失 → whitespace 断口；OHLC 缺失以 close 退化（不造形）。 */
+export function toCandleSeriesData(bars: readonly CockpitBar[]): CandlePoint[] {
+	return [...bars]
+		.sort((a, b) => a.time - b.time)
+		.map((bar) => {
+			if (bar.close === null) {
+				return { time: bar.time as Time };
+			}
+			return {
+				time: bar.time as Time,
+				open: bar.open ?? bar.close,
+				high: bar.high ?? Math.max(bar.open ?? bar.close, bar.close),
+				low: bar.low ?? Math.min(bar.open ?? bar.close, bar.close),
+				close: bar.close,
+			};
+		});
+}
+
+/** 展示周期：日线原样；周/月按 ISO 周（周一）与自然月聚合。 */
+export type BarPeriod = "daily" | "weekly" | "monthly";
+
+function periodKey(unixSeconds: number, period: BarPeriod): { key: string; bucketStart: number } {
+	const date = new Date(unixSeconds * 1000);
+	if (period === "weekly") {
+		const weekday = (date.getUTCDay() + 6) % 7; // 周一为一周起点
+		const monday = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - weekday) / 1000;
+		return { key: `w${monday}`, bucketStart: monday };
+	}
+	if (period === "monthly") {
+		const monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1) / 1000;
+		return { key: `m${monthStart}`, bucketStart: monthStart };
+	}
+	return { key: `d${unixSeconds}`, bucketStart: unixSeconds };
+}
+
+/**
+ * OHLCV 周期重采样（语义对齐后端 technical_analysis `_weekly()`）：
+ * open 取首根、high/max、low/min、close 取末根、volume 求和；
+ * 桶内任一成分缺失 close 时该桶以「已有数据聚合」为准，不插值。
+ */
+export function resampleBars(bars: readonly CockpitBar[], period: BarPeriod): CockpitBar[] {
+	if (period === "daily") {
+		return [...bars].sort((a, b) => a.time - b.time);
+	}
+	const sorted = [...bars].sort((a, b) => a.time - b.time);
+	const buckets = new Map<
+		string,
+		{ start: number; open?: number; high?: number; low?: number; close: number | null; volume: number | null }
+	>();
+	for (const bar of sorted) {
+		const { key, bucketStart } = periodKey(bar.time, period);
+		const bucket = buckets.get(key) ?? { start: bucketStart, close: null, volume: null };
+		if (bar.close !== null) {
+			const open = bar.open ?? bar.close;
+			const high = bar.high ?? Math.max(open, bar.close);
+			const low = bar.low ?? Math.min(open, bar.close);
+			bucket.open = bucket.open ?? open;
+			bucket.high = bucket.high === undefined ? high : Math.max(bucket.high, high);
+			bucket.low = bucket.low === undefined ? low : Math.min(bucket.low, low);
+			bucket.close = bar.close;
+			bucket.volume = (bucket.volume ?? 0) + (bar.volume ?? 0);
+		}
+		buckets.set(key, bucket);
+	}
+	return [...buckets.values()]
+		.sort((a, b) => a.start - b.start)
+		.map((bucket) => ({
+			time: bucket.start,
+			open: bucket.open ?? null,
+			high: bucket.high ?? null,
+			low: bucket.low ?? null,
+			close: bucket.close,
+			volume: bucket.volume,
+		}));
 }
 
 export type FreshnessSegment = {
@@ -193,8 +274,9 @@ export function buildPngFooterLines(identity: ChartExportIdentity): [string, str
 }
 
 /**
- * 导出 CSV：每个序列一列 close（缺失留空保持断口语义），volume 取首个序列，
- * 行尾附带完整 PIT 身份列，使同 as_of 下不同 cutoff / 修订宇宙的导出物可区分。
+ * 导出 CSV：每序列一列 close（蜡烛序列附 open/high/low，缺失留空保持断口语义），
+ * volume 取首个序列，行尾附带完整 PIT 身份列，使同 as_of 下不同 cutoff /
+ * 修订宇宙的导出物可区分。
  */
 export function toCsvExport(
 	seriesById: ReadonlyArray<{ readonly id: string; readonly bars: readonly CockpitBar[] }>,
@@ -206,6 +288,7 @@ export function toCsvExport(
 	for (const entry of seriesById) {
 		for (const bar of entry.bars) times.add(bar.time);
 	}
+	const withOhlc = seriesById.map((entry) => entry.bars.some((bar) => bar.open !== undefined));
 	const metadata = [
 		identity.asOf != null ? formatExportTime(identity.asOf) : "",
 		identity.snapshotId ?? "",
@@ -215,12 +298,27 @@ export function toCsvExport(
 		new Date(identity.exportedAtMs).toISOString(),
 		identity.productVersion,
 	];
-	const header = ["time", ...seriesById.map((entry) => `close_${entry.id}`), "volume", ...CSV_METADATA_COLUMNS];
+	const header = [
+		"time",
+		...seriesById.flatMap((entry, index) =>
+			withOhlc[index]
+				? [`open_${entry.id}`, `high_${entry.id}`, `low_${entry.id}`, `close_${entry.id}`]
+				: [`close_${entry.id}`],
+		),
+		"volume",
+		...CSV_METADATA_COLUMNS,
+	];
 	const rows = [...times]
 		.sort((a, b) => a - b)
 		.map((time) => [
 			formatExportTime(time),
-			...seriesById.map((entry) => entry.bars.find((bar) => bar.time === time)?.close ?? ""),
+			...seriesById.flatMap((entry, index) => {
+				const bar = entry.bars.find((item) => item.time === time);
+				if (!withOhlc[index]) {
+					return [bar?.close ?? ""];
+				}
+				return [bar?.open ?? "", bar?.high ?? "", bar?.low ?? "", bar?.close ?? ""];
+			}),
 			volumeByTime.get(time) ?? "",
 			...metadata,
 		]);

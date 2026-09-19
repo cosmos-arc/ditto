@@ -6,7 +6,9 @@ export {
 	type CockpitSeriesSpec,
 } from "./chart-cockpit";
 export {
+	type BarPeriod,
 	buildPngFooterLines,
+	type CandlePoint,
 	type ChartExportIdentity,
 	type CockpitBar,
 	directionBetween,
@@ -21,8 +23,10 @@ export {
 	type GapRange,
 	type LinePoint,
 	lastNonNullClose,
+	resampleBars,
 	type SeriesDirection,
 	splitByFreshness,
+	toCandleSeriesData,
 	toCsvExport,
 	toLineSeriesData,
 	toVolumeSeriesData,

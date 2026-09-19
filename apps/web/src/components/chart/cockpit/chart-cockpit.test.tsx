@@ -154,6 +154,28 @@ describe("ChartCockpit 数据映射", () => {
 			0,
 		);
 	});
+
+	it("renders candle specs through the candle series with market up/down colors", () => {
+		renderCockpit({
+			series: [
+				{
+					id: "daily",
+					kind: "candle",
+					color: "var(--chart-combo-model)",
+					bars: [
+						{ time: 100, open: 10, high: 11, low: 9, close: 10.5, volume: 100 },
+						{ time: 200, close: null, volume: null },
+					],
+				},
+			],
+		});
+		expect(chartStub.addSeries).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ upColor: "#eb6268", downColor: "#53ae77" }),
+			0,
+		);
+		expect(seriesDataCalls[0]).toEqual([{ time: 100, open: 10, high: 11, low: 9, close: 10.5 }, { time: 200 }]);
+	});
 });
 
 describe("ChartCockpit 键盘操作", () => {

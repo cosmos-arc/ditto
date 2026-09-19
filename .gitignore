@@ -16,7 +16,7 @@ eggs/
 lib/
 lib64/
 # lib/ 来自 Python 构建模板，会误伤已跟踪的 web 源码目录（apps/web/src/lib）
-!apps/web/src/lib/
+!apps/web/src/**/lib/
 parts/
 sdist/
 var/

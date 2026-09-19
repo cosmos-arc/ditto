@@ -1,4 +1,5 @@
 import {
+	CandlestickSeries,
 	ColorType,
 	CrosshairMode,
 	createChart,
@@ -29,6 +30,7 @@ import {
 	formatReadoutTime,
 	lastNonNullClose,
 	splitByFreshness,
+	toCandleSeriesData,
 	toCsvExport,
 	toLineSeriesData,
 	toVolumeSeriesData,
@@ -55,6 +57,8 @@ export type CockpitSeriesSpec = {
 	/** CSS token 引用，如 "var(--chart-run-1)"（canvas 经 useChartTheme 解析）。 */
 	readonly color: string;
 	readonly lineWidth?: 1 | 2 | 3 | 4;
+	/** 序列形态：线（默认，color 生效）或蜡烛（涨跌色走 Market 域 token）。 */
+	readonly kind?: "line" | "candle";
 };
 
 export type ChartCockpitIdentity = {
@@ -153,7 +157,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	const hostRef = useRef<HTMLDivElement | null>(null);
 	const chartRef = useRef<IChartApi | null>(null);
 	const watermarkRef = useRef<AsOfWatermark | null>(null);
-	const primarySeriesRef = useRef<ISeriesApi<"Line", Time> | null>(null);
+	const primarySeriesRef = useRef<ISeriesApi<SeriesType, Time> | null>(null);
 	const contentSeriesRef = useRef<ISeriesApi<SeriesType, Time>[]>([]);
 	const applyingLinkedRangeRef = useRef(false);
 	const applyingLinkedCrosshairRef = useRef(false);
@@ -293,7 +297,28 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		contentSeriesRef.current = [];
 
 		let primary: ISeriesApi<"Line", Time> | null = null;
+		let primaryCandle: ISeriesApi<"Candlestick", Time> | null = null;
 		for (const spec of series) {
+			if (spec.kind === "candle") {
+				// 蜡烛为 EOD 语义：不做 freshness 分段（时变透明度仅用于实时线序列）。
+				const candle = chart.addSeries(
+					CandlestickSeries,
+					{
+						upColor: theme.up,
+						downColor: theme.down,
+						wickUpColor: theme.up,
+						wickDownColor: theme.down,
+						borderVisible: false,
+						priceLineVisible: false,
+						lastValueVisible: false,
+					},
+					0,
+				);
+				candle.setData(toCandleSeriesData(spec.bars));
+				contentSeriesRef.current.push(candle);
+				primaryCandle ??= candle;
+				continue;
+			}
 			const baseColor = theme.resolve(spec.color);
 			const segments: Array<{ bucket: FreshnessBucket; points: readonly CockpitBar[] }> = freshnessFade
 				? splitByFreshness(spec.bars, effectiveNowMs)
@@ -317,7 +342,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				}
 			}
 		}
-		primarySeriesRef.current = primary;
+		primarySeriesRef.current = primary ?? primaryCandle;
 
 		const primarySpec = series[0];
 		if (showVolumePane && primarySpec) {

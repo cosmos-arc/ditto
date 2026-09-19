@@ -1,9 +1,9 @@
 {
   "id": "instrument-hub",
-  "version": 3,
+  "version": 4,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-08-30",
+  "updatedAt": "2026-09-19",
   "route": "/instruments/$id",
   "resolvedRoute": "/instruments/1000001",
   "pagePattern": "object-hub",
@@ -20,11 +20,21 @@
       "src/features/instruments/components/instrument-components.test.tsx",
       "src/features/instruments/components/info-level-annotations.test.tsx"
     ],
-    "reactComponentRefs": ["InstrumentHubPage"]
+    "reactComponentRefs": [
+      "InstrumentHubPage"
+    ]
   },
   "viewports": [
-    { "width": 1536, "height": 900, "role": "primary" },
-    { "width": 1366, "height": 768, "role": "compact" }
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
   ],
   "slots": [
     {
@@ -55,7 +65,9 @@
         "widthRatio": 1,
         "heightRatio": 0.12
       },
-      "responsiveBehavior": { "compact": "reflow" }
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
     },
     {
       "name": "tabs",
@@ -69,7 +81,9 @@
         "widthRatio": 0.03,
         "heightRatio": 0.2
       },
-      "responsiveBehavior": { "compact": "reflow" }
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
     },
     {
       "name": "main",
@@ -96,22 +110,55 @@
         "widthRatio": 0.36,
         "heightRatio": 0.82
       },
-      "responsiveBehavior": { "compact": "collapsed" }
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
     }
   ],
   "states": {
-    "universal": ["loading", "empty", "error", "stale"],
-    "pageSpecific": ["not-found", "invalid-id", "bars-empty", "snapshot-identity-missing", "experimental-disabled"]
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "not-found",
+      "invalid-id",
+      "bars-empty",
+      "bars-partial",
+      "snapshot-identity-missing",
+      "experimental-disabled"
+    ]
   },
-  "flags": { "hasStatusBar": true, "sidebarCollapsible": false },
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
   "metrics": {
     "capturedAt": "2026-04-27",
     "viewport": "1536x900",
     "baseline": {
-      "meta": { "width": 1536, "height": 112, "strategy": "content-driven" },
-      "tabs": { "width": 1536, "height": 48, "strategy": "content-driven" },
-      "main": { "width": 1536, "height": 590, "strategy": "content-driven" },
-      "bottom": { "width": 1536, "height": 140, "strategy": "content-driven" }
+      "meta": {
+        "width": 1536,
+        "height": 112,
+        "strategy": "content-driven"
+      },
+      "tabs": {
+        "width": 1536,
+        "height": 48,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1536,
+        "height": 590,
+        "strategy": "content-driven"
+      },
+      "bottom": {
+        "width": 1536,
+        "height": 140,
+        "strategy": "content-driven"
+      }
     }
   },
   "visualThresholds": {
@@ -127,60 +174,100 @@
       "kind": "inline",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "main", "action": "toggle" },
+      "trigger": {
+        "slot": "main",
+        "action": "toggle"
+      },
       "prototypeSelector": "#overlay-chart-toolbar",
       "reactComponent": "InstrumentPageOverlays",
-      "closeBehavior": ["primary-action"]
+      "closeBehavior": [
+        "primary-action"
+      ]
     },
     {
       "id": "instrument-hub.news-detail",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "main", "action": "open-overlay" },
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-news-detail",
       "reactComponent": "InstrumentPageOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     },
     {
       "id": "instrument-hub.announcement-detail",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "main", "action": "open-overlay" },
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-announcement-detail",
       "reactComponent": "InstrumentPageOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     },
     {
       "id": "instrument-hub.add-watchlist",
       "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "bottom", "action": "open-overlay" },
+      "trigger": {
+        "slot": "bottom",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-add-watchlist",
       "reactComponent": "InstrumentPageOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     },
     {
       "id": "instrument-hub.send-research",
       "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "bottom", "action": "open-overlay" },
+      "trigger": {
+        "slot": "bottom",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-send-research",
       "reactComponent": "InstrumentPageOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     },
     {
       "id": "instrument-hub.halt-detail",
       "kind": "modal",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "meta", "action": "open-overlay" },
+      "trigger": {
+        "slot": "meta",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-halt-detail",
       "reactComponent": "InstrumentPageOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     }
   ],
   "liveData": {
@@ -195,8 +282,34 @@
     {
       "id": "select-bars-date-range",
       "trigger": "date-input-change",
-      "affectedSlots": ["main"],
+      "affectedSlots": [
+        "main"
+      ],
       "expectedBehavior": "requeries non-experimental unadjusted bars for one positive numeric instrument id and keeps missing snapshot identity visible"
+    },
+    {
+      "id": "select-bars-period",
+      "trigger": "segmented-button-press",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "resamples fetched daily candles to weekly or monthly buckets locally without refetching and keeps gaps uninterpolated"
+    },
+    {
+      "id": "select-bars-adjustment",
+      "trigger": "segmented-button-press",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "requeries bars with none/qfq/hfq adjustment; ETF disables the switch because server-side ETF adjustment is not wired"
+    },
+    {
+      "id": "toggle-experimental-data",
+      "trigger": "checkbox-change",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "explicitly opts the bars query into experimental dataset maturity for research browsing; default stays fail-closed off"
     }
   ]
 }

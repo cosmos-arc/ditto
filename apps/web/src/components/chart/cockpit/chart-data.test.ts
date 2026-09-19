@@ -8,7 +8,9 @@ import {
 	formatReadoutTime,
 	freshnessBucket,
 	lastNonNullClose,
+	resampleBars,
 	splitByFreshness,
+	toCandleSeriesData,
 	toCsvExport,
 	toLineSeriesData,
 	toVolumeSeriesData,
@@ -111,6 +113,81 @@ describe("toVolumeSeriesData", () => {
 			{ time: 3 },
 			{ time: 4, value: 80, color: "c-down" },
 			{ time: 5, value: 50, color: "c-flat" },
+		]);
+	});
+});
+
+describe("toCandleSeriesData", () => {
+	it("maps missing closes to whitespace and degrades missing OHLC from close", () => {
+		const bars: CockpitBar[] = [
+			{ time: 100, open: 10, high: 11, low: 9.5, close: 10.5, volume: 100 },
+			{ time: 200, open: null, high: null, low: null, close: null, volume: null },
+			{ time: 300, close: 12, volume: 90 },
+		];
+		expect(toCandleSeriesData(bars)).toEqual([
+			{ time: 100, open: 10, high: 11, low: 9.5, close: 10.5 },
+			{ time: 200 },
+			{ time: 300, open: 12, high: 12, low: 12, close: 12 },
+		]);
+	});
+});
+
+describe("resampleBars", () => {
+	const day = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
+	// 2026-09-07 是周一；09-09（三）与 09-10（四）同周，09-14（一）开新周。
+	const bars: CockpitBar[] = [
+		{ time: day("2026-09-07"), open: 10, high: 11, low: 9, close: 10.5, volume: 100 },
+		{ time: day("2026-09-09"), open: 10.5, high: 12, low: 10, close: 11.5, volume: 140 },
+		{ time: day("2026-09-10"), open: 11.5, high: 11.8, low: 10.8, close: 11, volume: 60 },
+		{ time: day("2026-09-14"), open: 11, high: 11.2, low: 10.5, close: 10.8, volume: 80 },
+	];
+
+	it("keeps daily bars untouched but ordered", () => {
+		expect(resampleBars([...bars].reverse(), "daily").map((bar) => bar.time)).toEqual(bars.map((bar) => bar.time));
+	});
+
+	it("rolls weekly buckets with first-open/max-high/min-low/last-close/sum-volume", () => {
+		expect(resampleBars(bars, "weekly")).toEqual([
+			{
+				time: day("2026-09-07"),
+				open: 10,
+				high: 12,
+				low: 9,
+				close: 11,
+				volume: 300,
+			},
+			{
+				time: day("2026-09-14"),
+				open: 11,
+				high: 11.2,
+				low: 10.5,
+				close: 10.8,
+				volume: 80,
+			},
+		]);
+	});
+
+	it("rolls monthly buckets from the first calendar day", () => {
+		expect(resampleBars(bars, "monthly")).toEqual([
+			{
+				time: day("2026-09-01"),
+				open: 10,
+				high: 12,
+				low: 9,
+				close: 10.8,
+				volume: 380,
+			},
+		]);
+	});
+
+	it("skips gap bars so missing days do not fabricate buckets", () => {
+		const withGap: CockpitBar[] = [
+			{ time: day("2026-09-07"), open: 10, high: 10, low: 10, close: 10, volume: 5 },
+			{ time: day("2026-09-08"), close: null, volume: null },
+			{ time: day("2026-09-09"), open: 10, high: 13, low: 10, close: 12, volume: 7 },
+		];
+		expect(resampleBars(withGap, "weekly")).toEqual([
+			{ time: day("2026-09-07"), open: 10, high: 13, low: 10, close: 12, volume: 12 },
 		]);
 	});
 });
