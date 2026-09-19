@@ -456,7 +456,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-backtest-result.html",
     requiredSlots: ["header", "meta", "tabs", "main", "bottom"],
-    requiredStates: ["loading", "empty", "error", "stale", "selected-nav-tab", "selected-report-tab", "selected-trades-tab", "selected-audit-tab", "run-unavailable", "report-unavailable", "performance-unpublished", "nav-unavailable", "benchmark-unpublished", "benchmark-unavailable", "trades-empty", "trades-unavailable", "audit-empty", "audit-unavailable", "benchmark-partial", "benchmark-unconfigured"],
+    requiredStates: ["loading", "empty", "error", "stale", "selected-nav-tab", "selected-report-tab", "selected-trades-tab", "selected-audit-tab", "run-unavailable", "report-unavailable", "performance-unpublished", "nav-unavailable", "benchmark-unpublished", "benchmark-unavailable", "trades-empty", "trades-unavailable", "audit-empty", "audit-unavailable", "benchmark-partial", "benchmark-unconfigured", "trade-evidence-drawer"],
     landing: {
       "reactRouteStatus": "implemented",
       "featureModule": "src/features/backtest",
@@ -1092,7 +1092,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-instrument-hub.html",
     requiredSlots: ["header", "meta", "tabs", "main", "bottom"],
-    requiredStates: ["loading", "empty", "error", "stale", "not-found", "invalid-id", "bars-empty", "bars-partial", "snapshot-identity-missing", "experimental-disabled", "nav-unavailable"],
+    requiredStates: ["loading", "empty", "error", "stale", "not-found", "invalid-id", "bars-empty", "bars-partial", "snapshot-identity-missing", "experimental-disabled", "nav-unavailable", "drill-focus"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",

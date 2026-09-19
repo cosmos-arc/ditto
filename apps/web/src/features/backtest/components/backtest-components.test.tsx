@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { backtestHandlers } from "@/mocks/handlers/backtest";
@@ -77,6 +78,36 @@ describe("BacktestTrades", () => {
 		await expect(screen.findByText("Instrument #600519")).resolves.toBeInTheDocument();
 		expect(screen.getByText("Instrument #300750")).toBeInTheDocument();
 		expect(screen.queryByText("贵州茅台")).not.toBeInTheDocument();
+	});
+
+	it("打开成交证据抽屉：精确身份 + 时点过滤的审计证据行", async () => {
+		render(<BacktestTrades jobId="bt-001" />, { wrapper: createWrapper() });
+		const evidenceButton = await screen.findByTestId("trade-evidence-600519-2025-03-03");
+		await userEvent.click(evidenceButton);
+		await expect(screen.findByText("成交证据下钻")).resolves.toBeInTheDocument();
+		// 精确成交身份（Entry/Exit/PnL）
+		expect(screen.getByText(/2025-03-03 @ 1500\.0000/)).toBeInTheDocument();
+		// 审计证据按标的+日期过滤（mock 中 600519 @2025-04-03 命中）
+		const rows = await screen.findByTestId("trade-evidence-rows");
+		expect(rows.textContent).toContain("2025-04-03");
+		expect(rows.textContent).not.toContain("2025-09-18");
+	});
+
+	it("抽屉的 K 线定位链接携带跨域跳转上下文（对象/原因/知识时间/方向）", async () => {
+		render(<BacktestTrades jobId="bt-001" />, { wrapper: createWrapper() });
+		await userEvent.click(await screen.findByTestId("trade-evidence-600519-2025-03-03"));
+		const buyLink = await screen.findByTestId("drill-link-buy-600519-2025-03-03");
+		expect(buyLink).toHaveAttribute(
+			"href",
+			expect.stringContaining("/instruments/600519?tab=chart&focusDate=2025-03-03"),
+		);
+		const href = buyLink.getAttribute("href") ?? "";
+		expect(href).toContain("drillRunId=bt-001");
+		expect(href).toContain("drillDirection=buy");
+		expect(href).toContain("drillAsOf=");
+		const sellLink = screen.getByTestId("drill-link-sell-600519-2025-03-03");
+		expect(sellLink.getAttribute("href")).toContain("focusDate=2025-04-03");
+		expect(sellLink.getAttribute("href")).toContain("drillDirection=sell");
 	});
 });
 

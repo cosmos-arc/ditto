@@ -4,6 +4,7 @@ export {
 	type ChartCockpitIdentity,
 	type ChartCockpitProps,
 	type CockpitBand,
+	type CockpitMarker,
 	type CockpitOverlay,
 	type CockpitSeriesSpec,
 	type CockpitSubPane,

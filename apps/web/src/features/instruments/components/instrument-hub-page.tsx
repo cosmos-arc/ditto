@@ -4,6 +4,7 @@ import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, StatusBar } from "@/features/shell";
 import { addToLocalWatchlist } from "@/lib/local-watchlist";
+import type { InstrumentDrillContext } from "../types";
 import { InstrumentChartView } from "./instrument-chart-view";
 import { InstrumentMetaStrip } from "./instrument-meta-strip";
 import { InstrumentOverview } from "./instrument-overview";
@@ -12,6 +13,7 @@ import { type InstrumentOverlayId, InstrumentPageOverlays, instrumentActions } f
 export interface InstrumentHubSearch {
 	readonly selectionRunId?: string | undefined;
 	readonly tab?: "chart" | "fundamentals" | "overview" | "technical";
+	readonly drill?: InstrumentDrillContext | undefined;
 }
 
 export interface InstrumentTechnicalSlotProps {
@@ -77,7 +79,7 @@ export function InstrumentHubPage({
 							</TabsContent>
 							<TabsContent value="chart">
 								<div data-info-level="l1" data-info-unit="instrument-chart">
-									<InstrumentChartView id={instrumentId} />
+									<InstrumentChartView id={instrumentId} drill={search.drill} />
 								</div>
 							</TabsContent>
 							<TabsContent value="technical" className="h-full min-h-0 overflow-hidden">

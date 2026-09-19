@@ -1,6 +1,13 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Coordinate, Logical, LogicalRange, MouseEventParams, Time } from "lightweight-charts";
+import {
+	type Coordinate,
+	createSeriesMarkers,
+	type Logical,
+	type LogicalRange,
+	type MouseEventParams,
+	type Time,
+} from "lightweight-charts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChartCockpit, type CockpitSeriesSpec } from "./chart-cockpit";
 import { broadcastCrosshairTime, joinRangeGroup } from "./cockpit-link";
@@ -11,11 +18,16 @@ import { broadcastCrosshairTime, joinRangeGroup } from "./cockpit-link";
  * 不测图表库内部实现。
  */
 
+const hoisted = vi.hoisted(() => ({
+	setSeriesMarkers: vi.fn<(markers: unknown[]) => void>(),
+}));
 const seriesDataCalls: unknown[][] = [];
 const setVisibleLogicalRange = vi.fn<(range: LogicalRange) => void>();
 const fitContent = vi.fn<() => void>();
 const attachPrimitive = vi.fn<(primitive: object) => void>();
+// vi.mock 工厂被提升到 const 声明之前，marker 捕获必须经 vi.hoisted 暴露。
 let crosshairHandlers: Array<(param: MouseEventParams<Time>) => void> = [];
+let clickHandlers: Array<(param: MouseEventParams<Time>) => void> = [];
 let logicalRangeHandlers: Array<(range: LogicalRange | null) => void> = [];
 const timeScaleStub = {
 	getVisibleLogicalRange: vi.fn<() => LogicalRange | null>(() => ({ from: 0 as Logical, to: 100 as Logical })),
@@ -45,6 +57,9 @@ const chartStub = {
 	subscribeCrosshairMove: vi.fn((handler: (param: MouseEventParams<Time>) => void) => {
 		crosshairHandlers.push(handler);
 	}),
+	subscribeClick: vi.fn((handler: (param: MouseEventParams<Time>) => void) => {
+		clickHandlers.push(handler);
+	}),
 	subscribeVisibleLogicalRangeChange: vi.fn((handler: (range: LogicalRange | null) => void) => {
 		logicalRangeHandlers.push(handler);
 	}),
@@ -61,6 +76,7 @@ vi.mock("lightweight-charts", async (importOriginal) => {
 	return {
 		...actual,
 		createChart: vi.fn(() => chartStub),
+		createSeriesMarkers: vi.fn(() => ({ setMarkers: hoisted.setSeriesMarkers })),
 	};
 });
 
@@ -91,6 +107,7 @@ const originalRevokeObjectURL = URL.revokeObjectURL;
 beforeEach(() => {
 	vi.clearAllMocks();
 	crosshairHandlers = [];
+	clickHandlers = [];
 	logicalRangeHandlers = [];
 	seriesDataCalls.length = 0;
 	URL.createObjectURL = vi.fn(() => "blob:mock");
@@ -394,6 +411,59 @@ describe("Chart Cockpit 跨实例联动", () => {
 		});
 		expect(chartStub.setCrosshairPosition).toHaveBeenCalledWith(12, 300, expect.anything());
 		leave();
+	});
+});
+
+describe("ChartCockpit 买卖点标记与下钻定位", () => {
+	it("maps buy markers to above-bar arrows and sell to below-bar arrows with market colors", () => {
+		renderCockpit({
+			markers: [
+				{ id: "t1", time: 100, direction: "buy", label: "买入" },
+				{ id: "t2", time: 300, direction: "sell", label: "卖出" },
+			],
+		});
+		expect(vi.mocked(createSeriesMarkers)).toHaveBeenCalledWith(expect.anything(), [
+			expect.objectContaining({ time: 100, position: "aboveBar", shape: "arrowUp", text: "买入" }),
+			expect.objectContaining({ time: 300, position: "belowBar", shape: "arrowDown", text: "卖出" }),
+		]);
+		const host = screen.getByLabelText("演示收盘价图表（fixture）");
+		expect(host).toHaveAttribute("data-chart-marker-times", "100,300");
+	});
+
+	it("invokes onMarkerClick only when the clicked time hits a marker", () => {
+		const onMarkerClick = vi.fn();
+		renderCockpit({
+			markers: [{ id: "t1", time: 300, direction: "sell" }],
+			onMarkerClick,
+		});
+		act(() => {
+			for (const handler of clickHandlers) {
+				handler({
+					time: 300 as Time,
+					point: { x: 5 as Coordinate, y: 5 as Coordinate },
+					seriesData: new Map(),
+				});
+			}
+		});
+		expect(onMarkerClick).toHaveBeenCalledWith(expect.objectContaining({ id: "t1", direction: "sell" }));
+		act(() => {
+			for (const handler of clickHandlers) {
+				handler({ time: 100 as Time, point: { x: 5 as Coordinate, y: 5 as Coordinate }, seriesData: new Map() });
+			}
+		});
+		expect(onMarkerClick).toHaveBeenCalledTimes(1);
+	});
+
+	it("scrolls the initial focus time into the visible center instead of fitContent", () => {
+		renderCockpit({ initialFocusTime: 200 });
+		// t=200 是第 2 根 bar（index 1）；fixture 仅 3 根 → 可见窗口=序列长度，目标居中
+		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -0.5, to: 2.5 });
+		expect(fitContent).not.toHaveBeenCalled();
+	});
+
+	it("falls back to fitContent when the focus time is not in the series", () => {
+		renderCockpit({ initialFocusTime: 999 });
+		expect(fitContent).toHaveBeenCalled();
 	});
 });
 
