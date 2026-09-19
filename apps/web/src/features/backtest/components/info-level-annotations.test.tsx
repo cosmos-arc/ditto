@@ -1,11 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { backtestHandlers } from "@/mocks/handlers/backtest";
 import { server } from "@/mocks/server";
 import { BacktestPage } from "./backtest-page";
+
+// jsdom 无法承载 fancy-canvas：stub 掉图表 shell，信息单元测试聚焦 data-info-unit 标注。
+vi.mock("@/components/chart", () => ({
+	ChartCockpit: () => createElement("div", { "data-testid": "chart-cockpit-stub" }),
+}));
 
 // Mock TanStack Router's useParams (used by BacktestPage)
 vi.mock("@tanstack/react-router", async () => {
@@ -55,7 +60,7 @@ describe("BacktestPage info-level annotations", () => {
 	it("annotates 2 L2 information units", async () => {
 		render(<BacktestPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("净值与基准");
+		await screen.findByText("净值 vs 基准");
 
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
@@ -69,7 +74,7 @@ describe("BacktestPage info-level annotations", () => {
 		const user = userEvent.setup();
 		render(<BacktestPage />, { wrapper: createWrapper() });
 
-		await screen.findByText("净值与基准");
+		await screen.findByText("净值 vs 基准");
 		await user.click(screen.getByRole("tab", { name: "成交" }));
 		await screen.findByText("Instrument #600519");
 

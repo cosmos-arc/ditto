@@ -146,6 +146,7 @@ class AppStrategyQueryProvider(Provider):
         audit_service: ExecutionAuditService,
         artifact_service: StrategyArtifactService,
         artifact_reader: BacktestArtifactReader,
+        market: MarketQueryFacade,
     ) -> BacktestQueryFacade:
         """回测统一查询门面."""
         return BacktestQueryFacade(
@@ -154,6 +155,7 @@ class AppStrategyQueryProvider(Provider):
             audit_service=audit_service,
             artifact_service=artifact_service,
             artifact_reader=artifact_reader,
+            market=market,
         )
 
     @provide

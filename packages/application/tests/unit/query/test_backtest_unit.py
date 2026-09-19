@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -747,33 +748,126 @@ class TestBacktestQueryFacadeGetBenchmarkReturn:
 
 
 # =====================================================================
-# get_benchmark_nav_series — 基准 NAV 序列（当前未持久化）
+# get_benchmark_nav_series — 基准 NAV 序列（config_json → bars 归一自算）
 # =====================================================================
+
+
+def _benchmark_bars_frame() -> pl.DataFrame:
+    """基准标的运行期间收盘价（首日 4.0 → 归一基点）."""
+    return pl.DataFrame(
+        {
+            "trade_date": ["2026-01-05", "2026-01-06", "2026-01-07"],
+            "close": [4.0, 4.4, 4.2],
+        }
+    )
 
 
 class TestBacktestQueryFacadeGetBenchmarkNavSeries:
     """BacktestQueryFacade.get_benchmark_nav_series — 基准 NAV 序列."""
 
-    def test_returns_none_when_no_report(self) -> None:
-        """report 不存在时返回 None."""
+    def test_normalizes_configured_benchmark_close_to_unit_base(self) -> None:
+        """配置 benchmark_id 时按运行期间收盘价归一到 1.0 起步."""
+
+        run_record = _run_with_config(
+            benchmark_id=2_000_001,
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+        )
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = run_record
+        market = MagicMock(spec=["find_bars"])
+        market.find_bars.return_value = _benchmark_bars_frame()
+
+        facade = _make_facade(run_model=run_model)
+        facade_with_market = _inject_market(facade, market)
+
+        result = facade_with_market.get_benchmark_nav_series("run-001")
+
+        assert result == [
+            ("2026-01-05", 1.0),
+            ("2026-01-06", pytest.approx(1.1)),
+            ("2026-01-07", pytest.approx(1.05)),
+        ]
+        market.find_bars.assert_called_once_with(
+            instrument_ids=[2_000_001],
+            start="2026-01-05",
+            end="2026-01-07",
+        )
+
+    def test_returns_none_when_benchmark_not_configured(self) -> None:
+        """config_json 未携带整型 benchmark_id 时返回 None（未配置基准）."""
+        run_record = _run_with_config(benchmark_id=None)
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = run_record
+        market = MagicMock(spec=["find_bars"])
+
+        facade = _inject_market(_make_facade(run_model=run_model), market)
+
+        assert facade.get_benchmark_nav_series("run-001") is None
+        market.find_bars.assert_not_called()
+
+    def test_returns_empty_list_when_benchmark_bars_missing(self) -> None:
+        """配置了基准但行情缺失时返回空列表（数据不可得 ≠ 未配置）."""
+        run_record = _run_with_config(
+            benchmark_id=2_000_001,
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+        )
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = run_record
+        market = MagicMock(spec=["find_bars"])
+        market.find_bars.return_value = pl.DataFrame(
+            schema={"trade_date": pl.String, "close": pl.Float64}
+        )
+
+        facade = _inject_market(_make_facade(run_model=run_model), market)
+
+        assert facade.get_benchmark_nav_series("run-001") == []
+
+    def test_returns_none_without_market_dependency(self) -> None:
+        """未注入 market 查询时保持旧的 fail-closed 语义（None）."""
         facade = _make_facade()
-        facade.get_report = MagicMock(return_value=None)  # type: ignore[method-assign]
 
-        result = facade.get_benchmark_nav_series("run-001")
+        assert facade.get_benchmark_nav_series("run-001") is None
 
-        assert result is None
+    def test_propagates_maturity_gate_error(self) -> None:
+        """基准行情处于 experimental 成熟度门控时向上传播，不静默降级."""
+        from ditto_application.exceptions import AppQueryError
 
-    def test_returns_none_when_no_benchmark_data(self) -> None:
-        """report 无基准数据时返回 None."""
-        report = {
-            "alpha_stats": {
-                "annualized_return": 15.0,
-                "beta": None,
-            },
-        }
-        facade = _make_facade()
-        facade.get_report = MagicMock(return_value=report)  # type: ignore[method-assign]
+        run_record = _run_with_config(benchmark_id=1_000_001)
+        run_model = MagicMock(spec=["list_runs", "get_run"])
+        run_model.get_run.return_value = run_record
+        market = MagicMock(spec=["find_bars"])
+        market.find_bars.side_effect = AppQueryError("gated")
 
-        result = facade.get_benchmark_nav_series("run-001")
+        facade = _inject_market(_make_facade(run_model=run_model), market)
 
-        assert result is None
+        with pytest.raises(AppQueryError):
+            facade.get_benchmark_nav_series("run-001")
+
+
+def _run_with_config(
+    *,
+    benchmark_id: int | None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> StrategyRunRecord:
+    """构造携带 benchmark 配置 config_json 的运行记录."""
+    import orjson
+
+    return replace(
+        _make_run_record(),
+        config_json=orjson.dumps(
+            {
+                "benchmark_id": benchmark_id,
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+        ).decode(),
+    )
+
+
+def _inject_market(facade: object, market: MagicMock) -> object:
+    """把 mock market facade 注入已构造的 BacktestQueryFacade."""
+    facade.__dict__["_market"] = market
+    return facade

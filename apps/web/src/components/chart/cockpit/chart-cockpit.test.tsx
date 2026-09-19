@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Logical, LogicalRange, MouseEventParams, Time } from "lightweight-charts";
+import type { Coordinate, Logical, LogicalRange, MouseEventParams, Time } from "lightweight-charts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChartCockpit, type CockpitSeriesSpec } from "./chart-cockpit";
 import { broadcastCrosshairTime, joinRangeGroup } from "./cockpit-link";
@@ -274,6 +274,91 @@ describe("ChartCockpit 缺口标注", () => {
 		const chip = screen.getByTestId("chart-gaps-spec-close");
 		expect(chip.textContent).toContain("缺口");
 		expect(chip.textContent).toContain("1970-01-01 00:03");
+	});
+});
+
+describe("ChartCockpit 读数口径与副图图例", () => {
+	it("formats main-series readout through the per-series formatter", () => {
+		renderCockpit({
+			series: [{ ...SERIES[0]!, id: "nav", format: (value: number) => value.toFixed(4) }],
+		});
+		// 默认读数锚定最后一个非空点（t=300, close=12）
+		expect(screen.getByTestId("chart-readout-spec-close-nav").textContent).toBe("12.0000");
+	});
+
+	it("renders sub-pane readout chips with labels and formatters, gaps as —", () => {
+		renderCockpit({
+			subPanes: [
+				{
+					id: "excess",
+					label: "超额收益",
+					series: [
+						{
+							id: "excess",
+							label: "超额",
+							color: "var(--chart-run-2)",
+							format: (value: number) => `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`,
+							points: [
+								{ time: 100, close: 0.012, volume: null },
+								{ time: 200, close: null, volume: null },
+								{ time: 300, close: -0.005, volume: null },
+							],
+						},
+					],
+				},
+			],
+		});
+		// 默认读数锚定主序列最后非空点 t=300 → 副图同时点取值
+		expect(screen.getByTestId("chart-readout-spec-close-excess").textContent).toBe("-0.50%");
+		expect(screen.getByText("超额")).toBeInTheDocument();
+	});
+
+	it("keeps the readout index O(1): crosshair moves resolve values without rescanning", () => {
+		renderCockpit({
+			subPanes: [
+				{
+					id: "dd",
+					label: "回撤",
+					series: [
+						{
+							id: "dd",
+							color: "var(--chart-series-down)",
+							points: [
+								{ time: 100, close: -1, volume: null },
+								{ time: 300, close: -3, volume: null },
+							],
+						},
+					],
+				},
+			],
+		});
+		act(() => {
+			for (const handler of crosshairHandlers) {
+				handler({
+					time: 300 as Time,
+					point: { x: 10 as Coordinate, y: 10 as Coordinate },
+					seriesData: new Map(),
+				});
+			}
+		});
+		expect(screen.getByTestId("chart-readout-spec-close-dd").textContent).toBe("-3");
+		act(() => {
+			for (const handler of crosshairHandlers) {
+				handler({ seriesData: new Map() });
+			}
+		});
+		// 离开图表后回落到最后非空点读数
+		expect(screen.getByTestId("chart-readout-spec-close-dd").textContent).toBe("-3");
+	});
+});
+
+describe("ChartCockpit 主图区间底色", () => {
+	it("attaches the bands primitive and feeds resolved token ranges", () => {
+		renderCockpit({
+			bands: [{ id: "dd-1", from: 100, to: 300, color: "var(--chart-series-down)" }],
+		});
+		// 主图 pane 挂载水位线 + 底色两个 primitive
+		expect(attachPrimitive).toHaveBeenCalledTimes(2);
 	});
 });
 

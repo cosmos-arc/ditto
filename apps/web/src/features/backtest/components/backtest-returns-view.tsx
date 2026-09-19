@@ -63,7 +63,7 @@ export function BacktestReturnsView({ jobId }: BacktestReturnsViewProps) {
 					</h3>
 					<dl className="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 text-xs">
 						<dt>年化波动</dt>
-						<dd className="font-data">{metric(alpha && alpha.annualizedVolatility * 100, "%")}</dd>
+						<dd className="font-data">{metric(alpha && alpha.annualizedVolatility, "%")}</dd>
 						<dt>Calmar</dt>
 						<dd className="font-data">{metric(alpha?.calmarRatio)}</dd>
 						<dt>Information ratio</dt>
@@ -71,16 +71,9 @@ export function BacktestReturnsView({ jobId }: BacktestReturnsViewProps) {
 						<dt>Beta</dt>
 						<dd className="font-data">{metric(alpha?.beta)}</dd>
 						<dt>年化 Alpha</dt>
-						<dd className="font-data">
-							{metric(
-								alpha?.alphaAnnualized === null || alpha?.alphaAnnualized === undefined
-									? null
-									: alpha.alphaAnnualized * 100,
-								"%",
-							)}
-						</dd>
+						<dd className="font-data">{metric(alpha?.alphaAnnualized, "%")}</dd>
 						<dt>费用拖累</dt>
-						<dd className="font-data">{metric(alpha && alpha.costDrag * 100, "%")}</dd>
+						<dd className="font-data">{metric(alpha && alpha.costDrag, "%")}</dd>
 					</dl>
 				</section>
 				<section className="rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4">

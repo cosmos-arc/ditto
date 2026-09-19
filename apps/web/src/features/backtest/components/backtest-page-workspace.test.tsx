@@ -2,10 +2,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { BacktestPage } from "./backtest-page";
+
+// jsdom 无法承载 fancy-canvas：stub 掉图表 shell，页面测试聚焦资源身份与信息单元。
+vi.mock("@/components/chart", () => ({
+	ChartCockpit: (props: Record<string, unknown>) =>
+		createElement("div", {
+			"data-testid": "chart-cockpit-stub",
+			"data-chart-panes": String(1 + ((props["subPanes"] as unknown[] | undefined)?.length ?? 0)),
+		}),
+}));
 
 vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
@@ -66,22 +75,22 @@ const REPORT = {
 		avg_trade_return_pct: 0.012,
 	},
 	alpha_stats: {
-		annualized_return: 0.182,
-		annualized_volatility: 0.1,
+		annualized_return: 18.2,
+		annualized_volatility: 10.0,
 		sharpe_ratio: 1.82,
 		sortino_ratio: 2.35,
-		max_drawdown: -0.125,
+		max_drawdown: -12.5,
 		max_drawdown_duration_days: 28,
 		calmar_ratio: 1.45,
 		information_ratio: 0.73,
-		tracking_error: 0.06,
+		tracking_error: 6.0,
 		beta: 0.82,
-		alpha_annualized: 0.11,
+		alpha_annualized: 11.0,
 		total_turnover: 3.2,
 		avg_turnover_per_rebalance: 0.27,
 		total_fees: 3120,
-		net_return_after_cost: 0.174,
-		cost_drag: 0.008,
+		net_return_after_cost: 17.4,
+		cost_drag: 0.8,
 	},
 };
 
@@ -153,7 +162,7 @@ describe("BacktestPage governed workspace", () => {
 		expect(await screen.findByRole("heading", { name: "Backtest bt-live-001" })).toBeInTheDocument();
 		expect(await screen.findByText("1.82")).toBeInTheDocument();
 		expect(screen.getByText("18.2%")).toBeInTheDocument();
-		expect(await screen.findByText("净值与基准")).toBeInTheDocument();
+		expect(await screen.findByText("净值 vs 基准")).toBeInTheDocument();
 		expect(screen.queryByText("当前持仓")).not.toBeInTheDocument();
 
 		await user.click(screen.getByRole("tab", { name: "收益报告" }));
