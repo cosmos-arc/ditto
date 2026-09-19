@@ -56,8 +56,9 @@ export function BacktestKpiStrip({ jobId }: BacktestKpiStripProps) {
 	return (
 		<div className="flex h-14 min-w-max items-center gap-5 overflow-x-auto border-b border-(--color-border-subtle) px-4">
 			<Metric variant="strip" label="Sharpe" value={alpha.sharpeRatio.toFixed(2)} />
-			<Metric variant="strip" label="最大回撤" value={`${Math.abs(alpha.maxDrawdown * 100).toFixed(1)}%`} />
-			<Metric variant="strip" label="年化收益" value={`${(alpha.annualizedReturn * 100).toFixed(1)}%`} />
+			{/* 引擎 alpha_stats 的收益/回撤字段为百分数单位（18.2 = 18.2%），展示不再二次 ×100。 */}
+			<Metric variant="strip" label="最大回撤" value={`${Math.abs(alpha.maxDrawdown).toFixed(1)}%`} />
+			<Metric variant="strip" label="年化收益" value={`${alpha.annualizedReturn.toFixed(1)}%`} />
 			<Metric variant="strip" label="Sortino" value={alpha.sortinoRatio.toFixed(2)} />
 			<Metric variant="strip" label="总换手" value={`${alpha.totalTurnover.toFixed(1)}x`} />
 			<Metric variant="strip" label="胜率" value={trades ? `${(trades.winRate * 100).toFixed(1)}%` : "未评估"} />

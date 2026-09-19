@@ -61,27 +61,20 @@ export function BacktestReturnsView({ jobId }: BacktestReturnsViewProps) {
 					<h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-(--color-foreground-tertiary)">
 						Alpha statistics
 					</h3>
-					<dl className="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 text-xs">
-						<dt>年化波动</dt>
-						<dd className="font-data">{metric(alpha && alpha.annualizedVolatility * 100, "%")}</dd>
-						<dt>Calmar</dt>
-						<dd className="font-data">{metric(alpha?.calmarRatio)}</dd>
-						<dt>Information ratio</dt>
-						<dd className="font-data">{metric(alpha?.informationRatio)}</dd>
-						<dt>Beta</dt>
-						<dd className="font-data">{metric(alpha?.beta)}</dd>
-						<dt>年化 Alpha</dt>
-						<dd className="font-data">
-							{metric(
-								alpha?.alphaAnnualized === null || alpha?.alphaAnnualized === undefined
-									? null
-									: alpha.alphaAnnualized * 100,
-								"%",
-							)}
-						</dd>
-						<dt>费用拖累</dt>
-						<dd className="font-data">{metric(alpha && alpha.costDrag * 100, "%")}</dd>
-					</dl>
+				<dl className="mt-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 text-xs">
+					<dt>年化波动</dt>
+					<dd className="font-data">{metric(alpha && alpha.annualizedVolatility, "%")}</dd>
+					<dt>Calmar</dt>
+					<dd className="font-data">{metric(alpha?.calmarRatio)}</dd>
+					<dt>Information ratio</dt>
+					<dd className="font-data">{metric(alpha?.informationRatio)}</dd>
+					<dt>Beta</dt>
+					<dd className="font-data">{metric(alpha?.beta)}</dd>
+					<dt>年化 Alpha</dt>
+					<dd className="font-data">{metric(alpha?.alphaAnnualized, "%")}</dd>
+					<dt>费用拖累</dt>
+					<dd className="font-data">{metric(alpha && alpha.costDrag, "%")}</dd>
+				</dl>
 				</section>
 				<section className="rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4">
 					<h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-(--color-foreground-tertiary)">

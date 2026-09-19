@@ -1,9 +1,21 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { createElement, type ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { backtestHandlers } from "@/mocks/handlers/backtest";
 import { server } from "@/mocks/server";
+
+// jsdom 无法承载 fancy-canvas：barrel 级同步 stub ChartCockpit，捕获 props 断言喂养数据。
+const cockpitProps: Array<Record<string, unknown>> = [];
+vi.mock("@/components/chart", () => ({
+	ChartCockpit: (props: Record<string, unknown>) => {
+		cockpitProps.push(props);
+		return createElement("div", {
+			"data-testid": "chart-cockpit-stub",
+			"data-chart-panes": String(1 + ((props["subPanes"] as unknown[] | undefined)?.length ?? 0)),
+		});
+	},
+}));
 
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { BacktestListPage } from "./backtest-list-page";
@@ -24,7 +36,10 @@ function createWrapper() {
 	};
 }
 
-beforeEach(() => server.use(...backtestHandlers));
+beforeEach(() => {
+	server.use(...backtestHandlers);
+	cockpitProps.length = 0;
+});
 
 describe("Backtest route page contract handoffs", () => {
 	it("covers BacktestListPage route composition", async () => {
@@ -66,9 +81,21 @@ describe("BacktestTrades", () => {
 });
 
 describe("BacktestOverview", () => {
-	it("渲染 NAV 曲线区域", async () => {
+	it("渲染净值 vs 基准叠加 + 超额与回撤副图", async () => {
 		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("净值与基准")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("净值 vs 基准")).resolves.toBeInTheDocument();
+		const chart = await screen.findByTestId("chart-cockpit-stub");
+		// 主图（净值+基准）+ 超额副图 + 回撤副图 = 3 panes
+		expect(chart).toHaveAttribute("data-chart-panes", "3");
+		const last = cockpitProps.at(-1) as {
+			series: Array<{ id: string; label: string; bars: unknown[] }>;
+			subPanes: Array<{ id: string }>;
+			bands: unknown[];
+		};
+		expect(last.series.map((spec) => spec.id)).toEqual(["nav", "benchmark"]);
+		expect(last.series.map((spec) => spec.label)).toEqual(["策略净值", "基准"]);
+		expect(last.subPanes.map((pane) => pane.id)).toEqual(["excess", "drawdown"]);
+		expect(last.bands.length).toBeGreaterThan(0);
 	});
 
 	it("显示策略与基准的独立末值", async () => {
@@ -77,9 +104,39 @@ describe("BacktestOverview", () => {
 		await expect(screen.findByText("1.0740")).resolves.toBeInTheDocument();
 	});
 
+	it("水下曲线最深点与报告最大回撤同口径展示", async () => {
+		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
+		await screen.findByText("净值 vs 基准");
+		// mock nav: 1 → 1.041 回撤至 1.041/1.056−1 ≈ −1.42%
+		await expect(screen.findByText("最深回撤（水下曲线）")).resolves.toBeInTheDocument();
+		expect(screen.getByText("−1.42%")).toBeInTheDocument();
+	});
+
+	it("基准缺失（404）时明确标注未配置并只渲染策略净值", async () => {
+		render(<BacktestOverview jobId="bt-no-bench" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("净值 vs 基准")).resolves.toBeInTheDocument();
+		expect(
+			await screen.findByText("本运行未配置基准（benchmark 未发布）"),
+		).toHaveAttribute("data-state", "benchmark-unavailable");
+		const last = cockpitProps.at(-1) as {
+			series: Array<{ id: string }>;
+			subPanes: Array<{ id: string }>;
+		};
+		expect(last.series.map((spec) => spec.id)).toEqual(["nav"]);
+		expect(last.subPanes.map((pane) => pane.id)).toEqual(["drawdown"]);
+	});
+
+	it("基准已配置但行情无覆盖（200 空序列）时给出不可得状态", async () => {
+		render(<BacktestOverview jobId="bt-empty-bench" />, { wrapper: createWrapper() });
+		await expect(screen.findByText("净值 vs 基准")).resolves.toBeInTheDocument();
+		expect(
+			await screen.findByText("基准已配置，但本地行情无覆盖（基准数据不可得）"),
+		).toBeInTheDocument();
+	});
+
 	it("不展示没有公共资源支撑的持仓", async () => {
 		render(<BacktestOverview jobId="bt-001" />, { wrapper: createWrapper() });
-		await screen.findByText("净值与基准");
+		await screen.findByText("净值 vs 基准");
 		expect(screen.queryByText("当前持仓")).not.toBeInTheDocument();
 	});
 });

@@ -1,9 +1,9 @@
 {
   "id": "backtest-result",
-  "version": 3,
+  "version": 4,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-08-30",
+  "updatedAt": "2026-09-19",
   "route": "/research/backtests/$id",
   "resolvedRoute": "/research/backtests/bt-001",
   "pagePattern": "object-hub",
@@ -20,7 +20,9 @@
       "src/features/backtest/components/backtest-page-workspace.test.tsx",
       "src/features/backtest/components/backtest-components.test.tsx"
     ],
-    "reactComponentRefs": ["BacktestPage"]
+    "reactComponentRefs": [
+      "BacktestPage"
+    ]
   },
   "liveData": {
     "readPaths": [
@@ -35,9 +37,21 @@
     "mockFallback": false
   },
   "viewports": [
-    { "width": 1536, "height": 900, "role": "primary" },
-    { "width": 1366, "height": 768, "role": "compact" },
-    { "width": 1200, "height": 800, "role": "compact" }
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    },
+    {
+      "width": 1200,
+      "height": 800,
+      "role": "compact"
+    }
   ],
   "slots": [
     {
@@ -47,7 +61,12 @@
       "prototypeSelector": ".shell-header",
       "reactSelector": "[data-slot='header']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.11 },
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.11
+      },
       "a11yRole": "banner"
     },
     {
@@ -57,9 +76,16 @@
       "prototypeSelector": ".hub-meta",
       "reactSelector": "[data-testid='backtest-detail-identity']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 12, "widthRatio": 0.03, "heightRatio": 0.08 },
+      "threshold": {
+        "x": 4,
+        "y": 12,
+        "widthRatio": 0.03,
+        "heightRatio": 0.08
+      },
       "a11yRole": "complementary",
-      "responsiveBehavior": { "compact": "reflow" }
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
     },
     {
       "name": "tabs",
@@ -68,9 +94,16 @@
       "prototypeSelector": ".hub-tabs",
       "reactSelector": "[data-testid='backtest-detail-tabs']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 68, "widthRatio": 0.03, "heightRatio": 0.08 },
+      "threshold": {
+        "x": 4,
+        "y": 68,
+        "widthRatio": 0.03,
+        "heightRatio": 0.08
+      },
       "a11yRole": "navigation",
-      "responsiveBehavior": { "compact": "reflow" }
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
     },
     {
       "name": "main",
@@ -79,7 +112,12 @@
       "prototypeSelector": "[data-contract-slot='main']",
       "reactSelector": "[data-slot='main']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 68, "widthRatio": 0.03, "heightRatio": 0.2 },
+      "threshold": {
+        "x": 4,
+        "y": 68,
+        "widthRatio": 0.03,
+        "heightRatio": 0.2
+      },
       "a11yRole": "main"
     },
     {
@@ -89,13 +127,25 @@
       "prototypeSelector": ".hub-bottom",
       "reactSelector": "[data-testid='backtest-detail-bottom']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 12, "widthRatio": 0.03, "heightRatio": 0.12 },
+      "threshold": {
+        "x": 4,
+        "y": 12,
+        "widthRatio": 0.03,
+        "heightRatio": 0.12
+      },
       "a11yRole": "region",
-      "responsiveBehavior": { "compact": "collapsed" }
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
     }
   ],
   "states": {
-    "universal": ["loading", "empty", "error", "stale"],
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
     "pageSpecific": [
       "selected-nav-tab",
       "selected-report-tab",
@@ -110,44 +160,88 @@
       "trades-empty",
       "trades-unavailable",
       "audit-empty",
-      "audit-unavailable"
+      "audit-unavailable",
+      "benchmark-partial",
+      "benchmark-unconfigured"
     ]
   },
   "interactions": [
     {
       "id": "switch-backtest-evidence-view",
       "trigger": "tab-change",
-      "affectedSlots": ["tabs", "main", "bottom"],
+      "affectedSlots": [
+        "tabs",
+        "main",
+        "bottom"
+      ],
       "expectedBehavior": "switches among NAV, published report, exact trades, and audit evidence while retaining the frozen run and strategy-version identity"
     },
     {
       "id": "request-agent-evidence-analysis",
       "trigger": "header-evidence-action",
-      "affectedSlots": ["header"],
+      "affectedSlots": [
+        "header"
+      ],
       "expectedBehavior": "opens the governed Agent entry with the exact run, strategy, and version context instead of generating an ungoverned inline interpretation"
     },
     {
       "id": "retry-backtest-run",
       "trigger": "typed-run-retry-action",
-      "affectedSlots": ["meta", "tabs", "main", "bottom"],
+      "affectedSlots": [
+        "meta",
+        "tabs",
+        "main",
+        "bottom"
+      ],
       "expectedBehavior": "retries run identity and withholds every result resource until the run is confirmed"
     },
     {
       "id": "retry-backtest-resource",
       "trigger": "typed-resource-retry-action",
-      "affectedSlots": ["meta", "main", "bottom"],
+      "affectedSlots": [
+        "meta",
+        "main",
+        "bottom"
+      ],
       "expectedBehavior": "retries only the failed report, NAV, benchmark, trades, or audit resource and never substitutes zeros, holdings, names, or monthly returns"
+    },
+    {
+      "id": "crosshair-nav-readout",
+      "trigger": "chart-crosshair-hover",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "syncs the crosshair across NAV, benchmark, excess, and drawdown panes with readouts formatted in the same numeric discipline as the KPI strip"
     }
   ],
-  "flags": { "hasStatusBar": false, "sidebarCollapsible": false },
+  "flags": {
+    "hasStatusBar": false,
+    "sidebarCollapsible": false
+  },
   "metrics": {
     "capturedAt": "2026-08-30",
     "viewport": "1536x900",
     "baseline": {
-      "meta": { "width": 1480, "height": 36, "strategy": "content-driven" },
-      "tabs": { "width": 1480, "height": 45, "strategy": "content-driven" },
-      "main": { "width": 1480, "height": 659, "strategy": "content-driven" },
-      "bottom": { "width": 1480, "height": 36, "strategy": "content-driven" }
+      "meta": {
+        "width": 1480,
+        "height": 36,
+        "strategy": "content-driven"
+      },
+      "tabs": {
+        "width": 1480,
+        "height": 45,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1480,
+        "height": 659,
+        "strategy": "content-driven"
+      },
+      "bottom": {
+        "width": 1480,
+        "height": 36,
+        "strategy": "content-driven"
+      }
     }
   },
   "visualThresholds": {
@@ -163,50 +257,83 @@
       "kind": "sheet",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "header", "action": "open-overlay" },
+      "trigger": {
+        "slot": "header",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-export",
       "reactComponent": "BacktestOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     },
     {
       "id": "backtest-result.enable-signal",
       "kind": "alert-dialog",
       "blocking": true,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "header", "action": "open-overlay" },
+      "trigger": {
+        "slot": "header",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-enable-signal",
       "reactComponent": "BacktestOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     },
     {
       "id": "backtest-result.ai-analysis",
       "kind": "drawer",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "header", "action": "open-overlay" },
+      "trigger": {
+        "slot": "header",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-ai-analysis",
       "reactComponent": "BacktestOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     },
     {
       "id": "backtest-result.compare-toast",
       "kind": "toast",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "header", "action": "toggle" },
+      "trigger": {
+        "slot": "header",
+        "action": "toggle"
+      },
       "prototypeSelector": "#overlay-compare-toast",
       "reactComponent": "BacktestOverlays",
-      "closeBehavior": ["primary-action"]
+      "closeBehavior": [
+        "primary-action"
+      ]
     },
     {
       "id": "backtest-result.compare",
       "kind": "modal",
       "blocking": false,
       "requiredInDefaultFlow": true,
-      "trigger": { "slot": "header", "action": "open-overlay" },
+      "trigger": {
+        "slot": "header",
+        "action": "open-overlay"
+      },
       "prototypeSelector": "#overlay-compare",
       "reactComponent": "BacktestOverlays",
-      "closeBehavior": ["escape", "outside-click", "primary-action"]
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
     }
   ]
 }

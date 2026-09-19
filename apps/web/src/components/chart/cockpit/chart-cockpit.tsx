@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { withAlpha } from "@/lib/oklch";
 import { StaleIndicator } from "@/lib/stale-indicator";
 import { AsOfWatermark } from "./as-of-watermark";
+import { PaneBands } from "./pane-bands";
 import {
 	buildPngFooterLines,
 	type ChartExportIdentity,
@@ -32,6 +33,7 @@ import {
 	splitByFreshness,
 	toCandleSeriesData,
 	toCsvExport,
+	toHistogramSeriesData,
 	toLineSeriesData,
 	toVolumeSeriesData,
 } from "./chart-data";
@@ -53,12 +55,16 @@ import { broadcastCrosshairTime, broadcastVisibleRange, joinRangeGroup } from ".
 
 export type CockpitSeriesSpec = {
 	readonly id: string;
+	/** 图例读数标签（缺省用 id；CSV 列名始终用 id）。 */
+	readonly label?: string;
 	readonly bars: readonly CockpitBar[];
 	/** CSS token 引用，如 "var(--chart-run-1)"（canvas 经 useChartTheme 解析）。 */
 	readonly color: string;
 	readonly lineWidth?: 1 | 2 | 3 | 4;
 	/** 序列形态：线（默认，color 生效）或蜡烛（涨跌色走 Market 域 token）。 */
 	readonly kind?: "line" | "candle";
+	/** 图例读数格式化（与页面 KPI 同口径，如净值 4 位小数、百分比带符号）。 */
+	readonly format?: (value: number) => string;
 };
 
 /** 主图（pane 0）叠加线，如 MA/Donchian 轨道/ETF 净值。 */
@@ -69,13 +75,17 @@ export type CockpitOverlay = {
 	readonly lineWidth?: 1 | 2 | 3 | 4;
 };
 
-/** 独立副图（新 pane），与主图共享时间轴，如 MACD/RSI/ATR。 */
+/** 独立副图（新 pane），与主图共享时间轴，如 MACD/RSI/ATR/超额/回撤。 */
 export type CockpitSubPaneSeries = {
 	readonly id: string;
 	readonly points: readonly CockpitBar[];
 	readonly color: string;
-	/** 柱状（如 MACD histogram，涨跌色）或线（默认）。 */
+	/** 柱状（如 MACD histogram、回撤水下柱，涨跌色）或线（默认）。 */
 	readonly kind?: "line" | "histogram";
+	/** 图例读数标签（缺省用 id）。 */
+	readonly label?: string;
+	/** 图例读数格式化（与页面 KPI 同口径）。 */
+	readonly format?: (value: number) => string;
 };
 
 export type CockpitSubPane = {
@@ -83,6 +93,15 @@ export type CockpitSubPane = {
 	readonly label: string;
 	readonly series: readonly CockpitSubPaneSeries[];
 	readonly height?: number;
+};
+
+/** 主图（pane 0）横向区间底色，如回撤 peak→trough 区间；from/to 为 Unix 秒。 */
+export type CockpitBand = {
+	readonly id: string;
+	readonly from: number;
+	readonly to: number;
+	/** CSS token 引用（canvas 经 useChartTheme 解析并降透明度）。 */
+	readonly color: string;
 };
 
 export type ChartCockpitIdentity = {
@@ -101,6 +120,7 @@ export type ChartCockpitProps = {
 	readonly showVolumePane?: boolean;
 	readonly overlays?: readonly CockpitOverlay[];
 	readonly subPanes?: readonly CockpitSubPane[];
+	readonly bands?: readonly CockpitBand[];
 	readonly asOf?: { readonly time: number; readonly label?: string } | null;
 	/** 实时数据透明度时变（live 1.0 → expired 0.25）；默认关闭，EOD 图表只用水位线 + stale 徽标。 */
 	readonly freshnessFade?: boolean;
@@ -116,25 +136,71 @@ const SUB_PANE_HEIGHT = 96;
 // 空默认值必须用稳定引用：每次渲染新建数组会让内容 effect 失稳（重跑→fitContent 重置区间）。
 const EMPTY_OVERLAYS: readonly CockpitOverlay[] = [];
 const EMPTY_SUBPANES: readonly CockpitSubPane[] = [];
+const EMPTY_BANDS: readonly CockpitBand[] = [];
 const AFFORDANCES = "crosshair tooltip zoom-pan linked-time-range";
 
 type Readout = {
 	readonly time: number;
 	readonly values: readonly (number | null)[];
+	readonly subValues: readonly (number | null)[];
 	readonly volume: number | null;
 };
 
-function readoutAt(series: readonly CockpitSeriesSpec[], time: number): Readout | null {
-	if (series.length === 0) return null;
-	const values = series.map((spec) => spec.bars.find((bar) => bar.time === time)?.close ?? null);
-	const volume = series[0]?.bars.find((bar) => bar.time === time)?.volume ?? null;
-	return { time, values, volume };
+/** time → close/volume 查找索引：数据变更时构建一次，crosshair mousemove 上 O(1) 读数。 */
+type ReadoutIndex = {
+	readonly seriesValues: readonly ReadonlyMap<number, number | null>[];
+	readonly subPaneValues: readonly ReadonlyMap<number, number | null>[];
+	readonly volume: ReadonlyMap<number, number | null>;
+};
+
+function buildCloseIndex(bars: readonly CockpitBar[]): ReadonlyMap<number, number | null> {
+	const index = new Map<number, number | null>();
+	for (const bar of bars) {
+		if (!index.has(bar.time)) index.set(bar.time, bar.close);
+	}
+	return index;
 }
 
-function lastReadout(series: readonly CockpitSeriesSpec[]): Readout | null {
+function buildVolumeIndex(bars: readonly CockpitBar[]): ReadonlyMap<number, number | null> {
+	const index = new Map<number, number | null>();
+	for (const bar of bars) {
+		if (!index.has(bar.time)) index.set(bar.time, bar.volume);
+	}
+	return index;
+}
+
+function buildReadoutIndex(
+	series: readonly CockpitSeriesSpec[],
+	subPanes: readonly CockpitSubPane[],
+): ReadoutIndex {
+	return {
+		seriesValues: series.map((spec) => buildCloseIndex(spec.bars)),
+		subPaneValues: subPanes.flatMap((pane) =>
+			pane.series.map((paneSeries) => buildCloseIndex(paneSeries.points)),
+		),
+		volume: buildVolumeIndex(series[0]?.bars ?? []),
+	};
+}
+
+function readoutAtIndex(index: ReadoutIndex, time: number): Readout | null {
+	if (index.seriesValues.length === 0 && index.subPaneValues.length === 0) return null;
+	return {
+		time,
+		values: index.seriesValues.map((closeByTime) => closeByTime.get(time) ?? null),
+		subValues: index.subPaneValues.map((closeByTime) => closeByTime.get(time) ?? null),
+		volume: index.volume.get(time) ?? null,
+	};
+}
+
+function lastReadoutTime(
+	series: readonly CockpitSeriesSpec[],
+	subPanes: readonly CockpitSubPane[],
+): number | null {
 	const lastBar = lastNonNullClose(series[0]?.bars ?? []);
-	if (!lastBar) return null;
-	return readoutAt(series, lastBar.time);
+	if (lastBar) return lastBar.time;
+	return subPanes.length > 0
+		? (lastNonNullClose(subPanes[0]?.series[0]?.points ?? [])?.time ?? null)
+		: null;
 }
 
 function exportIdentity(
@@ -178,6 +244,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		showVolumePane = false,
 		overlays = EMPTY_OVERLAYS,
 		subPanes = EMPTY_SUBPANES,
+		bands = EMPTY_BANDS,
 		asOf = null,
 		freshnessFade = false,
 		timeVisible = false,
@@ -189,6 +256,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	const hostRef = useRef<HTMLDivElement | null>(null);
 	const chartRef = useRef<IChartApi | null>(null);
 	const watermarkRef = useRef<AsOfWatermark | null>(null);
+	const bandsRef = useRef<PaneBands | null>(null);
 	const primarySeriesRef = useRef<ISeriesApi<SeriesType, Time> | null>(null);
 	const contentSeriesRef = useRef<ISeriesApi<SeriesType, Time>[]>([]);
 	const applyingLinkedRangeRef = useRef(false);
@@ -197,9 +265,19 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	propsRef.current = props;
 
 	const [visibleRangeLabel, setVisibleRangeLabel] = useState("");
-	const [readout, setReadout] = useState<Readout | null>(() => lastReadout(series));
+	// 读数索引随数据重建一次；mousemove 联动回调经 ref 取最新索引，O(1) 查值。
+	const readoutIndex = useMemo(() => buildReadoutIndex(series, subPanes), [series, subPanes]);
+	const readoutIndexRef = useRef(readoutIndex);
+	readoutIndexRef.current = readoutIndex;
+	const initialReadout = useMemo(
+		() => readoutAtIndex(readoutIndex, lastReadoutTime(series, subPanes) ?? 0),
+		[readoutIndex, series, subPanes],
+	);
+	// 十字线只锚定时间：读数形状随当前索引派生，数据后到（如基准慢一拍）不会残留旧形状。
+	const [readoutTime, setReadoutTime] = useState<number | null>(null);
 	const [selection, setSelection] = useState<{ readonly from: number; readonly to: number } | null>(null);
-	const fallbackReadout = useMemo(() => lastReadout(series), [series]);
+	const activeReadout =
+		readoutTime === null ? initialReadout : readoutAtIndex(readoutIndex, readoutTime);
 	// 新鲜度时变的「当前时刻」：注入 nowMs（测试）固定，否则随 30s 心跳推进，
 	// 使 live→expired 分档在会话中随数据老化刷新。
 	const [effectiveNowMs, setEffectiveNowMs] = useState(() => nowMs ?? Date.now());
@@ -217,12 +295,12 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		if (!chart) return;
 		if (time === null) {
 			chart.clearCrosshairPosition();
-			setReadout(null);
+			setReadoutTime(null);
 			return;
 		}
 		const seconds = typeof time === "number" ? time : null;
 		if (seconds === null) return;
-		const readoutRow = readoutAt(propsRef.current.series, seconds);
+		const readoutRow = readoutAtIndex(readoutIndexRef.current, seconds);
 		const lastValue =
 			readoutRow?.values.find((value) => value !== null) ??
 			lastNonNullClose(propsRef.current.series[0]?.bars ?? [])?.close;
@@ -232,7 +310,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			window.setTimeout(() => {
 				applyingLinkedCrosshairRef.current = false;
 			}, 0);
-			if (readoutRow) setReadout(readoutRow);
+			if (readoutRow) setReadoutTime(readoutRow.time);
 		}
 	}, []);
 
@@ -271,6 +349,9 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		});
 		watermarkRef.current = watermark;
 		chart.panes()[0]?.attachPrimitive(watermark);
+		const paneBands = new PaneBands({ ranges: [] });
+		bandsRef.current = paneBands;
+		chart.panes()[0]?.attachPrimitive(paneBands);
 
 		const timeScale = chart.timeScale();
 		timeScale.subscribeVisibleLogicalRangeChange((range) => {
@@ -285,11 +366,11 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			const seconds = typeof param.time === "number" ? param.time : null;
 			if (applyingLinkedCrosshairRef.current) return;
 			if (seconds === null || !param.point) {
-				setReadout(null);
+				setReadoutTime(null);
 				broadcastCrosshairTime(rangeId, chartId, null);
 				return;
 			}
-			setReadout(readoutAt(propsRef.current.series, seconds));
+			setReadoutTime(seconds);
 			broadcastCrosshairTime(rangeId, chartId, param.time ?? null);
 		});
 
@@ -316,6 +397,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			primarySeriesRef.current = null;
 			contentSeriesRef.current = [];
 			watermarkRef.current = null;
+			bandsRef.current = null;
 		};
 	}, [theme, rangeId, chartId, applyLinkedCrosshair, timeVisible]);
 
@@ -421,7 +503,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 						nextPaneIndex,
 					);
 					histogram.setData(
-						toVolumeSeriesData(paneSeries.points, (direction) =>
+						toHistogramSeriesData(paneSeries.points, (direction) =>
 							withAlpha(theme.resolve(directionColorToken(direction)), 0.6),
 						),
 					);
@@ -446,6 +528,15 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			nextPaneIndex += 1;
 		}
 
+		// 主图区间底色（如回撤 peak→trough）：低透明度填充，逐带解析 token。
+		bandsRef.current?.updateOptions({
+			ranges: bands.map((band) => ({
+				from: band.from,
+				to: band.to,
+				fill: withAlpha(theme.resolve(band.color), 0.12),
+			})),
+		});
+
 		if (asOf) {
 			watermarkRef.current?.updateOptions({
 				time: asOf.time as Time,
@@ -465,7 +556,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		if (!freshnessFade) {
 			chart.timeScale().fitContent();
 		}
-	}, [series, overlays, subPanes, asOf, freshnessFade, effectiveNowMs, theme, showVolumePane]);
+	}, [series, overlays, subPanes, bands, asOf, freshnessFade, effectiveNowMs, theme, showVolumePane]);
 
 	const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
 		const chart = chartRef.current;
@@ -572,7 +663,17 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8;" }), `${exportName ?? chartId}.csv`);
 	}, [series, identity, asOf, nowMs, chartId, exportName]);
 
-	const activeReadout = readout ?? fallbackReadout;
+	// 副图读数芯片与 subValues 同序（subPanes.flatMap(series)），供图例逐条展示。
+	const subPaneChips = subPanes.flatMap((pane) =>
+		pane.series.map((paneSeries) => ({ paneSeries, paneLabel: pane.label })),
+	);
+	const formatValue = (
+		value: number | null | undefined,
+		format?: (value: number) => string,
+	): string => {
+		if (value === null || value === undefined) return "—";
+		return format ? format(value) : String(value);
+	};
 
 	return (
 		<div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
@@ -584,8 +685,25 @@ export function ChartCockpit(props: ChartCockpitProps) {
 							className="inline-block size-2 rounded-full"
 							style={{ background: theme.resolve(spec.color) }}
 						/>
-						<span className="font-medium">{spec.id}</span>
-						<span className="tabular-nums">{activeReadout ? (activeReadout.values[index] ?? "—") : "—"}</span>
+						<span className="font-medium">{spec.label ?? spec.id}</span>
+						<span className="tabular-nums" data-testid={`chart-readout-${chartId}-${spec.id}`}>
+							{activeReadout ? formatValue(activeReadout.values[index], spec.format) : "—"}
+						</span>
+					</span>
+				))}
+				{subPaneChips.map(({ paneSeries }, index) => (
+					<span key={paneSeries.id} className="inline-flex items-center gap-1.5">
+						<span
+							aria-hidden="true"
+							className="inline-block size-2 rounded-full"
+							style={{ background: theme.resolve(paneSeries.color) }}
+						/>
+						<span className="font-medium">{paneSeries.label ?? paneSeries.id}</span>
+						<span className="tabular-nums" data-testid={`chart-readout-${chartId}-${paneSeries.id}`}>
+							{activeReadout
+								? formatValue(activeReadout.subValues[index], paneSeries.format)
+								: "—"}
+						</span>
 					</span>
 				))}
 				{activeReadout && (

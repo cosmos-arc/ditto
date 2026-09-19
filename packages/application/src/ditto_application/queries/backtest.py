@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+import orjson
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_strategy.models import ArtifactKind
 from ditto_strategy.runs.models import StrategyRunRecord
@@ -21,6 +22,7 @@ from ditto_application.queries.backtest_trade import (
     BacktestTradeQueryFacade,
     TradeRecord,
 )
+from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.run import RunReadModel
 
 __all__ = [
@@ -111,12 +113,14 @@ class BacktestQueryFacade:
         audit_service: ExecutionAuditService,
         artifact_service: StrategyArtifactService,
         artifact_reader: BacktestArtifactReaderProtocol,
+        market: MarketQueryFacade | None = None,
     ) -> None:
         self._trade_facade = trade_facade
         self._run_model = run_model
         self._audit_service = audit_service
         self._artifact_service = artifact_service
         self._artifact_reader = artifact_reader
+        self._market = market
 
     # ------------------------------------------------------------------
     # 运行记录查询
@@ -310,12 +314,70 @@ class BacktestQueryFacade:
             return None
 
     def get_benchmark_nav_series(self, run_id: str) -> list[tuple[str, float]] | None:
-        """基准 NAV 序列 (当前未持久化，始终返回 None)."""
+        """
+        基准 NAV 序列 — 未配置基准返回 None，配置后按运行期间收盘价归一自算.
+
+        引擎当前不持久化基准序列；运行记录 config_json 携带 benchmark_id 与
+        起止日期，这里用既有 bars 查询（同一成熟度门控）把基准收盘价归一到
+        1.0 起步，与策略净值同口径可叠加。基准配置了但行情缺失时返回空列表，
+        由调用方区分「未配置」与「数据不可得」。
+        """
+        if self._market is None:
+            return None
+        run = self._run_model.get_run(run_id)
+        if run is None:
+            return None
+        benchmark = _benchmark_request(run)
+        if benchmark is None:
+            return None
+        benchmark_id, start, end = benchmark
+        bars = self._market.find_bars(
+            instrument_ids=[benchmark_id],
+            start=start,
+            end=end,
+        )
+        if bars.is_empty():
+            return []
+        closes = bars.select("trade_date", "close").sort("trade_date")
+        base = float(closes["close"][0])
+        if base == 0.0:
+            return []
+        dates = closes["trade_date"].to_list()
+        navs = (closes["close"] / base).to_list()
+        return [(str(date), float(nav)) for date, nav in zip(dates, navs, strict=True)]
+
+
+def _benchmark_request(
+    run: StrategyRunRecord,
+) -> tuple[int, str | None, str | None] | None:
+    """
+    从运行 config_json 提取 (benchmark_id, start_date, end_date).
+
+    config_json 缺失、损坏或未配置基准时返回 None；仅接受整型 benchmark_id，
+    不做字符串猜测。
+    """
+    if not run.config_json:
         return None
+    try:
+        loaded: object = orjson.loads(run.config_json)
+    except orjson.JSONDecodeError:
+        return None
+    if not isinstance(loaded, dict):
+        return None
+    config: dict[str, Any] = cast(dict[str, Any], loaded)
+    benchmark_id = config.get("benchmark_id")
+    if isinstance(benchmark_id, bool) or not isinstance(benchmark_id, int):
+        return None
+    start = config.get("start_date")
+    end = config.get("end_date")
+    return (
+        benchmark_id,
+        start if isinstance(start, str) else None,
+        end if isinstance(end, str) else None,
+    )
 
 
 def _str_field(payload: dict[str, Any], key: str) -> str:
-    """Read a JSON field as a string, returning empty for non-string values."""
     value = payload.get(key)
     return value if isinstance(value, str) else ""
 

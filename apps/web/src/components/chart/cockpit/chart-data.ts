@@ -233,6 +233,25 @@ export function toVolumeSeriesData(
 		});
 }
 
+/**
+ * 副图指标柱状数据（MACD 柱/回撤水下柱）：值取 close，颜色按值符号
+ * （正→涨色、负→跌色，回撤恒负）；close 缺失映射为 whitespace 断口。
+ */
+export function toHistogramSeriesData(
+	bars: readonly CockpitBar[],
+	colorFor: (direction: SeriesDirection) => string,
+): VolumePoint[] {
+	return [...bars]
+		.sort((a, b) => a.time - b.time)
+		.map((bar) => {
+			if (bar.close === null) {
+				return { time: bar.time as Time };
+			}
+			const direction: SeriesDirection = bar.close > 0 ? "up" : bar.close < 0 ? "down" : "flat";
+			return { time: bar.time as Time, value: bar.close, color: colorFor(direction) };
+		});
+}
+
 /** 导出物携带的 PIT 身份（裁决 #208-4：完整 snapshot id，不截断唯一修订标识）。 */
 export type ChartExportIdentity = {
 	readonly asOf?: number | null;

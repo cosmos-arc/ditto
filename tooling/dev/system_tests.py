@@ -519,6 +519,24 @@ def main() -> int:
                     web_port=web_port,
                 ),
             )
+
+            # A real engine backtest run (persisted through the production
+            # artifact/audit path) drives the NAV vs benchmark cockpit.
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.backtest_nav_app:app", api_port
+                    ),
+                    prefix="ditto-system-backtest-nav-",
+                    spec="backtest-nav.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
     except (OSError, RuntimeError, TimeoutError, ValueError) as error:
         print(f"System tests failed: {error}", file=sys.stderr)
         return 1

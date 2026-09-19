@@ -456,7 +456,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-backtest-result.html",
     requiredSlots: ["header", "meta", "tabs", "main", "bottom"],
-    requiredStates: ["loading", "empty", "error", "stale", "selected-nav-tab", "selected-report-tab", "selected-trades-tab", "selected-audit-tab", "run-unavailable", "report-unavailable", "performance-unpublished", "nav-unavailable", "benchmark-unpublished", "benchmark-unavailable", "trades-empty", "trades-unavailable", "audit-empty", "audit-unavailable"],
+    requiredStates: ["loading", "empty", "error", "stale", "selected-nav-tab", "selected-report-tab", "selected-trades-tab", "selected-audit-tab", "run-unavailable", "report-unavailable", "performance-unpublished", "nav-unavailable", "benchmark-unpublished", "benchmark-unavailable", "trades-empty", "trades-unavailable", "audit-empty", "audit-unavailable", "benchmark-partial", "benchmark-unconfigured"],
     landing: {
       "reactRouteStatus": "implemented",
       "featureModule": "src/features/backtest",
