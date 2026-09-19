@@ -1,3 +1,10 @@
 export { AreaChart } from "./area-chart";
-export { ChartCockpit, type ChartCockpitProps, type CockpitSeriesSpec } from "./cockpit/chart-cockpit";
+export {
+	type BarPeriod,
+	ChartCockpit,
+	type ChartCockpitProps,
+	type CockpitBar,
+	type CockpitSeriesSpec,
+	resampleBars,
+} from "./cockpit";
 export { LineChart } from "./line-chart";

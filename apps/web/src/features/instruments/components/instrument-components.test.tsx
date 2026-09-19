@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { instrumentsHandlers } from "@/mocks/handlers/instruments";
 import { server } from "@/mocks/server";
@@ -15,6 +15,20 @@ vi.mock("@tanstack/react-router", async () => {
 	const actual = await vi.importActual<typeof import("@tanstack/react-router")>("@tanstack/react-router");
 	return { ...actual, useParams: () => ({ id: "1000001" }) };
 });
+vi.mock("@/components/chart", () => ({
+	ChartCockpit: (props: unknown) => {
+		cockpitProps.push(props);
+		return createElement("div", {
+			"data-testid": "cockpit-stub",
+			"data-chart-aria": (props as { ariaLabel: string }).ariaLabel,
+		});
+	},
+}));
+
+// lightweight-charts / fancy-canvas 在 jsdom 中产生大量未处理错误；图表内部
+// 行为由 cockpit 组件测试覆盖，这里在 barrel 层同步 mock 组件（视图的重采样
+// 从 chart-data 叶模块导入，保持真实实现），只断言本视图喂养的外部合同。
+const cockpitProps: unknown[] = [];
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -31,6 +45,7 @@ function createWrapper() {
 
 beforeEach(() => {
 	localStorage.clear();
+	cockpitProps.length = 0;
 	server.use(...instrumentsHandlers);
 });
 
@@ -63,21 +78,59 @@ describe("InstrumentOverview", () => {
 });
 
 describe("InstrumentChartView", () => {
-	it("渲染行情数据区域", async () => {
+	it("渲染行情图表区域与工具栏", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("日线证据")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("行情图表")).resolves.toBeInTheDocument();
+		expect(screen.getByTestId("chart-周期-control")).toBeInTheDocument();
+		expect(screen.getByTestId("chart-复权-control")).toBeInTheDocument();
+		expect(screen.getByTestId("chart-experimental-toggle")).toBeInTheDocument();
 	});
 
-	it("显示精确 as-of 与 K 线数据", async () => {
+	it("以蜡烛形态喂给图表 shell 并展示 Primary Answer 关键数字", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText("2026-03-10")).resolves.toBeInTheDocument();
-		await expect(screen.findByText(/1750/)).resolves.toBeInTheDocument();
-		await expect(screen.findByText(/快照标识未由接口提供/)).resolves.toBeInTheDocument();
+		await screen.findByTestId("cockpit-stub");
+		const props = cockpitProps.at(-1) as {
+			series: Array<{
+				id: string;
+				kind: string;
+				bars: Array<{ open: number; high: number; low: number; close: number; volume: number }>;
+			}>;
+		};
+		expect(props.series[0]!.id).toBe("ohlc");
+		expect(props.series[0]!.kind).toBe("candle");
+		// mock 两根日 K（03-09/03-10），OHLCV 完整进入 view model
+		expect(props.series[0]!.bars).toHaveLength(2);
+		expect(props.series[0]!.bars[1]).toMatchObject({ open: 1744.6, close: 1750.2, volume: 3210000 });
+
+		const scope = await screen.findByText(/2026-03-10 收盘/);
+		expect(scope.closest("[data-primary-answer]")).not.toBeNull();
+		expect(screen.getByText("1750.20")).toBeInTheDocument();
+		expect(screen.getByText(/\+3\.90/)).toBeInTheDocument();
+		expect(screen.getByText(/1732\.10–1768\.80/)).toBeInTheDocument();
+		expect(screen.getByText(/快照标识未由接口提供/)).toBeInTheDocument();
 	});
 
-	it("显示成交量", async () => {
+	it("周线切换把日 K 聚合为周桶", async () => {
+		const user = userEvent.setup();
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
-		await expect(screen.findByText(/3,210,000/)).resolves.toBeInTheDocument();
+		await screen.findByTestId("cockpit-stub");
+		await user.click(screen.getByRole("button", { name: "周" }));
+		const props = cockpitProps.at(-1) as { series: Array<{ bars: unknown[] }> };
+		expect(props.series[0]!.bars).toHaveLength(1);
+	});
+
+	it("复权切换触发重新取数（查询键携带 adjustment）", async () => {
+		const user = userEvent.setup();
+		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		await user.click(screen.getByRole("button", { name: "前复权" }));
+		await screen.findByText(/复权：qfq · experimental：关/);
+	});
+
+	it("陈旧数据（距今远超阈值）展示 stale 徽标与延迟天数", async () => {
+		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		expect(await screen.findByText(/数据延迟 \d+ 天/)).toBeInTheDocument();
 	});
 });
 

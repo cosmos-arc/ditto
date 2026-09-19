@@ -3,10 +3,13 @@ import { apiClient } from "@/api/transport";
 
 export type InstrumentIdentity = components["schemas"]["Instrument"];
 export type InstrumentBar = components["schemas"]["Bar"];
+export type BarAdjustment = components["schemas"]["Adjustment"];
 
 export type InstrumentBarRange = {
 	readonly startDate: string;
 	readonly endDate: string;
+	readonly adjustment: BarAdjustment;
+	readonly allowExperimental: boolean;
 };
 
 export function parseInstrumentId(value: string): number {
@@ -32,11 +35,11 @@ export async function fetchInstrumentBars(value: string, range: InstrumentBarRan
 
 	const bars = await apiClient.post("/api/v1/market/bars", {
 		body: {
-			adjustment: "none",
-			allow_experimental_data: false,
+			adjustment: range.adjustment,
+			allow_experimental_data: range.allowExperimental,
 			end_date: range.endDate,
 			instrument_ids: [instrumentId],
-			limit: 120,
+			limit: 4000,
 			start_date: range.startDate,
 		},
 	});
