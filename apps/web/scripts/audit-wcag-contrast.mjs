@@ -83,6 +83,32 @@ const USAGE_TIER_GATES = Object.freeze({
 
 const BG_PATTERNS = ["overlay-2", "overlay-3", "overlay-4", "overlay-6", "overlay-8", "overlay-10", "overlay-12"];
 
+// Chart Cockpit series tokens audited against the chart pane surface in BOTH themes.
+// 涨跌 up/down 在 intl 市场配色下互为同值换位，对比度等价，不重复设对。
+const CHART_SERIES_PATTERNS = [
+  "chart-series-up",
+  "chart-series-down",
+  "chart-series-neutral",
+  "chart-combo-model",
+  "chart-combo-paper",
+  "chart-combo-manual",
+  "chart-run-1",
+  "chart-run-2",
+  "chart-run-3",
+  "chart-run-4",
+  "chart-run-5",
+  "chart-run-6",
+  "chart-run-7",
+  "chart-run-8",
+  "chart-quantile-1",
+  "chart-quantile-2",
+  "chart-quantile-3",
+  "chart-quantile-4",
+  "chart-quantile-5",
+  "chart-ls-spread",
+];
+const CHART_SURFACE = "chart-bg";
+
 const STATIC_AUDIT_TOKEN_VALUES = Object.freeze({
   // Atmosphere defaults all runtime offsets to zero, so the static audit uses the base app surface.
   "surface-app-atmosphere": "var(--neutral-0)",
@@ -90,18 +116,28 @@ const STATIC_AUDIT_TOKEN_VALUES = Object.freeze({
 
 // ── Build token map ──
 
-function buildTokenMap() {
+function extractBlocks(css, selector) {
+  // Plain-selector blocks only: compound selectors like `[data-theme="light"][data-domain="…"]`
+  // carry narrower semantics and are intentionally not merged into the theme overlay.
+  const pattern = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`, "g");
+  let combined = "";
+  for (const match of css.matchAll(pattern)) {
+    combined += `${match[1]}\n`;
+  }
+  return combined;
+}
+
+function buildTokenMap(theme = "dark") {
   const files = readAllTokenFiles();
-  // Only use :root tokens (not theme overrides)
   let allCss = "";
-  for (const { file, css } of files) {
-    // Extract only :root block content
-    const rootMatch = css.match(/:root\s*\{([^}]*)\}/s);
-    if (rootMatch) {
-      allCss += rootMatch[1] + "\n";
+  let themeCss = "";
+  for (const { css } of files) {
+    allCss += extractBlocks(css, ":root");
+    if (theme === "light") {
+      themeCss += extractBlocks(css, '\\[data-theme="light"\\]');
     }
   }
-  const tokens = extractTokensFromCss(allCss);
+  const tokens = extractTokensFromCss(allCss + (theme === "light" ? themeCss : ""));
   for (const [name, value] of Object.entries(STATIC_AUDIT_TOKEN_VALUES)) {
     tokens[name] = value;
   }
@@ -210,8 +246,51 @@ function addUnresolved(unresolved, token, role, reason) {
 
 // ── Main ──
 
+function auditChartSeries(themes, results, counts, unresolved) {
+  for (const { name: themeName, tokens } of themes) {
+    const surfVal = tokens[CHART_SURFACE];
+    if (!surfVal) {
+      addUnresolved(unresolved, CHART_SURFACE, "chart-surface", "token is declared for audit but missing from token map");
+      continue;
+    }
+    const surfColor = resolveAuditColor(surfVal, tokens);
+    if (!surfColor) {
+      addUnresolved(unresolved, CHART_SURFACE, "chart-surface", `could not resolve ${surfVal}`);
+      continue;
+    }
+    for (const seriesName of CHART_SERIES_PATTERNS) {
+      const seriesVal = tokens[seriesName];
+      if (!seriesVal) {
+        addUnresolved(unresolved, seriesName, `chart-series (${themeName})`, "token is declared for audit but missing from token map");
+        continue;
+      }
+      const seriesColor = resolveAuditColor(seriesVal, tokens);
+      if (!seriesColor) {
+        addUnresolved(unresolved, seriesName, `chart-series (${themeName})`, `could not resolve ${seriesVal}`);
+        continue;
+      }
+      const ratio = contrastRatio(surfColor.luminance, seriesColor.luminance);
+      const level = wcagLevel(ratio);
+      const classification = {
+        usageTier: "data-critical",
+        status: ratio < USAGE_TIER_GATES["data-critical"].failBelow ? "fail" : "pass",
+        pass: ratio >= USAGE_TIER_GATES["data-critical"].failBelow,
+        requiresNonColorMarker: true,
+      };
+      updateCounts(classification, counts);
+      results.push({
+        surface: `${CHART_SURFACE} (${themeName})`,
+        text: seriesName,
+        ratio,
+        level,
+        ...classification,
+      });
+    }
+  }
+}
+
 function main() {
-  const tokens = buildTokenMap();
+  const tokens = buildTokenMap("dark");
   const results = [];
   const counts = {
     pass: 0,
@@ -332,6 +411,17 @@ function main() {
     }
   }
 
+  // Chart Cockpit series × chart pane surface, audited in BOTH themes (dark :root + light overlay)
+  auditChartSeries(
+    [
+      { name: "dark", tokens },
+      { name: "light", tokens: buildTokenMap("light") },
+    ],
+    results,
+    counts,
+    unresolved,
+  );
+
   // Sort: failures first, then warnings, then reports, then passes
   const statusOrder = { fail: 0, warn: 1, report: 2, pass: 3 };
   results.sort((a, b) => {
@@ -341,7 +431,7 @@ function main() {
 
   // ── Output ──
 
-  console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults)\n");
+  console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults) + chart series in both themes\n");
   console.log(`Pairs checked: ${results.length}`);
   console.log(
     `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Failed pairs: ${counts.fail}  Unresolved: ${unresolved.length}  Report: ${counts.report}\n`,

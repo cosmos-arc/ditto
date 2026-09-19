@@ -25,6 +25,13 @@ describe("frontend regex gates", () => {
 		expect(await runFrontendGates(root)).toEqual([]);
 	});
 
+	test("the sanctioned oklch converter may parse and emit raw color syntax", async () => {
+		const root = await fixtureWeb({
+			"src/lib/oklch.ts": 'export const fallback = "oklch(0.62 0.012 253)";\nexport const rgba = (a) => `rgba(1, 2, 3, ${a})`;\n',
+		});
+		expect(await runFrontendGates(root)).toEqual([]);
+	});
+
 	test("suppression, vite base url, sendBeacon, qualified network access and raw colors are reported", async () => {
 		const root = await fixtureWeb({
 			"src/lib/a.ts": "// @ts-expect-error\nexport const a = 1;\n",

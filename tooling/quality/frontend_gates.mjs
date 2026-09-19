@@ -22,6 +22,11 @@ const SEND_BEACON = /\bnavigator\??\.sendBeacon\b/u;
 // still trip the gate — a fail-closed false positive, resolved by rewording.
 const CODE_TOKEN = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`|\/\/[^\n]*|\/\*[\s\S]*?\*\//gu;
 const NETWORK_CAPABILITY_ZONE = /^src\/(?:api|mocks|test|tests)\//u;
+// src/lib/oklch.ts is the sanctioned color-conversion authority: it parses and
+// emits raw CSS color syntax (oklch()/rgba()/#hex) by design so the chart engine
+// and the token audit share one implementation. Design values still belong in
+// src/styles/design-tokens; this exemption only covers the converter module.
+const COLOR_MATH_ZONE = /^src\/lib\/oklch\.ts$/u;
 // Biome's noRestrictedGlobals only sees bare identifier references. Qualified access
 // (window.fetch, window?.fetch, navigator.sendBeacon) and computed access are caught
 // here. Computed access is folded by stripping quotes/backticks/plus/whitespace from
@@ -88,7 +93,7 @@ export async function runFrontendGates(webRoot = WEB_ROOT) {
 		if (SUPPRESSION.test(text)) {
 			errors.push(`${location}: TypeScript suppression is forbidden`);
 		}
-		if (isCanonicalTokenFile(relativeWebPath)) continue;
+		if (isCanonicalTokenFile(relativeWebPath) || COLOR_MATH_ZONE.test(relativeWebPath)) continue;
 		for (const finding of findRawColorPrimitives(text, relativeWebPath)) {
 			errors.push(
 				`${location}:${finding.line}: raw ${finding.syntax} color must be defined in src/styles/design-tokens`,
