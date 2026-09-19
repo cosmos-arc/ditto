@@ -19,6 +19,7 @@ const FEATURE_INLINE_STYLE_ALLOWLIST = new Set(["features/shell/components/noise
 
 const COMPONENT_INLINE_STYLE_ALLOWLIST = new Set([
 	"components/chart/area-chart.tsx",
+	"components/chart/cockpit/chart-cockpit.tsx",
 	"components/chart/line-chart.tsx",
 	"components/data/flow-bar.tsx",
 	"components/indicator/confidence-bar/confidence-bar.tsx",

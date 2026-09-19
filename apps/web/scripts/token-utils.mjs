@@ -6,39 +6,16 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { oklchToRgbUnit } from "../src/lib/oklch.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TOKENS_DIR = resolve(__dirname, "../src/styles/design-tokens");
 
 // ── OKLCH → Linear sRGB → sRGB ──
+// 矩阵与 gamma 的权威实现在 src/lib/oklch.ts（浏览器图表引擎同源）。
 
 export function oklchToRgb(L, C, H) {
-  // oklch → oklab
-  const hRad = (H * Math.PI) / 180;
-  const a = C * Math.cos(hRad);
-  const b = C * Math.sin(hRad);
-
-  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-  const m = L + -0.1055613458 * a + -0.0638541728 * b;
-  const s = L + -0.0894841775 * a + -1.2914855480 * b;
-
-  const l3 = l_ * l_ * l_;
-  const m3 = m * m * m;
-  const s3 = s * s * s;
-
-  let r = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
-  let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
-  let b2 = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
-
-  // Linear sRGB → sRGB (gamma decompress)
-  const gamma = (c) =>
-    c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
-
-  return [gamma(clamp01(r)), gamma(clamp01(g)), gamma(clamp01(b2))];
-}
-
-function clamp01(v) {
-  return v < 0 ? 0 : v > 1 ? 1 : v;
+  return oklchToRgbUnit(L, C, H);
 }
 
 // ── WCAG 2.1 Relative Luminance ──

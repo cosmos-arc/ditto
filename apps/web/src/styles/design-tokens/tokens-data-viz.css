@@ -40,12 +40,37 @@
 	--chart-palette-6: var(--asset-volatility);
 
 	/* ── Chart Series (derived from market tokens, with alpha) ── */
+	/* 涨跌色属 Market 业务语义域（红涨绿跌为 CN 默认），禁跨域复用；intl 切换经 data-market-region 生效 */
 	--chart-series-up: var(--market-up-fg);
 	--chart-series-up-area: oklch(from var(--market-up-fg) l c h / 0.08);
 	--chart-series-down: var(--market-down-fg);
 	--chart-series-down-area: oklch(from var(--market-down-fg) l c h / 0.08);
-	--chart-series-neutral: var(--market-flat-fg);
-	--chart-series-neutral-area: oklch(from var(--market-flat-fg) l c h / 0.04);
+	/* 中性序列线由 chart 层自持亮度（market-flat-fg 在两主题均不满足线条 4.5:1） */
+	--chart-series-neutral: oklch(0.62 0.012 253);
+	--chart-series-neutral-area: oklch(from var(--chart-series-neutral) l c h / 0.04);
+
+	/* ── Chart Cockpit：三组合固定专属色（Model/Paper/Manual，与域签名色体系对齐） ── */
+	--chart-combo-model: oklch(0.72 0.12 255); /* blue → 模型组合 */
+	--chart-combo-paper: oklch(0.72 0.14 310); /* purple → paper 组合 */
+	--chart-combo-manual: oklch(0.78 0.13 75); /* amber → 手工账户 */
+
+	/* ── Chart Cockpit：8 色顺序 run 色板（多 run 叠加 + 图例开关） ── */
+	--chart-run-1: oklch(0.7 0.13 245); /* blue */
+	--chart-run-2: oklch(0.75 0.11 200); /* cyan */
+	--chart-run-3: oklch(0.72 0.11 170); /* teal */
+	--chart-run-4: oklch(0.78 0.11 115); /* olive */
+	--chart-run-5: oklch(0.8 0.12 90); /* sand */
+	--chart-run-6: oklch(0.74 0.14 55); /* orange */
+	--chart-run-7: oklch(0.7 0.14 295); /* purple */
+	--chart-run-8: oklch(0.7 0.15 330); /* magenta */
+
+	/* ── Chart Cockpit：Q1–Q5 分位单色渐进色带（Q5 最强调）+ LS 对比强调色 ── */
+	--chart-quantile-1: oklch(0.6 0.1 250);
+	--chart-quantile-2: oklch(0.68 0.11 250);
+	--chart-quantile-3: oklch(0.75 0.12 250);
+	--chart-quantile-4: oklch(0.81 0.12 250);
+	--chart-quantile-5: oklch(0.86 0.12 250);
+	--chart-ls-spread: oklch(0.78 0.14 70);
 
 	/* ── Sparkline ── */
 	--sparkline-width: 48px;
@@ -97,10 +122,43 @@
 /* ── Light Mode Data Viz Adjustments ──
  * Chart grid lines, crosshairs, and zero lines use white in dark mode.
  * In light mode, switch to black-at-opacity for visibility on white surfaces.
+ * Chart series colors (涨跌/组合/run/分位) 换用白底专用明度（同一色相体系，
+ * 双主题均过 WCAG AA 4.5:1，由 audit:tokens:contrast 双主题段守护）。
  */
 [data-theme="light"] {
 	--chart-grid: oklch(0 0 0 / 0.06);
 	--chart-grid-major: oklch(0 0 0 / 0.1);
 	--chart-crosshair: oklch(0 0 0 / 0.2);
 	--chart-zero-line: oklch(0 0 0 / 0.15);
+
+	--chart-series-up: oklch(0.55 0.19 27);
+	--chart-series-down: oklch(0.52 0.12 150);
+	--chart-series-neutral: oklch(0.46 0.012 253);
+
+	--chart-combo-model: oklch(0.5 0.16 255);
+	--chart-combo-paper: oklch(0.48 0.16 310);
+	--chart-combo-manual: oklch(0.55 0.12 75);
+
+	--chart-run-1: oklch(0.5 0.15 245);
+	--chart-run-2: oklch(0.5 0.1 210);
+	--chart-run-3: oklch(0.48 0.09 175);
+	--chart-run-4: oklch(0.5 0.1 120);
+	--chart-run-5: oklch(0.55 0.11 90);
+	--chart-run-6: oklch(0.55 0.13 50);
+	--chart-run-7: oklch(0.48 0.15 295);
+	--chart-run-8: oklch(0.5 0.16 330);
+
+	/* 色带方向随主题反转以保持「Q5 最强调」在白底上成立 */
+	--chart-quantile-1: oklch(0.55 0.13 250);
+	--chart-quantile-2: oklch(0.5 0.13 250);
+	--chart-quantile-3: oklch(0.45 0.13 250);
+	--chart-quantile-4: oklch(0.4 0.13 250);
+	--chart-quantile-5: oklch(0.35 0.13 250);
+	--chart-ls-spread: oklch(0.55 0.12 70);
+}
+
+/* light + intl：涨跌换位为绿涨红跌（同一对 light 明度，对比度等价） */
+[data-theme="light"][data-market-region="intl"] {
+	--chart-series-up: oklch(0.52 0.12 150);
+	--chart-series-down: oklch(0.55 0.19 27);
 }

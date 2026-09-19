@@ -290,6 +290,10 @@ def _run_primary_cohort(
         )
         _run_playwright(root, node, "cohort.spec.ts", environment)
 
+        # Chart Cockpit showcase journey: fixture-only charts on the production
+        # web build (no API dependency, but same artifact cohort).
+        _run_playwright(root, node, "chart-cockpit.spec.ts", environment)
+
         # Real product flows through the actual UI: research and portfolio
         # views, then paper onboarding to order readback, all against the
         # same isolated real backend before the failure-mode specs tear it down.
