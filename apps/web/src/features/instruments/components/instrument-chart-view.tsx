@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
-import { ChartCockpit } from "@/components/chart";
+import { ChartCockpit, type CockpitOverlay } from "@/components/chart";
 import { type BarPeriod, resampleBars } from "@/components/chart/cockpit/chart-data";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain";
 import { ErrorState } from "@/lib/error-boundary";
 import { StaleIndicator } from "@/lib/stale-indicator";
+import type { OverlayKind } from "../api/indicator-overlays";
 import type { BarAdjustment } from "../api/instrument-workspace";
-import { useInstrumentChart, useInstrumentDetail } from "../hooks";
+import { useEtfNav, useIndicatorSeries, useInstrumentChart, useInstrumentDetail } from "../hooks";
 import {
 	BAR_PERIOD_OPTIONS,
 	barsAgeDays,
@@ -14,7 +15,15 @@ import {
 	formatTradeDate,
 	primaryAnswerFromBars,
 	toCockpitBars,
+	tradeDateToUnix,
 } from "../lib/chart-mapping";
+import {
+	type IndicatorToggles,
+	indicatorOverlays,
+	indicatorSubPanes,
+	readIndicatorToggles,
+	writeIndicatorToggles,
+} from "../lib/indicator-overlays";
 
 interface InstrumentChartViewProps {
 	readonly id: string;
@@ -87,6 +96,14 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 	const [includeExperimental, setIncludeExperimental] = useState(false);
 	const [startDate, setStartDate] = useState(() => dateDaysAgo(365));
 	const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+	const [toggles, setToggles] = useState<IndicatorToggles>(() => readIndicatorToggles());
+	const updateToggle = (key: keyof IndicatorToggles, value: boolean) => {
+		setToggles((previous) => {
+			const next = { ...previous, [key]: value };
+			writeIndicatorToggles(next);
+			return next;
+		});
+	};
 
 	const detail = useInstrumentDetail(id);
 	// ETF 复权在服务端 bars 查询未接线（apply_adjustment 仅覆盖股票）：
@@ -101,6 +118,25 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 		startDate,
 	});
 
+	// 指标序列口径为日线（周/月指标窗口语义不同，不近似换算）。
+	const indicatorKinds = useMemo(() => {
+		const kinds: OverlayKind[] = [];
+		if (toggles.ma || toggles.donchian) kinds.push("ma", "donchian");
+		if (toggles.macd) kinds.push("macd");
+		if (toggles.rsi) kinds.push("rsi");
+		if (toggles.atr) kinds.push("atr");
+		return kinds;
+	}, [toggles]);
+	const indicatorsEnabled = period === "daily" && indicatorKinds.length > 0;
+	const indicatorQuery = useIndicatorSeries(id, {
+		adjustment: effectiveAdjustment,
+		allowExperimental: includeExperimental,
+		endDate,
+		indicators: indicatorKinds,
+		startDate,
+	});
+	const navQuery = useEtfNav(id, { startDate, endDate });
+
 	const bars = useMemo(() => (query.data ? toCockpitBars(query.data) : []), [query.data]);
 	const displayBars = useMemo(() => resampleBars(bars, period), [bars, period]);
 	const answer = useMemo(() => primaryAnswerFromBars(bars), [bars]);
@@ -109,6 +145,30 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 	// API Bar 合同不携带 null OHLC：partial 以日线日历缺口表达（缺失交易日区间）。
 	const calendarGaps = useMemo(() => findCalendarGaps(bars), [bars]);
 	const firstGap = calendarGaps[0];
+
+	const indicatorOverlaysList = useMemo(
+		() => (indicatorsEnabled && indicatorQuery.data ? indicatorOverlays(indicatorQuery.data, toggles) : []),
+		[indicatorQuery.data, indicatorsEnabled, toggles],
+	);
+	const indicatorSubPaneList = useMemo(
+		() => (indicatorsEnabled && indicatorQuery.data ? indicatorSubPanes(indicatorQuery.data, toggles) : []),
+		[indicatorQuery.data, indicatorsEnabled, toggles],
+	);
+	const navPoints = navQuery.data?.points ?? [];
+	const navOverlay = useMemo<CockpitOverlay | null>(() => {
+		if (!isEtf || !toggles.nav || navPoints.length === 0) return null;
+		return {
+			id: "etf-nav",
+			color: "var(--chart-combo-manual)",
+			lineWidth: 2,
+			points: navPoints.map((point: { nav_date: string; nav: number }) => ({
+				time: tradeDateToUnix(point.nav_date),
+				close: point.nav,
+				volume: null,
+			})),
+		};
+	}, [isEtf, navPoints, toggles.nav]);
+	const navUnavailable = isEtf && toggles.nav && !navQuery.isLoading && navPoints.length === 0;
 
 	const experimentalBlocked =
 		query.isError && String((query.error as Error | null)?.message ?? "").includes("experimental");
@@ -163,6 +223,54 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 						<br />
 						快照标识未由接口提供，仅作研究浏览，不生成交易建议
 					</div>
+				</div>
+
+				<div
+					className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-(--color-border-subtle) px-3 py-2"
+					data-info-unit="instrument-chart-indicators"
+				>
+					<span className="text-xs text-(--color-foreground-tertiary)">指标</span>
+					{(
+						[
+							["ma", "MA(5/20/60)"],
+							["donchian", "DON(20)"],
+							["macd", "MACD"],
+							["rsi", "RSI"],
+							["atr", "ATR"],
+						] as const
+					).map(([key, label]) => (
+						<label key={key} className="flex items-center gap-1.5 text-xs text-(--color-foreground-secondary)">
+							<input
+								type="checkbox"
+								checked={toggles[key]}
+								disabled={period !== "daily"}
+								onChange={(event) => updateToggle(key, event.currentTarget.checked)}
+								data-testid={`indicator-toggle-${key}`}
+							/>
+							{label}
+						</label>
+					))}
+					{isEtf && (
+						<label className="flex items-center gap-1.5 text-xs text-(--color-foreground-secondary)">
+							<input
+								type="checkbox"
+								checked={toggles.nav}
+								onChange={(event) => updateToggle("nav", event.currentTarget.checked)}
+								data-testid="indicator-toggle-nav"
+							/>
+							净值
+						</label>
+					)}
+					{period !== "daily" && <span className="text-xs text-(--color-foreground-muted)">指标叠加仅日线周期</span>}
+					{navUnavailable && (
+						<span
+							data-state="nav-unavailable"
+							className="text-xs text-(--color-foreground-muted)"
+							title="本地净值库无该标的数据（etf_nav 摄取未覆盖）"
+						>
+							净值数据不可得
+						</span>
+					)}
 				</div>
 
 				{answer && (
@@ -230,6 +338,8 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 							rangeId={`instrument-${id}`}
 							ariaLabel={`${detail.data?.name ?? id} ${period === "daily" ? "日" : period === "weekly" ? "周" : "月"}K 线（${effectiveAdjustment === "none" ? "原始价" : effectiveAdjustment === "qfq" ? "前复权" : "后复权"}），含成交量`}
 							series={[{ id: "ohlc", kind: "candle", color: "var(--chart-series-neutral)", bars: displayBars }]}
+							overlays={navOverlay ? [...indicatorOverlaysList, navOverlay] : indicatorOverlaysList}
+							subPanes={indicatorSubPaneList}
 							showVolumePane
 							height={360}
 							identity={{

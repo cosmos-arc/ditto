@@ -61,6 +61,30 @@ export type CockpitSeriesSpec = {
 	readonly kind?: "line" | "candle";
 };
 
+/** 主图（pane 0）叠加线，如 MA/Donchian 轨道/ETF 净值。 */
+export type CockpitOverlay = {
+	readonly id: string;
+	readonly points: readonly CockpitBar[];
+	readonly color: string;
+	readonly lineWidth?: 1 | 2 | 3 | 4;
+};
+
+/** 独立副图（新 pane），与主图共享时间轴，如 MACD/RSI/ATR。 */
+export type CockpitSubPaneSeries = {
+	readonly id: string;
+	readonly points: readonly CockpitBar[];
+	readonly color: string;
+	/** 柱状（如 MACD histogram，涨跌色）或线（默认）。 */
+	readonly kind?: "line" | "histogram";
+};
+
+export type CockpitSubPane = {
+	readonly id: string;
+	readonly label: string;
+	readonly series: readonly CockpitSubPaneSeries[];
+	readonly height?: number;
+};
+
 export type ChartCockpitIdentity = {
 	readonly dataSourceName: string;
 	readonly snapshotId?: string | null;
@@ -75,6 +99,8 @@ export type ChartCockpitProps = {
 	readonly series: readonly CockpitSeriesSpec[];
 	readonly identity: ChartCockpitIdentity;
 	readonly showVolumePane?: boolean;
+	readonly overlays?: readonly CockpitOverlay[];
+	readonly subPanes?: readonly CockpitSubPane[];
 	readonly asOf?: { readonly time: number; readonly label?: string } | null;
 	/** 实时数据透明度时变（live 1.0 → expired 0.25）；默认关闭，EOD 图表只用水位线 + stale 徽标。 */
 	readonly freshnessFade?: boolean;
@@ -86,6 +112,10 @@ export type ChartCockpitProps = {
 };
 
 const VOLUME_PANE_HEIGHT = 84;
+const SUB_PANE_HEIGHT = 96;
+// 空默认值必须用稳定引用：每次渲染新建数组会让内容 effect 失稳（重跑→fitContent 重置区间）。
+const EMPTY_OVERLAYS: readonly CockpitOverlay[] = [];
+const EMPTY_SUBPANES: readonly CockpitSubPane[] = [];
 const AFFORDANCES = "crosshair tooltip zoom-pan linked-time-range";
 
 type Readout = {
@@ -146,6 +176,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		series,
 		identity,
 		showVolumePane = false,
+		overlays = EMPTY_OVERLAYS,
+		subPanes = EMPTY_SUBPANES,
 		asOf = null,
 		freshnessFade = false,
 		timeVisible = false,
@@ -344,12 +376,30 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		}
 		primarySeriesRef.current = primary ?? primaryCandle;
 
+		// 主图叠加线（MA/Donchian/净值等）：pane 0，warm-up 断口由 whitespace 语义承载。
+		for (const overlay of overlays) {
+			const line = chart.addSeries(
+				LineSeries,
+				{
+					color: theme.resolve(overlay.color),
+					lineWidth: overlay.lineWidth ?? 1,
+					priceLineVisible: false,
+					lastValueVisible: false,
+					crosshairMarkerVisible: false,
+				},
+				0,
+			);
+			line.setData(toLineSeriesData(overlay.points));
+			contentSeriesRef.current.push(line);
+		}
+
+		let nextPaneIndex = 1;
 		const primarySpec = series[0];
 		if (showVolumePane && primarySpec) {
 			const volume = chart.addSeries(
 				HistogramSeries,
 				{ priceFormat: { type: "volume" }, priceLineVisible: false, lastValueVisible: false },
-				1,
+				nextPaneIndex,
 			);
 			volume.setData(
 				toVolumeSeriesData(primarySpec.bars, (direction) =>
@@ -357,7 +407,43 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				),
 			);
 			contentSeriesRef.current.push(volume);
-			chart.panes()[1]?.setHeight(VOLUME_PANE_HEIGHT);
+			chart.panes()[nextPaneIndex]?.setHeight(VOLUME_PANE_HEIGHT);
+			nextPaneIndex += 1;
+		}
+
+		// 指标副图（MACD/RSI/ATR 等）：新 pane，与主图共享时间轴与十字线。
+		for (const pane of subPanes) {
+			for (const paneSeries of pane.series) {
+				if (paneSeries.kind === "histogram") {
+					const histogram = chart.addSeries(
+						HistogramSeries,
+						{ priceLineVisible: false, lastValueVisible: false },
+						nextPaneIndex,
+					);
+					histogram.setData(
+						toVolumeSeriesData(paneSeries.points, (direction) =>
+							withAlpha(theme.resolve(directionColorToken(direction)), 0.6),
+						),
+					);
+					contentSeriesRef.current.push(histogram);
+					continue;
+				}
+				const line = chart.addSeries(
+					LineSeries,
+					{
+						color: theme.resolve(paneSeries.color),
+						lineWidth: 2,
+						priceLineVisible: false,
+						lastValueVisible: false,
+						crosshairMarkerVisible: false,
+					},
+					nextPaneIndex,
+				);
+				line.setData(toLineSeriesData(paneSeries.points));
+				contentSeriesRef.current.push(line);
+			}
+			chart.panes()[nextPaneIndex]?.setHeight(pane.height ?? SUB_PANE_HEIGHT);
+			nextPaneIndex += 1;
 		}
 
 		if (asOf) {
@@ -379,7 +465,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		if (!freshnessFade) {
 			chart.timeScale().fitContent();
 		}
-	}, [series, asOf, freshnessFade, effectiveNowMs, theme, showVolumePane]);
+	}, [series, overlays, subPanes, asOf, freshnessFade, effectiveNowMs, theme, showVolumePane]);
 
 	const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
 		const chart = chartRef.current;
@@ -552,6 +638,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				data-chart-interaction-contract={chartId}
 				data-chart-affordances={AFFORDANCES}
 				data-chart-linked-time-range={rangeId}
+				data-chart-panes={1 + (showVolumePane ? 1 : 0) + subPanes.length}
 				data-chart-visible-range={visibleRangeLabel}
 				data-chart-as-of={asOf ? String(asOf.time) : undefined}
 				onKeyDown={handleKeyDown}

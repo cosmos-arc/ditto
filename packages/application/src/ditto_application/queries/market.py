@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
 
 import polars as pl
@@ -9,6 +10,10 @@ from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.models import InstrumentIdRange
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
+from ditto_features.technical_analysis.series import (
+    SUPPORTED_OVERLAYS,
+    compute_overlay_series,
+)
 
 from ditto_application.catalog_maturity import blocked_catalog_datasets
 from ditto_application.exceptions import AppQueryError
@@ -200,6 +205,61 @@ class MarketQueryFacade:
             )
             raise AppQueryError(msg)
         return self._service.get_adj_factors(start, end)
+
+    def indicator_series(
+        self,
+        *,
+        instrument_id: int,
+        start: str | None = None,
+        end: str | None = None,
+        adj: str = "none",
+        allow_experimental_data: bool = False,
+        ma_windows: Sequence[int] = (),
+        include: frozenset[str] | set[str] = frozenset(),
+    ) -> pl.DataFrame:
+        """
+        按需计算标的页叠加指标全序列（复用 technical-analysis registry 公式）。
+
+        Returns:
+            DataFrame：trade_date + 每个请求序列一列（warm-up 段为 null）。
+
+        """
+        unknown = set(include) - SUPPORTED_OVERLAYS
+        if unknown:
+            msg = f"unsupported overlays: {sorted(unknown)}"
+            raise AppQueryError(msg)
+        bars = self.find_bars(
+            instrument_ids=[instrument_id],
+            start=start,
+            end=end,
+            adj=adj,
+            allow_experimental_data=allow_experimental_data,
+        )
+        if bars.is_empty():
+            return pl.DataFrame()
+        frame = bars.select("trade_date", "high", "low", "close").sort("trade_date")
+        series = compute_overlay_series(
+            frame, ma_windows=ma_windows, include=frozenset(include)
+        )
+        trade_dates = frame.get_column("trade_date").cast(pl.String)
+        columns: dict[str, pl.Series] = {"trade_date": trade_dates}
+        for name, values in series.items():
+            columns[name] = pl.Series(name, values, dtype=pl.Float64)
+        return pl.DataFrame(columns)
+
+    def get_etf_nav(
+        self,
+        *,
+        instrument_id: int,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> pl.DataFrame:
+        """查询 ETF 净值序列（数据可得时；未配置/无数据返回空帧）。"""
+        return self._service.get_etf_nav(
+            start or "1900-01-01",
+            end or "9999-12-31",
+            instrument_ids=[instrument_id],
+        )
 
     def _assert_market_bars_allowed(
         self,

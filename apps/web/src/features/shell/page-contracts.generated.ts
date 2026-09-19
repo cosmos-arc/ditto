@@ -1092,7 +1092,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-instrument-hub.html",
     requiredSlots: ["header", "meta", "tabs", "main", "bottom"],
-    requiredStates: ["loading", "empty", "error", "stale", "not-found", "invalid-id", "bars-empty", "bars-partial", "snapshot-identity-missing", "experimental-disabled"],
+    requiredStates: ["loading", "empty", "error", "stale", "not-found", "invalid-id", "bars-empty", "bars-partial", "snapshot-identity-missing", "experimental-disabled", "nav-unavailable"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",

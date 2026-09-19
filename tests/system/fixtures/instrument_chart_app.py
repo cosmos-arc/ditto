@@ -33,6 +33,7 @@ os.environ.update(
 )
 
 ETF_ID = 2_000_001
+ETF_NO_NAV_ID = 2_000_002
 STOCK_ID = 1_000_001
 # 固定日历：2026-01-05 起 95 个交易日（跳过周末），索引 40–45 挖空演示断口。
 _TRADING_DAYS: list[date] = []
@@ -119,6 +120,17 @@ def _seed(root: Path) -> None:
             list_date="2001-08-27",
         ),
     )
+    writer.register(
+        ETF_NO_NAV_ID,
+        InstrumentRegistration(
+            source_ticker="159915.SZ",
+            ticker="159915",
+            name="创业板ETF-无净值验收",
+            exchange="SZSE",
+            asset_class="etf",
+            list_date="2011-12-09",
+        ),
+    )
     store = ParquetStore(
         root / "state",
         key_columns=("instrument_id", "trade_date"),
@@ -127,7 +139,9 @@ def _seed(root: Path) -> None:
     )
     store.write(
         "market/etf/bars",
-        _bars_frame(ETF_ID, base=4.0),
+        pl.concat(
+            [_bars_frame(ETF_ID, base=4.0), _bars_frame(ETF_NO_NAV_ID, base=3.0)]
+        ),
         OnDuplicate.ERROR.value,
         year=2026,
     )
@@ -145,6 +159,21 @@ def _seed(root: Path) -> None:
     )
     adj_store.write(
         "market/stock/adj", _adj_frame(STOCK_ID), OnDuplicate.ERROR.value, year=2026
+    )
+    # 第一只 ETF 有净值(可得路径), 第二只不播净值(不可得降级路径)
+    nav_rows = [
+        {
+            "instrument_id": ETF_ID,
+            "trade_date": day.isoformat(),
+            "nav": round(3.8 + ((index * 11) % 19) * 0.02, 4),
+        }
+        for index, day in enumerate(_TRADING_DAYS)
+    ]
+    store.write(
+        "market/etf/nav",
+        pl.DataFrame(nav_rows).with_columns(pl.col("trade_date").str.to_date()),
+        OnDuplicate.ERROR.value,
+        year=2026,
     )
 
 

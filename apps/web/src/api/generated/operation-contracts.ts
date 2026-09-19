@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 81e44cbfc44a077a1904a96f321d6d368b1a308d9fce8c991b35b7f1c7cf1afb
+ * Schema SHA-256: 6c4de056e05976ee23c0e88e23c19b358eb6efd583dccdfc98287babc3789b36
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1498,6 +1498,26 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "post /api/v1/market/etf-nav": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "post /api/v1/market/indicator-series": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "post /api/v1/paper/accounts": {
     "201": ["application/json"],
     "400": ["application/json"],
@@ -2694,6 +2714,16 @@ export const operationRequestContracts = {
     },
   },
   "post /api/v1/market/bars": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
+  "post /api/v1/market/etf-nav": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
+  "post /api/v1/market/indicator-series": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
     },

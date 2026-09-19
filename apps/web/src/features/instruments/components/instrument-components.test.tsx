@@ -132,7 +132,63 @@ describe("InstrumentChartView", () => {
 		await screen.findByTestId("cockpit-stub");
 		expect(await screen.findByText(/数据延迟 \d+ 天/)).toBeInTheDocument();
 	});
+
+	it("指标开关把 MA overlay 与 MACD/RSI 副图喂给图表 shell，并持久化选择", async () => {
+		const user = userEvent.setup();
+		const view = render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		const propsBefore = cockpitProps.at(-1) as { overlays?: unknown[]; subPanes?: unknown[] };
+		expect(propsBefore.overlays ?? []).toHaveLength(0);
+
+		await user.click(screen.getByTestId("indicator-toggle-ma"));
+		await user.click(screen.getByTestId("indicator-toggle-macd"));
+		await user.click(screen.getByTestId("indicator-toggle-rsi"));
+
+		const props = await waitForCockpit(
+			(next) => (next.overlays ?? []).length === 3 && (next.subPanes ?? []).length === 2,
+		);
+		const overlayIds = (props.overlays as Array<{ id: string }>).map((overlay) => overlay.id);
+		expect(overlayIds).toEqual(["ma_5", "ma_20", "ma_60"]);
+		const paneIds = (props.subPanes as Array<{ id: string }>).map((pane) => pane.id);
+		expect(paneIds).toEqual(["macd", "rsi"]);
+		expect(localStorage.getItem("ditto.instrument-chart-indicators.v1")).toContain('"ma":true');
+
+		// 卸载重挂载后选择保持（页面级持久化）
+		view.unmount();
+		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		expect((await waitForCockpit((next) => (next.overlays ?? []).length === 3)).overlays).toHaveLength(3);
+	});
+
+	it("ETF 净值不可得时显式提示而非隐藏（nav 开关存在）", async () => {
+		const user = userEvent.setup();
+		render(<InstrumentChartView id="1000004" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		await user.click(screen.getByTestId("indicator-toggle-nav"));
+		expect(await screen.findByText("净值数据不可得")).toBeInTheDocument();
+	});
 });
+
+function waitForCockpit(
+	predicate: (props: { overlays?: unknown[]; subPanes?: unknown[] }) => boolean,
+): Promise<{ overlays?: unknown[]; subPanes?: unknown[] }> {
+	return new Promise((resolve, reject) => {
+		const started = Date.now();
+		const tick = () => {
+			const props = cockpitProps.at(-1) as { overlays?: unknown[]; subPanes?: unknown[] };
+			if (props && predicate(props)) {
+				resolve(props);
+				return;
+			}
+			if (Date.now() - started > 4000) {
+				reject(new Error("cockpit props predicate timeout"));
+				return;
+			}
+			setTimeout(tick, 50);
+		};
+		tick();
+	});
+}
 
 describe("InstrumentHubPage overlays", () => {
 	it("sends exact Selection and technical identities to the Research Agent route", () => {

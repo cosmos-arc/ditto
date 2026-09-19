@@ -28,6 +28,12 @@ from ditto_apps.models.common import APIResponse
 from ditto_apps.models.market import (
     Bar,
     BarsQuery,
+    EtfNavPoint,
+    EtfNavQuery,
+    EtfNavResponse,
+    IndicatorSeriesColumn,
+    IndicatorSeriesQuery,
+    IndicatorSeriesResponse,
     MarketContextDriverResponse,
     MarketContextImpactResponse,
     MarketContextMetricResponse,
@@ -252,3 +258,84 @@ async def post_bars(
     bars = bars[: query.limit]
 
     return APIResponse(data=bars)
+
+
+@router.post(
+    "/indicator-series",
+    response_model=APIResponse[IndicatorSeriesResponse],
+    operation_id="market_post_indicator_series",
+)
+@inject
+async def post_indicator_series(
+    query: IndicatorSeriesQuery,
+    facade: Annotated[MarketQueryFacade, FromComponent()],
+) -> APIResponse[IndicatorSeriesResponse]:
+    """
+    查询叠加指标全序列（technical-analysis registry 既有公式）.
+
+    maturity 门控与 /market/bars 一致；warm-up 段输出 null。
+    """
+    df = await asyncio.to_thread(
+        facade.indicator_series,
+        instrument_id=query.instrument_id,
+        start=query.start_date.isoformat() if query.start_date else None,
+        end=query.end_date.isoformat() if query.end_date else None,
+        adj=query.adjustment.value,
+        allow_experimental_data=query.allow_experimental_data,
+        ma_windows=query.ma_windows,
+        include=frozenset(query.indicators),
+    )
+    trade_dates = (
+        df.get_column("trade_date").cast(str).to_list() if not df.is_empty() else []
+    )
+    window_by_name = {f"ma_{window}": window for window in query.ma_windows}
+    series = [
+        IndicatorSeriesColumn(
+            name=name,
+            window=window_by_name.get(name),
+            values=df.get_column(name).to_list(),
+        )
+        for name in df.columns
+        if name != "trade_date"
+    ]
+    return APIResponse(
+        data=IndicatorSeriesResponse(
+            instrument_id=query.instrument_id,
+            adjustment=query.adjustment,
+            registry_version="technical-indicator-registry.v1",
+            trade_dates=trade_dates,
+            series=series,
+        )
+    )
+
+
+@router.post(
+    "/etf-nav",
+    response_model=APIResponse[EtfNavResponse],
+    operation_id="market_post_etf_nav",
+)
+@inject
+async def post_etf_nav(
+    query: EtfNavQuery,
+    facade: Annotated[MarketQueryFacade, FromComponent()],
+) -> APIResponse[EtfNavResponse]:
+    """
+    查询 ETF 净值序列.
+
+    数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级。
+    """
+    df = await asyncio.to_thread(
+        facade.get_etf_nav,
+        instrument_id=query.instrument_id,
+        start=query.start_date.isoformat() if query.start_date else None,
+        end=query.end_date.isoformat() if query.end_date else None,
+    )
+    date_column = "nav_date" if "nav_date" in df.columns else "trade_date"
+    points = [
+        EtfNavPoint(nav_date=str(row[date_column]), nav=float(row["nav"]))
+        for row in df.to_dicts()
+        if row.get("nav") is not None
+    ]
+    return APIResponse(
+        data=EtfNavResponse(instrument_id=query.instrument_id, points=points)
+    )

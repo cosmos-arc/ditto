@@ -3,7 +3,10 @@ export {
 	ChartCockpit,
 	type ChartCockpitIdentity,
 	type ChartCockpitProps,
+	type CockpitOverlay,
 	type CockpitSeriesSpec,
+	type CockpitSubPane,
+	type CockpitSubPaneSeries,
 } from "./chart-cockpit";
 export {
 	type BarPeriod,

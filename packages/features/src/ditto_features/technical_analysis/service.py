@@ -745,3 +745,10 @@ class TechnicalAnalysisService:
         )
         digest = canonical_snapshot_hash(draft)
         return replace(draft, snapshot_id=f"technical-analysis:sha256:{digest}")
+
+
+# 公共出口：同一权威实现绑定公共名，供 series.py 的全序列叠加计算复用
+# （跨模块引用私有函数被 typecheck 禁止，此处不复制公式）。
+ema_values = _ema
+rsi_value = _rsi
+atr_value = _atr
