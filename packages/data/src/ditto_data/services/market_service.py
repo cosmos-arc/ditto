@@ -230,6 +230,41 @@ class MarketService:
 
         return df
 
+    @traced("market.get_etf_nav")
+    def get_etf_nav(
+        self,
+        start: str,
+        end: str,
+        *,
+        instrument_ids: list[int] | None = None,
+    ) -> pl.DataFrame:
+        """
+        查询 ETF 净值.
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+            instrument_ids: 标的 ID 过滤（可选，None 为全部）.
+
+        Returns:
+            净值 DataFrame（instrument_id、nav_date、nav 等）；读取器未配置时
+            返回空帧（调用方按不可得降级）。
+
+        """
+        reader = self._read_ports.etf_nav
+        if reader is None:
+            logger.warning(
+                "ETF NAV reader not configured",
+                event="market_etf_nav_reader_missing",
+            )
+            return pl.DataFrame()
+        df = reader.read(instrument_ids=instrument_ids, start_date=start, end_date=end)
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "etf_nav", "operation": "get"},
+        )
+        return df
+
     @traced("market.get_stock_status")
     def get_stock_status(self, start: str, end: str) -> pl.DataFrame:
         """

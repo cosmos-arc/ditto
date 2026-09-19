@@ -1009,6 +1009,30 @@
         "title": "APIResponse[DeviationResponse]",
         "type": "object"
       },
+      "APIResponse_EtfNavResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EtfNavResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[EtfNavResponse]",
+        "type": "object"
+      },
       "APIResponse_ExperimentComparisonResponse_": {
         "properties": {
           "data": {
@@ -1271,6 +1295,30 @@
           "data"
         ],
         "title": "APIResponse[HoldoutEvaluationReceiptResponse]",
+        "type": "object"
+      },
+      "APIResponse_IndicatorSeriesResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/IndicatorSeriesResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[IndicatorSeriesResponse]",
         "type": "object"
       },
       "APIResponse_IndustryRotationResponse_": {
@@ -13344,6 +13392,92 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "EtfNavPoint": {
+        "description": "ETF 净值点.",
+        "properties": {
+          "nav": {
+            "description": "单位净值",
+            "title": "Nav",
+            "type": "number"
+          },
+          "nav_date": {
+            "description": "净值日期 (YYYY-MM-DD)",
+            "title": "Nav Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nav_date",
+          "nav"
+        ],
+        "title": "EtfNavPoint",
+        "type": "object"
+      },
+      "EtfNavQuery": {
+        "description": "ETF 净值查询参数模型.",
+        "properties": {
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "结束日期",
+            "title": "End Date"
+          },
+          "instrument_id": {
+            "description": "标的 ID",
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "开始日期",
+            "title": "Start Date"
+          }
+        },
+        "required": [
+          "instrument_id"
+        ],
+        "title": "EtfNavQuery",
+        "type": "object"
+      },
+      "EtfNavResponse": {
+        "description": "ETF 净值响应（数据可得时返回点列，不可得时为空列表）。",
+        "properties": {
+          "instrument_id": {
+            "description": "标的 ID",
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "points": {
+            "description": "净值点列",
+            "items": {
+              "$ref": "#/components/schemas/EtfNavPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "points"
+        ],
+        "title": "EtfNavResponse",
+        "type": "object"
+      },
       "EtfSelectionSpecRequest": {
         "additionalProperties": false,
         "description": "ETF-specific saved selection policy.",
@@ -15896,6 +16030,161 @@
           }
         },
         "title": "IndicatorQuery",
+        "type": "object"
+      },
+      "IndicatorSeriesColumn": {
+        "description": "一列指标全序列（与 trade_dates 对齐；warm-up 段为 null）。",
+        "properties": {
+          "name": {
+            "description": "序列名, 如 ma_5/macd/rsi",
+            "title": "Name",
+            "type": "string"
+          },
+          "values": {
+            "description": "序列值, 与 trade_dates 等长",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "array"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "窗口参数",
+            "title": "Window"
+          }
+        },
+        "required": [
+          "name",
+          "values"
+        ],
+        "title": "IndicatorSeriesColumn",
+        "type": "object"
+      },
+      "IndicatorSeriesQuery": {
+        "description": "指标叠加序列查询参数模型.\n\nAttributes:\n    instrument_id: 标的 ID\n    start_date: 开始日期 (可选)\n    end_date: 结束日期 (可选)\n    adjustment: 复权类型, 默认 none\n    allow_experimental_data: 显式允许 experimental 数据集进入研究态查询\n    ma_windows: MA 窗口列表 (可选, 默认 [5, 20, 60])\n    indicators: 请求的叠加类别, 取值 ma/donchian/macd/rsi/atr",
+        "properties": {
+          "adjustment": {
+            "$ref": "#/components/schemas/Adjustment",
+            "default": "none",
+            "description": "复权类型"
+          },
+          "allow_experimental_data": {
+            "default": false,
+            "description": "显式允许 experimental 数据集进入研究态查询",
+            "title": "Allow Experimental Data",
+            "type": "boolean"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "结束日期",
+            "title": "End Date"
+          },
+          "indicators": {
+            "description": "叠加类别列表",
+            "items": {
+              "type": "string"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "instrument_id": {
+            "description": "标的 ID",
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "ma_windows": {
+            "description": "MA 窗口列表",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Ma Windows",
+            "type": "array"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "开始日期",
+            "title": "Start Date"
+          }
+        },
+        "required": [
+          "instrument_id"
+        ],
+        "title": "IndicatorSeriesQuery",
+        "type": "object"
+      },
+      "IndicatorSeriesResponse": {
+        "description": "指标叠加序列响应（registry 既有公式计算）。",
+        "properties": {
+          "adjustment": {
+            "$ref": "#/components/schemas/Adjustment",
+            "description": "复权类型"
+          },
+          "instrument_id": {
+            "description": "标的 ID",
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "registry_version": {
+            "description": "指标 registry 版本",
+            "title": "Registry Version",
+            "type": "string"
+          },
+          "series": {
+            "description": "指标序列列",
+            "items": {
+              "$ref": "#/components/schemas/IndicatorSeriesColumn"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "trade_dates": {
+            "description": "交易日列表 (YYYY-MM-DD)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Trade Dates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "adjustment",
+          "registry_version",
+          "trade_dates",
+          "series"
+        ],
+        "title": "IndicatorSeriesResponse",
         "type": "object"
       },
       "IndustryRotationContributionResponse": {
@@ -39316,6 +39605,240 @@
           }
         },
         "summary": "Get Market Context",
+        "tags": [
+          "market"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/market/etf-nav": {
+      "post": {
+        "description": "查询 ETF 净值序列.\n\n数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级。\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "market_post_etf_nav",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EtfNavQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_EtfNavResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Post Etf Nav",
+        "tags": [
+          "market"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/market/indicator-series": {
+      "post": {
+        "description": "查询叠加指标全序列（technical-analysis registry 既有公式）.\n\nmaturity 门控与 /market/bars 一致；warm-up 段输出 null。\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "market_post_indicator_series",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicatorSeriesQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_IndicatorSeriesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Post Indicator Series",
         "tags": [
           "market"
         ],

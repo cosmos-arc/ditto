@@ -155,6 +155,55 @@ describe("ChartCockpit 数据映射", () => {
 		);
 	});
 
+	it("renders overlays on pane 0 and sub-panes after the volume pane", () => {
+		renderCockpit({
+			showVolumePane: true,
+			overlays: [
+				{
+					id: "ma_5",
+					color: "var(--chart-run-1)",
+					points: [
+						{ time: 100, close: 10, volume: null },
+						{ time: 200, close: null, volume: null },
+					],
+				},
+			],
+			subPanes: [
+				{
+					id: "rsi",
+					label: "RSI(14)",
+					series: [
+						{
+							id: "rsi",
+							color: "var(--chart-run-4)",
+							points: [
+								{ time: 100, close: 55, volume: null },
+								{ time: 200, close: null, volume: null },
+							],
+						},
+					],
+				},
+				{
+					id: "macd",
+					label: "MACD(12,26,9)",
+					series: [
+						{
+							id: "macd_histogram",
+							color: "var(--chart-series-neutral)",
+							kind: "histogram",
+							points: [{ time: 100, close: 0.4, volume: null }],
+						},
+					],
+				},
+			],
+		});
+		// 主蜡烛(1) + overlay(1) + 量(1) + RSI 线(1) + MACD 柱(1) = 5 个引擎序列
+		expect(chartStub.addSeries).toHaveBeenCalledTimes(5);
+		const paneIndexes = chartStub.addSeries.mock.calls.map((call) => call[2]);
+		expect(paneIndexes).toEqual([0, 0, 1, 2, 3]);
+		expect(screen.getByLabelText("演示收盘价图表（fixture）")).toHaveAttribute("data-chart-panes", "4");
+	});
+
 	it("renders candle specs through the candle series with market up/down colors", () => {
 		renderCockpit({
 			series: [

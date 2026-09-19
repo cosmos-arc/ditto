@@ -1,6 +1,6 @@
 {
   "id": "instrument-hub",
-  "version": 4,
+  "version": 5,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
   "updatedAt": "2026-09-19",
@@ -128,7 +128,8 @@
       "bars-empty",
       "bars-partial",
       "snapshot-identity-missing",
-      "experimental-disabled"
+      "experimental-disabled",
+      "nav-unavailable"
     ]
   },
   "flags": {
@@ -310,6 +311,22 @@
         "main"
       ],
       "expectedBehavior": "explicitly opts the bars query into experimental dataset maturity for research browsing; default stays fail-closed off"
+    },
+    {
+      "id": "toggle-indicator-overlays",
+      "trigger": "checkbox-change",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "toggles MA(5/20/60)/Donchian/MACD/RSI/ATR overlays computed by the technical-analysis registry on daily bars; selection persists in localStorage and weekly/monthly periods disable overlays honestly"
+    },
+    {
+      "id": "toggle-etf-nav-overlay",
+      "trigger": "checkbox-change",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "overlays the ETF NAV line when local nav data exists and shows an explicit unavailable state when it does not"
     }
   ]
 }

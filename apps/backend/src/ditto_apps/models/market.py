@@ -136,6 +136,75 @@ class Bar(BaseModel):
     )
 
 
+class IndicatorSeriesQuery(BaseModel):
+    """
+    指标叠加序列查询参数模型.
+
+    Attributes:
+        instrument_id: 标的 ID
+        start_date: 开始日期 (可选)
+        end_date: 结束日期 (可选)
+        adjustment: 复权类型, 默认 none
+        allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
+        ma_windows: MA 窗口列表 (可选, 默认 [5, 20, 60])
+        indicators: 请求的叠加类别, 取值 ma/donchian/macd/rsi/atr
+
+    """
+
+    instrument_id: int = Field(description="标的 ID")
+    start_date: DateField = Field(default=None, description="开始日期")
+    end_date: DateField = Field(default=None, description="结束日期")
+    adjustment: AdjustmentField = Field(default=Adjustment.NONE, description="复权类型")
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    )
+    ma_windows: list[int] = Field(
+        default_factory=lambda: [5, 20, 60], description="MA 窗口列表"
+    )
+    indicators: list[str] = Field(default_factory=list, description="叠加类别列表")
+
+
+class IndicatorSeriesColumn(BaseModel):
+    """一列指标全序列（与 trade_dates 对齐；warm-up 段为 null）。"""
+
+    name: str = Field(description="序列名, 如 ma_5/macd/rsi")
+    window: int | None = Field(default=None, description="窗口参数")
+    values: list[float | None] = Field(description="序列值, 与 trade_dates 等长")
+
+
+class IndicatorSeriesResponse(BaseModel):
+    """指标叠加序列响应（registry 既有公式计算）。"""
+
+    instrument_id: int = Field(description="标的 ID")
+    adjustment: Adjustment = Field(description="复权类型")
+    registry_version: str = Field(description="指标 registry 版本")
+    trade_dates: list[str] = Field(description="交易日列表 (YYYY-MM-DD)")
+    series: list[IndicatorSeriesColumn] = Field(description="指标序列列")
+
+
+class EtfNavQuery(BaseModel):
+    """ETF 净值查询参数模型."""
+
+    instrument_id: int = Field(description="标的 ID")
+    start_date: DateField = Field(default=None, description="开始日期")
+    end_date: DateField = Field(default=None, description="结束日期")
+
+
+class EtfNavPoint(BaseModel):
+    """ETF 净值点."""
+
+    nav_date: str = Field(description="净值日期 (YYYY-MM-DD)")
+    nav: float = Field(description="单位净值")
+
+
+class EtfNavResponse(BaseModel):
+    """ETF 净值响应（数据可得时返回点列，不可得时为空列表）。"""
+
+    instrument_id: int = Field(description="标的 ID")
+    points: list[EtfNavPoint] = Field(description="净值点列")
+
+
 class RegimeIndicatorResponse(BaseModel):
     """One normalized input used by the frozen regime model."""
 
@@ -304,6 +373,12 @@ __all__ = [
     "Adjustment",
     "Bar",
     "BarsQuery",
+    "EtfNavPoint",
+    "EtfNavQuery",
+    "EtfNavResponse",
+    "IndicatorSeriesColumn",
+    "IndicatorSeriesQuery",
+    "IndicatorSeriesResponse",
     "MarketContextDriverResponse",
     "MarketContextImpactResponse",
     "MarketContextMetricResponse",

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 81e44cbfc44a077a1904a96f321d6d368b1a308d9fce8c991b35b7f1c7cf1afb
+ * Schema SHA-256: 6c4de056e05976ee23c0e88e23c19b358eb6efd583dccdfc98287babc3789b36
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2397,6 +2397,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/market/etf-nav": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Etf Nav
+         * @description 查询 ETF 净值序列.
+         *
+         *     数据不可得（读取器未配置或无数据）时返回空 points，由前端诚实降级。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["market_post_etf_nav"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/market/indicator-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Indicator Series
+         * @description 查询叠加指标全序列（technical-analysis registry 既有公式）.
+         *
+         *     maturity 门控与 /market/bars 一致；warm-up 段输出 null。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["market_post_indicator_series"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/market/regime": {
         parameters: {
             query?: never;
@@ -4180,6 +4228,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[EtfNavResponse] */
+        APIResponse_EtfNavResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["EtfNavResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[ExperimentComparisonResponse] */
         APIResponse_ExperimentComparisonResponse_: {
             /** @description 响应数据 */
@@ -4254,6 +4309,13 @@ export interface components {
         APIResponse_HoldoutEvaluationReceiptResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["HoldoutEvaluationReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[IndicatorSeriesResponse] */
+        APIResponse_IndicatorSeriesResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["IndicatorSeriesResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -9997,6 +10059,59 @@ export interface components {
             timestamp?: number | null;
         };
         /**
+         * EtfNavPoint
+         * @description ETF 净值点.
+         */
+        EtfNavPoint: {
+            /**
+             * Nav
+             * @description 单位净值
+             */
+            nav: number;
+            /**
+             * Nav Date
+             * @description 净值日期 (YYYY-MM-DD)
+             */
+            nav_date: string;
+        };
+        /**
+         * EtfNavQuery
+         * @description ETF 净值查询参数模型.
+         */
+        EtfNavQuery: {
+            /**
+             * End Date
+             * @description 结束日期
+             */
+            end_date?: string | null;
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
+             * Start Date
+             * @description 开始日期
+             */
+            start_date?: string | null;
+        };
+        /**
+         * EtfNavResponse
+         * @description ETF 净值响应（数据可得时返回点列，不可得时为空列表）。
+         */
+        EtfNavResponse: {
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
+             * Points
+             * @description 净值点列
+             */
+            points: components["schemas"]["EtfNavPoint"][];
+        };
+        /**
          * EtfSelectionSpecRequest
          * @description ETF-specific saved selection policy.
          */
@@ -11221,6 +11336,106 @@ export interface components {
              * @description 开始日期
              */
             start_date?: string | null;
+        };
+        /**
+         * IndicatorSeriesColumn
+         * @description 一列指标全序列（与 trade_dates 对齐；warm-up 段为 null）。
+         */
+        IndicatorSeriesColumn: {
+            /**
+             * Name
+             * @description 序列名, 如 ma_5/macd/rsi
+             */
+            name: string;
+            /**
+             * Values
+             * @description 序列值, 与 trade_dates 等长
+             */
+            values: (number | null)[];
+            /**
+             * Window
+             * @description 窗口参数
+             */
+            window?: number | null;
+        };
+        /**
+         * IndicatorSeriesQuery
+         * @description 指标叠加序列查询参数模型.
+         *
+         *     Attributes:
+         *         instrument_id: 标的 ID
+         *         start_date: 开始日期 (可选)
+         *         end_date: 结束日期 (可选)
+         *         adjustment: 复权类型, 默认 none
+         *         allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
+         *         ma_windows: MA 窗口列表 (可选, 默认 [5, 20, 60])
+         *         indicators: 请求的叠加类别, 取值 ma/donchian/macd/rsi/atr
+         */
+        IndicatorSeriesQuery: {
+            /**
+             * @description 复权类型
+             * @default none
+             */
+            adjustment: components["schemas"]["Adjustment"];
+            /**
+             * Allow Experimental Data
+             * @description 显式允许 experimental 数据集进入研究态查询
+             * @default false
+             */
+            allow_experimental_data: boolean;
+            /**
+             * End Date
+             * @description 结束日期
+             */
+            end_date?: string | null;
+            /**
+             * Indicators
+             * @description 叠加类别列表
+             */
+            indicators?: string[];
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
+             * Ma Windows
+             * @description MA 窗口列表
+             */
+            ma_windows?: number[];
+            /**
+             * Start Date
+             * @description 开始日期
+             */
+            start_date?: string | null;
+        };
+        /**
+         * IndicatorSeriesResponse
+         * @description 指标叠加序列响应（registry 既有公式计算）。
+         */
+        IndicatorSeriesResponse: {
+            /** @description 复权类型 */
+            adjustment: components["schemas"]["Adjustment"];
+            /**
+             * Instrument Id
+             * @description 标的 ID
+             */
+            instrument_id: number;
+            /**
+             * Registry Version
+             * @description 指标 registry 版本
+             */
+            registry_version: string;
+            /**
+             * Series
+             * @description 指标序列列
+             */
+            series: components["schemas"]["IndicatorSeriesColumn"][];
+            /**
+             * Trade Dates
+             * @description 交易日列表 (YYYY-MM-DD)
+             */
+            trade_dates: string[];
         };
         /**
          * IndustryRotationContributionResponse
@@ -25332,6 +25547,186 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_MarketContextResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    market_post_etf_nav: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EtfNavQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_EtfNavResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    market_post_indicator_series: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndicatorSeriesQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_IndicatorSeriesResponse_"];
                 };
             };
             /** @description Bad request */

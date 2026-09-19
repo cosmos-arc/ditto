@@ -10,6 +10,7 @@ function requiredEnvironment(name: string): string {
 const webOrigin = requiredEnvironment("DITTO_SYSTEM_WEB_ORIGIN");
 
 const ETF_ID = 2000001;
+const ETF_NO_NAV_ID = 2000002;
 const STOCK_ID = 1000001;
 
 function captureBrowserErrors(page: Page): string[] {
@@ -48,9 +49,30 @@ test.describe
 			// partial：断口范围标注（fixture 挖空 6 个交易日 → 单处缺口）
 			await expect(page.getByText(/缺口 .+ →/)).toBeVisible();
 
-			// 周期切换为本地重采样（不重新取数）
+			// 指标开关（日线周期下可用）：MACD+RSI 副图让 pane 数从 2（价格+量）变 4
+			const host2 = page.locator(`[data-chart-interaction-contract="instrument-candles-${ETF_ID}"]`);
+			await expect(host2).toHaveAttribute("data-chart-panes", "2");
+			await page.getByTestId("indicator-toggle-macd").check();
+			await page.getByTestId("indicator-toggle-rsi").check();
+			await expect(host2).toHaveAttribute("data-chart-panes", "4");
+
+			// ETF 净值叠加（fixture 已播种净值）+ 刷新后开关保持（页面级持久化）
+			await page.getByTestId("indicator-toggle-nav").check();
+			await expect(page.locator('[data-state="nav-unavailable"]')).toHaveCount(0);
+			await page.reload();
+			await expect(
+				page.locator(`[data-chart-interaction-contract="instrument-candles-${ETF_ID}"]`),
+			).toBeVisible();
+			await expect(host2).toHaveAttribute("data-chart-panes", "4");
+			await expect(page.getByTestId("indicator-toggle-rsi")).toBeChecked();
+			await expect(page.getByTestId("indicator-toggle-nav")).toBeChecked();
+
+			// 周期切周线：本地重采样，指标仅日线（开关禁用并说明）
 			await page.getByRole("button", { name: "周" }).click();
 			await expect(host).toHaveAttribute("aria-label", /周K 线/);
+			await expect(host2).toHaveAttribute("data-chart-panes", "2");
+			await expect(page.getByTestId("indicator-toggle-rsi")).toBeDisabled();
+			await expect(page.getByText("指标叠加仅日线周期")).toBeVisible();
 
 			// ETF 复权未接线：切换禁用并给出原因
 			await expect(page.getByRole("button", { name: "前复权" })).toBeDisabled();
@@ -58,6 +80,14 @@ test.describe
 
 			await expectNoSeriousAccessibilityViolations(page);
 			expect(browserErrors).toEqual([]);
+		});
+
+		test("ETF without local NAV data degrades to an explicit unavailable state", async ({ page }) => {
+			const browserErrors = captureBrowserErrors(page);
+			await page.goto(`${webOrigin}/instruments/${ETF_NO_NAV_ID}?tab=chart`);
+			await page.getByTestId("indicator-toggle-nav").check();
+			await expect(page.locator('[data-state="nav-unavailable"]')).toBeVisible();
+			expect(browserErrors.filter((line) => !line.includes("status of 400"))).toEqual([]);
 		});
 
 		test("stocks stay fail-closed until the explicit experimental opt-in, then adjust locally", async ({
