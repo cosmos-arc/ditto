@@ -86,6 +86,33 @@ describe("InstrumentChartView", () => {
 		expect(screen.getByTestId("chart-experimental-toggle")).toBeInTheDocument();
 	});
 
+	it("回测下钻上下文：定位 marker + as_of 水位线 + drill-focus 状态条", async () => {
+		render(
+			<InstrumentChartView
+				id="1000001"
+				drill={{ date: "2026-03-09", runId: "sys-fx-nav-001", asOf: "2026-03-27", direction: "buy" }}
+			/>,
+			{ wrapper: createWrapper() },
+		);
+		await screen.findByTestId("cockpit-stub");
+		const chip = await screen.findByTestId("drill-focus-1000001");
+		expect(chip).toHaveAttribute("data-state", "drill-focus");
+		expect(chip.textContent).toContain("买入");
+		expect(chip.textContent).toContain("sys-fx-nav-001");
+		expect(chip.textContent).toContain("as_of 2026-03-27");
+		const props = cockpitProps.at(-1) as {
+			markers: Array<{ time: number; direction: string }>;
+			initialFocusTime: number | null;
+			asOf: { time: number; label: string } | null;
+		};
+		expect(props.markers).toHaveLength(1);
+		expect(props.markers[0]).toMatchObject({ direction: "buy" });
+		// 定位与水位线都按 UTC 日锚定
+		expect(props.initialFocusTime).toBe(Date.parse("2026-03-09T00:00:00Z") / 1000);
+		expect(props.asOf).not.toBeNull();
+		expect(props.asOf?.label).toContain("回测下钻 sys-fx-nav-001");
+	});
+
 	it("以蜡烛形态喂给图表 shell 并展示 Primary Answer 关键数字", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await screen.findByTestId("cockpit-stub");
