@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { withAlpha } from "@/lib/oklch";
 import { StaleIndicator } from "@/lib/stale-indicator";
 import { AsOfWatermark } from "./as-of-watermark";
-import { PaneBands } from "./pane-bands";
 import {
 	buildPngFooterLines,
 	type ChartExportIdentity,
@@ -39,6 +38,7 @@ import {
 } from "./chart-data";
 import { useChartTheme } from "./chart-theme";
 import { broadcastCrosshairTime, broadcastVisibleRange, joinRangeGroup } from "./cockpit-link";
+import { PaneBands } from "./pane-bands";
 
 /**
  * Chart Cockpit 核心 shell：lightweight-charts 5 多 pane 工作台。
@@ -169,15 +169,10 @@ function buildVolumeIndex(bars: readonly CockpitBar[]): ReadonlyMap<number, numb
 	return index;
 }
 
-function buildReadoutIndex(
-	series: readonly CockpitSeriesSpec[],
-	subPanes: readonly CockpitSubPane[],
-): ReadoutIndex {
+function buildReadoutIndex(series: readonly CockpitSeriesSpec[], subPanes: readonly CockpitSubPane[]): ReadoutIndex {
 	return {
 		seriesValues: series.map((spec) => buildCloseIndex(spec.bars)),
-		subPaneValues: subPanes.flatMap((pane) =>
-			pane.series.map((paneSeries) => buildCloseIndex(paneSeries.points)),
-		),
+		subPaneValues: subPanes.flatMap((pane) => pane.series.map((paneSeries) => buildCloseIndex(paneSeries.points))),
 		volume: buildVolumeIndex(series[0]?.bars ?? []),
 	};
 }
@@ -192,15 +187,10 @@ function readoutAtIndex(index: ReadoutIndex, time: number): Readout | null {
 	};
 }
 
-function lastReadoutTime(
-	series: readonly CockpitSeriesSpec[],
-	subPanes: readonly CockpitSubPane[],
-): number | null {
+function lastReadoutTime(series: readonly CockpitSeriesSpec[], subPanes: readonly CockpitSubPane[]): number | null {
 	const lastBar = lastNonNullClose(series[0]?.bars ?? []);
 	if (lastBar) return lastBar.time;
-	return subPanes.length > 0
-		? (lastNonNullClose(subPanes[0]?.series[0]?.points ?? [])?.time ?? null)
-		: null;
+	return subPanes.length > 0 ? (lastNonNullClose(subPanes[0]?.series[0]?.points ?? [])?.time ?? null) : null;
 }
 
 function exportIdentity(
@@ -276,8 +266,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	// 十字线只锚定时间：读数形状随当前索引派生，数据后到（如基准慢一拍）不会残留旧形状。
 	const [readoutTime, setReadoutTime] = useState<number | null>(null);
 	const [selection, setSelection] = useState<{ readonly from: number; readonly to: number } | null>(null);
-	const activeReadout =
-		readoutTime === null ? initialReadout : readoutAtIndex(readoutIndex, readoutTime);
+	const activeReadout = readoutTime === null ? initialReadout : readoutAtIndex(readoutIndex, readoutTime);
 	// 新鲜度时变的「当前时刻」：注入 nowMs（测试）固定，否则随 30s 心跳推进，
 	// 使 live→expired 分档在会话中随数据老化刷新。
 	const [effectiveNowMs, setEffectiveNowMs] = useState(() => nowMs ?? Date.now());
@@ -667,10 +656,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	const subPaneChips = subPanes.flatMap((pane) =>
 		pane.series.map((paneSeries) => ({ paneSeries, paneLabel: pane.label })),
 	);
-	const formatValue = (
-		value: number | null | undefined,
-		format?: (value: number) => string,
-	): string => {
+	const formatValue = (value: number | null | undefined, format?: (value: number) => string): string => {
 		if (value === null || value === undefined) return "—";
 		return format ? format(value) : String(value);
 	};
@@ -700,9 +686,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 						/>
 						<span className="font-medium">{paneSeries.label ?? paneSeries.id}</span>
 						<span className="tabular-nums" data-testid={`chart-readout-${chartId}-${paneSeries.id}`}>
-							{activeReadout
-								? formatValue(activeReadout.subValues[index], paneSeries.format)
-								: "—"}
+							{activeReadout ? formatValue(activeReadout.subValues[index], paneSeries.format) : "—"}
 						</span>
 					</span>
 				))}

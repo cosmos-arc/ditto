@@ -115,9 +115,10 @@ describe("BacktestOverview", () => {
 	it("基准缺失（404）时明确标注未配置并只渲染策略净值", async () => {
 		render(<BacktestOverview jobId="bt-no-bench" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("净值 vs 基准")).resolves.toBeInTheDocument();
-		expect(
-			await screen.findByText("本运行未配置基准（benchmark 未发布）"),
-		).toHaveAttribute("data-state", "benchmark-unavailable");
+		expect(await screen.findByText("本运行未配置基准（benchmark 未发布）")).toHaveAttribute(
+			"data-state",
+			"benchmark-unavailable",
+		);
 		const last = cockpitProps.at(-1) as {
 			series: Array<{ id: string }>;
 			subPanes: Array<{ id: string }>;
@@ -129,9 +130,7 @@ describe("BacktestOverview", () => {
 	it("基准已配置但行情无覆盖（200 空序列）时给出不可得状态", async () => {
 		render(<BacktestOverview jobId="bt-empty-bench" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("净值 vs 基准")).resolves.toBeInTheDocument();
-		expect(
-			await screen.findByText("基准已配置，但本地行情无覆盖（基准数据不可得）"),
-		).toBeInTheDocument();
+		expect(await screen.findByText("基准已配置，但本地行情无覆盖（基准数据不可得）")).toBeInTheDocument();
 	});
 
 	it("不展示没有公共资源支撑的持仓", async () => {

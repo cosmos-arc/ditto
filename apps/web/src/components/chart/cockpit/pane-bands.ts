@@ -69,10 +69,7 @@ export class PaneBands implements IPanePrimitive<Time> {
 				x2: timeScale.timeToCoordinate(range.to as Time),
 				fill: range.fill,
 			}))
-			.filter(
-				(rect): rect is { x1: Coordinate; x2: Coordinate; fill: string } =>
-					rect.x1 !== null && rect.x2 !== null,
-			);
+			.filter((rect): rect is { x1: Coordinate; x2: Coordinate; fill: string } => rect.x1 !== null && rect.x2 !== null);
 	}
 
 	paneViews(): readonly IPanePrimitivePaneView[] {

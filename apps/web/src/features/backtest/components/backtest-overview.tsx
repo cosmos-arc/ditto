@@ -69,7 +69,7 @@ export function BacktestOverview({ jobId }: BacktestOverviewProps) {
 	const nav = navQuery.data ?? [];
 	const lastNav = nav.at(-1)?.nav;
 	const benchmark = benchmarkQuery.data;
-	const lastBenchmarkNav = hasBenchmark ? benchmarkBars.at(-1)?.close ?? null : null;
+	const lastBenchmarkNav = hasBenchmark ? (benchmarkBars.at(-1)?.close ?? null) : null;
 	const lastBenchmarkRaw = benchmark?.navs.at(-1);
 	const benchmarkError = benchmarkQuery.error;
 	const benchmarkErrorText = benchmarkError
@@ -181,9 +181,7 @@ export function BacktestOverview({ jobId }: BacktestOverviewProps) {
 						基准已配置，但本地行情无覆盖（基准数据不可得）
 					</p>
 				)}
-				{benchmarkQuery.isLoading && (
-					<p className="mt-3 text-xs text-(--color-foreground-tertiary)">正在加载基准…</p>
-				)}
+				{benchmarkQuery.isLoading && <p className="mt-3 text-xs text-(--color-foreground-tertiary)">正在加载基准…</p>}
 				{benchmarkUnconfigured && nav.length > 0 && (
 					<p data-state="benchmark-unavailable" className="mt-3 text-xs text-(--color-foreground-muted)">
 						本运行未配置基准（benchmark 未发布）
@@ -194,12 +192,7 @@ export function BacktestOverview({ jobId }: BacktestOverviewProps) {
 						<p role="alert" className="text-xs text-(--color-led-danger)">
 							{benchmarkErrorText}
 						</p>
-						<Button
-							size="sm"
-							variant="outline"
-							className="mt-2"
-							onClick={() => void benchmarkQuery.refetch()}
-						>
+						<Button size="sm" variant="outline" className="mt-2" onClick={() => void benchmarkQuery.refetch()}>
 							重试基准序列
 						</Button>
 					</div>

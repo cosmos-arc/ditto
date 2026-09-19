@@ -1,4 +1,4 @@
-import { type CockpitBand, type CockpitBar } from "@/components/chart";
+import type { CockpitBand, CockpitBar } from "@/components/chart";
 import type { BacktestBenchmark, BacktestNavPoint } from "../types";
 
 /**
@@ -57,10 +57,7 @@ export function alignedBenchmarkPoints(
 }
 
 /** 超额收益（小数）：navNorm − benchNorm；任一侧缺失即为断口。 */
-export function excessPoints(
-	navBars: readonly CockpitBar[],
-	benchmarkBars: readonly CockpitBar[],
-): CockpitBar[] {
+export function excessPoints(navBars: readonly CockpitBar[], benchmarkBars: readonly CockpitBar[]): CockpitBar[] {
 	const benchByTime = new Map(benchmarkBars.map((bar) => [bar.time, bar.close]));
 	return navBars.map((navBar) => {
 		const bench = benchByTime.get(navBar.time) ?? null;

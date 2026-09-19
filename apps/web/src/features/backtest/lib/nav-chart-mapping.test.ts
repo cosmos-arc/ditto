@@ -23,9 +23,7 @@ const NAV: BacktestNavPoint[] = [
 describe("normalizedNavPoints", () => {
 	it("normalizes strategy NAV to a 1.0 base so benchmark overlay shares the scale", () => {
 		const bars = normalizedNavPoints(NAV);
-		expect(bars.map((bar) => bar.close)).toEqual([
-			1, 1.06, 0.98, 0.94, 1.07, 1.1,
-		]);
+		expect(bars.map((bar) => bar.close)).toEqual([1, 1.06, 0.98, 0.94, 1.07, 1.1]);
 	});
 
 	it("returns empty for empty or zero-base series", () => {
