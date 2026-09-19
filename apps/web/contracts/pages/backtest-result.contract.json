@@ -1,6 +1,6 @@
 {
   "id": "backtest-result",
-  "version": 4,
+  "version": 5,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
   "updatedAt": "2026-09-19",
@@ -162,7 +162,8 @@
       "audit-empty",
       "audit-unavailable",
       "benchmark-partial",
-      "benchmark-unconfigured"
+      "benchmark-unconfigured",
+      "trade-evidence-drawer"
     ]
   },
   "interactions": [
@@ -212,6 +213,22 @@
         "main"
       ],
       "expectedBehavior": "syncs the crosshair across NAV, benchmark, excess, and drawdown panes with readouts formatted in the same numeric discipline as the KPI strip"
+    },
+    {
+      "id": "open-trade-evidence-drawer",
+      "trigger": "trade-evidence-action",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "opens the per-trade evidence drawer with exact trade identity and pre-trade audit rows filtered by instrument and trade dates"
+    },
+    {
+      "id": "drill-trade-to-instrument",
+      "trigger": "drill-link",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "jumps to the instrument chart with focus date, marker direction, source run id, and as_of knowledge time carried in the cross-domain jump context"
     }
   ],
   "flags": {

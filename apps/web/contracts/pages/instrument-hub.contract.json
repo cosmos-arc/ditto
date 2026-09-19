@@ -1,6 +1,6 @@
 {
   "id": "instrument-hub",
-  "version": 5,
+  "version": 6,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
   "updatedAt": "2026-09-19",
@@ -129,7 +129,8 @@
       "bars-partial",
       "snapshot-identity-missing",
       "experimental-disabled",
-      "nav-unavailable"
+      "nav-unavailable",
+      "drill-focus"
     ]
   },
   "flags": {
@@ -327,6 +328,14 @@
         "main"
       ],
       "expectedBehavior": "overlays the ETF NAV line when local nav data exists and shows an explicit unavailable state when it does not"
+    },
+    {
+      "id": "receive-trade-drill",
+      "trigger": "search-param-jump",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "focuses the chart on the drilled trade date with a direction marker and the source run's as_of watermark preserved from the backtest jump context"
     }
   ]
 }

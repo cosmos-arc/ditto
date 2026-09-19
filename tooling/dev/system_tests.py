@@ -537,6 +537,24 @@ def main() -> int:
                     web_port=web_port,
                 ),
             )
+
+            # The same engine run also drives the trade drill-down chain
+            # (report row → evidence drawer → instrument chart focus).
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.backtest_nav_app:app", api_port
+                    ),
+                    prefix="ditto-system-backtest-drill-",
+                    spec="backtest-trade-drill.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
     except (OSError, RuntimeError, TimeoutError, ValueError) as error:
         print(f"System tests failed: {error}", file=sys.stderr)
         return 1

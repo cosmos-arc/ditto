@@ -3,6 +3,7 @@ import {
 	ColorType,
 	CrosshairMode,
 	createChart,
+	createSeriesMarkers,
 	HistogramSeries,
 	type IChartApi,
 	type ISeriesApi,
@@ -104,6 +105,15 @@ export type CockpitBand = {
 	readonly color: string;
 };
 
+/** 主序列上的事件标记（如回测买卖点）；buy 在 bar 上方箭头、sell 在 bar 下方箭头。 */
+export type CockpitMarker = {
+	readonly id: string;
+	readonly time: number;
+	readonly direction: "buy" | "sell";
+	/** 标记悬停/图例短标签（如 "买入 400 股"）。 */
+	readonly label?: string;
+};
+
 export type ChartCockpitIdentity = {
 	readonly dataSourceName: string;
 	readonly snapshotId?: string | null;
@@ -121,6 +131,11 @@ export type ChartCockpitProps = {
 	readonly overlays?: readonly CockpitOverlay[];
 	readonly subPanes?: readonly CockpitSubPane[];
 	readonly bands?: readonly CockpitBand[];
+	/** 主序列事件标记（买卖点）；点击标记时回调 onMarkerClick。 */
+	readonly markers?: readonly CockpitMarker[];
+	readonly onMarkerClick?: (marker: CockpitMarker) => void;
+	/** 初始定位（Unix 秒）：优先于 fitContent，把该时点滚到可视区中心（下钻定位）。 */
+	readonly initialFocusTime?: number | null;
 	readonly asOf?: { readonly time: number; readonly label?: string } | null;
 	/** 实时数据透明度时变（live 1.0 → expired 0.25）；默认关闭，EOD 图表只用水位线 + stale 徽标。 */
 	readonly freshnessFade?: boolean;
@@ -137,6 +152,7 @@ const SUB_PANE_HEIGHT = 96;
 const EMPTY_OVERLAYS: readonly CockpitOverlay[] = [];
 const EMPTY_SUBPANES: readonly CockpitSubPane[] = [];
 const EMPTY_BANDS: readonly CockpitBand[] = [];
+const EMPTY_MARKERS: readonly CockpitMarker[] = [];
 const AFFORDANCES = "crosshair tooltip zoom-pan linked-time-range";
 
 type Readout = {
@@ -235,6 +251,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		overlays = EMPTY_OVERLAYS,
 		subPanes = EMPTY_SUBPANES,
 		bands = EMPTY_BANDS,
+		markers = EMPTY_MARKERS,
+		initialFocusTime = null,
 		asOf = null,
 		freshnessFade = false,
 		timeVisible = false,
@@ -361,6 +379,13 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			}
 			setReadoutTime(seconds);
 			broadcastCrosshairTime(rangeId, chartId, param.time ?? null);
+		});
+		// 点击时点命中事件标记（买卖点）→ 下钻回调；未命中不拦截（保留框选等交互）。
+		chart.subscribeClick((param: MouseEventParams<Time>) => {
+			const seconds = typeof param.time === "number" ? param.time : null;
+			if (seconds === null || !param.point) return;
+			const hit = propsRef.current.markers?.find((marker) => marker.time === seconds);
+			if (hit) propsRef.current.onMarkerClick?.(hit);
 		});
 
 		const leave = joinRangeGroup(rangeId, {
@@ -526,6 +551,22 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			})),
 		});
 
+		// 主序列事件标记（买卖点）：buy 在 bar 上方箭头（涨色）、sell 在 bar 下方箭头（跌色）。
+		if (primarySeriesRef.current) {
+			createSeriesMarkers(
+				primarySeriesRef.current,
+				[...markers]
+					.sort((a, b) => a.time - b.time)
+					.map((marker) => ({
+						time: marker.time as Time,
+						position: marker.direction === "buy" ? "aboveBar" : "belowBar",
+						shape: marker.direction === "buy" ? "arrowUp" : "arrowDown",
+						color: theme.resolve(directionColorToken(marker.direction === "buy" ? "up" : "down")),
+						text: marker.label ?? "",
+					})),
+			);
+		}
+
 		if (asOf) {
 			watermarkRef.current?.updateOptions({
 				time: asOf.time as Time,
@@ -543,9 +584,37 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		}
 
 		if (!freshnessFade) {
-			chart.timeScale().fitContent();
+			const timeScale = chart.timeScale();
+			if (initialFocusTime !== null) {
+				// 下钻定位：把目标时点滚到可视区中心（约 60 根可见），优先于 fitContent。
+				const bars = series[0]?.bars ?? [];
+				const index = bars.findIndex((bar) => bar.time === initialFocusTime);
+				if (index >= 0) {
+					const span = Math.min(60, Math.max(bars.length, 1));
+					timeScale.setVisibleLogicalRange({
+						from: index - span / 2,
+						to: index + span / 2,
+					});
+				} else {
+					timeScale.fitContent();
+				}
+			} else {
+				timeScale.fitContent();
+			}
 		}
-	}, [series, overlays, subPanes, bands, asOf, freshnessFade, effectiveNowMs, theme, showVolumePane]);
+	}, [
+		series,
+		overlays,
+		subPanes,
+		bands,
+		markers,
+		initialFocusTime,
+		asOf,
+		freshnessFade,
+		effectiveNowMs,
+		theme,
+		showVolumePane,
+	]);
 
 	const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
 		const chart = chartRef.current;
@@ -743,6 +812,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				data-chart-panes={1 + (showVolumePane ? 1 : 0) + subPanes.length}
 				data-chart-visible-range={visibleRangeLabel}
 				data-chart-as-of={asOf ? String(asOf.time) : undefined}
+				data-chart-marker-times={markers.length > 0 ? markers.map((marker) => marker.time).join(",") : undefined}
 				onKeyDown={handleKeyDown}
 				onDoubleClick={handleDoubleClick}
 				onMouseDownCapture={beginSelection}

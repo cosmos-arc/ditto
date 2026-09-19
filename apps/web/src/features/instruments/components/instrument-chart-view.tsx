@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChartCockpit, type CockpitOverlay } from "@/components/chart";
+import { ChartCockpit, type CockpitMarker, type CockpitOverlay } from "@/components/chart";
 import { type BarPeriod, resampleBars } from "@/components/chart/cockpit/chart-data";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain";
@@ -24,9 +24,12 @@ import {
 	readIndicatorToggles,
 	writeIndicatorToggles,
 } from "../lib/indicator-overlays";
+import type { InstrumentDrillContext } from "../types";
 
 interface InstrumentChartViewProps {
 	readonly id: string;
+	/** 回测买卖点下钻上下文：定位日滚入可视中心 + 买卖 marker + as_of 水位线。 */
+	readonly drill?: InstrumentDrillContext | undefined;
 }
 
 /** 数据级陈旧阈值：最近一根 bar 距今超过 7 个自然日视为 stale。 */
@@ -90,7 +93,7 @@ function SegmentedControl<T extends string>({
 	);
 }
 
-export function InstrumentChartView({ id }: InstrumentChartViewProps) {
+export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	const [period, setPeriod] = useState<BarPeriod>("daily");
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
@@ -173,6 +176,33 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 	const experimentalBlocked =
 		query.isError && String((query.error as Error | null)?.message ?? "").includes("experimental");
 
+	// 下钻定位（跨域跳转合同）：日线锚定 marker + as_of 水位线；周/月重采样不承载 marker 语义。
+	const drillTime = drill ? tradeDateToUnix(drill.date) : null;
+	const drillMarkers = useMemo<readonly CockpitMarker[]>(
+		() =>
+			drill && drillTime !== null && period === "daily"
+				? [
+						{
+							id: `drill-${drill.runId}-${drill.date}-${drill.direction}`,
+							time: drillTime,
+							direction: drill.direction,
+							label: `${drill.direction === "buy" ? "买入" : "卖出"} · ${drill.runId}`,
+						},
+					]
+				: [],
+		[drill, drillTime, period],
+	);
+	const drillAsOf = useMemo(
+		() =>
+			drill && drill.asOf
+				? {
+						time: tradeDateToUnix(drill.asOf.slice(0, 10)),
+						label: `as_of ${drill.asOf.slice(0, 10)} · 回测下钻 ${drill.runId}`,
+					}
+				: null,
+		[drill],
+	);
+
 	return (
 		<div className="p-[var(--density-panel-padding)]">
 			<ContextSection title="行情图表">
@@ -224,6 +254,22 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 						快照标识未由接口提供，仅作研究浏览，不生成交易建议
 					</div>
 				</div>
+
+				{drill && (
+					<div
+						data-state="drill-focus"
+						data-testid={`drill-focus-${id}`}
+						className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) bg-(--color-interaction-hover-subtle-bg) px-3 py-2 text-xs"
+					>
+						<span className="font-medium text-(--color-foreground)">回测买卖点下钻</span>
+						<span className="font-data text-(--color-foreground-secondary)">
+							{drill.direction === "buy" ? "买入" : "卖出"} · {drill.date}
+						</span>
+						<span className="font-data text-(--color-foreground-tertiary)">run {drill.runId}</span>
+						<span className="font-data text-(--color-foreground-tertiary)">as_of {drill.asOf || "—"}</span>
+						<span className="text-(--color-foreground-muted)">知识时间水位线与来源 run 一致</span>
+					</div>
+				)}
 
 				<div
 					className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-(--color-border-subtle) px-3 py-2"
@@ -340,6 +386,9 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 							series={[{ id: "ohlc", kind: "candle", color: "var(--chart-series-neutral)", bars: displayBars }]}
 							overlays={navOverlay ? [...indicatorOverlaysList, navOverlay] : indicatorOverlaysList}
 							subPanes={indicatorSubPaneList}
+							markers={drillMarkers}
+							initialFocusTime={drillTime}
+							asOf={drillAsOf}
 							showVolumePane
 							height={360}
 							identity={{
