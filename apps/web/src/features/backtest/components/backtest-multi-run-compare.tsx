@@ -55,17 +55,18 @@ function useRunResources(runs: readonly BacktestRun[]) {
 			throwOnError: false,
 		})),
 	});
-	const resources: RunResources[] = runs.map((run, index) => ({
-		run,
-		nav: navs[index]?.data ?? [],
-		navLoading: navs[index]?.isLoading ?? false,
-		report: reports[index]?.data,
-		fetchError: navs[index]?.isError
-			? toFetchError("nav", navs[index]?.error)
-			: reports[index]?.isError
-				? toFetchError("report", reports[index]?.error)
-				: null,
-	}));
+	const resources: RunResources[] = runs.map((run, index) => {
+		// 两类错误都评估再择一：nav 404（业务态 → null）不能遮蔽同 run 的 report 5xx
+		const navError = navs[index]?.isError ? toFetchError("nav", navs[index]?.error) : null;
+		const reportError = reports[index]?.isError ? toFetchError("report", reports[index]?.error) : null;
+		return {
+			run,
+			nav: navs[index]?.data ?? [],
+			navLoading: navs[index]?.isLoading ?? false,
+			report: reports[index]?.data,
+			fetchError: navError ?? reportError,
+		};
+	});
 	const refetchAll = () => {
 		for (const result of [...navs, ...reports]) void result.refetch();
 	};

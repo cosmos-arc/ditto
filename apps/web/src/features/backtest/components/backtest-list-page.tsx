@@ -110,9 +110,12 @@ export function BacktestListPage() {
 
 	const toggleCompare = (runId: string) => {
 		setCompareIds((previous) => {
-			if (previous.includes(runId)) return previous.filter((value) => value !== runId);
-			if (previous.length >= MAX_COMPARE_RUNS) return previous;
-			return [...previous, runId];
+			// 守卫与去留都基于现存目录：先剪除 refetch 后消失的 run，
+			// 否则幽灵 id 会让已释放的容量在 mutator 里仍被占用（静默拒选）
+			const present = previous.filter((id) => byId.has(id));
+			if (present.includes(runId)) return present.filter((value) => value !== runId);
+			if (present.length >= MAX_COMPARE_RUNS) return present;
+			return [...present, runId];
 		});
 	};
 

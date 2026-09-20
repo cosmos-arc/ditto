@@ -245,6 +245,34 @@ describe("ChartCockpit 数据映射", () => {
 });
 
 describe("ChartCockpit 键盘操作", () => {
+	it("anchors readout and End navigation on any populated series when the first is empty", async () => {
+		// 多 run 叠加：首个 run 合法空 bars（404），锚点须来自其余序列
+		renderCockpit({
+			series: [
+				{ id: "empty-run", bars: [], color: "var(--chart-run-1)" },
+				{
+					id: "filled-run",
+					color: "var(--chart-run-2)",
+					bars: [
+						{ time: 100, close: 1, volume: null },
+						{ time: 200, close: 1.1, volume: null },
+						{ time: 300, close: 1.2, volume: null },
+						{ time: 400, close: 1.3, volume: null },
+						{ time: 500, close: 1.4, volume: null },
+					],
+				},
+			],
+		});
+		// 初始读数锚定最晚非空点（第二个序列的 500），不再因首序列为空而恒为 —
+		expect(screen.getByTestId("chart-readout-spec-close-filled-run").textContent).toMatch(/\d/u);
+		const user = userEvent.setup();
+		const host = screen.getByLabelText("演示收盘价图表（fixture）");
+		await user.click(host);
+		await user.keyboard("{End}");
+		// End 取全部序列最大长度（5），首序列空 bars 不再让导航失锚
+		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -94, to: 6 });
+	});
+
 	it("pans with arrows, zooms with +/-, jumps to the tail with End, resets on dblclick", async () => {
 		renderCockpit();
 		const user = userEvent.setup();

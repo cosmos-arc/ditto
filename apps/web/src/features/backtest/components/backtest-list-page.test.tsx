@@ -142,6 +142,10 @@ describe("BacktestListPage", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("7/8");
 		});
-		expect(screen.getByRole("checkbox", { name: "加入对比 bt-live-009" })).toBeEnabled();
+		// 释放的容量可真正选入：mutator 守卫同样基于对账后的现存集合（幽灵 id 不占位）
+		const freedNinth = screen.getByRole("checkbox", { name: "加入对比 bt-live-009" });
+		expect(freedNinth).toBeEnabled();
+		await user.click(freedNinth);
+		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("8/8");
 	});
 });

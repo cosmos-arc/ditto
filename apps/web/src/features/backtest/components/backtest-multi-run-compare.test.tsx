@@ -207,4 +207,27 @@ describe("BacktestMultiRunCompare", () => {
 		// 404 report 仍走业务态（未发布），不触发 fetch-error
 		expect(screen.getByTestId("multi-run-metrics").querySelector("[data-run-id='run-b']")).toHaveTextContent("未发布");
 	});
+
+	it("keeps surfacing a report failure even when the same run's nav is a 404 business state", async () => {
+		// nav 404（业务态）不得遮蔽同 run 的 report 5xx：两类错误都评估
+		server.use(
+			http.get("/api/v1/backtests/runs/run-a/nav", () =>
+				HttpResponse.json({ data: [{ trade_date: "2026-01-05", nav: 1_000_000 }] }),
+			),
+			http.get("/api/v1/backtests/runs/run-b/nav", () =>
+				HttpResponse.json({ detail: "nav not found", error_code: "BACKTEST_NAV_NOT_FOUND" }, { status: 404 }),
+			),
+			http.get("/api/v1/backtests/runs/run-a/report", () =>
+				HttpResponse.json({ detail: "report not found", error_code: "BACKTEST_REPORT_NOT_FOUND" }, { status: 404 }),
+			),
+			http.get("/api/v1/backtests/runs/run-b/report", () =>
+				HttpResponse.json({ detail: "boom", error_code: "REPORT_500" }, { status: 500 }),
+			),
+		);
+		render(<BacktestMultiRunCompare runs={[run("run-a"), run("run-b")]} />, { wrapper: createWrapper() });
+
+		const alert = await screen.findByRole("alert");
+		expect(alert).toHaveAttribute("data-state", "fetch-error");
+		expect(alert).toHaveTextContent(/report.*读取失败/u);
+	});
 });

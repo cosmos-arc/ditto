@@ -206,8 +206,14 @@ function readoutAtIndex(index: ReadoutIndex, time: number): Readout | null {
 }
 
 function lastReadoutTime(series: readonly CockpitSeriesSpec[], subPanes: readonly CockpitSubPane[]): number | null {
-	const lastBar = lastNonNullClose(series[0]?.bars ?? []);
-	if (lastBar) return lastBar.time;
+	// 锚点跨全部序列取最晚非空点：首序列可能合法为空（如 404 run 的空 bars），
+	// 不应让初始读数恒为 —（多 run 叠加时其余序列仍有数据）。
+	let latest: number | null = null;
+	for (const spec of series) {
+		const time = lastNonNullClose(spec.bars)?.time;
+		if (time !== undefined && (latest === null || time > latest)) latest = time;
+	}
+	if (latest !== null) return latest;
 	return subPanes.length > 0 ? (lastNonNullClose(subPanes[0]?.series[0]?.points ?? [])?.time ?? null) : null;
 }
 
@@ -634,7 +640,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		} else if (event.key === "Home") {
 			timeScale.setVisibleLogicalRange({ from: -1, to: span - 1 });
 		} else if (event.key === "End") {
-			const barCount = propsRef.current.series[0]?.bars.length ?? 0;
+			// 跨全部序列取最大长度：End 导航不因首序列空 bars 而失锚
+			const barCount = propsRef.current.series.reduce((max, spec) => Math.max(max, spec.bars.length), 0);
 			timeScale.setVisibleLogicalRange({ from: barCount - span + 1, to: barCount + 1 });
 		} else if (event.key === "+" || event.key === "=") {
 			const center = (range.from + range.to) / 2;
