@@ -80,6 +80,7 @@ from ditto_platform.foundation import (
     SQLiteClient,
     SQLitePool,
 )
+from ditto_platform.foundation.storage import parquet_store
 
 
 def _license() -> DatasetLicenseRecord:
@@ -453,7 +454,9 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
         assert ingest(original).status == "success"
         assert ingest(revised, force=True).status == "success"
         assert len(snapshots.list_snapshots()) == 2
-        assert len(lifecycle.list_complete()) == 2
+        # Recovering A after an uncertain B intent is also a durable recovery.
+        assert len(lifecycle.list_complete()) == 3
+        assert lifecycle.list_incomplete() == ()
         assert snapshots.get_snapshot(first.snapshot_id) == first
         assert first.payload_uri is not None
         old = FilesystemProviderPayloadStore(tmp_path).read_payload(
@@ -474,7 +477,7 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
         restored = logs.get_log(dataset, "tushare", "2026-07-16")
         assert restored is not None
         assert restored.checksum == recovered.checksum
-        assert len(lifecycle.list_complete()) == 3
+        assert len(lifecycle.list_complete()) == 4
 
 
 class _MarketSource:
@@ -526,9 +529,11 @@ def _coordinator(runtime: _Pipeline, source: _MarketSource):
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("failure_boundary", ["catalog_checkpoint", "payload_checksum"])
 def test_normal_backfill_resumes_failed_revision_after_original_completed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    failure_boundary: str,
 ) -> None:
     with _pipeline(tmp_path, "stock_daily") as runtime:
         source = _MarketSource()
@@ -556,7 +561,11 @@ def test_normal_backfill_resumes_failed_revision_after_original_completed(
             evidence_id: str | None = None,
         ):
             nonlocal should_fail
-            if should_fail and stage is PartitionLifecycleStatus.CATALOG_ATTESTED:
+            if (
+                should_fail
+                and failure_boundary == "catalog_checkpoint"
+                and stage is PartitionLifecycleStatus.CATALOG_ATTESTED
+            ):
                 should_fail = False
                 raise OSError("injected revision checkpoint failure")
             return advance(
@@ -566,6 +575,16 @@ def test_normal_backfill_resumes_failed_revision_after_original_completed(
         monkeypatch.setattr(
             runtime.ports.lifecycle_writer, "advance_partition", fail_once
         )
+        digest = parquet_store.file_md5
+
+        def fail_checksum(path: Path) -> str:
+            nonlocal should_fail
+            if should_fail and failure_boundary == "payload_checksum":
+                should_fail = False
+                raise OSError("injected failure after atomic payload write")
+            return digest(path)
+
+        monkeypatch.setattr(parquet_store, "file_md5", fail_checksum)
         source.payload = source.payload.with_columns(pl.lit(999.0).alias("close"))
         failed = coordinator.ingest_chunk(
             "stock_daily",

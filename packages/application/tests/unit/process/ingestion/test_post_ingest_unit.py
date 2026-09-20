@@ -110,6 +110,9 @@ class _EvidenceCommitRecorder:
         self.outcome = outcome
         self.requests: list[object] = []
 
+    def prepare_payload_write(self, intent: object) -> None:
+        pass
+
     def commit(self, request: object) -> EvidenceCommitOutcome:
         self.requests.append(request)
         return self.outcome

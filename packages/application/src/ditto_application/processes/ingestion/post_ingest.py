@@ -40,11 +40,13 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.evidence_commit import (
     IngestionEvidenceCommitter,
+    PartitionWriteIntent,
 )
 from ditto_application.processes.ingestion.ingestion_evidence import (
     CatalogWriteContext,
     build_data_catalog_entry,
     build_evidence_commit_request,
+    ingestion_partition_id,
     record_ingestion_lineage,
 )
 from ditto_application.processes.ingestion.list_date_inference import (
@@ -269,6 +271,17 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         if isinstance(retained, IngestionResult):
             return retained
         provider_payload = retained
+
+    if provider_payload is not None and ctx.evidence_committer is not None:
+        failure = prepare_payload_write(
+            provider_payload,
+            committer=ctx.evidence_committer,
+            trade_date=trade_date,
+            request_end=request_end,
+            chunk_id=chunk_id,
+        )
+        if failure is not None:
+            return failure
 
     on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.VERIFY_IDENTICAL
 
@@ -779,3 +792,41 @@ def handle_fetch_error(
         error_type=type(error).__name__,
     )
     return result_handler.handle_unknown_error(dataset, date_identifier, error)
+
+
+def prepare_payload_write(
+    payload: ProviderPayloadArtifact,
+    *,
+    committer: IngestionEvidenceCommitter,
+    trade_date: str,
+    request_end: str | None,
+    chunk_id: str | None,
+    source_ticker: str | None = None,
+) -> IngestionResult | None:
+    """Refuse canonical mutation unless its retained input is durably resumable."""
+    try:
+        committer.prepare_payload_write(
+            PartitionWriteIntent(
+                chunk_id=ingestion_partition_id(
+                    source=payload.source,
+                    dataset=payload.dataset_id,
+                    start=trade_date,
+                    end=request_end or trade_date,
+                    chunk_id=chunk_id,
+                    source_ticker=source_ticker,
+                ),
+                request_start=trade_date,
+                request_end=request_end or trade_date,
+                payload=payload,
+            )
+        )
+    except Exception:
+        logger.exception("ingestion_write_intent_failed", dataset=payload.dataset_id)
+        return IngestionResult(
+            dataset=payload.dataset_id,
+            trade_date=trade_date,
+            status="failed",
+            error="PARTITION_INTENT_FAILED",
+            message="写入意图持久化失败, 尚未修改数据, 可重试原回补请求",
+        )
+    return None

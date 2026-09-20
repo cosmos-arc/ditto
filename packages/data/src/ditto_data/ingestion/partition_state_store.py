@@ -246,7 +246,7 @@ class SQLitePartitionLifecycleStore:
         dataset_id: str | None = None,
         source: str | None = None,
     ) -> tuple[PartitionCheckpoint, ...]:
-        """List every non-COMPLETE chunk eligible for continuation or repair."""
+        """List active unfinished revisions; superseded attempts remain in the audit."""
         rows = self._client.fetchall(
             """
             SELECT * FROM ingestion_partition_checkpoints
@@ -263,7 +263,15 @@ class SQLitePartitionLifecycleStore:
                 source,
             ],
         )
-        return tuple(_checkpoint_from_row(row) for row in rows)
+        checkpoints = (_checkpoint_from_row(row) for row in rows)
+        return tuple(
+            checkpoint
+            for checkpoint in checkpoints
+            if checkpoint
+            == self.get_latest_checkpoint(
+                checkpoint.chunk_id.partition(":revision:")[0]
+            )
+        )
 
     def list_complete(
         self,

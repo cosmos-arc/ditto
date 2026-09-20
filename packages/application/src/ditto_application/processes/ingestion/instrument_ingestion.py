@@ -45,6 +45,7 @@ from ditto_application.processes.ingestion.post_ingest import (
     DataWriteContext,
     build_evidence_commit_request,
     handle_fetch_error,
+    prepare_payload_write,
     record_data_catalog_entry,
     record_ingestion_lineage,
     retain_provider_payload,
@@ -281,6 +282,9 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
         dataset=dataset,
         trade_date=params.start_date,
         ctx=ctx,
+        request_end=params.end_date,
+        chunk_id=chunk_id,
+        source_ticker=source_ticker,
     )
     if isinstance(retained, IngestionResult):
         return retained
@@ -400,16 +404,33 @@ def _retain_instrument_provider_payload(
     dataset: str,
     trade_date: str,
     ctx: InstrumentPostIngestContext,
+    request_end: str,
+    chunk_id: str | None,
+    source_ticker: str,
 ) -> ProviderPayloadArtifact | IngestionResult | None:
     """Retain R2 payloads while leaving non-evidence ingestion unchanged."""
     if ctx.evidence_committer is None:
         return None
-    return retain_provider_payload(
+    retained = retain_provider_payload(
         df,
         dataset=dataset,
         trade_date=trade_date,
         source_name=ctx.source_name,
         writer=ctx.provider_payload_writer,
+    )
+
+    if isinstance(retained, IngestionResult):
+        return retained
+    return (
+        prepare_payload_write(
+            retained,
+            committer=ctx.evidence_committer,
+            trade_date=trade_date,
+            request_end=request_end,
+            chunk_id=chunk_id,
+            source_ticker=source_ticker,
+        )
+        or retained
     )
 
 

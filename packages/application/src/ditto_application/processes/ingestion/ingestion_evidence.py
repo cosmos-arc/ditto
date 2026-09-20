@@ -367,12 +367,14 @@ def build_evidence_commit_request(
             created_at=now,
         )
     )
-    range_key = f":{ctx.source_ticker}" if ctx.source_ticker is not None else ""
     return EvidenceCommitRequest(
-        chunk_id=ctx.chunk_id
-        or (
-            f"partition:{ctx.source_name}:{ctx.dataset}{range_key}:"
-            f"{ctx.trade_date}:{request_end}"
+        chunk_id=ingestion_partition_id(
+            source=ctx.source_name,
+            dataset=ctx.dataset,
+            start=ctx.trade_date,
+            end=request_end,
+            source_ticker=ctx.source_ticker,
+            chunk_id=ctx.chunk_id,
         ),
         dataset_id=ctx.dataset,
         source=ctx.source_name,
@@ -399,3 +401,17 @@ def build_evidence_commit_request(
         ),
         quality_attested=ctx.l1_l2_attested,
     )
+
+
+def ingestion_partition_id(
+    *,
+    source: str,
+    dataset: str,
+    start: str,
+    end: str,
+    source_ticker: str | None = None,
+    chunk_id: str | None = None,
+) -> str:
+    """Share request identity between write intent and committed evidence."""
+    range_key = f":{source_ticker}" if source_ticker is not None else ""
+    return chunk_id or f"partition:{source}:{dataset}{range_key}:{start}:{end}"
