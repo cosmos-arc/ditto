@@ -171,6 +171,7 @@ def ingest_by_instrument(
         params,
         ctx=ctx,
         chunk_id=chunk_id,
+        force=force,
     )
 
 
@@ -182,6 +183,7 @@ def _fetch_and_ingest_by_instrument(
     *,
     ctx: InstrumentIngestContext,
     chunk_id: str | None = None,
+    force: bool = False,
 ) -> IngestionResult:
     """按标的获取数据并执行摄取（统一错误处理）。"""
     df_or_result = _try_fetch_data_by_instrument(
@@ -214,6 +216,7 @@ def _fetch_and_ingest_by_instrument(
             license_record_id=ctx.license_record_id,
         ),
         chunk_id=chunk_id,
+        force=force,
     )
 
 
@@ -250,6 +253,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
     *,
     ctx: InstrumentPostIngestContext,
     chunk_id: str | None = None,
+    force: bool = False,
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
@@ -282,7 +286,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
         return retained
     provider_payload = retained
 
-    on_duplicate = OnDuplicate.KEEP_LAST
+    on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.VERIFY_IDENTICAL
 
     write_result = write_data_safe(
         DataWriteContext(

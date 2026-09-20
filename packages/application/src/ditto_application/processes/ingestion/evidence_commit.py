@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Protocol
 
@@ -12,14 +12,18 @@ from ditto_data.catalog import (
     DataCatalogWriter,
 )
 from ditto_data.catalog.license import DatasetLicenseReader
-from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotWriter
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotReader,
+    ProviderSnapshotWriter,
+)
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
     PartitionLifecycleReader,
     PartitionLifecycleStatus,
     PartitionLifecycleWriter,
 )
-from ditto_data.lineage import DataLineageRecorder, LineageEvent
+from ditto_data.lineage import DataLineageReader, DataLineageRecorder, LineageEvent
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 
 from ditto_application.exceptions import AppProcessError
@@ -33,6 +37,12 @@ __all__ = [
 
 
 class _IngestionLogWriter(Protocol):
+    def get_log(
+        self, dataset: str, source: str, trade_date: str
+    ) -> IngestionLog | None:
+        """Read the durable result before retrying its write."""
+        ...
+
     def save_log(self, log: IngestionLog) -> IngestionLog:
         """Persist one ingestion log record."""
         ...
@@ -71,9 +81,11 @@ class EvidenceCommitPorts:
     lifecycle_reader: PartitionLifecycleReader
     lifecycle_writer: PartitionLifecycleWriter
     snapshot_writer: ProviderSnapshotWriter
+    snapshot_reader: ProviderSnapshotReader
     license_reader: DatasetLicenseReader
     catalog_writer: DataCatalogWriter
     lineage_recorder: DataLineageRecorder
+    lineage_reader: DataLineageReader
     ingestion_log_store: _IngestionLogWriter
 
 
@@ -92,6 +104,7 @@ class IngestionEvidenceCommitter:
     def commit(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         """Commit or repair the evidence chain without repeating durable stages."""
         self._validate_request(request)
+        request = self._versioned_request(request)
         preparation = self._prepare_payload(request)
         if preparation is not None:
             return preparation
@@ -106,6 +119,23 @@ class IngestionEvidenceCommitter:
         if log_failure is not None:
             return log_failure
         return self._complete(request)
+
+    def _versioned_request(
+        self, request: EvidenceCommitRequest
+    ) -> EvidenceCommitRequest:
+        """Keep the original checkpoint and bind changed payloads to new checkpoints."""
+        checkpoint = self._ports.lifecycle_reader.get_checkpoint(request.chunk_id)
+        if checkpoint is not None and checkpoint.payload_id not in {
+            None,
+            _payload_evidence_id(request),
+        }:
+            return replace(
+                request,
+                chunk_id=(
+                    f"{request.chunk_id}:revision:{request.provider_snapshot.snapshot_id}"
+                ),
+            )
+        return request
 
     def _prepare_payload(
         self, request: EvidenceCommitRequest
@@ -144,7 +174,12 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.PAYLOAD_COMMITTED:
             return None
         try:
-            self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
+            snapshot = request.provider_snapshot
+            existing = self._ports.snapshot_reader.get_snapshot(snapshot.snapshot_id)
+            if existing is None:
+                self._ports.snapshot_writer.append_snapshot(snapshot)
+            elif replace(snapshot, created_at=existing.created_at) != existing:
+                raise AppProcessError("immutable provider snapshot conflict")
         except Exception:
             return self._fail(
                 request,
@@ -173,7 +208,15 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.CATALOG_ATTESTED:
             return None
         try:
-            self._ports.lineage_recorder.record_event(request.lineage_event)
+            event = request.lineage_event
+            existing = self._ports.lineage_reader.list_events_for_run(event.run_id)
+            if not existing:
+                self._ports.lineage_recorder.record_event(event)
+            elif (
+                len(existing) != 1
+                or replace(event, timestamp=existing[0].timestamp) != existing[0]
+            ):
+                raise AppProcessError("immutable ingestion lineage conflict")
             self._advance(
                 request.chunk_id,
                 PartitionLifecycleStatus.LINEAGE_RECORDED,
@@ -194,7 +237,16 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.LINEAGE_RECORDED:
             return None
         try:
-            self._ports.ingestion_log_store.save_log(request.success_log)
+            log = request.success_log
+            existing = self._ports.ingestion_log_store.get_log(
+                log.dataset, log.source, log.trade_date
+            )
+            if existing is None or (
+                existing.status,
+                existing.checksum,
+                existing.rows,
+            ) != (log.status, log.checksum, log.rows):
+                self._ports.ingestion_log_store.save_log(log)
             self._advance(
                 request.chunk_id,
                 PartitionLifecycleStatus.SUCCESS_RECORDED,
@@ -248,6 +300,22 @@ class IngestionEvidenceCommitter:
         self, request: EvidenceCommitRequest
     ) -> PartitionCheckpoint:
         checkpoint = self._ports.lifecycle_reader.get_checkpoint(request.chunk_id)
+        if checkpoint is not None and (
+            (
+                checkpoint.dataset_id,
+                checkpoint.source,
+                checkpoint.request_start,
+                checkpoint.request_end,
+            )
+            != (
+                request.dataset_id,
+                request.source,
+                request.request_start,
+                request.request_end,
+            )
+            or checkpoint.payload_id not in {None, _payload_evidence_id(request)}
+        ):
+            raise AppProcessError("partition checkpoint identity conflict")
         if checkpoint is None:
             checkpoint = PartitionCheckpoint(
                 chunk_id=request.chunk_id,

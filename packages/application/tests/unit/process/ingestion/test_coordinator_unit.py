@@ -1826,14 +1826,14 @@ class TestWriteT0Data:
 class TestForceParameter:
     """测试 force 参数语义。"""
 
-    def test_force_false_maps_to_error_on_duplicate(
+    def test_force_false_verifies_identical_on_duplicate(
         self,
         coordinator,
         mock_ingestion_log_store,
         mock_source,
         mock_market_write_service,
     ) -> None:
-        """验证 force=False 映射到 OnDuplicate.ERROR。"""
+        """验证 force=False 映射到 OnDuplicate.VERIFY_IDENTICAL。"""
         # Arrange
         mock_ingestion_log_store.get_log.return_value = None
         source_df = pl.DataFrame(
@@ -1870,8 +1870,8 @@ class TestForceParameter:
         # 验证 on_duplicate 参数传递正确（位置参数：dataset, df, year, on_duplicate）
         call_kwargs = mock_market_write_service.save_bars.call_args.kwargs
         assert (
-            call_kwargs.get("on_duplicate") == "error"
-            or call_kwargs.get("on_duplicate") == OnDuplicate.ERROR
+            call_kwargs.get("on_duplicate") == "verify_identical"
+            or call_kwargs.get("on_duplicate") == OnDuplicate.VERIFY_IDENTICAL
         )
 
     def test_force_true_maps_to_keep_last_on_duplicate(

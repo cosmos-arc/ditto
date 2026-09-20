@@ -16,6 +16,7 @@ class OnDuplicate(StrEnum):
     """Strategy for handling duplicate data during writes."""
 
     ERROR = "error"  # Raise on duplicate (default, safest)
+    VERIFY_IDENTICAL = "verify_identical"  # Ignore exact rows, reject changed values
     KEEP_FIRST = "keep_first"  # Keep existing data, ignore new
     KEEP_LAST = "keep_last"  # Overwrite existing with new (Last-Write-Wins)
 

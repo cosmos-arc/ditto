@@ -270,7 +270,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
             return retained
         provider_payload = retained
 
-    on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
+    on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.VERIFY_IDENTICAL
 
     write_result = write_data_safe(
         DataWriteContext(

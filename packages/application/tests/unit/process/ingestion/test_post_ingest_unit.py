@@ -238,7 +238,7 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
     assert result.quality_evidence is not None
     assert result.quality_evidence.status == "passed"
     assert result.quality_evidence.checksum == "checksum123"
-    assert writer.calls == [("stock_daily", "2024-12-27", OnDuplicate.ERROR)]
+    assert writer.calls == [("stock_daily", "2024-12-27", OnDuplicate.VERIFY_IDENTICAL)]
     assert list_date_inference.asset_classes == []
 
 

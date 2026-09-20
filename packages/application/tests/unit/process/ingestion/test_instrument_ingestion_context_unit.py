@@ -158,7 +158,7 @@ def test_process_fetched_data_by_instrument_accepts_context() -> None:
     )
 
     assert result.status == "success"
-    assert writer.calls == [("stock_daily", "2024-01-01", OnDuplicate.KEEP_LAST)]
+    assert writer.calls == [("stock_daily", "2024-01-01", OnDuplicate.VERIFY_IDENTICAL)]
     asset = DataAssetRef(
         dataset_id="stock_daily",
         namespace="market",
@@ -211,7 +211,7 @@ def test_ingest_by_instrument_accepts_runtime_context() -> None:
     assert result.status == "success"
     assert metadata.calls == [("000001", "tushare")]
     assert market_source.calls == [("000001.SZ", "2024-01-01", "2024-01-31")]
-    assert writer.calls == [("stock_daily", "2024-01-01", OnDuplicate.KEEP_LAST)]
+    assert writer.calls == [("stock_daily", "2024-01-01", OnDuplicate.VERIFY_IDENTICAL)]
 
 
 def test_backfill_adj_factor_accepts_runtime_context() -> None:
