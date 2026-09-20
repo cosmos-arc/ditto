@@ -76,6 +76,26 @@ describe("multi-run-mapping", () => {
 		expect(series[1]?.id).toBe("r2");
 	});
 
+	it("keeps palette slots explicit and builds the union only from the passed set", () => {
+		const day = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
+		// 过滤后的可见集：仅 run-b（原勾选序 slot 1）；其自身日期不因缺席的 run-a 产生断口
+		const series = multiRunSeries([
+			{
+				runId: "b",
+				slot: 1,
+				nav: [
+					{ tradeDate: "2026-01-06", nav: 5 },
+					{ tradeDate: "2026-01-07", nav: 6 },
+				],
+			},
+		]);
+		expect(series[0]?.color).toBe("var(--chart-run-2)");
+		expect(series[0]?.bars.map((bar) => [bar.time, bar.close])).toEqual([
+			[day("2026-01-06"), 1],
+			[day("2026-01-07"), 1.2],
+		]);
+	});
+
 	it("inserts whitespace gaps on the union timeline without extending a run's own range", () => {
 		const day = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
 		const series = multiRunSeries([

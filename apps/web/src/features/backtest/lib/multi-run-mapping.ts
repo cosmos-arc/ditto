@@ -33,13 +33,17 @@ export function runColor(index: number): string {
 export type RunNavInput = {
 	readonly runId: string;
 	readonly nav: readonly { readonly tradeDate: string; readonly nav: number }[];
+	/** 色槽位：勾选序原始索引。调用方过滤可见集后仍以此保色（缺省用数组位置）。 */
+	readonly slot?: number;
 };
 
 /** 可见 run → Cockpit 序列（归一化净值；空 nav → 空 bars 序列，保留图例位）。
  * 等宽线（CR #236-4）：勾选顺序是操作顺序而非优先级，序列区分只靠色板。
- * 并集时间轴（CR：内部缺失插 whitespace）：各 run 自身缺失的交易日若被其他 run
- * 覆盖，在该序列自身 [首日, 末日] 范围内补 close: null 断口，不视觉插值；
- * 序列范围之外的并集日期不外延（晚开始的 run 不加前导 null）。 */
+ * 色槽显式携带（CR）：隐藏过滤发生在并集对齐之前，剩余序列保持原色不重排。
+ * 并集时间轴（CR：内部缺失插 whitespace）：以传入集合（可见集）构建并集——
+ * 各 run 自身缺失的交易日若被集合内其他 run 覆盖，在该序列自身 [首日, 末日]
+ * 范围内补 close: null 断口，不视觉插值；序列范围之外的并集日期不外延
+ * （晚开始的 run 不加前导 null）。隐藏的 run 对可见序列与导出零影响。 */
 export function multiRunSeries(runs: readonly RunNavInput[]): CockpitSeriesSpec[] {
 	const normalized = runs.map((run) => normalizedNavPoints(run.nav));
 	const unionTimes = [...new Set(normalized.flat().map((bar) => bar.time))].sort((left, right) => left - right);
@@ -56,7 +60,7 @@ export function multiRunSeries(runs: readonly RunNavInput[]): CockpitSeriesSpec[
 		id: runs[index]!.runId,
 		label: runs[index]!.runId,
 		bars,
-		color: runColor(index),
+		color: runColor(runs[index]!.slot ?? index),
 		format: formatNav,
 	}));
 }

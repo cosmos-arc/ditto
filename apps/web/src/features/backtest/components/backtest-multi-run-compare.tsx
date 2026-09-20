@@ -92,10 +92,14 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 	const { resources, refetchAll } = useRunResources(runs);
 	const [hiddenRuns, setHiddenRuns] = useState<ReadonlySet<string>>(new Set());
 	// 色板绑定勾选序：先按全量选中集着色再过滤显隐，隐藏不重排剩余序列的颜色
+	// 先过滤可见集再喂 multiRunSeries（并集时间轴与断口只由可见 run 决定——
+	// 隐藏的 run 对可见序列与 CSV/PNG 导出零影响），色槽携带原始勾选序索引
 	const series = useMemo(
 		() =>
-			multiRunSeries(resources.map((item) => ({ runId: item.run.runId, nav: item.nav }))).filter(
-				(spec) => !hiddenRuns.has(spec.id),
+			multiRunSeries(
+				resources
+					.map((item, index) => ({ runId: item.run.runId, nav: item.nav, slot: index }))
+					.filter((run) => !hiddenRuns.has(run.runId)),
 			),
 		[resources, hiddenRuns],
 	);
