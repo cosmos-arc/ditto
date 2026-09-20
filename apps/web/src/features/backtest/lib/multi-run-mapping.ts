@@ -88,7 +88,9 @@ const money = (value: number): string => new Intl.NumberFormat("zh-CN", { maximu
 const percent = (value: number): string => `${value.toFixed(2)}%`;
 
 function metricsRow(run: BacktestRun, read: ReportReadState): MultiRunMetricsRow {
-	if (!read.report) {
+	// failed 优先于已缓存的 report：重取失败时缓存值与 fetch-error alert 矛盾，
+	// 按「读取失败」呈现（不把 stale 缓存当已发布指标）
+	if (!read.report || read.failed) {
 		// 加载中/读取失败是「未知」，404 落定才是「未发布」——不提前下结论
 		const annualized = read.pending ? "读取中…" : read.failed ? "读取失败" : "未发布";
 		return {

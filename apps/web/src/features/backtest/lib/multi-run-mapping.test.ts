@@ -126,5 +126,11 @@ describe("multi-run-mapping", () => {
 		expect(rows[1]).toMatchObject({ runId: "r2", annualizedReturn: "读取中…", reportPublished: false });
 		expect(rows[2]).toMatchObject({ runId: "r3", annualizedReturn: "读取失败", reportPublished: false });
 		expect(rows[3]).toMatchObject({ runId: "r4", annualizedReturn: "未发布", reportPublished: false });
+		// 缓存 report + 重取失败：failed 优先，不把 stale 缓存当已发布（与 fetch-error alert 一致）
+		const staleRows = metricsRows(
+			[run("r5")],
+			new Map([["r5", { report: report("r5"), pending: false, failed: true }]]),
+		);
+		expect(staleRows[0]).toMatchObject({ runId: "r5", annualizedReturn: "读取失败", reportPublished: false });
 	});
 });

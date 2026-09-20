@@ -174,6 +174,27 @@ describe("BacktestMultiRunCompare", () => {
 		expect(screen.getByTestId("multi-run-metrics").querySelectorAll("[data-run-id]")).toHaveLength(2);
 	});
 
+	it("renders a structured empty state when every selected run has no persisted NAV", async () => {
+		server.use(
+			http.get("/api/v1/backtests/runs/:runId/nav", () =>
+				HttpResponse.json({ detail: "nav not found", error_code: "BACKTEST_NAV_NOT_FOUND" }, { status: 404 }),
+			),
+			http.get("/api/v1/backtests/runs/:runId/report", () =>
+				HttpResponse.json({ detail: "report not found", error_code: "BACKTEST_REPORT_NOT_FOUND" }, { status: 404 }),
+			),
+		);
+		cockpitProps.length = 0;
+		render(<BacktestMultiRunCompare runs={[run("run-a"), run("run-b")]} />, { wrapper: createWrapper() });
+
+		const empty = await screen.findByText("所选 run 均未落盘净值证据（无 nav.parquet）。");
+		expect(empty.closest("[data-state='nav-empty']")).toBeInTheDocument();
+		// 空态替代空白画布：cockpit 不挂载，图例位保留
+		expect(screen.queryByTestId("chart-cockpit-stub")).not.toBeInTheDocument();
+		expect(screen.getByTestId("multi-run-legend").querySelectorAll("button")).toHaveLength(2);
+		// 差异表仍呈现（全部未发布）
+		expect(screen.getByTestId("multi-run-metrics").querySelectorAll("[data-run-id]")).toHaveLength(2);
+	});
+
 	it("surfaces non-404 fetch failures with a retry instead of collapsing them to absent evidence", async () => {
 		// run-b 的 nav 首次 500（获取失败），重试后恢复
 		let navBFailing = true;
