@@ -1,7 +1,7 @@
 # 架构决策记录 (Architecture Decision Records)
 
 **版本**: v0.4.0
-**最后更新**: 2026-09-08
+**最后更新**: 2026-09-20
 **状态**: ✅ 稳定
 
 ## 概要
@@ -34,6 +34,7 @@ ADR 记录项目中的重要架构决策，每个 ADR 包含：
 | [0011](0011-ci-verification-scope.md) | 分层验证与 CI 证明范围 | Accepted | 2026-09-08 | 普通 PR 按粗粒度影响范围验证，高风险与未知全量；同提交完整覆盖率证明 |
 | [0012](0012-development-skills-ownership.md) | 通用开发 skills 与 Ditto 治理的职责边界 | Accepted | 2026-09-08 | 上游独立维护，项目适配与交付闭环 |
 | [0013](0013-repository-knowledge-lifecycle.md) | 仓库知识归属与生命周期 | Accepted | 2026-09-08 | GitHub 管任务，仓库保存长期知识 |
+| [0014](0014-agent-sdk-agui-goalx-alignment.md) | 研究 Agent SDK 与 AG-UI 对齐 GoalX | Accepted | 2026-09-20 | 沿用 Python SDK，统一交互栈，保留 Ditto 状态、审批和恢复边界 |
 
 ## ADR 编号规则
 
