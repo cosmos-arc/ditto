@@ -111,15 +111,20 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 	);
 	const navLoading = resources.some((item) => item.navLoading);
 	const fetchError = resources.find((item) => item.fetchError)?.fetchError ?? null;
-	// PNG/CSV 导出 footer 内嵌有序 run 身份：导出的叠加图可独立归因（无 DOM 图例）
+	// PNG/CSV 导出 footer 内嵌 run 身份：跟随可见序列——隐藏 run 的数据不在导出物里，
+	// 身份不得声称其参与（导出物无 DOM 图例可供读者发现差异）
+	const visibleRunIds = useMemo(
+		() => resources.filter((item) => !hiddenRuns.has(item.run.runId)).map((item) => item.run.runId),
+		[resources, hiddenRuns],
+	);
 	const identity = useMemo(
 		() => ({
-			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一）：${runs.map((run) => run.runId).join(" · ")}`,
+			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一）：${visibleRunIds.join(" · ")}`,
 			snapshotId: null,
 			knowledgeCutoff: null,
 			publicationCutoff: null,
 		}),
-		[runs],
+		[visibleRunIds],
 	);
 
 	return (

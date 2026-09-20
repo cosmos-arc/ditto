@@ -76,6 +76,34 @@ describe("multi-run-mapping", () => {
 		expect(series[1]?.id).toBe("r2");
 	});
 
+	it("inserts whitespace gaps on the union timeline without extending a run's own range", () => {
+		const day = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
+		const series = multiRunSeries([
+			{
+				runId: "a",
+				// 自身缺 01-06：被另一 run 覆盖 → 内部补 null 断口，不视觉插值
+				nav: [
+					{ tradeDate: "2026-01-05", nav: 1 },
+					{ tradeDate: "2026-01-07", nav: 2 },
+				],
+			},
+			{
+				runId: "b",
+				// 晚开始的 run：并集里的 01-05 不外延为前导 null
+				nav: [
+					{ tradeDate: "2026-01-06", nav: 5 },
+					{ tradeDate: "2026-01-07", nav: 6 },
+				],
+			},
+		]);
+		expect(series[0]?.bars.map((bar) => [bar.time, bar.close])).toEqual([
+			[day("2026-01-05"), 1],
+			[day("2026-01-06"), null],
+			[day("2026-01-07"), 2],
+		]);
+		expect(series[1]?.bars.map((bar) => bar.time)).toEqual([day("2026-01-06"), day("2026-01-07")]);
+	});
+
 	it("builds metrics rows from published reports and distinguishes pending/failed/unpublished", () => {
 		const rows = metricsRows(
 			[run("r1"), run("r2"), run("r3"), run("r4")],

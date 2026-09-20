@@ -36,12 +36,26 @@ export type RunNavInput = {
 };
 
 /** 可见 run → Cockpit 序列（归一化净值；空 nav → 空 bars 序列，保留图例位）。
- * 等宽线（CR #236-4）：勾选顺序是操作顺序而非优先级，序列区分只靠色板。 */
+ * 等宽线（CR #236-4）：勾选顺序是操作顺序而非优先级，序列区分只靠色板。
+ * 并集时间轴（CR：内部缺失插 whitespace）：各 run 自身缺失的交易日若被其他 run
+ * 覆盖，在该序列自身 [首日, 末日] 范围内补 close: null 断口，不视觉插值；
+ * 序列范围之外的并集日期不外延（晚开始的 run 不加前导 null）。 */
 export function multiRunSeries(runs: readonly RunNavInput[]): CockpitSeriesSpec[] {
-	return runs.map((run, index) => ({
-		id: run.runId,
-		label: run.runId,
-		bars: normalizedNavPoints(run.nav),
+	const normalized = runs.map((run) => normalizedNavPoints(run.nav));
+	const unionTimes = [...new Set(normalized.flat().map((bar) => bar.time))].sort((left, right) => left - right);
+	const aligned = normalized.map((bars) => {
+		if (bars.length === 0) return bars;
+		const byTime = new Map(bars.map((bar) => [bar.time, bar]));
+		const first = bars[0]!.time;
+		const last = bars[bars.length - 1]!.time;
+		return unionTimes
+			.filter((time) => time >= first && time <= last)
+			.map((time) => byTime.get(time) ?? { time, close: null, volume: null });
+	});
+	return aligned.map((bars, index) => ({
+		id: runs[index]!.runId,
+		label: runs[index]!.runId,
+		bars,
 		color: runColor(index),
 		format: formatNav,
 	}));

@@ -167,6 +167,9 @@ describe("BacktestMultiRunCompare", () => {
 		});
 		// 色板索引绑定勾选序：隐藏首个 run 后，第二个 run 仍保持 --chart-run-2，不重排
 		expect(cockpitProps.at(-1)?.series[0]?.color).toBe("var(--chart-run-2)");
+		// 导出身份跟随可见序列：隐藏 run 不再出现在 PNG/CSV 身份里（数据不在导出物中）
+		expect(cockpitProps.at(-1)?.identity?.dataSourceName).toContain("run-b");
+		expect(cockpitProps.at(-1)?.identity?.dataSourceName).not.toContain("run-a");
 		// 差异表不受图例显隐影响，仍呈现全部选中 run
 		expect(screen.getByTestId("multi-run-metrics").querySelectorAll("[data-run-id]")).toHaveLength(2);
 	});
