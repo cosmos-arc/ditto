@@ -19,6 +19,7 @@ from ditto_data.catalog.certification import (
     EvidenceCheck,
 )
 from ditto_data.catalog.coverage import CoverageCollector, CoverageException
+from ditto_data.catalog.field_evidence import CertifiedField
 from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import (
@@ -84,6 +85,7 @@ class CertificationBuildRequest:
     target_from: date | None = None
     exceptions: tuple[CoverageException, ...] = ()
     snapshot_ids: tuple[str, ...] = ()
+    certified_fields: tuple[CertifiedField, ...] = ()
 
 
 class DataProductCertificationBuilder:
@@ -128,6 +130,23 @@ class DataProductCertificationBuilder:
             )
         entries, checkpoints = self._evidence_chain(request, snapshots)
         self._verify_snapshot_bindings(request, snapshots, entries, checkpoints)
+        snapshot_assets = {item.snapshot_id: item.canonical_asset for item in snapshots}
+        for field in request.certified_fields:
+            matching = [
+                entry
+                for entry in entries
+                if entry.asset == snapshot_assets.get(field.snapshot_id)
+            ]
+            if not matching or not all(
+                field.field in entry.schema.columns for entry in matching
+            ):
+                raise AppProcessError(
+                    "certified field is absent from the exact catalog schema"
+                )
+            if field.evidence_uri != request.consumer_evidence.evidence_uri:
+                raise AppProcessError(
+                    "certified field must reference verified consumer evidence"
+                )
 
         stage_digest = self._verify_lifecycle_stages(checkpoints)
         latest_request_end = max(
@@ -162,6 +181,7 @@ class DataProductCertificationBuilder:
             orjson.dumps([latest_request_end.isoformat(), list(snapshot_ids)])
         ).hexdigest()
         evidence = CertificationEvidence(
+            certified_fields=request.certified_fields,
             source_ids=source_ids,
             schema_versions=schema_versions,
             snapshot_ids=snapshot_ids,

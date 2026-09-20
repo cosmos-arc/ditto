@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from ditto_kernel.identity import InstrumentId
@@ -22,10 +22,21 @@ from ditto_strategy.selection.contracts import (
     StockSelectionSpec,
 )
 
-from ditto_application.exceptions import AppProcessError
+from ditto_application.exceptions import AppProcessError, AppQueryError
+from ditto_application.processes.selection.admission import (
+    assess_selection_fields,
+    missing_field,
+    observed_fields,
+)
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
     RunIndustryAndSecuritySelectionRequest,
+)
+from ditto_application.queries.field_admission import (
+    FieldAdmissionQuery,
+    FieldAdmissionReport,
+    FieldAdmissionRequest,
+    FieldRequirement,
 )
 from ditto_application.queries.selection_views import (
     SelectionWorkspaceReceiptView,
@@ -144,6 +155,9 @@ class CreateSelectionRunRequest:
     seed: int
     instruments: tuple[SelectionInstrumentDraft, ...]
     rotation_missing_inputs: tuple[str, ...] = ()
+    data_fields: tuple[FieldRequirement, ...] = ()
+    data_from: date | None = None
+    data_to: date | None = None
 
 
 def _factor_weights(
@@ -247,8 +261,58 @@ def _selection_input(value: CreateSelectionRunRequest) -> SelectionInputBundle:
 class SelectionWorkspaceFacade:
     """Validate public drafts through strategy contracts and execute the process."""
 
-    def __init__(self, process: RunIndustryAndSecuritySelection) -> None:
+    def __init__(
+        self,
+        process: RunIndustryAndSecuritySelection,
+        *,
+        admission: FieldAdmissionQuery,
+    ) -> None:
         self._process = process
+        self._admission = admission
+
+    def assess_admission(
+        self, request: CreateSelectionRunRequest
+    ) -> FieldAdmissionReport:
+        """Show exactly the data gate that create rechecks before any writes."""
+        if (
+            not request.data_fields
+            or request.data_from is None
+            or request.data_to is None
+        ):
+            return FieldAdmissionReport(
+                False,
+                "formal_research",
+                (missing_field("data_fields", "CONSUMER_BINDING_MISSING"),),
+            )
+        try:
+            return assess_selection_fields(
+                self._admission,
+                FieldAdmissionRequest(
+                    fields=request.data_fields,
+                    instrument_ids=tuple(
+                        int(item.instrument_id) for item in request.instruments
+                    ),
+                    required_from=request.data_from,
+                    required_to=request.data_to,
+                    knowledge_cutoff=request.knowledge_cutoff,
+                    publication_cutoff=request.publication_cutoff,
+                    purpose="formal_research",
+                ),
+                consumed_fields=_consumed_fields(request),
+                instrument_ids=tuple(
+                    int(item.instrument_id) for item in request.instruments
+                ),
+                snapshot_ids=frozenset(
+                    (
+                        *request.selection_source_snapshot_ids,
+                        *request.rotation_source_snapshot_ids,
+                    )
+                ),
+            )
+        except AppQueryError as exc:
+            raise AppProcessError(
+                str(exc), details={"reason": "invalid_data_admission_request"}
+            ) from exc
 
     def create(
         self,
@@ -266,6 +330,18 @@ class SelectionWorkspaceFacade:
                 str(exc),
                 details={"reason": "invalid_selection_request", **details},
             ) from exc
+        admission = self.assess_admission(request)
+        if not admission.allowed:
+            reasons = sorted(
+                {reason for item in admission.fields for reason in item.reason_codes}
+            )
+            raise AppProcessError(
+                "数据准入未通过:" + ", ".join(reasons),
+                details={
+                    "reason": "SELECTION_DATA_ADMISSION_BLOCKED",
+                    "reason_codes": reasons,
+                },
+            )
         try:
             receipt = self._process.execute(process_request)
         except StrategySpecError as exc:
@@ -277,3 +353,32 @@ class SelectionWorkspaceFacade:
             receipt.industry_rotation,
             receipt.selection_run,
         )
+
+
+def _consumed_fields(request: CreateSelectionRunRequest) -> frozenset[str]:
+    names: set[str] = {"universe_snapshot_id", "membership_version"}
+    if request.market_context_feature_set_id is not None:
+        names.add("market_context_feature_set_id")
+    excluded = {"factor_values", "declared_missing_inputs"}
+    if isinstance(request.selection_spec, EtfSelectionSpecDraft):
+        excluded.add("is_st")
+    if (
+        not isinstance(request.selection_spec, EtfSelectionSpecDraft)
+        or request.selection_spec.max_tracking_error is None
+    ):
+        excluded.add("tracking_error")
+    weighted = {item.name for item in request.selection_spec.factor_weights}
+    for instrument in request.instruments:
+        names.update(
+            observed_fields(
+                instrument, prefix="instruments", exclude=frozenset(excluded)
+            )
+        )
+        names.update(
+            f"instruments.factor_values.{item.name}"
+            for item in instrument.factor_values
+            if item.name in weighted
+        )
+    for industry in request.industries:
+        names.update(observed_fields(industry, prefix="industries"))
+    return frozenset(names)

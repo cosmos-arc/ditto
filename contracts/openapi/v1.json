@@ -1993,6 +1993,30 @@
         "title": "APIResponse[RunResponse]",
         "type": "object"
       },
+      "APIResponse_SelectionAdmissionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SelectionAdmissionResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[SelectionAdmissionResponse]",
+        "type": "object"
+      },
       "APIResponse_SelectionRunDiffResponse_": {
         "properties": {
           "data": {
@@ -10415,19 +10439,39 @@
             "title": "As Of",
             "type": "string"
           },
+          "data_fields": {
+            "$ref": "#/components/schemas/HttpTuple_SelectionFieldRequirementBody_",
+            "default": []
+          },
+          "data_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data From"
+          },
+          "data_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data To"
+          },
           "industries": {
-            "items": {
-              "$ref": "#/components/schemas/IndustryRotationObservationRequest"
-            },
-            "title": "Industries",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_IndustryRotationObservationRequest_"
           },
           "instruments": {
-            "items": {
-              "$ref": "#/components/schemas/SelectionInstrumentRequest"
-            },
-            "title": "Instruments",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_SelectionInstrumentRequest_"
           },
           "knowledge_cutoff": {
             "format": "date-time",
@@ -10461,20 +10505,12 @@
             "type": "string"
           },
           "rotation_missing_inputs": {
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "title": "Rotation Missing Inputs",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_str_",
+            "default": []
           },
           "rotation_source_snapshot_ids": {
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1,
-            "title": "Rotation Source Snapshot Ids",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_str__MinLen_min_length_1_",
+            "minLength": 1
           },
           "seed": {
             "minimum": 0.0,
@@ -10482,12 +10518,8 @@
             "type": "integer"
           },
           "selection_source_snapshot_ids": {
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1,
-            "title": "Selection Source Snapshot Ids",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_str__MinLen_min_length_1_",
+            "minLength": 1
           },
           "selection_spec": {
             "$ref": "#/components/schemas/SelectionSpecRequest"
@@ -13512,23 +13544,15 @@
             "type": "string"
           },
           "excluded_limit_states": {
+            "$ref": "#/components/schemas/HttpTuple_LimitStateRequest_",
             "default": [
               "limit_up",
               "limit_down"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/LimitStateRequest"
-            },
-            "title": "Excluded Limit States",
-            "type": "array"
+            ]
           },
           "factor_weights": {
-            "items": {
-              "$ref": "#/components/schemas/SelectionFactorWeightRequest"
-            },
-            "minItems": 1,
-            "title": "Factor Weights",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_",
+            "minLength": 1
           },
           "max_tracking_error": {
             "anyOf": [
@@ -15944,6 +15968,54 @@
         ],
         "title": "HoldoutSelectionReasonRequest",
         "type": "object"
+      },
+      "HttpTuple_IndustryRotationObservationRequest_": {
+        "items": {
+          "$ref": "#/components/schemas/IndustryRotationObservationRequest"
+        },
+        "type": "array"
+      },
+      "HttpTuple_LimitStateRequest_": {
+        "items": {
+          "$ref": "#/components/schemas/LimitStateRequest"
+        },
+        "type": "array"
+      },
+      "HttpTuple_SelectionFactorValueRequest_": {
+        "items": {
+          "$ref": "#/components/schemas/SelectionFactorValueRequest"
+        },
+        "type": "array"
+      },
+      "HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_": {
+        "items": {
+          "$ref": "#/components/schemas/SelectionFactorWeightRequest"
+        },
+        "type": "array"
+      },
+      "HttpTuple_SelectionFieldRequirementBody_": {
+        "items": {
+          "$ref": "#/components/schemas/SelectionFieldRequirementBody"
+        },
+        "type": "array"
+      },
+      "HttpTuple_SelectionInstrumentRequest_": {
+        "items": {
+          "$ref": "#/components/schemas/SelectionInstrumentRequest"
+        },
+        "type": "array"
+      },
+      "HttpTuple_str_": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "HttpTuple_str__MinLen_min_length_1_": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
       },
       "ImpactModel": {
         "description": "冲击成本模型枚举。",
@@ -21965,6 +22037,44 @@
         "title": "ScenarioRiskPreviewResponse",
         "type": "object"
       },
+      "SelectionAdmissionResponse": {
+        "description": "Read-only preview of the server's mandatory create-run gate.",
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/SelectionFieldAdmissionResponse"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "purpose": {
+            "enum": [
+              "display",
+              "exploration",
+              "formal_research",
+              "promotion_paper"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowed",
+          "purpose",
+          "fields",
+          "rule_version"
+        ],
+        "title": "SelectionAdmissionResponse",
+        "type": "object"
+      },
       "SelectionCandidateResponse": {
         "description": "One selected candidate and exact ranking evidence.",
         "properties": {
@@ -22161,6 +22271,158 @@
         "title": "SelectionFactorWeightRequest",
         "type": "object"
       },
+      "SelectionFieldAdmissionResponse": {
+        "description": "Field-scoped qualification and actionable durable evidence references.",
+        "properties": {
+          "allowed_uses": {
+            "items": {
+              "enum": [
+                "display",
+                "exploration",
+                "formal_research",
+                "promotion_paper"
+              ],
+              "type": "string"
+            },
+            "title": "Allowed Uses",
+            "type": "array"
+          },
+          "certification_report_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certification Report Id"
+          },
+          "consumer_field": {
+            "title": "Consumer Field",
+            "type": "string"
+          },
+          "covered_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Covered From"
+          },
+          "covered_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Covered To"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "evidence_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Uri"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "license_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Record Id"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "time_precision": {
+            "title": "Time Precision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "field",
+          "snapshot_id",
+          "consumer_field",
+          "allowed_uses",
+          "reason_codes",
+          "license_record_id",
+          "certification_report_id",
+          "covered_from",
+          "covered_to",
+          "time_precision",
+          "evidence_uri"
+        ],
+        "title": "SelectionFieldAdmissionResponse",
+        "type": "object"
+      },
+      "SelectionFieldRequirementBody": {
+        "additionalProperties": false,
+        "description": "A reviewed dependency binding, never a client-provided permission.",
+        "properties": {
+          "consumer_field": {
+            "minLength": 1,
+            "title": "Consumer Field",
+            "type": "string"
+          },
+          "dataset_id": {
+            "minLength": 1,
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "field": {
+            "minLength": 1,
+            "title": "Field",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "minLength": 1,
+            "title": "Snapshot Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "field",
+          "snapshot_id",
+          "consumer_field"
+        ],
+        "title": "SelectionFieldRequirementBody",
+        "type": "object"
+      },
       "SelectionInstrumentRequest": {
         "additionalProperties": false,
         "description": "Normalized factor and hard-filter facts for one instrument.",
@@ -22178,19 +22440,11 @@
             "title": "Average Turnover"
           },
           "declared_missing_inputs": {
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "title": "Declared Missing Inputs",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_str_",
+            "default": []
           },
           "factor_values": {
-            "items": {
-              "$ref": "#/components/schemas/SelectionFactorValueRequest"
-            },
-            "title": "Factor Values",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_SelectionFactorValueRequest_"
           },
           "industry_id": {
             "anyOf": [
@@ -22722,23 +22976,15 @@
             "type": "string"
           },
           "excluded_limit_states": {
+            "$ref": "#/components/schemas/HttpTuple_LimitStateRequest_",
             "default": [
               "limit_up",
               "limit_down"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/LimitStateRequest"
-            },
-            "title": "Excluded Limit States",
-            "type": "array"
+            ]
           },
           "factor_weights": {
-            "items": {
-              "$ref": "#/components/schemas/SelectionFactorWeightRequest"
-            },
-            "minItems": 1,
-            "title": "Factor Weights",
-            "type": "array"
+            "$ref": "#/components/schemas/HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_",
+            "minLength": 1
           },
           "min_average_turnover": {
             "minimum": 0.0,
@@ -45003,6 +45249,123 @@
           "research"
         ],
         "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/selections/admission": {
+      "post": {
+        "description": "Preview exact field admission without saving or changing certification.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "selections_assess_admission",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSelectionRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_SelectionAdmissionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Assess Selection Admission",
+        "tags": [
+          "selections"
+        ],
+        "x-ditto-maturity": "initial-focus"
       }
     },
     "/api/v1/selections/industry-rotations/{snapshot_id}": {

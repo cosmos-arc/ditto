@@ -42,3 +42,7 @@ export function compareSelectionRuns(beforeRunId: string, afterRunId: string): P
 export function createSelectionRun(body: CreateSelectionRunBody): Promise<SelectionWorkspaceReceipt> {
 	return apiClient.post("/api/v1/selections/runs", { body });
 }
+
+export function assessSelectionAdmission(body: CreateSelectionRunBody) {
+	return apiClient.post("/api/v1/selections/admission", { body });
+}

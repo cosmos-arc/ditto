@@ -89,3 +89,17 @@ describe("SelectionWorkspacePage", () => {
 		await expect(screen.findByText("已保存 SelectionRun run-one")).resolves.toBeInTheDocument();
 	});
 });
+
+it("previews field admission and clears stale qualification when the input changes", async () => {
+	const user = userEvent.setup();
+	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+	await user.click(screen.getByText("新建运行 · 导入规范化输入包"));
+	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), {
+		target: { value: JSON.stringify(selectionRunInputFixture) },
+	});
+	await user.click(screen.getByRole("button", { name: "检查字段准入" }));
+	await expect(screen.findByText("请补齐该字段的认证与范围证据，再重新检查。")).resolves.toBeInTheDocument();
+	expect(screen.getByRole("combobox", { name: "选择输入字段" })).toBeInTheDocument();
+	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), { target: { value: "{}" } });
+	expect(screen.queryByRole("combobox", { name: "选择输入字段" })).not.toBeInTheDocument();
+});

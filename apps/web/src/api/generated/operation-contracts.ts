@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: b58c16c9898ccac41bd73c17d2a4f7d50e39f290a3ce12784d4fb52a918c4d99
+ * Schema SHA-256: e8a7c32abd11c33b797a5aa15502140cf4e8c48f9411bc2b38b1905d298b3ca8
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1678,6 +1678,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "post /api/v1/selections/admission": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "post /api/v1/selections/runs": {
     "201": ["application/json"],
     "400": ["application/json"],
@@ -2829,6 +2839,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["Idempotency-Key", "X-Ditto-API-Contract-Version"],
       "path": ["experiment_id"],
+    },
+  },
+  "post /api/v1/selections/admission": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "post /api/v1/selections/runs": {

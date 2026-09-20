@@ -240,3 +240,33 @@ def test_builder_rejects_unknown_snapshot_allowlist_entry(tmp_path) -> None:
 
     with pytest.raises(AppProcessError, match="unknown IDs"):
         builder.build(replace(request, snapshot_ids=("missing-snapshot",)))
+
+
+def test_builder_rejects_field_claim_without_exact_schema_evidence(tmp_path) -> None:
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    builder, request = _fixture(tmp_path)
+    original = builder.build(request)
+    field = CertifiedField(
+        field="unobserved_column",
+        snapshot_id=original.evidence.snapshot_ids[0],
+        instrument_ids=(600000,),
+        covered_from=request.target_to,
+        covered_to=request.target_to,
+        available_at=None,
+        publication_at=None,
+        time_precision="unknown",
+        evidence_uri=request.consumer_evidence.evidence_uri,
+    )
+    with pytest.raises(AppProcessError, match="exact catalog schema"):
+        builder.build(replace(request, certified_fields=(field,)))
+    admitted = replace(field, field="close")
+    assert builder.build(
+        replace(request, certified_fields=(admitted,))
+    ).evidence.certified_fields == (admitted,)
+    with pytest.raises(AppProcessError, match="verified consumer evidence"):
+        builder.build(
+            replace(
+                request, certified_fields=(replace(admitted, evidence_uri="unknown"),)
+            )
+        )

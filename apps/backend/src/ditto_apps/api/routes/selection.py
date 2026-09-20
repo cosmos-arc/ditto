@@ -22,6 +22,7 @@ from ditto_application.processes.selection.facade import (
     SelectionWorkspaceFacade,
     StockSelectionSpecDraft,
 )
+from ditto_application.queries.field_admission import FieldRequirement
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from fastapi import APIRouter, Path, Query, status
@@ -33,6 +34,7 @@ from ditto_apps.models.selection import (
     CreateSelectionRunBody,
     IndustryRotationResponse,
     ResearchCaseResponse,
+    SelectionAdmissionResponse,
     SelectionRunDiffResponse,
     SelectionRunResponse,
     SelectionWorkspaceReceiptResponse,
@@ -80,6 +82,14 @@ def _application_request(body: CreateSelectionRunBody) -> CreateSelectionRunRequ
             excluded_limit_states=spec.excluded_limit_states,
         )
     return CreateSelectionRunRequest(
+        data_fields=tuple(
+            FieldRequirement(
+                item.dataset_id, item.field, item.snapshot_id, item.consumer_field
+            )
+            for item in body.data_fields
+        ),
+        data_from=body.data_from,
+        data_to=body.data_to,
         as_of=body.as_of,
         knowledge_cutoff=body.knowledge_cutoff,
         publication_cutoff=body.publication_cutoff,
@@ -260,3 +270,25 @@ async def compare_selection_runs(
     except AppQueryError as exc:
         _raise_query_error(exc)
     return APIResponse(data=SelectionRunDiffResponse.model_validate(value))
+
+
+@router.post(
+    "/admission",
+    response_model=APIResponse[SelectionAdmissionResponse],
+    operation_id="selections_assess_admission",
+)
+@inject
+async def assess_selection_admission(
+    body: CreateSelectionRunBody,
+    facade: Annotated[SelectionWorkspaceFacade, FromComponent()],
+) -> APIResponse[SelectionAdmissionResponse]:
+    """Preview exact field admission without saving or changing certification."""
+    try:
+        value = await asyncio.to_thread(
+            facade.assess_admission, _application_request(body)
+        )
+    except AppProcessError as exc:
+        raise UnprocessableEntityError(
+            str(exc), error_code=str(exc.details.get("reason", "SELECTION_RUN_INVALID"))
+        ) from exc
+    return APIResponse(data=SelectionAdmissionResponse.model_validate(value))

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog.certification import CertificationReader
+from ditto_data.catalog.license import DatasetLicenseReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.industry_rotation.store import (
     IndustryRotationReader,
@@ -18,6 +21,7 @@ from ditto_application.processes.selection.facade import SelectionWorkspaceFacad
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
+from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.selection_evidence import (
     IndustryRotationEvidenceQueryFacade,
@@ -54,9 +58,10 @@ class AppSelectionProvider(Provider):
     def selection_workspace_facade(
         self,
         process: RunIndustryAndSecuritySelection,
+        admission: FieldAdmissionQuery,
     ) -> SelectionWorkspaceFacade:
         """Expose typed create-selection requests to transport adapters."""
-        return SelectionWorkspaceFacade(process)
+        return SelectionWorkspaceFacade(process, admission=admission)
 
     @provide
     def create_research_case_from_selection(
@@ -98,3 +103,13 @@ class AppSelectionProvider(Provider):
     ) -> SelectionRunEvidenceQueryFacade:
         """Bind exact saved runs to the Agent-facing application port."""
         return SelectionRunEvidenceQueryFacade(reader)
+
+    @provide
+    def field_admission_query(
+        self,
+        snapshots: ProviderSnapshotReader,
+        licenses: DatasetLicenseReader,
+        certifications: CertificationReader,
+    ) -> FieldAdmissionQuery:
+        """Reuse durable data evidence for both selection checks and previews."""
+        return FieldAdmissionQuery(snapshots, licenses, certifications)

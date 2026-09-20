@@ -165,3 +165,29 @@ done
 # 4. 验证
 uv run --no-sync ditto ops promotion-history stock_daily
 ```
+
+## 字段用途准入与选股输入迁移（#256）
+
+`field-admission-v1` 是 Selection 创建入口的数据门禁。`POST /api/v1/selections/admission`
+只读检查与创建请求相同的输入包；`POST /api/v1/selections/runs` 在任何保存之前重新检查。
+页面可选择字段查看用途、范围、时间精度、许可/认证和快照引用。数据合格仍不能代替策略验证、晋级或 Paper 审批。
+
+旧输入包须补充 `data_from`、`data_to` 及 `data_fields`。每个绑定包含
+`dataset_id`、`field`、`snapshot_id`、`consumer_field`；例如
+`consumer_field="instruments.factor_values.liquidity_rank"`。服务端从实际消费的因子、
+过滤字段、行业观察、证券池及上下文引用推导必需绑定；额外未消费字段不阻塞本次选股。
+未提供绑定的旧请求保留原入口，返回 `SELECTION_DATA_ADMISSION_BLOCKED`，不能继续生成正式输入。
+既有已保存运行仍可按精确 ID 读取，不重写其身份。
+
+字段证明存入既有 `DatasetCertificationReport.evidence.certified_fields`，使用
+`selection-fields-v1` profile。`CertifiedField` 指定字段、精确快照、显式证券集合、覆盖区间、
+可得/公开时间上界、时间精度、原件引用和获审查的 `consumer_fields` 依赖映射。
+`CertificationBuildRequest.certified_fields` 校验真实 catalog 字段和消费者证据引用；
+调用已有 builder、freeze、review 流程，不从网页输入直接写入资格。
+审核者需确认映射、证券范围和时间上界有原件支持；日期精度须先通过交易日历解析成保守时间上界，
+不能用摄取时间代替。缺失时间保留未知。许可有效期按实际使用日（Asia/Shanghai）校验，
+与历史数据覆盖区间分开；展示和探索同样执行许可限制。
+
+旧报告没有字段证明时不推断合格，其序列化与 hash 不变。补证通过新的认证与审核完成；
+撤销保留旧报告但阻止新的正式消费。已有 live discovery 脚本或外部输入包需先完成同样的字段绑定与
+认证迁移后再运行；本改动不自动填造认证、购买权益或修改真实 catalog。

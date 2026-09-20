@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: b58c16c9898ccac41bd73c17d2a4f7d50e39f290a3ce12784d4fb52a918c4d99
+ * Schema SHA-256: e8a7c32abd11c33b797a5aa15502140cf4e8c48f9411bc2b38b1905d298b3ca8
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3277,6 +3277,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/selections/admission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assess Selection Admission
+         * @description Preview exact field admission without saving or changing certification.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["selections_assess_admission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/selections/industry-rotations/{snapshot_id}": {
         parameters: {
             query?: never;
@@ -4534,6 +4556,13 @@ export interface components {
         APIResponse_RunResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["RunResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[SelectionAdmissionResponse] */
+        APIResponse_SelectionAdmissionResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["SelectionAdmissionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -8706,10 +8735,14 @@ export interface components {
              * Format: date-time
              */
             as_of: string;
-            /** Industries */
-            industries: components["schemas"]["IndustryRotationObservationRequest"][];
-            /** Instruments */
-            instruments: components["schemas"]["SelectionInstrumentRequest"][];
+            /** @default [] */
+            data_fields: components["schemas"]["HttpTuple_SelectionFieldRequirementBody_"];
+            /** Data From */
+            data_from?: string | null;
+            /** Data To */
+            data_to?: string | null;
+            industries: components["schemas"]["HttpTuple_IndustryRotationObservationRequest_"];
+            instruments: components["schemas"]["HttpTuple_SelectionInstrumentRequest_"];
             /**
              * Knowledge Cutoff
              * Format: date-time
@@ -8729,17 +8762,12 @@ export interface components {
              * @default industry-rotation-v1
              */
             rotation_algorithm_version: string;
-            /**
-             * Rotation Missing Inputs
-             * @default []
-             */
-            rotation_missing_inputs: string[];
-            /** Rotation Source Snapshot Ids */
-            rotation_source_snapshot_ids: string[];
+            /** @default [] */
+            rotation_missing_inputs: components["schemas"]["HttpTuple_str_"];
+            rotation_source_snapshot_ids: components["schemas"]["HttpTuple_str__MinLen_min_length_1_"];
             /** Seed */
             seed: number;
-            /** Selection Source Snapshot Ids */
-            selection_source_snapshot_ids: string[];
+            selection_source_snapshot_ids: components["schemas"]["HttpTuple_str__MinLen_min_length_1_"];
             selection_spec: components["schemas"]["SelectionSpecRequest"];
             /** Universe Snapshot Id */
             universe_snapshot_id: string;
@@ -10151,15 +10179,13 @@ export interface components {
              */
             asset_kind: "etf";
             /**
-             * Excluded Limit States
              * @default [
              *       "limit_up",
              *       "limit_down"
              *     ]
              */
-            excluded_limit_states: components["schemas"]["LimitStateRequest"][];
-            /** Factor Weights */
-            factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
+            excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
+            factor_weights: components["schemas"]["HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_"];
             /** Max Tracking Error */
             max_tracking_error?: number | null;
             /** Min Average Turnover */
@@ -11260,6 +11286,14 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        HttpTuple_IndustryRotationObservationRequest_: components["schemas"]["IndustryRotationObservationRequest"][];
+        HttpTuple_LimitStateRequest_: components["schemas"]["LimitStateRequest"][];
+        HttpTuple_SelectionFactorValueRequest_: components["schemas"]["SelectionFactorValueRequest"][];
+        HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_: components["schemas"]["SelectionFactorWeightRequest"][];
+        HttpTuple_SelectionFieldRequirementBody_: components["schemas"]["SelectionFieldRequirementBody"][];
+        HttpTuple_SelectionInstrumentRequest_: components["schemas"]["SelectionInstrumentRequest"][];
+        HttpTuple_str_: string[];
+        HttpTuple_str__MinLen_min_length_1_: string[];
         /**
          * ImpactModel
          * @description 冲击成本模型枚举。
@@ -14426,6 +14460,23 @@ export interface components {
             valuation_snapshot_id: string;
         };
         /**
+         * SelectionAdmissionResponse
+         * @description Read-only preview of the server's mandatory create-run gate.
+         */
+        SelectionAdmissionResponse: {
+            /** Allowed */
+            allowed: boolean;
+            /** Fields */
+            fields: components["schemas"]["SelectionFieldAdmissionResponse"][];
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "display" | "exploration" | "formal_research" | "promotion_paper";
+            /** Rule Version */
+            rule_version: string;
+        };
+        /**
          * SelectionCandidateResponse
          * @description One selected candidate and exact ranking evidence.
          */
@@ -14506,19 +14557,59 @@ export interface components {
             weight: number;
         };
         /**
+         * SelectionFieldAdmissionResponse
+         * @description Field-scoped qualification and actionable durable evidence references.
+         */
+        SelectionFieldAdmissionResponse: {
+            /** Allowed Uses */
+            allowed_uses: ("display" | "exploration" | "formal_research" | "promotion_paper")[];
+            /** Certification Report Id */
+            certification_report_id: string | null;
+            /** Consumer Field */
+            consumer_field: string;
+            /** Covered From */
+            covered_from: string | null;
+            /** Covered To */
+            covered_to: string | null;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Evidence Uri */
+            evidence_uri: string | null;
+            /** Field */
+            field: string;
+            /** License Record Id */
+            license_record_id: string | null;
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Time Precision */
+            time_precision: string;
+        };
+        /**
+         * SelectionFieldRequirementBody
+         * @description A reviewed dependency binding, never a client-provided permission.
+         */
+        SelectionFieldRequirementBody: {
+            /** Consumer Field */
+            consumer_field: string;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Field */
+            field: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+        };
+        /**
          * SelectionInstrumentRequest
          * @description Normalized factor and hard-filter facts for one instrument.
          */
         SelectionInstrumentRequest: {
             /** Average Turnover */
             average_turnover?: number | null;
-            /**
-             * Declared Missing Inputs
-             * @default []
-             */
-            declared_missing_inputs: string[];
-            /** Factor Values */
-            factor_values: components["schemas"]["SelectionFactorValueRequest"][];
+            /** @default [] */
+            declared_missing_inputs: components["schemas"]["HttpTuple_str_"];
+            factor_values: components["schemas"]["HttpTuple_SelectionFactorValueRequest_"];
             /** Industry Id */
             industry_id?: string | null;
             /** Instrument Id */
@@ -14732,15 +14823,13 @@ export interface components {
              */
             asset_kind: "stock";
             /**
-             * Excluded Limit States
              * @default [
              *       "limit_up",
              *       "limit_down"
              *     ]
              */
-            excluded_limit_states: components["schemas"]["LimitStateRequest"][];
-            /** Factor Weights */
-            factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
+            excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
+            factor_weights: components["schemas"]["HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_"];
             /** Min Average Turnover */
             min_average_turnover: number;
             /** Min Listing Days */
@@ -29185,6 +29274,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_StrategyVersionResponse__"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    selections_assess_admission: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSelectionRunBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_SelectionAdmissionResponse_"];
                 };
             };
             /** @description Bad request */

@@ -7,6 +7,31 @@ import {
 } from "../fixtures/selection";
 
 export const selectionHandlers = [
+	http.post("/api/v1/selections/admission", () =>
+		HttpResponse.json({
+			data: {
+				allowed: false,
+				purpose: "formal_research",
+				rule_version: "field-admission-v1",
+				fields: [
+					{
+						dataset_id: "stock_daily",
+						field: "amount",
+						snapshot_id: "synthetic-snapshot",
+						consumer_field: "instruments.average_turnover",
+						allowed_uses: [],
+						reason_codes: ["FIELD_EVIDENCE_MISSING"],
+						license_record_id: null,
+						certification_report_id: null,
+						covered_from: null,
+						covered_to: null,
+						time_precision: "unknown",
+						evidence_uri: null,
+					},
+				],
+			},
+		}),
+	),
 	http.get("/api/v1/selections/runs", ({ request }) => {
 		const specId = new URL(request.url).searchParams.get("spec_id");
 		return HttpResponse.json({ data: selectionRunFixtures.filter((run) => run.spec_id === specId) });

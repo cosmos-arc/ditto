@@ -283,3 +283,35 @@ def test_review_revoke_and_recertify_are_append_only() -> None:
 def _store() -> SQLiteCertificationStore:
     pool = SQLitePool(":memory:")
     return SQLiteCertificationStore(SQLiteClient(pool))
+
+
+def test_field_evidence_round_trips_without_changing_legacy_report_identity() -> None:
+    """Field-scoped approval extends existing reports without rehashing old ones."""
+    from ditto_data.catalog.certification import report_from_json, report_to_json
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    legacy = _report(generated_at=datetime(2026, 7, 18, tzinfo=UTC))
+    legacy_json = report_to_json(legacy)
+    assert "certified_fields" not in legacy_json
+    assert report_from_json(legacy_json) == legacy
+    field = CertifiedField(
+        field="is_suspended",
+        snapshot_id="snapshot:stock_status:2016",
+        instrument_ids=(600000,),
+        covered_from=date(2016, 1, 4),
+        covered_to=date(2016, 1, 6),
+        available_at=datetime(2016, 1, 7, tzinfo=UTC),
+        publication_at=datetime(2016, 1, 7, tzinfo=UTC),
+        time_precision="timestamp",
+        evidence_uri="evidence://stock-status/field-validation",
+    )
+    evidence = replace(legacy.evidence, certified_fields=(field,))
+    extended = DatasetCertificationReport.create(
+        dataset_id=legacy.dataset_id,
+        profile=legacy.profile,
+        coverage=legacy.coverage,
+        evidence=evidence,
+        generated_at=legacy.generated_at,
+    )
+    assert extended.content_hash != legacy.content_hash
+    assert report_from_json(report_to_json(extended)) == extended

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Literal, cast
 
 from ditto_kernel.identity import InstrumentId
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+
+from ditto_apps.models.technical_analysis import HttpDateTime
 
 __all__ = [
     "CreateResearchCaseBody",
@@ -39,6 +41,17 @@ def _parse_http_array(value: object) -> object:
     if isinstance(value, list):
         return tuple(cast("list[object]", value))
     return value
+
+
+HttpDate = Annotated[
+    date | None,
+    BeforeValidator(
+        lambda value: date.fromisoformat(value) if isinstance(value, str) else value
+    ),
+]
+
+
+type HttpTuple[T] = Annotated[tuple[T, ...], BeforeValidator(_parse_http_array)]
 
 
 CandidateInstrumentIds = Annotated[
@@ -130,8 +143,8 @@ class StockSelectionSpecRequest(BaseModel):
     top_k: int = Field(gt=0)
     min_average_turnover: float = Field(ge=0.0)
     min_listing_days: int = Field(gt=0)
-    factor_weights: tuple[SelectionFactorWeightRequest, ...] = Field(min_length=1)
-    excluded_limit_states: tuple[LimitStateRequest, ...] = (
+    factor_weights: HttpTuple[SelectionFactorWeightRequest] = Field(min_length=1)
+    excluded_limit_states: HttpTuple[LimitStateRequest] = (
         "limit_up",
         "limit_down",
     )
@@ -148,9 +161,9 @@ class EtfSelectionSpecRequest(BaseModel):
     top_k: int = Field(gt=0)
     min_average_turnover: float = Field(ge=0.0)
     min_listing_days: int = Field(gt=0)
-    factor_weights: tuple[SelectionFactorWeightRequest, ...] = Field(min_length=1)
+    factor_weights: HttpTuple[SelectionFactorWeightRequest] = Field(min_length=1)
     max_tracking_error: float | None = Field(default=None, ge=0.0)
-    excluded_limit_states: tuple[LimitStateRequest, ...] = (
+    excluded_limit_states: HttpTuple[LimitStateRequest] = (
         "limit_up",
         "limit_down",
     )
@@ -170,14 +183,54 @@ class SelectionInstrumentRequest(BaseModel):
     instrument_id: InstrumentId = Field(gt=0)
     instrument_name: str = Field(min_length=1)
     industry_id: str | None = None
-    factor_values: tuple[SelectionFactorValueRequest, ...]
+    factor_values: HttpTuple[SelectionFactorValueRequest]
     average_turnover: float | None = Field(default=None, ge=0.0)
     is_st: bool | None = None
     is_suspended: bool | None = None
     listing_days: int | None = Field(default=None, ge=0)
     limit_state: LimitStateRequest | None = None
     tracking_error: float | None = Field(default=None, ge=0.0)
-    declared_missing_inputs: tuple[str, ...] = ()
+    declared_missing_inputs: HttpTuple[str] = ()
+
+
+class SelectionFieldRequirementBody(BaseModel):
+    """A reviewed dependency binding, never a client-provided permission."""
+
+    model_config = _REQUEST_CONFIG
+    dataset_id: str = Field(min_length=1)
+    field: str = Field(min_length=1)
+    snapshot_id: str = Field(min_length=1)
+    consumer_field: str = Field(min_length=1)
+
+
+class SelectionFieldAdmissionResponse(BaseModel):
+    """Field-scoped qualification and actionable durable evidence references."""
+
+    model_config = _RESPONSE_CONFIG
+    dataset_id: str
+    field: str
+    snapshot_id: str
+    consumer_field: str
+    allowed_uses: tuple[
+        Literal["display", "exploration", "formal_research", "promotion_paper"], ...
+    ]
+    reason_codes: tuple[str, ...]
+    license_record_id: str | None
+    certification_report_id: str | None
+    covered_from: date | None
+    covered_to: date | None
+    time_precision: str
+    evidence_uri: str | None
+
+
+class SelectionAdmissionResponse(BaseModel):
+    """Read-only preview of the server's mandatory create-run gate."""
+
+    model_config = _RESPONSE_CONFIG
+    allowed: bool
+    purpose: Literal["display", "exploration", "formal_research", "promotion_paper"]
+    fields: tuple[SelectionFieldAdmissionResponse, ...]
+    rule_version: str
 
 
 class CreateSelectionRunBody(BaseModel):
@@ -185,20 +238,23 @@ class CreateSelectionRunBody(BaseModel):
 
     model_config = _REQUEST_CONFIG
 
-    as_of: datetime
-    knowledge_cutoff: datetime
-    publication_cutoff: datetime
-    rotation_source_snapshot_ids: tuple[str, ...] = Field(min_length=1)
+    as_of: HttpDateTime
+    knowledge_cutoff: HttpDateTime
+    publication_cutoff: HttpDateTime
+    rotation_source_snapshot_ids: HttpTuple[str] = Field(min_length=1)
     market_context_feature_set_id: str | None = None
     membership_version: str = Field(min_length=1)
     rotation_algorithm_version: str = "industry-rotation-v1"
-    industries: tuple[IndustryRotationObservationRequest, ...]
-    rotation_missing_inputs: tuple[str, ...] = ()
+    industries: HttpTuple[IndustryRotationObservationRequest]
+    rotation_missing_inputs: HttpTuple[str] = ()
     universe_snapshot_id: str = Field(min_length=1)
-    selection_source_snapshot_ids: tuple[str, ...] = Field(min_length=1)
+    selection_source_snapshot_ids: HttpTuple[str] = Field(min_length=1)
     selection_spec: SelectionSpecRequest
     seed: int = Field(ge=0)
-    instruments: tuple[SelectionInstrumentRequest, ...]
+    instruments: HttpTuple[SelectionInstrumentRequest]
+    data_fields: HttpTuple[SelectionFieldRequirementBody] = ()
+    data_from: HttpDate = None
+    data_to: HttpDate = None
 
 
 class IndustryRotationContributionResponse(BaseModel):

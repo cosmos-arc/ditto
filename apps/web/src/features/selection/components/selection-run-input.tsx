@@ -1,6 +1,9 @@
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { CreateSelectionRunBody } from "../api";
+import { toAdmissionView } from "../admission";
+import { assessSelectionAdmission, type CreateSelectionRunBody } from "../api";
+import { SelectionAdmission } from "./selection-admission";
 
 const STORAGE_KEY = "ditto.selection-run-input.v1";
 
@@ -31,6 +34,11 @@ export function SelectionRunInput({
 }) {
 	const [value, setValue] = useState(readSavedSelectionInput);
 	const [message, setMessage] = useState<string | null>(null);
+	const inspection = useMutation({
+		mutationFn: async (raw: string) => toAdmissionView(await assessSelectionAdmission(parseRunInput(raw))),
+	});
+	const currentInspection = inspection.variables === value;
+	const admission = currentInspection ? inspection.data : undefined;
 
 	function validated(): CreateSelectionRunBody | null {
 		try {
@@ -59,7 +67,7 @@ export function SelectionRunInput({
 			</summary>
 			<div className="grid gap-3 px-4 pb-4">
 				<p className="max-w-3xl text-xs leading-5 text-(--color-foreground-tertiary)">
-					输入包必须来自已认证 snapshot；这里不会以演示值补齐价格、因子或可交易性事实。
+					输入包需绑定字段来源及数据区间。检查许可、认证与时点后，服务端会在执行时再次校验。
 				</p>
 				<textarea
 					aria-label="Selection 输入 JSON"
@@ -70,12 +78,22 @@ export function SelectionRunInput({
 					onChange={(event) => setValue(event.currentTarget.value)}
 				/>
 				<div className="flex items-center gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						disabled={inspection.isPending || !value.trim()}
+						onClick={() => {
+							if (validated()) inspection.mutate(value);
+						}}
+					>
+						{inspection.isPending ? "检查中…" : "检查字段准入"}
+					</Button>
 					<Button type="button" variant="outline" onClick={save}>
 						校验并保存输入
 					</Button>
 					<Button
 						type="button"
-						disabled={busy || value.trim().length === 0}
+						disabled={busy || value.trim().length === 0 || admission?.allowed === false}
 						onClick={() => {
 							const input = validated();
 							if (input) onRun(input);
@@ -89,6 +107,8 @@ export function SelectionRunInput({
 						</span>
 					)}
 				</div>
+				{currentInspection && inspection.isError && <p role="alert">{inspection.error.message}</p>}
+				{admission && <SelectionAdmission key={value} value={admission} />}
 			</div>
 		</details>
 	);
