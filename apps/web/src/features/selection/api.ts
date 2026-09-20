@@ -1,6 +1,7 @@
 import type { components } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
 
+export type AdmissionResponse = components["schemas"]["SelectionAdmissionResponse"];
 export type CreateSelectionRunBody = components["schemas"]["CreateSelectionRunBody"];
 export type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
 export type SelectionRun = components["schemas"]["SelectionRunResponse"];

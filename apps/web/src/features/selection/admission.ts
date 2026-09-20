@@ -1,6 +1,4 @@
-import type { components } from "@/api/generated/schema";
-
-type AdmissionResponse = components["schemas"]["SelectionAdmissionResponse"];
+import type { AdmissionResponse } from "./api";
 
 const PURPOSES: Record<string, string> = {
 	display: "展示",
@@ -15,7 +13,7 @@ const REASONS: Record<string, string> = {
 	CERTIFICATION_MISSING: "没有有效认证，请检查审核或撤销记录。",
 	LICENSE_MISSING: "未找到来源许可，请核实并登记相应用途权益。",
 	LICENSE_RESTRICTED: "当前许可不允许此用途，请调整用途或核实权益。",
-	LICENSE_INTERVAL_MISSING: "许可未覆盖所需区间，请核实有效期。",
+	LICENSE_INTERVAL_MISSING: "许可在当前使用日无效，请核实有效期。",
 	LICENSE_CERTIFICATION_CONFLICT: "许可与认证引用不一致，请重新核对证据。",
 	FIELD_COVERAGE_MISSING: "字段覆盖不足，请缩小研究区间或补齐证据。",
 	INSTRUMENT_SCOPE_MISSING: "证券不在认证范围内，请调整证券范围。",
