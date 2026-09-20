@@ -27,9 +27,9 @@ import {
 	directionColorToken,
 	FRESHNESS_THRESHOLDS,
 	type FreshnessBucket,
-	findGapRanges,
 	formatReadoutTime,
 	lastNonNullClose,
+	mergedGapRanges,
 	splitByFreshness,
 	toCandleSeriesData,
 	toCsvExport,
@@ -304,7 +304,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	}, [freshnessFade, nowMs]);
 
 	const stale = asOf !== null && effectiveNowMs - asOf.time * 1000 >= FRESHNESS_THRESHOLDS.stale;
-	const gaps = useMemo(() => findGapRanges(series[0]?.bars ?? []), [series]);
+	// 缺口标注跨全部序列并集：任一序列的内部断点都要在状态条可见，不只看首序列
+	const gaps = useMemo(() => mergedGapRanges(series.map((spec) => spec.bars)), [series]);
 
 	const applyLinkedCrosshair = useCallback((time: Time | null) => {
 		const chart = chartRef.current;

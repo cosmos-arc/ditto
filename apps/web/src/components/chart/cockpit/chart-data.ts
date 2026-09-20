@@ -97,6 +97,24 @@ export function findGapRanges(bars: readonly CockpitBar[]): GapRange[] {
 	return gaps;
 }
 
+/**
+ * 多序列缺口并集：任一序列在某区间存在 null 断点即计为图表级缺口（重叠区间合并）。
+ * 单序列退化为 findGapRanges 本身；缺口归属由对应曲线的断口呈现。
+ */
+export function mergedGapRanges(seriesBars: readonly (readonly CockpitBar[])[]): GapRange[] {
+	const ranges = seriesBars.flatMap((bars) => findGapRanges(bars)).sort((left, right) => left.from - right.from);
+	const merged: GapRange[] = [];
+	for (const range of ranges) {
+		const last = merged.at(-1);
+		if (last && range.from <= last.to) {
+			if (range.to > last.to) merged[merged.length - 1] = { from: last.from, to: range.to };
+		} else {
+			merged.push(range);
+		}
+	}
+	return merged;
+}
+
 /** close 缺失（null）映射为 whitespace 点：lightweight-charts 据此渲染断口。 */
 export function toLineSeriesData(bars: readonly CockpitBar[]): LinePoint[] {
 	return [...bars]

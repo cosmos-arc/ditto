@@ -8,6 +8,7 @@ import {
 	formatReadoutTime,
 	freshnessBucket,
 	lastNonNullClose,
+	mergedGapRanges,
 	resampleBars,
 	splitByFreshness,
 	toCandleSeriesData,
@@ -296,5 +297,25 @@ describe("wrapFooterLine", () => {
 
 	it("returns the text as-is for non-positive widths instead of looping", () => {
 		expect(wrapFooterLine(charWidth, "anything", 0)).toEqual(["anything"]);
+	});
+});
+
+describe("mergedGapRanges", () => {
+	it("unions gap ranges across series and merges overlaps (single series degenerates)", () => {
+		const bars = (closes: (number | null)[]) =>
+			closes.map((close, index) => ({ time: (index + 1) * 100, close, volume: null }));
+		// 首序列完整；次序列两个内部断点（100–300、400–500 与第三序列 450–600 重叠）
+		const merged = mergedGapRanges([
+			bars([1, 1, 1, 1, 1, 1]),
+			bars([1, null, null, 1, null, 1]),
+			bars([1, 1, 1, 1, null, null]),
+		]);
+		// 次序列断点：100–400（null 段至下一个非空 400）与 500–600；第三序列 500–600 重叠合并
+		expect(merged).toEqual([
+			{ from: 200, to: 400 },
+			{ from: 500, to: 600 },
+		]);
+		// 单序列退化：与 findGapRanges 一致
+		expect(mergedGapRanges([bars([1, null, 1])])).toEqual([{ from: 200, to: 300 }]);
 	});
 });

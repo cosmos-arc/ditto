@@ -109,9 +109,10 @@ const DRIFT_SCALE_STEPS = 8;
 /**
  * 发散条离散刻度（1–8；0 = 无条）：宽度按 |bps|/scale 的 1/8 档呈现，
  * 精确值由条旁数字表达（与月度 IC 热力图的分桶纪律一致）。
+ * 零漂移不画条：最小非零档不适用于 0（否则 6.25% 宽的正侧条会虚示超配）。
  */
 export function driftScaleBucket(value: number | undefined, scale: number): number {
-	if (value === undefined || scale <= 0) return 0;
+	if (value === undefined || value === 0 || scale <= 0) return 0;
 	const ratio = Math.min(Math.abs(value) / scale, 1);
 	return Math.max(1, Math.ceil(ratio * DRIFT_SCALE_STEPS));
 }

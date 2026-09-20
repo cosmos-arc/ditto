@@ -82,6 +82,8 @@ describe("drift-chart-mapping", () => {
 
 	it("buckets bar widths into discrete scale steps", () => {
 		expect(driftScaleBucket(undefined, 1000)).toBe(0);
+		// 零漂移不画条：不得借最小非零档虚示超配
+		expect(driftScaleBucket(0, 1000)).toBe(0);
 		expect(driftScaleBucket(100, 0)).toBe(0);
 		expect(driftScaleBucket(10, 1000)).toBe(1);
 		expect(driftScaleBucket(600, 1000)).toBe(5);
