@@ -177,12 +177,17 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 					正在读取所选 run 的净值证据…
 				</div>
 			) : series.every((spec) => spec.bars.length === 0) ? (
-				// 全部可见 run 均未落盘 nav（404 业务态）：结构化空态而非空白画布
+				// 可见 run 均未落盘 nav（404 业务态）：结构化空态而非空白画布。
+				// 结论基于未过滤的选中集区分两种情形——隐藏的 run 可能仍有数据。
 				<div
 					className="flex h-64 flex-col items-center justify-center gap-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4 text-center text-xs text-(--color-foreground-secondary)"
 					data-state="nav-empty"
 				>
-					<p>所选 run 均未落盘净值证据（无 nav.parquet）。</p>
+					<p>
+						{resources.every((item) => item.nav.length === 0)
+							? "所选 run 均未落盘净值证据（无 nav.parquet）。"
+							: "当前可见 run 均未落盘净值证据；隐藏的 run 中仍有数据，点击图例恢复。"}
+					</p>
 					<p className="text-(--color-foreground-tertiary)">指标差异表仍按各 run report 状态呈现。</p>
 				</div>
 			) : (

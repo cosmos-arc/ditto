@@ -195,6 +195,28 @@ describe("BacktestMultiRunCompare", () => {
 		expect(screen.getByTestId("multi-run-metrics").querySelectorAll("[data-run-id]")).toHaveLength(2);
 	});
 
+	it("distinguishes visible-only emptiness from an all-selected-empty selection", async () => {
+		// run-a 有数据、run-b 无 nav：隐藏 run-a 后空态不得谎称「所选 run 均未落盘」
+		server.use(
+			http.get("/api/v1/backtests/runs/run-a/nav", () =>
+				HttpResponse.json({ data: [{ trade_date: "2026-01-05", nav: 1_000_000 }] }),
+			),
+			http.get("/api/v1/backtests/runs/run-b/nav", () =>
+				HttpResponse.json({ detail: "nav not found", error_code: "BACKTEST_NAV_NOT_FOUND" }, { status: 404 }),
+			),
+			http.get("/api/v1/backtests/runs/:runId/report", () =>
+				HttpResponse.json({ detail: "report not found", error_code: "BACKTEST_REPORT_NOT_FOUND" }, { status: 404 }),
+			),
+		);
+		render(<BacktestMultiRunCompare runs={[run("run-a"), run("run-b")]} />, { wrapper: createWrapper() });
+		await waitFor(() => {
+			expect(screen.getByTestId("chart-cockpit-stub")).toBeInTheDocument();
+		});
+		fireEvent.click(within(screen.getByTestId("multi-run-legend")).getByText("run-a"));
+		await screen.findByText("当前可见 run 均未落盘净值证据；隐藏的 run 中仍有数据，点击图例恢复。");
+		expect(screen.queryByTestId("chart-cockpit-stub")).not.toBeInTheDocument();
+	});
+
 	it("surfaces non-404 fetch failures with a retry instead of collapsing them to absent evidence", async () => {
 		// run-b 的 nav 首次 500（获取失败），重试后恢复
 		let navBFailing = true;
