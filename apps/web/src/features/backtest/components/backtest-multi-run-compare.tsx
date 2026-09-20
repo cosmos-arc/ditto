@@ -62,10 +62,12 @@ function useRunResources(runs: readonly BacktestRun[]) {
 	const resources: RunResources[] = runs.map((run, index) => {
 		const navQuery = navs[index];
 		const reportQuery = reports[index];
-		// 派生标志先取：下方 isError 判别式会收窄 navQuery 联合类型，之后取不到其余字段
+		// 派生标志先取：下方 isError 判别式会收窄联合类型，之后取不到其余字段
 		const navFirstLoad = navQuery?.isLoading ?? false;
 		const navRefetching = (navQuery?.fetchStatus ?? "idle") !== "idle";
 		const navData = navQuery?.data ?? [];
+		const reportData = reportQuery?.data;
+		const reportFetching = (reportQuery?.fetchStatus ?? "idle") !== "idle";
 		// 两类错误都评估再择一：nav 404（业务态 → null）不能遮蔽同 run 的 report 5xx
 		const navError = navQuery?.isError ? toFetchError("nav", navQuery.error) : null;
 		const reportError = reportQuery?.isError ? toFetchError("report", reportQuery.error) : null;
@@ -75,9 +77,9 @@ function useRunResources(runs: readonly BacktestRun[]) {
 			// 缓存为空 + 后台重取期间是「未知」：不得把缓存空当成权威的
 			// 「无 nav.parquet」空态；已有数据时后台刷新保持图表不打断
 			navLoading: navFirstLoad || (navRefetching && navData.length === 0),
-			report: reportQuery?.data,
-			// report 查询状态传播到差异表：未定/失败期间不得标注「未发布」
-			reportPending: reportQuery?.isLoading ?? false,
+			report: reportData,
+			// 同口径：缓存 404（无数据）+ 活跃取数期间是「未知」，不得断言「未发布」
+			reportPending: (reportQuery?.isLoading ?? false) || (reportFetching && reportData === undefined),
 			reportFailed: reportError !== null,
 			fetchError: navError ?? reportError,
 		};
