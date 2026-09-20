@@ -115,9 +115,9 @@ describe("BacktestMultiRunCompare", () => {
 		// 图例按选中序占用 run 色板
 		const legend = screen.getByTestId("multi-run-legend");
 		expect(legend.querySelector("[data-legend-id='run-a']")).toHaveAttribute("data-legend-visible", "true");
-		// PNG/CSV 导出身份内嵌有序 run ids：导出物可独立归因
+		// PNG/CSV 导出身份内嵌有序 run ids + 色槽位：导出物可独立归因
 		expect(cockpitProps.at(-1)).toMatchObject({
-			identity: { dataSourceName: expect.stringContaining("run-a · run-b") },
+			identity: { dataSourceName: expect.stringContaining("run-a#1 · run-b#2") },
 		});
 		// 指标差异表：已发布 run 的真实指标 + 未发布 run 的诚实标注
 		const table = screen.getByTestId("multi-run-metrics");
@@ -167,8 +167,8 @@ describe("BacktestMultiRunCompare", () => {
 		});
 		// 色板索引绑定勾选序：隐藏首个 run 后，第二个 run 仍保持 --chart-run-2，不重排
 		expect(cockpitProps.at(-1)?.series[0]?.color).toBe("var(--chart-run-2)");
-		// 导出身份跟随可见序列：隐藏 run 不再出现在 PNG/CSV 身份里（数据不在导出物中）
-		expect(cockpitProps.at(-1)?.identity?.dataSourceName).toContain("run-b");
+		// 导出身份跟随可见序列并保留原色槽位：隐藏 run-a 后 run-b 仍是 #2（不重编号）
+		expect(cockpitProps.at(-1)?.identity?.dataSourceName).toContain("run-b#2");
 		expect(cockpitProps.at(-1)?.identity?.dataSourceName).not.toContain("run-a");
 		// 差异表不受图例显隐影响，仍呈现全部选中 run
 		expect(screen.getByTestId("multi-run-metrics").querySelectorAll("[data-run-id]")).toHaveLength(2);

@@ -5,7 +5,7 @@ import { ChartCockpit, ChartLegend } from "@/components/chart";
 import { Button } from "@/components/ui/button";
 import { fetchBacktestNav, fetchBacktestReport } from "../api/backtests";
 import { backtestKeys } from "../hooks";
-import { metricsRows, multiRunSeries, runColor } from "../lib/multi-run-mapping";
+import { MAX_COMPARE_RUNS, metricsRows, multiRunSeries, runColor } from "../lib/multi-run-mapping";
 import type { BacktestNavPoint, BacktestReport, BacktestRun } from "../types";
 
 /**
@@ -60,16 +60,24 @@ function useRunResources(runs: readonly BacktestRun[]) {
 		})),
 	});
 	const resources: RunResources[] = runs.map((run, index) => {
+		const navQuery = navs[index];
+		const reportQuery = reports[index];
+		// 派生标志先取：下方 isError 判别式会收窄 navQuery 联合类型，之后取不到其余字段
+		const navFirstLoad = navQuery?.isLoading ?? false;
+		const navRefetching = (navQuery?.fetchStatus ?? "idle") !== "idle";
+		const navData = navQuery?.data ?? [];
 		// 两类错误都评估再择一：nav 404（业务态 → null）不能遮蔽同 run 的 report 5xx
-		const navError = navs[index]?.isError ? toFetchError("nav", navs[index]?.error) : null;
-		const reportError = reports[index]?.isError ? toFetchError("report", reports[index]?.error) : null;
+		const navError = navQuery?.isError ? toFetchError("nav", navQuery.error) : null;
+		const reportError = reportQuery?.isError ? toFetchError("report", reportQuery.error) : null;
 		return {
 			run,
-			nav: navs[index]?.data ?? [],
-			navLoading: navs[index]?.isLoading ?? false,
-			report: reports[index]?.data,
+			nav: navData,
+			// 缓存为空 + 后台重取期间是「未知」：不得把缓存空当成权威的
+			// 「无 nav.parquet」空态；已有数据时后台刷新保持图表不打断
+			navLoading: navFirstLoad || (navRefetching && navData.length === 0),
+			report: reportQuery?.data,
 			// report 查询状态传播到差异表：未定/失败期间不得标注「未发布」
-			reportPending: reports[index]?.isLoading ?? false,
+			reportPending: reportQuery?.isLoading ?? false,
 			reportFailed: reportError !== null,
 			fetchError: navError ?? reportError,
 		};
@@ -113,20 +121,24 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 	// nav 与 report 失败分开处置：净值图只依赖 nav，report 失败不连坐撤图（CR）
 	const navFetchError = resources.find((item) => item.fetchError?.kind === "nav")?.fetchError ?? null;
 	const reportFetchError = resources.find((item) => item.fetchError?.kind === "report")?.fetchError ?? null;
-	// PNG/CSV 导出 footer 内嵌 run 身份：跟随可见序列——隐藏 run 的数据不在导出物里，
-	// 身份不得声称其参与（导出物无 DOM 图例可供读者发现差异）
-	const visibleRunIds = useMemo(
-		() => resources.filter((item) => !hiddenRuns.has(item.run.runId)).map((item) => item.run.runId),
+	// PNG/CSV 导出 footer 内嵌 run 身份：跟随可见序列并携带色槽位（#N）——
+	// 隐藏产生的空槽下，仅凭顺序会误读曲线归属（导出物无 DOM 图例）
+	const visibleRunLabels = useMemo(
+		() =>
+			resources
+				.map((item, index) => ({ item, slot: index + 1 }))
+				.filter(({ item, slot }) => slot <= MAX_COMPARE_RUNS && !hiddenRuns.has(item.run.runId))
+				.map(({ item, slot }) => `${item.run.runId}#${slot}`),
 		[resources, hiddenRuns],
 	);
 	const identity = useMemo(
 		() => ({
-			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一）：${visibleRunIds.join(" · ")}`,
+			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一，#N 为色槽位）：${visibleRunLabels.join(" · ")}`,
 			snapshotId: null,
 			knowledgeCutoff: null,
 			publicationCutoff: null,
 		}),
-		[visibleRunIds],
+		[visibleRunLabels],
 	);
 
 	return (
