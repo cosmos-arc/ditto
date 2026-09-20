@@ -109,3 +109,26 @@ def test_delete_without_filters_or_date_range_is_noop(tmp_path):
 
 def _records(df: pl.DataFrame) -> list[dict[str, Any]]:
     return df.select("id", "date", "value").to_dicts()
+
+
+def test_identical_retry_recovers_partial_payload_and_rejects_revision(tmp_path):
+    store = ParquetStore(data_root=tmp_path, key_columns=("id",))
+    original = pl.DataFrame({"id": [1, 2], "value": [10, 20]})
+    store.write("retry", original.head(1), year=2026)
+    recovered = store.write(
+        "retry", original, on_duplicate="verify_identical", year=2026
+    )
+    repeated = store.write(
+        "retry", original, on_duplicate="verify_identical", year=2026
+    )
+    assert (recovered.added, recovered.updated, recovered.skipped) == (1, 0, 1)
+    assert (repeated.added, repeated.updated, repeated.skipped) == (0, 0, 2)
+    assert store.read("retry").equals(original)
+    with pytest.raises(ValueError, match="conflict"):
+        store.write(
+            "retry",
+            pl.DataFrame({"id": [1], "value": [999]}),
+            on_duplicate="verify_identical",
+            year=2026,
+        )
+    assert store.read("retry").equals(original)

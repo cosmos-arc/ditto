@@ -23,7 +23,10 @@ from ditto_data.catalog.certification import (
 from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
-from ditto_data.catalog.source_snapshot import ProviderSnapshotWriter
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshotReader,
+    ProviderSnapshotWriter,
+)
 from ditto_data.config.data_source import DataSourceSettings
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
@@ -31,7 +34,7 @@ from ditto_data.ingestion.partition_state import (
     PartitionLifecycleReader,
     PartitionLifecycleWriter,
 )
-from ditto_data.lineage import DataLineageRecorder
+from ditto_data.lineage import DataLineageReader, DataLineageRecorder
 from ditto_data.quality import QualityEngine
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -206,6 +209,15 @@ class _MaterializationGovernancePorts:
     lineage_recorder: DataLineageRecorder
 
 
+@dataclass(frozen=True)
+class _IngestionEvidenceReaders:
+    """Read durable effects before retrying evidence writes."""
+
+    partitions: PartitionLifecycleReader
+    snapshots: ProviderSnapshotReader
+    lineage: DataLineageReader
+
+
 class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
@@ -229,11 +241,21 @@ class AppProcessProvider(Provider):
         )
 
     @provide
+    def ingestion_evidence_readers(
+        self,
+        partitions: PartitionLifecycleReader,
+        snapshots: ProviderSnapshotReader,
+        lineage: DataLineageReader,
+    ) -> _IngestionEvidenceReaders:
+        """Group the recovery reads used by the evidence saga."""
+        return _IngestionEvidenceReaders(partitions, snapshots, lineage)
+
+    @provide
     def ingestion_evidence_committer(
         self,
-        partition_lifecycle_reader: PartitionLifecycleReader,
         partition_lifecycle_writer: PartitionLifecycleWriter,
         provider_snapshot_writer: ProviderSnapshotWriter,
+        readers: _IngestionEvidenceReaders,
         dataset_license_reader: DatasetLicenseReader,
         data_catalog_writer: DataCatalogWriter,
         lineage_recorder: DataLineageRecorder,
@@ -242,9 +264,11 @@ class AppProcessProvider(Provider):
         """Assemble the fail-closed R2 evidence saga from application ports."""
         return IngestionEvidenceCommitter(
             ports=EvidenceCommitPorts(
-                lifecycle_reader=partition_lifecycle_reader,
+                lifecycle_reader=readers.partitions,
                 lifecycle_writer=partition_lifecycle_writer,
                 snapshot_writer=provider_snapshot_writer,
+                snapshot_reader=readers.snapshots,
+                lineage_reader=readers.lineage,
                 license_reader=dataset_license_reader,
                 catalog_writer=data_catalog_writer,
                 lineage_recorder=lineage_recorder,

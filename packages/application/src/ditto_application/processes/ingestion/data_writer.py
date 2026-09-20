@@ -78,6 +78,8 @@ def _to_write_result(
     year: int,
     df: pl.DataFrame,
     rows_written: int,
+    *,
+    on_duplicate: OnDuplicate = OnDuplicate.ERROR,
 ) -> WriteResult:
     """
     将写入结果转换为 WriteResult。
@@ -87,11 +89,14 @@ def _to_write_result(
         year: 年份
         df: 写入的 DataFrame（用于计算 checksum）
         rows_written: 写入行数
+        on_duplicate: 重试校验模式按已接受载荷记录行数
 
     Returns:
         WriteResult 对象
 
     """
+    if on_duplicate is OnDuplicate.VERIFY_IDENTICAL:
+        rows_written = len(df)
     checksum = ChecksumCompute.from_dataframe(df, dataset_sort_keys(dataset))
     return WriteResult(
         file_path=f"{dataset}/{year}",
@@ -389,7 +394,9 @@ class IngestionDataWriter:
             year=year,
             on_duplicate=on_duplicate,
         )
-        return _to_write_result(dataset, year, enriched_df, rows_written)
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
 
     def _write_global_index_bars(
         self,
@@ -404,7 +411,9 @@ class IngestionDataWriter:
             year=year,
             on_duplicate=on_duplicate,
         )
-        return _to_write_result(dataset, year, df, rows_written)
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
 
     def _write_industry_read_model(
         self,
@@ -435,7 +444,9 @@ class IngestionDataWriter:
             year=year,
             on_duplicate=on_duplicate,
         )
-        return _to_write_result(dataset, year, df, rows_written)
+        return _to_write_result(
+            dataset, year, df, rows_written, on_duplicate=on_duplicate
+        )
 
     def _write_stock_status(
         self,
@@ -490,6 +501,7 @@ class IngestionDataWriter:
             year,
             enriched_df,
             rows_written,
+            on_duplicate=on_duplicate,
         )
 
     def _write_fund_adj(
@@ -514,7 +526,9 @@ class IngestionDataWriter:
             year=year,
             on_duplicate=on_duplicate,
         )
-        return _to_write_result(dataset, year, enriched_df, rows_written)
+        return _to_write_result(
+            dataset, year, enriched_df, rows_written, on_duplicate=on_duplicate
+        )
 
     def _write_index_weight(
         self,

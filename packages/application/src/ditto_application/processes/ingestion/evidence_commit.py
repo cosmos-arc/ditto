@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from hashlib import sha256
 from typing import Protocol
 
 from ditto_data.catalog import (
@@ -12,14 +13,19 @@ from ditto_data.catalog import (
     DataCatalogWriter,
 )
 from ditto_data.catalog.license import DatasetLicenseReader
-from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotWriter
+from ditto_data.catalog.provider_payload import ProviderPayloadArtifact
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotReader,
+    ProviderSnapshotWriter,
+)
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
     PartitionLifecycleReader,
     PartitionLifecycleStatus,
     PartitionLifecycleWriter,
 )
-from ditto_data.lineage import DataLineageRecorder, LineageEvent
+from ditto_data.lineage import DataLineageReader, DataLineageRecorder, LineageEvent
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 
 from ditto_application.exceptions import AppProcessError
@@ -29,13 +35,30 @@ __all__ = [
     "EvidenceCommitPorts",
     "EvidenceCommitRequest",
     "IngestionEvidenceCommitter",
+    "PartitionWriteIntent",
 ]
 
 
 class _IngestionLogWriter(Protocol):
+    def get_log(
+        self, dataset: str, source: str, trade_date: str
+    ) -> IngestionLog | None:
+        """Read the durable result before retrying its write."""
+        ...
+
     def save_log(self, log: IngestionLog) -> IngestionLog:
         """Persist one ingestion log record."""
         ...
+
+
+@dataclass(frozen=True, slots=True)
+class PartitionWriteIntent:
+    """A retained input to apply, not proof of a committed canonical write."""
+
+    chunk_id: str
+    request_start: str
+    request_end: str
+    payload: ProviderPayloadArtifact
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,9 +94,11 @@ class EvidenceCommitPorts:
     lifecycle_reader: PartitionLifecycleReader
     lifecycle_writer: PartitionLifecycleWriter
     snapshot_writer: ProviderSnapshotWriter
+    snapshot_reader: ProviderSnapshotReader
     license_reader: DatasetLicenseReader
     catalog_writer: DataCatalogWriter
     lineage_recorder: DataLineageRecorder
+    lineage_reader: DataLineageReader
     ingestion_log_store: _IngestionLogWriter
 
 
@@ -89,9 +114,35 @@ class IngestionEvidenceCommitter:
         self._ports = ports
         self._now = now or (lambda: datetime.now(UTC))
 
+    def prepare_payload_write(self, intent: PartitionWriteIntent) -> None:
+        """Persist a resumable intent before any canonical file can be changed."""
+        chunk_id = self._revision_id(intent.chunk_id, intent.payload.checksum)
+        if self._ports.lifecycle_reader.get_checkpoint(chunk_id) is not None:
+            return
+        self._ports.lifecycle_writer.plan_partition(
+            PartitionCheckpoint(
+                chunk_id=chunk_id,
+                dataset_id=intent.payload.dataset_id,
+                source=intent.payload.source,
+                request_start=intent.request_start,
+                request_end=intent.request_end,
+                status=PartitionLifecycleStatus.PLANNED,
+                last_successful_stage=None,
+                attempt=1,
+                retry_budget=3,
+                payload_id=f"intent:{intent.payload.checksum}",
+                catalog_asset_id=None,
+                lineage_run_id=None,
+                ingestion_log_id=None,
+                error_code=None,
+                updated_at=self._now(),
+            )
+        )
+
     def commit(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         """Commit or repair the evidence chain without repeating durable stages."""
         self._validate_request(request)
+        request = self._versioned_request(request)
         preparation = self._prepare_payload(request)
         if preparation is not None:
             return preparation
@@ -107,12 +158,37 @@ class IngestionEvidenceCommitter:
             return log_failure
         return self._complete(request)
 
+    def _versioned_request(
+        self, request: EvidenceCommitRequest
+    ) -> EvidenceCommitRequest:
+        return replace(
+            request,
+            chunk_id=self._revision_id(
+                request.chunk_id, request.provider_snapshot.checksum
+            ),
+        )
+
+    def _revision_id(self, chunk_id: str, checksum: str) -> str:
+        checkpoint = self._ports.lifecycle_reader.get_latest_checkpoint(chunk_id)
+        if checkpoint is None:
+            return chunk_id
+        payload_id = checkpoint.payload_id
+        if (
+            payload_id is None
+            or payload_id == f"intent:{checksum}"
+            or (payload_id.startswith(f"payload:{checksum}:"))
+        ):
+            return checkpoint.chunk_id
+        revision = sha256(repr((checkpoint.chunk_id, checksum)).encode()).hexdigest()
+        return f"{chunk_id}:revision:{revision}"
+
     def _prepare_payload(
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitOutcome | None:
         try:
             checkpoint = self._prepare_checkpoint(request)
             if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
+                self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
             self._advance_payload_stages(checkpoint, request)
         except Exception:
@@ -144,7 +220,12 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.PAYLOAD_COMMITTED:
             return None
         try:
-            self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
+            snapshot = request.provider_snapshot
+            existing = self._ports.snapshot_reader.get_snapshot(snapshot.snapshot_id)
+            if existing is None:
+                self._ports.snapshot_writer.append_snapshot(snapshot)
+            elif replace(snapshot, created_at=existing.created_at) != existing:
+                raise AppProcessError("immutable provider snapshot conflict")
         except Exception:
             return self._fail(
                 request,
@@ -173,7 +254,15 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.CATALOG_ATTESTED:
             return None
         try:
-            self._ports.lineage_recorder.record_event(request.lineage_event)
+            event = request.lineage_event
+            existing = self._ports.lineage_reader.list_events_for_run(event.run_id)
+            if not existing:
+                self._ports.lineage_recorder.record_event(event)
+            elif (
+                len(existing) != 1
+                or replace(event, timestamp=existing[0].timestamp) != existing[0]
+            ):
+                raise AppProcessError("immutable ingestion lineage conflict")
             self._advance(
                 request.chunk_id,
                 PartitionLifecycleStatus.LINEAGE_RECORDED,
@@ -194,7 +283,7 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.LINEAGE_RECORDED:
             return None
         try:
-            self._ports.ingestion_log_store.save_log(request.success_log)
+            self._persist_success_log(request.success_log)
             self._advance(
                 request.chunk_id,
                 PartitionLifecycleStatus.SUCCESS_RECORDED,
@@ -207,6 +296,17 @@ class IngestionEvidenceCommitter:
                 error_code="SUCCESS_LOG_WRITE_FAILED",
             )
         return None
+
+    def _persist_success_log(self, log: IngestionLog) -> None:
+        existing = self._ports.ingestion_log_store.get_log(
+            log.dataset, log.source, log.trade_date
+        )
+        if existing is None or (existing.status, existing.checksum, existing.rows) != (
+            log.status,
+            log.checksum,
+            log.rows,
+        ):
+            self._ports.ingestion_log_store.save_log(log)
 
     def _complete(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         try:
@@ -248,6 +348,28 @@ class IngestionEvidenceCommitter:
         self, request: EvidenceCommitRequest
     ) -> PartitionCheckpoint:
         checkpoint = self._ports.lifecycle_reader.get_checkpoint(request.chunk_id)
+        if checkpoint is not None and (
+            (
+                checkpoint.dataset_id,
+                checkpoint.source,
+                checkpoint.request_start,
+                checkpoint.request_end,
+            )
+            != (
+                request.dataset_id,
+                request.source,
+                request.request_start,
+                request.request_end,
+            )
+            or checkpoint.payload_id
+            not in {
+                None,
+                f"intent:{request.provider_snapshot.checksum}",
+                _payload_evidence_id(request),
+            }
+            or checkpoint.lineage_run_id not in {None, request.lineage_event.run_id}
+        ):
+            raise AppProcessError("partition checkpoint identity conflict")
         if checkpoint is None:
             checkpoint = PartitionCheckpoint(
                 chunk_id=request.chunk_id,

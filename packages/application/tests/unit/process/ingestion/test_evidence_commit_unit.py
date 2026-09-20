@@ -63,6 +63,46 @@ class _Recorder:
         self._record(value)
         return value
 
+    def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
+        return next(
+            (
+                v
+                for v in self.values
+                if isinstance(v, ProviderSnapshot) and v.snapshot_id == snapshot_id
+            ),
+            None,
+        )
+
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ) -> tuple[ProviderSnapshot, ...]:
+        return tuple(v for v in self.values if isinstance(v, ProviderSnapshot))
+
+    def list_events_for_run(self, run_id: str) -> tuple[LineageEvent, ...]:
+        return tuple(
+            v for v in self.values if isinstance(v, LineageEvent) and v.run_id == run_id
+        )
+
+    def list_events_for_asset(self, asset: DataAssetRef) -> tuple[LineageEvent, ...]:
+        return tuple(v for v in self.values if isinstance(v, LineageEvent))
+
+    def get_log(
+        self, dataset: str, source: str, trade_date: str
+    ) -> IngestionLog | None:
+        return next(
+            (
+                v
+                for v in self.values
+                if isinstance(v, IngestionLog)
+                and (v.dataset, v.source, v.trade_date) == (dataset, source, trade_date)
+            ),
+            None,
+        )
+
     def _record(self, value: object) -> None:
         if self.fail:
             raise RuntimeError("injected durable evidence failure")
@@ -185,9 +225,11 @@ def test_evidence_commit_reaches_complete_only_after_all_durable_writes(
             lifecycle_reader=lifecycle,
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshot,
+            snapshot_reader=snapshot,
             license_reader=_LicenseReader(license_record),
             catalog_writer=catalog,
             lineage_recorder=lineage,
+            lineage_reader=lineage,
             ingestion_log_store=logs,
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
@@ -221,9 +263,11 @@ def test_license_effective_on_fetch_date_allows_older_observation_date(
             lifecycle_reader=lifecycle,
             lifecycle_writer=lifecycle,
             snapshot_writer=recorder,
+            snapshot_reader=recorder,
             license_reader=_LicenseReader(license_record),
             catalog_writer=recorder,
             lineage_recorder=recorder,
+            lineage_reader=recorder,
             ingestion_log_store=recorder,
         )
     )
@@ -247,9 +291,11 @@ def test_license_expired_before_fetch_date_fails_closed(tmp_path: Path) -> None:
             lifecycle_reader=lifecycle,
             lifecycle_writer=lifecycle,
             snapshot_writer=recorder,
+            snapshot_reader=recorder,
             license_reader=_LicenseReader(license_record),
             catalog_writer=recorder,
             lineage_recorder=recorder,
+            lineage_reader=recorder,
             ingestion_log_store=recorder,
         )
     )
@@ -290,9 +336,11 @@ def test_evidence_commit_fails_closed_at_each_durable_boundary(
             lifecycle_reader=lifecycle,
             lifecycle_writer=lifecycle,
             snapshot_writer=ports["snapshot"],
+            snapshot_reader=ports["snapshot"],
             license_reader=_LicenseReader(license_record),
             catalog_writer=ports["catalog"],
             lineage_recorder=ports["lineage"],
+            lineage_reader=ports["lineage"],
             ingestion_log_store=ports["logs"],
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
@@ -324,9 +372,11 @@ def test_repair_resumes_after_payload_without_rewriting_payload(tmp_path: Path) 
             lifecycle_reader=lifecycle,
             lifecycle_writer=lifecycle,
             snapshot_writer=snapshot,
+            snapshot_reader=snapshot,
             license_reader=_LicenseReader(license_record),
             catalog_writer=catalog,
             lineage_recorder=lineage,
+            lineage_reader=lineage,
             ingestion_log_store=logs,
         ),
         now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),

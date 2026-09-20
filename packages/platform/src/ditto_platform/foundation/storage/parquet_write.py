@@ -84,10 +84,27 @@ def _merge_keep_last(
     return MergeResult(df=combined, added=added, updated=overlap_count)
 
 
+def _merge_verify_identical(
+    df: pl.DataFrame,
+    existing: pl.DataFrame,
+    key_columns: list[str],
+    overlap_count: int,
+) -> MergeResult:
+    """Accept retries only when every overlapping row is unchanged."""
+    incoming = df.join(existing.select(key_columns), on=key_columns, how="semi")
+    stored = existing.join(df.select(key_columns), on=key_columns, how="semi")
+    if set(incoming.columns) != set(stored.columns) or not incoming.sort(
+        key_columns
+    ).equals(stored.select(incoming.columns).sort(key_columns)):
+        raise ValueError("Duplicate data conflict: retry contains changed values")
+    return _merge_keep_first(df, existing, key_columns, overlap_count)
+
+
 _MERGE_STRATEGIES: dict[OnDuplicate, Callable[..., MergeResult]] = {
     OnDuplicate.ERROR: _merge_error,
     OnDuplicate.KEEP_FIRST: _merge_keep_first,
     OnDuplicate.KEEP_LAST: _merge_keep_last,
+    OnDuplicate.VERIFY_IDENTICAL: _merge_verify_identical,
 }
 
 

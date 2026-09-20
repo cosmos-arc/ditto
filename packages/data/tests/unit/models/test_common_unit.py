@@ -141,7 +141,7 @@ class TestOnDuplicate:
 
     def test_should_have_three_members(self) -> None:
         """应该有三个成员."""
-        assert len(OnDuplicate) == 3
+        assert len(OnDuplicate) == 4
 
 
 @pytest.mark.unit

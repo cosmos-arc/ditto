@@ -227,6 +227,8 @@ class ParquetStore:
         is_merge = file_path.exists()
         strategy = OnDuplicate(on_duplicate)
         key_columns = self._get_key_columns()
+        df = self._prepare_for_write(df)
+        input_count = len(df)
 
         # Batch internal dedup
         if key_columns:
@@ -236,6 +238,10 @@ class ParquetStore:
                 .filter(pl.col("_count") > 1)
             )
             if not batch_dup.is_empty():
+                if strategy is OnDuplicate.VERIFY_IDENTICAL and len(df.unique()) != len(
+                    df.unique(subset=key_columns)
+                ):
+                    raise ValueError("Duplicate data conflict within input batch")
                 logger.warning(
                     "Batch internal duplicates detected, auto-dedup (keep first)",
                     event="batch_internal_duplicates",
@@ -258,7 +264,8 @@ class ParquetStore:
             added = len(df)
 
         df = self._prepare_for_write(df)
-        atomic_write(df, file_path)
+        if not is_merge or added or updated:
+            atomic_write(df, file_path)
         checksum = file_md5(file_path)
 
         logger.info(
@@ -277,7 +284,7 @@ class ParquetStore:
             checksum=checksum,
             added=added,
             updated=updated,
-            skipped=0,
+            skipped=input_count - added - updated,
             is_merge=is_merge,
         )
 
