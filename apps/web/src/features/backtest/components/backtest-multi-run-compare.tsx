@@ -24,6 +24,10 @@ type RunResources = {
 	readonly nav: readonly BacktestNavPoint[];
 	readonly navLoading: boolean;
 	readonly report: BacktestReport | undefined;
+	/** report 查询仍在进行——差异表标「读取中…」而非「未发布」。 */
+	readonly reportPending: boolean;
+	/** report 查询非 404 失败——差异表标「读取失败」。 */
+	readonly reportFailed: boolean;
 	/** 404 之外的获取失败（超时/5xx）——需显式暴露而非折叠为空数据。 */
 	readonly fetchError: { readonly kind: "nav" | "report"; readonly cause: Error } | null;
 };
@@ -64,6 +68,9 @@ function useRunResources(runs: readonly BacktestRun[]) {
 			nav: navs[index]?.data ?? [],
 			navLoading: navs[index]?.isLoading ?? false,
 			report: reports[index]?.data,
+			// report 查询状态传播到差异表：未定/失败期间不得标注「未发布」
+			reportPending: reports[index]?.isLoading ?? false,
+			reportFailed: reportError !== null,
 			fetchError: navError ?? reportError,
 		};
 	});
@@ -86,7 +93,12 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 	);
 	const reports = useMemo(
 		() =>
-			new Map(resources.filter((item) => item.report).map((item) => [item.run.runId, item.report as BacktestReport])),
+			new Map(
+				resources.map((item) => [
+					item.run.runId,
+					{ report: item.report, pending: item.reportPending, failed: item.reportFailed },
+				]),
+			),
 		[resources],
 	);
 	const rows = useMemo(

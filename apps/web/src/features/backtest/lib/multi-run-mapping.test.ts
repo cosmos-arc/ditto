@@ -76,8 +76,16 @@ describe("multi-run-mapping", () => {
 		expect(series[1]?.id).toBe("r2");
 	});
 
-	it("builds metrics rows from published reports and marks unpublished runs", () => {
-		const rows = metricsRows([run("r1"), run("r2")], new Map([["r1", report("r1")]]));
+	it("builds metrics rows from published reports and distinguishes pending/failed/unpublished", () => {
+		const rows = metricsRows(
+			[run("r1"), run("r2"), run("r3"), run("r4")],
+			new Map([
+				["r1", { report: report("r1"), pending: false, failed: false }],
+				["r2", { report: undefined, pending: true, failed: false }],
+				["r3", { report: undefined, pending: false, failed: true }],
+				["r4", { report: undefined, pending: false, failed: false }],
+			]),
+		);
 		expect(rows[0]).toMatchObject({
 			runId: "r1",
 			period: "2025-01-02 → 2025-12-31",
@@ -86,6 +94,9 @@ describe("multi-run-mapping", () => {
 			sharpe: "1.47",
 			reportPublished: true,
 		});
-		expect(rows[1]).toMatchObject({ runId: "r2", annualizedReturn: "未发布", reportPublished: false });
+		// 查询未定/失败是「未知」：不提前标「未发布」（404 落定才是）
+		expect(rows[1]).toMatchObject({ runId: "r2", annualizedReturn: "读取中…", reportPublished: false });
+		expect(rows[2]).toMatchObject({ runId: "r3", annualizedReturn: "读取失败", reportPublished: false });
+		expect(rows[3]).toMatchObject({ runId: "r4", annualizedReturn: "未发布", reportPublished: false });
 	});
 });

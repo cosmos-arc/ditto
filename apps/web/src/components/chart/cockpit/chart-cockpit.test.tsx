@@ -23,6 +23,7 @@ const hoisted = vi.hoisted(() => ({
 }));
 const seriesDataCalls: unknown[][] = [];
 const setVisibleLogicalRange = vi.fn<(range: LogicalRange) => void>();
+const scrollToRealTime = vi.fn<() => void>();
 const fitContent = vi.fn<() => void>();
 const attachPrimitive = vi.fn<(primitive: object) => void>();
 // vi.mock 工厂被提升到 const 声明之前，marker 捕获必须经 vi.hoisted 暴露。
@@ -32,6 +33,7 @@ let logicalRangeHandlers: Array<(range: LogicalRange | null) => void> = [];
 const timeScaleStub = {
 	getVisibleLogicalRange: vi.fn<() => LogicalRange | null>(() => ({ from: 0 as Logical, to: 100 as Logical })),
 	setVisibleLogicalRange,
+	scrollToRealTime,
 	coordinateToLogical: vi.fn((x: number) => x as Logical),
 	timeToCoordinate: vi.fn<(time: Time) => number | null>(() => 42),
 	fitContent,
@@ -269,8 +271,8 @@ describe("ChartCockpit 键盘操作", () => {
 		const host = screen.getByLabelText("演示收盘价图表（fixture）");
 		await user.click(host);
 		await user.keyboard("{End}");
-		// End 取全部序列最大长度（5），首序列空 bars 不再让导航失锚
-		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -94, to: 6 });
+		// End 由引擎滚动到并集时间轴右端，首序列空 bars 不再让导航失锚
+		expect(scrollToRealTime).toHaveBeenCalled();
 	});
 
 	it("pans with arrows, zooms with +/-, jumps to the tail with End, resets on dblclick", async () => {
@@ -290,7 +292,8 @@ describe("ChartCockpit 键盘操作", () => {
 		await user.keyboard("-");
 		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -12.5, to: 112.5 });
 		await user.keyboard("{End}");
-		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -96, to: 4 });
+		// End 走引擎 real-time 滚动：多序列并集时间轴的右端只有引擎知道
+		expect(scrollToRealTime).toHaveBeenCalled();
 		await user.keyboard("{Home}");
 		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -1, to: 99 });
 		await user.dblClick(host);

@@ -59,32 +59,44 @@ export type MultiRunMetricsRow = {
 	readonly reportPublished: boolean;
 };
 
+/** 单 run 的 report 查询状态：未定（加载/失败）期间不得标注「未发布」。 */
+export type ReportReadState = {
+	readonly report: BacktestReport | undefined;
+	/** 查询仍在进行——指标尚未可知。 */
+	readonly pending: boolean;
+	/** 404 之外的失败——与页面 fetch-error alert 同源。 */
+	readonly failed: boolean;
+};
+
 const money = (value: number): string => new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(value);
 
 /** 引擎 alpha_stats 为百分数单位（#212 已对齐），此处不再 ×100。 */
 const percent = (value: number): string => `${value.toFixed(2)}%`;
 
-function metricsRow(run: BacktestRun, report: BacktestReport | undefined): MultiRunMetricsRow {
-	if (!report) {
+function metricsRow(run: BacktestRun, read: ReportReadState): MultiRunMetricsRow {
+	if (!read.report) {
+		// 加载中/读取失败是「未知」，404 落定才是「未发布」——不提前下结论
+		const annualized = read.pending ? "读取中…" : read.failed ? "读取失败" : "未发布";
 		return {
 			runId: run.runId,
 			strategyId: run.strategyId,
 			period: "—",
 			initialCash: "—",
 			finalNav: "—",
-			annualizedReturn: "未发布",
+			annualizedReturn: annualized,
 			maxDrawdown: "—",
 			sharpe: "—",
 			reportPublished: false,
 		};
 	}
-	const alpha = report.alphaStats;
+	const alpha = read.report.alphaStats;
 	return {
 		runId: run.runId,
 		strategyId: run.strategyId,
-		period: report.periodStart && report.periodEnd ? `${report.periodStart} → ${report.periodEnd}` : "—",
-		initialCash: money(report.initialCash),
-		finalNav: money(report.finalNav),
+		period:
+			read.report.periodStart && read.report.periodEnd ? `${read.report.periodStart} → ${read.report.periodEnd}` : "—",
+		initialCash: money(read.report.initialCash),
+		finalNav: money(read.report.finalNav),
 		annualizedReturn: alpha ? percent(alpha.annualizedReturn) : "—",
 		maxDrawdown: alpha ? percent(alpha.maxDrawdown) : "—",
 		sharpe: alpha ? alpha.sharpeRatio.toFixed(2) : "—",
@@ -92,10 +104,12 @@ function metricsRow(run: BacktestRun, report: BacktestReport | undefined): Multi
 	};
 }
 
-/** 指标差异表行：按传入 run 顺序（= 色板顺序），缺 report 的 run 诚实标注。 */
+/** 指标差异表行：按传入 run 顺序（= 色板顺序），report 未定/失败/未发布逐格诚实标注。 */
 export function metricsRows(
 	runs: readonly BacktestRun[],
-	reports: ReadonlyMap<string, BacktestReport>,
+	reports: ReadonlyMap<string, ReportReadState>,
 ): MultiRunMetricsRow[] {
-	return runs.map((run) => metricsRow(run, reports.get(run.runId)));
+	return runs.map((run) =>
+		metricsRow(run, reports.get(run.runId) ?? { report: undefined, pending: false, failed: false }),
+	);
 }

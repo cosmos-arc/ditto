@@ -640,9 +640,9 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		} else if (event.key === "Home") {
 			timeScale.setVisibleLogicalRange({ from: -1, to: span - 1 });
 		} else if (event.key === "End") {
-			// 跨全部序列取最大长度：End 导航不因首序列空 bars 而失锚
-			const barCount = propsRef.current.series.reduce((max, spec) => Math.max(max, spec.bars.length), 0);
-			timeScale.setVisibleLogicalRange({ from: barCount - span + 1, to: barCount + 1 });
+			// 跳到数据右端：多序列并集时间轴的总长度只有引擎知道（最大序列长度 ≠ 并集长度），
+			// 用引擎的 real-time 滚动而非自行推算逻辑位置
+			timeScale.scrollToRealTime();
 		} else if (event.key === "+" || event.key === "=") {
 			const center = (range.from + range.to) / 2;
 			const zoomed = span * 0.8;
