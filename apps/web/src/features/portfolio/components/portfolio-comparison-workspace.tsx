@@ -12,6 +12,7 @@ import {
 	previewPortfolioScenario,
 } from "../api/portfolio-comparison";
 import { tradingKeys } from "../api/query-keys";
+import { PortfolioDriftChart } from "./portfolio-drift-chart";
 
 interface PortfolioComparisonWorkspaceProps {
 	readonly identity?: PortfolioComparisonIdentity | undefined;
@@ -431,6 +432,7 @@ export function PortfolioComparisonWorkspace({ identity }: PortfolioComparisonWo
 				<PortfolioColumnCard portfolio={comparison.data.manual} />
 			</div>
 			<div className="mt-4 grid gap-4">
+				<PortfolioDriftChart comparison={comparison.data} />
 				<AttributionPanel comparison={comparison.data} />
 				<ScenarioPanel identity={identity} />
 			</div>

@@ -1,9 +1,9 @@
 {
   "id": "backtest-list",
-  "version": 3,
+  "version": 4,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-08-30",
+  "updatedAt": "2026-09-18",
   "route": "/research/backtests",
   "pagePattern": "catalog-screener",
   "shellFamily": "catalog",
@@ -17,7 +17,8 @@
     "reactParityVerified": true,
     "reactTestRefs": [
       "src/features/backtest/components/backtest-list-page.test.tsx",
-      "src/features/backtest/components/backtest-components.test.tsx"
+      "src/features/backtest/components/backtest-components.test.tsx",
+      "src/features/backtest/components/backtest-multi-run-compare.test.tsx"
     ],
     "reactComponentRefs": ["BacktestListPage"]
   },
@@ -75,7 +76,8 @@
       "run-running",
       "run-completed",
       "run-failed",
-      "benchmark-unpublished"
+      "benchmark-unpublished",
+      "compare-selected"
     ]
   },
   "interactions": [
@@ -96,6 +98,12 @@
       "trigger": "result-action",
       "affectedSlots": ["detail"],
       "expectedBehavior": "opens the result workbench for the selected run identity without synthesizing report or NAV evidence in the catalog"
+    },
+    {
+      "id": "compare-backtest-runs",
+      "trigger": "run-compare-checkbox + compare-action",
+      "affectedSlots": ["toolbar", "main"],
+      "expectedBehavior": "collects 2-8 selected runs by exact identity and overlays their published normalized NAV series with legend toggles and a metrics diff table, without synthesizing runs or reports"
     },
     {
       "id": "retry-backtest-catalog",

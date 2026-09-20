@@ -162,7 +162,8 @@ describe("PortfolioComparisonWorkspace", () => {
 		expect(screen.getByText("未成交 300 bps")).toBeInTheDocument();
 		expect(screen.getByText("风险阻塞 150 bps")).toBeInTheDocument();
 		expect(screen.getByText("用户选择 2,000 bps")).toBeInTheDocument();
-		expect(screen.getByText("valuation:abc")).toBeInTheDocument();
+		// 页头与 drift 图 footer 各呈现一次 valuation snapshot（同 PIT 身份）
+		expect(screen.getAllByText("valuation:abc").length).toBeGreaterThanOrEqual(1);
 		expect(screen.getByText("snapshot:stock + snapshot:fund")).toBeInTheDocument();
 		const diagnostic = screen.getByRole("link", { name: "请求组合诊断" });
 		expect(diagnostic).toHaveAttribute("data-context-type", "portfolio");

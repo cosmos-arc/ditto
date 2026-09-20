@@ -50,6 +50,8 @@ interface PageActionOverlayProps {
 	readonly onClose: () => void;
 	readonly open: boolean;
 	readonly title: string;
+	/** 覆盖容器宽度类（如宽 drawer 放图表工作台）；twMerge 与默认宽度冲突时后写优先。 */
+	readonly contentClassName?: string;
 }
 
 function OverlayBody({ children }: { readonly children?: ReactNode }) {
@@ -63,6 +65,7 @@ function OverlayBody({ children }: { readonly children?: ReactNode }) {
 export function PageActionOverlay({
 	actions,
 	children,
+	contentClassName,
 	description,
 	kind,
 	onClose,
@@ -107,7 +110,7 @@ export function PageActionOverlay({
 	if (kind === "drawer") {
 		return (
 			<Sheet open onOpenChange={(isOpen) => !isOpen && onClose()}>
-				<SheetContent side="right" aria-label={title} className="p-0">
+				<SheetContent side="right" aria-label={title} className={contentClassName ? `p-0 ${contentClassName}` : "p-0"}>
 					<SheetHeader className="border-b border-(--color-border-subtle) px-5 py-4 pr-14">
 						<SheetTitle>{title}</SheetTitle>
 						<SheetDescription>{description}</SheetDescription>

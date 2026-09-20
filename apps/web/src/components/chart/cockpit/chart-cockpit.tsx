@@ -763,7 +763,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					</span>
 				))}
 				{activeReadout && (
-					<span className="tabular-nums text-[var(--color-foreground-muted)]">
+					<span className="tabular-nums">
 						{formatReadoutTime(activeReadout.time)}
 						{activeReadout.volume !== null && ` · vol ${activeReadout.volume}`}
 					</span>
@@ -775,7 +775,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					</span>
 				)}
 				{gaps.length > 0 && (
-					<span className="tabular-nums text-[var(--color-foreground-muted)]" data-testid={`chart-gaps-${chartId}`}>
+					<span className="tabular-nums" data-testid={`chart-gaps-${chartId}`}>
 						{gaps.length > 1 ? `缺口 ${gaps.length} 处 · 首处 ` : "缺口 "}
 						{formatReadoutTime(gaps[0]!.from)} → {formatReadoutTime(gaps[0]!.to)}
 					</span>
@@ -835,7 +835,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					/>
 				)}
 			</div>
-			<p className="mt-1.5 text-[var(--text-xs)] text-[var(--color-foreground-muted)]">
+			{/* 读数时间/缺口/键盘提示用条内已审计的 secondary 色：quaternary 在 surface-1 上 4.38:1 跌穿 AA */}
+			<p className="mt-1.5 text-[var(--text-xs)] text-[var(--color-foreground-secondary)]">
 				键盘：←/→ 平移 · ↑/↓ 粗平移 · +/− 缩放 · Home/End 首尾 · Shift+拖拽框选缩放 · 双击复位；断口 =
 				数据缺失（不插值）
 			</p>

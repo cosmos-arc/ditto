@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { useBacktestRuns } from "../hooks";
+import { MAX_COMPARE_RUNS } from "../lib/multi-run-mapping";
 import type { BacktestRun } from "../types";
 import { BacktestCompareOverlay } from "./backtest-overlays";
 
@@ -83,6 +84,7 @@ export function BacktestListPage() {
 	const [status, setStatus] = useState("all");
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 	const [compareOpen, setCompareOpen] = useState(false);
+	const [compareIds, setCompareIds] = useState<string[]>([]);
 	const statuses = useMemo(() => [...new Set(runs.map((run) => run.status))].sort(), [runs]);
 	const filtered = useMemo(() => {
 		const needle = search.trim().toLowerCase();
@@ -98,10 +100,18 @@ export function BacktestListPage() {
 	const selected = filtered.find((run) => run.runId === selectedRunId) ?? filtered[0] ?? null;
 	const completedCount = runs.filter((run) => run.status === "completed").length;
 	const runningCount = runs.filter((run) => run.status === "running").length;
-	const compareIds = [selected?.runId, ...runs.map((run) => run.runId)]
-		.filter((value): value is string => Boolean(value))
-		.filter((value, index, values) => values.indexOf(value) === index)
-		.slice(0, 2);
+	const byId = useMemo(() => new Map(runs.map((run) => [run.runId, run])), [runs]);
+	// 勾选序即色板序；上限 8（run 色板 token 数），目录刷新后消失的 run 自然出列。
+	const compareRuns = compareIds.map((runId) => byId.get(runId)).filter((run): run is BacktestRun => Boolean(run));
+	const compareAtCapacity = compareIds.length >= MAX_COMPARE_RUNS;
+
+	const toggleCompare = (runId: string) => {
+		setCompareIds((previous) => {
+			if (previous.includes(runId)) return previous.filter((value) => value !== runId);
+			if (previous.length >= MAX_COMPARE_RUNS) return previous;
+			return [...previous, runId];
+		});
+	};
 
 	return (
 		<section aria-label="受控回测目录" className="h-full min-h-0">
@@ -148,13 +158,17 @@ export function BacktestListPage() {
 							title="Backtest Runs"
 							count={filtered.length}
 							actions={
-								<span className="font-data text-xs text-(--color-foreground-tertiary)">
-									{completedCount} completed · {runningCount} running
+								<span
+									className="font-data text-xs text-(--color-foreground-tertiary)"
+									data-testid="compare-selection-count"
+								>
+									{compareIds.length}/{MAX_COMPARE_RUNS} 对比 · {completedCount} completed · {runningCount} running
 								</span>
 							}
 						/>
 						<PanelBody className="p-0">
-							<div className="grid grid-cols-[minmax(11rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+							<div className="grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+								<span className="sr-only">加入对比</span>
 								<span>Run</span>
 								<span>Strategy version</span>
 								<span>Status</span>
@@ -176,29 +190,43 @@ export function BacktestListPage() {
 								<div className="divide-y divide-(--color-border-subtle)">
 									{filtered.map((run) => {
 										const isSelected = selected === run;
+										const inCompare = compareIds.includes(run.runId);
 										return (
-											<button
+											<div
 												key={run.runId}
-												type="button"
-												aria-label={`选择回测 ${run.runId}`}
-												aria-pressed={isSelected}
-												onClick={() => setSelectedRunId(run.runId)}
-												className={`grid w-full grid-cols-[minmax(11rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] items-center px-3 py-2.5 text-left text-xs transition-colors ${
-													isSelected
-														? "bg-[color-mix(in_oklch,var(--color-accent)_8%,transparent)]"
-														: "hover:bg-(--color-interaction-hover-subtle-bg)"
-												}`}
+												className="grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] items-center px-3 py-2.5 text-xs transition-colors"
+												data-compare-selected={inCompare}
 											>
-												<span className="truncate font-data font-medium text-(--color-foreground)">{run.runId}</span>
-												<span className="truncate font-data text-(--color-foreground-secondary)">
-													{run.strategyId} · v{run.strategyVersion || "—"}
-												</span>
-												<StatusBadge label={run.status} variant={statusVariant(run.status)} size="sm" />
-												<span className="font-data text-(--color-foreground-secondary)">{run.progressPct}%</span>
-												<span className="font-data text-xs text-(--color-foreground-tertiary)">
-													{run.startedAt.slice(0, 10) || "—"}
-												</span>
-											</button>
+												<input
+													type="checkbox"
+													aria-label={`加入对比 ${run.runId}`}
+													checked={inCompare}
+													disabled={!inCompare && compareAtCapacity}
+													onChange={() => toggleCompare(run.runId)}
+													className="h-3.5 w-3.5 accent-(--brand-accent)"
+												/>
+												<button
+													type="button"
+													aria-label={`选择回测 ${run.runId}`}
+													aria-pressed={isSelected}
+													onClick={() => setSelectedRunId(run.runId)}
+													className={`grid w-full grid-cols-[minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] items-center text-left transition-colors ${
+														isSelected
+															? "rounded-(--radius-sm) bg-[color-mix(in_oklch,var(--color-accent)_8%,transparent)]"
+															: "hover:bg-(--color-interaction-hover-subtle-bg)"
+													}`}
+												>
+													<span className="truncate font-data font-medium text-(--color-foreground)">{run.runId}</span>
+													<span className="truncate font-data text-(--color-foreground-secondary)">
+														{run.strategyId} · v{run.strategyVersion || "—"}
+													</span>
+													<StatusBadge label={run.status} variant={statusVariant(run.status)} size="sm" />
+													<span className="font-data text-(--color-foreground-secondary)">{run.progressPct}%</span>
+													<span className="font-data text-xs text-(--color-foreground-tertiary)">
+														{run.startedAt.slice(0, 10) || "—"}
+													</span>
+												</button>
+											</div>
 										);
 									})}
 								</div>
@@ -225,7 +253,7 @@ export function BacktestListPage() {
 					</aside>
 				}
 			/>
-			<BacktestCompareOverlay open={compareOpen} onClose={() => setCompareOpen(false)} runIds={compareIds} />
+			<BacktestCompareOverlay open={compareOpen} onClose={() => setCompareOpen(false)} runs={compareRuns} />
 		</section>
 	);
 }

@@ -71,8 +71,12 @@ describe("BacktestListPage", () => {
 		expect(screen.getByRole("button", { name: "选择回测 bt-live-001" })).toBeInTheDocument();
 		expect(screen.getByRole("complementary", { name: "回测运行详情" })).toHaveTextContent("7.4%");
 
+		// 对比集合为显式勾选：不足两个 run 时 drawer 保持引导，不虚构基准 run
+		await user.click(screen.getByRole("checkbox", { name: "加入对比 bt-live-001" }));
+		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("1/8");
 		await user.click(screen.getByRole("button", { name: "回测对比" }));
 		expect(screen.getByRole("dialog", { name: "回测对比" })).toHaveTextContent("bt-live-001");
+		expect(screen.getByRole("dialog", { name: "回测对比" })).toHaveTextContent("至少需要两个真实 run");
 	});
 
 	it("shows a typed retry error and never falls back to the old static catalog", async () => {

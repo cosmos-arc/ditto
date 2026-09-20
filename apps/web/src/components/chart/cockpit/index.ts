@@ -38,6 +38,7 @@ export {
 	toVolumeSeriesData,
 	type VolumePoint,
 } from "./chart-data";
+export { ChartLegend, type ChartLegendItem } from "./chart-legend";
 export { type ChartTheme, FALLBACK_CHART_THEME, resolveChartTheme, useChartTheme } from "./chart-theme";
 export {
 	broadcastCrosshairTime,

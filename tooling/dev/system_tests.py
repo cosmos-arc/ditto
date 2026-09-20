@@ -468,6 +468,25 @@ def main() -> int:
                 ),
             )
 
+            # The same three-portfolio fixture drives the single-as_of drift
+            # matrix (#215 ①, CR-narrowed delivery) through the production
+            # comparison query.
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.portfolio_agent_app:app", api_port
+                    ),
+                    prefix="ditto-system-portfolio-drift-",
+                    spec="portfolio-comparison-drift.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The normal product profile keeps Agent disabled. This fixture
             # mounts the production router over real SQLite and pre-issued,
             # fictional actions without a model, credentials, or write tool.
@@ -533,6 +552,25 @@ def main() -> int:
                     ),
                     prefix="ditto-system-backtest-nav-",
                     spec="backtest-nav.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
+            # The same two completed engine runs drive the catalog multi-run
+            # NAV overlay with legend toggles and the metrics diff table
+            # (#215 ②).
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.backtest_nav_app:app", api_port
+                    ),
+                    prefix="ditto-system-backtest-multi-run-",
+                    spec="backtest-multi-run.spec.ts",
                     web_root=web_root,
                     web_port=web_port,
                 ),

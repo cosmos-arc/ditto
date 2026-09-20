@@ -1,9 +1,9 @@
 {
   "id": "portfolio-overview",
-  "version": 3,
+  "version": 4,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-08-31",
+  "updatedAt": "2026-09-18",
   "route": "/portfolio",
   "pagePattern": "analytical-overview",
   "shellFamily": "analytical",
@@ -17,11 +17,13 @@
     "reactParityVerified": true,
     "reactTestRefs": [
       "src/features/portfolio/components/portfolio-components.test.tsx",
-      "src/features/portfolio/components/portfolio-comparison-workspace.test.tsx"
+      "src/features/portfolio/components/portfolio-comparison-workspace.test.tsx",
+      "src/features/portfolio/components/portfolio-drift-chart.test.tsx"
     ],
     "reactComponentRefs": [
       "PortfolioPage",
-      "PortfolioComparisonWorkspace"
+      "PortfolioComparisonWorkspace",
+      "PortfolioDriftChart"
     ]
   },
   "liveData": {
@@ -101,7 +103,8 @@
       "identity-missing",
       "scenario-preview",
       "reconciliation-mismatch",
-      "source-snapshot-mismatch"
+      "source-snapshot-mismatch",
+      "drift-compare"
     ]
   },
   "flags": {
