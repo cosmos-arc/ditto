@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
+from hashlib import sha256
 from typing import Any, Literal
+
+import orjson
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,7 +30,7 @@ class CertifiedField:
     publication_at: datetime | None
     time_precision: Literal["timestamp", "date", "unknown"]
     evidence_uri: str
-    consumer_fields: tuple[str, ...] = ()
+    consumer_bindings: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         """Reject ambiguous scope or naive visibility constraints."""
@@ -39,6 +43,11 @@ class CertifiedField:
             self.instrument_ids
         ):
             raise ValueError("certified field requires unique explicit instruments")
+        if any(isinstance(value, bool) or value <= 0 for value in self.instrument_ids):
+            raise ValueError(
+                "certified instruments must be positive integer identities"
+            )
+        _validate_consumer_bindings(self.consumer_bindings)
         for value in (self.available_at, self.publication_at):
             if value is not None and value.tzinfo is None:
                 raise ValueError("certified field visibility must be timezone-aware")
@@ -49,7 +58,7 @@ class CertifiedField:
 def field_to_payload(value: CertifiedField) -> dict[str, object]:
     """Serialize evidence without coupling it to the report identity codec."""
     return {
-        "consumer_fields": value.consumer_fields,
+        "consumer_bindings": value.consumer_bindings,
         "field": value.field,
         "snapshot_id": value.snapshot_id,
         "instrument_ids": value.instrument_ids,
@@ -66,8 +75,12 @@ def field_to_payload(value: CertifiedField) -> dict[str, object]:
 
 def field_from_payload(value: dict[str, Any]) -> CertifiedField:
     """Restore frozen field facts; legacy reports have no such facts."""
+    if any(not isinstance(item, int) for item in value["instrument_ids"]):
+        raise ValueError("certified instruments must be integer identities")
     return CertifiedField(
-        consumer_fields=tuple(value.get("consumer_fields", ())),
+        consumer_bindings=tuple(
+            tuple(item) for item in value.get("consumer_bindings", ())
+        ),
         field=value["field"],
         snapshot_id=value["snapshot_id"],
         instrument_ids=tuple(value["instrument_ids"]),
@@ -82,3 +95,20 @@ def field_from_payload(value: dict[str, Any]) -> CertifiedField:
         time_precision=value["time_precision"],
         evidence_uri=value["evidence_uri"],
     )
+
+
+def consumer_input_digest(payload: object) -> str:
+    """Address a normalized consumer input and its complete dependency group."""
+    return sha256(orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)).hexdigest()
+
+
+def _validate_consumer_bindings(bindings: tuple[tuple[str, str], ...]) -> None:
+    if len(set(bindings)) != len(bindings):
+        raise ValueError("duplicate consumer input binding")
+    for name, digest in bindings:
+        if (
+            not name
+            or name.strip() != name
+            or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        ):
+            raise ValueError("consumer input binding must have a name and SHA-256")

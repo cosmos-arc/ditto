@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from ditto_application.processes.selection.admission import selection_field_payload
 from ditto_application.queries.field_admission import (
     FieldAdmissionQuery,
     FieldAdmissionRequest,
@@ -19,7 +20,7 @@ from ditto_data.catalog.certification import (
 from ditto_data.catalog.certification_store import SQLiteCertificationStore
 from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.coverage import DatasetCoverage
-from ditto_data.catalog.field_evidence import CertifiedField
+from ditto_data.catalog.field_evidence import CertifiedField, consumer_input_digest
 from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
 from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
@@ -91,7 +92,7 @@ def field_evidence(
         publication_at=visible,
         time_precision="timestamp",
         evidence_uri="evidence://field/amount",
-        consumer_fields=("instruments.average_turnover",),
+        consumer_bindings=(("instruments.average_turnover", "a" * 64),),
     )
     check = (EvidenceCheck("recorded", "evidence://synthetic", True),)
     report = DatasetCertificationReport.create(
@@ -140,6 +141,7 @@ def field_evidence(
                 "amount",
                 snapshot.snapshot_id,
                 "instruments.average_turnover",
+                "a" * 64,
             ),
         ),
         instrument_ids=(600000,),
@@ -198,6 +200,17 @@ def certified_selection(request):
             ),
         )
         snapshot_id = old.evidence.snapshot_ids[0]
+        bound = replace(
+            request,
+            data_fields=tuple(
+                FieldRequirement("stock_daily", "amount", snapshot_id, consumer)
+                for consumer in consumer_fields
+            ),
+            data_from=old.coverage.target_from,
+            data_to=old.coverage.target_to,
+            rotation_source_snapshot_ids=(snapshot_id,),
+            selection_source_snapshot_ids=(snapshot_id,),
+        )
         field = replace(
             old.evidence.certified_fields[0],
             instrument_ids=tuple(
@@ -205,7 +218,10 @@ def certified_selection(request):
             ),
             available_at=request.knowledge_cutoff,
             publication_at=request.publication_cutoff,
-            consumer_fields=consumer_fields,
+            consumer_bindings=tuple(
+                (name, consumer_input_digest(selection_field_payload(bound, name)))
+                for name in consumer_fields
+            ),
         )
         reports.revoke_report(
             old.report_id,
@@ -222,15 +238,4 @@ def certified_selection(request):
         )
         reports.append_report(report)
         reports.approve_report(report.report_id, reviewer="human", reviewed_at=_VISIBLE)
-        bound = replace(
-            request,
-            data_fields=tuple(
-                FieldRequirement("stock_daily", "amount", snapshot_id, consumer)
-                for consumer in consumer_fields
-            ),
-            data_from=old.coverage.target_from,
-            data_to=old.coverage.target_to,
-            rotation_source_snapshot_ids=(snapshot_id,),
-            selection_source_snapshot_ids=(snapshot_id,),
-        )
         yield query, bound

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from hashlib import sha256
 from pathlib import Path
+from typing import cast
 
 import orjson
 from ditto_data.catalog import (
@@ -19,7 +20,7 @@ from ditto_data.catalog.certification import (
     EvidenceCheck,
 )
 from ditto_data.catalog.coverage import CoverageCollector, CoverageException
-from ditto_data.catalog.field_evidence import CertifiedField
+from ditto_data.catalog.field_evidence import CertifiedField, consumer_input_digest
 from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import (
@@ -130,6 +131,7 @@ class DataProductCertificationBuilder:
             )
         entries, checkpoints = self._evidence_chain(request, snapshots)
         self._verify_snapshot_bindings(request, snapshots, entries, checkpoints)
+        _verify_consumer_bindings(request)
         snapshot_assets = {item.snapshot_id: item.canonical_asset for item in snapshots}
         for field in request.certified_fields:
             matching = [
@@ -367,3 +369,32 @@ class DataProductCertificationBuilder:
                 ]
             )
         return sha256(orjson.dumps(payload)).hexdigest()
+
+
+def _verify_consumer_bindings(request: CertificationBuildRequest) -> None:
+    """Require every input digest to match retained, hash-verified consumer facts."""
+    expected = {
+        binding
+        for field in request.certified_fields
+        for binding in field.consumer_bindings
+    }
+    if not expected:
+        return
+    request.consumer_evidence.verify()
+    payload: object = orjson.loads(request.consumer_evidence.local_path.read_bytes())
+    if not isinstance(payload, dict):
+        raise AppProcessError("consumer evidence must be an object")
+    inputs = cast(dict[str, object], payload).get("field_inputs")
+    if not isinstance(inputs, list):
+        raise AppProcessError("consumer evidence has no retained field inputs")
+    actual: set[tuple[str, str]] = set()
+    for item in cast(list[object], inputs):
+        if not isinstance(item, dict):
+            raise AppProcessError("consumer field input must be an object")
+        record = cast(dict[str, object], item)
+        name = record.get("consumer_field")
+        if not isinstance(name, str):
+            raise AppProcessError("consumer field input name is required")
+        actual.add((name, consumer_input_digest(record)))
+    if not expected.issubset(actual):
+        raise AppProcessError("consumer input binding does not match retained evidence")

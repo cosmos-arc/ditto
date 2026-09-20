@@ -1,5 +1,6 @@
 """Real HTTP selection admission with isolated SQLite evidence and run stores."""
 
+from copy import deepcopy
 from dataclasses import asdict
 
 import httpx
@@ -62,6 +63,8 @@ async def test_http_admission_and_create_share_the_gate_and_retry_identity(tmp_p
         app.add_exception_handler(APIError, api_error_handler)
         body = orjson.loads(orjson.dumps(asdict(request)))
         body["selection_spec"]["asset_kind"] = "stock"
+        for field in body["data_fields"]:
+            field.pop("consumer_input_hash", None)
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
@@ -82,6 +85,16 @@ async def test_http_admission_and_create_share_the_gate_and_retry_identity(tmp_p
                 == second.json()["data"]["selection_run"]["run_id"]
             )
             assert len(runs.list_by_spec("admission-test")) == 1
+            selected = await client.post(
+                "/api/v1/selections/admission?instrument_id=600000", json=body
+            )
+            assert selected.status_code == 200, selected.text
+            assert selected.json()["data"]["allowed"] is True
+            foreign = await client.post(
+                "/api/v1/selections/admission?instrument_id=600001", json=body
+            )
+            assert foreign.status_code == 422
+            await _assert_tampering_rejected(client, body)
             body["data_fields"] = []
             blocked = await client.post("/api/v1/selections/admission", json=body)
             assert blocked.status_code == 200
@@ -92,3 +105,24 @@ async def test_http_admission_and_create_share_the_gate_and_retry_identity(tmp_p
             assert len(runs.list_by_spec("admission-test")) == 1
         await container.close()
         pool.close_all()
+
+
+async def _assert_tampering_rejected(client, body):
+    for field_name, forged in (("average_turnover", 999999.0), ("is_st", True)):
+        tampered = deepcopy(body)
+        tampered["instruments"][0][field_name] = forged
+        preview = await client.post("/api/v1/selections/admission", json=tampered)
+        assert preview.status_code == 200
+        assert preview.json()["data"]["allowed"] is False
+        assert "CONSUMER_INPUT_MISMATCH" in preview.text
+        denied = await client.post("/api/v1/selections/runs", json=tampered)
+        assert denied.status_code == 422
+    for field_name, forged in (
+        ("universe_snapshot_id", "forged-universe"),
+        ("data_from", "2026-09-17"),
+    ):
+        tampered = deepcopy(body)
+        tampered[field_name] = forged
+        denied = await client.post("/api/v1/selections/runs", json=tampered)
+        assert denied.status_code == 422
+        assert "CONSUMER_INPUT_MISMATCH" in denied.text

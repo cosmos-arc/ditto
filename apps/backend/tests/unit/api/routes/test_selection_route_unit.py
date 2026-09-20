@@ -278,7 +278,13 @@ def admission():
             query,
             {
                 "data_fields": tuple(
-                    SelectionFieldRequirementBody.model_validate(asdict(item))
+                    SelectionFieldRequirementBody.model_validate(
+                        {
+                            key: value
+                            for key, value in asdict(item).items()
+                            if key != "consumer_input_hash"
+                        }
+                    )
                     for item in request.data_fields
                 ),
                 "data_from": request.data_from,

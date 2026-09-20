@@ -34,10 +34,22 @@ export function SelectionRunInput({
 }) {
 	const [value, setValue] = useState(readSavedSelectionInput);
 	const [message, setMessage] = useState<string | null>(null);
+	const [instrument, setInstrument] = useState("");
 	const inspection = useMutation({
-		mutationFn: async (raw: string) => toAdmissionView(await assessSelectionAdmission(parseRunInput(raw))),
+		mutationFn: async ({ raw, instrument }: { raw: string; instrument: string }) =>
+			toAdmissionView(await assessSelectionAdmission(parseRunInput(raw), instrument ? Number(instrument) : undefined)),
 	});
-	const currentInspection = inspection.variables === value;
+	const currentInspection = inspection.variables?.raw === value && inspection.variables.instrument === instrument;
+	let instruments: CreateSelectionRunBody["instruments"] = [];
+	try {
+		const input = parseRunInput(value);
+		if (Array.isArray(input.instruments))
+			instruments = input.instruments.filter(
+				(item) => item && typeof item.instrument_id === "number" && typeof item.instrument_name === "string",
+			);
+	} catch {
+		/* Incomplete drafts are validated on explicit action. */
+	}
 	const admission = currentInspection ? inspection.data : undefined;
 
 	function validated(): CreateSelectionRunBody | null {
@@ -75,15 +87,35 @@ export function SelectionRunInput({
 					placeholder='{"as_of":"...","selection_spec":{"spec_id":"..."}}'
 					spellCheck={false}
 					value={value}
-					onChange={(event) => setValue(event.currentTarget.value)}
+					onChange={(event) => {
+						setValue(event.currentTarget.value);
+						setInstrument("");
+					}}
 				/>
+				<label className="grid gap-1 text-xs">
+					选择证券查看字段资格
+					<select
+						aria-label="选择证券"
+						value={instrument}
+						onChange={(event) => setInstrument(event.currentTarget.value)}
+						className="rounded-(--radius-md) border border-(--color-border-primary) bg-(--color-surface-1) p-2"
+					>
+						<option value="">全部输入证券</option>
+						{instruments.map((item) => (
+							<option key={item.instrument_id} value={item.instrument_id}>
+								{item.instrument_name} · {item.instrument_id}
+							</option>
+						))}
+					</select>
+				</label>
+				{instrument && <p className="text-xs">当前仅检查所选证券的数据资格；执行时服务端仍校验输入包的全部证券。</p>}
 				<div className="flex items-center gap-2">
 					<Button
 						type="button"
 						variant="outline"
 						disabled={inspection.isPending || !value.trim()}
 						onClick={() => {
-							if (validated()) inspection.mutate(value);
+							if (validated()) inspection.mutate({ raw: value, instrument });
 						}}
 					>
 						{inspection.isPending ? "检查中…" : "检查字段准入"}
@@ -93,7 +125,7 @@ export function SelectionRunInput({
 					</Button>
 					<Button
 						type="button"
-						disabled={busy || value.trim().length === 0 || admission?.allowed === false}
+						disabled={busy || value.trim().length === 0 || (!instrument && admission?.allowed === false)}
 						onClick={() => {
 							const input = validated();
 							if (input) onRun(input);
@@ -108,7 +140,13 @@ export function SelectionRunInput({
 					)}
 				</div>
 				{currentInspection && inspection.isError && <p role="alert">{inspection.error.message}</p>}
-				{admission && <SelectionAdmission key={value} value={admission} />}
+				{admission && (
+					<SelectionAdmission
+						key={`${value}:${instrument}`}
+						value={admission}
+						scope={instrument ? "所选证券" : "全部输入证券"}
+					/>
+				)}
 			</div>
 		</details>
 	);

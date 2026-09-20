@@ -170,7 +170,8 @@ uv run --no-sync ditto ops promotion-history stock_daily
 
 `field-admission-v1` 是 Selection 创建入口的数据门禁。`POST /api/v1/selections/admission`
 只读检查与创建请求相同的输入包；`POST /api/v1/selections/runs` 在任何保存之前重新检查。
-页面可选择字段查看用途、范围、时间精度、许可/认证和快照引用。数据合格仍不能代替策略验证、晋级或 Paper 审批。
+页面可选择输入包内证券，再选择字段查看用途、范围、时间精度、许可/认证和快照引用。
+单个证券下钻不改变输入包；执行始终重新校验全部输入证券。数据合格仍不能代替策略验证、晋级或 Paper 审批。
 
 旧输入包须补充 `data_from`、`data_to` 及 `data_fields`。每个绑定包含
 `dataset_id`、`field`、`snapshot_id`、`consumer_field`；例如
@@ -181,8 +182,10 @@ uv run --no-sync ditto ops promotion-history stock_daily
 
 字段证明存入既有 `DatasetCertificationReport.evidence.certified_fields`，使用
 `selection-fields-v1` profile。`CertifiedField` 指定字段、精确快照、显式证券集合、覆盖区间、
-可得/公开时间上界、时间精度、原件引用和获审查的 `consumer_fields` 依赖映射。
-`CertificationBuildRequest.certified_fields` 校验真实 catalog 字段和消费者证据引用；
+可得/公开时间上界、时间精度、原件引用和获审查的 `consumer_bindings`（消费字段名、输入 SHA-256）。
+`selection_field_payload` 固定该消费字段的实际数值、证券身份、区间、时点、证券池/上下文引用及完整依赖组。
+消费者工件的 `field_inputs` 数组保留这些规范化对象；`consumer_input_digest` 计算其 SHA-256。
+`CertificationBuildRequest.certified_fields` 校验真实 catalog 字段、已校验工件字节及其中的输入摘要；
 调用已有 builder、freeze、review 流程，不从网页输入直接写入资格。
 审核者需确认映射、证券范围和时间上界有原件支持；日期精度须先通过交易日历解析成保守时间上界，
 不能用摄取时间代替。缺失时间保留未知。许可有效期按实际使用日（Asia/Shanghai）校验，

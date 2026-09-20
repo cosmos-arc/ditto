@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import fields, is_dataclass, replace
+from typing import Any, cast
 
+import orjson
+
+from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.field_admission import (
     FieldAdmission,
     FieldAdmissionQuery,
@@ -75,9 +79,62 @@ def observed_fields(
 ) -> set[str]:
     """Find present dataclass input facts; never infer absent observations."""
     if not is_dataclass(value) or isinstance(value, type):
-        raise TypeError("selection observation must be a dataclass")
+        raise AppProcessError("selection observation must be a dataclass")
     return {
         f"{prefix}.{field.name}"
         for field in fields(value)
         if field.name not in exclude and getattr(value, field.name) is not None
+    }
+
+
+def selection_field_payload(request: object, consumer_field: str) -> dict[str, object]:
+    """
+    Freeze the actual normalized values, context and whole dependency group.
+
+    Policy weights, ranking limits and seed are not data facts. Unconsumed input
+    fields do not enter this field's identity. Certification tools retain these
+    payloads in the reviewed consumer artifact; HTTP clients cannot grant them.
+    """
+    value = cast(dict[str, Any], orjson.loads(orjson.dumps(request)))
+    parts = consumer_field.split(".", 2)
+    observed: object = value.get(consumer_field)
+    if parts[0] in {"instruments", "industries"}:
+        key = "instrument_id" if parts[0] == "instruments" else "industry_id"
+        rows: list[tuple[object, object]] = []
+        for item in value[parts[0]]:
+            fact = item.get(parts[1])
+            if parts[1] == "factor_values":
+                fact = next(
+                    (
+                        factor["value"]
+                        for factor in item["factor_values"]
+                        if factor["name"] == parts[2]
+                    ),
+                    None,
+                )
+            if isinstance(fact, (int, float)) and not isinstance(fact, bool):
+                fact = float(fact)
+            rows.append((item[key], fact))
+        observed = sorted(rows, key=lambda pair: str(pair[0]))
+    return {
+        "consumer_field": consumer_field,
+        "observed": observed,
+        "context": {
+            key: value[key]
+            for key in (
+                "as_of",
+                "knowledge_cutoff",
+                "publication_cutoff",
+                "data_from",
+                "data_to",
+                "universe_snapshot_id",
+                "membership_version",
+                "market_context_feature_set_id",
+            )
+        },
+        "dependencies": sorted(
+            (item["dataset_id"], item["field"], item["snapshot_id"])
+            for item in value["data_fields"]
+            if item["consumer_field"] == consumer_field
+        ),
     }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AdmissionView } from "../admission";
 
-export function SelectionAdmission({ value }: { readonly value: AdmissionView }) {
+export function SelectionAdmission({ value, scope }: { readonly value: AdmissionView; readonly scope: string }) {
 	const [selected, setSelected] = useState(0);
 	const field = value.fields[selected];
 	return (
@@ -10,7 +10,7 @@ export function SelectionAdmission({ value }: { readonly value: AdmissionView })
 			className="grid gap-2 rounded-(--radius-md) border border-(--color-border-subtle) p-3 text-xs"
 		>
 			<p role="status">
-				{value.allowed ? "数据准入通过" : "数据准入未通过"} · {value.ruleVersion}
+				{scope} · {value.allowed ? "数据准入通过" : "数据准入未通过"} · {value.ruleVersion}
 			</p>
 			<p>数据合格不代表策略已通过研究验证或获得晋级批准。</p>
 			{value.fields.length === 0 ? (

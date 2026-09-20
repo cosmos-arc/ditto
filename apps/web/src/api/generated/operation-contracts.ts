@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: e8a7c32abd11c33b797a5aa15502140cf4e8c48f9411bc2b38b1905d298b3ca8
+ * Schema SHA-256: 6e44a468a215f35929b03d11cf5b88d84706d719dce71a7ef295a2f43ffe5dd6
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -2844,6 +2844,7 @@ export const operationRequestContracts = {
   "post /api/v1/selections/admission": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["instrument_id"],
     },
   },
   "post /api/v1/selections/runs": {

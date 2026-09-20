@@ -45257,6 +45257,23 @@
         "operationId": "selections_assess_admission",
         "parameters": [
           {
+            "in": "query",
+            "name": "instrument_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Id"
+            }
+          },
+          {
             "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
             "in": "header",
             "name": "X-Ditto-API-Contract-Version",

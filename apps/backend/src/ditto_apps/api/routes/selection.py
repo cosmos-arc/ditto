@@ -281,11 +281,14 @@ async def compare_selection_runs(
 async def assess_selection_admission(
     body: CreateSelectionRunBody,
     facade: Annotated[SelectionWorkspaceFacade, FromComponent()],
+    instrument_id: Annotated[int | None, Query(gt=0)] = None,
 ) -> APIResponse[SelectionAdmissionResponse]:
     """Preview exact field admission without saving or changing certification."""
     try:
         value = await asyncio.to_thread(
-            facade.assess_admission, _application_request(body)
+            facade.assess_admission,
+            _application_request(body),
+            instrument_id=instrument_id,
         )
     except AppProcessError as exc:
         raise UnprocessableEntityError(

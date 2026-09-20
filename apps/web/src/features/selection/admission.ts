@@ -10,6 +10,7 @@ const PURPOSES: Record<string, string> = {
 };
 const REASONS: Record<string, string> = {
 	FIELD_EVIDENCE_MISSING: "请补齐该字段的认证与范围证据，再重新检查。",
+	CONSUMER_INPUT_MISMATCH: "输入内容、区间或依赖与审核证据不一致，请恢复原输入包或重新验证。",
 	CONSUMER_BINDING_MISSING: "输入缺少经审核的字段来源绑定，请补齐输入包。",
 	CERTIFICATION_MISSING: "没有有效认证，请检查审核或撤销记录。",
 	LICENSE_MISSING: "未找到来源许可，请核实并登记相应用途权益。",
@@ -34,6 +35,11 @@ export function toAdmissionView(value: AdmissionResponse) {
 	) {
 		throw new Error("数据准入响应无效，请重新检查");
 	}
+	const computed =
+		value.fields.length > 0 &&
+		value.fields.every((field) => Array.isArray(field.allowed_uses) && field.allowed_uses.includes(value.purpose));
+	if (value.purpose !== "formal_research" || computed !== value.allowed)
+		throw new Error("数据准入响应无效，请重新检查");
 	return {
 		allowed: value.allowed,
 		ruleVersion: value.rule_version,

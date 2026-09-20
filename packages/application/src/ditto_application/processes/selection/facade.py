@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Literal
 
+from ditto_data.catalog.field_evidence import consumer_input_digest
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.industry_rotation.contracts import (
@@ -27,6 +28,7 @@ from ditto_application.processes.selection.admission import (
     assess_selection_fields,
     missing_field,
     observed_fields,
+    selection_field_payload,
 )
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
@@ -271,7 +273,7 @@ class SelectionWorkspaceFacade:
         self._admission = admission
 
     def assess_admission(
-        self, request: CreateSelectionRunRequest
+        self, request: CreateSelectionRunRequest, *, instrument_id: int | None = None
     ) -> FieldAdmissionReport:
         """Show exactly the data gate that create rechecks before any writes."""
         if (
@@ -284,14 +286,29 @@ class SelectionWorkspaceFacade:
                 "formal_research",
                 (missing_field("data_fields", "CONSUMER_BINDING_MISSING"),),
             )
+        instrument_ids = tuple(int(item.instrument_id) for item in request.instruments)
+        if instrument_id is not None:
+            if instrument_id not in instrument_ids:
+                raise AppProcessError(
+                    "证券不在输入包中",
+                    details={"reason": "invalid_admission_instrument"},
+                )
+            instrument_ids = (instrument_id,)
         try:
             return assess_selection_fields(
                 self._admission,
                 FieldAdmissionRequest(
-                    fields=request.data_fields,
-                    instrument_ids=tuple(
-                        int(item.instrument_id) for item in request.instruments
+                    fields=tuple(
+                        replace(
+                            item,
+                            consumer_input_hash=consumer_input_digest(
+                                selection_field_payload(request, item.consumer_field)
+                            ),
+                        )
+                        for item in request.data_fields
+                        if item.consumer_field in _consumed_fields(request)
                     ),
+                    instrument_ids=instrument_ids,
                     required_from=request.data_from,
                     required_to=request.data_to,
                     knowledge_cutoff=request.knowledge_cutoff,
@@ -299,9 +316,7 @@ class SelectionWorkspaceFacade:
                     purpose="formal_research",
                 ),
                 consumed_fields=_consumed_fields(request),
-                instrument_ids=tuple(
-                    int(item.instrument_id) for item in request.instruments
-                ),
+                instrument_ids=instrument_ids,
                 snapshot_ids=frozenset(
                     (
                         *request.selection_source_snapshot_ids,

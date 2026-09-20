@@ -5,23 +5,21 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Literal
 from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.certification import CertificationReader
+from ditto_data.catalog.field_admission import (
+    DATA_USES,
+    DataUse,
+    FieldUsageScope,
+    field_reasons,
+    license_reasons,
+)
 from ditto_data.catalog.field_evidence import CertifiedField
-from ditto_data.catalog.license import DatasetLicenseReader, DatasetLicenseRecord
+from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 
 from ditto_application.exceptions import AppQueryError
-
-type DataUse = Literal["display", "exploration", "formal_research", "promotion_paper"]
-DATA_USES: tuple[DataUse, ...] = (
-    "display",
-    "exploration",
-    "formal_research",
-    "promotion_paper",
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +30,7 @@ class FieldRequirement:
     field: str
     snapshot_id: str
     consumer_field: str = ""
+    consumer_input_hash: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,62 +87,6 @@ class FieldAdmissionReport:
     purpose: DataUse
     fields: tuple[FieldAdmission, ...]
     rule_version: str = "field-admission-v1"
-
-
-def _license_reasons(
-    license_record: DatasetLicenseRecord | None,
-    purpose: DataUse,
-    used_on: date,
-) -> tuple[str, ...]:
-    if license_record is None:
-        return ("LICENSE_MISSING",)
-    if license_record.effective_from > used_on or (
-        license_record.effective_to is not None
-        and used_on >= license_record.effective_to
-    ):
-        return ("LICENSE_INTERVAL_MISSING",)
-    permissions = (license_record.local_cache, license_record.display)
-    if purpose != "display":
-        permissions += (license_record.derivative_compute,)
-    return (
-        ()
-        if all(item == "allowed" for item in permissions)
-        else ("LICENSE_RESTRICTED",)
-    )
-
-
-def _field_reasons(
-    field: CertifiedField | None,
-    requirement: FieldRequirement,
-    request: FieldAdmissionRequest,
-) -> tuple[str, ...]:
-    if field is None:
-        return ("FIELD_EVIDENCE_MISSING",)
-    reasons: list[str] = []
-    if (
-        requirement.consumer_field
-        and requirement.consumer_field not in field.consumer_fields
-    ):
-        reasons.append("CONSUMER_BINDING_MISSING")
-    if not set(request.instrument_ids).issubset(field.instrument_ids):
-        reasons.append("INSTRUMENT_SCOPE_MISSING")
-    if (
-        request.required_from < field.covered_from
-        or request.required_to > field.covered_to
-    ):
-        reasons.append("FIELD_COVERAGE_MISSING")
-    if (
-        field.available_at is None
-        or field.publication_at is None
-        or field.time_precision == "unknown"
-    ):
-        reasons.append("TIME_EVIDENCE_MISSING")
-    elif (
-        field.available_at > request.knowledge_cutoff
-        or field.publication_at > request.publication_cutoff
-    ):
-        reasons.append("TIME_NOT_VISIBLE")
-    return tuple(reasons)
 
 
 class FieldAdmissionQuery:
@@ -220,11 +163,24 @@ class FieldAdmissionQuery:
                 ),
                 None,
             )
-        reasons.extend(_field_reasons(field, item, request))
+        reasons.extend(
+            field_reasons(
+                field,
+                FieldUsageScope(
+                    consumer_field=item.consumer_field,
+                    consumer_input_hash=item.consumer_input_hash,
+                    instrument_ids=request.instrument_ids,
+                    required_from=request.required_from,
+                    required_to=request.required_to,
+                    knowledge_cutoff=request.knowledge_cutoff,
+                    publication_cutoff=request.publication_cutoff,
+                ),
+            )
+        )
         allowed: tuple[DataUse, ...] = tuple(
             purpose
             for purpose in DATA_USES
-            if not reasons and not _license_reasons(license_record, purpose, used_on)
+            if not reasons and not license_reasons(license_record, purpose, used_on)
         )
         return FieldAdmission(
             dataset_id=item.dataset_id,
@@ -236,7 +192,7 @@ class FieldAdmissionQuery:
                 dict.fromkeys(
                     (
                         *reasons,
-                        *_license_reasons(license_record, request.purpose, used_on),
+                        *license_reasons(license_record, request.purpose, used_on),
                     )
                 )
             ),

@@ -270,3 +270,37 @@ def test_builder_rejects_field_claim_without_exact_schema_evidence(tmp_path) -> 
                 request, certified_fields=(replace(admitted, evidence_uri="unknown"),)
             )
         )
+
+
+def test_builder_binds_input_digests_to_retained_verified_consumer_artifact(tmp_path):
+    import orjson
+    from ditto_data.catalog.field_evidence import CertifiedField, consumer_input_digest
+
+    builder, request = _fixture(tmp_path)
+    original = builder.build(request)
+    payload = {"consumer_field": "instruments.close", "observed": [[600000, 10.5]]}
+    raw = orjson.dumps({"field_inputs": [payload]})
+    request.consumer_evidence.local_path.write_bytes(raw)
+    field = CertifiedField(
+        field="close",
+        snapshot_id=original.evidence.snapshot_ids[0],
+        instrument_ids=(600000,),
+        covered_from=request.target_to,
+        covered_to=request.target_to,
+        available_at=None,
+        publication_at=None,
+        time_precision="unknown",
+        evidence_uri=request.consumer_evidence.evidence_uri,
+        consumer_bindings=(("instruments.close", consumer_input_digest(payload)),),
+    )
+    bound = replace(
+        request,
+        certified_fields=(field,),
+        consumer_evidence=replace(
+            request.consumer_evidence, sha256_hex=sha256(raw).hexdigest()
+        ),
+    )
+    assert builder.build(bound).evidence.certified_fields == (field,)
+    forged = replace(field, consumer_bindings=(("instruments.close", "f" * 64),))
+    with pytest.raises(AppProcessError, match="does not match retained evidence"):
+        builder.build(replace(bound, certified_fields=(forged,)))
