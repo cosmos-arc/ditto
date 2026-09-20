@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
+from unittest.mock import Mock
 
 import polars as pl
 import pytest
 from ditto_application.contracts import CheckDataQualityCommand
+from ditto_application.processes.ingestion.backfill_manager import BackfillManager
+from ditto_application.processes.ingestion.bootstrap_planner import BootstrapPlanner
+from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
+from ditto_application.processes.ingestion.coordinator import (
+    IngestionCoordinator,
+    IngestionServices,
+    MarketServices,
+)
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitPorts,
@@ -24,6 +36,7 @@ from ditto_application.processes.ingestion.post_ingest import (
     process_fetched_data,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
+from ditto_application.processes.ingestion.types import SourceFetchers
 from ditto_data.catalog import DataAssetRef, DataCatalogEntry, DataSchemaFingerprint
 from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
 from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
@@ -45,8 +58,16 @@ from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import MarketWriters
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
+from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
+from ditto_data.sources.protocols import (
+    CapitalFetcher,
+    FundamentalFetcher,
+    MacroFetcher,
+    MarketFetcher,
+    MetadataFetcher,
+)
 from ditto_data.storage.market.etf.bars import EtfBarsWriter
 from ditto_data.storage.market.etf.status import EtfStatusWriter
 from ditto_data.storage.market.stock.adj import StockAdjFactorWriter
@@ -212,6 +233,13 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
         saved_log = logs.get_log("stock_daily", "tushare", "2026-07-17")
         assert saved_log is not None
         assert saved_log.attempts == 1
+        IngestionResultHandler(logs, "tushare").handle_unknown_error(
+            "stock_daily", "2026-07-17", ValueError("rejected conflicting retry")
+        )
+        assert committer.commit(request).completed
+        restored = logs.get_log("stock_daily", "tushare", "2026-07-17")
+        assert restored is not None
+        assert restored.status is IngestionStatus.SUCCESS
     finally:
         pool.close()
 
@@ -297,14 +325,17 @@ def test_retry_after_evidence_write_before_checkpoint_does_not_duplicate(
         pool.close()
 
 
-@pytest.mark.integration
-@pytest.mark.pit
-@pytest.mark.parametrize("dataset", ["stock_daily", "etf_daily"])
-def test_partial_backfill_recovery_and_revision_preserve_old_payload(
-    tmp_path: Path,
-    dataset: str,
-) -> None:
+@dataclass(frozen=True)
+class _Pipeline:
+    context: PostIngestContext
+    writer: IngestionDataWriter
+    store: ParquetStore
+    market: MarketWriteService
+    ports: EvidenceCommitPorts
 
+
+@contextmanager
+def _pipeline(tmp_path: Path, dataset: str) -> Iterator[_Pipeline]:
     class QualityChecker:
         def handle(self, command: CheckDataQualityCommand) -> tuple[pl.DataFrame, bool]:
             assert command.df["close"].min() > 0
@@ -321,19 +352,18 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
     license_record = replace(_license(), dataset_id=dataset)
     licenses.append_license(license_record)
-    committer = IngestionEvidenceCommitter(
-        ports=EvidenceCommitPorts(
-            lifecycle_reader=lifecycle,
-            lifecycle_writer=lifecycle,
-            snapshot_writer=snapshots,
-            snapshot_reader=snapshots,
-            license_reader=licenses,
-            catalog_writer=catalog,
-            lineage_recorder=lineage,
-            lineage_reader=lineage,
-            ingestion_log_store=logs,
-        )
+    ports = EvidenceCommitPorts(
+        lifecycle_reader=lifecycle,
+        lifecycle_writer=lifecycle,
+        snapshot_writer=snapshots,
+        snapshot_reader=snapshots,
+        license_reader=licenses,
+        catalog_writer=catalog,
+        lineage_recorder=lineage,
+        lineage_reader=lineage,
+        ingestion_log_store=logs,
     )
+    committer = IngestionEvidenceCommitter(ports=ports)
     store = ParquetStore(
         tmp_path, key_columns=("instrument_id", "trade_date"), date_column="trade_date"
     )
@@ -367,7 +397,14 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
         provider_payload_writer=payloads,
         license_record_id=license_record.record_id,
     )
-    original = pl.DataFrame(
+    try:
+        yield _Pipeline(ctx, writer, store, market, ports)
+    finally:
+        pool.close()
+
+
+def _bars() -> pl.DataFrame:
+    return pl.DataFrame(
         {
             "instrument_id": [1000001, 1000001],
             "trade_date": [date(2026, 7, 16), date(2026, 7, 17)],
@@ -375,19 +412,32 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
         }
     )
 
-    def ingest(frame: pl.DataFrame, force: bool = False):
-        return process_fetched_data(
-            frame,
-            dataset,
-            "2026-07-16",
-            force,
-            ctx=ctx,
-            request_end="2026-07-17",
-            chunk_id="test-backfill",
-        )
 
-    try:
-        writer.write_data(dataset, original.head(1), "2026-07-16")
+@pytest.mark.integration
+@pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["stock_daily", "etf_daily"])
+def test_partial_backfill_recovery_and_revision_preserve_old_payload(
+    tmp_path: Path,
+    dataset: str,
+) -> None:
+    with _pipeline(tmp_path, dataset) as runtime:
+        snapshots = runtime.ports.snapshot_reader
+        lifecycle = runtime.ports.lifecycle_reader
+        logs = runtime.ports.ingestion_log_store
+        original = _bars()
+
+        def ingest(frame: pl.DataFrame, force: bool = False):
+            return process_fetched_data(
+                frame,
+                dataset,
+                "2026-07-16",
+                force,
+                ctx=runtime.context,
+                request_end="2026-07-17",
+                chunk_id="test-backfill",
+            )
+
+        runtime.writer.write_data(dataset, original.head(1), "2026-07-16")
         recovered = ingest(original)
         assert recovered.status == "success", recovered
         assert recovered.row_count == 2
@@ -406,7 +456,7 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
         assert len(lifecycle.list_complete()) == 2
         assert snapshots.get_snapshot(first.snapshot_id) == first
         assert first.payload_uri is not None
-        old = payloads.read_payload(
+        old = FilesystemProviderPayloadStore(tmp_path).read_payload(
             ProviderPayloadArtifact(
                 dataset_id=dataset,
                 source="tushare",
@@ -416,9 +466,125 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
             )
         )
         assert old.equals(original)
-        current = store.read(
+        current = runtime.store.read(
             "market/stock/bars" if dataset == "stock_daily" else "market/etf/bars"
         )
         assert current.equals(revised)
-    finally:
-        pool.close()
+        assert ingest(original, force=True).status == "success"
+        restored = logs.get_log(dataset, "tushare", "2026-07-16")
+        assert restored is not None
+        assert restored.checksum == recovered.checksum
+        assert len(lifecycle.list_complete()) == 3
+
+
+class _MarketSource:
+    def __init__(self) -> None:
+        self.payload = _bars()
+
+    def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
+        return self.payload.filter(
+            pl.col("trade_date") == date.fromisoformat(trade_date)
+        )
+
+
+def _coordinator(runtime: _Pipeline, source: _MarketSource):
+    metadata = cast(
+        MetadataService,
+        SimpleNamespace(
+            list_trading_days=lambda start, end: ["2026-07-16", "2026-07-17"],
+        ),
+    )
+    coordinator = IngestionCoordinator(
+        IngestionServices(
+            metadata=metadata,
+            market=MarketServices(
+                query=cast(MarketService, None), write=runtime.market
+            ),
+            fundamental=cast(FundamentalStore, None),
+            capital=cast(CapitalStore, None),
+            macro=cast(MacroService, None),
+        ),
+        fetchers=SourceFetchers(
+            metadata=Mock(spec=MetadataFetcher),
+            market=Mock(spec=MarketFetcher, fetch_stock_daily=source.fetch_stock_daily),
+            fundamental=Mock(spec=FundamentalFetcher),
+            capital=Mock(spec=CapitalFetcher),
+            macro=Mock(spec=MacroFetcher),
+        ),
+        config=IngestionCoordinatorConfig(
+            ingestion_log_store=cast(
+                IngestionLogStore, runtime.ports.ingestion_log_store
+            ),
+            catalog_reader=runtime.context.catalog_reader,
+            quality_checker=runtime.context.quality_checker,
+            evidence_committer=runtime.context.evidence_committer,
+            provider_payload_writer=runtime.context.provider_payload_writer,
+            license_record_id=runtime.context.license_record_id,
+        ),
+    )
+    return coordinator, metadata
+
+
+@pytest.mark.integration
+def test_normal_backfill_resumes_failed_revision_after_original_completed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with _pipeline(tmp_path, "stock_daily") as runtime:
+        source = _MarketSource()
+        coordinator, metadata = _coordinator(runtime, source)
+        manager = BackfillManager(
+            coordinator,
+            metadata,
+            cast(IngestionLogStore, runtime.ports.ingestion_log_store),
+            bootstrap_planner=BootstrapPlanner(
+                metadata_service=metadata,
+                partition_lifecycle_reader=runtime.ports.lifecycle_reader,
+            ),
+        )
+        initial = manager.backfill_range("stock_daily", "2026-07-16", "2026-07-17")
+        assert initial.success_count == 1
+        chunk_id = runtime.ports.lifecycle_reader.list_complete()[0].chunk_id
+        advance = runtime.ports.lifecycle_writer.advance_partition
+        should_fail = True
+
+        def fail_once(
+            chunk: str,
+            stage: PartitionLifecycleStatus,
+            *,
+            occurred_at: datetime,
+            evidence_id: str | None = None,
+        ):
+            nonlocal should_fail
+            if should_fail and stage is PartitionLifecycleStatus.CATALOG_ATTESTED:
+                should_fail = False
+                raise OSError("injected revision checkpoint failure")
+            return advance(
+                chunk, stage, occurred_at=occurred_at, evidence_id=evidence_id
+            )
+
+        monkeypatch.setattr(
+            runtime.ports.lifecycle_writer, "advance_partition", fail_once
+        )
+        source.payload = source.payload.with_columns(pl.lit(999.0).alias("close"))
+        failed = coordinator.ingest_chunk(
+            "stock_daily",
+            chunk_id=chunk_id,
+            request_start="2026-07-16",
+            request_end="2026-07-17",
+            partition_dates=("2026-07-16", "2026-07-17"),
+            force=True,
+        )
+        assert failed.status == "failed"
+        assert len(runtime.ports.lifecycle_reader.list_incomplete()) == 1
+        recovered = manager.backfill_range("stock_daily", "2026-07-16", "2026-07-17")
+        assert recovered.success_count == 1
+        assert recovered.results[0].row_count == 2
+        assert runtime.ports.lifecycle_reader.list_incomplete() == ()
+        assert len(runtime.ports.snapshot_reader.list_snapshots()) == 2
+        assert (
+            manager.backfill_range(
+                "stock_daily", "2026-07-16", "2026-07-17"
+            ).total_dates
+            == 0
+        )

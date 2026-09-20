@@ -243,7 +243,7 @@ class TestBootstrapPlannerCapabilitiesAndResume:
             end_date="2026-02-03",
         )
         complete_id = initial.chunks[0].chunk_id
-        lifecycle_reader.get_checkpoint.side_effect = lambda chunk_id: (
+        lifecycle_reader.get_latest_checkpoint.side_effect = lambda chunk_id: (
             SimpleNamespace(status=PartitionLifecycleStatus.COMPLETE)
             if chunk_id == complete_id
             else None

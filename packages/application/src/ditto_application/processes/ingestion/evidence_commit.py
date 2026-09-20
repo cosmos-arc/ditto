@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from hashlib import sha256
 from typing import Protocol
 
 from ditto_data.catalog import (
@@ -124,18 +125,25 @@ class IngestionEvidenceCommitter:
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitRequest:
         """Keep the original checkpoint and bind changed payloads to new checkpoints."""
-        checkpoint = self._ports.lifecycle_reader.get_checkpoint(request.chunk_id)
-        if checkpoint is not None and checkpoint.payload_id not in {
-            None,
-            _payload_evidence_id(request),
-        }:
-            return replace(
-                request,
-                chunk_id=(
-                    f"{request.chunk_id}:revision:{request.provider_snapshot.snapshot_id}"
-                ),
-            )
-        return request
+        checkpoint = self._ports.lifecycle_reader.get_latest_checkpoint(
+            request.chunk_id
+        )
+        if checkpoint is None:
+            return request
+        if checkpoint.payload_id in {None, _payload_evidence_id(request)} and (
+            checkpoint.lineage_run_id in {None, request.lineage_event.run_id}
+        ):
+            return replace(request, chunk_id=checkpoint.chunk_id)
+        revision = sha256(
+            repr(
+                (
+                    checkpoint.chunk_id,
+                    request.provider_snapshot.snapshot_id,
+                    request.lineage_event.run_id,
+                )
+            ).encode()
+        ).hexdigest()
+        return replace(request, chunk_id=f"{request.chunk_id}:revision:{revision}")
 
     def _prepare_payload(
         self, request: EvidenceCommitRequest
@@ -143,6 +151,7 @@ class IngestionEvidenceCommitter:
         try:
             checkpoint = self._prepare_checkpoint(request)
             if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
+                self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
             self._advance_payload_stages(checkpoint, request)
         except Exception:
@@ -237,16 +246,7 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.LINEAGE_RECORDED:
             return None
         try:
-            log = request.success_log
-            existing = self._ports.ingestion_log_store.get_log(
-                log.dataset, log.source, log.trade_date
-            )
-            if existing is None or (
-                existing.status,
-                existing.checksum,
-                existing.rows,
-            ) != (log.status, log.checksum, log.rows):
-                self._ports.ingestion_log_store.save_log(log)
+            self._persist_success_log(request.success_log)
             self._advance(
                 request.chunk_id,
                 PartitionLifecycleStatus.SUCCESS_RECORDED,
@@ -259,6 +259,17 @@ class IngestionEvidenceCommitter:
                 error_code="SUCCESS_LOG_WRITE_FAILED",
             )
         return None
+
+    def _persist_success_log(self, log: IngestionLog) -> None:
+        existing = self._ports.ingestion_log_store.get_log(
+            log.dataset, log.source, log.trade_date
+        )
+        if existing is None or (existing.status, existing.checksum, existing.rows) != (
+            log.status,
+            log.checksum,
+            log.rows,
+        ):
+            self._ports.ingestion_log_store.save_log(log)
 
     def _complete(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         try:

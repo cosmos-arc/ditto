@@ -124,7 +124,7 @@ class TestDQSeverity:
         """应该是字符串枚举."""
         assert isinstance(DQSeverity.ERROR.value, str)
 
-    def test_should_have_three_members(self) -> None:
+    def test_should_have_four_members(self) -> None:
         """应该有三个成员."""
         assert len(DQSeverity) == 3
 
@@ -139,9 +139,9 @@ class TestOnDuplicate:
         assert OnDuplicate.KEEP_FIRST.value == "keep_first"
         assert OnDuplicate.KEEP_LAST.value == "keep_last"
 
-    def test_should_have_three_members(self) -> None:
+    def test_should_have_four_members(self) -> None:
         """应该有三个成员."""
-        assert len(OnDuplicate) == 3
+        assert len(OnDuplicate) == 4
 
 
 @pytest.mark.unit

@@ -226,6 +226,20 @@ class SQLitePartitionLifecycleStore:
         )
         return None if row is None else _checkpoint_from_row(row)
 
+    def get_latest_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        """Resolve revisions by durable event order, independent of clock drift."""
+        prefix = f"{chunk_id}:revision:"
+        row = self._client.fetchone(
+            """
+            SELECT c.* FROM ingestion_partition_checkpoints c
+            JOIN ingestion_partition_events e ON e.chunk_id = c.chunk_id
+            WHERE c.chunk_id = ? OR substr(c.chunk_id, 1, ?) = ?
+            ORDER BY e.event_id DESC LIMIT 1
+            """,
+            [chunk_id, len(prefix), prefix],
+        )
+        return None if row is None else _checkpoint_from_row(row)
+
     def list_incomplete(
         self,
         *,

@@ -144,7 +144,7 @@ class BootstrapPlanner:
         skipped: list[str] = []
         for chunk in all_chunks:
             checkpoint = (
-                self._partition_lifecycle_reader.get_checkpoint(chunk.chunk_id)
+                self._partition_lifecycle_reader.get_latest_checkpoint(chunk.chunk_id)
                 if self._partition_lifecycle_reader is not None
                 else None
             )

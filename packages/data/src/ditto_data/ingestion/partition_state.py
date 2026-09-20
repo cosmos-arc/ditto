@@ -122,6 +122,10 @@ class PartitionLifecycleEvent:
 class PartitionLifecycleReader(Protocol):
     """Read partition recovery boundaries and audit events."""
 
+    def get_latest_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
+        """Return the most recently advanced revision of a planned chunk."""
+        ...
+
     def get_checkpoint(self, chunk_id: str) -> PartitionCheckpoint | None:
         """Return the current recovery boundary for one chunk."""
         ...
