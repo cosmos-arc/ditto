@@ -23,6 +23,7 @@ const hoisted = vi.hoisted(() => ({
 }));
 const seriesDataCalls: unknown[][] = [];
 const setVisibleLogicalRange = vi.fn<(range: LogicalRange) => void>();
+const scrollToRealTime = vi.fn<() => void>();
 const fitContent = vi.fn<() => void>();
 const attachPrimitive = vi.fn<(primitive: object) => void>();
 // vi.mock 工厂被提升到 const 声明之前，marker 捕获必须经 vi.hoisted 暴露。
@@ -32,6 +33,7 @@ let logicalRangeHandlers: Array<(range: LogicalRange | null) => void> = [];
 const timeScaleStub = {
 	getVisibleLogicalRange: vi.fn<() => LogicalRange | null>(() => ({ from: 0 as Logical, to: 100 as Logical })),
 	setVisibleLogicalRange,
+	scrollToRealTime,
 	coordinateToLogical: vi.fn((x: number) => x as Logical),
 	timeToCoordinate: vi.fn<(time: Time) => number | null>(() => 42),
 	fitContent,
@@ -245,6 +247,34 @@ describe("ChartCockpit 数据映射", () => {
 });
 
 describe("ChartCockpit 键盘操作", () => {
+	it("anchors readout and End navigation on any populated series when the first is empty", async () => {
+		// 多 run 叠加：首个 run 合法空 bars（404），锚点须来自其余序列
+		renderCockpit({
+			series: [
+				{ id: "empty-run", bars: [], color: "var(--chart-run-1)" },
+				{
+					id: "filled-run",
+					color: "var(--chart-run-2)",
+					bars: [
+						{ time: 100, close: 1, volume: null },
+						{ time: 200, close: 1.1, volume: null },
+						{ time: 300, close: 1.2, volume: null },
+						{ time: 400, close: 1.3, volume: null },
+						{ time: 500, close: 1.4, volume: null },
+					],
+				},
+			],
+		});
+		// 初始读数锚定最晚非空点（第二个序列的 500），不再因首序列为空而恒为 —
+		expect(screen.getByTestId("chart-readout-spec-close-filled-run").textContent).toMatch(/\d/u);
+		const user = userEvent.setup();
+		const host = screen.getByLabelText("演示收盘价图表（fixture）");
+		await user.click(host);
+		await user.keyboard("{End}");
+		// End 由引擎滚动到并集时间轴右端，首序列空 bars 不再让导航失锚
+		expect(scrollToRealTime).toHaveBeenCalled();
+	});
+
 	it("pans with arrows, zooms with +/-, jumps to the tail with End, resets on dblclick", async () => {
 		renderCockpit();
 		const user = userEvent.setup();
@@ -262,7 +292,8 @@ describe("ChartCockpit 键盘操作", () => {
 		await user.keyboard("-");
 		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -12.5, to: 112.5 });
 		await user.keyboard("{End}");
-		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -96, to: 4 });
+		// End 走引擎 real-time 滚动：多序列并集时间轴的右端只有引擎知道
+		expect(scrollToRealTime).toHaveBeenCalled();
 		await user.keyboard("{Home}");
 		expect(setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -1, to: 99 });
 		await user.dblClick(host);
@@ -489,6 +520,8 @@ describe("ChartCockpit 导出", () => {
 			fillRect: vi.fn(),
 			drawImage: vi.fn(),
 			fillText: vi.fn(),
+			// 固定小宽度：fixture footer 两行不触发换行（换行行为另测）
+			measureText: vi.fn(() => ({ width: 5 })),
 		};
 		const toBlob = vi.fn((callback: (blob: Blob | null) => void) => {
 			callback(new Blob(["png"], { type: "image/png" }));
@@ -512,6 +545,47 @@ describe("ChartCockpit 导出", () => {
 			expect(contextStub.fillText).toHaveBeenCalledTimes(2);
 			expect(contextStub.fillRect).toHaveBeenCalled();
 			expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.mocked(document.createElement).mockRestore();
+		}
+	});
+
+	it("wraps long multi-run footer identities to the canvas width when exporting PNG", async () => {
+		const contextStub = {
+			fillStyle: "",
+			font: "",
+			fillRect: vi.fn(),
+			drawImage: vi.fn(),
+			fillText: vi.fn(),
+			// 1px/字符：画布宽 100 → 可用宽 88，长身份必然换行
+			measureText: vi.fn<(text: string) => TextMetrics>((text) => ({ width: text.length }) as TextMetrics),
+		};
+		const toBlob = vi.fn((callback: (blob: Blob | null) => void) => {
+			callback(new Blob(["png"], { type: "image/png" }));
+		});
+		const createElement = document.createElement.bind(document);
+		vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
+			const element = createElement(tagName);
+			if (tagName === "canvas") {
+				const canvas = element as HTMLCanvasElement;
+				canvas.getContext = (() => contextStub) as unknown as HTMLCanvasElement["getContext"];
+				canvas.toBlob = toBlob;
+			}
+			return element;
+		});
+		try {
+			const longRunIds = Array.from({ length: 8 }, () => `research-run-${"a".repeat(64)}`).join(" · ");
+			renderCockpit({ identity: { dataSourceName: longRunIds, snapshotId: null } });
+			const user = userEvent.setup();
+			await user.click(screen.getByTestId("chart-export-png-spec-close"));
+			expect(toBlob).toHaveBeenCalledTimes(1);
+			const drawn = contextStub.fillText.mock.calls.map((call) => call[0] as string);
+			// 超宽身份换行成多行，且每行都在可用宽度内（不再被右缘裁掉）
+			expect(drawn.length).toBeGreaterThan(2);
+			for (const line of drawn) {
+				expect(line.length).toBeLessThanOrEqual(88);
+			}
+			expect(drawn.join("")).toContain("research-run-");
 		} finally {
 			vi.mocked(document.createElement).mockRestore();
 		}

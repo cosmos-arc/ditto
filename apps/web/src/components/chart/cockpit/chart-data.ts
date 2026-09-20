@@ -97,6 +97,24 @@ export function findGapRanges(bars: readonly CockpitBar[]): GapRange[] {
 	return gaps;
 }
 
+/**
+ * 多序列缺口并集：任一序列在某区间存在 null 断点即计为图表级缺口（重叠区间合并）。
+ * 单序列退化为 findGapRanges 本身；缺口归属由对应曲线的断口呈现。
+ */
+export function mergedGapRanges(seriesBars: readonly (readonly CockpitBar[])[]): GapRange[] {
+	const ranges = seriesBars.flatMap((bars) => findGapRanges(bars)).sort((left, right) => left.from - right.from);
+	const merged: GapRange[] = [];
+	for (const range of ranges) {
+		const last = merged.at(-1);
+		if (last && range.from <= last.to) {
+			if (range.to > last.to) merged[merged.length - 1] = { from: last.from, to: range.to };
+		} else {
+			merged.push(range);
+		}
+	}
+	return merged;
+}
+
 /** close 缺失（null）映射为 whitespace 点：lightweight-charts 据此渲染断口。 */
 export function toLineSeriesData(bars: readonly CockpitBar[]): LinePoint[] {
 	return [...bars]
@@ -290,6 +308,27 @@ export function buildPngFooterLines(identity: ChartExportIdentity): [string, str
 		`as_of ${identity.asOf != null ? formatExportTime(identity.asOf) : "—"} · snapshot ${orDash(identity.snapshotId)}`,
 		`cutoff k=${orDash(identity.knowledgeCutoff)} p=${orDash(identity.publicationCutoff)} · source ${identity.dataSourceName} · exported ${new Date(identity.exportedAtMs).toISOString()} · v${identity.productVersion}`,
 	];
+}
+
+/**
+ * PNG footer 行按画布宽换行：多 run 身份（8×~74 字符 id）单行绘制会被右缘裁掉。
+ * 逐字符贪心（ID 类内容无词边界可依）；measure 由调用方注入（canvas measureText），
+ * 纯函数便于单测。
+ */
+export function wrapFooterLine(measure: (text: string) => number, text: string, maxWidth: number): string[] {
+	if (maxWidth <= 0 || measure(text) <= maxWidth) return [text];
+	const lines: string[] = [];
+	let current = "";
+	for (const char of text) {
+		if (current && measure(current + char) > maxWidth) {
+			lines.push(current);
+			current = char;
+		} else {
+			current += char;
+		}
+	}
+	if (current) lines.push(current);
+	return lines;
 }
 
 /**

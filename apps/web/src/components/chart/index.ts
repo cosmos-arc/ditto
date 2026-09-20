@@ -3,6 +3,8 @@ export {
 	type BarPeriod,
 	ChartCockpit,
 	type ChartCockpitProps,
+	ChartLegend,
+	type ChartLegendItem,
 	type CockpitBand,
 	type CockpitBar,
 	type CockpitMarker,

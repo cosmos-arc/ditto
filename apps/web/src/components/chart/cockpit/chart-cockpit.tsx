@@ -27,15 +27,16 @@ import {
 	directionColorToken,
 	FRESHNESS_THRESHOLDS,
 	type FreshnessBucket,
-	findGapRanges,
 	formatReadoutTime,
 	lastNonNullClose,
+	mergedGapRanges,
 	splitByFreshness,
 	toCandleSeriesData,
 	toCsvExport,
 	toHistogramSeriesData,
 	toLineSeriesData,
 	toVolumeSeriesData,
+	wrapFooterLine,
 } from "./chart-data";
 import { useChartTheme } from "./chart-theme";
 import { broadcastCrosshairTime, broadcastVisibleRange, joinRangeGroup } from "./cockpit-link";
@@ -206,8 +207,14 @@ function readoutAtIndex(index: ReadoutIndex, time: number): Readout | null {
 }
 
 function lastReadoutTime(series: readonly CockpitSeriesSpec[], subPanes: readonly CockpitSubPane[]): number | null {
-	const lastBar = lastNonNullClose(series[0]?.bars ?? []);
-	if (lastBar) return lastBar.time;
+	// 锚点跨全部序列取最晚非空点：首序列可能合法为空（如 404 run 的空 bars），
+	// 不应让初始读数恒为 —（多 run 叠加时其余序列仍有数据）。
+	let latest: number | null = null;
+	for (const spec of series) {
+		const time = lastNonNullClose(spec.bars)?.time;
+		if (time !== undefined && (latest === null || time > latest)) latest = time;
+	}
+	if (latest !== null) return latest;
 	return subPanes.length > 0 ? (lastNonNullClose(subPanes[0]?.series[0]?.points ?? [])?.time ?? null) : null;
 }
 
@@ -297,7 +304,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	}, [freshnessFade, nowMs]);
 
 	const stale = asOf !== null && effectiveNowMs - asOf.time * 1000 >= FRESHNESS_THRESHOLDS.stale;
-	const gaps = useMemo(() => findGapRanges(series[0]?.bars ?? []), [series]);
+	// 缺口标注跨全部序列并集：任一序列的内部断点都要在状态条可见，不只看首序列
+	const gaps = useMemo(() => mergedGapRanges(series.map((spec) => spec.bars)), [series]);
 
 	const applyLinkedCrosshair = useCallback((time: Time | null) => {
 		const chart = chartRef.current;
@@ -634,8 +642,9 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		} else if (event.key === "Home") {
 			timeScale.setVisibleLogicalRange({ from: -1, to: span - 1 });
 		} else if (event.key === "End") {
-			const barCount = propsRef.current.series[0]?.bars.length ?? 0;
-			timeScale.setVisibleLogicalRange({ from: barCount - span + 1, to: barCount + 1 });
+			// 跳到数据右端：多序列并集时间轴的总长度只有引擎知道（最大序列长度 ≠ 并集长度），
+			// 用引擎的 real-time 滚动而非自行推算逻辑位置
+			timeScale.scrollToRealTime();
 		} else if (event.key === "+" || event.key === "=") {
 			const center = (range.from + range.to) / 2;
 			const zoomed = span * 0.8;
@@ -695,18 +704,24 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		if (!chart) return;
 		const shot = chart.takeScreenshot();
 		const footerLines = buildPngFooterLines(exportIdentity(identity, asOf, nowMs ?? Date.now()));
-		const footerHeight = 10 + footerLines.length * 14;
 		const canvas = document.createElement("canvas");
-		canvas.width = shot.width;
-		canvas.height = shot.height + footerHeight;
 		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
+		ctx.font = "11px sans-serif";
+		// footer 行按画布宽换行：多 run 身份可达数百字符，单行绘制会被右缘裁掉
+		const wrapped = footerLines.flatMap((line) =>
+			wrapFooterLine((text) => ctx.measureText(text).width, line, shot.width - 12),
+		);
+		const footerHeight = 10 + wrapped.length * 14;
+		canvas.width = shot.width;
+		canvas.height = shot.height + footerHeight;
 		ctx.fillStyle = theme.background;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		ctx.drawImage(shot, 0, 0);
 		ctx.fillStyle = theme.axisText;
+		// 重设 canvas 尺寸会重置 2D 状态（字体/填充），换行测量后须重设
 		ctx.font = "11px sans-serif";
-		footerLines.forEach((line, index) => {
+		wrapped.forEach((line, index) => {
 			ctx.fillText(line, 6, shot.height + 12 + index * 14);
 		});
 		canvas.toBlob((blob) => {
@@ -763,7 +778,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					</span>
 				))}
 				{activeReadout && (
-					<span className="tabular-nums text-[var(--color-foreground-muted)]">
+					<span className="tabular-nums">
 						{formatReadoutTime(activeReadout.time)}
 						{activeReadout.volume !== null && ` · vol ${activeReadout.volume}`}
 					</span>
@@ -775,7 +790,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					</span>
 				)}
 				{gaps.length > 0 && (
-					<span className="tabular-nums text-[var(--color-foreground-muted)]" data-testid={`chart-gaps-${chartId}`}>
+					<span className="tabular-nums" data-testid={`chart-gaps-${chartId}`}>
 						{gaps.length > 1 ? `缺口 ${gaps.length} 处 · 首处 ` : "缺口 "}
 						{formatReadoutTime(gaps[0]!.from)} → {formatReadoutTime(gaps[0]!.to)}
 					</span>
@@ -835,7 +850,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					/>
 				)}
 			</div>
-			<p className="mt-1.5 text-[var(--text-xs)] text-[var(--color-foreground-muted)]">
+			{/* 读数时间/缺口/键盘提示用条内已审计的 secondary 色：quaternary 在 surface-1 上 4.38:1 跌穿 AA */}
+			<p className="mt-1.5 text-[var(--text-xs)] text-[var(--color-foreground-secondary)]">
 				键盘：←/→ 平移 · ↑/↓ 粗平移 · +/− 缩放 · Home/End 首尾 · Shift+拖拽框选缩放 · 双击复位；断口 =
 				数据缺失（不插值）
 			</p>

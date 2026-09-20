@@ -831,3 +831,81 @@ body {
 .heat-cell[data-heat$="-5"] {
 	background: color-mix(in oklch, var(--heat-token) 85%, transparent);
 }
+
+/* ── Portfolio drift chart: 单 as_of 三组合两两权重漂移发散条 ──
+ * 颜色编码观察侧组合专属色（paper 紫 / manual 琥珀）；
+ * paper_vs_manual 两侧均为执行侧组合 → 中性线色，不冒用组合色。 */
+.drift-pair-dot[data-pair="model_vs_paper"],
+.drift-bar-fill[data-pair="model_vs_paper"] {
+	background: var(--chart-combo-paper);
+}
+.drift-pair-dot[data-pair="model_vs_manual"],
+.drift-bar-fill[data-pair="model_vs_manual"] {
+	background: var(--chart-combo-manual);
+}
+.drift-pair-dot[data-pair="paper_vs_manual"],
+.drift-bar-fill[data-pair="paper_vs_manual"] {
+	background: var(--chart-series-neutral);
+}
+.drift-pair-dot {
+	display: inline-block;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 9999px;
+	flex: none;
+}
+.drift-bar {
+	position: relative;
+	display: inline-block;
+	flex: 1 1 0%;
+	min-width: 3.5rem;
+	height: 6px;
+	border-radius: 9999px;
+	background: var(--color-surface-strip);
+}
+.drift-bar-axis {
+	position: absolute;
+	top: -2px;
+	bottom: -2px;
+	left: 50%;
+	width: 1px;
+	background: var(--chart-zero-line);
+}
+.drift-bar-fill {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+}
+/* 离散刻度（1–8 档，半轨 50% 按 6.25% 递增；精确值在条旁数字） */
+.drift-bar-fill[data-scale="1"] {
+	width: 6.25%;
+}
+.drift-bar-fill[data-scale="2"] {
+	width: 12.5%;
+}
+.drift-bar-fill[data-scale="3"] {
+	width: 18.75%;
+}
+.drift-bar-fill[data-scale="4"] {
+	width: 25%;
+}
+.drift-bar-fill[data-scale="5"] {
+	width: 31.25%;
+}
+.drift-bar-fill[data-scale="6"] {
+	width: 37.5%;
+}
+.drift-bar-fill[data-scale="7"] {
+	width: 43.75%;
+}
+.drift-bar-fill[data-scale="8"] {
+	width: 50%;
+}
+.drift-bar-fill[data-side="pos"] {
+	left: 50%;
+	border-radius: 0 9999px 9999px 0;
+}
+.drift-bar-fill[data-side="neg"] {
+	right: 50%;
+	border-radius: 9999px 0 0 9999px;
+}

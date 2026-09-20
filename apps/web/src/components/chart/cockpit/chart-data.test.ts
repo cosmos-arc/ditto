@@ -8,12 +8,14 @@ import {
 	formatReadoutTime,
 	freshnessBucket,
 	lastNonNullClose,
+	mergedGapRanges,
 	resampleBars,
 	splitByFreshness,
 	toCandleSeriesData,
 	toCsvExport,
 	toLineSeriesData,
 	toVolumeSeriesData,
+	wrapFooterLine,
 } from "./chart-data";
 
 const MINUTE = 60_000;
@@ -278,5 +280,42 @@ describe("buildPngFooterLines", () => {
 		expect(sourceLine).toContain("source tushare");
 		expect(sourceLine).toContain("exported 2026-09-18T08:00:00.000Z");
 		expect(sourceLine).toContain("v0.1.0");
+	});
+});
+
+describe("wrapFooterLine", () => {
+	const charWidth = (text: string) => text.length;
+
+	it("keeps short lines single and wraps long ID-style content by width", () => {
+		expect(wrapFooterLine(charWidth, "short line", 88)).toEqual(["short line"]);
+		const wrapped = wrapFooterLine(charWidth, "r".repeat(200), 88);
+		expect(wrapped.length).toBeGreaterThan(2);
+		for (const line of wrapped) expect(line.length).toBeLessThanOrEqual(88);
+		// 贪心切分不丢字符
+		expect(wrapped.join("")).toBe("r".repeat(200));
+	});
+
+	it("returns the text as-is for non-positive widths instead of looping", () => {
+		expect(wrapFooterLine(charWidth, "anything", 0)).toEqual(["anything"]);
+	});
+});
+
+describe("mergedGapRanges", () => {
+	it("unions gap ranges across series and merges overlaps (single series degenerates)", () => {
+		const bars = (closes: (number | null)[]) =>
+			closes.map((close, index) => ({ time: (index + 1) * 100, close, volume: null }));
+		// 首序列完整；次序列两个内部断点（100–300、400–500 与第三序列 450–600 重叠）
+		const merged = mergedGapRanges([
+			bars([1, 1, 1, 1, 1, 1]),
+			bars([1, null, null, 1, null, 1]),
+			bars([1, 1, 1, 1, null, null]),
+		]);
+		// 次序列断点：100–400（null 段至下一个非空 400）与 500–600；第三序列 500–600 重叠合并
+		expect(merged).toEqual([
+			{ from: 200, to: 400 },
+			{ from: 500, to: 600 },
+		]);
+		// 单序列退化：与 findGapRanges 一致
+		expect(mergedGapRanges([bars([1, null, 1])])).toEqual([{ from: 200, to: 300 }]);
 	});
 });

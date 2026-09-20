@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { OverlayFactList, PageActionOverlay } from "@/components/domain/page-action-overlay";
 import { Button } from "@/components/ui/button";
+import type { BacktestRun } from "../types";
+import { BacktestMultiRunCompare } from "./backtest-multi-run-compare";
 
 export type BacktestOverlayId = "export" | "enable-signal" | "ai-analysis" | "compare-toast" | "compare";
 
@@ -80,30 +82,39 @@ export function BacktestOverlays({
 export function BacktestCompareOverlay({
 	onClose,
 	open,
-	runIds,
+	runs,
 }: {
 	readonly onClose: () => void;
 	readonly open: boolean;
-	readonly runIds: readonly string[];
+	readonly runs: readonly BacktestRun[];
 }) {
 	return (
 		<PageActionOverlay
 			open={open}
 			kind="drawer"
 			title="回测对比"
-			description="按服务端 run identity 比较目录状态，不重算绩效。"
+			description="按服务端 run identity 叠加各 run 已发布净值与关键指标，不重算绩效。"
 			onClose={onClose}
+			contentClassName="sm:w-[min(72rem,calc(100vw-2rem))] sm:max-w-[min(72rem,calc(100vw-2rem))]"
 		>
-			<OverlayFactList
-				facts={[
-					["已选择", `${runIds.length} 个 run`],
-					["Run identities", runIds.join(" · ") || "尚未选择"],
-					["统计对比", "进入各自已发布 report"],
-				]}
-			/>
-			{runIds.length < 2 && (
-				<p className="text-xs text-(--color-foreground-tertiary)">至少需要两个真实 run 才能形成对比。</p>
-			)}
+			{/* 不透明画布底（surface-0）：cockpit/表格/事实清单的弱色组合按页面侧
+			    同底（surface-app）审计，overlay 面上会跌穿 AA；这里显式落回同底。 */}
+			<div className="flex flex-col gap-3 rounded-(--radius-md) bg-(--color-surface-0) p-3">
+				<OverlayFactList
+					facts={[
+						["已选择", `${runs.length} 个 run`],
+						["Run identities", runs.map((run) => run.runId).join(" · ") || "尚未选择"],
+						["对比口径", "nav₀ 归一净值叠加 + 已发布 report 指标"],
+					]}
+				/>
+				{runs.length < 2 ? (
+					<p className="text-xs text-(--color-foreground-tertiary)">
+						至少需要两个真实 run 才能形成对比；在目录中勾选 run 后重新打开。
+					</p>
+				) : (
+					<BacktestMultiRunCompare runs={runs} />
+				)}
+			</div>
 		</PageActionOverlay>
 	);
 }

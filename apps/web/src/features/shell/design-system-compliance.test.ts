@@ -20,6 +20,8 @@ const FEATURE_INLINE_STYLE_ALLOWLIST = new Set(["features/shell/components/noise
 const COMPONENT_INLINE_STYLE_ALLOWLIST = new Set([
 	"components/chart/area-chart.tsx",
 	"components/chart/cockpit/chart-cockpit.tsx",
+	// 序列色点：与 cockpit 同类的动态渲染原语（色值来自运行时序列 token）
+	"components/chart/cockpit/chart-legend.tsx",
 	"components/chart/line-chart.tsx",
 	"components/data/flow-bar.tsx",
 	"components/indicator/confidence-bar/confidence-bar.tsx",

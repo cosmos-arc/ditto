@@ -404,7 +404,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-backtest-list.html",
     requiredSlots: ["toolbar", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "selected-backtest", "filtered-results", "filtered-empty", "run-queued", "run-running", "run-completed", "run-failed", "benchmark-unpublished"],
+    requiredStates: ["loading", "empty", "error", "stale", "selected-backtest", "filtered-results", "filtered-empty", "run-queued", "run-running", "run-completed", "run-failed", "benchmark-unpublished", "compare-selected"],
     landing: {
       "reactRouteStatus": "implemented",
       "featureModule": "src/features/backtest",
@@ -414,7 +414,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactParityVerified": true,
       "reactTestRefs": [
         "src/features/backtest/components/backtest-list-page.test.tsx",
-        "src/features/backtest/components/backtest-components.test.tsx"
+        "src/features/backtest/components/backtest-components.test.tsx",
+        "src/features/backtest/components/backtest-multi-run-compare.test.tsx"
       ],
       "reactComponentRefs": [
         "BacktestListPage"
@@ -1408,7 +1409,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-portfolio.html",
     requiredSlots: ["strip", "main", "activity", "analysis"],
-    requiredStates: ["loading", "empty", "error", "stale", "ready", "identity-missing", "scenario-preview", "reconciliation-mismatch", "source-snapshot-mismatch"],
+    requiredStates: ["loading", "empty", "error", "stale", "ready", "identity-missing", "scenario-preview", "reconciliation-mismatch", "source-snapshot-mismatch", "drift-compare"],
     landing: {
       "reactRouteStatus": "implemented",
       "featureModule": "src/features/portfolio",
@@ -1418,11 +1419,13 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactParityVerified": true,
       "reactTestRefs": [
         "src/features/portfolio/components/portfolio-components.test.tsx",
-        "src/features/portfolio/components/portfolio-comparison-workspace.test.tsx"
+        "src/features/portfolio/components/portfolio-comparison-workspace.test.tsx",
+        "src/features/portfolio/components/portfolio-drift-chart.test.tsx"
       ],
       "reactComponentRefs": [
         "PortfolioPage",
-        "PortfolioComparisonWorkspace"
+        "PortfolioComparisonWorkspace",
+        "PortfolioDriftChart"
       ]
     },
     overlays: [],
