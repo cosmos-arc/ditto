@@ -293,6 +293,27 @@ export function buildPngFooterLines(identity: ChartExportIdentity): [string, str
 }
 
 /**
+ * PNG footer 行按画布宽换行：多 run 身份（8×~74 字符 id）单行绘制会被右缘裁掉。
+ * 逐字符贪心（ID 类内容无词边界可依）；measure 由调用方注入（canvas measureText），
+ * 纯函数便于单测。
+ */
+export function wrapFooterLine(measure: (text: string) => number, text: string, maxWidth: number): string[] {
+	if (maxWidth <= 0 || measure(text) <= maxWidth) return [text];
+	const lines: string[] = [];
+	let current = "";
+	for (const char of text) {
+		if (current && measure(current + char) > maxWidth) {
+			lines.push(current);
+			current = char;
+		} else {
+			current += char;
+		}
+	}
+	if (current) lines.push(current);
+	return lines;
+}
+
+/**
  * 导出 CSV：每序列一列 close（蜡烛序列附 open/high/low，缺失留空保持断口语义），
  * volume 取首个序列，行尾附带完整 PIT 身份列，使同 as_of 下不同 cutoff /
  * 修订宇宙的导出物可区分。

@@ -520,6 +520,8 @@ describe("ChartCockpit 导出", () => {
 			fillRect: vi.fn(),
 			drawImage: vi.fn(),
 			fillText: vi.fn(),
+			// 固定小宽度：fixture footer 两行不触发换行（换行行为另测）
+			measureText: vi.fn(() => ({ width: 5 })),
 		};
 		const toBlob = vi.fn((callback: (blob: Blob | null) => void) => {
 			callback(new Blob(["png"], { type: "image/png" }));
@@ -543,6 +545,47 @@ describe("ChartCockpit 导出", () => {
 			expect(contextStub.fillText).toHaveBeenCalledTimes(2);
 			expect(contextStub.fillRect).toHaveBeenCalled();
 			expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.mocked(document.createElement).mockRestore();
+		}
+	});
+
+	it("wraps long multi-run footer identities to the canvas width when exporting PNG", async () => {
+		const contextStub = {
+			fillStyle: "",
+			font: "",
+			fillRect: vi.fn(),
+			drawImage: vi.fn(),
+			fillText: vi.fn(),
+			// 1px/字符：画布宽 100 → 可用宽 88，长身份必然换行
+			measureText: vi.fn<(text: string) => TextMetrics>((text) => ({ width: text.length }) as TextMetrics),
+		};
+		const toBlob = vi.fn((callback: (blob: Blob | null) => void) => {
+			callback(new Blob(["png"], { type: "image/png" }));
+		});
+		const createElement = document.createElement.bind(document);
+		vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
+			const element = createElement(tagName);
+			if (tagName === "canvas") {
+				const canvas = element as HTMLCanvasElement;
+				canvas.getContext = (() => contextStub) as unknown as HTMLCanvasElement["getContext"];
+				canvas.toBlob = toBlob;
+			}
+			return element;
+		});
+		try {
+			const longRunIds = Array.from({ length: 8 }, () => `research-run-${"a".repeat(64)}`).join(" · ");
+			renderCockpit({ identity: { dataSourceName: longRunIds, snapshotId: null } });
+			const user = userEvent.setup();
+			await user.click(screen.getByTestId("chart-export-png-spec-close"));
+			expect(toBlob).toHaveBeenCalledTimes(1);
+			const drawn = contextStub.fillText.mock.calls.map((call) => call[0] as string);
+			// 超宽身份换行成多行，且每行都在可用宽度内（不再被右缘裁掉）
+			expect(drawn.length).toBeGreaterThan(2);
+			for (const line of drawn) {
+				expect(line.length).toBeLessThanOrEqual(88);
+			}
+			expect(drawn.join("")).toContain("research-run-");
 		} finally {
 			vi.mocked(document.createElement).mockRestore();
 		}

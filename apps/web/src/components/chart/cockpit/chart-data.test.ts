@@ -14,6 +14,7 @@ import {
 	toCsvExport,
 	toLineSeriesData,
 	toVolumeSeriesData,
+	wrapFooterLine,
 } from "./chart-data";
 
 const MINUTE = 60_000;
@@ -278,5 +279,22 @@ describe("buildPngFooterLines", () => {
 		expect(sourceLine).toContain("source tushare");
 		expect(sourceLine).toContain("exported 2026-09-18T08:00:00.000Z");
 		expect(sourceLine).toContain("v0.1.0");
+	});
+});
+
+describe("wrapFooterLine", () => {
+	const charWidth = (text: string) => text.length;
+
+	it("keeps short lines single and wraps long ID-style content by width", () => {
+		expect(wrapFooterLine(charWidth, "short line", 88)).toEqual(["short line"]);
+		const wrapped = wrapFooterLine(charWidth, "r".repeat(200), 88);
+		expect(wrapped.length).toBeGreaterThan(2);
+		for (const line of wrapped) expect(line.length).toBeLessThanOrEqual(88);
+		// 贪心切分不丢字符
+		expect(wrapped.join("")).toBe("r".repeat(200));
+	});
+
+	it("returns the text as-is for non-positive widths instead of looping", () => {
+		expect(wrapFooterLine(charWidth, "anything", 0)).toEqual(["anything"]);
 	});
 });

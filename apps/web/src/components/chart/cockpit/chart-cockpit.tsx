@@ -36,6 +36,7 @@ import {
 	toHistogramSeriesData,
 	toLineSeriesData,
 	toVolumeSeriesData,
+	wrapFooterLine,
 } from "./chart-data";
 import { useChartTheme } from "./chart-theme";
 import { broadcastCrosshairTime, broadcastVisibleRange, joinRangeGroup } from "./cockpit-link";
@@ -702,18 +703,24 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		if (!chart) return;
 		const shot = chart.takeScreenshot();
 		const footerLines = buildPngFooterLines(exportIdentity(identity, asOf, nowMs ?? Date.now()));
-		const footerHeight = 10 + footerLines.length * 14;
 		const canvas = document.createElement("canvas");
-		canvas.width = shot.width;
-		canvas.height = shot.height + footerHeight;
 		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
+		ctx.font = "11px sans-serif";
+		// footer 行按画布宽换行：多 run 身份可达数百字符，单行绘制会被右缘裁掉
+		const wrapped = footerLines.flatMap((line) =>
+			wrapFooterLine((text) => ctx.measureText(text).width, line, shot.width - 12),
+		);
+		const footerHeight = 10 + wrapped.length * 14;
+		canvas.width = shot.width;
+		canvas.height = shot.height + footerHeight;
 		ctx.fillStyle = theme.background;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		ctx.drawImage(shot, 0, 0);
 		ctx.fillStyle = theme.axisText;
+		// 重设 canvas 尺寸会重置 2D 状态（字体/填充），换行测量后须重设
 		ctx.font = "11px sans-serif";
-		footerLines.forEach((line, index) => {
+		wrapped.forEach((line, index) => {
 			ctx.fillText(line, 6, shot.height + 12 + index * 14);
 		});
 		canvas.toBlob((blob) => {
