@@ -830,7 +830,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "prototype/page-factor-analysis.html",
     requiredSlots: ["header", "meta", "main", "sidebar"],
-    requiredStates: ["loading", "empty", "error", "stale", "evidence-scope-missing", "diagnostics-ready", "handoff-open", "ai-governance-open", "diagnostic-detail-open"],
+    requiredStates: ["loading", "empty", "error", "stale", "evidence-scope-missing", "diagnostics-ready", "handoff-open", "ai-governance-open", "diagnostic-detail-open", "factor-series-empty", "factor-series-unavailable"],
     landing: {
       "reactRouteStatus": "implemented",
       "featureModule": "src/features/research",

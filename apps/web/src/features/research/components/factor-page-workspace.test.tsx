@@ -2,11 +2,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { ContextActionsProvider, type ContextActionsRequest } from "@/providers";
 import type { FactorDiagnosticsScope } from "../api/factor-diagnostics";
+
+// jsdom 无法承载 fancy-canvas：stub 图表 shell。
+vi.mock("@/components/chart", () => ({
+	ChartCockpit: () => createElement("div", { "data-testid": "cockpit-stub" }),
+}));
+
 import { FactorPage } from "./factor-page";
 
 const renderContextActions = vi.fn((request: ContextActionsRequest) => (

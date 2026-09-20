@@ -265,12 +265,21 @@ class DerivedArtifactReader:
         frame = _scan_with_schema_evolution(parquet_paths)
         if instrument_ids:
             frame = frame.filter(pl.col("instrument_id").is_in(instrument_ids))
+
+        # 时间列可能是 Date 或 ISO 字符串（按 artifact 物化形态）：
+        # 按列 dtype 选择可比字面量（ISO 字符串序即时间序）。
+        def _bound(value: str) -> pl.Expr:
+            schema = frame.collect_schema()
+            if schema.get(time_key) == pl.Utf8:
+                return pl.lit(value[:10])
+            return pl.lit(_coerce_date(value))
+
         if start is not None:
-            frame = frame.filter(pl.col(time_key) >= pl.lit(_coerce_date(start)))
+            frame = frame.filter(pl.col(time_key) >= _bound(start))
         if end is not None:
-            frame = frame.filter(pl.col(time_key) <= pl.lit(_coerce_date(end)))
+            frame = frame.filter(pl.col(time_key) <= _bound(end))
         if as_of is not None:
-            frame = frame.filter(pl.col(time_key) <= pl.lit(_coerce_date(as_of)))
+            frame = frame.filter(pl.col(time_key) <= _bound(as_of))
         return frame
 
     def _time_key(self, derived_id: str, version: int) -> str:

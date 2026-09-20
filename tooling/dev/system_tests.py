@@ -538,6 +538,24 @@ def main() -> int:
                 ),
             )
 
+            # The real evaluation stack (derived artifact + bars through the
+            # production query path) drives the factor research charts.
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.factor_series_app:app", api_port
+                    ),
+                    prefix="ditto-system-factor-charts-",
+                    spec="factor-charts.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The same engine run also drives the trade drill-down chain
             # (report row → evidence drawer → instrument chart focus).
             _run_fixture_acceptance(

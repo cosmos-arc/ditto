@@ -37,9 +37,12 @@ __all__ = [
     "ExperimentSummaryResponse",
     "FactorDescriptorResponse",
     "FactorDiagnosticsResponse",
+    "FactorEvaluationSeriesResponse",
     "HoldoutEvaluationReceiptResponse",
     "HoldoutEvaluationRequest",
+    "MonthlyIcCell",
     "NodeDescriptorResponse",
+    "QuantileNavColumn",
     "ReviewExposureWeightResponse",
     "ReviewGateOutcomeResponse",
     "ReviewSelectionExposureResponse",
@@ -480,6 +483,51 @@ class FactorDiagnosticsResponse(BaseModel):
     metrics: dict[str, JsonValue]
     artifact_id: str
     content_hash: str
+
+
+class FactorEvaluationSeriesResponse(BaseModel):
+    """
+    Per-date factor evaluation series computed at read time (research only).
+
+    前向收益使用 look-ahead 数据：生产环境 fail closed，仅研究/测试环境可用。
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    factor_id: str
+    factor_version: int
+    holding_period: int
+    n_quantiles: int
+    rolling_ir_window: int
+    period_start: date
+    period_end: date
+    n_dates: int
+    dates: list[str]
+    ic: list[float | None]
+    rolling_ir: list[float | None]
+    quantile_nav: list[QuantileNavColumn]
+    ls_nav: list[float | None]
+    monthly_ic: list[MonthlyIcCell]
+
+
+class QuantileNavColumn(BaseModel):
+    """Cumulative NAV path for one quantile group."""
+
+    model_config = ConfigDict(frozen=True)
+
+    quantile: int
+    nav: list[float | None]
+
+
+class MonthlyIcCell(BaseModel):
+    """Monthly IC aggregation cell for the heatmap."""
+
+    model_config = ConfigDict(frozen=True)
+
+    year: int
+    month: int
+    mean_ic: float | None
+    days: int
 
 
 class CandidateSelectionRequest(BaseModel):

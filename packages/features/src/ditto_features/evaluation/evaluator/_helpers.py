@@ -48,18 +48,22 @@ def prepare_data(
     """Filter date range and drop null values."""
     date_col = "trade_date"
 
-    # Build temporal bounds that are compatible with both Date and Utf8 columns.
-    start_lit = pl.lit(start).cast(pl.Date) if start is not None else None
-    end_lit = pl.lit(end).cast(pl.Date) if end is not None else None
+    # Bounds must match each frame's trade_date dtype: Date columns compare
+    # against Date literals, Utf8 (ISO string) columns against string literals
+    # (lexicographic ISO order == chronological order).
+    def _bound(frame: pl.DataFrame, value: str) -> pl.Expr:
+        if frame.schema[date_col] == pl.Utf8:
+            return pl.lit(value)
+        return pl.lit(value).cast(pl.Date)
 
-    if start_lit is not None and date_col in factor_df.columns:
-        factor_df = factor_df.filter(pl.col(date_col) >= start_lit)
-    if end_lit is not None and date_col in factor_df.columns:
-        factor_df = factor_df.filter(pl.col(date_col) <= end_lit)
-    if start_lit is not None and date_col in return_df.columns:
-        return_df = return_df.filter(pl.col(date_col) >= start_lit)
-    if end_lit is not None and date_col in return_df.columns:
-        return_df = return_df.filter(pl.col(date_col) <= end_lit)
+    if start is not None and date_col in factor_df.columns:
+        factor_df = factor_df.filter(pl.col(date_col) >= _bound(factor_df, start))
+    if end is not None and date_col in factor_df.columns:
+        factor_df = factor_df.filter(pl.col(date_col) <= _bound(factor_df, end))
+    if start is not None and date_col in return_df.columns:
+        return_df = return_df.filter(pl.col(date_col) >= _bound(return_df, start))
+    if end is not None and date_col in return_df.columns:
+        return_df = return_df.filter(pl.col(date_col) <= _bound(return_df, end))
 
     factor_df = factor_df.drop_nulls(subset=["value", date_col])
     return_df = return_df.drop_nulls(subset=["forward_return", date_col])

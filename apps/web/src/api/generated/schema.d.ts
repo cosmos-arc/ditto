@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6c4de056e05976ee23c0e88e23c19b358eb6efd583dccdfc98287babc3789b36
+ * Schema SHA-256: b58c16c9898ccac41bd73c17d2a4f7d50e39f290a3ce12784d4fb52a918c4d99
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3176,7 +3176,7 @@ export interface paths {
         };
         /**
          * List Research Factors
-         * @description 列出 R3 受控核心因子目录（governed catalog order）.
+         * @description 列出 R3 受控核心因子目录(governed catalog order).
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
@@ -3211,6 +3211,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/factors/{factor_id}/evaluation-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Research Factor Evaluation Series
+         * @description Per-date factor evaluation series computed at read time (research only).
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["design_research_factor_evaluation_series"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/node-descriptors": {
         parameters: {
             query?: never;
@@ -3220,7 +3242,7 @@ export interface paths {
         };
         /**
          * List Research Node Descriptors
-         * @description 列出 R3 内置策略节点 descriptor（pipeline studio 事实源）.
+         * @description 列出 R3 内置策略节点 descriptor(pipeline studio 事实源).
          *
          *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
          */
@@ -4288,6 +4310,13 @@ export interface components {
         APIResponse_FactorDiagnosticsResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["FactorDiagnosticsResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[FactorEvaluationSeriesResponse] */
+        APIResponse_FactorEvaluationSeriesResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["FactorEvaluationSeriesResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -10840,6 +10869,48 @@ export interface components {
             start_date: string;
         };
         /**
+         * FactorEvaluationSeriesResponse
+         * @description Per-date factor evaluation series computed at read time (research only).
+         *
+         *     前向收益使用 look-ahead 数据：生产环境 fail closed，仅研究/测试环境可用。
+         */
+        FactorEvaluationSeriesResponse: {
+            /** Dates */
+            dates: string[];
+            /** Factor Id */
+            factor_id: string;
+            /** Factor Version */
+            factor_version: number;
+            /** Holding Period */
+            holding_period: number;
+            /** Ic */
+            ic: (number | null)[];
+            /** Ls Nav */
+            ls_nav: (number | null)[];
+            /** Monthly Ic */
+            monthly_ic: components["schemas"]["MonthlyIcCell"][];
+            /** N Dates */
+            n_dates: number;
+            /** N Quantiles */
+            n_quantiles: number;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Quantile Nav */
+            quantile_nav: components["schemas"]["QuantileNavColumn"][];
+            /** Rolling Ir */
+            rolling_ir: (number | null)[];
+            /** Rolling Ir Window */
+            rolling_ir_window: number;
+        };
+        /**
          * FillAdjustmentResponse
          * @description 不可变成交修正事件响应。
          */
@@ -12301,6 +12372,20 @@ export interface components {
          */
         ModelProfile: "balanced" | "quality";
         /**
+         * MonthlyIcCell
+         * @description Monthly IC aggregation cell for the heatmap.
+         */
+        MonthlyIcCell: {
+            /** Days */
+            days: number;
+            /** Mean Ic */
+            mean_ic: number | null;
+            /** Month */
+            month: number;
+            /** Year */
+            year: number;
+        };
+        /**
          * NavPointResponse
          * @description NAV 序列数据点.
          */
@@ -13595,6 +13680,16 @@ export interface components {
             bundle_hash: string;
             /** Reason */
             reason: string;
+        };
+        /**
+         * QuantileNavColumn
+         * @description Cumulative NAV path for one quantile group.
+         */
+        QuantileNavColumn: {
+            /** Nav */
+            nav: (number | null)[];
+            /** Quantile */
+            quantile: number;
         };
         /**
          * ReactivateStrategyRequest
@@ -28813,6 +28908,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_FactorDiagnosticsResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    design_research_factor_evaluation_series: {
+        parameters: {
+            query?: {
+                /** @description 衍生 artifact 版本(缺省解析离线版本) */
+                version?: number | null;
+                /** @description 评估起始日(含) */
+                start_date?: string | null;
+                /** @description 评估结束日(含) */
+                end_date?: string | null;
+                /** @description 前向收益持有期(交易日) */
+                holding_period?: number;
+                /** @description 分位组数 */
+                n_quantiles?: number;
+                /** @description 滚动 IR 窗口(交易日) */
+                rolling_ir_window?: number;
+                /** @description 资产类别 */
+                asset_class?: "stock" | "etf";
+                /** @description 复权类型 */
+                adj?: "none" | "qfq" | "hfq";
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                factor_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_FactorEvaluationSeriesResponse_"];
                 };
             };
             /** @description Bad request */

@@ -5,7 +5,7 @@
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `13d0f234c2b240be0a1bd103525b19b54967b67425d234d9b23807545e9c89f7`
+> JSON canonical SHA-256: `6451382d85c8eb2ebef73f6d40096fd6b31655e9603840d65354702445344f1b`
 
 Task 4 classification 已由用户批准；批准 reference 为
 `user-message:2026-07-31:final-task4-classification-approved`。Task 9 candidate
@@ -32,9 +32,9 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
   "classification_counts": {
     "DEFER/PLANNED": 1,
     "EQUIVALENT/IMPLEMENTED": 6,
-    "IMPLEMENT/IMPLEMENTED": 34
+    "IMPLEMENT/IMPLEMENTED": 35
   },
-  "runtime_contract_count": 40,
+  "runtime_contract_count": 41,
   "defer_operation_ids": [
     "design_research_experiment_launch_alias"
   ],
@@ -207,6 +207,8 @@ cursor 还必须绑定 resource kind，不能跨三类 evidence page 复用。
 | `GET /research/node-descriptors` | IMPLEMENTED / exact | registry catalog | `list[NodeDescriptorResponse]` | read；descriptor version/registry hash | experimental；Studio node library；4,5,17 |
 | `GET /research/factors` | IMPLEMENTED / exact | factor catalog | `list[FactorDescriptorResponse]` | read；factor_id+version | experimental；Studio/factor catalog；4,5,10,17 |
 | `GET /research/factors/{factor_id}/diagnostics` | IMPLEMENTED（Task 9） | factor+snapshot/window+registry hash | `FactorDiagnosticsResponse` 含 provenance/artifact/content hash | 404 FACTOR_NOT_FOUND、422 scope/snapshot identity；read | experimental；factor detail；10,17 |
+| `GET /research/factors/{factor_id}/evaluation-series` | IMPLEMENTED / exact（RUNTIME_ONLY, M3 charts） | factor_id + version/window/holding/quantiles 查询 | `FactorEvaluationSeriesResponse` 列式逐日序列 | 422 生产前向收益门控；read | experimental；factor charts；10,17 |
+| `GET /research/factors/{factor_id}/evaluation-series` | IMPLEMENTED / exact（RUNTIME_ONLY, M3 charts） | factor_id + version/window/holding/quantiles 查询 | `FactorEvaluationSeriesResponse` 列式逐日序列 | 422 生产前向收益门控；read | experimental；factor charts；10,17 |
 | `POST /strategies` | IMPLEMENTED（Task 7） | strategy_id+canonical spec+Idem | `StrategyResponse` | 409 identity/Idem；422 spec；version=1 | initial-focus；Studio create；4,14,17 |
 | `POST /strategies/{id}/versions` | EQUIVALENT → `PUT /strategies/{id}` | path id + body parent version | `StrategyResponse` 新 draft | 409 stale/Idem；422 spec；parent version CAS | initial-focus；Studio save；4,14,17 |
 | `GET /strategies/{id}/versions` | IMPLEMENTED / exact | strategy_id | `list[StrategyVersionResponse]` | read；immutable version/spec_hash | initial-focus；versions/review join；11,14,17 |

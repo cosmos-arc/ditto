@@ -263,4 +263,47 @@ export const researchHandlers: RequestHandler[] = [
 		}
 		return HttpResponse.json({ data: mockReviewPacket });
 	}),
+
+	// 因子评估逐日序列（查询时计算语义；研究/测试环境可用）
+	http.get("/api/v1/research/factors/:factorId/evaluation-series", ({ request }) => {
+		const url = new URL(request.url);
+		const startDate = url.searchParams.get("start_date") ?? "2026-01-05";
+		const nQuantiles = Number(url.searchParams.get("n_quantiles") ?? 5);
+		const dates: string[] = [];
+		for (let day = 5; day <= 60; day += 7) {
+			dates.push(`2026-01-${String(day).padStart(2, "0")}`);
+		}
+		const ic = dates.map((_, index) => Number((0.08 * Math.sin(index / 2)).toFixed(4)));
+		const rollingIr = dates.map((_, index) => (index < 3 ? null : Number((0.9 * Math.cos(index / 3)).toFixed(3))));
+		const quantileNav = Array.from({ length: nQuantiles }, (_, q) => {
+			const drift = 0.002 * (q + 1);
+			let nav = 1;
+			return {
+				quantile: q + 1,
+				nav: dates.map(() => (nav = Number((nav * (1 + drift)).toFixed(4)))),
+			};
+		});
+		let lsNav = 1;
+		return HttpResponse.json({
+			data: {
+				factor_id: String(url.pathname.split("/").at(-2)),
+				factor_version: 1,
+				holding_period: 5,
+				n_quantiles: nQuantiles,
+				rolling_ir_window: 20,
+				period_start: startDate,
+				period_end: url.searchParams.get("end_date") ?? "2026-03-31",
+				n_dates: dates.length,
+				dates,
+				ic,
+				rolling_ir: rollingIr,
+				quantile_nav: quantileNav,
+				ls_nav: dates.map(() => (lsNav = Number((lsNav * 1.004).toFixed(4)))),
+				monthly_ic: [
+					{ year: 2026, month: 1, mean_ic: 0.0512, days: dates.length },
+					{ year: 2026, month: 2, mean_ic: -0.0231, days: dates.length },
+				],
+			},
+		});
+	}),
 ];
