@@ -110,7 +110,9 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 		[resources, reports],
 	);
 	const navLoading = resources.some((item) => item.navLoading);
-	const fetchError = resources.find((item) => item.fetchError)?.fetchError ?? null;
+	// nav 与 report 失败分开处置：净值图只依赖 nav，report 失败不连坐撤图（CR）
+	const navFetchError = resources.find((item) => item.fetchError?.kind === "nav")?.fetchError ?? null;
+	const reportFetchError = resources.find((item) => item.fetchError?.kind === "report")?.fetchError ?? null;
 	// PNG/CSV 导出 footer 内嵌 run 身份：跟随可见序列——隐藏 run 的数据不在导出物里，
 	// 身份不得声称其参与（导出物无 DOM 图例可供读者发现差异）
 	const visibleRunIds = useMemo(
@@ -143,25 +145,24 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 						const next = new Set(previous);
 						if (next.has(runId)) {
 							next.delete(runId);
-						} else if (previous.size < resources.length - 1) {
-							// 至少保留一条序列：全部隐藏后图表失去对比锚点。
-							next.add(runId);
 						} else {
-							return previous;
+							// 守卫只数仍在选中集里的隐藏 run：目录刷新后消失的 id 不占位；
+							// 至少保留一条序列——全部隐藏后图表失去对比锚点。
+							const presentHidden = [...next].filter((id) => resources.some((item) => item.run.runId === id));
+							if (presentHidden.length >= resources.length - 1) return previous;
+							next.add(runId);
 						}
 						return next;
 					})
 				}
 			/>
-			{fetchError ? (
+			{navFetchError ? (
 				<div
 					role="alert"
 					data-state="fetch-error"
 					className="flex flex-col items-start gap-2 rounded-(--radius-md) border border-(--color-risk-critical-fg) bg-(--color-surface-1) p-4 text-xs"
 				>
-					<p className="font-medium text-(--color-foreground)">
-						{fetchError.kind === "nav" ? "净值" : "report"}证据读取失败：{fetchError.cause.message}
-					</p>
+					<p className="font-medium text-(--color-foreground)">净值证据读取失败：{navFetchError.cause.message}</p>
 					<p className="text-(--color-foreground-secondary)">
 						获取失败不会折算为「未发布」或空净值；404 才是未落盘/未发布的业务态。
 					</p>
@@ -243,6 +244,22 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 					</tbody>
 				</table>
 			</div>
+			{reportFetchError && (
+				// report 失败只影响指标表（该 run 已标「读取失败」）：
+				// 净值图独立成立，保留并在此提示 + 重试
+				<div
+					role="alert"
+					data-state="report-fetch-error"
+					className="flex flex-wrap items-center gap-2 rounded-(--radius-sm) border border-(--color-risk-warning-fg) bg-(--color-surface-1) px-3 py-2 text-xs"
+				>
+					<span className="text-(--color-foreground)">
+						report 证据读取失败：{reportFetchError.cause.message}（指标表按「读取失败」标注）
+					</span>
+					<Button type="button" size="sm" variant="outline" onClick={refetchAll}>
+						重试读取 report 证据
+					</Button>
+				</div>
+			)}
 			<p className="text-[11px] text-(--color-foreground-tertiary)">
 				图内曲线按各 run 首日净值归一（跨初始资金可比）；表内为 run 原值，金额单位 CNY。未发布 report 的 run
 				指标不可得，如实标注。

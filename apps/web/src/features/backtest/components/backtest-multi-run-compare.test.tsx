@@ -272,8 +272,40 @@ describe("BacktestMultiRunCompare", () => {
 		);
 		render(<BacktestMultiRunCompare runs={[run("run-a"), run("run-b")]} />, { wrapper: createWrapper() });
 
-		const alert = await screen.findByRole("alert");
-		expect(alert).toHaveAttribute("data-state", "fetch-error");
-		expect(alert).toHaveTextContent(/report.*读取失败/u);
+		// nav 全部成立：净值图保留，report 失败只影响指标表——横幅提示 + 重试
+		await waitFor(() => {
+			expect(screen.getByTestId("chart-cockpit-stub")).toBeInTheDocument();
+		});
+		const alert = screen.getByRole("alert");
+		expect(alert).toHaveAttribute("data-state", "report-fetch-error");
+		expect(alert).toHaveTextContent(/report 证据读取失败/u);
+		expect(alert.querySelector("button")).toHaveTextContent("重试读取 report 证据");
+	});
+
+	it("excludes vanished runs from the hidden-series guard", async () => {
+		server.use(
+			http.get("/api/v1/backtests/runs/:runId/nav", () =>
+				HttpResponse.json({ data: [{ trade_date: "2026-01-05", nav: 1_000_000 }] }),
+			),
+			http.get("/api/v1/backtests/runs/:runId/report", () =>
+				HttpResponse.json({ detail: "report not found", error_code: "BACKTEST_REPORT_NOT_FOUND" }, { status: 404 }),
+			),
+		);
+		const view = render(<BacktestMultiRunCompare runs={[run("run-a"), run("run-b"), run("run-c")]} />, {
+			wrapper: createWrapper(),
+		});
+		await waitFor(() => {
+			expect(screen.getByTestId("multi-run-legend")).toBeInTheDocument();
+		});
+		// 隐藏 run-a 后目录刷新令其消失：隐藏 id 不占守卫位，仍可隐藏 run-b（run-c 保留）
+		fireEvent.click(within(screen.getByTestId("multi-run-legend")).getByText("run-a"));
+		view.rerender(<BacktestMultiRunCompare runs={[run("run-b"), run("run-c")]} />);
+		fireEvent.click(within(screen.getByTestId("multi-run-legend")).getByText("run-b"));
+		await waitFor(() => {
+			expect(screen.getByTestId("multi-run-legend").querySelector("[data-legend-id='run-b']")).toHaveAttribute(
+				"data-legend-visible",
+				"false",
+			);
+		});
 	});
 });
