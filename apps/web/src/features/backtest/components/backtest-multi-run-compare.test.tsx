@@ -9,11 +9,16 @@ import { BacktestMultiRunCompare } from "./backtest-multi-run-compare";
 
 // jsdom 无法承载 fancy-canvas：barrel 级 stub 只替换 ChartCockpit（捕获喂养序列）；
 // ChartLegend 重导出真实叶子模块（无 canvas 依赖，行为不重复实现）。
-const cockpitProps: { series: { id: string; bars: unknown[] }[]; chartId: string }[] = [];
+type CockpitStubProps = {
+	series: { id: string; bars: unknown[]; color?: string }[];
+	chartId: string;
+	identity?: { dataSourceName?: string };
+};
+const cockpitProps: CockpitStubProps[] = [];
 vi.mock("@/components/chart", async () => {
 	const { ChartLegend } = await import("@/components/chart/cockpit/chart-legend");
 	return {
-		ChartCockpit: (props: { series: { id: string; bars: unknown[] }[]; chartId: string }) => {
+		ChartCockpit: (props: CockpitStubProps) => {
 			cockpitProps.push(props);
 			return createElement("div", {
 				"data-testid": "chart-cockpit-stub",
@@ -110,6 +115,10 @@ describe("BacktestMultiRunCompare", () => {
 		// 图例按选中序占用 run 色板
 		const legend = screen.getByTestId("multi-run-legend");
 		expect(legend.querySelector("[data-legend-id='run-a']")).toHaveAttribute("data-legend-visible", "true");
+		// PNG/CSV 导出身份内嵌有序 run ids：导出物可独立归因
+		expect(cockpitProps.at(-1)).toMatchObject({
+			identity: { dataSourceName: expect.stringContaining("run-a · run-b") },
+		});
 		// 指标差异表：已发布 run 的真实指标 + 未发布 run 的诚实标注
 		const table = screen.getByTestId("multi-run-metrics");
 		expect(table.querySelector("[data-run-id='run-a']")).toHaveTextContent("18.20%");
@@ -146,17 +155,56 @@ describe("BacktestMultiRunCompare", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("multi-run-legend")).toBeInTheDocument();
 		});
-		fireEvent.click(within(screen.getByTestId("multi-run-legend")).getByText("run-b"));
+		fireEvent.click(within(screen.getByTestId("multi-run-legend")).getByText("run-a"));
 		await waitFor(() => {
-			expect(screen.getByTestId("multi-run-legend").querySelector("[data-legend-id='run-b']")).toHaveAttribute(
+			expect(screen.getByTestId("multi-run-legend").querySelector("[data-legend-id='run-a']")).toHaveAttribute(
 				"data-legend-visible",
 				"false",
 			);
 		});
 		await waitFor(() => {
-			expect(cockpitProps.at(-1)?.series.map((spec) => spec.id)).toEqual(["run-a"]);
+			expect(cockpitProps.at(-1)?.series.map((spec) => spec.id)).toEqual(["run-b"]);
 		});
+		// 色板索引绑定勾选序：隐藏首个 run 后，第二个 run 仍保持 --chart-run-2，不重排
+		expect(cockpitProps.at(-1)?.series[0]?.color).toBe("var(--chart-run-2)");
 		// 差异表不受图例显隐影响，仍呈现全部选中 run
 		expect(screen.getByTestId("multi-run-metrics").querySelectorAll("[data-run-id]")).toHaveLength(2);
+	});
+
+	it("surfaces non-404 fetch failures with a retry instead of collapsing them to absent evidence", async () => {
+		// run-b 的 nav 首次 500（获取失败），重试后恢复
+		let navBFailing = true;
+		server.use(
+			http.get("/api/v1/backtests/runs/run-a/nav", () =>
+				HttpResponse.json({ data: [{ trade_date: "2026-01-05", nav: 1_000_000 }] }),
+			),
+			http.get("/api/v1/backtests/runs/run-b/nav", () =>
+				navBFailing
+					? HttpResponse.json({ detail: "boom", error_code: "NAV_500" }, { status: 500 })
+					: HttpResponse.json({ data: [{ trade_date: "2026-01-05", nav: 900_000 }] }),
+			),
+			http.get("/api/v1/backtests/runs/:runId/report", () =>
+				HttpResponse.json({ detail: "report not found", error_code: "BACKTEST_REPORT_NOT_FOUND" }, { status: 404 }),
+			),
+		);
+		cockpitProps.length = 0;
+		render(<BacktestMultiRunCompare runs={[run("run-a"), run("run-b")]} />, { wrapper: createWrapper() });
+
+		// 获取失败显式报错（区分于 404 的「未发布」），并保留重试路径
+		const alert = await screen.findByRole("alert");
+		expect(alert).toHaveAttribute("data-state", "fetch-error");
+		expect(alert).toHaveTextContent(/净值.*读取失败/u);
+		expect(screen.queryByTestId("chart-cockpit-stub")).not.toBeInTheDocument();
+
+		navBFailing = false;
+		fireEvent.click(screen.getByRole("button", { name: "重试读取所选 run 证据" }));
+		await waitFor(() => {
+			expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		});
+		await waitFor(() => {
+			expect(cockpitProps.at(-1)?.series.map((spec) => spec.id)).toEqual(["run-a", "run-b"]);
+		});
+		// 404 report 仍走业务态（未发布），不触发 fetch-error
+		expect(screen.getByTestId("multi-run-metrics").querySelector("[data-run-id='run-b']")).toHaveTextContent("未发布");
 	});
 });

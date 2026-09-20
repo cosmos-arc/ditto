@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -98,7 +98,7 @@ describe("BacktestListPage", () => {
 
 	it("caps compare selection at 8 runs with a disabled reason, and frees a slot on uncheck", async () => {
 		const user = userEvent.setup();
-		const nineRuns = Array.from({ length: 9 }, (_, index) => ({
+		let visibleRuns = Array.from({ length: 9 }, (_, index) => ({
 			run_id: `bt-live-00${index + 1}`,
 			strategy_id: "seed_etf_industry_rotation",
 			strategy_version: "4",
@@ -114,10 +114,16 @@ describe("BacktestListPage", () => {
 			completed_days: 244,
 			total_days: 244,
 		}));
-		server.use(http.get("/api/v1/backtests/runs", () => HttpResponse.json({ data: nineRuns })));
+		server.use(http.get("/api/v1/backtests/runs", () => HttpResponse.json({ data: visibleRuns })));
+		const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+		const invalidateWrapper = ({ children }: { readonly children: ReactNode }) => (
+			<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		);
 
-		render(<BacktestListPage />, { wrapper });
+		render(<BacktestListPage />, { wrapper: invalidateWrapper });
 		await screen.findByRole("checkbox", { name: "加入对比 bt-live-001" });
+		// 行按钮跨外层 2–6 列，与表头五列对齐（防自动布局挤进首列）
+		expect(screen.getByRole("button", { name: "选择回测 bt-live-001" })).toHaveClass("col-span-5");
 		for (let index = 1; index <= 8; index += 1) {
 			await user.click(screen.getByRole("checkbox", { name: `加入对比 bt-live-00${index}` }));
 		}
@@ -128,10 +134,14 @@ describe("BacktestListPage", () => {
 		expect(ninth).toBeDisabled();
 		expect(ninth).toHaveAttribute("title", expect.stringContaining("8 个 run 上限"));
 
-		// 取消一个即释放槽位，第 9 个可再选入
-		await user.click(screen.getByRole("checkbox", { name: "加入对比 bt-live-003" }));
-		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("7/8");
-		await user.click(screen.getByRole("checkbox", { name: "加入对比 bt-live-009" }));
-		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("8/8");
+		// 目录刷新后已选 run 消失：先按现存目录对账再算容量，不留幽灵占位
+		visibleRuns = visibleRuns.filter((candidate) => candidate.run_id !== "bt-live-003");
+		await act(async () => {
+			await client.invalidateQueries({ queryKey: ["backtests"] });
+		});
+		await waitFor(() => {
+			expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("7/8");
+		});
+		expect(screen.getByRole("checkbox", { name: "加入对比 bt-live-009" })).toBeEnabled();
 	});
 });

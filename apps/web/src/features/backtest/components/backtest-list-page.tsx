@@ -101,9 +101,12 @@ export function BacktestListPage() {
 	const completedCount = runs.filter((run) => run.status === "completed").length;
 	const runningCount = runs.filter((run) => run.status === "running").length;
 	const byId = useMemo(() => new Map(runs.map((run) => [run.runId, run])), [runs]);
-	// 勾选序即色板序；上限 8（run 色板 token 数），目录刷新后消失的 run 自然出列。
-	const compareRuns = compareIds.map((runId) => byId.get(runId)).filter((run): run is BacktestRun => Boolean(run));
-	const compareAtCapacity = compareIds.length >= MAX_COMPARE_RUNS;
+	// 勾选序即色板序；先按当前目录对账（refetch 后消失的 run 出列并释放容量），上限 8。
+	const compareRuns = useMemo(
+		() => compareIds.map((runId) => byId.get(runId)).filter((run): run is BacktestRun => Boolean(run)),
+		[compareIds, byId],
+	);
+	const compareAtCapacity = compareRuns.length >= MAX_COMPARE_RUNS;
 
 	const toggleCompare = (runId: string) => {
 		setCompareIds((previous) => {
@@ -162,7 +165,7 @@ export function BacktestListPage() {
 									className="font-data text-xs text-(--color-foreground-tertiary)"
 									data-testid="compare-selection-count"
 								>
-									{compareIds.length}/{MAX_COMPARE_RUNS} 对比 · {completedCount} completed · {runningCount} running
+									{compareRuns.length}/{MAX_COMPARE_RUNS} 对比 · {completedCount} completed · {runningCount} running
 								</span>
 							}
 						/>
@@ -216,7 +219,9 @@ export function BacktestListPage() {
 													aria-label={`选择回测 ${run.runId}`}
 													aria-pressed={isSelected}
 													onClick={() => setSelectedRunId(run.runId)}
-													className={`grid w-full grid-cols-[minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] items-center text-left transition-colors ${
+													// col-span-5：跨外层第 2–6 列，与表头五列一一对齐
+													// （自动布局会把按钮挤进首列导致内部轨道溢出错位）
+													className={`col-span-5 grid w-full grid-cols-[minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] items-center text-left transition-colors ${
 														isSelected
 															? "rounded-(--radius-sm) bg-[color-mix(in_oklch,var(--color-accent)_8%,transparent)]"
 															: "hover:bg-(--color-interaction-hover-subtle-bg)"

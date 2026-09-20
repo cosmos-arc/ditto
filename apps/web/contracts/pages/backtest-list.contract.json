@@ -23,7 +23,11 @@
     "reactComponentRefs": ["BacktestListPage"]
   },
   "liveData": {
-    "readPaths": ["/api/v1/backtests/runs"],
+    "readPaths": [
+      "/api/v1/backtests/runs",
+      "/api/v1/backtests/runs/{run_id}/nav",
+      "/api/v1/backtests/runs/{run_id}/report"
+    ],
     "writePaths": [],
     "mockFallback": false
   },

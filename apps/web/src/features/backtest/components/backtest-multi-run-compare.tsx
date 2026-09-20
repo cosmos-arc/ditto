@@ -1,6 +1,8 @@
 import { useQueries } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ApiError } from "@/api/errors";
 import { ChartCockpit, ChartLegend } from "@/components/chart";
+import { Button } from "@/components/ui/button";
 import { fetchBacktestNav, fetchBacktestReport } from "../api/backtests";
 import { backtestKeys } from "../hooks";
 import { metricsRows, multiRunSeries, runColor } from "../lib/multi-run-mapping";
@@ -10,9 +12,11 @@ import type { BacktestNavPoint, BacktestReport, BacktestRun } from "../types";
  * 多 run 净值叠加对比（≥2 个真实 run；#215 ②）。
  *
  * - 各 run 净值按 nav₀ 归一叠加（8 色 run 色板），图例 chip 控制显隐；
+ *   色板索引绑定勾选序，隐藏不重排（CR：legend/曲线同色恒等）；
  * - 关键指标差异表按 run 原值呈现（年化/回撤为引擎百分数口径），
  *   未发布 report 的 run 标「未发布」，不虚构指标；
- * - 每条序列来自该 run 已落盘 nav 证据，缺 nav 的 run 图上无曲线但保留图例位。
+ * - 404 = 未落盘/未发布（业务态，诚实空位）；超时/5xx 等获取失败显式报错并可重试，
+ *   不冒充缺席证据（CR）；PNG 导出 footer 内嵌有序 run 身份。
  */
 
 type RunResources = {
@@ -20,16 +24,24 @@ type RunResources = {
 	readonly nav: readonly BacktestNavPoint[];
 	readonly navLoading: boolean;
 	readonly report: BacktestReport | undefined;
+	/** 404 之外的获取失败（超时/5xx）——需显式暴露而非折叠为空数据。 */
+	readonly fetchError: { readonly kind: "nav" | "report"; readonly cause: Error } | null;
 };
 
+function toFetchError(kind: "nav" | "report", error: unknown) {
+	// 404 是业务态（未落盘/未发布），不属获取失败
+	if (error instanceof ApiError && error.status === 404) return null;
+	return { kind, cause: error instanceof Error ? error : new Error(String(error)) };
+}
+
 /** 选中集（≤8）逐 run 取 nav/report：useQueries 承接动态长度，hook 顺序稳定。 */
-function useRunResources(runs: readonly BacktestRun[]): RunResources[] {
+function useRunResources(runs: readonly BacktestRun[]) {
 	const navs = useQueries({
 		queries: runs.map((run) => ({
 			queryKey: backtestKeys.nav(run.runId),
 			queryFn: () => fetchBacktestNav(run.runId),
 			// nav 404 与 report 同为真实业务态（run 未落盘 nav），不重试，
-			// 直接落 error → data: undefined → 空 bars 的诚实路径。
+			// 404 落 data: undefined → 空 bars；其它错误走显式 fetchError。
 			retry: false,
 			throwOnError: false,
 		})),
@@ -43,21 +55,33 @@ function useRunResources(runs: readonly BacktestRun[]): RunResources[] {
 			throwOnError: false,
 		})),
 	});
-	return runs.map((run, index) => ({
+	const resources: RunResources[] = runs.map((run, index) => ({
 		run,
 		nav: navs[index]?.data ?? [],
 		navLoading: navs[index]?.isLoading ?? false,
 		report: reports[index]?.data,
+		fetchError: navs[index]?.isError
+			? toFetchError("nav", navs[index]?.error)
+			: reports[index]?.isError
+				? toFetchError("report", reports[index]?.error)
+				: null,
 	}));
+	const refetchAll = () => {
+		for (const result of [...navs, ...reports]) void result.refetch();
+	};
+	return { resources, refetchAll };
 }
 
 export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly BacktestRun[] }) {
-	const resources = useRunResources(runs);
+	const { resources, refetchAll } = useRunResources(runs);
 	const [hiddenRuns, setHiddenRuns] = useState<ReadonlySet<string>>(new Set());
-	const visible = useMemo(() => resources.filter((item) => !hiddenRuns.has(item.run.runId)), [resources, hiddenRuns]);
+	// 色板绑定勾选序：先按全量选中集着色再过滤显隐，隐藏不重排剩余序列的颜色
 	const series = useMemo(
-		() => multiRunSeries(visible.map((item) => ({ runId: item.run.runId, nav: item.nav }))),
-		[visible],
+		() =>
+			multiRunSeries(resources.map((item) => ({ runId: item.run.runId, nav: item.nav }))).filter(
+				(spec) => !hiddenRuns.has(spec.id),
+			),
+		[resources, hiddenRuns],
 	);
 	const reports = useMemo(
 		() =>
@@ -73,14 +97,16 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 		[resources, reports],
 	);
 	const navLoading = resources.some((item) => item.navLoading);
+	const fetchError = resources.find((item) => item.fetchError)?.fetchError ?? null;
+	// PNG/CSV 导出 footer 内嵌有序 run 身份：导出的叠加图可独立归因（无 DOM 图例）
 	const identity = useMemo(
 		() => ({
-			dataSourceName: "运行产物（各 run nav.parquet，按 nav₀ 归一）",
+			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一）：${runs.map((run) => run.runId).join(" · ")}`,
 			snapshotId: null,
 			knowledgeCutoff: null,
 			publicationCutoff: null,
 		}),
-		[],
+		[runs],
 	);
 
 	return (
@@ -109,7 +135,23 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 					})
 				}
 			/>
-			{navLoading ? (
+			{fetchError ? (
+				<div
+					role="alert"
+					data-state="fetch-error"
+					className="flex flex-col items-start gap-2 rounded-(--radius-md) border border-(--color-risk-critical-fg) bg-(--color-surface-1) p-4 text-xs"
+				>
+					<p className="font-medium text-(--color-foreground)">
+						{fetchError.kind === "nav" ? "净值" : "report"}证据读取失败：{fetchError.cause.message}
+					</p>
+					<p className="text-(--color-foreground-secondary)">
+						获取失败不会折算为「未发布」或空净值；404 才是未落盘/未发布的业务态。
+					</p>
+					<Button type="button" size="sm" variant="outline" onClick={refetchAll}>
+						重试读取所选 run 证据
+					</Button>
+				</div>
+			) : navLoading ? (
 				<div
 					className="flex h-64 items-center justify-center rounded-(--radius-md) border border-(--color-border-subtle) text-xs text-(--color-foreground-tertiary)"
 					data-state="loading"
