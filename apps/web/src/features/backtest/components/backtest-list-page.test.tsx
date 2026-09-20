@@ -95,4 +95,43 @@ describe("BacktestListPage", () => {
 		expect(screen.getByRole("button", { name: "重试回测目录" })).toBeInTheDocument();
 		expect(screen.queryByText("bt-240427-a")).not.toBeInTheDocument();
 	});
+
+	it("caps compare selection at 8 runs with a disabled reason, and frees a slot on uncheck", async () => {
+		const user = userEvent.setup();
+		const nineRuns = Array.from({ length: 9 }, (_, index) => ({
+			run_id: `bt-live-00${index + 1}`,
+			strategy_id: "seed_etf_industry_rotation",
+			strategy_version: "4",
+			mode: "backtest",
+			status: "completed",
+			started_at: "2026-08-28T09:00:00Z",
+			completed_at: "2026-08-28T09:14:00Z",
+			error_message: "",
+			parent_run_id: "",
+			benchmark_return: null,
+			progress_pct: 100,
+			current_step: "completed",
+			completed_days: 244,
+			total_days: 244,
+		}));
+		server.use(http.get("/api/v1/backtests/runs", () => HttpResponse.json({ data: nineRuns })));
+
+		render(<BacktestListPage />, { wrapper });
+		await screen.findByRole("checkbox", { name: "加入对比 bt-live-001" });
+		for (let index = 1; index <= 8; index += 1) {
+			await user.click(screen.getByRole("checkbox", { name: `加入对比 bt-live-00${index}` }));
+		}
+		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("8/8");
+
+		// 第 9 个在容量处禁用，title 给出原因（可见计数芯片之外的无障碍补充）
+		const ninth = screen.getByRole("checkbox", { name: "加入对比 bt-live-009" });
+		expect(ninth).toBeDisabled();
+		expect(ninth).toHaveAttribute("title", expect.stringContaining("8 个 run 上限"));
+
+		// 取消一个即释放槽位，第 9 个可再选入
+		await user.click(screen.getByRole("checkbox", { name: "加入对比 bt-live-003" }));
+		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("7/8");
+		await user.click(screen.getByRole("checkbox", { name: "加入对比 bt-live-009" }));
+		expect(screen.getByTestId("compare-selection-count")).toHaveTextContent("8/8");
+	});
 });

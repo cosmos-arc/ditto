@@ -7,44 +7,22 @@ import { server } from "@/mocks/server";
 import type { BacktestRun } from "../types";
 import { BacktestMultiRunCompare } from "./backtest-multi-run-compare";
 
-// jsdom 无法承载 fancy-canvas：barrel 级同步 stub ChartCockpit 捕获喂养序列；
-// ChartLegend 以等价行为内联重放（真实 legend 的开关行为由组件自身测试覆盖）。
+// jsdom 无法承载 fancy-canvas：barrel 级 stub 只替换 ChartCockpit（捕获喂养序列）；
+// ChartLegend 重导出真实叶子模块（无 canvas 依赖，行为不重复实现）。
 const cockpitProps: { series: { id: string; bars: unknown[] }[]; chartId: string }[] = [];
-vi.mock("@/components/chart", () => ({
-	ChartCockpit: (props: { series: { id: string; bars: unknown[] }[]; chartId: string }) => {
-		cockpitProps.push(props);
-		return createElement("div", {
-			"data-testid": "chart-cockpit-stub",
-			"data-chart-series-ids": props.series.map((spec) => spec.id).join(","),
-		});
-	},
-	ChartLegend: ({
-		items,
-		onToggle,
-		testId,
-	}: {
-		items: { id: string; label: string; visible: boolean }[];
-		onToggle: (id: string) => void;
-		testId?: string;
-	}) =>
-		createElement(
-			"div",
-			{ "data-testid": testId },
-			items.map((item) =>
-				createElement(
-					"button",
-					{
-						key: item.id,
-						type: "button",
-						"data-legend-id": item.id,
-						"data-legend-visible": String(item.visible),
-						onClick: () => onToggle(item.id),
-					},
-					item.label,
-				),
-			),
-		),
-}));
+vi.mock("@/components/chart", async () => {
+	const { ChartLegend } = await import("@/components/chart/cockpit/chart-legend");
+	return {
+		ChartCockpit: (props: { series: { id: string; bars: unknown[] }[]; chartId: string }) => {
+			cockpitProps.push(props);
+			return createElement("div", {
+				"data-testid": "chart-cockpit-stub",
+				"data-chart-series-ids": props.series.map((spec) => spec.id).join(","),
+			});
+		},
+		ChartLegend,
+	};
+});
 
 function run(runId: string): BacktestRun {
 	return {

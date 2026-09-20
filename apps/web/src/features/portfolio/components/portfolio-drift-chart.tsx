@@ -34,11 +34,8 @@ export function PortfolioDriftChart({ comparison }: { readonly comparison: Portf
 			const next = new Set(previous);
 			if (next.has(pairId)) {
 				next.delete(pairId);
-			} else if (previous.size < DRIFT_PAIRS.length - 1) {
-				// 至少保留一列：全部隐藏会让矩阵失去对比语义。
-				next.add(pairId);
 			} else {
-				return previous;
+				next.add(pairId);
 			}
 			return next;
 		});
@@ -134,6 +131,14 @@ export function PortfolioDriftChart({ comparison }: { readonly comparison: Portf
 							})}
 						</div>
 					))}
+					{visiblePairs.length === 0 && (
+						<p
+							className="col-span-full border-t border-(--color-border-subtle) py-6 text-center text-xs text-(--color-foreground-tertiary)"
+							data-state="all-pairs-hidden"
+						>
+							全部对比列已隐藏——点击任一列头恢复
+						</p>
+					)}
 				</div>
 				<p className="mt-3 border-t border-(--color-border-subtle) pt-2 text-[11px] text-(--color-foreground-tertiary)">
 					发散条按可见列最大 |bps| 归一；右 = 观察侧超配，左 = 观察侧低配。三列共享 valuation snapshot

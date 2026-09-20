@@ -115,11 +115,21 @@ describe("PortfolioDriftChart", () => {
 		expect(cell).toHaveTextContent("");
 		// 其余列不受影响
 		expect(screen.getByTestId("drift-cell-instrument-600519-model_vs_manual")).toHaveTextContent("−2000.0 bps");
-		// 保留最后一列：把另外两列也关掉时第三列拒绝关闭
+	});
+
+	it("allows hiding every column and shows an explicit all-hidden state", () => {
+		render(<PortfolioDriftChart comparison={comparisonFixture()} />);
+		// 三列全部可隐（不做静默拒绝），矩阵进入显式空态
+		for (const label of [/MODEL → PAPER/, /MODEL → MANUAL/, /PAPER → MANUAL/]) {
+			const column = screen.getByRole("button", { name: label });
+			fireEvent.click(column);
+			expect(column).toHaveAttribute("aria-pressed", "false");
+		}
+		expect(screen.getByText("全部对比列已隐藏——点击任一列头恢复")).toBeInTheDocument();
+		// 列头仍在，可恢复
 		fireEvent.click(screen.getByRole("button", { name: /MODEL → MANUAL/ }));
-		const lastColumn = screen.getByRole("button", { name: /PAPER → MANUAL/ });
-		fireEvent.click(lastColumn);
-		expect(lastColumn).toHaveAttribute("aria-pressed", "true");
+		expect(screen.queryByText("全部对比列已隐藏——点击任一列头恢复")).not.toBeInTheDocument();
+		expect(screen.getByTestId("drift-cell-instrument-600519-model_vs_manual")).toHaveTextContent("−2000.0 bps");
 	});
 
 	it("keeps the structured empty state when all drift surfaces are empty", () => {

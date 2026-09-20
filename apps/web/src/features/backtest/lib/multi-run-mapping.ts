@@ -35,14 +35,14 @@ export type RunNavInput = {
 	readonly nav: readonly { readonly tradeDate: string; readonly nav: number }[];
 };
 
-/** 可见 run → Cockpit 序列（归一化净值；空 nav → 空 bars 序列，保留图例位）。 */
+/** 可见 run → Cockpit 序列（归一化净值；空 nav → 空 bars 序列，保留图例位）。
+ * 等宽线（CR #236-4）：勾选顺序是操作顺序而非优先级，序列区分只靠色板。 */
 export function multiRunSeries(runs: readonly RunNavInput[]): CockpitSeriesSpec[] {
 	return runs.map((run, index) => ({
 		id: run.runId,
 		label: run.runId,
 		bars: normalizedNavPoints(run.nav),
 		color: runColor(index),
-		lineWidth: index === 0 ? 2 : 1,
 		format: formatNav,
 	}));
 }

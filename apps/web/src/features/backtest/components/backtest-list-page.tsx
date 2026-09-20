@@ -201,6 +201,12 @@ export function BacktestListPage() {
 													type="checkbox"
 													aria-label={`加入对比 ${run.runId}`}
 													checked={inCompare}
+													// 工具栏的 N/8 计数芯片是可见主提示；title 补充禁用原因
+													title={
+														compareAtCapacity && !inCompare
+															? "对比已达 8 个 run 上限（8 色 run 色板）；取消一个后再选"
+															: undefined
+													}
 													disabled={!inCompare && compareAtCapacity}
 													onChange={() => toggleCompare(run.runId)}
 													className="h-3.5 w-3.5 accent-(--brand-accent)"

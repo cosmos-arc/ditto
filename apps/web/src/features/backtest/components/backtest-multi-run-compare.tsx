@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { ChartCockpit, ChartLegend } from "@/components/chart";
 import { fetchBacktestNav, fetchBacktestReport } from "../api/backtests";
 import { backtestKeys } from "../hooks";
-import { metricsRows, multiRunSeries } from "../lib/multi-run-mapping";
+import { metricsRows, multiRunSeries, runColor } from "../lib/multi-run-mapping";
 import type { BacktestNavPoint, BacktestReport, BacktestRun } from "../types";
 
 /**
@@ -28,6 +28,10 @@ function useRunResources(runs: readonly BacktestRun[]): RunResources[] {
 		queries: runs.map((run) => ({
 			queryKey: backtestKeys.nav(run.runId),
 			queryFn: () => fetchBacktestNav(run.runId),
+			// nav 404 与 report 同为真实业务态（run 未落盘 nav），不重试，
+			// 直接落 error → data: undefined → 空 bars 的诚实路径。
+			retry: false,
+			throwOnError: false,
 		})),
 	});
 	const reports = useQueries({
@@ -87,7 +91,7 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 				items={resources.map((item, index) => ({
 					id: item.run.runId,
 					label: item.run.runId,
-					color: `var(--chart-run-${(index % 8) + 1})`,
+					color: runColor(index),
 					visible: !hiddenRuns.has(item.run.runId),
 				}))}
 				onToggle={(runId) =>
@@ -166,7 +170,8 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 				</table>
 			</div>
 			<p className="text-[11px] text-(--color-foreground-tertiary)">
-				图内曲线按各 run 首日净值归一（跨初始资金可比）；表内为 run 原值。未发布 report 的 run 指标不可得，如实标注。
+				图内曲线按各 run 首日净值归一（跨初始资金可比）；表内为 run 原值，金额单位 CNY。未发布 report 的 run
+				指标不可得，如实标注。
 			</p>
 		</div>
 	);
