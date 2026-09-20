@@ -163,3 +163,59 @@ class TestFactorEvaluationFacadeEvaluate:
         assert result.catalog_snapshot_id == "catalog-snap-20240630"
         assert result.universe == "csi_300"
         assert result.cost_bps == 8.0
+
+
+class TestFactorEvaluationFacadeEvaluateSeries:
+    """FactorEvaluationFacade.evaluate_series -- 同一输入装配 + 身份盖章."""
+
+    def test_delegates_and_stamps_identity(self) -> None:
+        import polars as pl
+        from ditto_features.evaluation.series import FactorEvaluationSeries
+
+        factor_df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": ["2026-01-05", "2026-01-05"],
+                "value": [0.5, -0.5],
+            },
+        )
+        with (
+            patch(
+                "ditto_application.queries.evaluation.FactorEvaluator",
+            ) as mock_evaluator_cls,
+            patch.object(
+                FactorEvaluationFacade,
+                "_resolve_version",
+                return_value=3,
+            ) as mock_resolve,
+        ):
+            facade = FactorEvaluationFacade(
+                artifact_reader=MagicMock(),
+                forward_return_service=MagicMock(),
+            )
+            facade._artifact_reader.read_frame.return_value = factor_df
+            series = FactorEvaluationSeries(
+                factor_id="unknown",
+                factor_version=0,
+                period=("2026-01-05", "2026-01-09"),
+                holding_period=5,
+                n_quantiles=5,
+                n_dates=1,
+                ic=pl.DataFrame({"trade_date": ["2026-01-05"], "ic": [0.2]}),
+                rolling_ir=pl.DataFrame(
+                    {"trade_date": ["2026-01-05"], "rolling_ir": [None]},
+                ),
+                quantile_nav=pl.DataFrame({"trade_date": ["2026-01-05"]}),
+                ls_nav=pl.DataFrame({"trade_date": ["2026-01-05"], "ls_nav": [1.0]}),
+                monthly_ic=pl.DataFrame(
+                    {"year": [2026], "month": [1], "mean_ic": [0.2], "days": [1]},
+                ),
+            )
+            mock_evaluator_cls.return_value.evaluate_series.return_value = series
+
+            result = facade.evaluate_series("momentum_20", options=EvaluationOptions())
+
+        mock_resolve.assert_called_once_with("momentum_20", None)
+        assert result.factor_id == "momentum_20"
+        assert result.factor_version == 3
+        assert result.n_dates == 1

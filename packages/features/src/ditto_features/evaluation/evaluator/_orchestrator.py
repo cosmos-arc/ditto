@@ -44,6 +44,14 @@ from ditto_features.evaluation.metrics import (
 from ditto_features.evaluation.report import (
     FactorEvaluationReport,
 )
+from ditto_features.evaluation.series import (
+    DEFAULT_ROLLING_IR_WINDOW,
+    FactorEvaluationSeries,
+    ls_nav_series,
+    monthly_ic,
+    quantile_nav_series,
+    rolling_ir_series,
+)
 
 __all__ = [
     "EvaluationConfig",
@@ -104,6 +112,74 @@ class FactorEvaluator:
         """
         effective_config = config or EvaluationConfig()
         return self._evaluate_impl(factor_df, effective_config, start, end)
+
+    def evaluate_series(
+        self,
+        factor_df: pl.DataFrame,
+        config: EvaluationConfig | None = None,
+        *,
+        start: str | None = None,
+        end: str | None = None,
+        rolling_ir_window: int = DEFAULT_ROLLING_IR_WINDOW,
+    ) -> FactorEvaluationSeries:
+        """
+        Per-date series variant of :meth:`evaluate`.
+
+        Runs the same data preparation and per-date metric pipeline
+        (``rank_ic`` + ``quantile_returns``) but keeps the series that the
+        aggregated report discards: IC per date, rolling IR, cumulative
+        quantile NAV paths, long-short NAV, and monthly IC aggregation.
+        """
+        effective_config = config or EvaluationConfig()
+        effective_start, effective_end = resolve_period(factor_df, start, end)
+        prepared = self._prepare_factor_data(
+            factor_df,
+            effective_config,
+            start=effective_start,
+            end=effective_end,
+        )
+        if isinstance(prepared, FactorEvaluationReport):
+            # 空输入：返回携带空帧的序列（调用方以 n_dates=0 呈现空态）。
+            empty = pl.DataFrame()
+            return FactorEvaluationSeries(
+                factor_id="unknown",
+                factor_version=0,
+                period=(effective_start, effective_end),
+                holding_period=effective_config.holding_period,
+                n_quantiles=effective_config.n_quantiles,
+                n_dates=0,
+                ic=empty,
+                rolling_ir=empty,
+                quantile_nav=empty,
+                ls_nav=empty,
+                monthly_ic=empty,
+            )
+        ic_df = rank_ic(prepared.factor_df, prepared.return_df)
+        q_ret_df = quantile_returns(
+            prepared.factor_df,
+            prepared.return_df,
+            n_quantiles=effective_config.n_quantiles,
+        )
+        return FactorEvaluationSeries(
+            factor_id="unknown",
+            factor_version=0,
+            period=(effective_start, effective_end),
+            holding_period=effective_config.holding_period,
+            n_quantiles=effective_config.n_quantiles,
+            n_dates=prepared.n_dates,
+            ic=ic_df,
+            rolling_ir=rolling_ir_series(ic_df, window=rolling_ir_window),
+            quantile_nav=quantile_nav_series(
+                q_ret_df,
+                n_quantiles=effective_config.n_quantiles,
+            ),
+            ls_nav=ls_nav_series(
+                q_ret_df,
+                top_quantile=effective_config.n_quantiles,
+                bottom_quantile=1,
+            ),
+            monthly_ic=monthly_ic(ic_df),
+        )
 
     def _evaluate_impl(
         self,

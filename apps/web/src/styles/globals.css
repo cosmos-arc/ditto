@@ -804,3 +804,30 @@ body {
 		transparent 100%
 	);
 }
+
+/* ── Factor monthly IC heatmap cells: discrete sign × magnitude buckets ── */
+.heat-cell[data-heat="none"] {
+	background: transparent;
+}
+.heat-cell[data-heat^="up-"],
+.heat-cell[data-heat^="down-"] {
+	--heat-token: var(--chart-series-up);
+}
+.heat-cell[data-heat^="down-"] {
+	--heat-token: var(--chart-series-down);
+}
+.heat-cell[data-heat$="-1"] {
+	background: color-mix(in oklch, var(--heat-token) 22%, transparent);
+}
+.heat-cell[data-heat$="-2"] {
+	background: color-mix(in oklch, var(--heat-token) 38%, transparent);
+}
+.heat-cell[data-heat$="-3"] {
+	background: color-mix(in oklch, var(--heat-token) 54%, transparent);
+}
+.heat-cell[data-heat$="-4"] {
+	background: color-mix(in oklch, var(--heat-token) 70%, transparent);
+}
+.heat-cell[data-heat$="-5"] {
+	background: color-mix(in oklch, var(--heat-token) 85%, transparent);
+}

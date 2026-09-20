@@ -66,6 +66,8 @@ export type CockpitSeriesSpec = {
 	readonly kind?: "line" | "candle";
 	/** 图例读数格式化（与页面 KPI 同口径，如净值 4 位小数、百分比带符号）。 */
 	readonly format?: (value: number) => string;
+	/** 价格轴（双轴序列，如 IC 左轴 + 滚动 IR 右轴）；缺省右轴。 */
+	readonly priceScaleId?: "left" | "right";
 };
 
 /** 主图（pane 0）叠加线，如 MA/Donchian 轨道/ETF 净值。 */
@@ -460,6 +462,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 						priceLineVisible: false,
 						lastValueVisible: false,
 						crosshairMarkerVisible: true,
+						...(spec.priceScaleId ? { priceScaleId: spec.priceScaleId } : {}),
 					},
 					0,
 				);

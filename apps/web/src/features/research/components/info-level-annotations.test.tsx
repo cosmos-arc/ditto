@@ -1,10 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { regimeHandlers } from "@/mocks/handlers/regime";
 import { researchHandlers } from "@/mocks/handlers/research";
 import { server } from "@/mocks/server";
+
+// jsdom 无法承载 fancy-canvas：stub 图表 shell。
+vi.mock("@/components/chart", () => ({
+	ChartCockpit: () => createElement("div", { "data-testid": "cockpit-stub" }),
+}));
+
 import { FactorPage } from "./factor-page";
 import { RegimePage } from "./regime-page";
 import { ResearchPage } from "./research-page";
@@ -141,7 +147,7 @@ describe("FactorPage info-level annotations", () => {
 		expect(l1Units).toHaveLength(2);
 	});
 
-	it("annotates 2 L2 information units", async () => {
+	it("annotates 3 L2 information units", async () => {
 		render(<FactorPage initialScope={FACTOR_SCOPE} />, { wrapper: createWrapper() });
 
 		await screen.findByText("factor-diagnostic-1");
@@ -149,9 +155,11 @@ describe("FactorPage info-level annotations", () => {
 		const l2Units = document.querySelectorAll("[data-info-level='l2']");
 		const l2UnitNames = Array.from(l2Units).map((el) => el.getAttribute("data-info-unit"));
 
+		expect(l2UnitNames).toContain("factor-series");
+		expect(l2UnitNames).toContain("factor-series-charts");
 		expect(l2UnitNames).toContain("factor-diagnostics");
 		expect(l2UnitNames).toContain("factor-provenance");
-		expect(l2Units).toHaveLength(2);
+		expect(l2Units).toHaveLength(4);
 	});
 
 	it("annotates server-provided L3 diagnostic items", async () => {

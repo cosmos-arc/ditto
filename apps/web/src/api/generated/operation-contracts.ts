@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6c4de056e05976ee23c0e88e23c19b358eb6efd583dccdfc98287babc3789b36
+ * Schema SHA-256: b58c16c9898ccac41bd73c17d2a4f7d50e39f290a3ce12784d4fb52a918c4d99
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -938,6 +938,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/research/factors/{factor_id}/diagnostics": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/research/factors/{factor_id}/evaluation-series": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2404,6 +2414,13 @@ export const operationRequestContracts = {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["factor_id"],
       "query": ["end_date", "registry_hash", "snapshot_id", "start_date"],
+    },
+  },
+  "get /api/v1/research/factors/{factor_id}/evaluation-series": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["factor_id"],
+      "query": ["adj", "asset_class", "end_date", "holding_period", "n_quantiles", "rolling_ir_window", "start_date", "version"],
     },
   },
   "get /api/v1/research/node-descriptors": {

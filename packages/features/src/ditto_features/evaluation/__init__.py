@@ -16,11 +16,15 @@ from ditto_features.evaluation.report import (
     RegimeICResult,
     TailRiskMetrics,
 )
+from ditto_features.evaluation.series import (
+    FactorEvaluationSeries,
+)
 
 __all__ = [
     "AttributionContribution",
     "ClosePriceProvider",
     "FactorEvaluationReport",
+    "FactorEvaluationSeries",
     "FactorExposureResult",
     "FamaMacBethResult",
     "ForwardReturnProvider",

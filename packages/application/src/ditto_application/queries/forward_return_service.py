@@ -96,7 +96,11 @@ class ForwardReturnService:
             )
 
         result = (
-            bars.sort(["instrument_id", "trade_date"])
+            # 输出契约为 ISO 字符串日期（与因子 artifact 的 trade_date 同
+            # dtype 才能 join）；market service 可能返回 date 类型，这里统
+            # 一归一（ISO 字符串序即时间序）。
+            bars.with_columns(pl.col("trade_date").cast(pl.Utf8))
+            .sort(["instrument_id", "trade_date"])
             .with_columns(
                 forward_return=(
                     pl.col("close").shift(-holding_period).over("instrument_id")

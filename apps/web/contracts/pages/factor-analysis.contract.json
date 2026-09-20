@@ -1,9 +1,9 @@
 {
   "id": "factor-analysis",
-  "version": 2,
+  "version": 3,
   "status": "contract-ready",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-08-29",
+  "updatedAt": "2026-09-20",
   "route": "/research/factors/$id",
   "pagePattern": "object-hub",
   "shellFamily": "object-hub",
@@ -129,7 +129,9 @@
       "diagnostics-ready",
       "handoff-open",
       "ai-governance-open",
-      "diagnostic-detail-open"
+      "diagnostic-detail-open",
+      "factor-series-empty",
+      "factor-series-unavailable"
     ]
   },
   "interactions": [
@@ -176,6 +178,14 @@
         "sidebar"
       ],
       "expectedBehavior": "reuses the exact server-backed diagnostics query and immutable provenance"
+    },
+    {
+      "id": "view-factor-series-charts",
+      "trigger": "bind-scope-window",
+      "affectedSlots": [
+        "main"
+      ],
+      "expectedBehavior": "renders IC/rolling-IR dual-axis, quantile layered NAV with LS spread, and the monthly IC heatmap computed at read time from the same evaluator family; research-gated forward returns fail closed in production"
     }
   ],
   "flags": {

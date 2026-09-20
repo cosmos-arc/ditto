@@ -1225,6 +1225,30 @@
         "title": "APIResponse[FactorDiagnosticsResponse]",
         "type": "object"
       },
+      "APIResponse_FactorEvaluationSeriesResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FactorEvaluationSeriesResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[FactorEvaluationSeriesResponse]",
+        "type": "object"
+      },
       "APIResponse_FillAdjustmentResponse_": {
         "properties": {
           "data": {
@@ -15280,6 +15304,126 @@
         "title": "FactorDiagnosticsResponse",
         "type": "object"
       },
+      "FactorEvaluationSeriesResponse": {
+        "description": "Per-date factor evaluation series computed at read time (research only).\n\n前向收益使用 look-ahead 数据：生产环境 fail closed，仅研究/测试环境可用。",
+        "properties": {
+          "dates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dates",
+            "type": "array"
+          },
+          "factor_id": {
+            "title": "Factor Id",
+            "type": "string"
+          },
+          "factor_version": {
+            "title": "Factor Version",
+            "type": "integer"
+          },
+          "holding_period": {
+            "title": "Holding Period",
+            "type": "integer"
+          },
+          "ic": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Ic",
+            "type": "array"
+          },
+          "ls_nav": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Ls Nav",
+            "type": "array"
+          },
+          "monthly_ic": {
+            "items": {
+              "$ref": "#/components/schemas/MonthlyIcCell"
+            },
+            "title": "Monthly Ic",
+            "type": "array"
+          },
+          "n_dates": {
+            "title": "N Dates",
+            "type": "integer"
+          },
+          "n_quantiles": {
+            "title": "N Quantiles",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "quantile_nav": {
+            "items": {
+              "$ref": "#/components/schemas/QuantileNavColumn"
+            },
+            "title": "Quantile Nav",
+            "type": "array"
+          },
+          "rolling_ir": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Rolling Ir",
+            "type": "array"
+          },
+          "rolling_ir_window": {
+            "title": "Rolling Ir Window",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "factor_id",
+          "factor_version",
+          "holding_period",
+          "n_quantiles",
+          "rolling_ir_window",
+          "period_start",
+          "period_end",
+          "n_dates",
+          "dates",
+          "ic",
+          "rolling_ir",
+          "quantile_nav",
+          "ls_nav",
+          "monthly_ic"
+        ],
+        "title": "FactorEvaluationSeriesResponse",
+        "type": "object"
+      },
       "FillAdjustmentResponse": {
         "additionalProperties": false,
         "description": "不可变成交修正事件响应。",
@@ -17903,6 +18047,42 @@
         "title": "ModelProfile",
         "type": "string"
       },
+      "MonthlyIcCell": {
+        "description": "Monthly IC aggregation cell for the heatmap.",
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "mean_ic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Ic"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "month",
+          "mean_ic",
+          "days"
+        ],
+        "title": "MonthlyIcCell",
+        "type": "object"
+      },
       "NavPointResponse": {
         "description": "NAV 序列数据点.",
         "properties": {
@@ -20467,6 +20647,35 @@
           "reason"
         ],
         "title": "PublishStrategyVersionRequest",
+        "type": "object"
+      },
+      "QuantileNavColumn": {
+        "description": "Cumulative NAV path for one quantile group.",
+        "properties": {
+          "nav": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Nav",
+            "type": "array"
+          },
+          "quantile": {
+            "title": "Quantile",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantile",
+          "nav"
+        ],
+        "title": "QuantileNavColumn",
         "type": "object"
       },
       "ReactivateStrategyRequest": {
@@ -44073,7 +44282,7 @@
     },
     "/api/v1/research/factors": {
       "get": {
-        "description": "列出 R3 受控核心因子目录（governed catalog order）.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "列出 R3 受控核心因子目录(governed catalog order).\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "research_list_research_factors",
         "parameters": [
           {
@@ -44335,9 +44544,256 @@
         "x-ditto-maturity": "experimental"
       }
     },
+    "/api/v1/research/factors/{factor_id}/evaluation-series": {
+      "get": {
+        "description": "Per-date factor evaluation series computed at read time (research only).\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "design_research_factor_evaluation_series",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factor_id",
+            "required": true,
+            "schema": {
+              "title": "Factor Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "衍生 artifact 版本(缺省解析离线版本)",
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "衍生 artifact 版本(缺省解析离线版本)",
+              "title": "Version"
+            }
+          },
+          {
+            "description": "评估起始日(含)",
+            "in": "query",
+            "name": "start_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "评估起始日(含)",
+              "title": "Start Date"
+            }
+          },
+          {
+            "description": "评估结束日(含)",
+            "in": "query",
+            "name": "end_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "评估结束日(含)",
+              "title": "End Date"
+            }
+          },
+          {
+            "description": "前向收益持有期(交易日)",
+            "in": "query",
+            "name": "holding_period",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "前向收益持有期(交易日)",
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Holding Period",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "分位组数",
+            "in": "query",
+            "name": "n_quantiles",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "分位组数",
+              "maximum": 10,
+              "minimum": 2,
+              "title": "N Quantiles",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "滚动 IR 窗口(交易日)",
+            "in": "query",
+            "name": "rolling_ir_window",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "滚动 IR 窗口(交易日)",
+              "maximum": 250,
+              "minimum": 2,
+              "title": "Rolling Ir Window",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "资产类别",
+            "in": "query",
+            "name": "asset_class",
+            "required": false,
+            "schema": {
+              "default": "etf",
+              "description": "资产类别",
+              "enum": [
+                "stock",
+                "etf"
+              ],
+              "title": "Asset Class",
+              "type": "string"
+            }
+          },
+          {
+            "description": "复权类型",
+            "in": "query",
+            "name": "adj",
+            "required": false,
+            "schema": {
+              "default": "none",
+              "description": "复权类型",
+              "enum": [
+                "none",
+                "qfq",
+                "hfq"
+              ],
+              "title": "Adj",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_FactorEvaluationSeriesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Research Factor Evaluation Series",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
     "/api/v1/research/node-descriptors": {
       "get": {
-        "description": "列出 R3 内置策略节点 descriptor（pipeline studio 事实源）.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "description": "列出 R3 内置策略节点 descriptor(pipeline studio 事实源).\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
         "operationId": "research_list_research_node_descriptors",
         "parameters": [
           {

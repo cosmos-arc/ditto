@@ -2,11 +2,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { createElement, type ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import type { FactorDiagnosticsScope } from "../api/factor-diagnostics";
 import { FactorDiagnosticsView } from "./factor-diagnostics-view";
+
+// jsdom 无法承载 fancy-canvas：stub 图表 shell（研究图表段的渲染由专文件覆盖）。
+vi.mock("@/components/chart", () => ({
+	ChartCockpit: () => createElement("div", { "data-testid": "cockpit-stub" }),
+}));
 
 const SCOPE: FactorDiagnosticsScope = {
 	snapshotId: "snapshot-r3",

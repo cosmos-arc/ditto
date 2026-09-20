@@ -10,6 +10,10 @@ from ditto_features.evaluation.evaluator import (
     FactorEvaluator,
 )
 from ditto_features.evaluation.report import FactorEvaluationReport
+from ditto_features.evaluation.series import (
+    DEFAULT_ROLLING_IR_WINDOW,
+    FactorEvaluationSeries,
+)
 from ditto_features.services import DerivedArtifactReader
 
 from ditto_application.exceptions import AppQueryError
@@ -138,6 +142,54 @@ class FactorEvaluationFacade:
             catalog_snapshot_id=options.catalog_snapshot_id,
             universe=options.universe,
             cost_bps=options.cost_bps,
+        )
+
+    def evaluate_series(
+        self,
+        factor_id: str,
+        version: int | None = None,
+        *,
+        options: EvaluationOptions = _DEFAULT_OPTIONS,
+        rolling_ir_window: int = DEFAULT_ROLLING_IR_WINDOW,
+    ) -> FactorEvaluationSeries:
+        """
+        评估单个因子并返回逐日序列（IC/滚动 IR/分位净值/多空净值/月度 IC）.
+
+        与 :meth:`evaluate` 相同的输入装配（derived artifact + 前向收益），
+        但保留评估器内部已计算、聚合报告丢弃的逐日序列。前向收益使用
+        look-ahead 数据，生产环境 fail closed（与 ForwardReturnService 同门）。
+        """
+        resolved_version = self._resolve_version(factor_id, version)
+
+        factor_df = self._artifact_reader.read_frame(
+            derived_id=factor_id,
+            version=resolved_version,
+            start=options.start,
+            end=options.end,
+        )
+
+        evaluator = FactorEvaluator(
+            forward_return_provider=self._forward_return_service,
+        )
+        config = EvaluationConfig(
+            asset_class=options.asset_class,
+            adj=options.adj,
+            holding_period=options.holding_period,
+            n_quantiles=options.n_quantiles,
+            run_regime_ic=options.run_regime_ic,
+            run_performance_attribution=options.run_performance_attribution,
+        )
+        series = evaluator.evaluate_series(
+            factor_df,
+            config=config,
+            start=options.start,
+            end=options.end,
+            rolling_ir_window=rolling_ir_window,
+        )
+        return replace(
+            series,
+            factor_id=factor_id,
+            factor_version=resolved_version,
         )
 
     def _resolve_version(

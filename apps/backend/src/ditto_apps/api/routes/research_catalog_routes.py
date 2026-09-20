@@ -12,8 +12,9 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
+import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.exceptions import AppProcessError
@@ -21,12 +22,17 @@ from ditto_application.processes.experiments.factor_diagnostics_reader import (
     FactorDiagnosticsReader,
     FactorDiagnosticsScope,
 )
+from ditto_application.queries.evaluation import (
+    EvaluationOptions,
+    FactorEvaluationFacade,
+)
 from ditto_application.queries.research_catalog import (
     FactorDescriptorInfo,
     NodeDescriptorInfo,
     ResearchCatalogQueryFacade,
 )
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_apps.api.errors import APIError, UnprocessableEntityError
 from ditto_apps.api.json_values import to_json_mapping
@@ -34,7 +40,10 @@ from ditto_apps.models.common import APIResponse
 from ditto_apps.models.research import (
     FactorDescriptorResponse,
     FactorDiagnosticsResponse,
+    FactorEvaluationSeriesResponse,
+    MonthlyIcCell,
     NodeDescriptorResponse,
+    QuantileNavColumn,
 )
 
 router = APIRouter(prefix="/research", tags=["research"])
@@ -80,7 +89,7 @@ def _to_factor_response(info: FactorDescriptorInfo) -> FactorDescriptorResponse:
 async def list_research_node_descriptors(
     facade: Annotated[ResearchCatalogQueryFacade, FromComponent()],
 ) -> APIResponse[list[NodeDescriptorResponse]]:
-    """列出 R3 内置策略节点 descriptor（pipeline studio 事实源）."""
+    """列出 R3 内置策略节点 descriptor(pipeline studio 事实源)."""
     descriptors = await run_blocking(facade.list_node_descriptors)
     return APIResponse(data=[_to_node_response(d) for d in descriptors])
 
@@ -94,7 +103,7 @@ async def list_research_node_descriptors(
 async def list_research_factors(
     facade: Annotated[ResearchCatalogQueryFacade, FromComponent()],
 ) -> APIResponse[list[FactorDescriptorResponse]]:
-    """列出 R3 受控核心因子目录（governed catalog order）."""
+    """列出 R3 受控核心因子目录(governed catalog order)."""
     factors = await run_blocking(facade.list_factors)
     return APIResponse(data=[_to_factor_response(factor) for factor in factors])
 
@@ -147,5 +156,90 @@ async def get_research_factor_diagnostics(
             metrics=to_json_mapping(view.metrics),
             artifact_id=view.artifact_id,
             content_hash=view.content_hash,
+        )
+    )
+
+
+class EvaluationSeriesQuery(BaseModel):
+    """evaluation-series 的查询参数模型（FastAPI Query model，逐字段进 OpenAPI）。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    version: int | None = Field(
+        None, description="衍生 artifact 版本(缺省解析离线版本)"
+    )
+    start_date: date | None = Field(None, description="评估起始日(含)")
+    end_date: date | None = Field(None, description="评估结束日(含)")
+    holding_period: int = Field(5, ge=1, le=60, description="前向收益持有期(交易日)")
+    n_quantiles: int = Field(5, ge=2, le=10, description="分位组数")
+    rolling_ir_window: int = Field(20, ge=2, le=250, description="滚动 IR 窗口(交易日)")
+    asset_class: Literal["stock", "etf"] = Field("etf", description="资产类别")
+    adj: Literal["none", "qfq", "hfq"] = Field("none", description="复权类型")
+
+
+@router.get(
+    "/factors/{factor_id}/evaluation-series",
+    response_model=APIResponse[FactorEvaluationSeriesResponse],
+    operation_id="design_research_factor_evaluation_series",
+)
+@inject
+async def get_research_factor_evaluation_series(
+    factor_id: str,
+    facade: Annotated[FactorEvaluationFacade, FromComponent()],
+    query: Annotated[EvaluationSeriesQuery, Query()],
+) -> APIResponse[FactorEvaluationSeriesResponse]:
+    """Per-date factor evaluation series computed at read time (research only)."""
+    series = await run_blocking(
+        facade.evaluate_series,
+        factor_id,
+        query.version,
+        options=EvaluationOptions(
+            start=query.start_date.isoformat() if query.start_date else None,
+            end=query.end_date.isoformat() if query.end_date else None,
+            holding_period=query.holding_period,
+            n_quantiles=query.n_quantiles,
+            asset_class=query.asset_class,
+            adj=query.adj,
+        ),
+        rolling_ir_window=query.rolling_ir_window,
+    )
+
+    dates = series.ic["trade_date"].cast(pl.String).to_list()
+    ic = series.ic["ic"].to_list()
+    rolling = series.rolling_ir["rolling_ir"].to_list()
+    ls_nav = series.ls_nav["ls_nav"].to_list()
+    quantile_nav = [
+        QuantileNavColumn(
+            quantile=quantile,
+            nav=series.quantile_nav[f"q_{quantile}"].to_list(),
+        )
+        for quantile in range(1, series.n_quantiles + 1)
+        if f"q_{quantile}" in series.quantile_nav.columns
+    ]
+    monthly = [
+        MonthlyIcCell(
+            year=int(row["year"]),
+            month=int(row["month"]),
+            mean_ic=row["mean_ic"],
+            days=int(row["days"]),
+        )
+        for row in series.monthly_ic.to_dicts()
+    ]
+    return APIResponse(
+        data=FactorEvaluationSeriesResponse(
+            factor_id=series.factor_id,
+            factor_version=series.factor_version,
+            holding_period=series.holding_period,
+            n_quantiles=series.n_quantiles,
+            rolling_ir_window=query.rolling_ir_window,
+            period_start=date.fromisoformat(series.period[0]),
+            period_end=date.fromisoformat(series.period[1]),
+            n_dates=series.n_dates,
+            dates=dates,
+            ic=[None if value is None else float(value) for value in ic],
+            rolling_ir=[None if value is None else float(value) for value in rolling],
+            quantile_nav=quantile_nav,
+            ls_nav=[None if value is None else float(value) for value in ls_nav],
+            monthly_ic=monthly,
         )
     )
