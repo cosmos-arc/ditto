@@ -44,5 +44,8 @@ export function createSelectionRun(body: CreateSelectionRunBody): Promise<Select
 }
 
 export function assessSelectionAdmission(body: CreateSelectionRunBody, instrumentId?: number) {
-	return apiClient.post("/api/v1/selections/admission", { body, params: { query: { instrument_id: instrumentId } } });
+	return apiClient.post("/api/v1/selections/admission", {
+		body,
+		params: { query: instrumentId === undefined ? {} : { instrument_id: instrumentId } },
+	});
 }

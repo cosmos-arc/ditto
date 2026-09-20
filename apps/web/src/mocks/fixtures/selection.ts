@@ -8,6 +8,7 @@ import type {
 
 export const selectionRunInputFixture = {
 	as_of: "2026-08-31T07:00:00Z",
+	data_fields: [],
 	industries: [],
 	instruments: [],
 	knowledge_cutoff: "2026-08-31T07:00:00Z",
