@@ -83,12 +83,24 @@ def field_reasons(
     ):
         reasons.append("CALENDAR_EVIDENCE_MISSING")
     else:
-        publication = field.publication_at
-        available = field.available_at
-        for constraint in (field.date_visible_at, field.revised_at):
-            if constraint is not None:
-                publication = max(publication, constraint)
-                available = max(available, constraint)
+        publication, available = _visibility_bounds(
+            field.publication_at, field.available_at, field
+        )
         if available > scope.knowledge_cutoff or publication > scope.publication_cutoff:
             reasons.append("TIME_NOT_VISIBLE")
     return tuple(reasons)
+
+
+def _visibility_bounds(
+    publication: datetime,
+    available: datetime,
+    field: CertifiedField,
+) -> tuple[datetime, datetime]:
+    """Lower-bound publication and knowledge visibility by every known fact."""
+    for constraint in (field.date_visible_at, field.revised_at):
+        if constraint is not None:
+            publication = max(publication, constraint)
+            available = max(available, constraint)
+    if field.observed_at is not None:
+        available = max(available, field.observed_at)
+    return publication, available

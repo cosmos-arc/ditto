@@ -67,7 +67,7 @@ def _certify(runtime, reports, snapshot, tmp_path, visible):
                     publication_at=visible,
                     available_at=visible,
                     time_precision="timestamp",
-                    observed_at=snapshot.created_at,
+                    observed_at=visible,
                     revised_at=visible,
                     evidence_uri=proof.evidence_uri,
                 ),

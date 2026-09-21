@@ -135,7 +135,10 @@ def _license() -> DatasetLicenseRecord:
     )
 
 
-def _request(license_record: DatasetLicenseRecord) -> EvidenceCommitRequest:
+def _request(
+    license_record: DatasetLicenseRecord,
+    schema_version: str = "market.stock_daily.v1",
+) -> EvidenceCommitRequest:
     now = datetime(2026, 7, 18, 8, 30, tzinfo=UTC)
     canonical_asset = DataAssetRef(
         dataset_id="stock_daily",
@@ -148,7 +151,7 @@ def _request(license_record: DatasetLicenseRecord) -> EvidenceCommitRequest:
             source="tushare",
             request_start="2026-07-17",
             request_end="2026-07-17",
-            schema_version="market.stock_daily.v1",
+            schema_version=schema_version,
             checksum="sha256:payload",
             canonical_asset=canonical_asset,
             request_parameters_hash="sha256:request",
@@ -464,6 +467,53 @@ def test_reingest_legacy_completion_reattests_on_new_revision(
         assert replay.chunk_id == outcome.chunk_id
         assert len(lineage.values) == 1
         assert len(logs.values) == 1
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_schema_version_change_with_same_checksum_reattests_new_snapshot(
+    tmp_path: Path,
+) -> None:
+    lifecycle, pool = _store(tmp_path)
+    license_record = _license()
+    recorder = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=recorder,
+            snapshot_reader=recorder,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=recorder,
+            lineage_recorder=recorder,
+            lineage_reader=recorder,
+            ingestion_log_store=recorder,
+        ),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request_v1 = _request(license_record)
+    request_v2 = _request(license_record, schema_version="market.stock_daily.v2")
+
+    try:
+        first = committer.commit(request_v1)
+
+        assert first.completed is True
+        assert first.chunk_id == request_v1.chunk_id
+        assert snapshot_completed(request_v1.provider_snapshot, lifecycle)
+
+        second = committer.commit(request_v2)
+
+        assert second.completed is True
+        assert second.chunk_id != request_v1.chunk_id
+        assert second.chunk_id.startswith(f"{request_v1.chunk_id}:revision:")
+        assert snapshot_completed(request_v2.provider_snapshot, lifecycle)
+        assert snapshot_completed(request_v1.provider_snapshot, lifecycle)
+
+        replay = committer.commit(request_v2)
+
+        assert replay.completed is True
+        assert replay.chunk_id == second.chunk_id
     finally:
         pool.close()
 

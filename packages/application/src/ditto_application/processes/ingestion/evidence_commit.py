@@ -164,11 +164,15 @@ class IngestionEvidenceCommitter:
         return replace(
             request,
             chunk_id=self._revision_id(
-                request.chunk_id, request.provider_snapshot.checksum
+                request.chunk_id,
+                request.provider_snapshot.checksum,
+                request.provider_snapshot.snapshot_id,
             ),
         )
 
-    def _revision_id(self, chunk_id: str, checksum: str) -> str:
+    def _revision_id(
+        self, chunk_id: str, checksum: str, snapshot_id: str | None = None
+    ) -> str:
         checkpoint = self._ports.lifecycle_reader.get_latest_checkpoint(chunk_id)
         if checkpoint is None:
             return chunk_id
@@ -178,22 +182,33 @@ class IngestionEvidenceCommitter:
             or payload_id == f"intent:{checksum}"
             or (
                 payload_id.startswith(f"payload:{checksum}:")
-                and not self._legacy_completion(checkpoint)
+                and not self._completion_evidence_conflict(checkpoint, snapshot_id)
             )
         ):
             return checkpoint.chunk_id
         revision = sha256(repr((checkpoint.chunk_id, checksum)).encode()).hexdigest()
         return f"{chunk_id}:revision:{revision}"
 
-    def _legacy_completion(self, checkpoint: PartitionCheckpoint) -> bool:
-        """A COMPLETE without snapshot-bound evidence cannot attest replay."""
+    def _completion_evidence_conflict(
+        self, checkpoint: PartitionCheckpoint, snapshot_id: str | None
+    ) -> bool:
+        """Only a COMPLETE bound to this snapshot's full identity can be reused."""
         if checkpoint.status is not PartitionLifecycleStatus.COMPLETE:
             return False
-        return not any(
-            event.to_status is PartitionLifecycleStatus.COMPLETE
-            and event.evidence_id is not None
-            for event in self._ports.lifecycle_reader.list_events(checkpoint.chunk_id)
+        attested = next(
+            (
+                event.evidence_id
+                for event in self._ports.lifecycle_reader.list_events(
+                    checkpoint.chunk_id
+                )
+                if event.to_status is PartitionLifecycleStatus.COMPLETE
+                and event.evidence_id is not None
+            ),
+            None,
         )
+        if attested is None:
+            return True
+        return snapshot_id is not None and attested != snapshot_id
 
     def _prepare_payload(
         self, request: EvidenceCommitRequest
