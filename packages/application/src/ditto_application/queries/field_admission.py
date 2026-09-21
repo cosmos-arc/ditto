@@ -17,7 +17,6 @@ from ditto_data.catalog.field_admission import (
 )
 from ditto_data.catalog.field_evidence import CertifiedField
 from ditto_data.catalog.license import DatasetLicenseReader
-from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
@@ -92,20 +91,6 @@ class FieldAdmissionReport:
     rule_version: str = "field-admission-v2"
 
 
-def _replay_identity_reasons(dataset_id: str) -> tuple[str, ...]:
-    """Replay projects instrument- and trade-date-keyed payloads only."""
-    metadata = default_dataset_metadata().get(dataset_id)
-    if (
-        metadata is None
-        or metadata.dataset_spec is None
-        or not {"instrument_id", "trade_date"}.issubset(
-            metadata.dataset_spec.primary_key
-        )
-    ):
-        return ("REPLAY_IDENTITY_UNSUPPORTED",)
-    return ()
-
-
 class FieldAdmissionQuery:
     """Intersect only the requested fields, using durable reviewed evidence."""
 
@@ -143,7 +128,7 @@ class FieldAdmissionQuery:
         report = self._certifications.get_active_report(
             item.dataset_id, request.profile
         )
-        reasons: list[str] = list(_replay_identity_reasons(item.dataset_id))
+        reasons: list[str] = []
         field: CertifiedField | None = None
         license_record = None
         if snapshot is None:
