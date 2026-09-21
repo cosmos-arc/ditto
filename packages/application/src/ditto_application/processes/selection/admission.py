@@ -112,11 +112,16 @@ def observed_fields(
 
 def selection_field_payload(request: object, consumer_field: str) -> dict[str, object]:
     """
-    Freeze the actual normalized values, context and whole dependency group.
+    Freeze the actual normalized values, context, package shape and dependency group.
 
     Policy weights, ranking limits and seed are not data facts. Unconsumed input
-    fields do not enter this field's identity. Certification tools retain these
-    payloads in the reviewed consumer artifact; HTTP clients cannot grant them.
+    fields do not enter this field's identity. The package shape — industry
+    roster, per-instrument declared missing inputs and rotation declared
+    missing inputs — is consumed structurally by the strategy, so changing it
+    (including emptying a collection or adding a declaration) must break the
+    reviewed digest even though declarations need no source-field binding.
+    Certification tools retain these payloads in the reviewed consumer
+    artifact; HTTP clients cannot grant them.
     """
     value = cast(dict[str, Any], orjson.loads(orjson.dumps(request)))
     parts = consumer_field.split(".", 2)
@@ -154,6 +159,18 @@ def selection_field_payload(request: object, consumer_field: str) -> dict[str, o
                 "membership_version",
                 "market_context_feature_set_id",
             )
+        },
+        "package_shape": {
+            "industry_ids": sorted(
+                item["industry_id"] for item in value.get("industries", ())
+            ),
+            "declared_missing_inputs": {
+                str(item["instrument_id"]): sorted(
+                    item.get("declared_missing_inputs", ())
+                )
+                for item in value.get("instruments", ())
+            },
+            "rotation_missing_inputs": sorted(value.get("rotation_missing_inputs", ())),
         },
         "dependencies": sorted(
             (item["dataset_id"], item["field"], item["snapshot_id"])

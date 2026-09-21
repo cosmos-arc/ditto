@@ -121,6 +121,7 @@ async def _assert_tampering_rejected(client, body):
         ("average_turnover", 999999.0),
         ("average_turnover", None),
         ("is_st", True),
+        ("declared_missing_inputs", ["average_turnover"]),
     ):
         tampered = deepcopy(body)
         tampered["instruments"][0][field_name] = forged
@@ -133,6 +134,8 @@ async def _assert_tampering_rejected(client, body):
     for field_name, forged in (
         ("universe_snapshot_id", "forged-universe"),
         ("data_from", "2026-09-17"),
+        ("industries", []),
+        ("rotation_missing_inputs", ["relative_strength_5d"]),
     ):
         tampered = deepcopy(body)
         tampered[field_name] = forged

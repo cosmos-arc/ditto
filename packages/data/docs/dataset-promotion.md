@@ -178,7 +178,9 @@ uv run --no-sync ditto ops promotion-history stock_daily
 `consumer_field="instruments.factor_values.liquidity_rank"`。服务端从实际消费的因子、
 过滤字段、行业观察、证券池及上下文引用推导必需绑定；策略必读的可空字段即使取
 `null` 也视为已消费，绑定并哈希显式缺失值，防止把已审事实改为缺失绕过门禁；
-额外未消费字段不阻塞本次选股。
+行业名单、逐证券 `declared_missing_inputs` 与 `rotation_missing_inputs` 作为包形状
+冻结进每个字段的输入摘要——清空行业集合或追加缺失声明同样构成
+`CONSUMER_INPUT_MISMATCH`，声明本身不需要独立来源绑定；额外未消费字段不阻塞本次选股。
 绑定的 `snapshot_id` 只能来自该消费字段所属阶段声明的来源列表
 （`instruments.*` 与 `universe_snapshot_id` 对应 `selection_source_snapshot_ids`，
 其余对应 `rotation_source_snapshot_ids`），跨阶段引用返回 `SNAPSHOT_CONFLICT`；

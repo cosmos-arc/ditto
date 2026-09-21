@@ -193,6 +193,7 @@ def test_admission_tracks_stage_usage_by_identity_not_shared_contents():
 def selection_request():
     from ditto_application.processes.selection.facade import (
         CreateSelectionRunRequest,
+        IndustryRotationObservationDraft,
         SelectionFactorValueDraft,
         SelectionFactorWeightDraft,
         SelectionInstrumentDraft,
@@ -208,7 +209,21 @@ def selection_request():
         market_context_feature_set_id=None,
         membership_version="test-v1",
         rotation_algorithm_version="industry-rotation-v1",
-        industries=(),
+        industries=(
+            IndustryRotationObservationDraft(
+                industry_id="801010",
+                industry_name="Agriculture",
+                relative_strength_5d=0.5,
+                relative_strength_20d=0.5,
+                relative_strength_60d=0.5,
+                advancing_count=6,
+                declining_count=4,
+                member_count=10,
+                trend_score=0.5,
+                fundamental_score=0.5,
+                regime_alignment_score=0.5,
+            ),
+        ),
         universe_snapshot_id="unverified",
         selection_source_snapshot_ids=("unverified",),
         selection_spec=StockSelectionSpecDraft(
