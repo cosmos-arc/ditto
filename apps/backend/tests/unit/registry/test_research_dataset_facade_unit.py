@@ -22,16 +22,7 @@ from ditto_application.commands.research_dataset_export import ResearchDatasetEx
 from ditto_application.exceptions import AppQueryError
 from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
 from ditto_application.queries.research import ResearchDatasetQuery
-from ditto_application.queries.source import SourceDataPort
 from ditto_apps.registry import ConfigProvider
-from ditto_data.di import (
-    CapitalProvider,
-    FundamentalProvider,
-    MacroProvider,
-    MarketProvider,
-    MetadataProvider,
-    RuntimeProvider,
-)
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_features.derived_types import (
@@ -43,8 +34,6 @@ from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import DerivedCatalogService
 from ditto_platform.foundation import SQLiteClient
-
-# CapitalProvider is used in _make_container to satisfy MetadataService deps
 
 
 def _sources_provider() -> Provider:
@@ -65,24 +54,8 @@ def _sources_provider() -> Provider:
     return SourcesProvider()
 
 
-def _protocol_adapter_provider() -> Provider:
-    """测试用 Protocol 适配器."""
-
-    class _Adapter(Provider):
-        scope = Scope.APP
-
-        @provide
-        def source_data_port(self) -> SourceDataPort:
-            return MagicMock(spec=SourceDataPort)
-
-    return _Adapter()
-
-
 def _make_container(*, monkeypatch, tmp_path: Path):
-    from ditto_analysis.di import AnalysisStorageProvider
-    from ditto_application.providers_market import AppMarketQueryProvider
-    from ditto_execution.di import ExecutionStorageProvider
-    from ditto_features.di import FeaturesStorageProvider
+    from ditto_apps.registry.container import _get_base_providers
 
     monkeypatch.setenv("ENVIRONMENT", "testing")
     monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
@@ -91,21 +64,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         (tmp_path / "metadata" / "metadata.sqlite").as_posix(),
     )
     monkeypatch.setenv("DUCKDB_PATH", (tmp_path / "db" / "ditto.duckdb").as_posix())
-    return make_container(
-        ConfigProvider(),
-        _sources_provider(),
-        _protocol_adapter_provider(),
-        RuntimeProvider(),
-        MetadataProvider(),
-        MarketProvider(),
-        CapitalProvider(),
-        FeaturesStorageProvider(),
-        AnalysisStorageProvider(),
-        FundamentalProvider(),
-        MacroProvider(),
-        ExecutionStorageProvider(),
-        AppMarketQueryProvider(),
-    )
+    return make_container(ConfigProvider(), _sources_provider(), *_get_base_providers())
 
 
 def _seed_calendar(sqlite_client: SQLiteClient, dates: list[date]) -> None:
