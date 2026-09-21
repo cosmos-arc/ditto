@@ -83,3 +83,25 @@ def test_provider_payload_rejects_unsafe_identity(tmp_path: Path) -> None:
             source="tushare",
             payload=_payload(),
         )
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_same_values_with_different_schema_cannot_reuse_artifact(
+    tmp_path: Path,
+) -> None:
+    store = FilesystemProviderPayloadStore(tmp_path)
+    int32 = pl.DataFrame(
+        {"instrument_id": [1], "close": pl.Series("close", [10], pl.Int32)}
+    )
+    int64 = int32.cast({"close": pl.Int64})
+
+    first = store.retain_payload(
+        dataset_id="stock_daily", source="tushare", payload=int32
+    )
+
+    assert int64["close"].dtype != int32["close"].dtype
+    assert int64["close"].to_list() == int32["close"].to_list()
+    with pytest.raises(ValueError, match="collides across schemas"):
+        store.retain_payload(dataset_id="stock_daily", source="tushare", payload=int64)
+    assert store.read_payload(first).schema == int32.schema

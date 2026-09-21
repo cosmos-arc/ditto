@@ -110,7 +110,15 @@ class FilesystemProviderPayloadStore:
         )
         path = self._resolve_uri(artifact.uri)
         if path.exists():
-            self._verify_artifact(artifact, self._read_parquet(path))
+            retained = self._read_parquet(path)
+            self._verify_artifact(artifact, retained)
+            # ponytail: value checksums are dtype-blind, so equal values with
+            # different physical schemas must fail closed instead of aliasing
+            # one artifact to two schema versions.
+            if retained.schema != payload.schema:
+                raise ValueError(
+                    f"provider payload checksum collides across schemas: {artifact.uri}"
+                )
             return artifact
 
         path.parent.mkdir(parents=True, exist_ok=True)
