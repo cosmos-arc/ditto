@@ -40,6 +40,13 @@ def _scope(**overrides: object) -> FieldUsageScope:
 class TestFieldReasonsObservedAt:
     """Local first observation bounds knowledge visibility, not publication."""
 
+    def test_consumer_bound_field_requires_binding_proof(self) -> None:
+        field = _field(consumer_bindings=(("instruments.close", "a" * 64),))
+
+        reasons = field_reasons(field, _scope())
+
+        assert "CONSUMER_INPUT_MISMATCH" in reasons
+
     def test_missing_observation_is_unauthorized(self) -> None:
         field = _field()
 

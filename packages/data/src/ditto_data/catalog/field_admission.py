@@ -60,10 +60,13 @@ def field_reasons(
     if field is None:
         return ("FIELD_EVIDENCE_MISSING",)
     reasons: list[str] = []
-    if scope.consumer_field and (
-        scope.consumer_input_hash is None
-        or (scope.consumer_field, scope.consumer_input_hash)
-        not in field.consumer_bindings
+    if (field.consumer_bindings and not scope.consumer_field) or (
+        scope.consumer_field
+        and (
+            scope.consumer_input_hash is None
+            or (scope.consumer_field, scope.consumer_input_hash)
+            not in field.consumer_bindings
+        )
     ):
         reasons.append("CONSUMER_INPUT_MISMATCH")
     if not set(scope.instrument_ids).issubset(field.instrument_ids):

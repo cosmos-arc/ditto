@@ -283,3 +283,18 @@ def test_license_validity_is_use_time_not_historical_data_interval():
         assert (
             "LICENSE_INTERVAL_MISSING" in query.assess(request).fields[0].reason_codes
         )
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_replay_rejects_datasets_without_instrument_trade_date_identity():
+    with field_evidence() as (query, request, _, _):
+        mismatched = replace(
+            request,
+            fields=(FieldRequirement("macro_indicators", "amount", "snapshot:any"),),
+        )
+
+        report = query.assess(mismatched)
+
+        assert report.allowed is False
+        assert "REPLAY_IDENTITY_UNSUPPORTED" in report.fields[0].reason_codes
