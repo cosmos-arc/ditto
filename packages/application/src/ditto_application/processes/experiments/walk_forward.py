@@ -36,7 +36,10 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments import (
     canonical_payload as _canonical_payload,
 )
-from ditto_analysis.experiments.statistics import return_statistics
+from ditto_analysis.experiments.statistics import (
+    execution_statistics,
+    return_statistics,
+)
 
 from ditto_application.processes.experiments._comparison_evidence import (
     CandidateWalkForwardStatus,
@@ -434,21 +437,15 @@ def _aggregate_execution_metrics(
             metric_id: _not_evaluated(reason)
             for metric_id in (_ResearchMetricId.TURNOVER, _ResearchMetricId.COST_DRAG)
         }
-    average_nav = sum(scaled_navs) / len(scaled_navs)
     evidence_refs, evidence_hashes = _lineage(refs, hashes)
     return {
-        _ResearchMetricId.TURNOVER: _evaluated(
-            _ResearchMetricId.TURNOVER,
-            total_notional / average_nav,
-            evidence_refs,
-            evidence_hashes,
-        ),
-        _ResearchMetricId.COST_DRAG: _evaluated(
-            _ResearchMetricId.COST_DRAG,
-            total_cost * 100.0,
-            evidence_refs,
-            evidence_hashes,
-        ),
+        metric_id: _evaluated(metric_id, result.value, evidence_refs, evidence_hashes)
+        for metric_id, result in execution_statistics(
+            scaled_navs,
+            initial_capital=1.0,
+            fill_notional=total_notional,
+            explicit_cost=total_cost,
+        ).items()
     }
 
 
