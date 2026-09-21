@@ -162,6 +162,34 @@ def test_admission_rejects_stage_sources_no_binding_claims():
     assert [item.field for item in unclaimed] == ["extra-source"]
 
 
+def test_admission_tracks_stage_usage_by_identity_not_shared_contents():
+    """Identical declared sets must not merge the two stages' usage."""
+    with certified_selection(selection_request()) as (query, request):
+        certified = request.rotation_source_snapshot_ids[0]
+        shared = (certified, "extra")
+        facade, _, pool = _gate_facade(query)
+        report = facade.assess_admission(
+            replace(
+                request,
+                rotation_source_snapshot_ids=shared,
+                selection_source_snapshot_ids=shared,
+                data_fields=tuple(
+                    replace(item, snapshot_id="extra")
+                    if item.consumer_field.startswith("instruments.")
+                    or item.consumer_field == "universe_snapshot_id"
+                    else item
+                    for item in request.data_fields
+                ),
+            )
+        )
+        pool.close()
+    assert not report.allowed
+    unclaimed = {
+        item.field for item in report.fields if "SNAPSHOT_UNBOUND" in item.reason_codes
+    }
+    assert unclaimed == {certified, "extra"}
+
+
 def selection_request():
     from ditto_application.processes.selection.facade import (
         CreateSelectionRunRequest,

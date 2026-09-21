@@ -41,14 +41,15 @@ def assess_selection_fields(
     *,
     consumed_fields: frozenset[str],
     instrument_ids: tuple[int, ...],
-    snapshot_bindings: Mapping[str, frozenset[str]],
+    snapshot_bindings: Mapping[str, tuple[str, frozenset[str]]],
 ) -> FieldAdmissionReport:
     """
     Ignore unrelated inputs and refuse omitted or foreign dependencies.
 
-    Each consumed input may only be served by the snapshot sources its own
-    stage declared for the saved run, never by the other stage's list; each
-    declared source must in turn be claimed by a binding of its own stage.
+    Each consumed input binds to its stage's identity and may only be served
+    by that stage's declared sources, never by the other stage's list; usage
+    is tracked per stage identity, so a declared source must be claimed by a
+    binding of its own stage even when both stages declare the same set.
     """
     bound = tuple(
         item for item in request.fields if item.consumer_field in consumed_fields
@@ -57,15 +58,16 @@ def assess_selection_fields(
         missing_field(name, "CONSUMER_BINDING_MISSING")
         for name in sorted(consumed_fields - {item.consumer_field for item in bound})
     ]
-    referenced: dict[frozenset[str], set[str]] = {}
+    declared = dict(snapshot_bindings.values())
+    referenced: dict[str, set[str]] = {}
     for item in bound:
-        stage = snapshot_bindings.get(item.consumer_field, frozenset())
+        stage = snapshot_bindings[item.consumer_field][0]
         referenced.setdefault(stage, set()).add(item.snapshot_id)
     missing.extend(
         missing_field(snapshot_id, "SNAPSHOT_UNBOUND")
-        for stage in set(snapshot_bindings.values())
-        if stage
-        for snapshot_id in sorted(stage - referenced.get(stage, set()))
+        for stage, sources in declared.items()
+        if sources
+        for snapshot_id in sorted(sources - referenced.get(stage, set()))
     )
     if not bound or not instrument_ids:
         return FieldAdmissionReport(
@@ -76,7 +78,8 @@ def assess_selection_fields(
     report = query.assess(replace(request, fields=bound))
     assessed = tuple(
         item
-        if item.snapshot_id in snapshot_bindings.get(item.consumer_field, frozenset())
+        if item.snapshot_id
+        in snapshot_bindings.get(item.consumer_field, ("", frozenset()))[1]
         else replace(
             item,
             allowed_uses=(),

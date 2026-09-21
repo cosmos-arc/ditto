@@ -392,10 +392,10 @@ def _declares_data_binding(request: CreateSelectionRunRequest) -> bool:
 
 def _snapshot_bindings(
     request: CreateSelectionRunRequest,
-) -> dict[str, frozenset[str]]:
-    """Serve each consumed input only from its own stage's declared sources."""
-    selection = frozenset(request.selection_source_snapshot_ids)
-    rotation = frozenset(request.rotation_source_snapshot_ids)
+) -> dict[str, tuple[str, frozenset[str]]]:
+    """Bind each consumed input to its stage identity and declared sources."""
+    selection = ("selection", frozenset(request.selection_source_snapshot_ids))
+    rotation = ("rotation", frozenset(request.rotation_source_snapshot_ids))
     return {
         name: (
             selection
