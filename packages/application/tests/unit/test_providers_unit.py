@@ -346,7 +346,7 @@ class TestAppProviderStructure:
             "derived_query_facade",
             "market_query_facade",
             "source_query_facade",
-            "research_dataset_build",
+            "research_dataset_query",
             "catalog_query_facade",
             "metadata_query_facade",
             "capital_query_facade",

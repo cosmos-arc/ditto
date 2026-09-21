@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import date
 from typing import NamedTuple
 
 import polars as pl
@@ -106,17 +107,23 @@ class ResearchDatasetBuildProcess:
             self._require_spine_spec_record(dataset_spec.spine_id),
         )
         spine_spec.validate_spec()
+        known_at_policy = (
+            KnownAtPolicy.EXPLICIT_CUTOFF
+            if explicit_cutoff is not None
+            else dataset_spec.known_at_policy
+        )
+        if date.fromisoformat(start) > date.fromisoformat(end):
+            raise AppProcessError("research dataset start must not be after end")
+        if known_at_policy == KnownAtPolicy.EXPLICIT_CUTOFF:
+            if explicit_cutoff is None:
+                raise AppProcessError("explicit_cutoff is required")
+            date.fromisoformat(explicit_cutoff[:10])
         spine_snapshot = self._build_spine_snapshot(
             spine_spec=spine_spec,
             start=start,
             end=end,
         )
         spine_frame = self._artifact_service.read_parquet(spine_snapshot.data_path)
-        known_at_policy = (
-            KnownAtPolicy.EXPLICIT_CUTOFF
-            if explicit_cutoff is not None
-            else dataset_spec.known_at_policy
-        )
         dataset_frame = _attach_known_at(
             frame=spine_frame,
             known_at_policy=known_at_policy,

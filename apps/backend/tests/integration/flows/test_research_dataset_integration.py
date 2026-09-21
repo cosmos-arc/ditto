@@ -1,5 +1,6 @@
 """Integration tests for research dataset build flow."""
 
+import sqlite3
 from contextlib import contextmanager
 from dataclasses import asdict, replace
 from datetime import date
@@ -12,14 +13,13 @@ import orjson
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_analysis.errors import ExperimentConflictError
+from ditto_analysis.errors import ExperimentConflictError, ResearchDatasetError
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.research.domain import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_analysis.storage.sqlite.research.writer import SQLiteResearchCatalogWriter
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
@@ -256,6 +256,49 @@ def _persisted_state(root: Path) -> dict[str, str | None]:
     }
 
 
+@contextmanager
+def _build_failure(monkeypatch, failure_stage: str):
+    publish = ResearchArtifactService.publish_immutable_artifact
+
+    def fail_publish(self, relative_path, payload):
+        filename = {
+            "data": "data.parquet",
+            "report": "build_report.json",
+            "manifest": "metadata.json",
+        }.get(failure_stage)
+        if "/datasets/" in relative_path and relative_path.endswith(str(filename)):
+            raise OSError("injected publication failure")
+        return publish(self, relative_path, payload)
+
+    execute = SQLiteClient.execute
+    commit = SQLiteClient.commit
+    pending_dataset = False
+
+    def execute_with_fault(self, sql, parameters=None):
+        nonlocal pending_dataset
+        if "INSERT OR REPLACE INTO research_dataset_snapshot" in sql:
+            pending_dataset = True
+            if failure_stage == "catalog_execute":
+                raise sqlite3.OperationalError("injected database lock")
+        return execute(self, sql, parameters)
+
+    def commit_with_fault(self):
+        if pending_dataset:
+            raise sqlite3.OperationalError("injected database commit failure")
+        return commit(self)
+
+    with monkeypatch.context() as fault:
+        if failure_stage.startswith("catalog"):
+            fault.setattr(SQLiteClient, "execute", execute_with_fault)
+            if failure_stage == "catalog_commit":
+                fault.setattr(SQLiteClient, "commit", commit_with_fault)
+        else:
+            fault.setattr(
+                ResearchArtifactService, "publish_immutable_artifact", fail_publish
+            )
+        yield
+
+
 @pytest.fixture
 def research_state(monkeypatch, mocker, tmp_path: Path) -> Path:
     """Seed a real research catalog and isolated derived input files."""
@@ -374,7 +417,10 @@ class TestResearchDatasetBuildFlowIntegration:
         finally:
             reader_container.close()
 
-    @pytest.mark.parametrize("failure_stage", ["data", "report", "manifest", "catalog"])
+    @pytest.mark.parametrize(
+        "failure_stage",
+        ["data", "report", "manifest", "catalog_execute", "catalog_commit"],
+    )
     def test_failed_build_recovers_without_republishing(
         self,
         research_state: Path,
@@ -395,31 +441,10 @@ class TestResearchDatasetBuildFlowIntegration:
         finally:
             container.close()
         # A different cutoff creates a new identity, but a failed build is invisible.
-        publish = ResearchArtifactService.publish_immutable_artifact
-
-        def fail_publish(self, relative_path, payload):
-            filename = {
-                "data": "data.parquet",
-                "report": "build_report.json",
-                "manifest": "metadata.json",
-            }.get(failure_stage)
-            if "/datasets/" in relative_path and relative_path.endswith(str(filename)):
-                raise OSError("injected publication failure")
-            return publish(self, relative_path, payload)
-
-        def fail_catalog(self, record):
-            raise OSError("injected catalog failure")
-
-        with monkeypatch.context() as fault:
-            if failure_stage == "catalog":
-                fault.setattr(
-                    SQLiteResearchCatalogWriter, "write_dataset_snapshot", fail_catalog
-                )
-            else:
-                fault.setattr(
-                    ResearchArtifactService, "publish_immutable_artifact", fail_publish
-                )
-            with pytest.raises(AppProcessError, match="injected") as failure:
+        with _build_failure(monkeypatch, failure_stage):
+            with pytest.raises(
+                (AppProcessError, ResearchDatasetError), match="injected"
+            ) as failure:
                 _invoke_research_build_flow(
                     dataset_id="research.alpha_flow",
                     start="2026-03-10",
@@ -428,7 +453,7 @@ class TestResearchDatasetBuildFlowIntegration:
                 )
         assert failure.value.details["stage"] == (
             "dataset_catalog_commit"
-            if failure_stage == "catalog"
+            if failure_stage.startswith("catalog")
             else "dataset_publication"
         )
         assert failure.value.details["recoverable"] is True
@@ -574,3 +599,26 @@ class TestResearchDatasetBuildFlowIntegration:
         frame = pl.read_parquet(research_state / included["results"][0]["data_path"])
         assert frame["factor.alpha"].to_list() == [1e9, 1e9]
         assert included["results"][0]["source_snapshot_ids"] == ("market:20260311-001",)
+
+    @pytest.mark.parametrize("cutoff", [None, "not-a-date"])
+    def test_invalid_cutoff_writes_nothing(
+        self, research_state: Path, cutoff: str | None
+    ) -> None:
+        container = _make_test_container()
+        try:
+            catalog = container.get(ResearchCatalogService)
+            spec = catalog.get_dataset_spec("research.alpha_flow")
+            assert spec is not None
+            catalog.save_dataset_spec(replace(spec, known_at_policy="explicit_cutoff"))
+            process = container.get(ResearchDatasetBuildProcess)
+            before = _persisted_state(research_state)
+            with pytest.raises((ValueError, AppProcessError)):
+                process.build(
+                    dataset_id="research.alpha_flow",
+                    start="2026-03-10",
+                    end="2026-03-11",
+                    explicit_cutoff=cutoff,
+                )
+            assert _persisted_state(research_state) == before
+        finally:
+            container.close()

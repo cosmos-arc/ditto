@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import sqlite3
+from collections.abc import Generator
+from contextlib import contextmanager
+
 import orjson
 from ditto_platform.foundation import SQLiteClient
 
+from ditto_analysis.errors import ResearchDatasetError
 from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
@@ -153,10 +158,25 @@ class SQLiteResearchCatalogWriter:
 
     def write_spine_snapshot(self, record: ResearchSpineSnapshotRecord) -> None:
         """Persist one spine snapshot row."""
-        self.execute_spine_snapshot(record)
-        self.commit()
+        with self._snapshot_write():
+            self.execute_spine_snapshot(record)
+            self.commit()
 
     def write_dataset_snapshot(self, record: ResearchDatasetSnapshotRecord) -> None:
         """Persist one dataset snapshot row."""
-        self.execute_dataset_snapshot(record)
-        self.commit()
+        with self._snapshot_write():
+            self.execute_dataset_snapshot(record)
+            self.commit()
+
+    @contextmanager
+    def _snapshot_write(self) -> Generator[None]:
+        """Roll back failed snapshot writes and expose a domain-level error."""
+        try:
+            yield
+        except sqlite3.Error as error:
+            self.rollback()
+            raise ResearchDatasetError(
+                f"Research snapshot catalog write failed: {error}",
+                reason_code="research_catalog_write_failed",
+                recoverable=isinstance(error, sqlite3.OperationalError),
+            ) from error
