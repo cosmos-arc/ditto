@@ -184,6 +184,14 @@ class ProviderSnapshotReader(Protocol):
         """Return one snapshot by deterministic ID."""
         ...
 
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        """Return the first recorded local catalog observation, if known."""
+        ...
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        """Return the prior observed content identity, if recorded."""
+        ...
+
     def list_snapshots(
         self,
         *,

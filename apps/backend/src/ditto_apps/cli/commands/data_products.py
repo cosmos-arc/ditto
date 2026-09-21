@@ -32,7 +32,8 @@ from ditto_application.commands.data_product_operations import (
     confirm_data_product_operation,
     preview_data_product_operation,
 )
-from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.exceptions import AppCommandError, AppProcessError, AppQueryError
+from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 
 from ditto_apps.cli.utils.output import output_json_dict
 from ditto_apps.registry.container import make_app_container
@@ -559,3 +560,25 @@ def revoke(
             reason=reason,
         ),
     )
+
+
+@app.command("read-snapshot")
+def read_snapshot(snapshot_id: str = typer.Argument(...)) -> None:
+    """Read completed immutable evidence for audit, without granting new eligibility."""
+    container = make_app_container()
+    try:
+        contents = container.get(ProviderSnapshotQuery).read_for_audit(snapshot_id)
+        output_json_dict(
+            {
+                "use": "audit",
+                "snapshot": asdict(contents.snapshot),
+                "previous_snapshot_id": contents.previous_snapshot_id,
+                "observed_at": contents.observed_at,
+                "rows": contents.frame.to_dicts(),
+            }
+        )
+    except AppQueryError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(2) from error
+    finally:
+        container.close()

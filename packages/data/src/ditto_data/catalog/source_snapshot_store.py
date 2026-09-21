@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, cast
 
 import orjson
@@ -79,6 +79,15 @@ class SQLiteProviderSnapshotStore:
             )
             """
         )
+        self._client.execute(
+            """
+            CREATE TABLE IF NOT EXISTS provider_snapshot_observations (
+                snapshot_id TEXT PRIMARY KEY REFERENCES provider_snapshots(snapshot_id),
+                previous_snapshot_id TEXT REFERENCES provider_snapshots(snapshot_id),
+                observed_at TEXT NOT NULL
+            )
+            """
+        )
         self._client.commit()
 
     def append_snapshot(self, snapshot: ProviderSnapshot) -> None:
@@ -126,6 +135,32 @@ class SQLiteProviderSnapshotStore:
                     snapshot.created_at.isoformat(),
                 ],
             )
+            previous = self._client.fetchone(
+                """
+                SELECT snapshot_id FROM provider_snapshots
+                WHERE dataset_id = ? AND source = ? AND request_start = ?
+                  AND request_end = ? AND canonical_namespace = ?
+                  AND canonical_partition_keys = ? AND snapshot_id != ?
+                ORDER BY rowid DESC LIMIT 1
+                """,
+                [
+                    snapshot.dataset_id,
+                    snapshot.source,
+                    snapshot.request_start,
+                    snapshot.request_end,
+                    snapshot.canonical_asset.namespace,
+                    partition_keys_json(snapshot.canonical_asset.partition_keys),
+                    snapshot.snapshot_id,
+                ],
+            )
+            self._client.execute(
+                "INSERT INTO provider_snapshot_observations VALUES (?, ?, ?)",
+                [
+                    snapshot.snapshot_id,
+                    previous["snapshot_id"] if previous else None,
+                    datetime.now(UTC).isoformat(),
+                ],
+            )
             self._client.commit()
         except Exception:
             self._client.rollback()
@@ -138,6 +173,28 @@ class SQLiteProviderSnapshotStore:
             [snapshot_id],
         )
         return None if row is None else _snapshot_from_row(row)
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        """Return prior observed content without claiming historical availability."""
+        row = self._client.fetchone(
+            """SELECT previous_snapshot_id FROM provider_snapshot_observations
+               WHERE snapshot_id = ?""",
+            [snapshot_id],
+        )
+        return (
+            str(row["previous_snapshot_id"])
+            if row and row["previous_snapshot_id"]
+            else None
+        )
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        """First local catalog observation; absent for legacy evidence."""
+        row = self._client.fetchone(
+            """SELECT observed_at FROM provider_snapshot_observations
+               WHERE snapshot_id = ?""",
+            [snapshot_id],
+        )
+        return datetime.fromisoformat(str(row["observed_at"])) if row else None
 
     def list_snapshots(
         self,

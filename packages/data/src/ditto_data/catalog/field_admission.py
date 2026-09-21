@@ -76,9 +76,19 @@ def field_reasons(
         or field.time_precision == "unknown"
     ):
         reasons.append("TIME_EVIDENCE_MISSING")
-    elif (
-        field.available_at > scope.knowledge_cutoff
-        or field.publication_at > scope.publication_cutoff
+    elif field.time_precision == "date" and (
+        field.date_visible_at is None
+        or not field.calendar_hash
+        or not field.calendar_evidence
     ):
-        reasons.append("TIME_NOT_VISIBLE")
+        reasons.append("CALENDAR_EVIDENCE_MISSING")
+    else:
+        publication = field.publication_at
+        available = field.available_at
+        for constraint in (field.date_visible_at, field.revised_at):
+            if constraint is not None:
+                publication = max(publication, constraint)
+                available = max(available, constraint)
+        if available > scope.knowledge_cutoff or publication > scope.publication_cutoff:
+            reasons.append("TIME_NOT_VISIBLE")
     return tuple(reasons)

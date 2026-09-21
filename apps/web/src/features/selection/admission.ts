@@ -29,7 +29,7 @@ const REASONS: Record<string, string> = {
 export function toAdmissionView(value: AdmissionResponse) {
 	if (
 		typeof value.allowed !== "boolean" ||
-		value.rule_version !== "field-admission-v1" ||
+		value.rule_version !== "field-admission-v2" ||
 		!Array.isArray(value.fields)
 	) {
 		throw new Error("数据准入响应无效，请重新检查");

@@ -168,7 +168,7 @@ uv run --no-sync ditto ops promotion-history stock_daily
 
 ## 字段用途准入与选股输入迁移（#256）
 
-`field-admission-v1` 是 Selection 创建入口的数据门禁。`POST /api/v1/selections/admission`
+`field-admission-v2` 是 Selection 创建入口的数据门禁。`POST /api/v1/selections/admission`
 只读检查与创建请求相同的输入包；`POST /api/v1/selections/runs` 在任何保存之前重新检查。
 页面可选择输入包内证券，再选择字段查看用途、范围、时间精度、许可/认证和快照引用。
 单个证券下钻不改变输入包；执行始终重新校验全部输入证券。数据合格仍不能代替策略验证、晋级或 Paper 审批。
@@ -210,3 +210,29 @@ uv run --no-sync ditto ops promotion-history stock_daily
 旧报告没有字段证明时不推断合格，其序列化与 hash 不变。补证通过新的认证与审核完成；
 撤销保留旧报告但阻止新的正式消费。已有 live discovery 脚本或外部输入包需先完成同样的字段绑定与
 认证迁移后再运行；本改动不自动填造认证、购买权益或修改真实 catalog。
+
+### 修订与精确读取（#257）
+
+同一供应商、数据集、请求区间和 canonical 分区的新内容生成独立
+`ProviderSnapshot`；SQLite 在同一事务中保存新快照、前版 ID 和首次本地目录观察时间。
+同内容重试复用事实，A → B → A 复用 A 的载荷身份，摄取生命周期另留每次修订/恢复事件。
+旧记录不补造观察时间或历史可得性。`created_at` 仍只是对象创建时间。
+
+`COMPLETE` 事件现在绑定精确 snapshot ID，包含 schema/请求/内容身份。
+认证、字段准入和精确读取共同要求该证据；同日期区间的旧成功记录不能证明新版本已完成。
+旧的无 snapshot ID 完成事件不自动升级为正式资格，需重新摄取并生成明确的新完成证据。
+独立的未完成新内容不会影响已完成旧载荷的读取。
+
+`CertifiedField.covered_from/to` 表达业务区间；`publication_at`、`available_at`、
+`observed_at`、`revised_at` 分别表达公开、供应商可得、本地观察和供应商修订时间。
+未知值保持空；观察时间不能替代公开/可得时间。日期精度的公开/可得/修订证据取最晚日期，
+由认证构建器按 Asia/Shanghai、SSE 交易日历解析为严格下一交易日 09:30。
+需要从次日至首次开市的连续日历记录；本地 32 日窗口不能证明时拒绝认证。
+边界、日历记录和哈希冻结在认证报告中，日历后续改变不修改旧报告；已有精确时间的更晚
+约束仍然有效。缺少时间或日历证据不得进入正式研究。
+
+`ProviderSnapshotQuery.replay` 复用字段准入，仅返回申请的字段、证券与业务区间。
+`ditto data-products read-snapshot <snapshot-id>` 只读取已完成的保留载荷供审计，
+输出前版和本地观察时间，不表示具备当前研究/晋级资格。撤销认证保留报告、事件与载荷，
+阻止新研究/晋级；已有研究应保留并使用原 snapshot ID、截止时间及准入规则版本。
+本次准入规则为 `field-admission-v2`。

@@ -310,7 +310,11 @@ class IngestionEvidenceCommitter:
 
     def _complete(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         try:
-            self._advance(request.chunk_id, PartitionLifecycleStatus.COMPLETE)
+            self._advance(
+                request.chunk_id,
+                PartitionLifecycleStatus.COMPLETE,
+                evidence_id=request.provider_snapshot.snapshot_id,
+            )
         except Exception:
             return self._fail(
                 request,
