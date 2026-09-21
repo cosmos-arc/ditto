@@ -8,7 +8,7 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
-from ditto_analysis.errors import ResearchDatasetError
+from ditto_analysis.errors import ExperimentConflictError, ResearchDatasetError
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from polars.testing import assert_frame_equal
 
@@ -147,18 +147,19 @@ class TestExportDataset:
         with pytest.raises(ResearchDatasetError, match="unsupported format"):
             service.export_dataset("data.xlsx", frame, fmt="xlsx")
 
-    def test_export_overwrites_existing_file(self, tmp_path: Path) -> None:
-        """Existing file is overwritten."""
+    def test_export_refuses_existing_different_file(self, tmp_path: Path) -> None:
+        """Export conflicts preserve the existing file."""
         frame1 = pl.DataFrame({"x": [1]})
         frame1.write_csv(tmp_path / "data.csv")
 
         frame2 = pl.DataFrame({"x": [2, 3]})
 
         service = ResearchArtifactService(artifact_root=tmp_path)
-        service.export_dataset("data.csv", frame2, fmt="csv")
+        with pytest.raises(ExperimentConflictError):
+            service.export_dataset("data.csv", frame2, fmt="csv")
 
         result = pl.read_csv(tmp_path / "data.csv")
-        assert_frame_equal(result, frame2)
+        assert_frame_equal(result, frame1)
 
 
 class TestResolveArtifactRelativePath:

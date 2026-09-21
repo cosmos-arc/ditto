@@ -74,3 +74,28 @@ def test_sqlite_refuses_nan_instead_of_silently_exporting_null(tmp_path: Path) -
             "out.sqlite", pl.DataFrame({"value": [float("nan")]}), fmt="sqlite"
         )
     assert not (tmp_path / "out.sqlite").exists()
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_csv_schema_and_identity_conflict(tmp_path: Path, empty: bool) -> None:
+    import orjson
+
+    frame = pl.DataFrame({'a,"b': [10, 20], "text": ["a,b", "line\nbreak"]})
+    if empty:
+        frame = frame.head(0)
+    artifacts = ResearchArtifactService(artifact_root=tmp_path)
+    receipt = artifacts.export_dataset(
+        "out.csv", frame, fmt="csv", provenance={"snapshot_id": "first"}
+    )
+    result = pl.read_csv(tmp_path / "out.csv")
+    assert result.columns == ['a,"b', "text"]
+    assert result.rows() == ([] if empty else [(10, "a,b"), (20, "line\nbreak")])
+    sidecar = (tmp_path / "out.csv.manifest.json").read_bytes()
+    assert orjson.loads(sidecar) == receipt
+    before = (tmp_path / "out.csv").read_bytes()
+    with pytest.raises(ExperimentConflictError):
+        artifacts.export_dataset(
+            "out.csv", frame, fmt="csv", provenance={"snapshot_id": "different"}
+        )
+    assert (tmp_path / "out.csv").read_bytes() == before
+    assert (tmp_path / "out.csv.manifest.json").read_bytes() == sidecar

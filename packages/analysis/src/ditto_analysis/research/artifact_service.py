@@ -575,10 +575,6 @@ class ResearchArtifactService:
                 supported=supported,
                 supported_formats=supported,
             )
-        if provenance is None and fmt != "sqlite":
-            writer = cast("Callable[[Path], object]", getattr(frame, str(writer_name)))
-            self._atomic_write(relative_path, writer)
-            return None
         if fmt == "sqlite":
             if self._sqlite_export is None:
                 raise ResearchDatasetError("SQLite export adapter is not configured")

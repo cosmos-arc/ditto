@@ -54,7 +54,7 @@ class ResearchDatasetExport:
         except ValueError as error:
             raise AppQueryError("导出目标必须位于研究工件目录内") from error
         frame = self._artifacts.read_verified_snapshot(snapshot)
-        receipt = self._artifacts.export_dataset(
+        return self._artifacts.export_dataset(
             relative,
             frame,
             fmt=fmt,
@@ -65,9 +65,6 @@ class ResearchDatasetExport:
                 "usage": "personal_local_research_only",
             },
         )
-        if receipt is None:
-            raise AppQueryError("导出未返回工件身份")
-        return receipt
 
     def _check_licenses(self, snapshot: DatasetSnapshot) -> tuple[str, ...]:
         if not snapshot.source_snapshot_ids:
