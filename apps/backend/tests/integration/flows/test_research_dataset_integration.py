@@ -998,3 +998,34 @@ def test_export_requires_frozen_source_evidence_for_every_input(
     assert pl.read_csv(research_state / "exports/complete.csv")[
         "factor.beta"
     ].to_list() == [None, 30.0]
+
+
+@pytest.mark.parametrize("old_sources", [[], ["unlicensed-old-source"]])
+def test_export_does_not_let_latest_run_hide_older_evidence(
+    export_snapshot, research_state: Path, old_sources
+) -> None:
+    import os
+
+    old = research_state / "derived/artifacts/series/factor.alpha/v2/_runs/older"
+    old.mkdir()
+    metadata = old / "artifact_metadata.json"
+    metadata.write_bytes(orjson.dumps({"input_snapshots": old_sources}))
+    os.utime(metadata, ns=(0, 1))
+    result = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+    )
+    with closing(_make_test_container()) as container:
+        snapshot = container.get(ResearchDatasetQuery).get_snapshot(
+            result["summary"]["snapshot_id"]
+        )
+        if old_sources:
+            assert set(snapshot.source_snapshot_ids) == set(
+                export_snapshot.source_snapshot_ids
+            ) | set(old_sources)
+        from ditto_application.exceptions import AppQueryError
+
+        with pytest.raises(AppQueryError, match="来源"):
+            container.get(ResearchDatasetExport).export(
+                snapshot, "csv", Path("exports/incremental.csv")
+            )
+    assert not (research_state / "exports").exists()

@@ -108,3 +108,5 @@ Composition root (`apps.registry`) wires OTel bridge and physical Agent adapters
 按[测试指南](../engineering/testing.md)选择 Task 验证范围；PR 的绿色结果只证明
 当前提交所选中的检查，完整证明由 main、merge queue、定期 CI 和发布要求承载。
 具体选择与聚合见[Harness 验证分工](../engineering/agent-harness.md#本地与-ci-的验证分工)。
+
+研究导出对增量制品保守绑定该版本所有物化 run 的来源集合，不按 mtime 只选最新批次；任一 run 缺少来源证据则拒绝导出。当前没有分区级完整 lineage，完整覆盖旧分区后仍可能要求旧来源许可；需缩小许可范围时先补充分区 lineage，再收窄来源集合。SQLite 将 UInt64/Int128 与时间、decimal 按文本无损保存，manifest 保留原始 Polars schema。

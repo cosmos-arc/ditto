@@ -17,6 +17,8 @@ def _identifier(value: str) -> str:
 
 
 def _column_type(dtype: pl.DataType) -> str:
+    if isinstance(dtype, (pl.UInt64, pl.Int128)):
+        return "TEXT"
     if dtype.is_integer() or dtype == pl.Boolean:
         return "INTEGER"
     if dtype.is_float():
@@ -49,7 +51,7 @@ def sqlite_dataset_bytes(frame: pl.DataFrame, table_name: str) -> bytes:
     frame = frame.with_columns(
         pl.col(name).cast(pl.String)
         for name, dtype in frame.schema.items()
-        if dtype.is_temporal() or dtype.is_decimal()
+        if _column_type(dtype) == "TEXT" and dtype != pl.Null
     )
     placeholders = ", ".join("?" for _ in frame.columns)
     with TemporaryDirectory(prefix="ditto-research-export-") as directory:

@@ -101,3 +101,19 @@ def test_csv_schema_and_identity_conflict(tmp_path: Path, empty: bool) -> None:
         )
     assert (tmp_path / "out.csv").read_bytes() == before
     assert (tmp_path / "out.csv.manifest.json").read_bytes() == sidecar
+
+
+@pytest.mark.parametrize(
+    ("dtype", "values"),
+    [(pl.UInt64, [0, 2**64 - 1, None]), (pl.Int128, [-(2**100), 2**100, None])],
+)
+def test_sqlite_preserves_wide_integers(tmp_path: Path, dtype, values) -> None:
+    frame = pl.DataFrame({"wide": pl.Series(values, dtype=dtype)})
+    ResearchArtifactService(
+        artifact_root=tmp_path, sqlite_export=sqlite_dataset_bytes
+    ).export_dataset("out.sqlite", frame, fmt="sqlite")
+    with sqlite3.connect(tmp_path / "out.sqlite") as connection:
+        assert connection.execute("SELECT wide FROM dataset").fetchall() == [
+            (None if value is None else str(value),) for value in values
+        ]
+        assert connection.execute("PRAGMA table_info(dataset)").fetchone()[2] == "TEXT"

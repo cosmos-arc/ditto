@@ -667,24 +667,30 @@ class ResearchArtifactService:
         self,
         artifact_relative_path: str,
     ) -> tuple[str, ...]:
-        """Read source snapshot IDs from the latest artifact metadata."""
+        """Conservatively bind every recorded run of this artifact version."""
         version_root = self._path(artifact_relative_path)
         runs_root = version_root / "_runs"
         if not runs_root.exists():
             return ()
-        metadata_paths = tuple(runs_root.glob("*/artifact_metadata.json"))
-        if not metadata_paths:
-            return ()
-        latest_metadata = max(
-            metadata_paths,
-            key=lambda p: p.stat().st_mtime_ns,
-        )
-        payload = orjson.loads(latest_metadata.read_bytes())
-        raw_snapshots = payload.get("input_snapshots", [])
-        if not isinstance(raw_snapshots, list):
-            return ()
-        ids: list[str] = []
-        for item in cast(list[object], raw_snapshots):
-            if isinstance(item, str) and item:
-                ids.append(item)
-        return tuple(sorted(set(ids)))
+        ids: set[str] = set()
+        # ponytail: version-wide provenance can over-restrict exports after full
+        # replacement; narrow only when partition-level lineage is persisted.
+        for run in runs_root.iterdir():
+            if not run.is_dir():
+                continue
+            metadata = run / "artifact_metadata.json"
+            if not metadata.is_file():
+                return ()
+            payload = orjson.loads(metadata.read_bytes())
+            raw_snapshots = payload.get("input_snapshots", [])
+            if not isinstance(raw_snapshots, list):
+                return ()
+            run_ids: set[str] = set()
+            for item in cast(list[object], raw_snapshots):
+                if not isinstance(item, str) or not item:
+                    return ()
+                run_ids.add(item)
+            if not run_ids:
+                return ()
+            ids.update(run_ids)
+        return tuple(sorted(ids))
