@@ -790,3 +790,81 @@ def test_reingestion_backfills_observation_for_legacy_snapshot_row(
         )
     finally:
         pool.close()
+
+
+@pytest.mark.unit
+def test_schema_change_after_unbound_intent_forks_new_revision(tmp_path: Path) -> None:
+    lifecycle, pool = _store(tmp_path)
+    license_record = _license()
+    recorder = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=recorder,
+            snapshot_reader=recorder,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=recorder,
+            lineage_recorder=recorder,
+            lineage_reader=recorder,
+            ingestion_log_store=recorder,
+        ),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request_v1 = _request(license_record)
+    request_v2 = _request(license_record, schema_version="market.stock_daily.v2")
+
+    try:
+        lifecycle.plan_partition(
+            PartitionCheckpoint(
+                chunk_id=request_v1.chunk_id,
+                dataset_id=request_v1.dataset_id,
+                source=request_v1.source,
+                request_start=request_v1.request_start,
+                request_end=request_v1.request_end,
+                status=PartitionLifecycleStatus.PLANNED,
+                last_successful_stage=None,
+                attempt=1,
+                retry_budget=3,
+                # Legacy intents bind only the value checksum.
+                payload_id=f"intent:{request_v1.provider_snapshot.checksum}",
+                catalog_asset_id=None,
+                lineage_run_id=None,
+                ingestion_log_id=None,
+                error_code=None,
+                updated_at=datetime(2026, 7, 18, 8, 40, tzinfo=UTC),
+            )
+        )
+        for status in (
+            PartitionLifecycleStatus.FETCHED,
+            PartitionLifecycleStatus.NORMALIZED,
+            PartitionLifecycleStatus.PIT_PASSED,
+            PartitionLifecycleStatus.DQ_PASSED,
+        ):
+            lifecycle.advance_partition(
+                request_v1.chunk_id,
+                status,
+                occurred_at=datetime(2026, 7, 18, 8, 41, tzinfo=UTC),
+            )
+
+        outcome = committer.commit(request_v2)
+
+        assert outcome.completed is True
+        assert outcome.chunk_id != request_v1.chunk_id
+        assert outcome.chunk_id.startswith(f"{request_v1.chunk_id}:revision:")
+        fork_events = lifecycle.list_events(outcome.chunk_id)
+        assert (
+            len(
+                [
+                    event
+                    for event in fork_events
+                    if event.to_status is PartitionLifecycleStatus.DQ_PASSED
+                ]
+            )
+            == 1
+        )
+        base = lifecycle.get_checkpoint(request_v1.chunk_id)
+        assert base is not None
+        assert base.status is PartitionLifecycleStatus.DQ_PASSED
+    finally:
+        pool.close()

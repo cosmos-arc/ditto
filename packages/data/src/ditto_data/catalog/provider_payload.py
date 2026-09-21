@@ -20,6 +20,7 @@ __all__ = [
     "ProviderPayloadArtifact",
     "ProviderPayloadReader",
     "ProviderPayloadWriter",
+    "schema_fingerprint",
 ]
 
 _IDENTITY_PATTERN = re.compile(r"[a-z0-9][a-z0-9_-]*")
@@ -32,9 +33,15 @@ def _validate_identity(field: str, value: str) -> None:
         raise ValueError(f"invalid provider payload {field}: {value!r}")
 
 
-def _schema_fingerprint(frame: pl.DataFrame) -> bytes:
+def schema_fingerprint(frame: pl.DataFrame) -> str:
     """Value checksums are dtype-blind; this pins column order and dtypes."""
-    return orjson.dumps([[name, str(dtype)] for name, dtype in frame.schema.items()])
+    return orjson.dumps(
+        [[name, str(dtype)] for name, dtype in frame.schema.items()]
+    ).decode()
+
+
+def _schema_fingerprint(frame: pl.DataFrame) -> bytes:
+    return schema_fingerprint(frame).encode()
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +53,7 @@ class ProviderPayloadArtifact:
     checksum: str
     row_count: int
     uri: str
+    schema_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         """Reject identities that could alias or escape the content path."""
@@ -161,7 +169,11 @@ class FilesystemProviderPayloadStore:
             raise ValueError(
                 f"provider payload schema fingerprint is missing: {artifact.uri}"
             )
-        if fingerprint.read_bytes() != _schema_fingerprint(frame):
+        retained = fingerprint.read_bytes()
+        if retained != _schema_fingerprint(frame) or (
+            artifact.schema_fingerprint is not None
+            and retained.decode() != artifact.schema_fingerprint
+        ):
             raise ValueError(
                 f"provider payload schema fingerprint mismatch: {artifact.uri}"
             )

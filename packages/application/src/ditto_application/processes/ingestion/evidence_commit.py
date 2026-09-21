@@ -59,6 +59,7 @@ class PartitionWriteIntent:
     request_start: str
     request_end: str
     payload: ProviderPayloadArtifact
+    snapshot_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,7 +117,11 @@ class IngestionEvidenceCommitter:
 
     def prepare_payload_write(self, intent: PartitionWriteIntent) -> None:
         """Persist a resumable intent before any canonical file can be changed."""
-        chunk_id = self._revision_id(intent.chunk_id, intent.payload.checksum)
+        chunk_id = self._revision_id(
+            intent.chunk_id,
+            intent.payload.checksum,
+            snapshot_id=intent.snapshot_id,
+        )
         if self._ports.lifecycle_reader.get_checkpoint(chunk_id) is not None:
             return
         self._ports.lifecycle_writer.plan_partition(
@@ -130,7 +135,11 @@ class IngestionEvidenceCommitter:
                 last_successful_stage=None,
                 attempt=1,
                 retry_budget=3,
-                payload_id=f"intent:{intent.payload.checksum}",
+                payload_id=(
+                    f"intent:{intent.payload.checksum}:{intent.snapshot_id}"
+                    if intent.snapshot_id is not None
+                    else f"intent:{intent.payload.checksum}"
+                ),
                 catalog_asset_id=None,
                 lineage_run_id=None,
                 ingestion_log_id=None,
@@ -185,7 +194,11 @@ class IngestionEvidenceCommitter:
         payload_id = checkpoint.payload_id
         if (
             payload_id is None
-            or payload_id == f"intent:{checksum}"
+            or (payload_id == f"intent:{checksum}" and snapshot_id is None)
+            or (
+                snapshot_id is not None
+                and payload_id == f"intent:{checksum}:{snapshot_id}"
+            )
             or (
                 payload_id.startswith(f"payload:{checksum}:")
                 and not self._identity_conflict(
@@ -409,6 +422,7 @@ class IngestionEvidenceCommitter:
             not in {
                 None,
                 f"intent:{request.provider_snapshot.checksum}",
+                _intent_evidence_id(request),
                 _payload_evidence_id(request),
             }
             or checkpoint.lineage_run_id not in {None, request.lineage_event.run_id}
@@ -542,6 +556,13 @@ class IngestionEvidenceCommitter:
         if checkpoint is None:
             raise AppProcessError(f"missing partition checkpoint: {chunk_id}")
         return checkpoint
+
+
+def _intent_evidence_id(request: EvidenceCommitRequest) -> str:
+    return (
+        f"intent:{request.provider_snapshot.checksum}:"
+        f"{request.provider_snapshot.snapshot_id}"
+    )
 
 
 def _payload_evidence_id(request: EvidenceCommitRequest) -> str:

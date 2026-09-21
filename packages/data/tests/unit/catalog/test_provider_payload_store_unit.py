@@ -1,5 +1,6 @@
 """Immutable provider payload artifact tests."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import polars as pl
@@ -190,3 +191,32 @@ def test_read_refuses_reordered_columns(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="fingerprint mismatch"):
         store.read_payload(artifact)
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_trusted_fingerprint_pin_survives_artifact_republication(
+    tmp_path: Path,
+) -> None:
+    from ditto_data.catalog.provider_payload import schema_fingerprint
+
+    store = FilesystemProviderPayloadStore(tmp_path)
+    int32 = pl.DataFrame(
+        {"instrument_id": [1], "close": pl.Series("close", [10], pl.Int32)}
+    )
+    original = store.retain_payload(
+        dataset_id="stock_daily", source="tushare", payload=int32
+    )
+    pinned = replace(original, schema_fingerprint=schema_fingerprint(int32))
+    path = tmp_path / original.uri
+
+    # Cleanup or partial restore removes the artifact and its sidecar.
+    path.unlink()
+    path.with_name(f"{path.name}.schema").unlink()
+
+    # A different schema version with identical values republishes the URI.
+    int64 = int32.cast({"close": pl.Int64})
+    store.retain_payload(dataset_id="stock_daily", source="tushare", payload=int64)
+
+    with pytest.raises(ValueError, match="fingerprint mismatch"):
+        store.read_payload(pinned)

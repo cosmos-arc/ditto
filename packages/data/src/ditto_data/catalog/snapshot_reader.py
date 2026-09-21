@@ -56,6 +56,7 @@ class SnapshotReadService:
                 checksum=snapshot.checksum,
                 row_count=snapshot.row_count,
                 uri=snapshot.payload_uri,
+                schema_fingerprint=snapshot.schema_fingerprint,
             )
         )
         return SnapshotContents(

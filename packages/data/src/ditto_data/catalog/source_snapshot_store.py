@@ -72,10 +72,16 @@ class SQLiteProviderSnapshotStore:
                 row_count INTEGER NOT NULL,
                 payload_uri TEXT,
                 payload_retained INTEGER NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                schema_fingerprint TEXT
             )
             """
         )
+        if self._column_missing("provider_snapshots", "schema_fingerprint"):
+            # Upgraded stores predate the trusted payload schema pin.
+            self._client.execute(
+                "ALTER TABLE provider_snapshots ADD COLUMN schema_fingerprint TEXT"
+            )
         self._client.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_provider_snapshots_canonical
@@ -98,6 +104,10 @@ class SQLiteProviderSnapshotStore:
         )
         self._client.commit()
 
+    def _column_missing(self, table: str, column: str) -> bool:
+        rows = self._client.fetchall(f"PRAGMA table_info({table})")
+        return all(row["name"] != column for row in rows)
+
     def append_snapshot(self, snapshot: ProviderSnapshot) -> None:
         """Append a snapshot, treating a re-observed duplicate as idempotent."""
         existing = self.get_snapshot(snapshot.snapshot_id)
@@ -107,6 +117,18 @@ class SQLiteProviderSnapshotStore:
                     f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
                 )
             self._backfill_observation(snapshot.snapshot_id)
+            if existing.schema_fingerprint is None and (
+                snapshot.schema_fingerprint is not None
+            ):
+                update = (
+                    "UPDATE provider_snapshots "
+                    "SET schema_fingerprint = ? WHERE snapshot_id = ?"
+                )
+                self._client.execute(
+                    update,
+                    [snapshot.schema_fingerprint, snapshot.snapshot_id],
+                )
+                self._client.commit()
             return
         if snapshot.snapshot_id != snapshot.expected_snapshot_id():
             raise ValueError(
@@ -120,9 +142,10 @@ class SQLiteProviderSnapshotStore:
                     schema_version, checksum, canonical_namespace,
                     canonical_dataset_id, canonical_partition_keys,
                     request_parameters_hash, response_metadata, license_record_id,
-                    row_count, payload_uri, payload_retained, created_at
+                    row_count, payload_uri, payload_retained, created_at,
+                    schema_fingerprint
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     snapshot.snapshot_id,
@@ -142,6 +165,7 @@ class SQLiteProviderSnapshotStore:
                     snapshot.payload_uri,
                     int(snapshot.payload_retained),
                     snapshot.created_at.isoformat(),
+                    snapshot.schema_fingerprint,
                 ],
             )
             previous = self._client.fetchone(
@@ -297,4 +321,9 @@ def _snapshot_from_row(row: dict[str, Any]) -> ProviderSnapshot:
         ),
         payload_retained=bool(row["payload_retained"]),
         created_at=datetime.fromisoformat(str(row["created_at"])),
+        schema_fingerprint=(
+            str(row["schema_fingerprint"])
+            if row.get("schema_fingerprint") is not None
+            else None
+        ),
     )
