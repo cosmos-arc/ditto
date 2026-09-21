@@ -556,9 +556,9 @@ class ResearchArtifactService:
         fmt: ExportFormat = "parquet",
         provenance: Mapping[str, object] | None = None,
         table_name: str = "dataset",
-    ) -> dict[str, object] | None:
+    ) -> dict[str, object]:
         """
-        Export data; snapshot provenance opts into immutable, recoverable publication.
+        Export data with immutable publication and a checksum sidecar.
 
         The sidecar reserves the target identity before the complete data file is
         published. A failed final publication can be retried with identical inputs.

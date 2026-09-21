@@ -1,5 +1,6 @@
 """Standalone exports preserve actual file schema, rows and immutable targets."""
 
+import csv
 import sqlite3
 from pathlib import Path
 
@@ -87,9 +88,10 @@ def test_csv_schema_and_identity_conflict(tmp_path: Path, empty: bool) -> None:
     receipt = artifacts.export_dataset(
         "out.csv", frame, fmt="csv", provenance={"snapshot_id": "first"}
     )
-    result = pl.read_csv(tmp_path / "out.csv")
-    assert result.columns == ['a,"b', "text"]
-    assert result.rows() == ([] if empty else [(10, "a,b"), (20, "line\nbreak")])
+    with (tmp_path / "out.csv").open(newline="") as stream:
+        header, *rows = csv.reader(stream)
+    assert header == ['a,"b', "text"]
+    assert rows == ([] if empty else [["10", "a,b"], ["20", "line\nbreak"]])
     sidecar = (tmp_path / "out.csv.manifest.json").read_bytes()
     assert orjson.loads(sidecar) == receipt
     before = (tmp_path / "out.csv").read_bytes()
