@@ -25,6 +25,11 @@ from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
 from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
+from ditto_data.ingestion.partition_state import (
+    PartitionCheckpoint,
+    PartitionLifecycleStatus,
+)
+from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 _DAY = date(2026, 9, 18)
@@ -82,6 +87,47 @@ def field_evidence(
         )
     )
     snapshots.append_snapshot(snapshot)
+    lifecycle = SQLitePartitionLifecycleStore(client)
+    lifecycle.plan_partition(
+        PartitionCheckpoint(
+            chunk_id="synthetic",
+            dataset_id=snapshot.dataset_id,
+            source=snapshot.source,
+            request_start=snapshot.request_start,
+            request_end=snapshot.request_end,
+            status=PartitionLifecycleStatus.PLANNED,
+            last_successful_stage=None,
+            attempt=1,
+            retry_budget=3,
+            payload_id=None,
+            catalog_asset_id=None,
+            lineage_run_id=None,
+            ingestion_log_id=None,
+            error_code=None,
+            updated_at=visible,
+        )
+    )
+    for stage in (
+        PartitionLifecycleStatus.FETCHED,
+        PartitionLifecycleStatus.NORMALIZED,
+        PartitionLifecycleStatus.PIT_PASSED,
+        PartitionLifecycleStatus.DQ_PASSED,
+        PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+        PartitionLifecycleStatus.CATALOG_ATTESTED,
+        PartitionLifecycleStatus.LINEAGE_RECORDED,
+        PartitionLifecycleStatus.SUCCESS_RECORDED,
+        PartitionLifecycleStatus.COMPLETE,
+    ):
+        lifecycle.advance_partition(
+            "synthetic",
+            stage,
+            occurred_at=visible,
+            evidence_id=(
+                f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}"
+                if stage is PartitionLifecycleStatus.PAYLOAD_COMMITTED
+                else snapshot.snapshot_id
+            ),
+        )
     field = CertifiedField(
         field="amount",
         snapshot_id=snapshot.snapshot_id,
@@ -91,6 +137,7 @@ def field_evidence(
         available_at=visible,
         publication_at=visible,
         time_precision="timestamp",
+        observed_at=visible,
         evidence_uri="evidence://field/amount",
         consumer_bindings=(("instruments.average_turnover", "a" * 64),),
     )
@@ -152,7 +199,9 @@ def field_evidence(
         purpose="formal_research",
     )
     yield (
-        FieldAdmissionQuery(snapshots, licenses, reports, now=lambda: _VISIBLE),
+        FieldAdmissionQuery(
+            snapshots, licenses, reports, lifecycle, now=lambda: _VISIBLE
+        ),
         request,
         reports,
         report,

@@ -16,6 +16,7 @@ __all__ = [
     "ProviderSnapshotDraft",
     "ProviderSnapshotReader",
     "ProviderSnapshotWriter",
+    "snapshot_identity",
 ]
 
 _SECRET_MARKERS: tuple[str, ...] = (
@@ -60,6 +61,7 @@ class ProviderSnapshotDraft:
     payload_uri: str | None
     payload_retained: bool
     created_at: datetime
+    schema_fingerprint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -81,6 +83,7 @@ class ProviderSnapshot:
     payload_uri: str | None
     payload_retained: bool
     created_at: datetime
+    schema_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         """Validate source evidence without persisting provider secrets."""
@@ -158,22 +161,42 @@ class ProviderSnapshot:
             payload_uri=placeholder.payload_uri,
             payload_retained=placeholder.payload_retained,
             created_at=placeholder.created_at,
+            schema_fingerprint=draft.schema_fingerprint,
         )
 
     def expected_snapshot_id(self) -> str:
         """Return the identity mandated by the R2 provider snapshot contract."""
-        payload = orjson.dumps(
-            [
-                self.dataset_id,
-                self.source,
-                self.request_start,
-                self.request_end,
-                self.schema_version,
-                self.checksum,
-            ]
+        return snapshot_identity(
+            self.dataset_id,
+            self.source,
+            self.request_start,
+            self.request_end,
+            self.schema_version,
+            self.checksum,
         )
-        digest = hashlib.sha256(payload).hexdigest()
-        return f"snapshot:{self.source}:{self.dataset_id}:sha256:{digest}"
+
+
+def snapshot_identity(
+    dataset_id: str,
+    source: str,
+    request_start: str,
+    request_end: str,
+    schema_version: str,
+    checksum: str,
+) -> str:
+    """Derive the deterministic provider snapshot identity before creation."""
+    payload = orjson.dumps(
+        [
+            dataset_id,
+            source,
+            request_start,
+            request_end,
+            schema_version,
+            checksum,
+        ]
+    )
+    digest = hashlib.sha256(payload).hexdigest()
+    return f"snapshot:{source}:{dataset_id}:sha256:{digest}"
 
 
 @runtime_checkable
@@ -182,6 +205,14 @@ class ProviderSnapshotReader(Protocol):
 
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         """Return one snapshot by deterministic ID."""
+        ...
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        """Return the first recorded local catalog observation, if known."""
+        ...
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        """Return the prior observed content identity, if recorded."""
         ...
 
     def list_snapshots(

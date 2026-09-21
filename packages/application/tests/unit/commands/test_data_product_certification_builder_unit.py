@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 from hashlib import sha256
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from ditto_application.commands.data_product_certification_builder import (
@@ -29,12 +30,18 @@ from ditto_data.ingestion.partition_state import (
     PartitionLifecycleStatus,
 )
 
+_LEDGER_OBSERVED = object()
+
 
 def _fixture(
     tmp_path,
     *,
     canonical_row_count: int = 1,
     provider_row_count: int = 1,
+    checkpoint_checksum: str = "payload-checksum",
+    completion_snapshot_id: str | None = None,
+    calendar=None,
+    ledger_observed_at: object = _LEDGER_OBSERVED,
 ):
     now = datetime(2026, 8, 1, tzinfo=UTC)
     asset = DataAssetRef(
@@ -107,7 +114,7 @@ def _fixture(
         last_successful_stage=PartitionLifecycleStatus.COMPLETE,
         attempt=1,
         retry_budget=3,
-        payload_id="payload:payload-checksum:stock_daily/2015",
+        payload_id=f"payload:{checkpoint_checksum}:stock_daily/2015:{snapshot.snapshot_id}",
         catalog_asset_id="catalog:market:stock_daily",
         lineage_run_id="lineage:1",
         ingestion_log_id="log:1",
@@ -121,7 +128,9 @@ def _fixture(
             from_status=None,
             to_status=status,
             attempt=1,
-            evidence_id=None,
+            evidence_id=(completion_snapshot_id or snapshot.snapshot_id)
+            if status is PartitionLifecycleStatus.COMPLETE
+            else None,
             error_code=None,
             occurred_at=now,
         )
@@ -134,8 +143,12 @@ def _fixture(
             start=1,
         )
     )
+    ledger_observed = (
+        now if ledger_observed_at is _LEDGER_OBSERVED else ledger_observed_at
+    )
     snapshot_reader = SimpleNamespace(
         list_snapshots=lambda **_kwargs: (snapshot,),
+        get_observed_at=lambda _snapshot_id: cast(datetime | None, ledger_observed),
     )
     license_reader = SimpleNamespace(
         get_license=lambda record_id: (
@@ -157,6 +170,7 @@ def _fixture(
             snapshot_reader=snapshot_reader,
             license_reader=license_reader,
             lifecycle_reader=lifecycle,
+            calendar=calendar,
         ),
         CertificationBuildRequest(
             dataset_id="stock_daily",
@@ -264,7 +278,9 @@ def test_builder_rejects_field_claim_without_exact_schema_evidence(tmp_path) -> 
     admitted = replace(field, field="close")
     assert builder.build(
         replace(request, certified_fields=(admitted,))
-    ).evidence.certified_fields == (admitted,)
+    ).evidence.certified_fields == (
+        replace(admitted, observed_at=request.generated_at),
+    )
     with pytest.raises(AppProcessError, match="verified consumer evidence"):
         builder.build(
             replace(
@@ -303,7 +319,9 @@ def test_builder_binds_input_digests_to_retained_verified_consumer_artifact(tmp_
             request.consumer_evidence, sha256_hex=sha256(raw).hexdigest()
         ),
     )
-    assert builder.build(bound).evidence.certified_fields == (field,)
+    assert builder.build(bound).evidence.certified_fields == (
+        replace(field, observed_at=request.generated_at),
+    )
     forged = replace(field, consumer_bindings=(("instruments.close", "f" * 64),))
     with pytest.raises(AppProcessError, match="does not match retained evidence"):
         builder.build(replace(bound, certified_fields=(forged,)))
@@ -390,3 +408,247 @@ def test_builder_rejects_hash_matched_but_malformed_consumer_evidence(tmp_path):
     )
     with pytest.raises(AppProcessError, match="not valid JSON"):
         builder.build(bound)
+
+
+def test_builder_cannot_certify_revision_using_same_interval_old_checkpoint(
+    tmp_path,
+) -> None:
+    builder, request = _fixture(tmp_path, checkpoint_checksum="older-payload")
+    with pytest.raises(AppProcessError, match="COMPLETE checkpoint"):
+        builder.build(request)
+
+
+@pytest.mark.pit
+def test_date_precision_freezes_next_session_and_missing_calendar_fails_closed(
+    tmp_path,
+):
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    import ditto_data
+    from ditto_data.catalog.field_admission import FieldUsageScope, field_reasons
+    from ditto_data.catalog.field_evidence import (
+        CertifiedField,
+        field_from_payload,
+        field_to_payload,
+    )
+    from ditto_data.services.metadata.calendar import CalendarService
+    from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
+    from ditto_platform.foundation import SQLiteClient, SQLitePool
+
+    pool = SQLitePool(
+        tmp_path / "calendar.sqlite",
+        schema_path=Path(ditto_data.__file__).parent / "scripts/schema.sql",
+    )
+    pool.init_schema()
+    client = SQLiteClient(pool)
+    reader = CalendarReader(client)
+    calendar = CalendarService(reader, CalendarWriter(client, None, reader))
+    zone = ZoneInfo("Asia/Shanghai")
+    try:
+        calendar.save_calendar(
+            [
+                {"trade_date": "2026-08-01", "is_open": False},
+                {"trade_date": "2026-08-02", "is_open": False},
+                {"trade_date": "2026-08-03", "is_open": True},
+            ]
+        )
+        builder, request = _fixture(tmp_path, calendar=calendar)
+        base = builder.build(request)
+        claim = CertifiedField(
+            field="close",
+            snapshot_id=base.evidence.snapshot_ids[0],
+            instrument_ids=(1,),
+            covered_from=date(2015, 1, 5),
+            covered_to=date(2015, 1, 5),
+            available_at=datetime(2026, 7, 31, tzinfo=zone),
+            publication_at=datetime(2026, 7, 31, tzinfo=zone),
+            time_precision="date",
+            evidence_uri=request.consumer_evidence.evidence_uri,
+        )
+        certified = builder.build(
+            replace(request, certified_fields=(claim,))
+        ).evidence.certified_fields[0]
+        boundary = datetime(2026, 8, 3, 9, 30, tzinfo=zone)
+        assert certified.date_visible_at == boundary
+        assert certified.calendar_hash
+        assert field_from_payload(field_to_payload(certified)) == certified
+        early = datetime(2026, 8, 3, 9, 29, tzinfo=zone)
+        scope = FieldUsageScope(
+            "", None, (1,), date(2015, 1, 5), date(2015, 1, 5), early, early
+        )
+        assert "TIME_NOT_VISIBLE" in field_reasons(certified, scope)
+        assert not field_reasons(
+            certified,
+            replace(scope, knowledge_cutoff=boundary, publication_cutoff=boundary),
+        )
+        observed_claim = replace(claim, observed_at=request.generated_at)
+        assert "CALENDAR_EVIDENCE_MISSING" in field_reasons(observed_claim, scope)
+        later = datetime(2026, 8, 3, 10, tzinfo=zone)
+        delayed = builder.build(
+            replace(request, certified_fields=(replace(claim, available_at=later),))
+        ).evidence.certified_fields[0]
+        assert delayed.date_visible_at == boundary
+        assert "TIME_NOT_VISIBLE" in field_reasons(
+            delayed,
+            replace(scope, knowledge_cutoff=boundary, publication_cutoff=boundary),
+        )
+        assert not field_reasons(
+            delayed, replace(scope, knowledge_cutoff=later, publication_cutoff=later)
+        )
+        client.execute(
+            "DELETE FROM trading_calendar WHERE trade_date = ?", ["2026-08-02"]
+        )
+        client.commit()
+        reader.reload()
+        with pytest.raises(AppProcessError, match="calendar evidence is incomplete"):
+            builder.build(replace(request, certified_fields=(claim,)))
+    finally:
+        pool.close()
+
+
+def test_completion_must_attest_full_snapshot_identity_not_only_payload(tmp_path):
+    builder, request = _fixture(
+        tmp_path, completion_snapshot_id="other-schema-snapshot"
+    )
+    with pytest.raises(AppProcessError, match="COMPLETE checkpoint"):
+        builder.build(request)
+
+
+@pytest.mark.unit
+def test_builder_rejects_observation_claim_conflicting_with_ledger(tmp_path) -> None:
+    builder, request = _fixture(tmp_path)
+    base = builder.build(request)
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    field = CertifiedField(
+        field="close",
+        snapshot_id=base.evidence.snapshot_ids[0],
+        instrument_ids=(600000,),
+        covered_from=request.target_to,
+        covered_to=request.target_to,
+        available_at=None,
+        publication_at=None,
+        time_precision="unknown",
+        observed_at=datetime(2026, 7, 1, tzinfo=UTC),
+        evidence_uri=request.consumer_evidence.evidence_uri,
+    )
+
+    with pytest.raises(AppProcessError, match="observed_at claim conflicts"):
+        builder.build(replace(request, certified_fields=(field,)))
+
+
+@pytest.mark.unit
+def test_builder_rejects_field_without_authoritative_observation(tmp_path) -> None:
+    builder, request = _fixture(tmp_path, ledger_observed_at=None)
+    base = builder.build(request)
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    field = CertifiedField(
+        field="close",
+        snapshot_id=base.evidence.snapshot_ids[0],
+        instrument_ids=(600000,),
+        covered_from=request.target_to,
+        covered_to=request.target_to,
+        available_at=None,
+        publication_at=None,
+        time_precision="unknown",
+        evidence_uri=request.consumer_evidence.evidence_uri,
+    )
+
+    with pytest.raises(AppProcessError, match="lacks observed snapshot evidence"):
+        builder.build(replace(request, certified_fields=(field,)))
+
+
+@pytest.mark.unit
+def test_date_precision_revision_resolves_through_revised_session(tmp_path) -> None:
+    """A later date-only revision must wait for its own next session open."""
+    from datetime import timedelta
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    import ditto_data
+    from ditto_data.catalog.field_admission import FieldUsageScope, field_reasons
+    from ditto_data.catalog.field_evidence import CertifiedField
+    from ditto_data.services.metadata.calendar import CalendarService
+    from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
+    from ditto_platform.foundation import SQLiteClient, SQLitePool
+
+    pool = SQLitePool(
+        tmp_path / "calendar.sqlite",
+        schema_path=Path(ditto_data.__file__).parent / "scripts/schema.sql",
+    )
+    pool.init_schema()
+    client = SQLiteClient(pool)
+    reader = CalendarReader(client)
+    calendar = CalendarService(reader, CalendarWriter(client, None, reader))
+    zone = ZoneInfo("Asia/Shanghai")
+    try:
+        calendar.save_calendar(
+            [
+                {"trade_date": "2026-08-01", "is_open": False},
+                {"trade_date": "2026-08-02", "is_open": False},
+                {"trade_date": "2026-08-03", "is_open": True},
+                {"trade_date": "2026-08-04", "is_open": False},
+                {"trade_date": "2026-08-05", "is_open": True},
+            ]
+        )
+        builder, request = _fixture(tmp_path, calendar=calendar)
+        base = builder.build(request)
+        revised_at = datetime(2026, 8, 4, 0, 0, tzinfo=zone)
+        claim = CertifiedField(
+            field="close",
+            snapshot_id=base.evidence.snapshot_ids[0],
+            instrument_ids=(1,),
+            covered_from=date(2015, 1, 5),
+            covered_to=date(2015, 1, 5),
+            available_at=datetime(2026, 7, 31, tzinfo=zone),
+            publication_at=datetime(2026, 7, 31, tzinfo=zone),
+            time_precision="date",
+            revised_at=revised_at,
+            evidence_uri=request.consumer_evidence.evidence_uri,
+        )
+
+        certified = builder.build(
+            replace(request, certified_fields=(claim,))
+        ).evidence.certified_fields[0]
+
+        assert certified.date_visible_at == datetime(2026, 8, 5, 9, 30, tzinfo=zone)
+        too_early = datetime(2026, 8, 4, 9, 0, tzinfo=zone)
+        scope = FieldUsageScope(
+            "", None, (1,), date(2015, 1, 5), date(2015, 1, 5), too_early, too_early
+        )
+        assert "TIME_NOT_VISIBLE" in field_reasons(certified, scope)
+        visible = datetime(2026, 8, 5, 9, 30, tzinfo=zone)
+        assert not field_reasons(
+            certified,
+            replace(
+                scope,
+                knowledge_cutoff=visible,
+                publication_cutoff=visible + timedelta(hours=1),
+            ),
+        )
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("dataset_id", "eligible"),
+    [
+        ("stock_daily", True),
+        ("etf_daily", True),
+        ("index_daily", True),
+        ("global_index_daily", False),
+        ("macro_indicators", False),
+        ("commodity_daily", False),
+        ("fx_daily", False),
+        ("unknown_dataset", False),
+    ],
+)
+def test_sse_calendar_eligibility_follows_dataset_sources(dataset_id, eligible) -> None:
+    from ditto_application.commands.data_product_certification_builder import (
+        _sse_calendar_eligible,
+    )
+
+    assert _sse_calendar_eligible(dataset_id) is eligible

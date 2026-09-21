@@ -5,7 +5,7 @@ import { toAdmissionView } from "./admission";
 const blocked: components["schemas"]["SelectionAdmissionResponse"] = {
 	allowed: false,
 	purpose: "formal_research",
-	rule_version: "field-admission-v1",
+	rule_version: "field-admission-v2",
 	fields: [
 		{
 			dataset_id: "stock_daily",

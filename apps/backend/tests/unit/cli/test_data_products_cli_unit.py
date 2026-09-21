@@ -334,3 +334,39 @@ def test_build_certification_forwards_reviewed_field_claims_file(
     assert result.exit_code == 0
     options = execute.call_args.args[2]
     assert options.certified_fields_file == "/tmp/reviewed-field-claims.json"
+
+
+def test_read_snapshot_outputs_audit_content_and_closes_container(runner, monkeypatch):
+    from dataclasses import dataclass
+
+    import polars as pl
+    from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
+
+    @dataclass
+    class Snapshot:
+        snapshot_id: str
+
+    query = MagicMock(spec=ProviderSnapshotQuery)
+    query.read_for_audit.return_value = SimpleNamespace(
+        snapshot=Snapshot("pinned-id"),
+        previous_snapshot_id="prior-id",
+        observed_at=None,
+        frame=pl.DataFrame({"close": [10.0]}),
+    )
+    container = MagicMock()
+    container.get.return_value = query
+    monkeypatch.setattr(
+        "ditto_apps.cli.commands.data_products.make_app_container", lambda: container
+    )
+    result = runner.invoke(app, ["data-products", "read-snapshot", "pinned-id"])
+    assert result.exit_code == 0, result.output
+    assert orjson.loads(result.output) == {
+        "use": "audit",
+        "snapshot": {"snapshot_id": "pinned-id"},
+        "previous_snapshot_id": "prior-id",
+        "observed_at": None,
+        "rows": [{"close": 10.0}],
+    }
+    query.read_for_audit.assert_called_once_with("pinned-id")
+    container.get.assert_called_once_with(ProviderSnapshotQuery)
+    container.close.assert_called_once()

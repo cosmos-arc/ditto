@@ -6,12 +6,13 @@ CalendarService - 交易日历子服务.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import polars as pl
 from ditto_platform.foundation import traced
 
+from ditto_data.catalog.field_evidence import publication_calendar_boundary
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
 
 
@@ -155,6 +156,30 @@ class CalendarService:
 
         """
         return self._calendar_reader.get_range_df(start, end, only_open)
+
+    def publication_boundary(
+        self, disclosed_on: date
+    ) -> tuple[datetime, str, tuple[str, ...]]:
+        """Freeze a date-only disclosure at the strictly next proven session open."""
+        start = disclosed_on + timedelta(days=1)
+        # Fail closed when the local calendar cannot prove a next session.
+        frame = self.list_calendar_range(
+            start.isoformat(), (start + timedelta(days=31)).isoformat(), only_open=False
+        )
+        if frame.is_empty():
+            raise ValueError("publication calendar evidence is missing")
+        days = sorted(
+            (str(row["trade_date"]), bool(row["is_open"])) for row in frame.to_dicts()
+        )
+        proof: list[str] = []
+        for raw, is_open in days:
+            proof.append(f"{raw}:{int(is_open)}")
+            if is_open:
+                boundary, digest = publication_calendar_boundary(
+                    disclosed_on, tuple(proof)
+                )
+                return boundary, digest, tuple(proof)
+        raise ValueError("publication calendar has no proven next session")
 
     @traced("metadata.calendar.save_calendar")
     def save_calendar(self, records: list[dict[str, Any]]) -> int:

@@ -2,9 +2,10 @@
 
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from typing import cast
 
 import pytest
-from ditto_application.exceptions import AppProcessError
+from ditto_application.exceptions import AppProcessError, AppQueryError
 from ditto_application.processes.selection.facade import SelectionWorkspaceFacade
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
@@ -283,3 +284,28 @@ def test_license_validity_is_use_time_not_historical_data_interval():
         assert (
             "LICENSE_INTERVAL_MISSING" in query.assess(request).fields[0].reason_codes
         )
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_replay_gate_rejects_datasets_without_instrument_trade_date_identity():
+    with field_evidence() as (admission, request, _, _):
+        from types import SimpleNamespace
+
+        from ditto_application.queries.provider_snapshot import (
+            ProviderSnapshotQuery,
+        )
+        from ditto_data.catalog.snapshot_reader import SnapshotReadService
+
+        query = ProviderSnapshotQuery(
+            cast(SnapshotReadService, SimpleNamespace()), admission
+        )
+        mismatched = replace(
+            request,
+            fields=(FieldRequirement("macro_indicators", "amount", "snapshot:any"),),
+        )
+
+        with pytest.raises(AppQueryError, match="instrument- and trade-date-keyed"):
+            query.replay(mismatched)
+
+        assert admission.assess(request).allowed

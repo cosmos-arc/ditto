@@ -17,7 +17,9 @@ from ditto_data.catalog.field_admission import (
 )
 from ditto_data.catalog.field_evidence import CertifiedField
 from ditto_data.catalog.license import DatasetLicenseReader
+from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 
 from ditto_application.exceptions import AppQueryError
 
@@ -86,7 +88,7 @@ class FieldAdmissionReport:
     allowed: bool
     purpose: DataUse
     fields: tuple[FieldAdmission, ...]
-    rule_version: str = "field-admission-v1"
+    rule_version: str = "field-admission-v2"
 
 
 class FieldAdmissionQuery:
@@ -97,12 +99,14 @@ class FieldAdmissionQuery:
         snapshots: ProviderSnapshotReader,
         licenses: DatasetLicenseReader,
         certifications: CertificationReader,
+        lifecycle: PartitionLifecycleReader,
         *,
         now: Callable[[], datetime] | None = None,
     ) -> None:
         self._snapshots = snapshots
         self._licenses = licenses
         self._certifications = certifications
+        self._lifecycle = lifecycle
         self._now = now or (lambda: datetime.now(UTC))
 
     def assess(self, request: FieldAdmissionRequest) -> FieldAdmissionReport:
@@ -132,6 +136,8 @@ class FieldAdmissionQuery:
         elif snapshot.dataset_id != item.dataset_id:
             reasons.append("SNAPSHOT_CONFLICT")
         else:
+            if not snapshot_completed(snapshot, self._lifecycle):
+                reasons.append("SNAPSHOT_INCOMPLETE")
             license_record = self._licenses.get_license(snapshot.license_record_id)
             if license_record is not None and (
                 license_record.dataset_id != item.dataset_id

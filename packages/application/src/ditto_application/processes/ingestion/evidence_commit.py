@@ -59,6 +59,7 @@ class PartitionWriteIntent:
     request_start: str
     request_end: str
     payload: ProviderPayloadArtifact
+    snapshot_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,7 +117,11 @@ class IngestionEvidenceCommitter:
 
     def prepare_payload_write(self, intent: PartitionWriteIntent) -> None:
         """Persist a resumable intent before any canonical file can be changed."""
-        chunk_id = self._revision_id(intent.chunk_id, intent.payload.checksum)
+        chunk_id = self._revision_id(
+            intent.chunk_id,
+            intent.payload.checksum,
+            snapshot_id=intent.snapshot_id,
+        )
         if self._ports.lifecycle_reader.get_checkpoint(chunk_id) is not None:
             return
         self._ports.lifecycle_writer.plan_partition(
@@ -130,7 +135,11 @@ class IngestionEvidenceCommitter:
                 last_successful_stage=None,
                 attempt=1,
                 retry_budget=3,
-                payload_id=f"intent:{intent.payload.checksum}",
+                payload_id=(
+                    f"intent:{intent.payload.checksum}:{intent.snapshot_id}"
+                    if intent.snapshot_id is not None
+                    else f"intent:{intent.payload.checksum}"
+                ),
                 catalog_asset_id=None,
                 lineage_run_id=None,
                 ingestion_log_id=None,
@@ -164,23 +173,70 @@ class IngestionEvidenceCommitter:
         return replace(
             request,
             chunk_id=self._revision_id(
-                request.chunk_id, request.provider_snapshot.checksum
+                request.chunk_id,
+                request.provider_snapshot.checksum,
+                snapshot_id=request.provider_snapshot.snapshot_id,
+                payload_evidence_id=_payload_evidence_id(request),
             ),
         )
 
-    def _revision_id(self, chunk_id: str, checksum: str) -> str:
+    def _revision_id(
+        self,
+        chunk_id: str,
+        checksum: str,
+        *,
+        snapshot_id: str | None = None,
+        payload_evidence_id: str | None = None,
+    ) -> str:
         checkpoint = self._ports.lifecycle_reader.get_latest_checkpoint(chunk_id)
         if checkpoint is None:
             return chunk_id
         payload_id = checkpoint.payload_id
         if (
             payload_id is None
-            or payload_id == f"intent:{checksum}"
-            or (payload_id.startswith(f"payload:{checksum}:"))
+            or (payload_id == f"intent:{checksum}" and snapshot_id is None)
+            or (
+                snapshot_id is not None
+                and payload_id == f"intent:{checksum}:{snapshot_id}"
+            )
+            or (
+                payload_id.startswith(f"payload:{checksum}:")
+                and not self._identity_conflict(
+                    checkpoint, snapshot_id, payload_evidence_id
+                )
+            )
         ):
             return checkpoint.chunk_id
         revision = sha256(repr((checkpoint.chunk_id, checksum)).encode()).hexdigest()
         return f"{chunk_id}:revision:{revision}"
+
+    def _identity_conflict(
+        self,
+        checkpoint: PartitionCheckpoint,
+        snapshot_id: str | None,
+        payload_evidence_id: str | None,
+    ) -> bool:
+        """Reuse must prove the recorded evidence belongs to this snapshot."""
+        if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
+            attested = next(
+                (
+                    event.evidence_id
+                    for event in self._ports.lifecycle_reader.list_events(
+                        checkpoint.chunk_id
+                    )
+                    if event.to_status is PartitionLifecycleStatus.COMPLETE
+                    and event.evidence_id is not None
+                ),
+                None,
+            )
+            if attested is None:
+                return True
+            return snapshot_id is not None and attested != snapshot_id
+        return (
+            checkpoint.payload_id is not None
+            and payload_evidence_id is not None
+            and checkpoint.payload_id != payload_evidence_id
+        )
 
     def _prepare_payload(
         self, request: EvidenceCommitRequest
@@ -220,12 +276,9 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.PAYLOAD_COMMITTED:
             return None
         try:
-            snapshot = request.provider_snapshot
-            existing = self._ports.snapshot_reader.get_snapshot(snapshot.snapshot_id)
-            if existing is None:
-                self._ports.snapshot_writer.append_snapshot(snapshot)
-            elif replace(snapshot, created_at=existing.created_at) != existing:
-                raise AppProcessError("immutable provider snapshot conflict")
+            # The idempotent append also backfills the observation ledger for
+            # upgraded stores whose legacy snapshot rows predate observations.
+            self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
         except Exception:
             return self._fail(
                 request,
@@ -310,7 +363,11 @@ class IngestionEvidenceCommitter:
 
     def _complete(self, request: EvidenceCommitRequest) -> EvidenceCommitOutcome:
         try:
-            self._advance(request.chunk_id, PartitionLifecycleStatus.COMPLETE)
+            self._advance(
+                request.chunk_id,
+                PartitionLifecycleStatus.COMPLETE,
+                evidence_id=request.provider_snapshot.snapshot_id,
+            )
         except Exception:
             return self._fail(
                 request,
@@ -365,6 +422,7 @@ class IngestionEvidenceCommitter:
             not in {
                 None,
                 f"intent:{request.provider_snapshot.checksum}",
+                _intent_evidence_id(request),
                 _payload_evidence_id(request),
             }
             or checkpoint.lineage_run_id not in {None, request.lineage_event.run_id}
@@ -500,10 +558,18 @@ class IngestionEvidenceCommitter:
         return checkpoint
 
 
+def _intent_evidence_id(request: EvidenceCommitRequest) -> str:
+    return (
+        f"intent:{request.provider_snapshot.checksum}:"
+        f"{request.provider_snapshot.snapshot_id}"
+    )
+
+
 def _payload_evidence_id(request: EvidenceCommitRequest) -> str:
+    """Bind the committed payload stage to one exact provider snapshot."""
     return (
         f"payload:{request.provider_snapshot.checksum}:"
-        f"{request.catalog_entry.storage_uri}"
+        f"{request.catalog_entry.storage_uri}:{request.provider_snapshot.snapshot_id}"
     )
 
 

@@ -19,6 +19,7 @@ from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadWriter,
 )
+from ditto_data.catalog.source_snapshot import snapshot_identity
 from ditto_data.errors import (
     DataSourceError,
     NetworkError,
@@ -46,6 +47,7 @@ from ditto_application.processes.ingestion.ingestion_evidence import (
     CatalogWriteContext,
     build_data_catalog_entry,
     build_evidence_commit_request,
+    dataset_schema_version,
     ingestion_partition_id,
     record_ingestion_lineage,
 )
@@ -818,6 +820,14 @@ def prepare_payload_write(
                 request_start=trade_date,
                 request_end=request_end or trade_date,
                 payload=payload,
+                snapshot_id=snapshot_identity(
+                    payload.dataset_id,
+                    payload.source,
+                    trade_date,
+                    request_end or trade_date,
+                    dataset_schema_version(payload.dataset_id),
+                    payload.checksum,
+                ),
             )
         )
     except Exception:

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Literal, cast
 from unittest.mock import Mock
 
 import polars as pl
@@ -336,7 +336,13 @@ class _Pipeline:
 
 
 @contextmanager
-def _pipeline(tmp_path: Path, dataset: str) -> Iterator[_Pipeline]:
+def _pipeline(
+    tmp_path: Path,
+    dataset: str,
+    *,
+    display: Literal["allowed", "restricted"] = "restricted",
+    snapshot_now: Callable[[], datetime] | None = None,
+) -> Iterator[_Pipeline]:
     class QualityChecker:
         def handle(self, command: CheckDataQualityCommand) -> tuple[pl.DataFrame, bool]:
             assert command.df["close"].min() > 0
@@ -347,11 +353,11 @@ def _pipeline(tmp_path: Path, dataset: str) -> Iterator[_Pipeline]:
     client = SQLiteClient(pool)
     lifecycle = SQLitePartitionLifecycleStore(client)
     licenses = SQLiteDatasetLicenseStore(client)
-    snapshots = SQLiteProviderSnapshotStore(client)
+    snapshots = SQLiteProviderSnapshotStore(client, now=snapshot_now)
     catalog = SQLiteDataCatalog(client)
     lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))
-    license_record = replace(_license(), dataset_id=dataset)
+    license_record = replace(_license(), dataset_id=dataset, display=display)
     licenses.append_license(license_record)
     ports = EvidenceCommitPorts(
         lifecycle_reader=lifecycle,

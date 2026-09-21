@@ -253,6 +253,7 @@ class AppCommandProvider(Provider):
         snapshot_reader: ProviderSnapshotReader,
         license_reader: DatasetLicenseReader,
         lifecycle_reader: PartitionLifecycleReader,
+        metadata_service: MetadataService,
     ) -> DataProductCertificationBuilder:
         """Build reviewable R2 reports from the durable ingestion evidence chain."""
         return DataProductCertificationBuilder(
@@ -260,6 +261,7 @@ class AppCommandProvider(Provider):
             snapshot_reader=snapshot_reader,
             license_reader=license_reader,
             lifecycle_reader=lifecycle_reader,
+            calendar=metadata_service.calendar,
         )
 
     @provide

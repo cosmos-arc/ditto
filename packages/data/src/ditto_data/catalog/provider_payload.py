@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Protocol, runtime_checkable
 from uuid import uuid4
 
+import orjson
 import polars as pl
 from ditto_platform.foundation import ChecksumCompute
 
@@ -18,6 +20,7 @@ __all__ = [
     "ProviderPayloadArtifact",
     "ProviderPayloadReader",
     "ProviderPayloadWriter",
+    "schema_fingerprint",
 ]
 
 _IDENTITY_PATTERN = re.compile(r"[a-z0-9][a-z0-9_-]*")
@@ -30,6 +33,17 @@ def _validate_identity(field: str, value: str) -> None:
         raise ValueError(f"invalid provider payload {field}: {value!r}")
 
 
+def schema_fingerprint(frame: pl.DataFrame) -> str:
+    """Value checksums are dtype-blind; this pins column order and dtypes."""
+    return orjson.dumps(
+        [[name, str(dtype)] for name, dtype in frame.schema.items()]
+    ).decode()
+
+
+def _schema_fingerprint(frame: pl.DataFrame) -> bytes:
+    return schema_fingerprint(frame).encode()
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderPayloadArtifact:
     """Identity and location of one immutable normalized provider response."""
@@ -39,6 +53,7 @@ class ProviderPayloadArtifact:
     checksum: str
     row_count: int
     uri: str
+    schema_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         """Reject identities that could alias or escape the content path."""
@@ -110,7 +125,16 @@ class FilesystemProviderPayloadStore:
         )
         path = self._resolve_uri(artifact.uri)
         if path.exists():
-            self._verify_artifact(artifact, self._read_parquet(path))
+            retained = self._read_parquet(path)
+            self._verify_artifact(artifact, retained)
+            # ponytail: value checksums are dtype-blind, so equal values with
+            # different physical schemas must fail closed instead of aliasing
+            # one artifact to two schema versions.
+            if retained.schema != payload.schema:
+                raise ValueError(
+                    f"provider payload checksum collides across schemas: {artifact.uri}"
+                )
+            self._publish_fingerprint(path, payload)
             return artifact
 
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -118,19 +142,62 @@ class FilesystemProviderPayloadStore:
         try:
             payload.write_parquet(temporary)
             self._verify_artifact(artifact, self._read_parquet(temporary))
-            if path.exists():
-                self._verify_artifact(artifact, self._read_parquet(path))
-            else:
-                temporary.replace(path)
+            try:
+                # A hard link publishes atomically: exactly one physical schema
+                # can win a checksum path, and racing losers verify the winner.
+                os.link(temporary, path)
+            except FileExistsError:
+                pass
+            retained = self._read_parquet(path)
+            self._verify_artifact(artifact, retained)
+            if retained.schema != payload.schema:
+                raise ValueError(
+                    f"provider payload checksum collides across schemas: {artifact.uri}"
+                )
         finally:
             temporary.unlink(missing_ok=True)
+        self._publish_fingerprint(path, payload)
         return artifact
 
     def read_payload(self, artifact: ProviderPayloadArtifact) -> pl.DataFrame:
-        """Read an immutable response and verify checksum and row count."""
-        frame = self._read_parquet(self._resolve_uri(artifact.uri))
+        """Read an immutable response and verify checksum, rows and schema."""
+        path = self._resolve_uri(artifact.uri)
+        frame = self._read_parquet(path)
         self._verify_artifact(artifact, frame)
+        fingerprint = path.with_name(f"{path.name}.schema")
+        if not fingerprint.exists():
+            raise ValueError(
+                f"provider payload schema fingerprint is missing: {artifact.uri}"
+            )
+        retained = fingerprint.read_bytes()
+        if retained != _schema_fingerprint(frame) or (
+            artifact.schema_fingerprint is not None
+            and retained.decode() != artifact.schema_fingerprint
+        ):
+            raise ValueError(
+                f"provider payload schema fingerprint mismatch: {artifact.uri}"
+            )
         return frame
+
+    @staticmethod
+    def _publish_fingerprint(path: Path, frame: pl.DataFrame) -> None:
+        """Persist the physical schema beside the artifact it describes."""
+        fingerprint = path.with_name(f"{path.name}.schema")
+        expected = _schema_fingerprint(frame)
+        if fingerprint.exists():
+            if fingerprint.read_bytes() != expected:
+                raise ValueError(
+                    f"provider payload schema fingerprint conflicts: {path.name}"
+                )
+            return
+        temporary = path.with_name(f".{fingerprint.name}.{uuid4().hex}.tmp")
+        temporary.write_bytes(expected)
+        try:
+            os.link(temporary, fingerprint)
+        except FileExistsError:
+            pass
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def _resolve_uri(self, uri: str) -> Path:
         relative = PurePosixPath(uri)

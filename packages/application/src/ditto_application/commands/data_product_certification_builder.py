@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from hashlib import sha256
 from pathlib import Path
@@ -26,12 +26,17 @@ from ditto_data.catalog.field_evidence import (
     field_from_payload,
 )
 from ditto_data.catalog.license import DatasetLicenseReader
+from ditto_data.catalog.snapshot_completion import (
+    checkpoint_matches_snapshot,
+    snapshot_completed,
+)
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import (
     PartitionCheckpoint,
     PartitionLifecycleReader,
     PartitionLifecycleStatus,
 )
+from ditto_data.services.metadata.calendar import CalendarService
 
 from ditto_application.exceptions import AppProcessError
 
@@ -115,6 +120,12 @@ class CertificationBuildRequest:
     certified_fields: tuple[CertifiedField, ...] = ()
 
 
+def _sse_calendar_eligible(dataset_id: str) -> bool:
+    """Only datasets scheduled on the local trading calendar may freeze on it."""
+    metadata = default_dataset_metadata().get(dataset_id)
+    return metadata is not None and metadata.schedule == "trading_days"
+
+
 class DataProductCertificationBuilder:
     """Derive frozen machine facts from the durable R2 evidence chain."""
 
@@ -125,11 +136,13 @@ class DataProductCertificationBuilder:
         snapshot_reader: ProviderSnapshotReader,
         license_reader: DatasetLicenseReader,
         lifecycle_reader: PartitionLifecycleReader,
+        calendar: CalendarService | None = None,
     ) -> None:
         self._catalog_reader = catalog_reader
         self._snapshot_reader = snapshot_reader
         self._license_reader = license_reader
         self._lifecycle_reader = lifecycle_reader
+        self._calendar = calendar
 
     def build(self, request: CertificationBuildRequest) -> DatasetCertificationReport:
         """Verify coverage and evidence closure, then create an immutable report."""
@@ -156,7 +169,7 @@ class DataProductCertificationBuilder:
                 f"dataset coverage is incomplete: {request.dataset_id}"
             )
         entries, checkpoints = self._evidence_chain(request, snapshots)
-        self._verify_snapshot_bindings(request, snapshots, entries, checkpoints)
+        self._verify_snapshot_bindings(request, snapshots, entries)
         _verify_consumer_bindings(request)
         self._verify_certified_fields(request, snapshots, entries)
 
@@ -193,7 +206,12 @@ class DataProductCertificationBuilder:
             orjson.dumps([latest_request_end.isoformat(), list(snapshot_ids)])
         ).hexdigest()
         evidence = CertificationEvidence(
-            certified_fields=request.certified_fields,
+            certified_fields=tuple(
+                self._resolve_field_time(
+                    self._bind_observed_at(field), request.dataset_id
+                )
+                for field in request.certified_fields
+            ),
             source_ids=source_ids,
             schema_versions=schema_versions,
             snapshot_ids=snapshot_ids,
@@ -239,6 +257,45 @@ class DataProductCertificationBuilder:
             generated_at=request.generated_at,
         )
 
+    def _bind_observed_at(self, field: CertifiedField) -> CertifiedField:
+        """Local knowledge visibility is fixed by the observation ledger, not claims."""
+        observed = self._snapshot_reader.get_observed_at(field.snapshot_id)
+        if observed is None:
+            raise AppProcessError(
+                f"certified field lacks observed snapshot evidence: {field.snapshot_id}"
+            )
+        if field.observed_at is not None and field.observed_at != observed:
+            raise AppProcessError(
+                f"observed_at claim conflicts with ledger: {field.snapshot_id}"
+            )
+        return replace(field, observed_at=observed)
+
+    def _resolve_field_time(
+        self, field: CertifiedField, dataset_id: str
+    ) -> CertifiedField:
+        if field.time_precision != "date":
+            return field
+        if (
+            self._calendar is None
+            or not _sse_calendar_eligible(dataset_id)
+            or field.publication_at is None
+            or field.available_at is None
+        ):
+            raise AppProcessError(
+                f"date precision lacks the dataset's SSE market calendar: {dataset_id}"
+            )
+        disclosed = field.latest_disclosure_date()
+        try:
+            boundary, digest, evidence = self._calendar.publication_boundary(disclosed)
+        except ValueError as error:
+            raise AppProcessError(str(error)) from error
+        return replace(
+            field,
+            date_visible_at=boundary,
+            calendar_hash=digest,
+            calendar_evidence=evidence,
+        )
+
     def _selected_snapshots(
         self,
         request: CertificationBuildRequest,
@@ -277,17 +334,11 @@ class DataProductCertificationBuilder:
             if entry.asset.dataset_id == request.dataset_id
             and entry.asset in selected_assets
         )
-        selected_intervals = {
-            (snapshot.source, snapshot.request_start, snapshot.request_end)
-            for snapshot in snapshots
-        }
 
         def selected(checkpoint: PartitionCheckpoint) -> bool:
-            return (
-                checkpoint.source,
-                checkpoint.request_start,
-                checkpoint.request_end,
-            ) in selected_intervals
+            return any(
+                checkpoint_matches_snapshot(checkpoint, item) for item in snapshots
+            )
 
         checkpoints = tuple(
             checkpoint
@@ -303,7 +354,7 @@ class DataProductCertificationBuilder:
             )
             if selected(checkpoint)
         )
-        if not entries or not snapshots or not checkpoints:
+        if not entries or not snapshots:
             raise AppProcessError(
                 f"dataset evidence chain is empty: {request.dataset_id}"
             )
@@ -318,12 +369,8 @@ class DataProductCertificationBuilder:
         request: CertificationBuildRequest,
         snapshots: tuple[ProviderSnapshot, ...],
         entries: tuple[DataCatalogEntry, ...],
-        checkpoints: tuple[PartitionCheckpoint, ...],
     ) -> None:
         assets = {entry.asset: entry for entry in entries}
-        checkpoint_intervals = {
-            (item.source, item.request_start, item.request_end) for item in checkpoints
-        }
         for snapshot in snapshots:
             if snapshot.snapshot_id != snapshot.expected_snapshot_id():
                 raise AppProcessError("provider snapshot identity mismatch")
@@ -348,8 +395,7 @@ class DataProductCertificationBuilder:
                 or license_record.source != snapshot.source
             ):
                 raise AppProcessError("provider snapshot license binding mismatch")
-            interval = (snapshot.source, snapshot.request_start, snapshot.request_end)
-            if interval not in checkpoint_intervals:
+            if not snapshot_completed(snapshot, self._lifecycle_reader):
                 raise AppProcessError("provider snapshot has no COMPLETE checkpoint")
 
     def _verify_certified_fields(

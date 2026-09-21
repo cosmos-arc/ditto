@@ -5,7 +5,10 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.license import DatasetLicenseReader
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
+from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.industry_rotation.store import (
     IndustryRotationReader,
@@ -23,6 +26,7 @@ from ditto_application.processes.selection.run_industry_and_security_selection i
 )
 from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
+from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 from ditto_application.queries.selection_evidence import (
     IndustryRotationEvidenceQueryFacade,
     SelectionRunEvidenceQueryFacade,
@@ -110,6 +114,20 @@ class AppSelectionProvider(Provider):
         snapshots: ProviderSnapshotReader,
         licenses: DatasetLicenseReader,
         certifications: CertificationReader,
+        lifecycle: PartitionLifecycleReader,
     ) -> FieldAdmissionQuery:
         """Reuse durable data evidence for both selection checks and previews."""
-        return FieldAdmissionQuery(snapshots, licenses, certifications)
+        return FieldAdmissionQuery(snapshots, licenses, certifications, lifecycle)
+
+    @provide
+    def provider_snapshot_query(
+        self,
+        snapshots: ProviderSnapshotReader,
+        payloads: ProviderPayloadReader,
+        lifecycle: PartitionLifecycleReader,
+        admission: FieldAdmissionQuery,
+    ) -> ProviderSnapshotQuery:
+        """Bind exact replay to data-owned immutable reads and current qualification."""
+        return ProviderSnapshotQuery(
+            SnapshotReadService(snapshots, payloads, lifecycle), admission
+        )

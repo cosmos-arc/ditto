@@ -154,3 +154,56 @@ class TestProviderSnapshotIdentity:
                     created_at=datetime(2026, 6, 1, 10, 0, tzinfo=UTC),
                 )
             )
+
+
+class TestObservationBackfill:
+    def test_reingesting_legacy_snapshot_records_observation_at_reingestion_time(
+        self, tmp_path: Path
+    ) -> None:
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        reingested_at = datetime(2026, 9, 21, 12, 0, tzinfo=UTC)
+        store = SQLiteProviderSnapshotStore(client, now=lambda: reingested_at)
+        snapshot = _snapshot("tushare", "sha256:tushare")
+
+        try:
+            store.append_snapshot(snapshot)
+            # A store upgraded before the observation ledger existed has rows
+            # without observations.
+            client.execute(
+                "DELETE FROM provider_snapshot_observations WHERE snapshot_id = ?",
+                [snapshot.snapshot_id],
+            )
+            client.commit()
+            assert store.get_observed_at(snapshot.snapshot_id) is None
+
+            store.append_snapshot(snapshot)
+
+            observed = store.get_observed_at(snapshot.snapshot_id)
+            assert observed == reingested_at
+            assert store.get_predecessor(snapshot.snapshot_id) is None
+        finally:
+            pool.close()
+
+
+class TestSchemaFingerprintBackfill:
+    def test_reingesting_legacy_snapshot_backfills_fingerprint(
+        self, tmp_path: Path
+    ) -> None:
+        import polars as pl
+        from ditto_data.catalog.provider_payload import schema_fingerprint
+
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteProviderSnapshotStore(client)
+        legacy = _snapshot("tushare", "sha256:tushare")
+        assert legacy.schema_fingerprint is None
+
+        try:
+            store.append_snapshot(legacy)
+            frame = pl.DataFrame({"instrument_id": [1], "close": [10.5]})
+            upgraded = replace(legacy, schema_fingerprint=schema_fingerprint(frame))
+
+            store.append_snapshot(upgraded)
+
+            assert store.get_snapshot(legacy.snapshot_id) == upgraded
+        finally:
+            pool.close()

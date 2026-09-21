@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from collections.abc import Callable
+from dataclasses import replace
+from datetime import UTC, datetime
 from typing import Any, cast
 
 import orjson
@@ -40,8 +42,14 @@ def _metadata_from_json(value: object) -> tuple[tuple[str, str], ...]:
 class SQLiteProviderSnapshotStore:
     """Append-only provider snapshot store."""
 
-    def __init__(self, client: SQLiteClient) -> None:
+    def __init__(
+        self,
+        client: SQLiteClient,
+        *,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
         self._client = client
+        self._now = now or (lambda: datetime.now(UTC))
         self._create_tables()
 
     def _create_tables(self) -> None:
@@ -64,10 +72,16 @@ class SQLiteProviderSnapshotStore:
                 row_count INTEGER NOT NULL,
                 payload_uri TEXT,
                 payload_retained INTEGER NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                schema_fingerprint TEXT
             )
             """
         )
+        if self._column_missing("provider_snapshots", "schema_fingerprint"):
+            # Upgraded stores predate the trusted payload schema pin.
+            self._client.execute(
+                "ALTER TABLE provider_snapshots ADD COLUMN schema_fingerprint TEXT"
+            )
         self._client.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_provider_snapshots_canonical
@@ -79,17 +93,48 @@ class SQLiteProviderSnapshotStore:
             )
             """
         )
+        self._client.execute(
+            """
+            CREATE TABLE IF NOT EXISTS provider_snapshot_observations (
+                snapshot_id TEXT PRIMARY KEY REFERENCES provider_snapshots(snapshot_id),
+                previous_snapshot_id TEXT REFERENCES provider_snapshots(snapshot_id),
+                observed_at TEXT NOT NULL
+            )
+            """
+        )
         self._client.commit()
 
+    def _column_missing(self, table: str, column: str) -> bool:
+        rows = self._client.fetchall(f"PRAGMA table_info({table})")
+        return all(row["name"] != column for row in rows)
+
     def append_snapshot(self, snapshot: ProviderSnapshot) -> None:
-        """Append a snapshot, treating an exact duplicate as idempotent."""
+        """Append a snapshot, treating a re-observed duplicate as idempotent."""
         existing = self.get_snapshot(snapshot.snapshot_id)
         if existing is not None:
-            if existing == snapshot:
-                return
-            raise ValueError(
-                f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
-            )
+            # A legacy row without the fingerprint pin accepts it on
+            # re-ingestion instead of conflicting; both-present stays strict.
+            comparable = replace(snapshot, created_at=existing.created_at)
+            if existing.schema_fingerprint is None:
+                comparable = replace(comparable, schema_fingerprint=None)
+            if comparable != existing:
+                raise ValueError(
+                    f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
+                )
+            self._backfill_observation(snapshot.snapshot_id)
+            if existing.schema_fingerprint is None and (
+                snapshot.schema_fingerprint is not None
+            ):
+                update = (
+                    "UPDATE provider_snapshots "
+                    "SET schema_fingerprint = ? WHERE snapshot_id = ?"
+                )
+                self._client.execute(
+                    update,
+                    [snapshot.schema_fingerprint, snapshot.snapshot_id],
+                )
+                self._client.commit()
+            return
         if snapshot.snapshot_id != snapshot.expected_snapshot_id():
             raise ValueError(
                 "provider snapshot identity does not match required fields"
@@ -102,9 +147,10 @@ class SQLiteProviderSnapshotStore:
                     schema_version, checksum, canonical_namespace,
                     canonical_dataset_id, canonical_partition_keys,
                     request_parameters_hash, response_metadata, license_record_id,
-                    row_count, payload_uri, payload_retained, created_at
+                    row_count, payload_uri, payload_retained, created_at,
+                    schema_fingerprint
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     snapshot.snapshot_id,
@@ -124,6 +170,33 @@ class SQLiteProviderSnapshotStore:
                     snapshot.payload_uri,
                     int(snapshot.payload_retained),
                     snapshot.created_at.isoformat(),
+                    snapshot.schema_fingerprint,
+                ],
+            )
+            previous = self._client.fetchone(
+                """
+                SELECT snapshot_id FROM provider_snapshots
+                WHERE dataset_id = ? AND source = ? AND request_start = ?
+                  AND request_end = ? AND canonical_namespace = ?
+                  AND canonical_partition_keys = ? AND snapshot_id != ?
+                ORDER BY rowid DESC LIMIT 1
+                """,
+                [
+                    snapshot.dataset_id,
+                    snapshot.source,
+                    snapshot.request_start,
+                    snapshot.request_end,
+                    snapshot.canonical_asset.namespace,
+                    partition_keys_json(snapshot.canonical_asset.partition_keys),
+                    snapshot.snapshot_id,
+                ],
+            )
+            self._client.execute(
+                "INSERT INTO provider_snapshot_observations VALUES (?, ?, ?)",
+                [
+                    snapshot.snapshot_id,
+                    previous["snapshot_id"] if previous else None,
+                    self._now().isoformat(),
                 ],
             )
             self._client.commit()
@@ -132,12 +205,53 @@ class SQLiteProviderSnapshotStore:
             raise
 
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
-        """Return one immutable provider snapshot by ID."""
+        """Return one immutable snapshot by deterministic ID."""
         row = self._client.fetchone(
             "SELECT * FROM provider_snapshots WHERE snapshot_id = ?",
             [snapshot_id],
         )
         return None if row is None else _snapshot_from_row(row)
+
+    def _backfill_observation(self, snapshot_id: str) -> None:
+        """
+        Upgraded stores predate the observation ledger; record re-ingestion now.
+
+        The timestamp is the current clock, never a fabricated historical one, and
+        the prior content identity stays unknown for legacy rows.
+        """
+        if self.get_observed_at(snapshot_id) is not None:
+            return
+        try:
+            self._client.execute(
+                "INSERT INTO provider_snapshot_observations VALUES (?, NULL, ?)",
+                [snapshot_id, self._now().isoformat()],
+            )
+            self._client.commit()
+        except Exception:
+            self._client.rollback()
+            raise
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        """Return prior observed content without claiming historical availability."""
+        row = self._client.fetchone(
+            """SELECT previous_snapshot_id FROM provider_snapshot_observations
+               WHERE snapshot_id = ?""",
+            [snapshot_id],
+        )
+        return (
+            str(row["previous_snapshot_id"])
+            if row and row["previous_snapshot_id"]
+            else None
+        )
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        """First local catalog observation; absent for legacy evidence."""
+        row = self._client.fetchone(
+            """SELECT observed_at FROM provider_snapshot_observations
+               WHERE snapshot_id = ?""",
+            [snapshot_id],
+        )
+        return datetime.fromisoformat(str(row["observed_at"])) if row else None
 
     def list_snapshots(
         self,
@@ -212,4 +326,9 @@ def _snapshot_from_row(row: dict[str, Any]) -> ProviderSnapshot:
         ),
         payload_retained=bool(row["payload_retained"]),
         created_at=datetime.fromisoformat(str(row["created_at"])),
+        schema_fingerprint=(
+            str(row["schema_fingerprint"])
+            if row.get("schema_fingerprint") is not None
+            else None
+        ),
     )

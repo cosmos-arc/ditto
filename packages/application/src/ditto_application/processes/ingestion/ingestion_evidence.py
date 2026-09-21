@@ -14,7 +14,10 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
     default_dataset_metadata,
 )
-from ditto_data.catalog.provider_payload import ProviderPayloadArtifact
+from ditto_data.catalog.provider_payload import (
+    ProviderPayloadArtifact,
+    schema_fingerprint,
+)
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.lineage import (
     DataLineageRecorder,
@@ -266,7 +269,7 @@ def _schema_hash_from_dataframe(df: pl.DataFrame) -> str:
     return f"schema:sha256:{hashlib.sha256(payload.encode()).hexdigest()}"
 
 
-def _dataset_schema_version(dataset: str) -> str:
+def dataset_schema_version(dataset: str) -> str:
     metadata = default_dataset_metadata().get(dataset)
     if metadata is None or metadata.schema_version is None:
         raise AppProcessError(
@@ -293,7 +296,7 @@ def build_data_catalog_entry(
             schema_hash=_schema_hash_from_dataframe(ctx.df),
             row_count=ctx.write_result.rows_written,
             created_at=now,
-            schema_version=_dataset_schema_version(ctx.dataset),
+            schema_version=dataset_schema_version(ctx.dataset),
             columns=tuple(ctx.df.columns),
         ),
         source=ctx.source_name,
@@ -342,7 +345,7 @@ def build_evidence_commit_request(
             source=ctx.source_name,
             request_start=ctx.trade_date,
             request_end=request_end,
-            schema_version=_dataset_schema_version(ctx.dataset),
+            schema_version=dataset_schema_version(ctx.dataset),
             checksum=payload_checksum,
             canonical_asset=catalog_entry.asset,
             request_parameters_hash=f"sha256:{request_hash}",
@@ -365,6 +368,9 @@ def build_evidence_commit_request(
             ),
             payload_retained=ctx.payload_retained,
             created_at=now,
+            schema_fingerprint=(
+                schema_fingerprint(ctx.df) if ctx.payload_retained else None
+            ),
         )
     )
     return EvidenceCommitRequest(
