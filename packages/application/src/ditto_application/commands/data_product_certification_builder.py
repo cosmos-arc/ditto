@@ -273,7 +273,7 @@ class DataProductCertificationBuilder:
             raise AppProcessError(
                 "date precision needs source times and calendar evidence"
             )
-        disclosed = field.disclosure_date()
+        disclosed = field.latest_disclosure_date()
         try:
             boundary, digest, evidence = self._calendar.publication_boundary(disclosed)
         except ValueError as error:

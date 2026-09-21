@@ -558,3 +558,75 @@ def test_builder_rejects_field_without_authoritative_observation(tmp_path) -> No
 
     with pytest.raises(AppProcessError, match="lacks observed snapshot evidence"):
         builder.build(replace(request, certified_fields=(field,)))
+
+
+@pytest.mark.unit
+def test_date_precision_revision_resolves_through_revised_session(tmp_path) -> None:
+    """A later date-only revision must wait for its own next session open."""
+    from datetime import timedelta
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    import ditto_data
+    from ditto_data.catalog.field_admission import FieldUsageScope, field_reasons
+    from ditto_data.catalog.field_evidence import CertifiedField
+    from ditto_data.services.metadata.calendar import CalendarService
+    from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
+    from ditto_platform.foundation import SQLiteClient, SQLitePool
+
+    pool = SQLitePool(
+        tmp_path / "calendar.sqlite",
+        schema_path=Path(ditto_data.__file__).parent / "scripts/schema.sql",
+    )
+    pool.init_schema()
+    client = SQLiteClient(pool)
+    reader = CalendarReader(client)
+    calendar = CalendarService(reader, CalendarWriter(client, None, reader))
+    zone = ZoneInfo("Asia/Shanghai")
+    try:
+        calendar.save_calendar(
+            [
+                {"trade_date": "2026-08-01", "is_open": False},
+                {"trade_date": "2026-08-02", "is_open": False},
+                {"trade_date": "2026-08-03", "is_open": True},
+                {"trade_date": "2026-08-04", "is_open": False},
+                {"trade_date": "2026-08-05", "is_open": True},
+            ]
+        )
+        builder, request = _fixture(tmp_path, calendar=calendar)
+        base = builder.build(request)
+        revised_at = datetime(2026, 8, 4, 0, 0, tzinfo=zone)
+        claim = CertifiedField(
+            field="close",
+            snapshot_id=base.evidence.snapshot_ids[0],
+            instrument_ids=(1,),
+            covered_from=date(2015, 1, 5),
+            covered_to=date(2015, 1, 5),
+            available_at=datetime(2026, 7, 31, tzinfo=zone),
+            publication_at=datetime(2026, 7, 31, tzinfo=zone),
+            time_precision="date",
+            revised_at=revised_at,
+            evidence_uri=request.consumer_evidence.evidence_uri,
+        )
+
+        certified = builder.build(
+            replace(request, certified_fields=(claim,))
+        ).evidence.certified_fields[0]
+
+        assert certified.date_visible_at == datetime(2026, 8, 5, 9, 30, tzinfo=zone)
+        too_early = datetime(2026, 8, 4, 9, 0, tzinfo=zone)
+        scope = FieldUsageScope(
+            "", None, (1,), date(2015, 1, 5), date(2015, 1, 5), too_early, too_early
+        )
+        assert "TIME_NOT_VISIBLE" in field_reasons(certified, scope)
+        visible = datetime(2026, 8, 5, 9, 30, tzinfo=zone)
+        assert not field_reasons(
+            certified,
+            replace(
+                scope,
+                knowledge_cutoff=visible,
+                publication_cutoff=visible + timedelta(hours=1),
+            ),
+        )
+    finally:
+        pool.close()

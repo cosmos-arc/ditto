@@ -23,6 +23,10 @@ from ditto_data.catalog.certification_store import SQLiteCertificationStore
 from ditto_data.catalog.field_evidence import CertifiedField
 from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
 from ditto_data.catalog.snapshot_reader import SnapshotReadService
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotDraft,
+)
 from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 from packages.application.tests.integration.test_ingestion_evidence_recovery import (
@@ -195,3 +199,68 @@ def _fail_next_completion(monkeypatch, writer):
         return advance(chunk_id, stage, **kwargs)
 
     monkeypatch.setattr(writer, "advance_partition", fail_complete)
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_replay_refuses_payload_checksum_aliased_across_schema_versions(
+    tmp_path,
+):
+    with _pipeline(tmp_path, "stock_daily", display="allowed") as runtime:
+        ports = runtime.ports
+        original = _bars()
+        assert (
+            process_fetched_data(
+                original,
+                "stock_daily",
+                "2026-07-16",
+                False,
+                ctx=runtime.context,
+                request_end="2026-07-17",
+                chunk_id="aliased",
+            ).status
+            == "success"
+        )
+        first = ports.snapshot_reader.list_snapshots()[0]
+        reader = ProviderSnapshotQuery(
+            SnapshotReadService(
+                ports.snapshot_reader,
+                FilesystemProviderPayloadStore(tmp_path),
+                ports.lifecycle_reader,
+            ),
+            FieldAdmissionQuery(
+                ports.snapshot_reader,
+                ports.license_reader,
+                SQLiteCertificationStore(
+                    SQLiteClient(SQLitePool(tmp_path / "r.sqlite"))
+                ),
+                ports.lifecycle_reader,
+            ),
+        )
+        assert reader.read_for_audit(first.snapshot_id).frame.equals(original)
+
+        # A pre-guard writer could publish this same-checksum alias; replay
+        # must refuse bytes that cannot prove either schema.
+        ports.snapshot_writer.append_snapshot(
+            ProviderSnapshot.create(
+                ProviderSnapshotDraft(
+                    dataset_id=first.dataset_id,
+                    source=first.source,
+                    request_start=first.request_start,
+                    request_end=first.request_end,
+                    schema_version="market.stock_daily.v2",
+                    checksum=first.checksum,
+                    canonical_asset=first.canonical_asset,
+                    request_parameters_hash=first.request_parameters_hash,
+                    response_metadata=first.response_metadata,
+                    license_record_id=first.license_record_id,
+                    row_count=first.row_count,
+                    payload_uri=first.payload_uri,
+                    payload_retained=first.payload_retained,
+                    created_at=first.created_at,
+                )
+            )
+        )
+
+        with pytest.raises(AppQueryError, match="shared across schema versions"):
+            reader.read_for_audit(first.snapshot_id)
