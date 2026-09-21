@@ -120,18 +120,10 @@ class CertificationBuildRequest:
     certified_fields: tuple[CertifiedField, ...] = ()
 
 
-# The retained calendar evidence is the SSE session; only datasets whose every
-# source trades there may freeze date-only disclosure on it.
-_SSE_CALENDAR_SOURCES = frozenset({"tushare", "fuyao"})
-
-
 def _sse_calendar_eligible(dataset_id: str) -> bool:
+    """Only datasets scheduled on the local trading calendar may freeze on it."""
     metadata = default_dataset_metadata().get(dataset_id)
-    if metadata is None:
-        return False
-    return set(metadata.supported_sources) | set(metadata.auxiliary_sources) <= (
-        _SSE_CALENDAR_SOURCES
-    )
+    return metadata is not None and metadata.schedule == "trading_days"
 
 
 class DataProductCertificationBuilder:

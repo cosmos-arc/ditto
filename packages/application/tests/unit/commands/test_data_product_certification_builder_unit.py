@@ -638,8 +638,11 @@ def test_date_precision_revision_resolves_through_revised_session(tmp_path) -> N
     [
         ("stock_daily", True),
         ("etf_daily", True),
+        ("index_daily", True),
+        ("global_index_daily", False),
         ("macro_indicators", False),
         ("commodity_daily", False),
+        ("fx_daily", False),
         ("unknown_dataset", False),
     ],
 )
