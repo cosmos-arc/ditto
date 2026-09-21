@@ -18,18 +18,11 @@ from ditto_analysis.research.domain import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
 )
+from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.research import ResearchDatasetFacade
-from ditto_application.queries.source import SourceDataPort
+from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
+from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_apps.registry import ConfigProvider
-from ditto_data.di import (
-    CapitalProvider,
-    FundamentalProvider,
-    MacroProvider,
-    MarketProvider,
-    MetadataProvider,
-    RuntimeProvider,
-)
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_features.derived_types import (
@@ -41,8 +34,6 @@ from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import DerivedCatalogService
 from ditto_platform.foundation import SQLiteClient
-
-# CapitalProvider is used in _make_container to satisfy MetadataService deps
 
 
 def _sources_provider() -> Provider:
@@ -63,24 +54,8 @@ def _sources_provider() -> Provider:
     return SourcesProvider()
 
 
-def _protocol_adapter_provider() -> Provider:
-    """测试用 Protocol 适配器."""
-
-    class _Adapter(Provider):
-        scope = Scope.APP
-
-        @provide
-        def source_data_port(self) -> SourceDataPort:
-            return MagicMock(spec=SourceDataPort)
-
-    return _Adapter()
-
-
 def _make_container(*, monkeypatch, tmp_path: Path):
-    from ditto_analysis.di import AnalysisStorageProvider
-    from ditto_application.providers_market import AppMarketQueryProvider
-    from ditto_execution.di import ExecutionStorageProvider
-    from ditto_features.di import FeaturesStorageProvider
+    from ditto_apps.registry.container import _get_base_providers
 
     monkeypatch.setenv("ENVIRONMENT", "testing")
     monkeypatch.setenv("DITTO_STATE_ROOT", tmp_path.as_posix())
@@ -89,21 +64,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         (tmp_path / "metadata" / "metadata.sqlite").as_posix(),
     )
     monkeypatch.setenv("DUCKDB_PATH", (tmp_path / "db" / "ditto.duckdb").as_posix())
-    return make_container(
-        ConfigProvider(),
-        _sources_provider(),
-        _protocol_adapter_provider(),
-        RuntimeProvider(),
-        MetadataProvider(),
-        MarketProvider(),
-        CapitalProvider(),
-        FeaturesStorageProvider(),
-        AnalysisStorageProvider(),
-        FundamentalProvider(),
-        MacroProvider(),
-        ExecutionStorageProvider(),
-        AppMarketQueryProvider(),
-    )
+    return make_container(ConfigProvider(), _sources_provider(), *_get_base_providers())
 
 
 def _seed_calendar(sqlite_client: SQLiteClient, dates: list[date]) -> None:
@@ -255,8 +216,8 @@ def _write_artifact(
         )
 
 
-class TestResearchDatasetFacade:
-    """Tests for ResearchDatasetFacade."""
+class TestResearchDatasetBuildProcess:
+    """Tests for ResearchDatasetBuildProcess."""
 
     def test_build_creates_snapshot_with_left_preserving_pit_join(
         self,
@@ -273,7 +234,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -415,7 +376,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -515,7 +476,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -617,7 +578,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -676,7 +637,7 @@ class TestResearchDatasetFacade:
                 end="2026-03-11",
             )
 
-            report = facade.load_build_report(snapshot)
+            report = container.get(ResearchDatasetQuery).load_build_report(snapshot)
 
             assert report == {
                 "row_count": 2,
@@ -694,16 +655,13 @@ class TestResearchDatasetFacade:
             container.close()
 
 
-class TestResearchDatasetFacadeExport:
-    """Tests for ResearchDatasetFacade.export()."""
+class TestResearchDatasetExport:
+    """Tests for ResearchDatasetExport.export()."""
 
-    def _make_facade(self) -> tuple[ResearchDatasetFacade, MagicMock]:
+    def _make_facade(self) -> tuple[ResearchDatasetExport, MagicMock]:
         """创建带 mock 的 facade 实例."""
         artifact_service = MagicMock()
-        facade = ResearchDatasetFacade(
-            metadata_service=MagicMock(),
-            research_catalog_service=MagicMock(),
-            artifact_reader=MagicMock(),
+        facade = ResearchDatasetExport(
             research_artifact_service=artifact_service,
         )
         return facade, artifact_service

@@ -8,8 +8,9 @@ import tempfile
 from collections.abc import Callable, Mapping
 from contextlib import suppress
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal, NamedTuple, cast
 
 import orjson
 import polars as pl
@@ -48,6 +49,15 @@ _EXPORT_WRITERS: dict[ExportFormat, str] = {
     "csv": "write_csv",
     "feather": "write_ipc",
 }
+
+
+class PublishedResearchSnapshot(NamedTuple):
+    """Identity of a complete immutable dataset or spine artifact set."""
+
+    snapshot_id: str
+    data_path: str
+    manifest_hash: str
+    created_at: str
 
 
 class ResearchArtifactService:
@@ -210,6 +220,86 @@ class ResearchArtifactService:
                     os.close(descriptor)
             with suppress(FileNotFoundError):
                 temporary.unlink()
+
+    def publish_research_snapshot(
+        self,
+        *,
+        namespace: str,
+        prefix: str,
+        identity_field: str,
+        frame: pl.DataFrame,
+        metadata: Mapping[str, object],
+        created_at: str,
+        extra_json_files: Mapping[str, Mapping[str, object]] | None = None,
+    ) -> PublishedResearchSnapshot:
+        """
+        Publish all files before the caller commits a catalog record.
+
+        Content and logical inputs determine identity; retrying a partial publish
+        fills missing files and refuses conflicting bytes. The first published
+        metadata fixes creation time even after a failed catalog commit.
+        """
+        buffer = BytesIO()
+        frame.write_parquet(buffer)
+        payload = buffer.getvalue()
+        extras = dict(extra_json_files or {})
+        content = {**metadata, "data_sha256": hashlib.sha256(payload).hexdigest()}
+        identity = hashlib.sha256(
+            orjson.dumps(
+                {"metadata": content, "files": extras}, option=orjson.OPT_SORT_KEYS
+            )
+        ).hexdigest()
+        snapshot_id = f"{prefix}-{identity}"
+        directory = f"{namespace}/snapshots/{snapshot_id}"
+        data_path = f"{directory}/data.parquet"
+        fixed = {**content, identity_field: snapshot_id, "data_path": data_path}
+        self.publish_immutable_artifact(data_path, payload)
+        for name, data in extras.items():
+            self.publish_immutable_artifact(
+                f"{directory}/{name}",
+                orjson.dumps(data, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2),
+            )
+        manifest_path = f"{directory}/metadata.json"
+        try:
+            stored = self.read_json(manifest_path)
+        except FileNotFoundError:
+            candidate = {**fixed, "created_at": created_at}
+            manifest_hash = hashlib.sha256(
+                orjson.dumps(candidate, option=orjson.OPT_SORT_KEYS)
+            ).hexdigest()
+            try:
+                self.publish_immutable_artifact(
+                    manifest_path,
+                    orjson.dumps(
+                        {**candidate, "manifest_hash": manifest_hash},
+                        option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2,
+                    ),
+                )
+            except ExperimentConflictError:
+                # Another identical builder may have published first.
+                pass
+            stored = self.read_json(manifest_path)
+        actual = dict(stored)
+        actual_hash = actual.pop("manifest_hash", None)
+        expected_hash = hashlib.sha256(
+            orjson.dumps(actual, option=orjson.OPT_SORT_KEYS)
+        ).hexdigest()
+        stored_created_at = actual.pop("created_at", None)
+        if (
+            actual != fixed
+            or actual_hash != expected_hash
+            or not isinstance(stored_created_at, str)
+        ):
+            raise ExperimentIntegrityError(
+                "research snapshot metadata conflicts with its content identity",
+                details={
+                    "reason_code": "research_snapshot_integrity",
+                    "snapshot_id": snapshot_id,
+                },
+            )
+        return PublishedResearchSnapshot(
+            snapshot_id, data_path, expected_hash, stored_created_at
+        )
 
     def publish_frozen_research_input(
         self,

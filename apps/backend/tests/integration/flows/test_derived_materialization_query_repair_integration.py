@@ -16,7 +16,8 @@ from ditto_application.processes.materialization.cascade_orchestrator import (
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
+from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_apps.jobs.flows.materialization import (
     daily_materialization_flow,
     repair_from_invalidation_flow,
@@ -88,7 +89,8 @@ def _materialization_bundle_context():
             materialization_service=container.get(DerivedMaterializationOrchestrator),
             invalidation_service=container.get(InvalidationCascadeOrchestrator),
             publication_facade=container.get(DerivedPublicationFacade),
-            research_dataset_facade=container.get(ResearchDatasetFacade),
+            research_dataset_build=container.get(ResearchDatasetBuildProcess),
+            research_dataset_query=container.get(ResearchDatasetQuery),
         )
     finally:
         container.close()

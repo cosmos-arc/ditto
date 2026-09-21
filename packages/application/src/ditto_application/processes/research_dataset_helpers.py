@@ -1,27 +1,26 @@
 """
 Pure helper functions for research dataset snapshot construction.
 
-Extracted from ``research.py`` to keep the facade focused on orchestration.
+Used by the explicit research dataset build process.
 All symbols are private by convention (``_`` prefix) and consumed only by
-``ResearchDatasetFacade``.
+``ResearchDatasetBuildProcess``.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
-from hashlib import sha256
 from typing import cast
 
-import orjson
 import polars as pl
-from ditto_analysis.research.domain import (
+from ditto_analysis.research.records import (
+    ResearchDatasetSpecRecord,
+    ResearchSpineSpecRecord,
+)
+from ditto_analysis.research.specs import (
     KnownAtPolicy,
     LateArrivalPolicy,
     ResearchDatasetSpec,
-    ResearchDatasetSpecRecord,
-    ResearchSpineSpecRecord,
     SpineSpec,
 )
 from ditto_features.errors import DerivedValidationError
@@ -37,7 +36,6 @@ __all__ = [
     "_collect_null_counts",
     "_hydrate_dataset_spec",
     "_hydrate_spine_spec",
-    "_manifest_hash",
     "_normalize_trade_dates",
     "_pit_join",
     "_source_value_column",
@@ -182,11 +180,6 @@ def _source_value_column(source_frame: pl.DataFrame) -> str:
 # ---------------------------------------------------------------------------
 # Metadata / reporting helpers
 # ---------------------------------------------------------------------------
-
-
-def _manifest_hash(metadata: Mapping[str, object]) -> str:
-    payload = orjson.dumps(metadata, option=orjson.OPT_SORT_KEYS)
-    return sha256(payload).hexdigest()
 
 
 def _build_dataset_report(

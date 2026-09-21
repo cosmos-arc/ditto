@@ -167,6 +167,7 @@ from ditto_application.processes.quality import (
     QualityCompletenessService,
     QualityPatrolService,
 )
+from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
 from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.account import AccountBaselineQuery
@@ -222,6 +223,26 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def research_dataset_build(
+        self,
+        metadata_service: MetadataService,
+        research_catalog_service: ResearchCatalogService,
+        derived_catalog_service: DerivedCatalogService,
+        research_artifact_service: ResearchArtifactService,
+        settings: DataStoreSettings,
+    ) -> ResearchDatasetBuildProcess:
+        """研究数据集快照构建 facade."""
+        return ResearchDatasetBuildProcess(
+            metadata_service=metadata_service,
+            research_catalog_service=research_catalog_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=derived_catalog_service,
+                artifact_root=Path(settings.data_root),
+            ),
+            research_artifact_service=research_artifact_service,
+        )
 
     @provide
     def r2_live_gate_evidence_reader(self) -> R2LiveGateEvidenceReader:

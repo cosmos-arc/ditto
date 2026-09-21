@@ -1,4 +1,4 @@
-"""Tests for ResearchDatasetFacade -- 封装 research snapshot 构建、导出与加载."""
+"""Existing research export behavior; safe publication is tracked in #254."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from unittest.mock import MagicMock
 
 import polars as pl
 from ditto_analysis.research.domain import DatasetSnapshot, KnownAtPolicy
-from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.research import (
-    ResearchDatasetFacade,
+from ditto_application.commands.research_dataset_export import (
+    ResearchDatasetExport,
     _sanitize_table_name,
 )
+from ditto_application.exceptions import AppQueryError
 
 
 def _make_snapshot(**overrides: object) -> DatasetSnapshot:
@@ -35,41 +35,16 @@ def _make_snapshot(**overrides: object) -> DatasetSnapshot:
     return DatasetSnapshot(**defaults)  # type: ignore[arg-type]
 
 
-def _make_facade() -> ResearchDatasetFacade:
-    """构造一个所有依赖均为 MagicMock 的 ResearchDatasetFacade."""
-    return ResearchDatasetFacade(
-        metadata_service=MagicMock(
-            spec=["list_calendar_range", "get_universe"],
-        ),
-        research_catalog_service=MagicMock(
-            spec=[
-                "get_dataset_spec",
-                "get_spine_spec",
-                "save_spine_snapshot",
-                "save_dataset_snapshot",
-            ],
-        ),
-        artifact_reader=MagicMock(
-            spec=["read_frame", "resolve_serving_version"],
-        ),
-        research_artifact_service=MagicMock(
-            spec=[
-                "read_parquet",
-                "write_parquet",
-                "read_json",
-                "write_json",
-                "resolve_artifact_relative_path",
-                "read_source_snapshot_ids",
-            ],
-        ),
-    )
+def _make_facade() -> ResearchDatasetExport:
+    """构造一个所有依赖均为 MagicMock 的 ResearchDatasetExport."""
+    return ResearchDatasetExport(research_artifact_service=MagicMock())
 
 
 # ========== export delegation ==========
 
 
 class TestResearchFacadeExportCsv:
-    """ResearchDatasetFacade.export -- fmt=csv 时调用 write_csv."""
+    """ResearchDatasetExport.export -- fmt=csv 时调用 write_csv."""
 
     def test_writes_csv(self, tmp_path: Path) -> None:
         """验证 fmt="csv" 时读取 parquet 并调用 write_csv."""
@@ -92,7 +67,7 @@ class TestResearchFacadeExportCsv:
 
 
 class TestResearchFacadeExportSqlite:
-    """ResearchDatasetFacade.export -- fmt=sqlite 时调用 _export_sqlite."""
+    """ResearchDatasetExport.export -- fmt=sqlite 时调用 _export_sqlite."""
 
     def test_writes_sqlite(self, tmp_path: Path) -> None:
         """验证 fmt="sqlite" 时读取 parquet 并写入 SQLite."""
@@ -121,7 +96,7 @@ class TestResearchFacadeExportSqlite:
 
 
 class TestResearchFacadeExportUnsupported:
-    """ResearchDatasetFacade.export -- 不支持的格式抛 ValueError."""
+    """ResearchDatasetExport.export -- 不支持的格式抛 ValueError."""
 
     def test_raises_on_unknown_format(self, tmp_path: Path) -> None:
         """验证不支持的格式抛出 ValueError."""
@@ -133,32 +108,6 @@ class TestResearchFacadeExportUnsupported:
         with pytest.raises(AppQueryError, match="不支持的导出格式") as exc_info:
             facade.export(snapshot, fmt="parquet", path=tmp_path / "out.parquet")
         assert "parquet" in str(exc_info.value)
-
-
-# ========== load_build_report delegation ==========
-
-
-class TestResearchFacadeLoadBuildReport:
-    """ResearchDatasetFacade.load_build_report -- 读取 JSON 构建报告."""
-
-    def test_reads_build_report(self) -> None:
-        """验证通过 artifact_service 读取 build_report.json."""
-        facade = _make_facade()
-        expected_report: dict[str, object] = {"row_count": 100, "builder_version": "v1"}
-        facade._artifact_service.read_json.return_value = expected_report  # type: ignore[attr-defined]
-        snapshot = _make_snapshot(
-            data_path="derived/research/datasets/test_dataset/snapshots/rds-abc123/data.parquet",
-        )
-
-        result = facade.load_build_report(snapshot)
-
-        expected_relative = (
-            "derived/research/datasets/test_dataset"
-            "/snapshots/rds-abc123/build_report.json"
-        )
-        facade._artifact_service.read_json.assert_called_once_with(expected_relative)  # type: ignore[attr-defined]
-        assert result == expected_report
-        assert result["row_count"] == 100
 
 
 # ========== SQL injection tests ==========
@@ -224,26 +173,3 @@ class TestSanitizeTableNameRejectsInjection:
         with pytest.raises(AppQueryError, match="Invalid dataset_id") as exc_info:
             _sanitize_table_name("table;drop")
         assert "table;drop" in str(exc_info.value)
-
-
-# ========== build error handling ==========
-
-
-class TestResearchFacadeBuildDatasetNotFound:
-    """ResearchDatasetFacade.build -- dataset spec 不存在时抛 DerivedNotFoundError."""
-
-    def test_raises_when_spec_missing(self) -> None:
-        """验证 catalog 返回 None 时抛出 DerivedNotFoundError."""
-        import pytest
-        from ditto_features.errors import DerivedNotFoundError
-
-        facade = _make_facade()
-        facade._research_catalog_service.get_dataset_spec.return_value = None  # type: ignore[attr-defined]
-
-        with pytest.raises(DerivedNotFoundError) as exc_info:
-            facade.build(
-                dataset_id="nonexistent",
-                start="2024-01-01",
-                end="2024-06-30",
-            )
-        assert "nonexistent" in str(exc_info.value)

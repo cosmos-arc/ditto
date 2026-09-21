@@ -60,7 +60,7 @@ from ditto_application.queries.market_context_source import (
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.promotion_evidence import PromotionEvidenceCollector
-from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_application.queries.source import SourceDataPort, SourceQueryFacade
 from ditto_application.queries.technical_analysis import (
     TechnicalAnalysisFacade,
@@ -239,22 +239,14 @@ class AppMarketQueryProvider(Provider):
         )
 
     @provide
-    def research_dataset_facade(
+    def research_dataset_query(
         self,
-        metadata_service: MetadataService,
         research_catalog_service: ResearchCatalogService,
-        derived_catalog_service: DerivedCatalogService,
         research_artifact_service: ResearchArtifactService,
-        settings: DataStoreSettings,
-    ) -> ResearchDatasetFacade:
-        """研究数据集快照构建 facade."""
-        return ResearchDatasetFacade(
-            metadata_service=metadata_service,
+    ) -> ResearchDatasetQuery:
+        """Read completed research snapshots."""
+        return ResearchDatasetQuery(
             research_catalog_service=research_catalog_service,
-            artifact_reader=DerivedArtifactReader(
-                catalog_service=derived_catalog_service,
-                artifact_root=Path(settings.data_root),
-            ),
             research_artifact_service=research_artifact_service,
         )
 

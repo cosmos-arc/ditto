@@ -51,12 +51,13 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
+from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
 from ditto_application.processes.strategy.seed_bootstrap import SeedStrategyBootstrap
 from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_application.queries.data_readiness import DataReadinessQueryFacade
 from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
-from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_strategy.contracts import (
     StrategyCatalogReader,
@@ -90,7 +91,8 @@ class MaterializationBundle:
     materialization_service: DerivedMaterializationOrchestrator
     invalidation_service: InvalidationCascadeOrchestrator
     publication_facade: DerivedPublicationFacade
-    research_dataset_facade: ResearchDatasetFacade
+    research_dataset_build: ResearchDatasetBuildProcess
+    research_dataset_query: ResearchDatasetQuery
 
 
 @dataclass(frozen=True)
