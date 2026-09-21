@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6e44a468a215f35929b03d11cf5b88d84706d719dce71a7ef295a2f43ffe5dd6
+ * Schema SHA-256: 90e41e35c441af9f60bcbd8cb163110dbc9062e81929dd67224b566f47bfae2b
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -8764,10 +8764,12 @@ export interface components {
             rotation_algorithm_version: string;
             /** @default [] */
             rotation_missing_inputs: components["schemas"]["HttpTuple_str_"];
-            rotation_source_snapshot_ids: components["schemas"]["HttpTuple_str__MinLen_min_length_1_"];
+            /** Rotation Source Snapshot Ids */
+            rotation_source_snapshot_ids: string[];
             /** Seed */
             seed: number;
-            selection_source_snapshot_ids: components["schemas"]["HttpTuple_str__MinLen_min_length_1_"];
+            /** Selection Source Snapshot Ids */
+            selection_source_snapshot_ids: string[];
             selection_spec: components["schemas"]["SelectionSpecRequest"];
             /** Universe Snapshot Id */
             universe_snapshot_id: string;
@@ -10185,7 +10187,8 @@ export interface components {
              *     ]
              */
             excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
-            factor_weights: components["schemas"]["HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_"];
+            /** Factor Weights */
+            factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
             /** Max Tracking Error */
             max_tracking_error?: number | null;
             /** Min Average Turnover */
@@ -11289,11 +11292,9 @@ export interface components {
         HttpTuple_IndustryRotationObservationRequest_: components["schemas"]["IndustryRotationObservationRequest"][];
         HttpTuple_LimitStateRequest_: components["schemas"]["LimitStateRequest"][];
         HttpTuple_SelectionFactorValueRequest_: components["schemas"]["SelectionFactorValueRequest"][];
-        HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_: components["schemas"]["SelectionFactorWeightRequest"][];
         HttpTuple_SelectionFieldRequirementBody_: components["schemas"]["SelectionFieldRequirementBody"][];
         HttpTuple_SelectionInstrumentRequest_: components["schemas"]["SelectionInstrumentRequest"][];
         HttpTuple_str_: string[];
-        HttpTuple_str__MinLen_min_length_1_: string[];
         /**
          * ImpactModel
          * @description 冲击成本模型枚举。
@@ -14829,7 +14830,8 @@ export interface components {
              *     ]
              */
             excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
-            factor_weights: components["schemas"]["HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_"];
+            /** Factor Weights */
+            factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
             /** Min Average Turnover */
             min_average_turnover: number;
             /** Min Listing Days */

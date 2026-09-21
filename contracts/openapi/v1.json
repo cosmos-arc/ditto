@@ -10509,8 +10509,12 @@
             "default": []
           },
           "rotation_source_snapshot_ids": {
-            "$ref": "#/components/schemas/HttpTuple_str__MinLen_min_length_1_",
-            "minLength": 1
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Rotation Source Snapshot Ids",
+            "type": "array"
           },
           "seed": {
             "minimum": 0.0,
@@ -10518,8 +10522,12 @@
             "type": "integer"
           },
           "selection_source_snapshot_ids": {
-            "$ref": "#/components/schemas/HttpTuple_str__MinLen_min_length_1_",
-            "minLength": 1
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Selection Source Snapshot Ids",
+            "type": "array"
           },
           "selection_spec": {
             "$ref": "#/components/schemas/SelectionSpecRequest"
@@ -13551,8 +13559,12 @@
             ]
           },
           "factor_weights": {
-            "$ref": "#/components/schemas/HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_",
-            "minLength": 1
+            "items": {
+              "$ref": "#/components/schemas/SelectionFactorWeightRequest"
+            },
+            "minItems": 1,
+            "title": "Factor Weights",
+            "type": "array"
           },
           "max_tracking_error": {
             "anyOf": [
@@ -15987,12 +15999,6 @@
         },
         "type": "array"
       },
-      "HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_": {
-        "items": {
-          "$ref": "#/components/schemas/SelectionFactorWeightRequest"
-        },
-        "type": "array"
-      },
       "HttpTuple_SelectionFieldRequirementBody_": {
         "items": {
           "$ref": "#/components/schemas/SelectionFieldRequirementBody"
@@ -16006,12 +16012,6 @@
         "type": "array"
       },
       "HttpTuple_str_": {
-        "items": {
-          "type": "string"
-        },
-        "type": "array"
-      },
-      "HttpTuple_str__MinLen_min_length_1_": {
         "items": {
           "type": "string"
         },
@@ -22983,8 +22983,12 @@
             ]
           },
           "factor_weights": {
-            "$ref": "#/components/schemas/HttpTuple_SelectionFactorWeightRequest__MinLen_min_length_1_",
-            "minLength": 1
+            "items": {
+              "$ref": "#/components/schemas/SelectionFactorWeightRequest"
+            },
+            "minItems": 1,
+            "title": "Factor Weights",
+            "type": "array"
           },
           "min_average_turnover": {
             "minimum": 0.0,

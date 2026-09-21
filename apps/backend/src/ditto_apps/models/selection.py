@@ -143,7 +143,9 @@ class StockSelectionSpecRequest(BaseModel):
     top_k: int = Field(gt=0)
     min_average_turnover: float = Field(ge=0.0)
     min_listing_days: int = Field(gt=0)
-    factor_weights: HttpTuple[SelectionFactorWeightRequest] = Field(min_length=1)
+    factor_weights: Annotated[
+        tuple[SelectionFactorWeightRequest, ...], BeforeValidator(_parse_http_array)
+    ] = Field(min_length=1)
     excluded_limit_states: HttpTuple[LimitStateRequest] = (
         "limit_up",
         "limit_down",
@@ -161,7 +163,9 @@ class EtfSelectionSpecRequest(BaseModel):
     top_k: int = Field(gt=0)
     min_average_turnover: float = Field(ge=0.0)
     min_listing_days: int = Field(gt=0)
-    factor_weights: HttpTuple[SelectionFactorWeightRequest] = Field(min_length=1)
+    factor_weights: Annotated[
+        tuple[SelectionFactorWeightRequest, ...], BeforeValidator(_parse_http_array)
+    ] = Field(min_length=1)
     max_tracking_error: float | None = Field(default=None, ge=0.0)
     excluded_limit_states: HttpTuple[LimitStateRequest] = (
         "limit_up",
@@ -241,14 +245,18 @@ class CreateSelectionRunBody(BaseModel):
     as_of: HttpDateTime
     knowledge_cutoff: HttpDateTime
     publication_cutoff: HttpDateTime
-    rotation_source_snapshot_ids: HttpTuple[str] = Field(min_length=1)
+    rotation_source_snapshot_ids: Annotated[
+        tuple[str, ...], BeforeValidator(_parse_http_array)
+    ] = Field(min_length=1)
     market_context_feature_set_id: str | None = None
     membership_version: str = Field(min_length=1)
     rotation_algorithm_version: str = "industry-rotation-v1"
     industries: HttpTuple[IndustryRotationObservationRequest]
     rotation_missing_inputs: HttpTuple[str] = ()
     universe_snapshot_id: str = Field(min_length=1)
-    selection_source_snapshot_ids: HttpTuple[str] = Field(min_length=1)
+    selection_source_snapshot_ids: Annotated[
+        tuple[str, ...], BeforeValidator(_parse_http_array)
+    ] = Field(min_length=1)
     selection_spec: SelectionSpecRequest
     seed: int = Field(ge=0)
     instruments: HttpTuple[SelectionInstrumentRequest]
