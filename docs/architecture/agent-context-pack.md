@@ -41,9 +41,23 @@ namespaces, not current runtime APIs.
 - Same inputs and content reuse the published identity, including creation time.
   A failed catalog commit is retried against those files; a conflicting immutable
   file is rejected. Partial publication has no completed catalog entry.
-- `ResearchDatasetExport` is an explicit command. Its existing CSV/SQLite behavior
-  is unchanged in #253; atomic export, license checks and moving its SQL into the
-  analysis adapter are the separately scoped #254 work.
+- `ditto research export-dataset --snapshot-id <id> --format csv|sqlite --path
+  exports/data.csv` resolves a saved snapshot via `ResearchDatasetQuery`, then
+  invokes `ResearchDatasetExport`. It verifies the catalog identity, manifest,
+  data checksum and source-bound local research permissions before publication.
+- Export targets stay within the research artifact root. The analysis artifact
+  service reserves a `<target>.manifest.json` sidecar with source identity,
+  ordered schema, row count and checksum, then publishes the complete data file
+  without replacement. Read both files and verify the checksum; a sidecar alone
+  is an interrupted export, recoverable by repeating the same request.
+- SQLite export uses an analysis-owned temporary database and transaction, quoted
+  identifiers and bound values. Empty data retains its schema. Temporal/decimal
+  values use lossless text and their original types remain in the sidecar; NaN
+  is rejected because SQLite would silently turn it into NULL.
+- Same-content retries reuse files; target or provenance conflicts require a new
+  target. Export is personal local research only and grants no redistribution
+  rights. Missing source/license evidence fails closed; no rebuild or latest
+  input lookup occurs during export.
 
 ## Portfolio Comparison Boundary
 

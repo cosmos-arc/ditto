@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
+from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -96,6 +97,7 @@ def _materialization_bundle_context():
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_build=container.get(ResearchDatasetBuildProcess),
             research_dataset_query=container.get(ResearchDatasetQuery),
+            research_dataset_export=container.get(ResearchDatasetExport),
         )
     finally:
         container.close()

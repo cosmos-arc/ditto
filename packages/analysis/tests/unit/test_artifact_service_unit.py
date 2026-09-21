@@ -344,8 +344,8 @@ class TestExportDataset:
         assert exc_info.value.details == {
             "relative_path": "out.xlsx",
             "format": "xlsx",
-            "supported": ("parquet", "csv", "feather"),
-            "supported_formats": ("parquet", "csv", "feather"),
+            "supported": ("parquet", "csv", "feather", "sqlite"),
+            "supported_formats": ("parquet", "csv", "feather", "sqlite"),
         }
 
 

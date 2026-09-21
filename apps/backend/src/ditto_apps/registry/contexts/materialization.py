@@ -3,6 +3,7 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
+from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -30,6 +31,7 @@ def create_materialization_bundle() -> Generator[MaterializationBundle]:
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_build=container.get(ResearchDatasetBuildProcess),
             research_dataset_query=container.get(ResearchDatasetQuery),
+            research_dataset_export=container.get(ResearchDatasetExport),
         )
     finally:
         container.close()

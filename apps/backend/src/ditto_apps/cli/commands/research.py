@@ -32,6 +32,7 @@ from pydantic import ValidationError
 from ditto_apps.cli.utils.output import output_json_dict
 from ditto_apps.models.research import ExperimentPlanningRequest
 from ditto_apps.registry.contexts import create_research_bundle
+from ditto_apps.registry.contexts.materialization import create_materialization_bundle
 
 app = typer.Typer(help="研究实验查询与控制")
 
@@ -315,3 +316,16 @@ def retry_fold(
             )
         )
     output_json_dict(_receipt_payload(receipt))
+
+
+@app.command("export-dataset")
+def export_dataset(
+    snapshot_id: Annotated[str, typer.Option(help="已保存的研究快照 ID")],
+    path: Annotated[Path, typer.Option(help="工件目录内目标, 相对路径按工件目录解析")],
+    fmt: Annotated[str, typer.Option("--format", help="csv 或 sqlite")] = "csv",
+) -> None:
+    """导出已保存快照供个人本地研究，不授予再分发权利。"""
+    with create_materialization_bundle() as bundle:
+        snapshot = bundle.research_dataset_query.get_snapshot(snapshot_id)
+        receipt = bundle.research_dataset_export.export(snapshot, fmt, path)
+    output_json_dict(receipt)

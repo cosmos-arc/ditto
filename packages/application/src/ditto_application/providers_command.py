@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader
 from ditto_data.catalog.certification import CertificationGovernanceStore
 from ditto_data.catalog.fallback_policy import (
@@ -95,6 +97,7 @@ from ditto_application.commands.experiments import (
 )
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
+from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.commands.source_fallback_policy import (
     ActivateCatalogSourceFallbackPolicyHandler,
     ApproveCatalogSourceFallbackPolicyHandler,
@@ -149,6 +152,22 @@ class AppCommandProvider(Provider):
     """App Command 层 DI Provider — Command Handler 注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def research_dataset_export(
+        self,
+        research_artifact_service: ResearchArtifactService,
+        research_catalog_service: ResearchCatalogService,
+        snapshots: ProviderSnapshotReader,
+        licenses: DatasetLicenseReader,
+    ) -> ResearchDatasetExport:
+        """Wire saved snapshot export and reviewed source permissions."""
+        return ResearchDatasetExport(
+            research_artifact_service=research_artifact_service,
+            research_catalog_service=research_catalog_service,
+            snapshots=snapshots,
+            licenses=licenses,
+        )
 
     @provide
     def candidate_selection_handler(

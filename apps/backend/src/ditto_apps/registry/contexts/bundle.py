@@ -14,6 +14,7 @@ from ditto_application.commands.experiments import (
     ResumeExperimentHandler,
     RetryExperimentFoldHandler,
 )
+from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.processes.execution.manual_sizing import (
     AShareTradeDateResolver,
     ManualSizingContextBuilder,
@@ -93,6 +94,7 @@ class MaterializationBundle:
     publication_facade: DerivedPublicationFacade
     research_dataset_build: ResearchDatasetBuildProcess
     research_dataset_query: ResearchDatasetQuery
+    research_dataset_export: ResearchDatasetExport
 
 
 @dataclass(frozen=True)
