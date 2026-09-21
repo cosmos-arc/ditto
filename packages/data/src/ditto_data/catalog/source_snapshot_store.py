@@ -112,7 +112,12 @@ class SQLiteProviderSnapshotStore:
         """Append a snapshot, treating a re-observed duplicate as idempotent."""
         existing = self.get_snapshot(snapshot.snapshot_id)
         if existing is not None:
-            if replace(snapshot, created_at=existing.created_at) != existing:
+            # A legacy row without the fingerprint pin accepts it on
+            # re-ingestion instead of conflicting; both-present stays strict.
+            comparable = replace(snapshot, created_at=existing.created_at)
+            if existing.schema_fingerprint is None:
+                comparable = replace(comparable, schema_fingerprint=None)
+            if comparable != existing:
                 raise ValueError(
                     f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
                 )
