@@ -59,7 +59,7 @@ def load_certified_field_claims(path: Path) -> tuple[CertifiedField, ...]:
         claims = tuple(
             field_from_payload(item) for item in cast(list[dict[str, Any]], decoded)
         )
-    except (TypeError, ValueError, KeyError) as exc:
+    except (AttributeError, TypeError, ValueError, KeyError) as exc:
         raise AppProcessError(f"certified field claim is invalid: {exc}") from exc
     if not claims:
         raise AppProcessError("certified field claims must not be empty")

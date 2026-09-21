@@ -351,6 +351,10 @@ def test_load_certified_field_claims_parses_only_reviewed_claim_arrays(tmp_path)
     )
     with pytest.raises(AppProcessError, match="reversed"):
         load_certified_field_claims(reversed_interval)
+    wrong_scalar_type = tmp_path / "wrong-type.json"
+    wrong_scalar_type.write_bytes(orjson.dumps([claim | {"field": 123}]))
+    with pytest.raises(AppProcessError, match="claim is invalid"):
+        load_certified_field_claims(wrong_scalar_type)
     empty = tmp_path / "empty.json"
     empty.write_bytes(b"[]")
     with pytest.raises(AppProcessError, match="must not be empty"):
