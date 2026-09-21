@@ -176,11 +176,24 @@ class IngestionEvidenceCommitter:
         if (
             payload_id is None
             or payload_id == f"intent:{checksum}"
-            or (payload_id.startswith(f"payload:{checksum}:"))
+            or (
+                payload_id.startswith(f"payload:{checksum}:")
+                and not self._legacy_completion(checkpoint)
+            )
         ):
             return checkpoint.chunk_id
         revision = sha256(repr((checkpoint.chunk_id, checksum)).encode()).hexdigest()
         return f"{chunk_id}:revision:{revision}"
+
+    def _legacy_completion(self, checkpoint: PartitionCheckpoint) -> bool:
+        """A COMPLETE without snapshot-bound evidence cannot attest replay."""
+        if checkpoint.status is not PartitionLifecycleStatus.COMPLETE:
+            return False
+        return not any(
+            event.to_status is PartitionLifecycleStatus.COMPLETE
+            and event.evidence_id is not None
+            for event in self._ports.lifecycle_reader.list_events(checkpoint.chunk_id)
+        )
 
     def _prepare_payload(
         self, request: EvidenceCommitRequest

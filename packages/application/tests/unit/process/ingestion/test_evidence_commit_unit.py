@@ -11,6 +11,9 @@ from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitPorts,
     EvidenceCommitRequest,
     IngestionEvidenceCommitter,
+    _catalog_evidence_id,
+    _ingestion_log_id,
+    _payload_evidence_id,
 )
 from ditto_data.catalog import (
     DataAssetRef,
@@ -18,8 +21,12 @@ from ditto_data.catalog import (
     DataSchemaFingerprint,
 )
 from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
+from ditto_data.catalog.snapshot_completion import snapshot_completed
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
-from ditto_data.ingestion.partition_state import PartitionLifecycleStatus
+from ditto_data.ingestion.partition_state import (
+    PartitionCheckpoint,
+    PartitionLifecycleStatus,
+)
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_data.lineage import LineageEvent, LineageInputRef, LineageOutputRef
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
@@ -355,6 +362,108 @@ def test_evidence_commit_fails_closed_at_each_durable_boundary(
         assert checkpoint is not None
         assert checkpoint.status is expected_status
         assert checkpoint.status is not PartitionLifecycleStatus.COMPLETE
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_reingest_legacy_completion_reattests_on_new_revision(
+    tmp_path: Path,
+) -> None:
+    lifecycle, pool = _store(tmp_path)
+    license_record = _license()
+    snapshot = _Recorder()
+    catalog = _Recorder()
+    lineage = _Recorder()
+    logs = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=snapshot,
+            snapshot_reader=snapshot,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=catalog,
+            lineage_recorder=lineage,
+            lineage_reader=lineage,
+            ingestion_log_store=logs,
+        ),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request = _request(license_record)
+
+    try:
+        lifecycle.plan_partition(
+            PartitionCheckpoint(
+                chunk_id=request.chunk_id,
+                dataset_id=request.dataset_id,
+                source=request.source,
+                request_start=request.request_start,
+                request_end=request.request_end,
+                status=PartitionLifecycleStatus.PLANNED,
+                last_successful_stage=None,
+                attempt=1,
+                retry_budget=3,
+                payload_id=None,
+                catalog_asset_id=None,
+                lineage_run_id=None,
+                ingestion_log_id=None,
+                error_code=None,
+                updated_at=datetime(2026, 7, 18, 8, 40, tzinfo=UTC),
+            )
+        )
+        for status, evidence_id in (
+            (PartitionLifecycleStatus.FETCHED, None),
+            (PartitionLifecycleStatus.NORMALIZED, None),
+            (PartitionLifecycleStatus.PIT_PASSED, None),
+            (PartitionLifecycleStatus.DQ_PASSED, None),
+            (PartitionLifecycleStatus.PAYLOAD_COMMITTED, _payload_evidence_id(request)),
+            (
+                PartitionLifecycleStatus.CATALOG_ATTESTED,
+                _catalog_evidence_id(request.catalog_entry),
+            ),
+            (PartitionLifecycleStatus.LINEAGE_RECORDED, request.lineage_event.run_id),
+            (
+                PartitionLifecycleStatus.SUCCESS_RECORDED,
+                _ingestion_log_id(request.success_log),
+            ),
+            # Legacy completions predate snapshot-bound COMPLETE evidence.
+            (PartitionLifecycleStatus.COMPLETE, None),
+        ):
+            lifecycle.advance_partition(
+                request.chunk_id,
+                status,
+                occurred_at=datetime(2026, 7, 18, 8, 41, tzinfo=UTC),
+                evidence_id=evidence_id,
+            )
+        snapshot.values.append(request.provider_snapshot)
+        lineage.values.append(request.lineage_event)
+        logs.values.append(request.success_log)
+
+        outcome = committer.commit(request)
+
+        assert outcome.completed is True
+        assert outcome.error_code is None
+        assert outcome.chunk_id.startswith(f"{request.chunk_id}:revision:")
+        base_checkpoint = lifecycle.get_checkpoint(request.chunk_id)
+        assert base_checkpoint is not None
+        assert base_checkpoint.status is PartitionLifecycleStatus.COMPLETE
+        base_complete_events = [
+            event
+            for event in lifecycle.list_events(request.chunk_id)
+            if event.to_status is PartitionLifecycleStatus.COMPLETE
+        ]
+        assert base_complete_events[-1].evidence_id is None
+        assert snapshot_completed(request.provider_snapshot, lifecycle)
+        assert len(lineage.values) == 1
+        assert len(logs.values) == 1
+
+        replay = committer.commit(request)
+
+        assert replay.completed is True
+        assert replay.chunk_id == outcome.chunk_id
+        assert len(lineage.values) == 1
+        assert len(logs.values) == 1
     finally:
         pool.close()
 
