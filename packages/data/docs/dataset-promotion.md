@@ -225,7 +225,7 @@ uv run --no-sync ditto ops promotion-history stock_daily
 
 `CertifiedField.covered_from/to` 表达业务区间；`publication_at`、`available_at`、
 `observed_at`、`revised_at` 分别表达公开、供应商可得、本地观察和供应商修订时间。
-未知值保持空；观察时间不能替代公开/可得时间。日期精度的公开/可得/修订证据取最晚日期，
+未知值保持空；观察时间不能替代公开/可得时间。日期精度的公开证据
 由认证构建器按 Asia/Shanghai、SSE 交易日历解析为严格下一交易日 09:30。
 需要从次日至首次开市的连续日历记录；本地 32 日窗口不能证明时拒绝认证。
 边界、日历记录和哈希冻结在认证报告中，日历后续改变不修改旧报告；已有精确时间的更晚
@@ -236,3 +236,21 @@ uv run --no-sync ditto ops promotion-history stock_daily
 输出前版和本地观察时间，不表示具备当前研究/晋级资格。撤销认证保留报告、事件与载荷，
 阻止新研究/晋级；已有研究应保留并使用原 snapshot ID、截止时间及准入规则版本。
 本次准入规则为 `field-admission-v2`。
+
+正式字段读取使用 `ditto data-products replay-snapshots request.json`。
+请求必须明确快照、证券、字段、业务区间、knowledge/publication cutoff 和用途，例如：
+
+```json
+{
+  "fields": [{"dataset_id": "stock_daily", "field": "close", "snapshot_id": "<exact-id>"}],
+  "instrument_ids": [1000001],
+  "required_from": "2026-07-16",
+  "required_to": "2026-07-17",
+  "knowledge_cutoff": "2026-07-18T09:00:00+08:00",
+  "publication_cutoff": "2026-07-18T09:00:00+08:00",
+  "purpose": "formal_research"
+}
+```
+
+成功输出保留请求身份、当前准入报告（含认证 ID/规则版本）与精确字段数据；资格不足、
+不可见或未完成快照返回失败，不回退到最新分区。该命令只读取，不自动认证或晋级。

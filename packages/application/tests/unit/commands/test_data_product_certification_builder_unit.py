@@ -471,6 +471,18 @@ def test_date_precision_freezes_next_session_and_missing_calendar_fails_closed(
             replace(scope, knowledge_cutoff=boundary, publication_cutoff=boundary),
         )
         assert "CALENDAR_EVIDENCE_MISSING" in field_reasons(claim, scope)
+        later = datetime(2026, 8, 3, 10, tzinfo=zone)
+        delayed = builder.build(
+            replace(request, certified_fields=(replace(claim, available_at=later),))
+        ).evidence.certified_fields[0]
+        assert delayed.date_visible_at == boundary
+        assert "TIME_NOT_VISIBLE" in field_reasons(
+            delayed,
+            replace(scope, knowledge_cutoff=boundary, publication_cutoff=boundary),
+        )
+        assert not field_reasons(
+            delayed, replace(scope, knowledge_cutoff=later, publication_cutoff=later)
+        )
         client.execute(
             "DELETE FROM trading_calendar WHERE trade_date = ?", ["2026-08-02"]
         )

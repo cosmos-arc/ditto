@@ -130,7 +130,7 @@ def test_delayed_revision_replay_and_failed_completion_recovery(tmp_path, monkey
                 publication_cutoff=now,
                 purpose="formal_research",
             )
-            assert reader.replay(request)[first.snapshot_id].equals(original)
+            assert reader.replay(request).frames[first.snapshot_id].equals(original)
             _fail_next_completion(monkeypatch, ports.lifecycle_writer)
             future = original.with_columns(pl.lit(999.0).alias("close"))
             assert ingest(future, True).status == "failed"
@@ -143,10 +143,10 @@ def test_delayed_revision_replay_and_failed_completion_recovery(tmp_path, monkey
             )
             with pytest.raises(AppQueryError, match="COMPLETE"):
                 reader.read_for_audit(second.snapshot_id)
-            assert reader.replay(request)[first.snapshot_id].equals(original)
+            assert reader.replay(request).frames[first.snapshot_id].equals(original)
             assert ingest(future, True).status == "success"
             assert reader.read_for_audit(second.snapshot_id).frame.equals(future)
-            assert reader.replay(request)[first.snapshot_id].equals(original)
+            assert reader.replay(request).frames[first.snapshot_id].equals(original)
             events = ports.lifecycle_reader.list_complete()
             assert ingest(future).status == "success"
             assert ports.lifecycle_reader.list_complete() == events
@@ -174,7 +174,9 @@ def test_delayed_revision_replay_and_failed_completion_recovery(tmp_path, monkey
             visible_request = replace(
                 revised_request, knowledge_cutoff=later, publication_cutoff=later
             )
-            assert reader.replay(visible_request)[second.snapshot_id].equals(future)
+            assert (
+                reader.replay(visible_request).frames[second.snapshot_id].equals(future)
+            )
         finally:
             pool.close()
 

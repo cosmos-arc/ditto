@@ -67,6 +67,12 @@ class CertifiedField:
             raise ValueError("invalid certified field time precision")
         _validate_calendar_evidence(self)
 
+    def disclosure_date(self) -> date:
+        """Date-only publication is interpreted in the market's explicit timezone."""
+        if self.publication_at is None:
+            raise ValueError("publication evidence is missing")
+        return self.publication_at.astimezone(ZoneInfo("Asia/Shanghai")).date()
+
 
 def field_to_payload(value: CertifiedField) -> dict[str, object]:
     """Serialize evidence without coupling it to the report identity codec."""
@@ -165,16 +171,7 @@ def _validate_calendar_evidence(field: CertifiedField) -> None:
         raise ValueError(
             "date visibility requires source times and retained calendar evidence"
         )
-    zone = ZoneInfo("Asia/Shanghai")
-    disclosed = (
-        max(
-            field.publication_at,
-            field.available_at,
-            field.revised_at or field.publication_at,
-        )
-        .astimezone(zone)
-        .date()
-    )
+    disclosed = field.disclosure_date()
     boundary, digest = publication_calendar_boundary(disclosed, field.calendar_evidence)
     if field.date_visible_at != boundary or field.calendar_hash != digest:
         raise ValueError("date visibility does not match retained calendar evidence")

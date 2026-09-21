@@ -7,7 +7,6 @@ from datetime import date, datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, cast
-from zoneinfo import ZoneInfo
 
 import orjson
 from ditto_data.catalog import (
@@ -260,15 +259,7 @@ class DataProductCertificationBuilder:
             raise AppProcessError(
                 "date precision needs source times and calendar evidence"
             )
-        disclosed = (
-            max(
-                field.publication_at,
-                field.available_at,
-                field.revised_at or field.publication_at,
-            )
-            .astimezone(ZoneInfo("Asia/Shanghai"))
-            .date()
-        )
+        disclosed = field.disclosure_date()
         try:
             boundary, digest, evidence = self._calendar.publication_boundary(disclosed)
         except ValueError as error:

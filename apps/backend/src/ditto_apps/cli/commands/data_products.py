@@ -33,7 +33,9 @@ from ditto_application.commands.data_product_operations import (
     preview_data_product_operation,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError, AppQueryError
+from ditto_application.queries.field_admission import FieldAdmissionRequest
 from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
+from pydantic import TypeAdapter, ValidationError
 
 from ditto_apps.cli.utils.output import output_json_dict
 from ditto_apps.registry.container import make_app_container
@@ -578,6 +580,33 @@ def read_snapshot(snapshot_id: str = typer.Argument(...)) -> None:
             }
         )
     except AppQueryError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(2) from error
+    finally:
+        container.close()
+
+
+@app.command("replay-snapshots")
+def replay_snapshots(
+    request_file: Path = typer.Argument(..., exists=True, dir_okay=False),
+) -> None:
+    """Read qualified fields at explicit snapshot identities and PIT cutoffs."""
+    container = make_app_container()
+    try:
+        request = TypeAdapter(FieldAdmissionRequest).validate_json(
+            request_file.read_bytes()
+        )
+        result = container.get(ProviderSnapshotQuery).replay(request)
+        output_json_dict(
+            {
+                "request": asdict(request),
+                "admission": asdict(result.admission),
+                "snapshots": {
+                    key: frame.to_dicts() for key, frame in result.frames.items()
+                },
+            }
+        )
+    except (OSError, ValidationError, AppQueryError) as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(2) from error
     finally:

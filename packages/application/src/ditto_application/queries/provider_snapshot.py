@@ -1,13 +1,24 @@
 """Application entrypoint for retained provider evidence and qualified replay."""
 
+from dataclasses import dataclass
+
 import polars as pl
 from ditto_data.catalog.snapshot_reader import SnapshotContents, SnapshotReadService
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.field_admission import (
     FieldAdmissionQuery,
+    FieldAdmissionReport,
     FieldAdmissionRequest,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class SnapshotReplay:
+    """Pinned read result with the exact certification and rule identities used."""
+
+    admission: FieldAdmissionReport
+    frames: dict[str, pl.DataFrame]
 
 
 class ProviderSnapshotQuery:
@@ -26,7 +37,7 @@ class ProviderSnapshotQuery:
         except ValueError as error:
             raise AppQueryError(str(error)) from error
 
-    def replay(self, request: FieldAdmissionRequest) -> dict[str, pl.DataFrame]:
+    def replay(self, request: FieldAdmissionRequest) -> SnapshotReplay:
         """Read only the approved fields, instruments and interval at pinned cutoffs."""
         report = self._admission.assess(request)
         if not report.allowed:
@@ -45,4 +56,4 @@ class ProviderSnapshotQuery:
                 )
             except ValueError as error:
                 raise AppQueryError(str(error)) from error
-        return frames
+        return SnapshotReplay(report, frames)
