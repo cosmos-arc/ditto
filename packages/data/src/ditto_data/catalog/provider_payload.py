@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -126,10 +127,18 @@ class FilesystemProviderPayloadStore:
         try:
             payload.write_parquet(temporary)
             self._verify_artifact(artifact, self._read_parquet(temporary))
-            if path.exists():
-                self._verify_artifact(artifact, self._read_parquet(path))
-            else:
-                temporary.replace(path)
+            try:
+                # A hard link publishes atomically: exactly one physical schema
+                # can win a checksum path, and racing losers verify the winner.
+                os.link(temporary, path)
+            except FileExistsError:
+                pass
+            retained = self._read_parquet(path)
+            self._verify_artifact(artifact, retained)
+            if retained.schema != payload.schema:
+                raise ValueError(
+                    f"provider payload checksum collides across schemas: {artifact.uri}"
+                )
         finally:
             temporary.unlink(missing_ok=True)
         return artifact

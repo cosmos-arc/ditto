@@ -105,3 +105,41 @@ def test_same_values_with_different_schema_cannot_reuse_artifact(
     with pytest.raises(ValueError, match="collides across schemas"):
         store.retain_payload(dataset_id="stock_daily", source="tushare", payload=int64)
     assert store.read_payload(first).schema == int32.schema
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_publishing_race_keeps_one_schema_per_checksum(tmp_path: Path) -> None:
+    store = FilesystemProviderPayloadStore(tmp_path)
+    int32 = pl.DataFrame(
+        {"instrument_id": [1], "close": pl.Series("close", [10], pl.Int32)}
+    )
+    int64 = int32.cast({"close": pl.Int64})
+
+    first = store.retain_payload(
+        dataset_id="stock_daily", source="tushare", payload=int32
+    )
+    # The racer starts while nothing is published for this checksum yet.
+    (tmp_path / first.uri).unlink()
+
+    original_write = pl.DataFrame.write_parquet
+
+    def delayed_write(frame, target, *args, **kwargs):
+        original_write(frame, target, *args, **kwargs)
+        if str(target).endswith(".tmp") and frame.schema == int64.schema:
+            # The racing winner publishes its schema while the loser is
+            # between its own temp write and publication.
+            store.retain_payload(
+                dataset_id="stock_daily", source="tushare", payload=int32
+            )
+
+    pl.DataFrame.write_parquet = delayed_write
+    try:
+        with pytest.raises(ValueError, match="collides across schemas"):
+            store.retain_payload(
+                dataset_id="stock_daily", source="tushare", payload=int64
+            )
+    finally:
+        pl.DataFrame.write_parquet = original_write
+
+    assert store.read_payload(first).schema == int32.schema
