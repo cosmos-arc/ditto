@@ -420,7 +420,12 @@ def _verify_consumer_bindings(request: CertificationBuildRequest) -> None:
     if not expected:
         return
     request.consumer_evidence.verify()
-    payload: object = orjson.loads(request.consumer_evidence.local_path.read_bytes())
+    try:
+        payload: object = orjson.loads(
+            request.consumer_evidence.local_path.read_bytes()
+        )
+    except (OSError, ValueError) as exc:
+        raise AppProcessError("consumer evidence is not valid JSON") from exc
     if not isinstance(payload, dict):
         raise AppProcessError("consumer evidence must be an object")
     inputs = cast(dict[str, object], payload).get("field_inputs")

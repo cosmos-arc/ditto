@@ -355,3 +355,34 @@ def test_load_certified_field_claims_parses_only_reviewed_claim_arrays(tmp_path)
     empty.write_bytes(b"[]")
     with pytest.raises(AppProcessError, match="must not be empty"):
         load_certified_field_claims(empty)
+
+
+def test_builder_rejects_hash_matched_but_malformed_consumer_evidence(tmp_path):
+
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    builder, request = _fixture(tmp_path)
+    original = builder.build(request)
+    raw = b"not-json"
+    request.consumer_evidence.local_path.write_bytes(raw)
+    field = CertifiedField(
+        field="close",
+        snapshot_id=original.evidence.snapshot_ids[0],
+        instrument_ids=(600000,),
+        covered_from=request.target_to,
+        covered_to=request.target_to,
+        available_at=None,
+        publication_at=None,
+        time_precision="unknown",
+        evidence_uri=request.consumer_evidence.evidence_uri,
+        consumer_bindings=(("instruments.close", "a" * 64),),
+    )
+    bound = replace(
+        request,
+        certified_fields=(field,),
+        consumer_evidence=replace(
+            request.consumer_evidence, sha256_hex=sha256(raw).hexdigest()
+        ),
+    )
+    with pytest.raises(AppProcessError, match="not valid JSON"):
+        builder.build(bound)
