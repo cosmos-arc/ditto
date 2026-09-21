@@ -42,23 +42,13 @@ class SnapshotReadService:
         snapshot = self._snapshots.get_snapshot(snapshot_id)
         if snapshot is None or snapshot.snapshot_id != snapshot.expected_snapshot_id():
             raise ValueError("provider snapshot is missing or has invalid identity")
-        if any(
-            item.checksum == snapshot.checksum
-            and item.schema_version != snapshot.schema_version
-            for item in self._snapshots.list_snapshots(
-                dataset_id=snapshot.dataset_id,
-            )
-        ):
-            # Pre-guard writers could alias one value-checksummed artifact to
-            # two schema versions; such bytes cannot prove either schema.
-            snapshot_id = snapshot.snapshot_id
-            raise ValueError(
-                f"payload checksum shared across schema versions: {snapshot_id}"
-            )
         if not snapshot_completed(snapshot, self._lifecycle):
             raise ValueError("provider snapshot has no COMPLETE checkpoint")
         if not snapshot.payload_retained or snapshot.payload_uri is None:
             raise ValueError("provider snapshot has no retained payload")
+        # Sharing one artifact across schema versions is legitimate when the
+        # physical bytes are the schema; the payload read pins them via the
+        # persisted schema fingerprint, so exactness is proven there.
         frame = self._payloads.read_payload(
             ProviderPayloadArtifact(
                 dataset_id=snapshot.dataset_id,

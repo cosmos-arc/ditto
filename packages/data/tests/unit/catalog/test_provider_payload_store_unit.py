@@ -173,3 +173,20 @@ def test_read_refuses_swapped_physical_schema_and_missing_fingerprint(
         dataset_id="stock_daily", source="tushare", payload=int32
     )
     assert store.read_payload(retrained).schema == int32.schema
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_read_refuses_reordered_columns(tmp_path: Path) -> None:
+    store = FilesystemProviderPayloadStore(tmp_path)
+    frame = pl.DataFrame({"instrument_id": [1], "close": [10.5]})
+    artifact = store.retain_payload(
+        dataset_id="stock_daily", source="tushare", payload=frame
+    )
+    path = tmp_path / artifact.uri
+
+    reordered = frame.select(reversed(frame.columns))
+    reordered.write_parquet(path)
+
+    with pytest.raises(ValueError, match="fingerprint mismatch"):
+        store.read_payload(artifact)

@@ -33,11 +33,8 @@ def _validate_identity(field: str, value: str) -> None:
 
 
 def _schema_fingerprint(frame: pl.DataFrame) -> bytes:
-    """Value checksums are dtype-blind; this pins the physical schema."""
-    return orjson.dumps(
-        {name: str(dtype) for name, dtype in frame.schema.items()},
-        option=orjson.OPT_SORT_KEYS,
-    )
+    """Value checksums are dtype-blind; this pins column order and dtypes."""
+    return orjson.dumps([[name, str(dtype)] for name, dtype in frame.schema.items()])
 
 
 @dataclass(frozen=True, slots=True)

@@ -203,9 +203,7 @@ def _fail_next_completion(monkeypatch, writer):
 
 @pytest.mark.integration
 @pytest.mark.pit
-def test_replay_refuses_payload_checksum_aliased_across_schema_versions(
-    tmp_path,
-):
+def test_schema_version_bump_sharing_artifact_still_replays_exact_bytes(tmp_path):
     with _pipeline(tmp_path, "stock_daily", display="allowed") as runtime:
         ports = runtime.ports
         original = _bars()
@@ -239,8 +237,9 @@ def test_replay_refuses_payload_checksum_aliased_across_schema_versions(
         )
         assert reader.read_for_audit(first.snapshot_id).frame.equals(original)
 
-        # A pre-guard writer could publish this same-checksum alias; replay
-        # must refuse bytes that cannot prove either schema.
+        # An unchanged-physical-schema version bump legitimately shares the
+        # checksum-addressed artifact; replay must keep returning the exact
+        # bytes rather than treating the shared checksum as ambiguous.
         ports.snapshot_writer.append_snapshot(
             ProviderSnapshot.create(
                 ProviderSnapshotDraft(
@@ -262,5 +261,4 @@ def test_replay_refuses_payload_checksum_aliased_across_schema_versions(
             )
         )
 
-        with pytest.raises(AppQueryError, match="shared across schema versions"):
-            reader.read_for_audit(first.snapshot_id)
+        assert reader.read_for_audit(first.snapshot_id).frame.equals(original)
