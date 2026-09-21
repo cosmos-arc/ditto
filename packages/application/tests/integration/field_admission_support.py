@@ -137,6 +137,7 @@ def field_evidence(
         available_at=visible,
         publication_at=visible,
         time_precision="timestamp",
+        observed_at=visible,
         evidence_uri="evidence://field/amount",
         consumer_bindings=(("instruments.average_turnover", "a" * 64),),
     )

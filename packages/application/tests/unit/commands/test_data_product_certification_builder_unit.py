@@ -482,7 +482,8 @@ def test_date_precision_freezes_next_session_and_missing_calendar_fails_closed(
             certified,
             replace(scope, knowledge_cutoff=boundary, publication_cutoff=boundary),
         )
-        assert "CALENDAR_EVIDENCE_MISSING" in field_reasons(claim, scope)
+        observed_claim = replace(claim, observed_at=request.generated_at)
+        assert "CALENDAR_EVIDENCE_MISSING" in field_reasons(observed_claim, scope)
         later = datetime(2026, 8, 3, 10, tzinfo=zone)
         delayed = builder.build(
             replace(request, certified_fields=(replace(claim, available_at=later),))

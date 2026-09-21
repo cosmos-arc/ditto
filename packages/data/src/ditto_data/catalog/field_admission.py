@@ -73,6 +73,7 @@ def field_reasons(
     if (
         field.available_at is None
         or field.publication_at is None
+        or field.observed_at is None
         or field.time_precision == "unknown"
     ):
         reasons.append("TIME_EVIDENCE_MISSING")

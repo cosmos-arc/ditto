@@ -40,6 +40,14 @@ def _scope(**overrides: object) -> FieldUsageScope:
 class TestFieldReasonsObservedAt:
     """Local first observation bounds knowledge visibility, not publication."""
 
+    def test_missing_observation_is_unauthorized(self) -> None:
+        field = _field()
+
+        reasons = field_reasons(field, _scope())
+
+        assert "TIME_EVIDENCE_MISSING" in reasons
+        assert "TIME_NOT_VISIBLE" not in reasons
+
     def test_observed_after_knowledge_cutoff_is_not_visible(self) -> None:
         field = _field(observed_at=datetime(2026, 9, 18, 9, tzinfo=UTC))
 

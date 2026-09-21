@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -98,10 +99,10 @@ class SQLiteProviderSnapshotStore:
         self._client.commit()
 
     def append_snapshot(self, snapshot: ProviderSnapshot) -> None:
-        """Append a snapshot, treating an exact duplicate as idempotent."""
+        """Append a snapshot, treating a re-observed duplicate as idempotent."""
         existing = self.get_snapshot(snapshot.snapshot_id)
         if existing is not None:
-            if existing != snapshot:
+            if replace(snapshot, created_at=existing.created_at) != existing:
                 raise ValueError(
                     f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
                 )

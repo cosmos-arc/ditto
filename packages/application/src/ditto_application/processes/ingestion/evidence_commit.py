@@ -263,12 +263,9 @@ class IngestionEvidenceCommitter:
         if checkpoint.status is not PartitionLifecycleStatus.PAYLOAD_COMMITTED:
             return None
         try:
-            snapshot = request.provider_snapshot
-            existing = self._ports.snapshot_reader.get_snapshot(snapshot.snapshot_id)
-            if existing is None:
-                self._ports.snapshot_writer.append_snapshot(snapshot)
-            elif replace(snapshot, created_at=existing.created_at) != existing:
-                raise AppProcessError("immutable provider snapshot conflict")
+            # The idempotent append also backfills the observation ledger for
+            # upgraded stores whose legacy snapshot rows predate observations.
+            self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
         except Exception:
             return self._fail(
                 request,

@@ -725,3 +725,68 @@ def test_same_request_resumes_partially_attested_checkpoint_without_fork(
         assert len(snapshot.values) == 1
     finally:
         pool.close()
+
+
+@pytest.mark.unit
+def test_reingestion_backfills_observation_for_legacy_snapshot_row(
+    tmp_path: Path,
+) -> None:
+    from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
+
+    lifecycle, pool = _store(tmp_path)
+    snapshots = SQLiteProviderSnapshotStore(SQLiteClient(pool))
+    license_record = _license()
+    lineage = _Recorder()
+    logs = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=snapshots,
+            snapshot_reader=snapshots,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=_Recorder(),
+            lineage_recorder=lineage,
+            lineage_reader=lineage,
+            ingestion_log_store=logs,
+        ),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request = _request(license_record)
+
+    try:
+        snapshots.append_snapshot(request.provider_snapshot)
+        client = SQLiteClient(pool)
+        client.execute(
+            "DELETE FROM provider_snapshot_observations WHERE snapshot_id = ?",
+            [request.provider_snapshot.snapshot_id],
+        )
+        client.commit()
+        assert snapshots.get_observed_at(request.provider_snapshot.snapshot_id) is None
+        lifecycle.plan_partition(
+            PartitionCheckpoint(
+                chunk_id=request.chunk_id,
+                dataset_id=request.dataset_id,
+                source=request.source,
+                request_start=request.request_start,
+                request_end=request.request_end,
+                status=PartitionLifecycleStatus.PLANNED,
+                last_successful_stage=None,
+                attempt=1,
+                retry_budget=3,
+                payload_id=None,
+                catalog_asset_id=None,
+                lineage_run_id=None,
+                ingestion_log_id=None,
+                error_code=None,
+                updated_at=datetime(2026, 7, 18, 8, 40, tzinfo=UTC),
+            )
+        )
+        outcome = committer.commit(request)
+
+        assert outcome.completed is True
+        assert (
+            snapshots.get_observed_at(request.provider_snapshot.snapshot_id) is not None
+        )
+    finally:
+        pool.close()
