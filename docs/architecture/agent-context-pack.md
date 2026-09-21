@@ -62,6 +62,27 @@ namespaces, not current runtime APIs.
   rights. Missing source/license evidence fails closed; no rebuild or latest
   input lookup occurs during export.
 
+## Research Statistics Boundary
+
+- HTTP `GET /research/experiments/{id}/comparison` →
+  `ExperimentComparisonReader.load_comparison` →
+  `WalkForwardEvidenceAssembler.assemble` → `build_candidate_comparison` and
+  `aggregate_walk_forward` → analysis `experiments.statistics`.
+- Analysis owns daily returns, net return, drawdown, sample Sharpe, geometric
+  Calmar and execution turnover/cost ratios. Application validates persisted
+  reports, fold dates, snapshots and execution evidence, assembles lineage and
+  missing-artifact reasons, and projects calculation results to the existing
+  evidence contract. No I/O or production imports enter the calculation module.
+- Fold inception is initial capital: 100 → NAV 90 → 99 gives −1% net return.
+  Production backtest `statistics_returns.total_return` retains first-NAV
+  inception (90 → 99 gives +10%). Compare origin, units, period and costs before
+  comparing metrics; these are deliberately separate contracts.
+- Return/drawdown/cost drag use percent; turnover and Sharpe/Calmar are ratios.
+  Annualization remains 252 sessions, zero risk-free rate and sample deviation.
+  Missing evidence, single observations, zero volatility and zero drawdown retain
+  existing `not_evaluated` reasons rather than invented zeros. HTTP schemas and
+  saved comparison payload/hash identities are unchanged by this ownership move.
+
 ## Portfolio Comparison Boundary
 
 | Responsibility | Owner / Provider | Direct Consumers | Contract |

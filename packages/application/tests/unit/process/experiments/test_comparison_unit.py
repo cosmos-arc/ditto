@@ -1098,3 +1098,15 @@ def test_comparison_allows_multiple_missing_artifacts_without_zero_hashes() -> N
         and row.metrics[ResearchMetricId.NET_RETURN].reason == "backtest_report_missing"
         for row in comparison.folds
     )
+
+
+def test_fold_return_keeps_initial_capital_distinct_from_backtest_first_nav() -> None:
+    from ditto_backtest.statistics_returns import total_return
+
+    source = _evidence("candidate-start", 2, 1, (90.0, 99.0))
+    row = build_candidate_comparison(
+        _baseline_identity(), (*_baseline_rows(), source)
+    ).folds[1]
+    assert row.metrics[ResearchMetricId.NET_RETURN].value == pytest.approx(-1.0)
+    assert row.metrics[ResearchMetricId.MAX_DRAWDOWN].value == pytest.approx(-10.0)
+    assert total_return([90.0, 99.0]) == pytest.approx(0.1)

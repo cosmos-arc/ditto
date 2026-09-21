@@ -8,7 +8,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
-from statistics import stdev
 from typing import Protocol, cast
 
 from ditto_analysis.experiments import (
@@ -44,6 +43,11 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments import (
     canonical_payload as _canonical_payload,
 )
+from ditto_analysis.experiments.statistics import (
+    daily_returns,
+    execution_statistics,
+    return_statistics,
+)
 
 from ditto_application.processes.experiments._evidence_values import (
     _canonical_text,
@@ -57,9 +61,7 @@ from ditto_application.processes.experiments._report_evidence import (
     LoadedBacktestReportArtifact,
 )
 
-_TRADING_DAYS_PER_YEAR = 252
 _EVIDENCE_PAIR_SIZE = 2
-_MIN_RETURN_OBSERVATIONS = 2
 R3_CAPACITY_EVIDENCE_SCHEMA_ID = "ditto.r3.capacity-evidence"
 R3_CAPACITY_EVIDENCE_SCHEMA_VERSION = 1
 
@@ -559,7 +561,7 @@ def _source_hashes(value: _FoldMetricSource) -> tuple[_ContentHash, ...]:
     return (artifact.record.content_hash,)
 
 
-def _return_evidence(  # noqa: C901, PLR0911 - fail-closed report parser
+def _return_evidence(  # noqa: PLR0911 - fail-closed report parser
     value: _FoldMetricSource,
 ) -> FoldReturnEvidence | None:
     artifact = value.report_artifact
@@ -595,11 +597,13 @@ def _return_evidence(  # noqa: C901, PLR0911 - fail-closed report parser
         or not math.isclose(normalized[-1][1], final, rel_tol=1e-12, abs_tol=1e-9)
     ):
         return None
-    returns: list[tuple[str, float]] = []
-    prior = initial
-    for trade_date, nav in normalized:
-        returns.append((trade_date, nav / prior - 1.0))
-        prior = nav
+    returns = tuple(
+        zip(
+            (item[0] for item in normalized),
+            daily_returns(initial, tuple(item[1] for item in normalized)),
+            strict=True,
+        )
+    )
     return FoldReturnEvidence(
         initial,
         tuple(normalized),
@@ -607,18 +611,6 @@ def _return_evidence(  # noqa: C901, PLR0911 - fail-closed report parser
         _source_refs(value),
         _source_hashes(value),
     )
-
-
-def _drawdown(
-    navs: Sequence[float],
-    *,
-    initial_peak: float | None = None,
-) -> float:
-    peak, worst = navs[0] if initial_peak is None else initial_peak, 0.0
-    for nav in navs:
-        peak = max(peak, nav)
-        worst = min(worst, nav / peak - 1.0)
-    return worst * 100.0
 
 
 def _merge_refs(
@@ -658,49 +650,18 @@ def _return_metrics(
     )
     if evidence is None:
         return {metric_id: _not_evaluated(reason) for metric_id in ids}
-    returns = tuple(item[1] for item in evidence.daily_returns)
-    growth = math.prod(1.0 + item for item in returns)
-    max_drawdown = _drawdown(
-        (evidence.initial_capital, *(item[1] for item in evidence.nav_series))
-    )
-    refs, hashes = evidence.evidence_refs, evidence.evidence_hashes
-    result = {
-        _ResearchMetricId.NET_RETURN: _evaluated(
-            _ResearchMetricId.NET_RETURN, (growth - 1.0) * 100.0, refs, hashes
-        ),
-        _ResearchMetricId.MAX_DRAWDOWN: _evaluated(
-            _ResearchMetricId.MAX_DRAWDOWN, max_drawdown, refs, hashes
-        ),
+    return {
+        metric_id: _not_evaluated(result)
+        if isinstance(result, str)
+        else _evaluated(
+            metric_id, result.value, evidence.evidence_refs, evidence.evidence_hashes
+        )
+        for metric_id, result in return_statistics(
+            tuple(item[1] for item in evidence.daily_returns),
+            tuple(item[1] for item in evidence.nav_series),
+            initial_capital=evidence.initial_capital,
+        ).items()
     }
-    volatility = stdev(returns) if len(returns) >= _MIN_RETURN_OBSERVATIONS else 0.0
-    result[_ResearchMetricId.SHARPE_RATIO] = (
-        _not_evaluated("insufficient_daily_return_evidence")
-        if len(returns) < _MIN_RETURN_OBSERVATIONS
-        else _not_evaluated("zero_return_volatility")
-        if volatility == 0.0
-        else _evaluated(
-            _ResearchMetricId.SHARPE_RATIO,
-            sum(returns)
-            / len(returns)
-            / volatility
-            * math.sqrt(_TRADING_DAYS_PER_YEAR),
-            refs,
-            hashes,
-        )
-    )
-    result[_ResearchMetricId.CALMAR_RATIO] = (
-        _not_evaluated("zero_max_drawdown")
-        if max_drawdown == 0.0
-        else _evaluated(
-            _ResearchMetricId.CALMAR_RATIO,
-            ((growth ** (_TRADING_DAYS_PER_YEAR / len(returns))) - 1.0)
-            * 100.0
-            / abs(max_drawdown),
-            refs,
-            hashes,
-        )
-    )
-    return result
 
 
 def _execution_evidence(
@@ -748,23 +709,16 @@ def _execution_metrics(
             item: _not_evaluated("insufficient_fill_nav_capital_evidence")
             for item in ids
         }
-    average_nav = sum(item[1] for item in evidence.nav_series) / len(
-        evidence.nav_series
-    )
-    refs, hashes = evidence.evidence_refs, evidence.evidence_hashes
     return {
-        _ResearchMetricId.TURNOVER: _evaluated(
-            _ResearchMetricId.TURNOVER,
-            evidence.fill_notional / average_nav,
-            refs,
-            hashes,
-        ),
-        _ResearchMetricId.COST_DRAG: _evaluated(
-            _ResearchMetricId.COST_DRAG,
-            evidence.explicit_cost / evidence.initial_capital * 100.0,
-            refs,
-            hashes,
-        ),
+        metric_id: _evaluated(
+            metric_id, result.value, evidence.evidence_refs, evidence.evidence_hashes
+        )
+        for metric_id, result in execution_statistics(
+            tuple(item[1] for item in evidence.nav_series),
+            initial_capital=evidence.initial_capital,
+            fill_notional=evidence.fill_notional,
+            explicit_cost=evidence.explicit_cost,
+        ).items()
     }
 
 
