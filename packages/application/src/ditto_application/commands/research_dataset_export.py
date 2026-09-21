@@ -69,6 +69,29 @@ class ResearchDatasetExport:
     def _check_licenses(self, snapshot: DatasetSnapshot) -> tuple[str, ...]:
         if not snapshot.source_snapshot_ids:
             raise AppQueryError("导出缺少来源快照, 无法验证许可")
+        versions: dict[str, int] = {}
+        bound_sources: set[str] = set()
+        for item in snapshot.resolved_inputs:
+            derived_id = item.get("derived_id")
+            version = item.get("version")
+            sources = item.get("source_snapshot_ids")
+            if (
+                not isinstance(derived_id, str)
+                or derived_id in versions
+                or type(version) is not int
+                or not isinstance(sources, list)
+                or not sources
+                or any(type(source) is not str or not source for source in sources)
+            ):
+                raise AppQueryError("每个研究输入都必须绑定完整来源快照证据")
+            versions[derived_id] = version
+            bound_sources.update(sources)
+        if (
+            not versions
+            or versions != snapshot.resolved_versions
+            or bound_sources != set(snapshot.source_snapshot_ids)
+        ):
+            raise AppQueryError("研究输入与来源快照汇总身份不一致")
         used_on = datetime.now(ZoneInfo("Asia/Shanghai")).date()
         license_ids: set[str] = set()
         for snapshot_id in snapshot.source_snapshot_ids:

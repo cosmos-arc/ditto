@@ -45,6 +45,9 @@ namespaces, not current runtime APIs.
   exports/data.csv` resolves a saved snapshot via `ResearchDatasetQuery`, then
   invokes `ResearchDatasetExport`. It verifies the catalog identity, manifest,
   data checksum and source-bound local research permissions before publication.
+- Each resolved input freezes its own source snapshot IDs at build time. Export
+  requires complete per-input bindings and an exact union matching the snapshot
+  source set; later upstream metadata cannot retroactively authorize old inputs.
 - Export targets stay within the research artifact root. The analysis artifact
   service reserves a `<target>.manifest.json` sidecar with source identity,
   ordered schema, row count and checksum, then publishes the complete data file

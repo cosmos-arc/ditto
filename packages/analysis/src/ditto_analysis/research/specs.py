@@ -133,7 +133,9 @@ class DatasetSnapshot:
     effective_cutoff: str | None
     spine_spec_version: int = 1
     resolved_versions: dict[str, int] = field(default_factory=dict)
-    resolved_inputs: tuple[dict[str, str | int], ...] = field(default_factory=tuple)
+    resolved_inputs: tuple[dict[str, str | int | list[str]], ...] = field(
+        default_factory=tuple
+    )
     source_snapshot_ids: tuple[str, ...] = field(default_factory=tuple)
     builder_version: str = ""
     created_at: str = ""

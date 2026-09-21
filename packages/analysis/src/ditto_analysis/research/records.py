@@ -56,14 +56,14 @@ def _json_to_tuple_dicts(
     raw: object,
     *,
     default: str = "[]",
-) -> tuple[dict[str, str | int], ...]:
-    """将 JSON 字符串 / 序列 / 其他 反序列化为 ``tuple[dict[str, str | int], ...]``."""
+) -> tuple[dict[str, str | int | list[str]], ...]:
+    """Deserialize resolved inputs, retaining per-input source snapshot lists."""
     if isinstance(raw, str):
         return tuple(orjson.loads(raw))
     if isinstance(raw, (tuple, list)):
         return tuple(
             {str(k): v for k, v in d.items()}
-            for d in cast("list[dict[str, str | int]]", raw)
+            for d in cast("list[dict[str, str | int | list[str]]]", raw)
         )
     return ()
 
@@ -196,7 +196,9 @@ class ResearchDatasetSnapshotRecord:
     effective_cutoff: str | None
     spine_spec_version: int = 1
     resolved_versions: dict[str, int] = field(default_factory=dict)
-    resolved_inputs: tuple[dict[str, str | int], ...] = field(default_factory=tuple)
+    resolved_inputs: tuple[dict[str, str | int | list[str]], ...] = field(
+        default_factory=tuple
+    )
     source_snapshot_ids: tuple[str, ...] = field(default_factory=tuple)
     builder_version: str = ""
     created_at: str = ""

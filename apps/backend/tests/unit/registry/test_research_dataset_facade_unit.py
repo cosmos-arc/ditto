@@ -327,11 +327,13 @@ class TestResearchDatasetBuildProcess:
                     "derived_id": "factor.alpha",
                     "version": 2,
                     "artifact_path": "derived/artifacts/series/factor.alpha/v2",
+                    "source_snapshot_ids": [],
                 },
                 {
                     "derived_id": "factor.beta",
                     "version": 1,
                     "artifact_path": "derived/artifacts/series/factor.beta/v1",
+                    "source_snapshot_ids": [],
                 },
             )
             assert snapshot_record.manifest_hash

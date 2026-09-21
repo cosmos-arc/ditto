@@ -928,3 +928,73 @@ def test_export_sqlite_transaction_failure_preserves_target(
     assert temporary_paths
     assert all(not path.exists() for path in temporary_paths)
     assert not target.with_name(target.name + ".manifest.json").exists()
+
+
+@pytest.mark.integration
+def test_export_requires_frozen_source_evidence_for_every_input(
+    export_snapshot, research_state: Path
+) -> None:
+    from ditto_application.exceptions import AppQueryError
+
+    with closing(_make_test_container()) as container:
+        _seed_derived_spec(
+            container.get(DerivedCatalogService), derived_id="factor.beta", version=2
+        )
+        catalog = container.get(ResearchCatalogService)
+        spec = catalog.get_dataset_spec("research.alpha_flow")
+        assert spec is not None
+        catalog.save_dataset_spec(
+            replace(spec, derived_ids=("factor.alpha", "factor.beta"))
+        )
+    _write_artifact(
+        research_state,
+        derived_id="factor.beta",
+        version=2,
+        rows=[
+            {
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 11),
+                "value": 30.0,
+                "availability_time": date(2026, 3, 11),
+            }
+        ],
+    )
+    metadata_path = (
+        research_state
+        / "derived/artifacts/series/factor.beta/v2/_runs"
+        / "run-factor-beta/artifact_metadata.json"
+    )
+    metadata_path.write_bytes(orjson.dumps({"input_snapshots": []}))
+    result = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+    )
+    with closing(_make_test_container()) as container:
+        snapshot = container.get(ResearchDatasetQuery).get_snapshot(
+            result["summary"]["snapshot_id"]
+        )
+        assert snapshot.source_snapshot_ids == export_snapshot.source_snapshot_ids
+        command = container.get(ResearchDatasetExport)
+        with pytest.raises(AppQueryError, match=r"输入.*来源"):
+            command.export(snapshot, "csv", Path("exports/incomplete.csv"))
+        assert not (research_state / "exports").exists()
+        # Updating upstream evidence cannot retroactively authorize this saved snapshot.
+        metadata_path.write_bytes(
+            orjson.dumps({"input_snapshots": list(export_snapshot.source_snapshot_ids)})
+        )
+        with pytest.raises(AppQueryError, match=r"输入.*来源"):
+            command.export(snapshot, "csv", Path("exports/incomplete.csv"))
+    rebuilt = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+    )
+    with closing(_make_test_container()) as container:
+        complete = container.get(ResearchDatasetQuery).get_snapshot(
+            rebuilt["summary"]["snapshot_id"]
+        )
+        receipt = container.get(ResearchDatasetExport).export(
+            complete, "csv", Path("exports/complete.csv")
+        )
+        assert receipt["row_count"] == 2
+        assert complete.snapshot_id != snapshot.snapshot_id
+    assert pl.read_csv(research_state / "exports/complete.csv")[
+        "factor.beta"
+    ].to_list() == [None, 30.0]
