@@ -177,7 +177,16 @@ uv run --no-sync ditto ops promotion-history stock_daily
 `dataset_id`、`field`、`snapshot_id`、`consumer_field`；例如
 `consumer_field="instruments.factor_values.liquidity_rank"`。服务端从实际消费的因子、
 过滤字段、行业观察、证券池及上下文引用推导必需绑定；额外未消费字段不阻塞本次选股。
-未提供绑定的旧请求保留原入口，返回 `SELECTION_DATA_ADMISSION_BLOCKED`，不能继续生成正式输入。
+绑定的 `snapshot_id` 只能来自该消费字段所属阶段声明的来源列表
+（`instruments.*` 与 `universe_snapshot_id` 对应 `selection_source_snapshot_ids`，
+其余对应 `rotation_source_snapshot_ids`），跨阶段引用返回 `SNAPSHOT_CONFLICT`；
+声明的来源也必须被本阶段消费字段的绑定引用，未被任何绑定声明的来源返回
+`SNAPSHOT_UNBOUND`，不能进入已保存运行的血缘。
+按 `/api/v1` 兼容规则（contracts/openapi/README.md），在显式废弃窗口内，
+未声明任何数据绑定（既无 `data_fields` 也无 `data_from`/`data_to`）的旧请求保持
+#256 之前的原行为，不触发门禁；声明了任一绑定即进入门禁，缺失其余绑定返回
+`SELECTION_DATA_ADMISSION_BLOCKED`。`/admission` 预览始终报告严格结论；
+转为强制门禁属于破坏性变更，须按契约规则另行审批后执行。
 既有已保存运行仍可按精确 ID 读取，不重写其身份。
 
 字段证明存入既有 `DatasetCertificationReport.evidence.certified_fields`，使用
@@ -185,7 +194,10 @@ uv run --no-sync ditto ops promotion-history stock_daily
 可得/公开时间上界、时间精度、原件引用和获审查的 `consumer_bindings`（消费字段名、输入 SHA-256）。
 `selection_field_payload` 固定该消费字段的实际数值、证券身份、区间、时点、证券池/上下文引用及完整依赖组。
 消费者工件的 `field_inputs` 数组保留这些规范化对象；`consumer_input_digest` 计算其 SHA-256。
-`CertificationBuildRequest.certified_fields` 校验真实 catalog 字段、已校验工件字节及其中的输入摘要；
+生产输入是 `ditto data-products build-certification --profile selection-fields-v1
+--certified-fields-file <claims.json>`：claims 为 `CertifiedField` 的序列化数组
+（`field_from_payload` 编码）。`CertificationBuildRequest.certified_fields` 校验声明唯一、
+真实 catalog 字段、已校验工件字节及其中的输入摘要；
 调用已有 builder、freeze、review 流程，不从网页输入直接写入资格。
 审核者需确认映射、证券范围和时间上界有原件支持；日期精度须先通过交易日历解析成保守时间上界，
 不能用摄取时间代替。缺失时间保留未知。许可有效期按实际使用日（Asia/Shanghai）校验，

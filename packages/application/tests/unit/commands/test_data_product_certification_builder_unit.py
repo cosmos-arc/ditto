@@ -12,6 +12,7 @@ from ditto_application.commands.data_product_certification_builder import (
     AddressedCertificationEvidence,
     CertificationBuildRequest,
     DataProductCertificationBuilder,
+    load_certified_field_claims,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_data.catalog import (
@@ -270,6 +271,8 @@ def test_builder_rejects_field_claim_without_exact_schema_evidence(tmp_path) -> 
                 request, certified_fields=(replace(admitted, evidence_uri="unknown"),)
             )
         )
+    with pytest.raises(AppProcessError, match="unique"):
+        builder.build(replace(request, certified_fields=(admitted, admitted)))
 
 
 def test_builder_binds_input_digests_to_retained_verified_consumer_artifact(tmp_path):
@@ -304,3 +307,51 @@ def test_builder_binds_input_digests_to_retained_verified_consumer_artifact(tmp_
     forged = replace(field, consumer_bindings=(("instruments.close", "f" * 64),))
     with pytest.raises(AppProcessError, match="does not match retained evidence"):
         builder.build(replace(bound, certified_fields=(forged,)))
+
+
+def test_load_certified_field_claims_parses_only_reviewed_claim_arrays(tmp_path):
+    import orjson
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    claim = {
+        "field": "amount",
+        "snapshot_id": "snapshot:sha256:abc",
+        "instrument_ids": [600000],
+        "covered_from": "2026-09-18",
+        "covered_to": "2026-09-18",
+        "available_at": None,
+        "publication_at": None,
+        "time_precision": "timestamp",
+        "evidence_uri": "artifact+sha256://consumer/abc",
+    }
+    path = tmp_path / "claims.json"
+    path.write_bytes(orjson.dumps([claim]))
+
+    assert load_certified_field_claims(path) == (
+        CertifiedField(
+            field="amount",
+            snapshot_id="snapshot:sha256:abc",
+            instrument_ids=(600000,),
+            covered_from=date(2026, 9, 18),
+            covered_to=date(2026, 9, 18),
+            available_at=None,
+            publication_at=None,
+            time_precision="timestamp",
+            evidence_uri="artifact+sha256://consumer/abc",
+        ),
+    )
+
+    malformed = tmp_path / "malformed.json"
+    malformed.write_bytes(b"{}")
+    with pytest.raises(AppProcessError, match="array of objects"):
+        load_certified_field_claims(malformed)
+    reversed_interval = tmp_path / "reversed.json"
+    reversed_interval.write_bytes(
+        orjson.dumps([claim | {"covered_from": "2026-09-19"}])
+    )
+    with pytest.raises(AppProcessError, match="reversed"):
+        load_certified_field_claims(reversed_interval)
+    empty = tmp_path / "empty.json"
+    empty.write_bytes(b"[]")
+    with pytest.raises(AppProcessError, match="must not be empty"):
+        load_certified_field_claims(empty)

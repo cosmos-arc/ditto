@@ -21,6 +21,7 @@ const REASONS: Record<string, string> = {
 	TIME_NOT_VISIBLE: "该字段在决策截止时尚不可得，请调整决策时点。",
 	SNAPSHOT_MISSING: "找不到指定快照，请检查输入包中的引用。",
 	SNAPSHOT_CONFLICT: "快照与当前输入或认证不一致，请使用匹配版本。",
+	SNAPSHOT_UNBOUND: "该快照来源未被任何消费字段绑定，请移除多余来源或补齐字段绑定。",
 	SNAPSHOT_COVERAGE_MISSING: "快照没有覆盖所需区间，请缩小范围或使用匹配快照。",
 	SNAPSHOT_PAYLOAD_MISSING: "快照未保留原始载荷，无法提供可重放证据。",
 };

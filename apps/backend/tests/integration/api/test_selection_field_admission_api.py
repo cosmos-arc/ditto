@@ -103,6 +103,15 @@ async def test_http_admission_and_create_share_the_gate_and_retry_identity(tmp_p
             assert rejected.status_code == 422
             assert "SELECTION_DATA_ADMISSION_BLOCKED" in rejected.text
             assert len(runs.list_by_spec("admission-test")) == 1
+            body.pop("data_from")
+            body.pop("data_to")
+            legacy = await client.post("/api/v1/selections/runs", json=body)
+            assert legacy.status_code == 201, legacy.text
+            assert (
+                legacy.json()["data"]["selection_run"]["run_id"]
+                == first.json()["data"]["selection_run"]["run_id"]
+            )
+            assert len(runs.list_by_spec("admission-test")) == 1
         await container.close()
         pool.close_all()
 

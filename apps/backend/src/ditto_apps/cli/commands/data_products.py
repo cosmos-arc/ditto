@@ -20,6 +20,7 @@ from ditto_application.commands.data_product_certification_builder import (
     AddressedCertificationEvidence,
     CertificationBuildRequest,
     DataProductCertificationBuilder,
+    load_certified_field_claims,
 )
 from ditto_application.commands.data_product_license import (
     DataProductLicenseCommands,
@@ -31,7 +32,7 @@ from ditto_application.commands.data_product_operations import (
     confirm_data_product_operation,
     preview_data_product_operation,
 )
-from ditto_application.exceptions import AppCommandError
+from ditto_application.exceptions import AppCommandError, AppProcessError
 
 from ditto_apps.cli.utils.output import output_json_dict
 from ditto_apps.registry.container import make_app_container
@@ -74,6 +75,7 @@ class DataProductOperationOptions:
     consumer_evidence_path: str | None = None
     consumer_evidence_uri: str | None = None
     consumer_evidence_sha256: str | None = None
+    certified_fields_file: str | None = None
 
 
 def _required(value: str | None, option: str, operation: str) -> str:
@@ -299,6 +301,11 @@ def execute_data_product_operation(
                         sha256_hex=options.consumer_evidence_sha256,
                         operation=operation,
                     ),
+                    certified_fields=(
+                        load_certified_field_claims(Path(options.certified_fields_file))
+                        if options.certified_fields_file
+                        else ()
+                    ),
                 )
             )
             result = command.freeze(report)
@@ -357,7 +364,7 @@ def _run(
             dataset_id,
             options,
         )
-    except AppCommandError as exc:
+    except (AppCommandError, AppProcessError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(2) from exc
     output_json_dict(result)
@@ -487,6 +494,7 @@ def build_certification(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer
     consumer_evidence_sha256: str | None = typer.Option(
         None, "--consumer-evidence-sha256"
     ),
+    certified_fields_file: str | None = typer.Option(None, "--certified-fields-file"),
     confirm: str | None = typer.Option(None, "--confirm"),
 ) -> None:
     """Preview or freeze one machine-built certification report."""
@@ -506,6 +514,7 @@ def build_certification(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer
             consumer_evidence_path=consumer_evidence_path,
             consumer_evidence_uri=consumer_evidence_uri,
             consumer_evidence_sha256=consumer_evidence_sha256,
+            certified_fields_file=certified_fields_file,
         ),
     )
 

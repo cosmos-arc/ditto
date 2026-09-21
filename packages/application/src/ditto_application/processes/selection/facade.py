@@ -275,7 +275,14 @@ class SelectionWorkspaceFacade:
     def assess_admission(
         self, request: CreateSelectionRunRequest, *, instrument_id: int | None = None
     ) -> FieldAdmissionReport:
-        """Show exactly the data gate that create rechecks before any writes."""
+        """
+        Preview the data gate for a declared or incomplete binding.
+
+        Requests without a complete binding get the missing-binding verdict
+        instead of a per-field assessment. During the /api/v1 deprecation
+        window create enforces this verdict only for requests that declare
+        a data binding.
+        """
         if (
             not request.data_fields
             or request.data_from is None
@@ -317,12 +324,7 @@ class SelectionWorkspaceFacade:
                 ),
                 consumed_fields=_consumed_fields(request),
                 instrument_ids=instrument_ids,
-                snapshot_ids=frozenset(
-                    (
-                        *request.selection_source_snapshot_ids,
-                        *request.rotation_source_snapshot_ids,
-                    )
-                ),
+                snapshot_bindings=_snapshot_bindings(request),
             )
         except AppQueryError as exc:
             raise AppProcessError(
@@ -345,18 +347,23 @@ class SelectionWorkspaceFacade:
                 str(exc),
                 details={"reason": "invalid_selection_request", **details},
             ) from exc
-        admission = self.assess_admission(request)
-        if not admission.allowed:
-            reasons = sorted(
-                {reason for item in admission.fields for reason in item.reason_codes}
-            )
-            raise AppProcessError(
-                "数据准入未通过:" + ", ".join(reasons),
-                details={
-                    "reason": "SELECTION_DATA_ADMISSION_BLOCKED",
-                    "reason_codes": reasons,
-                },
-            )
+        if _declares_data_binding(request):
+            admission = self.assess_admission(request)
+            if not admission.allowed:
+                reasons = sorted(
+                    {
+                        reason
+                        for item in admission.fields
+                        for reason in item.reason_codes
+                    }
+                )
+                raise AppProcessError(
+                    "数据准入未通过:" + ", ".join(reasons),
+                    details={
+                        "reason": "SELECTION_DATA_ADMISSION_BLOCKED",
+                        "reason_codes": reasons,
+                    },
+                )
         try:
             receipt = self._process.execute(process_request)
         except StrategySpecError as exc:
@@ -368,6 +375,35 @@ class SelectionWorkspaceFacade:
             receipt.industry_rotation,
             receipt.selection_run,
         )
+
+
+def _declares_data_binding(request: CreateSelectionRunRequest) -> bool:
+    """
+    Pre-#256 v1 requests carry no binding and keep the ungated legacy path.
+
+    Declaring any binding part opts the request into the admission gate.
+    """
+    return (
+        bool(request.data_fields)
+        or request.data_from is not None
+        or request.data_to is not None
+    )
+
+
+def _snapshot_bindings(
+    request: CreateSelectionRunRequest,
+) -> dict[str, frozenset[str]]:
+    """Serve each consumed input only from its own stage's declared sources."""
+    selection = frozenset(request.selection_source_snapshot_ids)
+    rotation = frozenset(request.rotation_source_snapshot_ids)
+    return {
+        name: (
+            selection
+            if name == "universe_snapshot_id" or name.startswith("instruments.")
+            else rotation
+        )
+        for name in _consumed_fields(request)
+    }
 
 
 def _consumed_fields(request: CreateSelectionRunRequest) -> frozenset[str]:

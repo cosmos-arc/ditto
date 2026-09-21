@@ -4,14 +4,24 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 
 import pytest
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.selection.facade import SelectionWorkspaceFacade
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
 from ditto_application.queries.field_admission import (
+    FieldAdmissionQuery,
     FieldRequirement,
 )
 from ditto_platform.foundation import SQLitePool
+from ditto_strategy.industry_rotation.service import IndustryRotationService
+from ditto_strategy.selection.pipeline import SelectionPipeline
+from ditto_strategy.storage.sqlite.industry_rotation_store import (
+    SQLiteIndustryRotationStore,
+)
+from ditto_strategy.storage.sqlite.selection_run_store import SQLiteSelectionRunStore
 from packages.application.tests.integration.field_admission_support import (
+    certified_selection,
     field_evidence,
 )
 
@@ -73,19 +83,8 @@ def test_unused_unknown_field_does_not_block_and_scope_cannot_be_forged(evidence
     ).allowed
 
 
-def test_selection_cannot_save_a_run_without_complete_consumed_field_bindings(evidence):
-    from ditto_application.exceptions import AppProcessError
-    from ditto_application.processes.selection.facade import SelectionWorkspaceFacade
-    from ditto_strategy.industry_rotation.service import IndustryRotationService
-    from ditto_strategy.selection.pipeline import SelectionPipeline
-    from ditto_strategy.storage.sqlite.industry_rotation_store import (
-        SQLiteIndustryRotationStore,
-    )
-    from ditto_strategy.storage.sqlite.selection_run_store import (
-        SQLiteSelectionRunStore,
-    )
-
-    query, _, _, _ = evidence
+def _gate_facade(query: FieldAdmissionQuery):
+    """Real admission gate over isolated in-memory run stores."""
     pool = SQLitePool(":memory:")
     runs = SQLiteSelectionRunStore(pool)
     rotations = SQLiteIndustryRotationStore(pool)
@@ -100,10 +99,67 @@ def test_selection_cannot_save_a_run_without_complete_consumed_field_bindings(ev
         ),
         admission=query,
     )
+    return facade, runs, pool
+
+
+def test_selection_cannot_save_a_run_without_complete_consumed_field_bindings(evidence):
+    query, _, _, _ = evidence
+    facade, runs, pool = _gate_facade(query)
+    gated = replace(selection_request(), data_from=_DAY, data_to=_DAY)
     with pytest.raises(AppProcessError, match="准入"):
-        facade.create(selection_request())
+        facade.create(gated)
     assert runs.list_by_spec("admission-test") == []
     pool.close()
+
+
+def test_legacy_request_without_any_data_binding_keeps_v1_behavior(evidence):
+    """/api/v1 compat: pre-#256 requests stay ungated during the window."""
+    query, _, _, _ = evidence
+    facade, runs, pool = _gate_facade(query)
+    receipt = facade.create(selection_request())
+    assert [item.instrument_id for item in receipt.selection_run.candidates] == [600000]
+    assert len(runs.list_by_spec("admission-test")) == 1
+    pool.close()
+
+
+def test_admission_binds_each_stage_to_its_own_declared_sources():
+    """A snapshot declared only for rotation cannot serve selection inputs."""
+    with certified_selection(selection_request()) as (query, request):
+        facade, _, pool = _gate_facade(query)
+        report = facade.assess_admission(
+            replace(request, selection_source_snapshot_ids=("unbound",))
+        )
+        pool.close()
+    assert not report.allowed
+    selection_field = next(
+        item for item in report.fields if item.consumer_field.startswith("instruments.")
+    )
+    assert "SNAPSHOT_CONFLICT" in selection_field.reason_codes
+    rotation_field = next(
+        item for item in report.fields if item.consumer_field == "membership_version"
+    )
+    assert "SNAPSHOT_CONFLICT" not in rotation_field.reason_codes
+
+
+def test_admission_rejects_stage_sources_no_binding_claims():
+    """A declared source no consumed field claims cannot enter saved lineage."""
+    with certified_selection(selection_request()) as (query, request):
+        facade, _, pool = _gate_facade(query)
+        report = facade.assess_admission(
+            replace(
+                request,
+                rotation_source_snapshot_ids=(
+                    *request.rotation_source_snapshot_ids,
+                    "extra-source",
+                ),
+            )
+        )
+        pool.close()
+    assert not report.allowed
+    unclaimed = [
+        item for item in report.fields if "SNAPSHOT_UNBOUND" in item.reason_codes
+    ]
+    assert [item.field for item in unclaimed] == ["extra-source"]
 
 
 def selection_request():
