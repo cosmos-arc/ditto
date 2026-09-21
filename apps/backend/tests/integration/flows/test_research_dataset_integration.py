@@ -1,7 +1,7 @@
 """Integration tests for research dataset build flow."""
 
 import sqlite3
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import asdict, replace
 from datetime import date
 from hashlib import sha256
@@ -20,6 +20,7 @@ from ditto_analysis.research.domain import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
 )
+from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
@@ -240,6 +241,7 @@ def _materialization_bundle_context():
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_build=container.get(ResearchDatasetBuildProcess),
             research_dataset_query=container.get(ResearchDatasetQuery),
+            research_dataset_export=container.get(ResearchDatasetExport),
         )
     finally:
         container.close()
@@ -622,3 +624,408 @@ class TestResearchDatasetBuildFlowIntegration:
             assert _persisted_state(research_state) == before
         finally:
             container.close()
+
+
+@pytest.fixture
+def export_snapshot(research_state: Path, request: pytest.FixtureRequest):
+    """Build a real PIT snapshot backed by reviewed synthetic source evidence."""
+    from datetime import UTC, datetime
+
+    from ditto_data.catalog.contracts import DataAssetRef
+    from ditto_data.catalog.license import (
+        DatasetLicenseDraft,
+        DatasetLicenseRecord,
+        DatasetLicenseWriter,
+    )
+    from ditto_data.catalog.source_snapshot import (
+        ProviderSnapshot,
+        ProviderSnapshotDraft,
+        ProviderSnapshotWriter,
+    )
+
+    license_record = DatasetLicenseRecord.create(
+        DatasetLicenseDraft(
+            dataset_id="market.daily",
+            source="synthetic",
+            terms_version="v1",
+            effective_from=date(2000, 1, 1),
+            effective_to=None,
+            local_cache="allowed",
+            derivative_compute="allowed",
+            display="allowed",
+            redistribution="prohibited",
+            notes="Synthetic local research fixture",
+            reviewed_by="test",
+            reviewed_at=datetime(2026, 3, 14, tzinfo=UTC),
+        )
+    )
+    source = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="market.daily",
+            source="synthetic",
+            request_start="2026-03-10",
+            request_end="2026-03-11",
+            schema_version="v1",
+            checksum="synthetic-checksum",
+            canonical_asset=DataAssetRef(namespace="market", dataset_id="market.daily"),
+            request_parameters_hash="synthetic-request",
+            response_metadata=(),
+            license_record_id=license_record.record_id,
+            row_count=2,
+            payload_uri=None,
+            payload_retained=False,
+            created_at=datetime(2026, 3, 14, tzinfo=UTC),
+        )
+    )
+    variant = getattr(request, "param", "allowed")
+    if variant == "restricted":
+        license_record = replace(license_record, local_cache="restricted")
+    elif variant == "expired":
+        license_record = replace(license_record, effective_to=date(2001, 1, 1))
+    elif variant == "wrong_source":
+        license_record = replace(license_record, source="different")
+    with closing(_make_test_container()) as container:
+        if variant != "missing":
+            container.get(DatasetLicenseWriter).append_license(license_record)
+        container.get(ProviderSnapshotWriter).append_snapshot(source)
+    metadata_path = (
+        research_state
+        / "derived/artifacts/series/factor.alpha/v2/_runs"
+        / "run-factor-alpha/artifact_metadata.json"
+    )
+    metadata_path.write_bytes(orjson.dumps({"input_snapshots": [source.snapshot_id]}))
+    result = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+    )
+    with closing(_make_test_container()) as container:
+        snapshot = container.get(ResearchDatasetQuery).get_snapshot(
+            result["summary"]["snapshot_id"]
+        )
+    return snapshot
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+@pytest.mark.parametrize("fmt", ["csv", "sqlite"])
+def test_saved_snapshot_export_through_cli(
+    export_snapshot, research_state: Path, monkeypatch, fmt: str
+) -> None:
+    from ditto_apps.cli.commands import research
+    from typer.testing import CliRunner
+
+    monkeypatch.setattr(
+        research, "create_materialization_bundle", _materialization_bundle_context
+    )
+    target = f"exports/snapshot.{fmt}"
+    result = CliRunner().invoke(
+        research.app,
+        [
+            "export-dataset",
+            "--snapshot-id",
+            export_snapshot.snapshot_id,
+            "--path",
+            target,
+            "--format",
+            fmt,
+        ],
+    )
+    assert result.exit_code == 0, result.output or str(result.exception)
+    path = research_state / target
+    receipt = orjson.loads(path.with_name(path.name + ".manifest.json").read_bytes())
+    assert receipt["sha256"] == sha256(path.read_bytes()).hexdigest()
+    assert receipt["source"]["snapshot_id"] == export_snapshot.snapshot_id
+    assert receipt["source"]["source_snapshot_ids"] == list(
+        export_snapshot.source_snapshot_ids
+    )
+    assert receipt["row_count"] == 2
+    if fmt == "csv":
+        values = pl.read_csv(path)["factor.alpha"].to_list()
+    else:
+        with sqlite3.connect(path) as connection:
+            values = [
+                row[0]
+                for row in connection.execute(
+                    'SELECT "factor.alpha" FROM "research.alpha_flow"'
+                ).fetchall()
+            ]
+    assert values == [None, 20.0]
+    first = path.read_bytes()
+    # The next export still uses the saved bytes even if newer derived inputs appear.
+    pl.DataFrame({"future": [999999]}).write_parquet(
+        research_state / "derived/artifacts/series/factor.alpha/v2/2026.parquet"
+    )
+    replay = CliRunner().invoke(
+        research.app,
+        [
+            "export-dataset",
+            "--snapshot-id",
+            export_snapshot.snapshot_id,
+            "--path",
+            target,
+            "--format",
+            fmt,
+        ],
+    )
+    assert replay.exit_code == 0, replay.output or str(replay.exception)
+    assert path.read_bytes() == first
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "export_snapshot",
+    ["restricted", "expired", "wrong_source", "missing"],
+    indirect=True,
+)
+def test_export_license_denial_writes_nothing(
+    export_snapshot, research_state: Path
+) -> None:
+    from ditto_application.exceptions import AppQueryError
+
+    with closing(_make_test_container()) as container:
+        command = container.get(ResearchDatasetExport)
+        with pytest.raises(AppQueryError, match="许可"):
+            command.export(export_snapshot, "csv", Path("exports/denied.csv"))
+    assert not (research_state / "exports").exists()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("damage", ["data", "manifest", "caller"])
+def test_export_refuses_corrupt_or_forged_snapshot(
+    export_snapshot, research_state: Path, damage: str
+) -> None:
+    from ditto_analysis.errors import ExperimentIntegrityError
+
+    if damage == "data":
+        (research_state / export_snapshot.data_path).write_bytes(b"corrupt")
+    elif damage == "manifest":
+        path = (research_state / export_snapshot.data_path).with_name("metadata.json")
+        metadata = orjson.loads(path.read_bytes())
+        metadata["source_snapshot_ids"] = []
+        path.write_bytes(orjson.dumps(metadata))
+    else:
+        export_snapshot = replace(export_snapshot, source_snapshot_ids=())
+    with closing(_make_test_container()) as container:
+        with pytest.raises(ExperimentIntegrityError):
+            container.get(ResearchDatasetExport).export(
+                export_snapshot, "csv", Path("exports/denied.csv")
+            )
+    assert not (research_state / "exports").exists()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("fmt", ["csv", "sqlite"])
+def test_export_publish_failure_recovers(
+    export_snapshot, research_state: Path, monkeypatch, fmt: str
+) -> None:
+    import os
+
+    original = os.link
+    path = research_state / "exports" / f"failed.{fmt}"
+    old_path = research_state / "exports" / "old.csv"
+    with closing(_make_test_container()) as container:
+        command = container.get(ResearchDatasetExport)
+        command.export(export_snapshot, "csv", old_path)
+        old = old_path.read_bytes()
+
+        def fail_data(source, destination, **kwargs):
+            if Path(destination) == path:
+                raise OSError("simulated disk failure")
+            return original(source, destination, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(os, "link", fail_data)
+            with pytest.raises(OSError, match="simulated disk failure"):
+                command.export(export_snapshot, fmt, path)
+        assert not path.exists()
+        assert old_path.read_bytes() == old
+        assert not list(path.parent.glob(".*.tmp"))
+        receipt = command.export(export_snapshot, fmt, path)
+        assert receipt["row_count"] == 2
+        assert sha256(path.read_bytes()).hexdigest() == receipt["sha256"]
+        before = path.read_bytes()
+        assert command.export(export_snapshot, fmt, path) == receipt
+        assert path.read_bytes() == before
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("fmt", ["csv", "sqlite"])
+def test_export_target_conflict_preserves_old_file(
+    export_snapshot, research_state: Path, fmt: str
+) -> None:
+    path = research_state / "existing.file"
+    path.write_bytes(b"existing user content")
+    with closing(_make_test_container()) as container:
+        with pytest.raises(ExperimentConflictError):
+            container.get(ResearchDatasetExport).export(export_snapshot, fmt, path)
+    assert path.read_bytes() == b"existing user content"
+    assert not path.with_name(path.name + ".manifest.json").exists()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "target", ["../escape.csv", "exports/../outside/../../escape.csv"]
+)
+def test_export_refuses_escaping_path(
+    export_snapshot, research_state: Path, target: str
+) -> None:
+    from ditto_application.exceptions import AppQueryError
+
+    with closing(_make_test_container()) as container:
+        with pytest.raises(AppQueryError, match="工件目录"):
+            container.get(ResearchDatasetExport).export(
+                export_snapshot, "csv", Path(target)
+            )
+    assert not (research_state / "exports").exists()
+
+
+@pytest.mark.integration
+def test_export_unsupported_format_writes_nothing(
+    export_snapshot, research_state: Path
+) -> None:
+    from ditto_application.exceptions import AppQueryError
+
+    with closing(_make_test_container()) as container:
+        with pytest.raises(AppQueryError, match="不支持的导出格式"):
+            container.get(ResearchDatasetExport).export(
+                export_snapshot, "xlsx", Path("exports/out.xlsx")
+            )
+    assert not (research_state / "exports").exists()
+
+
+@pytest.mark.integration
+def test_export_sqlite_transaction_failure_preserves_target(
+    export_snapshot, research_state: Path, monkeypatch
+) -> None:
+    from ditto_analysis.storage.sqlite.research import export as export_module
+
+    original = sqlite3.connect
+    temporary_paths = []
+
+    class FailingConnection(sqlite3.Connection):
+        def executemany(self, sql, parameters):
+            rows = iter(parameters)
+            self.execute(sql, next(rows))
+            raise sqlite3.OperationalError("simulated transaction failure")
+
+    def failing_connect(path, *args, **kwargs):
+        if Path(path).name != "dataset.sqlite":
+            return original(path, *args, **kwargs)
+        temporary_paths.append(Path(path))
+        return original(path, factory=FailingConnection)
+
+    target = research_state / "old.sqlite"
+    target.write_bytes(b"old user database")
+    with closing(_make_test_container()) as container:
+        with monkeypatch.context() as patch:
+            patch.setattr(export_module.sqlite3, "connect", failing_connect)
+            with pytest.raises(
+                sqlite3.OperationalError, match="simulated transaction failure"
+            ):
+                container.get(ResearchDatasetExport).export(
+                    export_snapshot, "sqlite", target
+                )
+    assert target.read_bytes() == b"old user database"
+    assert temporary_paths
+    assert all(not path.exists() for path in temporary_paths)
+    assert not target.with_name(target.name + ".manifest.json").exists()
+
+
+@pytest.mark.integration
+def test_export_requires_frozen_source_evidence_for_every_input(
+    export_snapshot, research_state: Path
+) -> None:
+    from ditto_application.exceptions import AppQueryError
+
+    with closing(_make_test_container()) as container:
+        _seed_derived_spec(
+            container.get(DerivedCatalogService), derived_id="factor.beta", version=2
+        )
+        catalog = container.get(ResearchCatalogService)
+        spec = catalog.get_dataset_spec("research.alpha_flow")
+        assert spec is not None
+        catalog.save_dataset_spec(
+            replace(spec, derived_ids=("factor.alpha", "factor.beta"))
+        )
+    _write_artifact(
+        research_state,
+        derived_id="factor.beta",
+        version=2,
+        rows=[
+            {
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 11),
+                "value": 30.0,
+                "availability_time": date(2026, 3, 11),
+            }
+        ],
+    )
+    metadata_path = (
+        research_state
+        / "derived/artifacts/series/factor.beta/v2/_runs"
+        / "run-factor-beta/artifact_metadata.json"
+    )
+    metadata_path.write_bytes(orjson.dumps({"input_snapshots": []}))
+    result = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+    )
+    with closing(_make_test_container()) as container:
+        snapshot = container.get(ResearchDatasetQuery).get_snapshot(
+            result["summary"]["snapshot_id"]
+        )
+        assert snapshot.source_snapshot_ids == export_snapshot.source_snapshot_ids
+        command = container.get(ResearchDatasetExport)
+        with pytest.raises(AppQueryError, match=r"输入.*来源"):
+            command.export(snapshot, "csv", Path("exports/incomplete.csv"))
+        assert not (research_state / "exports").exists()
+        # Updating upstream evidence cannot retroactively authorize this saved snapshot.
+        metadata_path.write_bytes(
+            orjson.dumps({"input_snapshots": list(export_snapshot.source_snapshot_ids)})
+        )
+        with pytest.raises(AppQueryError, match=r"输入.*来源"):
+            command.export(snapshot, "csv", Path("exports/incomplete.csv"))
+    rebuilt = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+    )
+    with closing(_make_test_container()) as container:
+        complete = container.get(ResearchDatasetQuery).get_snapshot(
+            rebuilt["summary"]["snapshot_id"]
+        )
+        receipt = container.get(ResearchDatasetExport).export(
+            complete, "csv", Path("exports/complete.csv")
+        )
+        assert receipt["row_count"] == 2
+        assert complete.snapshot_id != snapshot.snapshot_id
+    assert pl.read_csv(research_state / "exports/complete.csv")[
+        "factor.beta"
+    ].to_list() == [None, 30.0]
+
+
+@pytest.mark.parametrize("old_sources", [[], ["unlicensed-old-source"]])
+def test_export_does_not_let_latest_run_hide_older_evidence(
+    export_snapshot, research_state: Path, old_sources
+) -> None:
+    import os
+
+    old = research_state / "derived/artifacts/series/factor.alpha/v2/_runs/older"
+    old.mkdir()
+    metadata = old / "artifact_metadata.json"
+    metadata.write_bytes(orjson.dumps({"input_snapshots": old_sources}))
+    os.utime(metadata, ns=(0, 1))
+    result = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+    )
+    with closing(_make_test_container()) as container:
+        snapshot = container.get(ResearchDatasetQuery).get_snapshot(
+            result["summary"]["snapshot_id"]
+        )
+        if old_sources:
+            assert set(snapshot.source_snapshot_ids) == set(
+                export_snapshot.source_snapshot_ids
+            ) | set(old_sources)
+        from ditto_application.exceptions import AppQueryError
+
+        with pytest.raises(AppQueryError, match="来源"):
+            container.get(ResearchDatasetExport).export(
+                snapshot, "csv", Path("exports/incremental.csv")
+            )
+    assert not (research_state / "exports").exists()

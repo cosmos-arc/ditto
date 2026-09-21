@@ -27,6 +27,7 @@ from ditto_analysis.storage.sqlite.research import (
     SQLiteResearchCatalogReader,
     SQLiteResearchCatalogWriter,
 )
+from ditto_analysis.storage.sqlite.research.export import sqlite_dataset_bytes
 
 __all__ = ["AnalysisStorageProvider"]
 
@@ -155,4 +156,5 @@ class AnalysisStorageProvider(Provider):
             indexed_artifact_root=database.artifact_root,
             artifact_reader=reader,
             artifact_writer=writer,
+            sqlite_export=sqlite_dataset_bytes,
         )

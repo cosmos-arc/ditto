@@ -1,0 +1,119 @@
+"""Standalone exports preserve actual file schema, rows and immutable targets."""
+
+import csv
+import sqlite3
+from pathlib import Path
+
+import polars as pl
+import pytest
+from ditto_analysis.errors import ExperimentConflictError
+from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_analysis.storage.sqlite.research.export import sqlite_dataset_bytes
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_sqlite_schema_and_replay(tmp_path: Path, empty: bool) -> None:
+    artifacts = ResearchArtifactService(
+        artifact_root=tmp_path, sqlite_export=sqlite_dataset_bytes
+    )
+    frame = pl.DataFrame(
+        {"select": [10, 20], 'a"b': ["x", "y"], "price x": [1.5, None]}
+    )
+    if empty:
+        frame = frame.head(0)
+    receipt = artifacts.export_dataset(
+        "out.sqlite", frame, fmt="sqlite", table_name="test.dataset"
+    )
+    first = (tmp_path / "out.sqlite").read_bytes()
+    assert (
+        artifacts.export_dataset(
+            "out.sqlite", frame, fmt="sqlite", table_name="test.dataset"
+        )
+        == receipt
+    )
+    assert (tmp_path / "out.sqlite").read_bytes() == first
+    with sqlite3.connect(tmp_path / "out.sqlite") as connection:
+        assert connection.execute('SELECT * FROM "test.dataset"').fetchall() == (
+            [] if empty else [(10, "x", 1.5), (20, "y", None)]
+        )
+        schema = connection.execute('PRAGMA table_info("test.dataset")').fetchall()
+        assert [(row[1], row[2]) for row in schema] == [
+            ("select", "INTEGER"),
+            ('a"b', "TEXT"),
+            ("price x", "REAL"),
+        ]
+    with pytest.raises(ExperimentConflictError):
+        artifacts.export_dataset(
+            "out.sqlite",
+            pl.DataFrame({"other": [99]}),
+            fmt="sqlite",
+            table_name="test.dataset",
+        )
+    assert (tmp_path / "out.sqlite").read_bytes() == first
+
+
+def test_sqlite_preserves_nanosecond_timestamps(tmp_path: Path) -> None:
+    frame = pl.DataFrame({"time": [1770000000000000123]}).with_columns(
+        pl.col("time").cast(pl.Datetime("ns"))
+    )
+    ResearchArtifactService(
+        artifact_root=tmp_path, sqlite_export=sqlite_dataset_bytes
+    ).export_dataset("out.sqlite", frame, fmt="sqlite")
+    with sqlite3.connect(tmp_path / "out.sqlite") as connection:
+        assert connection.execute("SELECT time FROM dataset").fetchone() == (
+            "2026-02-02 02:40:00.000000123",
+        )
+
+
+def test_sqlite_refuses_nan_instead_of_silently_exporting_null(tmp_path: Path) -> None:
+    from ditto_analysis.errors import ResearchDatasetError
+
+    with pytest.raises(ResearchDatasetError):
+        ResearchArtifactService(
+            artifact_root=tmp_path, sqlite_export=sqlite_dataset_bytes
+        ).export_dataset(
+            "out.sqlite", pl.DataFrame({"value": [float("nan")]}), fmt="sqlite"
+        )
+    assert not (tmp_path / "out.sqlite").exists()
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_csv_schema_and_identity_conflict(tmp_path: Path, empty: bool) -> None:
+    import orjson
+
+    frame = pl.DataFrame({'a,"b': [10, 20], "text": ["a,b", "line\nbreak"]})
+    if empty:
+        frame = frame.head(0)
+    artifacts = ResearchArtifactService(artifact_root=tmp_path)
+    receipt = artifacts.export_dataset(
+        "out.csv", frame, fmt="csv", provenance={"snapshot_id": "first"}
+    )
+    with (tmp_path / "out.csv").open(newline="") as stream:
+        header, *rows = csv.reader(stream)
+    assert header == ['a,"b', "text"]
+    assert rows == ([] if empty else [["10", "a,b"], ["20", "line\nbreak"]])
+    sidecar = (tmp_path / "out.csv.manifest.json").read_bytes()
+    assert orjson.loads(sidecar) == receipt
+    before = (tmp_path / "out.csv").read_bytes()
+    with pytest.raises(ExperimentConflictError):
+        artifacts.export_dataset(
+            "out.csv", frame, fmt="csv", provenance={"snapshot_id": "different"}
+        )
+    assert (tmp_path / "out.csv").read_bytes() == before
+    assert (tmp_path / "out.csv.manifest.json").read_bytes() == sidecar
+
+
+@pytest.mark.parametrize(
+    ("dtype", "values"),
+    [(pl.UInt64, [0, 2**64 - 1, None]), (pl.Int128, [-(2**100), 2**100, None])],
+)
+def test_sqlite_preserves_wide_integers(tmp_path: Path, dtype, values) -> None:
+    frame = pl.DataFrame({"wide": pl.Series(values, dtype=dtype)})
+    ResearchArtifactService(
+        artifact_root=tmp_path, sqlite_export=sqlite_dataset_bytes
+    ).export_dataset("out.sqlite", frame, fmt="sqlite")
+    with sqlite3.connect(tmp_path / "out.sqlite") as connection:
+        assert connection.execute("SELECT wide FROM dataset").fetchall() == [
+            (None if value is None else str(value),) for value in values
+        ]
+        assert connection.execute("PRAGMA table_info(dataset)").fetchone()[2] == "TEXT"

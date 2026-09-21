@@ -55,7 +55,7 @@ class _DatasetSnapshotContract:
     known_at_policy: KnownAtPolicy
     effective_cutoff: str | None
     resolved_versions: dict[str, int]
-    resolved_inputs: tuple[dict[str, str | int], ...]
+    resolved_inputs: tuple[dict[str, str | int | list[str]], ...]
     source_snapshot_ids: tuple[str, ...]
     builder_version: str = _RESEARCH_BUILDER_VERSION
 

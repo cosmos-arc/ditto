@@ -197,6 +197,7 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
     assert {
         "packages/application/src/ditto_application/providers.py",
         "packages/application/src/ditto_application/providers_market.py",
+        "packages/application/src/ditto_application/providers_command.py",
         "packages/application/src/ditto_application/providers_portfolio.py",
         "packages/application/src/ditto_application/providers_process.py",
         "packages/application/src/ditto_application/providers_strategy.py",
@@ -557,6 +558,7 @@ def test_application_provider_modules_are_allowed_to_wire_analysis():
     for rel_path in (
         "packages/application/src/ditto_application/providers.py",
         "packages/application/src/ditto_application/providers_market.py",
+        "packages/application/src/ditto_application/providers_command.py",
         "packages/application/src/ditto_application/providers_portfolio.py",
         "packages/application/src/ditto_application/providers_strategy.py",
     ):

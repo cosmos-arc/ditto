@@ -41,9 +41,26 @@ namespaces, not current runtime APIs.
 - Same inputs and content reuse the published identity, including creation time.
   A failed catalog commit is retried against those files; a conflicting immutable
   file is rejected. Partial publication has no completed catalog entry.
-- `ResearchDatasetExport` is an explicit command. Its existing CSV/SQLite behavior
-  is unchanged in #253; atomic export, license checks and moving its SQL into the
-  analysis adapter are the separately scoped #254 work.
+- `ditto research export-dataset --snapshot-id <id> --format csv|sqlite --path
+  exports/data.csv` resolves a saved snapshot via `ResearchDatasetQuery`, then
+  invokes `ResearchDatasetExport`. It verifies the catalog identity, manifest,
+  data checksum and source-bound local research permissions before publication.
+- Each resolved input freezes its own source snapshot IDs at build time. Export
+  requires complete per-input bindings and an exact union matching the snapshot
+  source set; later upstream metadata cannot retroactively authorize old inputs.
+- Export targets stay within the research artifact root. The analysis artifact
+  service reserves a `<target>.manifest.json` sidecar with source identity,
+  ordered schema, row count and checksum, then publishes the complete data file
+  without replacement. Read both files and verify the checksum; a sidecar alone
+  is an interrupted export, recoverable by repeating the same request.
+- SQLite export uses an analysis-owned temporary database and transaction, quoted
+  identifiers and bound values. Empty data retains its schema. Temporal/decimal
+  values use lossless text and their original types remain in the sidecar; NaN
+  is rejected because SQLite would silently turn it into NULL.
+- Same-content retries reuse files; target or provenance conflicts require a new
+  target. Export is personal local research only and grants no redistribution
+  rights. Missing source/license evidence fails closed; no rebuild or latest
+  input lookup occurs during export.
 
 ## Portfolio Comparison Boundary
 
@@ -91,3 +108,5 @@ Composition root (`apps.registry`) wires OTel bridge and physical Agent adapters
 按[测试指南](../engineering/testing.md)选择 Task 验证范围；PR 的绿色结果只证明
 当前提交所选中的检查，完整证明由 main、merge queue、定期 CI 和发布要求承载。
 具体选择与聚合见[Harness 验证分工](../engineering/agent-harness.md#本地与-ci-的验证分工)。
+
+研究导出对增量制品保守绑定该版本所有物化 run 的来源集合，不按 mtime 只选最新批次；任一 run 缺少来源证据则拒绝导出。当前没有分区级完整 lineage，完整覆盖旧分区后仍可能要求旧来源许可；需缩小许可范围时先补充分区 lineage，再收窄来源集合。SQLite 将 UInt64/Int128 与时间、decimal 按文本无损保存，manifest 保留原始 Polars schema。

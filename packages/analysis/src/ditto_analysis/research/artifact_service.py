@@ -7,6 +7,7 @@ import os
 import tempfile
 from collections.abc import Callable, Mapping
 from contextlib import suppress
+from dataclasses import asdict
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -38,12 +39,13 @@ from ditto_analysis.research._indexed_artifacts import (
     ArtifactIndexWriter,
     IndexedArtifactIO,
 )
+from ditto_analysis.research.specs import DatasetSnapshot
 
 __all__ = ["ResearchArtifactService"]
 
 _SHA256_HEX_LENGTH = 64
 
-ExportFormat = Literal["parquet", "csv", "feather"]
+ExportFormat = Literal["parquet", "csv", "feather", "sqlite"]
 _EXPORT_WRITERS: dict[ExportFormat, str] = {
     "parquet": "write_parquet",
     "csv": "write_csv",
@@ -70,8 +72,10 @@ class ResearchArtifactService:
         indexed_artifact_root: Path | None = None,
         artifact_reader: ArtifactIndexReader | None = None,
         artifact_writer: ArtifactIndexWriter | None = None,
+        sqlite_export: Callable[[pl.DataFrame, str], bytes] | None = None,
     ) -> None:
         self._root = Path(artifact_root).resolve()
+        self._sqlite_export = sqlite_export
         if (
             indexed_artifact_root is not None
             and artifact_reader is None
@@ -515,30 +519,102 @@ class ResearchArtifactService:
 
     # -- Multi-format export --
 
+    def read_verified_snapshot(self, snapshot: DatasetSnapshot) -> pl.DataFrame:
+        """Verify saved catalog identity, manifest and exact bytes before exporting."""
+        metadata = self.read_json(
+            f"{snapshot.data_path.rsplit('/', 1)[0]}/metadata.json"
+        )
+        manifest_hash = metadata.pop("manifest_hash", None)
+        actual_hash = hashlib.sha256(
+            orjson.dumps(metadata, option=orjson.OPT_SORT_KEYS)
+        ).hexdigest()
+        data_hash = metadata.pop("data_sha256", None)
+        expected = asdict(snapshot)
+        expected.pop("manifest_hash")
+        if (
+            manifest_hash != snapshot.manifest_hash
+            or actual_hash != snapshot.manifest_hash
+            or orjson.dumps(metadata, option=orjson.OPT_SORT_KEYS)
+            != orjson.dumps(expected, option=orjson.OPT_SORT_KEYS)
+        ):
+            raise ExperimentIntegrityError("research export snapshot manifest mismatch")
+        payload = self._path(snapshot.data_path).read_bytes()
+        if hashlib.sha256(payload).hexdigest() != data_hash:
+            raise ExperimentIntegrityError("research export snapshot checksum mismatch")
+        frame = pl.read_parquet(BytesIO(payload))
+        if frame.height != snapshot.row_count:
+            raise ExperimentIntegrityError(
+                "research export snapshot row count mismatch"
+            )
+        return frame
+
     def export_dataset(
         self,
         relative_path: str,
         frame: pl.DataFrame,
         *,
         fmt: ExportFormat = "parquet",
-    ) -> None:
+        provenance: Mapping[str, object] | None = None,
+        table_name: str = "dataset",
+    ) -> dict[str, object]:
         """
-        Export a DataFrame in the specified format.
+        Export data with immutable publication and a checksum sidecar.
 
-        Creates parent directories as needed. Supported formats: parquet, csv, feather.
+        The sidecar reserves the target identity before the complete data file is
+        published. A failed final publication can be retried with identical inputs.
+        Consumers require both files and verify the sidecar's content checksum.
         """
+        target = self._path(relative_path)
         writer_name = _EXPORT_WRITERS.get(fmt)
-        if writer_name is None:
-            supported = ", ".join(_EXPORT_WRITERS)
+        if writer_name is None and fmt != "sqlite":
+            supported = (*_EXPORT_WRITERS, "sqlite")
             raise ResearchDatasetError(
-                f"unsupported format: {fmt!r}. Expected one of: {supported}",
+                f"unsupported format: {fmt!r}",
                 relative_path=relative_path,
                 format=fmt,
-                supported=tuple(_EXPORT_WRITERS),
-                supported_formats=tuple(_EXPORT_WRITERS),
+                supported=supported,
+                supported_formats=supported,
             )
-        writer = cast("Callable[[Path], object]", getattr(frame, writer_name))
-        self._atomic_write(relative_path, writer)
+        if fmt == "sqlite":
+            if self._sqlite_export is None:
+                raise ResearchDatasetError("SQLite export adapter is not configured")
+            payload = self._sqlite_export(frame, table_name)
+        else:
+            buffer = BytesIO()
+            writer = cast(
+                "Callable[[BytesIO], object]", getattr(frame, str(writer_name))
+            )
+            writer(buffer)
+            payload = buffer.getvalue()
+        digest = hashlib.sha256(payload).hexdigest()
+        receipt: dict[str, object] = {
+            "path": relative_path,
+            "format": fmt,
+            "row_count": frame.height,
+            "schema": [
+                {"name": name, "dtype": str(dtype)}
+                for name, dtype in frame.schema.items()
+            ],
+            "sha256": digest,
+            "source": dict(provenance or {}),
+        }
+        if fmt == "sqlite":
+            receipt["table_name"] = table_name
+        manifest_path = f"{relative_path}.manifest.json"
+        self._path(manifest_path)
+        if target.exists():
+            self._validate_immutable_replay(
+                relative_path=relative_path,
+                existing=target.read_bytes(),
+                incoming=payload,
+                incoming_sha256=digest,
+            )
+        self.publish_immutable_artifact(
+            manifest_path,
+            orjson.dumps(receipt, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2),
+        )
+        self.publish_immutable_artifact(relative_path, payload)
+        return receipt
 
     # -- JSON --
 
@@ -591,24 +667,30 @@ class ResearchArtifactService:
         self,
         artifact_relative_path: str,
     ) -> tuple[str, ...]:
-        """Read source snapshot IDs from the latest artifact metadata."""
+        """Conservatively bind every recorded run of this artifact version."""
         version_root = self._path(artifact_relative_path)
         runs_root = version_root / "_runs"
         if not runs_root.exists():
             return ()
-        metadata_paths = tuple(runs_root.glob("*/artifact_metadata.json"))
-        if not metadata_paths:
-            return ()
-        latest_metadata = max(
-            metadata_paths,
-            key=lambda p: p.stat().st_mtime_ns,
-        )
-        payload = orjson.loads(latest_metadata.read_bytes())
-        raw_snapshots = payload.get("input_snapshots", [])
-        if not isinstance(raw_snapshots, list):
-            return ()
-        ids: list[str] = []
-        for item in cast(list[object], raw_snapshots):
-            if isinstance(item, str) and item:
-                ids.append(item)
-        return tuple(sorted(set(ids)))
+        ids: set[str] = set()
+        # ponytail: version-wide provenance can over-restrict exports after full
+        # replacement; narrow only when partition-level lineage is persisted.
+        for run in runs_root.iterdir():
+            if not run.is_dir():
+                continue
+            metadata = run / "artifact_metadata.json"
+            if not metadata.is_file():
+                return ()
+            payload = orjson.loads(metadata.read_bytes())
+            raw_snapshots = payload.get("input_snapshots", [])
+            if not isinstance(raw_snapshots, list):
+                return ()
+            run_ids: set[str] = set()
+            for item in cast(list[object], raw_snapshots):
+                if not isinstance(item, str) or not item:
+                    return ()
+                run_ids.add(item)
+            if not run_ids:
+                return ()
+            ids.update(run_ids)
+        return tuple(sorted(ids))

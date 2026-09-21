@@ -344,8 +344,8 @@ class TestExportDataset:
         assert exc_info.value.details == {
             "relative_path": "out.xlsx",
             "format": "xlsx",
-            "supported": ("parquet", "csv", "feather"),
-            "supported_formats": ("parquet", "csv", "feather"),
+            "supported": ("parquet", "csv", "feather", "sqlite"),
+            "supported_formats": ("parquet", "csv", "feather", "sqlite"),
         }
 
 
@@ -1829,7 +1829,7 @@ class TestReadSourceSnapshotIds:
         service: ResearchArtifactService,
         tmp_path: Path,
     ) -> None:
-        """Should read and return sorted unique snapshot IDs from latest metadata."""
+        """Should read and return sorted unique snapshot IDs from run metadata."""
         version_path = tmp_path / "derived" / "v1"
         runs_path = version_path / "_runs" / "run_001"
         runs_path.mkdir(parents=True)
@@ -1883,12 +1883,12 @@ class TestReadSourceSnapshotIds:
 
         assert result == ()
 
-    def test_read_source_snapshot_ids_filters_empty_strings(
+    def test_read_source_snapshot_ids_rejects_empty_strings(
         self,
         service: ResearchArtifactService,
         tmp_path: Path,
     ) -> None:
-        """Should filter out empty strings from snapshot IDs."""
+        """Missing source evidence must not be silently filtered out."""
         version_path = tmp_path / "derived" / "v1"
         runs_path = version_path / "_runs" / "run_001"
         runs_path.mkdir(parents=True)
@@ -1897,4 +1897,27 @@ class TestReadSourceSnapshotIds:
 
         result = service.read_source_snapshot_ids("derived/v1")
 
-        assert result == ("snap_a", "snap_b")
+        assert result == ()
+
+
+@pytest.mark.parametrize(
+    "old_sources", [[], ["old-source"], None, ["old-source", ""], ["old-source", None]]
+)
+def test_source_evidence_covers_every_run(tmp_path: Path, old_sources) -> None:
+    old = tmp_path / "derived/v1/_runs/old"
+    new = tmp_path / "derived/v1/_runs/new"
+    old.mkdir(parents=True)
+    new.mkdir()
+    if old_sources is not None:
+        (old / "artifact_metadata.json").write_bytes(
+            orjson.dumps({"input_snapshots": old_sources})
+        )
+    (new / "artifact_metadata.json").write_bytes(
+        orjson.dumps({"input_snapshots": ["new-source"]})
+    )
+    result = ResearchArtifactService(artifact_root=tmp_path).read_source_snapshot_ids(
+        "derived/v1"
+    )
+    assert result == (
+        ("new-source", "old-source") if old_sources == ["old-source"] else ()
+    )

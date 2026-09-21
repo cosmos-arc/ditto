@@ -8,7 +8,7 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
-from ditto_analysis.errors import ResearchDatasetError
+from ditto_analysis.errors import ExperimentConflictError, ResearchDatasetError
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from polars.testing import assert_frame_equal
 
@@ -147,18 +147,19 @@ class TestExportDataset:
         with pytest.raises(ResearchDatasetError, match="unsupported format"):
             service.export_dataset("data.xlsx", frame, fmt="xlsx")
 
-    def test_export_overwrites_existing_file(self, tmp_path: Path) -> None:
-        """Existing file is overwritten."""
+    def test_export_refuses_existing_different_file(self, tmp_path: Path) -> None:
+        """Export conflicts preserve the existing file."""
         frame1 = pl.DataFrame({"x": [1]})
         frame1.write_csv(tmp_path / "data.csv")
 
         frame2 = pl.DataFrame({"x": [2, 3]})
 
         service = ResearchArtifactService(artifact_root=tmp_path)
-        service.export_dataset("data.csv", frame2, fmt="csv")
+        with pytest.raises(ExperimentConflictError):
+            service.export_dataset("data.csv", frame2, fmt="csv")
 
         result = pl.read_csv(tmp_path / "data.csv")
-        assert_frame_equal(result, frame2)
+        assert_frame_equal(result, frame1)
 
 
 class TestResolveArtifactRelativePath:
@@ -245,7 +246,7 @@ class TestReadSourceSnapshotIds:
 
         assert result == ()
 
-    def test_picks_latest_metadata_by_mtime(self, tmp_path: Path) -> None:
+    def test_unions_all_runs_regardless_of_mtime(self, tmp_path: Path) -> None:
         run1 = (
             tmp_path
             / "derived"
@@ -282,7 +283,7 @@ class TestReadSourceSnapshotIds:
             "derived/artifacts/series/f.x/v1",
         )
 
-        assert result == ("market:002",)
+        assert result == ("market:001", "market:002")
 
     def test_deduplicates_and_sorts_snapshot_ids(self, tmp_path: Path) -> None:
         runs_root = (
@@ -297,7 +298,7 @@ class TestReadSourceSnapshotIds:
         )
         runs_root.mkdir(parents=True)
         metadata = {
-            "input_snapshots": ["market:002", "market:001", "market:002", ""],
+            "input_snapshots": ["market:002", "market:001", "market:002"],
         }
         (runs_root / "artifact_metadata.json").write_bytes(orjson.dumps(metadata))
 
@@ -331,7 +332,7 @@ class TestReadSourceSnapshotIds:
 
         assert result == ()
 
-    def test_filters_empty_strings(self, tmp_path: Path) -> None:
+    def test_rejects_empty_strings(self, tmp_path: Path) -> None:
         runs_root = (
             tmp_path
             / "derived"
@@ -352,4 +353,4 @@ class TestReadSourceSnapshotIds:
             "derived/artifacts/series/f.x/v1",
         )
 
-        assert result == ("market:001",)
+        assert result == ()

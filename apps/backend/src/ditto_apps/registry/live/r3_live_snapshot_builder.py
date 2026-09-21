@@ -729,7 +729,8 @@ def build_live_research_snapshot(
         effective_cutoff=_END.isoformat(),
         resolved_versions={item.input_id: 1 for item in published},
         resolved_inputs=tuple(
-            cast("dict[str, str | int]", dict(item.as_payload())) for item in published
+            cast("dict[str, str | int | list[str]]", dict(item.as_payload()))
+            for item in published
         ),
         source_snapshot_ids=sources,
         builder_version=_BUILDER_VERSION,

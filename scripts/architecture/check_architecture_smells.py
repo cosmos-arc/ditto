@@ -729,6 +729,11 @@ APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
         ),
     ),
     ApplicationAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/providers_command.py",
+        owner="application research export DI provider",
+        reason="Wires analysis catalog and artifacts into research export commands.",
+    ),
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/providers_process.py",
         owner="application research process DI provider",
         reason=(

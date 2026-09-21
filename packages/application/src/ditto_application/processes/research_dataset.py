@@ -52,7 +52,7 @@ class _ResolvedDerivedInputs(NamedTuple):
 
     frame: pl.DataFrame
     versions: dict[str, int]
-    inputs: tuple[dict[str, str | int], ...]
+    inputs: tuple[dict[str, str | int | list[str]], ...]
     source_ids: tuple[str, ...]
 
 
@@ -176,7 +176,7 @@ class ResearchDatasetBuildProcess:
     ) -> _ResolvedDerivedInputs:
         """解析 derived inputs，依次 PIT join 到 dataset_frame."""
         resolved_versions: dict[str, int] = {}
-        resolved_inputs: list[dict[str, str | int]] = []
+        resolved_inputs: list[dict[str, str | int | list[str]]] = []
         source_snapshot_ids: set[str] = set()
         for derived_id in derived_ids:
             resolved_version = overrides.get(derived_id)
@@ -194,16 +194,18 @@ class ResearchDatasetBuildProcess:
                 artifact_path = (
                     f"derived/artifacts/unknown/{derived_id}/v{resolved_version}"
                 )
+            input_sources = self._artifact_service.read_source_snapshot_ids(
+                artifact_path
+            )
             resolved_inputs.append(
                 {
                     "derived_id": derived_id,
                     "version": resolved_version,
                     "artifact_path": artifact_path,
+                    "source_snapshot_ids": list(input_sources),
                 }
             )
-            source_snapshot_ids.update(
-                self._artifact_service.read_source_snapshot_ids(artifact_path)
-            )
+            source_snapshot_ids.update(input_sources)
             source_frame = self._artifact_reader.read_frame(
                 derived_id=derived_id,
                 version=resolved_version,
