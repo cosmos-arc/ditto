@@ -209,8 +209,8 @@ unfixable = []
 "apps/backend/src/ditto_apps/registry/infra/signal_delivery.py" = ["S105"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "apps/backend/src/ditto_apps/services/derived/research.py" = ["S608"]
-# ResearchQuery.export() - 表名来自内部枚举，非用户输入
-"packages/application/src/ditto_application/queries/research.py" = ["S608"]
+# ResearchDatasetExport - dataset_id is validated by _sanitize_table_name
+"packages/application/src/ditto_application/commands/research_dataset_export.py" = ["S608"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/portfolio/src/ditto_portfolio/rebalancing/report_views.py" = ["D102"]
 # Protocol 接口方法用 ``...`` 省略体是标准惯例，D102 不适用

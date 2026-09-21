@@ -30,6 +30,21 @@ Analysis is research-only, not imported by production packages.
 Reports, diagnostics, experiments, and screeners are reserved/future analysis
 namespaces, not current runtime APIs.
 
+## Research Dataset Boundary
+
+- `research_dataset_build_flow` → `ResearchDatasetBuildProcess.build` resolves
+  specs, spine and PIT inputs → analysis `ResearchArtifactService` publishes
+  immutable content → `ResearchCatalogService` commits the completed snapshot.
+- `ResearchDatasetQuery.get_snapshot/load_build_report` reads exact catalog
+  identities and existing reports; it cannot build or export. Existing snapshot
+  paths and hashes are retained without rewriting.
+- Same inputs and content reuse the published identity, including creation time.
+  A failed catalog commit is retried against those files; a conflicting immutable
+  file is rejected. Partial publication has no completed catalog entry.
+- `ResearchDatasetExport` is an explicit command. Its existing CSV/SQLite behavior
+  is unchanged in #253; atomic export, license checks and moving its SQL into the
+  analysis adapter are the separately scoped #254 work.
+
 ## Portfolio Comparison Boundary
 
 | Responsibility | Owner / Provider | Direct Consumers | Contract |

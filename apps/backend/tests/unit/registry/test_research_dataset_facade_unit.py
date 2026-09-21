@@ -18,8 +18,10 @@ from ditto_analysis.research.domain import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
 )
+from ditto_application.commands.research_dataset_export import ResearchDatasetExport
 from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
+from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_application.queries.source import SourceDataPort
 from ditto_apps.registry import ConfigProvider
 from ditto_data.di import (
@@ -255,8 +257,8 @@ def _write_artifact(
         )
 
 
-class TestResearchDatasetFacade:
-    """Tests for ResearchDatasetFacade."""
+class TestResearchDatasetBuildProcess:
+    """Tests for ResearchDatasetBuildProcess."""
 
     def test_build_creates_snapshot_with_left_preserving_pit_join(
         self,
@@ -273,7 +275,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -415,7 +417,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -515,7 +517,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -617,7 +619,7 @@ class TestResearchDatasetFacade:
 
             derived_catalog = container.get(DerivedCatalogService)
             research_catalog = container.get(ResearchCatalogService)
-            facade = container.get(ResearchDatasetFacade)
+            facade = container.get(ResearchDatasetBuildProcess)
 
             _seed_derived_spec(
                 derived_catalog,
@@ -676,7 +678,7 @@ class TestResearchDatasetFacade:
                 end="2026-03-11",
             )
 
-            report = facade.load_build_report(snapshot)
+            report = container.get(ResearchDatasetQuery).load_build_report(snapshot)
 
             assert report == {
                 "row_count": 2,
@@ -694,16 +696,13 @@ class TestResearchDatasetFacade:
             container.close()
 
 
-class TestResearchDatasetFacadeExport:
-    """Tests for ResearchDatasetFacade.export()."""
+class TestResearchDatasetExport:
+    """Tests for ResearchDatasetExport.export()."""
 
-    def _make_facade(self) -> tuple[ResearchDatasetFacade, MagicMock]:
+    def _make_facade(self) -> tuple[ResearchDatasetExport, MagicMock]:
         """创建带 mock 的 facade 实例."""
         artifact_service = MagicMock()
-        facade = ResearchDatasetFacade(
-            metadata_service=MagicMock(),
-            research_catalog_service=MagicMock(),
-            artifact_reader=MagicMock(),
+        facade = ResearchDatasetExport(
             research_artifact_service=artifact_service,
         )
         return facade, artifact_service

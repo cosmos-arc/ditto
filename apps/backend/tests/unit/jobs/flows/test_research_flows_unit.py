@@ -47,8 +47,8 @@ class TestResearchDatasetBuildFlow:
             builder_version="unified-derived-research-v1",
             created_at="2026-03-14T12:00:00+08:00",
         )
-        bundle.research_dataset_facade.build.return_value = snapshot
-        bundle.research_dataset_facade.load_build_report.return_value = {
+        bundle.research_dataset_build.build.return_value = snapshot
+        bundle.research_dataset_query.load_build_report.return_value = {
             "row_count": 2,
             "spine_row_count": 2,
             "null_counts": {"factor.alpha": 0},
@@ -69,14 +69,14 @@ class TestResearchDatasetBuildFlow:
             end="2026-03-11",
         )
 
-        bundle.research_dataset_facade.build.assert_called_once_with(
+        bundle.research_dataset_build.build.assert_called_once_with(
             dataset_id="research.alpha_beta",
             start="2026-03-10",
             end="2026-03-11",
             version_overrides=None,
             explicit_cutoff=None,
         )
-        bundle.research_dataset_facade.load_build_report.assert_called_once_with(
+        bundle.research_dataset_query.load_build_report.assert_called_once_with(
             snapshot
         )
         assert result["summary"]["snapshot_id"] == "rds-001"
@@ -111,8 +111,8 @@ class TestResearchDatasetBuildFlow:
             builder_version="unified-derived-research-v1",
             created_at="2026-03-14T12:00:00+08:00",
         )
-        bundle.research_dataset_facade.build.return_value = snapshot
-        bundle.research_dataset_facade.load_build_report.return_value = {
+        bundle.research_dataset_build.build.return_value = snapshot
+        bundle.research_dataset_query.load_build_report.return_value = {
             "row_count": 1,
             "spine_row_count": 1,
             "null_counts": {"factor.alpha": 0},

@@ -12,7 +12,8 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
+from ditto_application.queries.research import ResearchDatasetQuery
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.bundle import MaterializationBundle
@@ -27,7 +28,8 @@ def create_materialization_bundle() -> Generator[MaterializationBundle]:
             materialization_service=container.get(DerivedMaterializationOrchestrator),
             invalidation_service=container.get(InvalidationCascadeOrchestrator),
             publication_facade=container.get(DerivedPublicationFacade),
-            research_dataset_facade=container.get(ResearchDatasetFacade),
+            research_dataset_build=container.get(ResearchDatasetBuildProcess),
+            research_dataset_query=container.get(ResearchDatasetQuery),
         )
     finally:
         container.close()

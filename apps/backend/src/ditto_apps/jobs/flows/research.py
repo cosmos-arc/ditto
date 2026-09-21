@@ -36,14 +36,14 @@ def research_dataset_build_flow(
 ) -> dict[str, object]:
     """Build one immutable research dataset snapshot."""
     with create_materialization_bundle() as bundle:
-        snapshot = bundle.research_dataset_facade.build(
+        snapshot = bundle.research_dataset_build.build(
             dataset_id=dataset_id,
             start=start,
             end=end,
             version_overrides=version_overrides,
             explicit_cutoff=explicit_cutoff,
         )
-        build_report = bundle.research_dataset_facade.load_build_report(snapshot)
+        build_report = bundle.research_dataset_query.load_build_report(snapshot)
 
     return {
         "results": _normalize_results((snapshot,)),

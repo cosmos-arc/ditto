@@ -382,7 +382,9 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
             "packages/application/src/ditto_application/queries/"
             "research_certification.py"
         ),
-        "packages/application/src/ditto_application/queries/research_helpers.py",
+        "packages/application/src/ditto_application/processes/research_dataset_helpers.py",
+        "packages/application/src/ditto_application/processes/research_dataset.py",
+        "packages/application/src/ditto_application/commands/research_dataset_export.py",
         (
             "packages/application/src/ditto_application/processes/execution/"
             "_research_replay_artifacts.py"

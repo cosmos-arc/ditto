@@ -1318,6 +1318,16 @@ APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
         ),
     ),
     ApplicationAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/processes/research_dataset.py",
+        owner="application research build process",
+        reason="Explicit research write use case; no production capability dependency.",
+    ),
+    ApplicationAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/commands/research_dataset_export.py",
+        owner="application research export command",
+        reason="Explicit research write use case; no production capability dependency.",
+    ),
+    ApplicationAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/queries/research.py",
         owner="application research query facade",
         reason=(
@@ -1338,7 +1348,7 @@ APPLICATION_ANALYSIS_WIRING_ALLOWANCES = (
         ),
     ),
     ApplicationAnalysisWiringAllowance(
-        path="packages/application/src/ditto_application/queries/research_helpers.py",
+        path="packages/application/src/ditto_application/processes/research_dataset_helpers.py",
         owner="application research query facade (extracted helpers)",
         reason=(
             "Extracted helper functions for the research query facade; same "

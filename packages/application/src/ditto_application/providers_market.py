@@ -34,6 +34,7 @@ from ditto_features.services import (
 )
 from ditto_features.technical_analysis.service import TechnicalAnalysisService
 
+from ditto_application.processes.research_dataset import ResearchDatasetBuildProcess
 from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
@@ -60,7 +61,7 @@ from ditto_application.queries.market_context_source import (
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.promotion_evidence import PromotionEvidenceCollector
-from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.queries.research import ResearchDatasetQuery
 from ditto_application.queries.source import SourceDataPort, SourceQueryFacade
 from ditto_application.queries.technical_analysis import (
     TechnicalAnalysisFacade,
@@ -239,16 +240,28 @@ class AppMarketQueryProvider(Provider):
         )
 
     @provide
-    def research_dataset_facade(
+    def research_dataset_query(
+        self,
+        research_catalog_service: ResearchCatalogService,
+        research_artifact_service: ResearchArtifactService,
+    ) -> ResearchDatasetQuery:
+        """Read completed research snapshots."""
+        return ResearchDatasetQuery(
+            research_catalog_service=research_catalog_service,
+            research_artifact_service=research_artifact_service,
+        )
+
+    @provide
+    def research_dataset_build(
         self,
         metadata_service: MetadataService,
         research_catalog_service: ResearchCatalogService,
         derived_catalog_service: DerivedCatalogService,
         research_artifact_service: ResearchArtifactService,
         settings: DataStoreSettings,
-    ) -> ResearchDatasetFacade:
+    ) -> ResearchDatasetBuildProcess:
         """研究数据集快照构建 facade."""
-        return ResearchDatasetFacade(
+        return ResearchDatasetBuildProcess(
             metadata_service=metadata_service,
             research_catalog_service=research_catalog_service,
             artifact_reader=DerivedArtifactReader(
