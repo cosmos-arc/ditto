@@ -176,7 +176,9 @@ uv run --no-sync ditto ops promotion-history stock_daily
 旧输入包须补充 `data_from`、`data_to` 及 `data_fields`。每个绑定包含
 `dataset_id`、`field`、`snapshot_id`、`consumer_field`；例如
 `consumer_field="instruments.factor_values.liquidity_rank"`。服务端从实际消费的因子、
-过滤字段、行业观察、证券池及上下文引用推导必需绑定；额外未消费字段不阻塞本次选股。
+过滤字段、行业观察、证券池及上下文引用推导必需绑定；策略必读的可空字段即使取
+`null` 也视为已消费，绑定并哈希显式缺失值，防止把已审事实改为缺失绕过门禁；
+额外未消费字段不阻塞本次选股。
 绑定的 `snapshot_id` 只能来自该消费字段所属阶段声明的来源列表
 （`instruments.*` 与 `universe_snapshot_id` 对应 `selection_source_snapshot_ids`，
 其余对应 `rotation_source_snapshot_ids`），跨阶段引用返回 `SNAPSHOT_CONFLICT`；

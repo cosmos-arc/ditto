@@ -117,7 +117,11 @@ async def test_http_admission_and_create_share_the_gate_and_retry_identity(tmp_p
 
 
 async def _assert_tampering_rejected(client, body):
-    for field_name, forged in (("average_turnover", 999999.0), ("is_st", True)):
+    for field_name, forged in (
+        ("average_turnover", 999999.0),
+        ("average_turnover", None),
+        ("is_st", True),
+    ):
         tampered = deepcopy(body)
         tampered["instruments"][0][field_name] = forged
         preview = await client.post("/api/v1/selections/admission", json=tampered)

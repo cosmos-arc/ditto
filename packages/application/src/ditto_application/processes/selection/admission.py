@@ -97,13 +97,16 @@ def assess_selection_fields(
 def observed_fields(
     value: object, *, prefix: str, exclude: frozenset[str] = frozenset()
 ) -> set[str]:
-    """Find present dataclass input facts; never infer absent observations."""
+    """
+    List strategy-consumed input facts for one observation.
+
+    A null on a required input is an explicitly consumed missing value, not
+    an absent observation; its binding must stay and hash the null itself.
+    """
     if not is_dataclass(value) or isinstance(value, type):
         raise AppProcessError("selection observation must be a dataclass")
     return {
-        f"{prefix}.{field.name}"
-        for field in fields(value)
-        if field.name not in exclude and getattr(value, field.name) is not None
+        f"{prefix}.{field.name}" for field in fields(value) if field.name not in exclude
     }
 
 

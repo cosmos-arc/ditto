@@ -419,16 +419,12 @@ def _consumed_fields(request: CreateSelectionRunRequest) -> frozenset[str]:
     ):
         excluded.add("tracking_error")
     weighted = {item.name for item in request.selection_spec.factor_weights}
+    names.update(f"instruments.factor_values.{name}" for name in weighted)
     for instrument in request.instruments:
         names.update(
             observed_fields(
                 instrument, prefix="instruments", exclude=frozenset(excluded)
             )
-        )
-        names.update(
-            f"instruments.factor_values.{item.name}"
-            for item in instrument.factor_values
-            if item.name in weighted
         )
     for industry in request.industries:
         names.update(observed_fields(industry, prefix="industries"))
