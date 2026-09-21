@@ -1,6 +1,7 @@
 import type { components } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
 
+export type AdmissionResponse = components["schemas"]["SelectionAdmissionResponse"];
 export type CreateSelectionRunBody = components["schemas"]["CreateSelectionRunBody"];
 export type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
 export type SelectionRun = components["schemas"]["SelectionRunResponse"];
@@ -41,4 +42,11 @@ export function compareSelectionRuns(beforeRunId: string, afterRunId: string): P
 
 export function createSelectionRun(body: CreateSelectionRunBody): Promise<SelectionWorkspaceReceipt> {
 	return apiClient.post("/api/v1/selections/runs", { body });
+}
+
+export function assessSelectionAdmission(body: CreateSelectionRunBody, instrumentId?: number) {
+	return apiClient.post("/api/v1/selections/admission", {
+		body,
+		params: { query: instrumentId === undefined ? {} : { instrument_id: instrumentId } },
+	});
 }

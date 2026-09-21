@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from hashlib import sha256
 from pathlib import Path
+from typing import Any, cast
 
 import orjson
 from ditto_data.catalog import (
@@ -19,6 +20,11 @@ from ditto_data.catalog.certification import (
     EvidenceCheck,
 )
 from ditto_data.catalog.coverage import CoverageCollector, CoverageException
+from ditto_data.catalog.field_evidence import (
+    CertifiedField,
+    consumer_input_digest,
+    field_from_payload,
+)
 from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import (
@@ -33,9 +39,31 @@ __all__ = [
     "AddressedCertificationEvidence",
     "CertificationBuildRequest",
     "DataProductCertificationBuilder",
+    "load_certified_field_claims",
 ]
 
 _SHA256_HEX_LENGTH = 64
+
+
+def load_certified_field_claims(path: Path) -> tuple[CertifiedField, ...]:
+    """Load reviewed field claims exactly as certification reports serialize them."""
+    try:
+        decoded = orjson.loads(path.read_bytes())
+    except (OSError, ValueError) as exc:
+        raise AppProcessError(f"certified field claims are unreadable: {exc}") from exc
+    if type(decoded) is not list or not all(
+        type(item) is dict for item in cast(list[object], decoded)
+    ):
+        raise AppProcessError("certified field claims must be an array of objects")
+    try:
+        claims = tuple(
+            field_from_payload(item) for item in cast(list[dict[str, Any]], decoded)
+        )
+    except (AttributeError, TypeError, ValueError, KeyError) as exc:
+        raise AppProcessError(f"certified field claim is invalid: {exc}") from exc
+    if not claims:
+        raise AppProcessError("certified field claims must not be empty")
+    return claims
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +112,7 @@ class CertificationBuildRequest:
     target_from: date | None = None
     exceptions: tuple[CoverageException, ...] = ()
     snapshot_ids: tuple[str, ...] = ()
+    certified_fields: tuple[CertifiedField, ...] = ()
 
 
 class DataProductCertificationBuilder:
@@ -128,6 +157,8 @@ class DataProductCertificationBuilder:
             )
         entries, checkpoints = self._evidence_chain(request, snapshots)
         self._verify_snapshot_bindings(request, snapshots, entries, checkpoints)
+        _verify_consumer_bindings(request)
+        self._verify_certified_fields(request, snapshots, entries)
 
         stage_digest = self._verify_lifecycle_stages(checkpoints)
         latest_request_end = max(
@@ -162,6 +193,7 @@ class DataProductCertificationBuilder:
             orjson.dumps([latest_request_end.isoformat(), list(snapshot_ids)])
         ).hexdigest()
         evidence = CertificationEvidence(
+            certified_fields=request.certified_fields,
             source_ids=source_ids,
             schema_versions=schema_versions,
             snapshot_ids=snapshot_ids,
@@ -320,6 +352,35 @@ class DataProductCertificationBuilder:
             if interval not in checkpoint_intervals:
                 raise AppProcessError("provider snapshot has no COMPLETE checkpoint")
 
+    def _verify_certified_fields(
+        self,
+        request: CertificationBuildRequest,
+        snapshots: tuple[ProviderSnapshot, ...],
+        entries: tuple[DataCatalogEntry, ...],
+    ) -> None:
+        """Require unique claims grounded in the exact catalog schema."""
+        if len(
+            {(field.field, field.snapshot_id) for field in request.certified_fields}
+        ) != len(request.certified_fields):
+            raise AppProcessError("certified field claims must be unique per snapshot")
+        snapshot_assets = {item.snapshot_id: item.canonical_asset for item in snapshots}
+        for field in request.certified_fields:
+            matching = [
+                entry
+                for entry in entries
+                if entry.asset == snapshot_assets.get(field.snapshot_id)
+            ]
+            if not matching or not all(
+                field.field in entry.schema.columns for entry in matching
+            ):
+                raise AppProcessError(
+                    "certified field is absent from the exact catalog schema"
+                )
+            if field.evidence_uri != request.consumer_evidence.evidence_uri:
+                raise AppProcessError(
+                    "certified field must reference verified consumer evidence"
+                )
+
     def _verify_lifecycle_stages(
         self,
         checkpoints: tuple[PartitionCheckpoint, ...],
@@ -347,3 +408,37 @@ class DataProductCertificationBuilder:
                 ]
             )
         return sha256(orjson.dumps(payload)).hexdigest()
+
+
+def _verify_consumer_bindings(request: CertificationBuildRequest) -> None:
+    """Require every input digest to match retained, hash-verified consumer facts."""
+    expected = {
+        binding
+        for field in request.certified_fields
+        for binding in field.consumer_bindings
+    }
+    if not expected:
+        return
+    request.consumer_evidence.verify()
+    try:
+        payload: object = orjson.loads(
+            request.consumer_evidence.local_path.read_bytes()
+        )
+    except (OSError, ValueError) as exc:
+        raise AppProcessError("consumer evidence is not valid JSON") from exc
+    if not isinstance(payload, dict):
+        raise AppProcessError("consumer evidence must be an object")
+    inputs = cast(dict[str, object], payload).get("field_inputs")
+    if not isinstance(inputs, list):
+        raise AppProcessError("consumer evidence has no retained field inputs")
+    actual: set[tuple[str, str]] = set()
+    for item in cast(list[object], inputs):
+        if not isinstance(item, dict):
+            raise AppProcessError("consumer field input must be an object")
+        record = cast(dict[str, object], item)
+        name = record.get("consumer_field")
+        if not isinstance(name, str):
+            raise AppProcessError("consumer field input name is required")
+        actual.add((name, consumer_input_digest(record)))
+    if not expected.issubset(actual):
+        raise AppProcessError("consumer input binding does not match retained evidence")

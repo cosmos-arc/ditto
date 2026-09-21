@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Coroutine
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import patch
 
+import pytest
 from ditto_application.processes.selection.create_research_case import (
     CreateResearchCaseFromSelection,
 )
@@ -15,9 +17,11 @@ from ditto_application.processes.selection.facade import SelectionWorkspaceFacad
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
+from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_apps.api.routes.selection import (
+    _application_request,
     compare_selection_runs,
     create_research_case,
     create_selection_run,
@@ -30,6 +34,7 @@ from ditto_apps.models.selection import (
     IndustryRotationObservationRequest,
     SelectionFactorValueRequest,
     SelectionFactorWeightRequest,
+    SelectionFieldRequirementBody,
     SelectionInstrumentRequest,
     StockSelectionSpecRequest,
 )
@@ -39,6 +44,9 @@ from ditto_strategy.industry_rotation.contracts import IndustryRotationSnapshot
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.selection.contracts import SelectionRun
 from ditto_strategy.selection.pipeline import SelectionPipeline
+from packages.application.tests.integration.field_admission_support import (
+    certified_selection,
+)
 
 _AS_OF = datetime(2026, 8, 31, 7, 0, tzinfo=UTC)
 
@@ -131,18 +139,19 @@ def _body(*, seed: int = 17) -> CreateSelectionRunBody:
     )
 
 
-def _facade(store: _Store) -> SelectionWorkspaceFacade:
+def _facade(store: _Store, admission: FieldAdmissionQuery) -> SelectionWorkspaceFacade:
     return SelectionWorkspaceFacade(
         RunIndustryAndSecuritySelection(
             rotation_service=IndustryRotationService(),
             selection_pipeline=SelectionPipeline(),
             rotation_writer=store,
             run_writer=store,
-        )
+        ),
+        admission=admission,
     )
 
 
-def test_create_handler_is_content_idempotent_and_preserves_evidence() -> None:
+def test_create_handler_is_content_idempotent_and_preserves_evidence(admission) -> None:
     store = _Store()
     handler = _original(create_selection_run)
 
@@ -150,8 +159,18 @@ def test_create_handler_is_content_idempotent_and_preserves_evidence() -> None:
         "ditto_apps.api.routes.selection.asyncio.to_thread",
         side_effect=_inline_to_thread,
     ):
-        first = asyncio.run(handler(body=_body(), facade=_facade(store)))
-        second = asyncio.run(handler(body=_body(), facade=_facade(store)))
+        first = asyncio.run(
+            handler(
+                body=_body().model_copy(update=admission[1]),
+                facade=_facade(store, admission[0]),
+            )
+        )
+        second = asyncio.run(
+            handler(
+                body=_body().model_copy(update=admission[1]),
+                facade=_facade(store, admission[0]),
+            )
+        )
 
     assert first.data.selection_run.run_id == second.data.selection_run.run_id
     assert len(store.saved) == 1
@@ -159,17 +178,21 @@ def test_create_handler_is_content_idempotent_and_preserves_evidence() -> None:
     assert first.data.selection_run.candidates[0].instrument_id == InstrumentId(600000)
 
 
-def test_get_and_compare_handlers_read_exact_saved_runs() -> None:
+def test_get_and_compare_handlers_read_exact_saved_runs(admission) -> None:
     store = _Store()
-    facade = _facade(store)
+    facade = _facade(store, admission[0])
     create_handler = _original(create_selection_run)
     with patch(
         "ditto_apps.api.routes.selection.asyncio.to_thread",
         side_effect=_inline_to_thread,
     ):
-        first_response = asyncio.run(create_handler(body=_body(), facade=facade))
+        first_response = asyncio.run(
+            create_handler(body=_body().model_copy(update=admission[1]), facade=facade)
+        )
         second_response = asyncio.run(
-            create_handler(body=_body(seed=18), facade=facade)
+            create_handler(
+                body=_body(seed=18).model_copy(update=admission[1]), facade=facade
+            )
         )
         query = SelectionRunQueryService(store)
         get_handler = _original(get_selection_run)
@@ -200,9 +223,11 @@ def test_get_and_compare_handlers_read_exact_saved_runs() -> None:
     assert compared.data.seed_changed is True
 
 
-def test_create_research_case_handler_returns_exact_selection_lineage() -> None:
+def test_create_research_case_handler_returns_exact_selection_lineage(
+    admission,
+) -> None:
     store = _Store()
-    facade = _facade(store)
+    facade = _facade(store, admission[0])
     create_run_handler = _original(create_selection_run)
     create_case_handler = _original(create_research_case)
 
@@ -210,7 +235,11 @@ def test_create_research_case_handler_returns_exact_selection_lineage() -> None:
         "ditto_apps.api.routes.selection.asyncio.to_thread",
         side_effect=_inline_to_thread,
     ):
-        run_response = asyncio.run(create_run_handler(body=_body(), facade=facade))
+        run_response = asyncio.run(
+            create_run_handler(
+                body=_body().model_copy(update=admission[1]), facade=facade
+            )
+        )
         case_response = asyncio.run(
             create_case_handler(
                 run_id=run_response.data.selection_run.run_id,
@@ -240,3 +269,27 @@ def test_research_case_request_accepts_json_candidate_array() -> None:
     )
 
     assert body.candidate_instrument_ids == (InstrumentId(1_002_506),)
+
+
+@pytest.fixture
+def admission():
+    with certified_selection(_application_request(_body())) as (query, request):
+        yield (
+            query,
+            {
+                "data_fields": tuple(
+                    SelectionFieldRequirementBody.model_validate(
+                        {
+                            key: value
+                            for key, value in asdict(item).items()
+                            if key != "consumer_input_hash"
+                        }
+                    )
+                    for item in request.data_fields
+                ),
+                "data_from": request.data_from,
+                "data_to": request.data_to,
+                "rotation_source_snapshot_ids": request.rotation_source_snapshot_ids,
+                "selection_source_snapshot_ids": request.selection_source_snapshot_ids,
+            },
+        )

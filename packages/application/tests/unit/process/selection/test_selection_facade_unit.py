@@ -19,11 +19,15 @@ from ditto_application.processes.selection.facade import (
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
+from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.industry_rotation.contracts import IndustryRotationSnapshot
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.selection.contracts import SelectionRun
 from ditto_strategy.selection.pipeline import SelectionPipeline
+from packages.application.tests.integration.field_admission_support import (
+    certified_selection,
+)
 
 _AS_OF = datetime(2026, 8, 31, 7, 0, tzinfo=UTC)
 
@@ -93,21 +97,25 @@ def _request() -> CreateSelectionRunRequest:
     )
 
 
-def _facade(writer: _Writer) -> SelectionWorkspaceFacade:
+def _facade(
+    writer: _Writer, admission: FieldAdmissionQuery
+) -> SelectionWorkspaceFacade:
     return SelectionWorkspaceFacade(
         RunIndustryAndSecuritySelection(
             rotation_service=IndustryRotationService(),
             selection_pipeline=SelectionPipeline(),
             rotation_writer=writer,
             run_writer=writer,
-        )
+        ),
+        admission=admission,
     )
 
 
 def test_facade_maps_typed_etf_request_to_exact_process_receipt() -> None:
     writer = _Writer()
 
-    receipt = _facade(writer).create(_request())
+    with certified_selection(_request()) as (admission, request):
+        receipt = _facade(writer, admission).create(request)
 
     assert receipt.selection_run.asset_kind == "etf"
     assert [item.instrument_id for item in receipt.selection_run.candidates] == [
@@ -124,7 +132,10 @@ def test_facade_maps_domain_validation_to_application_process_error() -> None:
         factor_weights=(SelectionFactorWeightDraft("momentum", 0.5),),
     )
 
-    with pytest.raises(AppProcessError, match="weights"):
-        _facade(writer).create(replace(request, selection_spec=invalid_spec))
+    with certified_selection(request) as (admission, bound):
+        with pytest.raises(AppProcessError, match="weights"):
+            _facade(writer, admission).create(
+                replace(bound, selection_spec=invalid_spec)
+            )
 
     assert writer.saved == []

@@ -10,6 +10,11 @@ from typing import Any, Literal, Protocol, cast
 import orjson
 
 from ditto_data.catalog.coverage import CoverageException, DatasetCoverage
+from ditto_data.catalog.field_evidence import (
+    CertifiedField,
+    field_from_payload,
+    field_to_payload,
+)
 from ditto_data.catalog.metadata import DatasetSchedule
 
 __all__ = [
@@ -59,9 +64,18 @@ class CertificationEvidence:
     recovery_results: tuple[EvidenceCheck, ...]
     license_record_ids: tuple[str, ...]
     consumer_results: tuple[EvidenceCheck, ...]
+    certified_fields: tuple[CertifiedField, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate that every mandatory evidence group is populated."""
+        if any(
+            field.snapshot_id not in self.snapshot_ids
+            for field in self.certified_fields
+        ):
+            raise ValueError("certified field snapshot must belong to report")
+        field_keys = {(item.snapshot_id, item.field) for item in self.certified_fields}
+        if len(field_keys) != len(self.certified_fields):
+            raise ValueError("certified field evidence must be unique per snapshot")
         _validate_text("DQ rule version", self.dq_rule_version)
         for field_name in (
             "source_ids",
@@ -121,6 +135,12 @@ class DatasetCertificationReport:
             raise ValueError("certification coverage dataset does not match report")
         if not self.coverage.is_complete:
             raise ValueError("certification coverage is incomplete")
+        if any(
+            field.covered_from < self.coverage.target_from
+            or field.covered_to > self.coverage.target_to
+            for field in self.evidence.certified_fields
+        ):
+            raise ValueError("certified field exceeds report coverage")
         if not self.evidence.all_checks_passed:
             raise ValueError("certification evidence contains failed checks")
         if self.generated_at.tzinfo is None:
@@ -312,6 +332,10 @@ def report_from_json(value: str) -> DatasetCertificationReport:
         recovery_results=_checks(evidence_payload["recovery_results"]),
         license_record_ids=_strings(evidence_payload["license_record_ids"]),
         consumer_results=_checks(evidence_payload["consumer_results"]),
+        certified_fields=tuple(
+            field_from_payload(item)
+            for item in evidence_payload.get("certified_fields", ())
+        ),
     )
     return DatasetCertificationReport(
         report_id=str(payload["report_id"]),
@@ -367,6 +391,15 @@ def _coverage_payload(coverage: DatasetCoverage) -> dict[str, object]:
 
 def _evidence_payload(evidence: CertificationEvidence) -> dict[str, object]:
     return {
+        **(
+            {
+                "certified_fields": [
+                    field_to_payload(item) for item in evidence.certified_fields
+                ]
+            }
+            if evidence.certified_fields
+            else {}
+        ),
         "source_ids": evidence.source_ids,
         "schema_versions": evidence.schema_versions,
         "snapshot_ids": evidence.snapshot_ids,
