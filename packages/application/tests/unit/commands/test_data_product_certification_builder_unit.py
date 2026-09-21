@@ -630,3 +630,22 @@ def test_date_precision_revision_resolves_through_revised_session(tmp_path) -> N
         )
     finally:
         pool.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("dataset_id", "eligible"),
+    [
+        ("stock_daily", True),
+        ("etf_daily", True),
+        ("macro_indicators", False),
+        ("commodity_daily", False),
+        ("unknown_dataset", False),
+    ],
+)
+def test_sse_calendar_eligibility_follows_dataset_sources(dataset_id, eligible) -> None:
+    from ditto_application.commands.data_product_certification_builder import (
+        _sse_calendar_eligible,
+    )
+
+    assert _sse_calendar_eligible(dataset_id) is eligible

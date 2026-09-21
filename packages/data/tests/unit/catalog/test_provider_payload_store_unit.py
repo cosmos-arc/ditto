@@ -143,3 +143,33 @@ def test_publishing_race_keeps_one_schema_per_checksum(tmp_path: Path) -> None:
         pl.DataFrame.write_parquet = original_write
 
     assert store.read_payload(first).schema == int32.schema
+
+
+@pytest.mark.unit
+@pytest.mark.pit
+def test_read_refuses_swapped_physical_schema_and_missing_fingerprint(
+    tmp_path: Path,
+) -> None:
+    store = FilesystemProviderPayloadStore(tmp_path)
+    int32 = pl.DataFrame(
+        {"instrument_id": [1], "close": pl.Series("close", [10], pl.Int32)}
+    )
+    artifact = store.retain_payload(
+        dataset_id="stock_daily", source="tushare", payload=int32
+    )
+    path = tmp_path / artifact.uri
+
+    # A crashed pre-guard racer could leave same-value, different-dtype bytes.
+    int32.cast({"close": pl.Int64}).write_parquet(path)
+    with pytest.raises(ValueError, match="fingerprint mismatch"):
+        store.read_payload(artifact)
+
+    int32.write_parquet(path)
+    path.with_name(f"{path.name}.schema").unlink()
+    with pytest.raises(ValueError, match="fingerprint is missing"):
+        store.read_payload(artifact)
+
+    retrained = store.retain_payload(
+        dataset_id="stock_daily", source="tushare", payload=int32
+    )
+    assert store.read_payload(retrained).schema == int32.schema

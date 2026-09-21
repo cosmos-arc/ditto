@@ -120,6 +120,20 @@ class CertificationBuildRequest:
     certified_fields: tuple[CertifiedField, ...] = ()
 
 
+# The retained calendar evidence is the SSE session; only datasets whose every
+# source trades there may freeze date-only disclosure on it.
+_SSE_CALENDAR_SOURCES = frozenset({"tushare", "fuyao"})
+
+
+def _sse_calendar_eligible(dataset_id: str) -> bool:
+    metadata = default_dataset_metadata().get(dataset_id)
+    if metadata is None:
+        return False
+    return set(metadata.supported_sources) | set(metadata.auxiliary_sources) <= (
+        _SSE_CALENDAR_SOURCES
+    )
+
+
 class DataProductCertificationBuilder:
     """Derive frozen machine facts from the durable R2 evidence chain."""
 
@@ -201,7 +215,9 @@ class DataProductCertificationBuilder:
         ).hexdigest()
         evidence = CertificationEvidence(
             certified_fields=tuple(
-                self._resolve_field_time(self._bind_observed_at(field))
+                self._resolve_field_time(
+                    self._bind_observed_at(field), request.dataset_id
+                )
                 for field in request.certified_fields
             ),
             source_ids=source_ids,
@@ -262,16 +278,19 @@ class DataProductCertificationBuilder:
             )
         return replace(field, observed_at=observed)
 
-    def _resolve_field_time(self, field: CertifiedField) -> CertifiedField:
+    def _resolve_field_time(
+        self, field: CertifiedField, dataset_id: str
+    ) -> CertifiedField:
         if field.time_precision != "date":
             return field
         if (
             self._calendar is None
+            or not _sse_calendar_eligible(dataset_id)
             or field.publication_at is None
             or field.available_at is None
         ):
             raise AppProcessError(
-                "date precision needs source times and calendar evidence"
+                f"date precision lacks the dataset's SSE market calendar: {dataset_id}"
             )
         disclosed = field.latest_disclosure_date()
         try:
