@@ -7,7 +7,6 @@ import math
 from collections.abc import Mapping
 from dataclasses import InitVar, dataclass, replace
 from datetime import date
-from statistics import stdev
 from types import MappingProxyType
 
 from ditto_analysis.experiments import (
@@ -37,11 +36,11 @@ from ditto_analysis.experiments import (
 from ditto_analysis.experiments import (
     canonical_payload as _canonical_payload,
 )
+from ditto_analysis.experiments.statistics import return_statistics
 
 from ditto_application.processes.experiments._comparison_evidence import (
     CandidateWalkForwardStatus,
     _candidate_status,
-    _drawdown,
     _evaluated,
     _lineage,
     _merge_refs,
@@ -75,8 +74,6 @@ __all__ = [
     "aggregate_walk_forward",
 ]
 
-_TRADING_DAYS_PER_YEAR = 252
-_MIN_RETURN_OBSERVATIONS = 2
 _STITCHED_ROW_SIZE = 3
 R3_WALK_FORWARD_ARTIFACT_SCHEMA_ID = "ditto.r3.walk-forward-aggregation"
 R3_WALK_FORWARD_ARTIFACT_SCHEMA_VERSION = 1
@@ -366,55 +363,18 @@ def _stitched_metrics(
             metric_id: _not_evaluated("fold_return_evidence_missing")
             for metric_id in ids
         }
-    returns = tuple(item[2] for item in evidence.daily_returns)
-    growth = math.prod(1.0 + value for value in returns)
-    net_return = (growth - 1.0) * 100.0
-    max_drawdown = _drawdown(
-        tuple(item[2] for item in evidence.equity_curve), initial_peak=1.0
-    )
-    result = {
-        _ResearchMetricId.NET_RETURN: _evaluated(
-            _ResearchMetricId.NET_RETURN,
-            net_return,
-            evidence.evidence_refs,
-            evidence.evidence_hashes,
-        ),
-        _ResearchMetricId.MAX_DRAWDOWN: _evaluated(
-            _ResearchMetricId.MAX_DRAWDOWN,
-            max_drawdown,
-            evidence.evidence_refs,
-            evidence.evidence_hashes,
-        ),
+    return {
+        metric_id: _not_evaluated(result)
+        if isinstance(result, str)
+        else _evaluated(
+            metric_id, result.value, evidence.evidence_refs, evidence.evidence_hashes
+        )
+        for metric_id, result in return_statistics(
+            tuple(item[2] for item in evidence.daily_returns),
+            tuple(item[2] for item in evidence.equity_curve),
+            initial_capital=1.0,
+        ).items()
     }
-    volatility = stdev(returns) if len(returns) >= _MIN_RETURN_OBSERVATIONS else 0.0
-    result[_ResearchMetricId.SHARPE_RATIO] = (
-        _not_evaluated("insufficient_daily_return_evidence")
-        if len(returns) < _MIN_RETURN_OBSERVATIONS
-        else _not_evaluated("zero_return_volatility")
-        if volatility == 0.0
-        else _evaluated(
-            _ResearchMetricId.SHARPE_RATIO,
-            sum(returns)
-            / len(returns)
-            / volatility
-            * math.sqrt(_TRADING_DAYS_PER_YEAR),
-            evidence.evidence_refs,
-            evidence.evidence_hashes,
-        )
-    )
-    result[_ResearchMetricId.CALMAR_RATIO] = (
-        _not_evaluated("zero_max_drawdown")
-        if max_drawdown == 0.0
-        else _evaluated(
-            _ResearchMetricId.CALMAR_RATIO,
-            ((growth ** (_TRADING_DAYS_PER_YEAR / len(returns))) - 1.0)
-            * 100.0
-            / abs(max_drawdown),
-            evidence.evidence_refs,
-            evidence.evidence_hashes,
-        )
-    )
-    return result
 
 
 def _aggregate_fold_metric(

@@ -1566,6 +1566,19 @@ def test_r3_evidence_closure_drives_review_packet_and_completed_status(  # noqa:
         store.load_snapshot(launch.experiment_id),
         project_snapshot_manifest(events[0].detail),
     )
+    from ditto_application.processes.experiments.comparison_reader import (
+        ExperimentComparisonReader,
+    )
+
+    comparison_reader = ExperimentComparisonReader(store, reader, assembler)
+    before_events = reader.list_status_events(launch.experiment_id)
+    report_view = comparison_reader.load_comparison(str(launch.experiment_id))
+    assert report_view is not None
+    assert dict(report_view.payload) == collected.comparison.canonical_payload()
+    assert report_view.payload_hash == str(collected.comparison.content_hash)
+    assert comparison_reader.load_comparison(str(launch.experiment_id)) == report_view
+    assert reader.list_status_events(launch.experiment_id) == before_events
+    assert comparison_reader.load_comparison("missing-experiment") is None
     assert len(collected.source_rows) == 4
     assert collected.missing_artifact_refs == ()
     expected_trace_refs = _assert_persisted_selection_trace_provenance(
