@@ -67,7 +67,6 @@ def _certify(runtime, reports, snapshot, tmp_path, visible):
                     publication_at=visible,
                     available_at=visible,
                     time_precision="timestamp",
-                    observed_at=visible,
                     revised_at=visible,
                     evidence_uri=proof.evidence_uri,
                 ),
@@ -84,7 +83,10 @@ def _certify(runtime, reports, snapshot, tmp_path, visible):
 @pytest.mark.integration
 @pytest.mark.pit
 def test_delayed_revision_replay_and_failed_completion_recovery(tmp_path, monkeypatch):
-    with _pipeline(tmp_path, "stock_daily", display="allowed") as runtime:
+    observed = datetime(2026, 7, 17, 10, tzinfo=UTC)
+    with _pipeline(
+        tmp_path, "stock_daily", display="allowed", snapshot_now=lambda: observed
+    ) as runtime:
         pool = SQLitePool(tmp_path / "reviews.sqlite")
         try:
             reports = SQLiteCertificationStore(SQLiteClient(pool))

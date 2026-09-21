@@ -201,7 +201,8 @@ class DataProductCertificationBuilder:
         ).hexdigest()
         evidence = CertificationEvidence(
             certified_fields=tuple(
-                self._resolve_field_time(field) for field in request.certified_fields
+                self._resolve_field_time(self._bind_observed_at(field))
+                for field in request.certified_fields
             ),
             source_ids=source_ids,
             schema_versions=schema_versions,
@@ -247,6 +248,19 @@ class DataProductCertificationBuilder:
             evidence=evidence,
             generated_at=request.generated_at,
         )
+
+    def _bind_observed_at(self, field: CertifiedField) -> CertifiedField:
+        """Local knowledge visibility is fixed by the observation ledger, not claims."""
+        observed = self._snapshot_reader.get_observed_at(field.snapshot_id)
+        if observed is None:
+            raise AppProcessError(
+                f"certified field lacks observed snapshot evidence: {field.snapshot_id}"
+            )
+        if field.observed_at is not None and field.observed_at != observed:
+            raise AppProcessError(
+                f"observed_at claim conflicts with ledger: {field.snapshot_id}"
+            )
+        return replace(field, observed_at=observed)
 
     def _resolve_field_time(self, field: CertifiedField) -> CertifiedField:
         if field.time_precision != "date":

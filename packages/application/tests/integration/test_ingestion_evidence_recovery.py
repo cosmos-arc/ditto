@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
@@ -341,6 +341,7 @@ def _pipeline(
     dataset: str,
     *,
     display: Literal["allowed", "restricted"] = "restricted",
+    snapshot_now: Callable[[], datetime] | None = None,
 ) -> Iterator[_Pipeline]:
     class QualityChecker:
         def handle(self, command: CheckDataQualityCommand) -> tuple[pl.DataFrame, bool]:
@@ -352,7 +353,7 @@ def _pipeline(
     client = SQLiteClient(pool)
     lifecycle = SQLitePartitionLifecycleStore(client)
     licenses = SQLiteDatasetLicenseStore(client)
-    snapshots = SQLiteProviderSnapshotStore(client)
+    snapshots = SQLiteProviderSnapshotStore(client, now=snapshot_now)
     catalog = SQLiteDataCatalog(client)
     lineage = SQLiteDataLineage(client)
     logs = IngestionLogStore(IngestionLogReader(client), IngestionLogWriter(client))

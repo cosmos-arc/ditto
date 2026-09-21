@@ -31,7 +31,12 @@ def test_cli_replay_checks_cutoff_and_revocation_without_losing_audit(
 ):
     with ExitStack() as stack:
         runtime = stack.enter_context(
-            _pipeline(tmp_path, "stock_daily", display="allowed")
+            _pipeline(
+                tmp_path,
+                "stock_daily",
+                display="allowed",
+                snapshot_now=lambda: datetime(2026, 7, 17, 10, tzinfo=UTC),
+            )
         )
         pool = SQLitePool(tmp_path / "reviews.sqlite")
         stack.callback(pool.close)

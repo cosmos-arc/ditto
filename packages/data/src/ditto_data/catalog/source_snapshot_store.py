@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -40,8 +41,14 @@ def _metadata_from_json(value: object) -> tuple[tuple[str, str], ...]:
 class SQLiteProviderSnapshotStore:
     """Append-only provider snapshot store."""
 
-    def __init__(self, client: SQLiteClient) -> None:
+    def __init__(
+        self,
+        client: SQLiteClient,
+        *,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
         self._client = client
+        self._now = now or (lambda: datetime.now(UTC))
         self._create_tables()
 
     def _create_tables(self) -> None:
@@ -158,7 +165,7 @@ class SQLiteProviderSnapshotStore:
                 [
                     snapshot.snapshot_id,
                     previous["snapshot_id"] if previous else None,
-                    datetime.now(UTC).isoformat(),
+                    self._now().isoformat(),
                 ],
             )
             self._client.commit()

@@ -423,7 +423,9 @@ def test_reingest_legacy_completion_reattests_on_new_revision(
             (PartitionLifecycleStatus.PAYLOAD_COMMITTED, _payload_evidence_id(request)),
             (
                 PartitionLifecycleStatus.CATALOG_ATTESTED,
-                _catalog_evidence_id(request.catalog_entry),
+                _catalog_evidence_id(
+                    request.catalog_entry, request.provider_snapshot.snapshot_id
+                ),
             ),
             (PartitionLifecycleStatus.LINEAGE_RECORDED, request.lineage_event.run_id),
             (
@@ -561,5 +563,172 @@ def test_repair_resumes_after_payload_without_rewriting_payload(tmp_path: Path) 
         assert len(payload_events) == 1
         assert len(lineage.values) == 1
         assert len(logs.values) == 1
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_schema_change_after_partial_attestation_forks_new_revision(
+    tmp_path: Path,
+) -> None:
+    lifecycle, pool = _store(tmp_path)
+    license_record = _license()
+    snapshot = _Recorder()
+    catalog = _Recorder()
+    lineage = _Recorder()
+    logs = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=snapshot,
+            snapshot_reader=snapshot,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=catalog,
+            lineage_recorder=lineage,
+            lineage_reader=lineage,
+            ingestion_log_store=logs,
+        ),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request_v1 = _request(license_record)
+    request_v2 = _request(license_record, schema_version="market.stock_daily.v2")
+
+    try:
+        lifecycle.plan_partition(
+            PartitionCheckpoint(
+                chunk_id=request_v1.chunk_id,
+                dataset_id=request_v1.dataset_id,
+                source=request_v1.source,
+                request_start=request_v1.request_start,
+                request_end=request_v1.request_end,
+                status=PartitionLifecycleStatus.PLANNED,
+                last_successful_stage=None,
+                attempt=1,
+                retry_budget=3,
+                payload_id=None,
+                catalog_asset_id=None,
+                lineage_run_id=None,
+                ingestion_log_id=None,
+                error_code=None,
+                updated_at=datetime(2026, 7, 18, 8, 40, tzinfo=UTC),
+            )
+        )
+        for status, evidence_id in (
+            (PartitionLifecycleStatus.FETCHED, None),
+            (PartitionLifecycleStatus.NORMALIZED, None),
+            (PartitionLifecycleStatus.PIT_PASSED, None),
+            (PartitionLifecycleStatus.DQ_PASSED, None),
+            (
+                PartitionLifecycleStatus.PAYLOAD_COMMITTED,
+                _payload_evidence_id(request_v1),
+            ),
+            (
+                PartitionLifecycleStatus.CATALOG_ATTESTED,
+                _catalog_evidence_id(
+                    request_v1.catalog_entry,
+                    request_v1.provider_snapshot.snapshot_id,
+                ),
+            ),
+        ):
+            lifecycle.advance_partition(
+                request_v1.chunk_id,
+                status,
+                occurred_at=datetime(2026, 7, 18, 8, 41, tzinfo=UTC),
+                evidence_id=evidence_id,
+            )
+
+        forked = committer.commit(request_v2)
+
+        assert forked.completed is True
+        assert forked.chunk_id != request_v1.chunk_id
+        assert forked.chunk_id.startswith(f"{request_v1.chunk_id}:revision:")
+        assert any(
+            item.snapshot_id == request_v2.provider_snapshot.snapshot_id
+            for item in snapshot.values
+        )
+        assert snapshot_completed(request_v2.provider_snapshot, lifecycle)
+
+        resumed = committer.commit(request_v1)
+
+        assert resumed.completed is True
+        assert snapshot_completed(request_v1.provider_snapshot, lifecycle)
+    finally:
+        pool.close()
+
+
+@pytest.mark.unit
+def test_same_request_resumes_partially_attested_checkpoint_without_fork(
+    tmp_path: Path,
+) -> None:
+    lifecycle, pool = _store(tmp_path)
+    license_record = _license()
+    snapshot = _Recorder()
+    catalog = _Recorder()
+    lineage = _Recorder()
+    logs = _Recorder()
+    committer = IngestionEvidenceCommitter(
+        ports=EvidenceCommitPorts(
+            lifecycle_reader=lifecycle,
+            lifecycle_writer=lifecycle,
+            snapshot_writer=snapshot,
+            snapshot_reader=snapshot,
+            license_reader=_LicenseReader(license_record),
+            catalog_writer=catalog,
+            lineage_recorder=lineage,
+            lineage_reader=lineage,
+            ingestion_log_store=logs,
+        ),
+        now=lambda: datetime(2026, 7, 18, 9, 0, tzinfo=UTC),
+    )
+    request = _request(license_record)
+
+    try:
+        lifecycle.plan_partition(
+            PartitionCheckpoint(
+                chunk_id=request.chunk_id,
+                dataset_id=request.dataset_id,
+                source=request.source,
+                request_start=request.request_start,
+                request_end=request.request_end,
+                status=PartitionLifecycleStatus.PLANNED,
+                last_successful_stage=None,
+                attempt=1,
+                retry_budget=3,
+                payload_id=None,
+                catalog_asset_id=None,
+                lineage_run_id=None,
+                ingestion_log_id=None,
+                error_code=None,
+                updated_at=datetime(2026, 7, 18, 8, 40, tzinfo=UTC),
+            )
+        )
+        for status, evidence_id in (
+            (PartitionLifecycleStatus.FETCHED, None),
+            (PartitionLifecycleStatus.NORMALIZED, None),
+            (PartitionLifecycleStatus.PIT_PASSED, None),
+            (PartitionLifecycleStatus.DQ_PASSED, None),
+            (PartitionLifecycleStatus.PAYLOAD_COMMITTED, _payload_evidence_id(request)),
+            (
+                PartitionLifecycleStatus.CATALOG_ATTESTED,
+                _catalog_evidence_id(
+                    request.catalog_entry, request.provider_snapshot.snapshot_id
+                ),
+            ),
+        ):
+            lifecycle.advance_partition(
+                request.chunk_id,
+                status,
+                occurred_at=datetime(2026, 7, 18, 8, 41, tzinfo=UTC),
+                evidence_id=evidence_id,
+            )
+        snapshot.values.append(request.provider_snapshot)
+
+        outcome = committer.commit(request)
+
+        assert outcome.completed is True
+        assert outcome.chunk_id == request.chunk_id
+        assert snapshot_completed(request.provider_snapshot, lifecycle)
+        assert len(snapshot.values) == 1
     finally:
         pool.close()

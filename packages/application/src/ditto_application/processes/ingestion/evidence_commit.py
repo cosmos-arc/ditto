@@ -166,12 +166,20 @@ class IngestionEvidenceCommitter:
             chunk_id=self._revision_id(
                 request.chunk_id,
                 request.provider_snapshot.checksum,
-                request.provider_snapshot.snapshot_id,
+                snapshot_id=request.provider_snapshot.snapshot_id,
+                catalog_evidence_id=_catalog_evidence_id(
+                    request.catalog_entry, request.provider_snapshot.snapshot_id
+                ),
             ),
         )
 
     def _revision_id(
-        self, chunk_id: str, checksum: str, snapshot_id: str | None = None
+        self,
+        chunk_id: str,
+        checksum: str,
+        *,
+        snapshot_id: str | None = None,
+        catalog_evidence_id: str | None = None,
     ) -> str:
         checkpoint = self._ports.lifecycle_reader.get_latest_checkpoint(chunk_id)
         if checkpoint is None:
@@ -182,33 +190,42 @@ class IngestionEvidenceCommitter:
             or payload_id == f"intent:{checksum}"
             or (
                 payload_id.startswith(f"payload:{checksum}:")
-                and not self._completion_evidence_conflict(checkpoint, snapshot_id)
+                and not self._identity_conflict(
+                    checkpoint, snapshot_id, catalog_evidence_id
+                )
             )
         ):
             return checkpoint.chunk_id
         revision = sha256(repr((checkpoint.chunk_id, checksum)).encode()).hexdigest()
         return f"{chunk_id}:revision:{revision}"
 
-    def _completion_evidence_conflict(
-        self, checkpoint: PartitionCheckpoint, snapshot_id: str | None
+    def _identity_conflict(
+        self,
+        checkpoint: PartitionCheckpoint,
+        snapshot_id: str | None,
+        catalog_evidence_id: str | None,
     ) -> bool:
-        """Only a COMPLETE bound to this snapshot's full identity can be reused."""
-        if checkpoint.status is not PartitionLifecycleStatus.COMPLETE:
-            return False
-        attested = next(
-            (
-                event.evidence_id
-                for event in self._ports.lifecycle_reader.list_events(
-                    checkpoint.chunk_id
-                )
-                if event.to_status is PartitionLifecycleStatus.COMPLETE
-                and event.evidence_id is not None
-            ),
-            None,
+        """Reuse must prove the recorded evidence belongs to this snapshot."""
+        if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
+            attested = next(
+                (
+                    event.evidence_id
+                    for event in self._ports.lifecycle_reader.list_events(
+                        checkpoint.chunk_id
+                    )
+                    if event.to_status is PartitionLifecycleStatus.COMPLETE
+                    and event.evidence_id is not None
+                ),
+                None,
+            )
+            if attested is None:
+                return True
+            return snapshot_id is not None and attested != snapshot_id
+        return (
+            checkpoint.catalog_asset_id is not None
+            and catalog_evidence_id is not None
+            and checkpoint.catalog_asset_id != catalog_evidence_id
         )
-        if attested is None:
-            return True
-        return snapshot_id is not None and attested != snapshot_id
 
     def _prepare_payload(
         self, request: EvidenceCommitRequest
@@ -265,7 +282,9 @@ class IngestionEvidenceCommitter:
             self._advance(
                 request.chunk_id,
                 PartitionLifecycleStatus.CATALOG_ATTESTED,
-                evidence_id=_catalog_evidence_id(request.catalog_entry),
+                evidence_id=_catalog_evidence_id(
+                    request.catalog_entry, request.provider_snapshot.snapshot_id
+                ),
             )
         except Exception:
             return self._fail(
@@ -539,9 +558,13 @@ def _payload_evidence_id(request: EvidenceCommitRequest) -> str:
     )
 
 
-def _catalog_evidence_id(entry: DataCatalogEntry) -> str:
+def _catalog_evidence_id(entry: DataCatalogEntry, snapshot_id: str) -> str:
+    """Bind the attested catalog stage to one exact provider snapshot."""
     partitions = ",".join(entry.asset.partition_keys)
-    return f"catalog:{entry.asset.namespace}:{entry.asset.dataset_id}:{partitions}"
+    return (
+        f"catalog:{entry.asset.namespace}:{entry.asset.dataset_id}:"
+        f"{partitions}:{snapshot_id}"
+    )
 
 
 def _ingestion_log_id(log: IngestionLog) -> str:

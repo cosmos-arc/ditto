@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 from hashlib import sha256
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from ditto_application.commands.data_product_certification_builder import (
@@ -29,6 +30,8 @@ from ditto_data.ingestion.partition_state import (
     PartitionLifecycleStatus,
 )
 
+_LEDGER_OBSERVED = object()
+
 
 def _fixture(
     tmp_path,
@@ -38,6 +41,7 @@ def _fixture(
     checkpoint_checksum: str = "payload-checksum",
     completion_snapshot_id: str | None = None,
     calendar=None,
+    ledger_observed_at: object = _LEDGER_OBSERVED,
 ):
     now = datetime(2026, 8, 1, tzinfo=UTC)
     asset = DataAssetRef(
@@ -139,8 +143,12 @@ def _fixture(
             start=1,
         )
     )
+    ledger_observed = (
+        now if ledger_observed_at is _LEDGER_OBSERVED else ledger_observed_at
+    )
     snapshot_reader = SimpleNamespace(
         list_snapshots=lambda **_kwargs: (snapshot,),
+        get_observed_at=lambda _snapshot_id: cast(datetime | None, ledger_observed),
     )
     license_reader = SimpleNamespace(
         get_license=lambda record_id: (
@@ -270,7 +278,9 @@ def test_builder_rejects_field_claim_without_exact_schema_evidence(tmp_path) -> 
     admitted = replace(field, field="close")
     assert builder.build(
         replace(request, certified_fields=(admitted,))
-    ).evidence.certified_fields == (admitted,)
+    ).evidence.certified_fields == (
+        replace(admitted, observed_at=request.generated_at),
+    )
     with pytest.raises(AppProcessError, match="verified consumer evidence"):
         builder.build(
             replace(
@@ -309,7 +319,9 @@ def test_builder_binds_input_digests_to_retained_verified_consumer_artifact(tmp_
             request.consumer_evidence, sha256_hex=sha256(raw).hexdigest()
         ),
     )
-    assert builder.build(bound).evidence.certified_fields == (field,)
+    assert builder.build(bound).evidence.certified_fields == (
+        replace(field, observed_at=request.generated_at),
+    )
     forged = replace(field, consumer_bindings=(("instruments.close", "f" * 64),))
     with pytest.raises(AppProcessError, match="does not match retained evidence"):
         builder.build(replace(bound, certified_fields=(forged,)))
@@ -500,3 +512,48 @@ def test_completion_must_attest_full_snapshot_identity_not_only_payload(tmp_path
     )
     with pytest.raises(AppProcessError, match="COMPLETE checkpoint"):
         builder.build(request)
+
+
+@pytest.mark.unit
+def test_builder_rejects_observation_claim_conflicting_with_ledger(tmp_path) -> None:
+    builder, request = _fixture(tmp_path)
+    base = builder.build(request)
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    field = CertifiedField(
+        field="close",
+        snapshot_id=base.evidence.snapshot_ids[0],
+        instrument_ids=(600000,),
+        covered_from=request.target_to,
+        covered_to=request.target_to,
+        available_at=None,
+        publication_at=None,
+        time_precision="unknown",
+        observed_at=datetime(2026, 7, 1, tzinfo=UTC),
+        evidence_uri=request.consumer_evidence.evidence_uri,
+    )
+
+    with pytest.raises(AppProcessError, match="observed_at claim conflicts"):
+        builder.build(replace(request, certified_fields=(field,)))
+
+
+@pytest.mark.unit
+def test_builder_rejects_field_without_authoritative_observation(tmp_path) -> None:
+    builder, request = _fixture(tmp_path, ledger_observed_at=None)
+    base = builder.build(request)
+    from ditto_data.catalog.field_evidence import CertifiedField
+
+    field = CertifiedField(
+        field="close",
+        snapshot_id=base.evidence.snapshot_ids[0],
+        instrument_ids=(600000,),
+        covered_from=request.target_to,
+        covered_to=request.target_to,
+        available_at=None,
+        publication_at=None,
+        time_precision="unknown",
+        evidence_uri=request.consumer_evidence.evidence_uri,
+    )
+
+    with pytest.raises(AppProcessError, match="lacks observed snapshot evidence"):
+        builder.build(replace(request, certified_fields=(field,)))
