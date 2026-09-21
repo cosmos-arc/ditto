@@ -114,7 +114,7 @@ def _fixture(
         last_successful_stage=PartitionLifecycleStatus.COMPLETE,
         attempt=1,
         retry_budget=3,
-        payload_id=f"payload:{checkpoint_checksum}:stock_daily/2015",
+        payload_id=f"payload:{checkpoint_checksum}:stock_daily/2015:{snapshot.snapshot_id}",
         catalog_asset_id="catalog:market:stock_daily",
         lineage_run_id="lineage:1",
         ingestion_log_id="log:1",

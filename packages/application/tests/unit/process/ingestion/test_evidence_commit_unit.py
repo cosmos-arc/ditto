@@ -423,9 +423,7 @@ def test_reingest_legacy_completion_reattests_on_new_revision(
             (PartitionLifecycleStatus.PAYLOAD_COMMITTED, _payload_evidence_id(request)),
             (
                 PartitionLifecycleStatus.CATALOG_ATTESTED,
-                _catalog_evidence_id(
-                    request.catalog_entry, request.provider_snapshot.snapshot_id
-                ),
+                _catalog_evidence_id(request.catalog_entry),
             ),
             (PartitionLifecycleStatus.LINEAGE_RECORDED, request.lineage_event.run_id),
             (
@@ -625,10 +623,7 @@ def test_schema_change_after_partial_attestation_forks_new_revision(
             ),
             (
                 PartitionLifecycleStatus.CATALOG_ATTESTED,
-                _catalog_evidence_id(
-                    request_v1.catalog_entry,
-                    request_v1.provider_snapshot.snapshot_id,
-                ),
+                _catalog_evidence_id(request_v1.catalog_entry),
             ),
         ):
             lifecycle.advance_partition(
@@ -711,9 +706,7 @@ def test_same_request_resumes_partially_attested_checkpoint_without_fork(
             (PartitionLifecycleStatus.PAYLOAD_COMMITTED, _payload_evidence_id(request)),
             (
                 PartitionLifecycleStatus.CATALOG_ATTESTED,
-                _catalog_evidence_id(
-                    request.catalog_entry, request.provider_snapshot.snapshot_id
-                ),
+                _catalog_evidence_id(request.catalog_entry),
             ),
         ):
             lifecycle.advance_partition(

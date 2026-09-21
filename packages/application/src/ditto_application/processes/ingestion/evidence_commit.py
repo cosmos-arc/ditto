@@ -167,9 +167,7 @@ class IngestionEvidenceCommitter:
                 request.chunk_id,
                 request.provider_snapshot.checksum,
                 snapshot_id=request.provider_snapshot.snapshot_id,
-                catalog_evidence_id=_catalog_evidence_id(
-                    request.catalog_entry, request.provider_snapshot.snapshot_id
-                ),
+                payload_evidence_id=_payload_evidence_id(request),
             ),
         )
 
@@ -179,7 +177,7 @@ class IngestionEvidenceCommitter:
         checksum: str,
         *,
         snapshot_id: str | None = None,
-        catalog_evidence_id: str | None = None,
+        payload_evidence_id: str | None = None,
     ) -> str:
         checkpoint = self._ports.lifecycle_reader.get_latest_checkpoint(chunk_id)
         if checkpoint is None:
@@ -191,7 +189,7 @@ class IngestionEvidenceCommitter:
             or (
                 payload_id.startswith(f"payload:{checksum}:")
                 and not self._identity_conflict(
-                    checkpoint, snapshot_id, catalog_evidence_id
+                    checkpoint, snapshot_id, payload_evidence_id
                 )
             )
         ):
@@ -203,7 +201,7 @@ class IngestionEvidenceCommitter:
         self,
         checkpoint: PartitionCheckpoint,
         snapshot_id: str | None,
-        catalog_evidence_id: str | None,
+        payload_evidence_id: str | None,
     ) -> bool:
         """Reuse must prove the recorded evidence belongs to this snapshot."""
         if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
@@ -222,9 +220,9 @@ class IngestionEvidenceCommitter:
                 return True
             return snapshot_id is not None and attested != snapshot_id
         return (
-            checkpoint.catalog_asset_id is not None
-            and catalog_evidence_id is not None
-            and checkpoint.catalog_asset_id != catalog_evidence_id
+            checkpoint.payload_id is not None
+            and payload_evidence_id is not None
+            and checkpoint.payload_id != payload_evidence_id
         )
 
     def _prepare_payload(
@@ -282,9 +280,7 @@ class IngestionEvidenceCommitter:
             self._advance(
                 request.chunk_id,
                 PartitionLifecycleStatus.CATALOG_ATTESTED,
-                evidence_id=_catalog_evidence_id(
-                    request.catalog_entry, request.provider_snapshot.snapshot_id
-                ),
+                evidence_id=_catalog_evidence_id(request.catalog_entry),
             )
         except Exception:
             return self._fail(
@@ -552,19 +548,16 @@ class IngestionEvidenceCommitter:
 
 
 def _payload_evidence_id(request: EvidenceCommitRequest) -> str:
+    """Bind the committed payload stage to one exact provider snapshot."""
     return (
         f"payload:{request.provider_snapshot.checksum}:"
-        f"{request.catalog_entry.storage_uri}"
+        f"{request.catalog_entry.storage_uri}:{request.provider_snapshot.snapshot_id}"
     )
 
 
-def _catalog_evidence_id(entry: DataCatalogEntry, snapshot_id: str) -> str:
-    """Bind the attested catalog stage to one exact provider snapshot."""
+def _catalog_evidence_id(entry: DataCatalogEntry) -> str:
     partitions = ",".join(entry.asset.partition_keys)
-    return (
-        f"catalog:{entry.asset.namespace}:{entry.asset.dataset_id}:"
-        f"{partitions}:{snapshot_id}"
-    )
+    return f"catalog:{entry.asset.namespace}:{entry.asset.dataset_id}:{partitions}"
 
 
 def _ingestion_log_id(log: IngestionLog) -> str:

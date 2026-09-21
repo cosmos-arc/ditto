@@ -11,7 +11,12 @@ from ditto_data.ingestion.partition_state import (
 def checkpoint_matches_snapshot(
     checkpoint: PartitionCheckpoint, snapshot: ProviderSnapshot
 ) -> bool:
-    """An interval alone cannot attest another revision's payload."""
+    """
+    An interval alone cannot attest another revision's payload.
+
+    Committed payload evidence carries the exact snapshot identity; an intent
+    only proves byte-level intent and stays deliberately conservative.
+    """
     return (
         checkpoint.dataset_id == snapshot.dataset_id
         and checkpoint.source == snapshot.source
@@ -23,7 +28,10 @@ def checkpoint_matches_snapshot(
                 checkpoint.status is not PartitionLifecycleStatus.COMPLETE
                 and checkpoint.payload_id == f"intent:{snapshot.checksum}"
             )
-            or checkpoint.payload_id.startswith(f"payload:{snapshot.checksum}:")
+            or (
+                checkpoint.payload_id.startswith(f"payload:{snapshot.checksum}:")
+                and checkpoint.payload_id.endswith(f":{snapshot.snapshot_id}")
+            )
         )
     )
 

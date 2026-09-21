@@ -122,9 +122,11 @@ def field_evidence(
             "synthetic",
             stage,
             occurred_at=visible,
-            evidence_id=f"payload:{snapshot.checksum}:synthetic"
-            if stage is PartitionLifecycleStatus.PAYLOAD_COMMITTED
-            else snapshot.snapshot_id,
+            evidence_id=(
+                f"payload:{snapshot.checksum}:synthetic:{snapshot.snapshot_id}"
+                if stage is PartitionLifecycleStatus.PAYLOAD_COMMITTED
+                else snapshot.snapshot_id
+            ),
         )
     field = CertifiedField(
         field="amount",

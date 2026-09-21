@@ -101,11 +101,12 @@ class SQLiteProviderSnapshotStore:
         """Append a snapshot, treating an exact duplicate as idempotent."""
         existing = self.get_snapshot(snapshot.snapshot_id)
         if existing is not None:
-            if existing == snapshot:
-                return
-            raise ValueError(
-                f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
-            )
+            if existing != snapshot:
+                raise ValueError(
+                    f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
+                )
+            self._backfill_observation(snapshot.snapshot_id)
+            return
         if snapshot.snapshot_id != snapshot.expected_snapshot_id():
             raise ValueError(
                 "provider snapshot identity does not match required fields"
@@ -174,12 +175,31 @@ class SQLiteProviderSnapshotStore:
             raise
 
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
-        """Return one immutable provider snapshot by ID."""
+        """Return one immutable snapshot by deterministic ID."""
         row = self._client.fetchone(
             "SELECT * FROM provider_snapshots WHERE snapshot_id = ?",
             [snapshot_id],
         )
         return None if row is None else _snapshot_from_row(row)
+
+    def _backfill_observation(self, snapshot_id: str) -> None:
+        """
+        Upgraded stores predate the observation ledger; record re-ingestion now.
+
+        The timestamp is the current clock, never a fabricated historical one, and
+        the prior content identity stays unknown for legacy rows.
+        """
+        if self.get_observed_at(snapshot_id) is not None:
+            return
+        try:
+            self._client.execute(
+                "INSERT INTO provider_snapshot_observations VALUES (?, NULL, ?)",
+                [snapshot_id, self._now().isoformat()],
+            )
+            self._client.commit()
+        except Exception:
+            self._client.rollback()
+            raise
 
     def get_predecessor(self, snapshot_id: str) -> str | None:
         """Return prior observed content without claiming historical availability."""
