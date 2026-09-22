@@ -2,12 +2,12 @@ import { apiClient } from "@/api/transport";
 import type {
 	CreatePaperAccountBody,
 	CreatePaperSessionBody,
-	ManualHistoryQueryIdentity,
 	OperatePaperOrderBody,
 	PaperAccountHistory,
 	PaperAccountLedger,
 	PaperAccountReceipt,
 	PaperExecutionReceipt,
+	PaperHistoryQueryIdentity,
 	PaperReconciliation,
 	PaperRecoverReceipt,
 	PaperSessionCommandReceipt,
@@ -30,12 +30,12 @@ import {
 export type {
 	CreatePaperAccountBody,
 	CreatePaperSessionBody,
-	ManualHistoryQueryIdentity,
 	OperatePaperOrderBody,
 	PaperAccountHistory,
 	PaperAccountLedger,
 	PaperAccountReceipt,
 	PaperExecutionReceipt,
+	PaperHistoryQueryIdentity,
 	PaperReconciliation,
 	PaperRecoverReceipt,
 	PaperSessionCommandReceipt,
@@ -59,14 +59,13 @@ export async function fetchPaperAccountLedger(accountId: string, asOf: string): 
 
 export async function fetchPaperAccountHistory(
 	accountId: string,
-	sessionId: string,
-	identity: ManualHistoryQueryIdentity,
+	identity: PaperHistoryQueryIdentity,
 ): Promise<PaperAccountHistory> {
 	const payload = await apiClient.get("/api/v1/paper/accounts/{account_id}/history", {
 		params: {
 			path: { account_id: accountId },
 			query: {
-				session_id: sessionId,
+				session_id: identity.session_id,
 				start_date: identity.start_date,
 				end_date: identity.end_date,
 				knowledge_cutoff: identity.knowledge_cutoff,

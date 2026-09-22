@@ -797,7 +797,10 @@ export function PaperAccountWorkspace({
 								tradingKeys.paperHistory(ledger.account.account_id, selectedSessionId, identity)
 							}
 							fetchHistory={(identity) =>
-								fetchPaperAccountHistory(ledger.account.account_id, selectedSessionId, identity)
+								fetchPaperAccountHistory(ledger.account.account_id, {
+									...identity,
+									session_id: selectedSessionId,
+								})
 							}
 						/>
 						<DriftAttribution executions={session.executions} />

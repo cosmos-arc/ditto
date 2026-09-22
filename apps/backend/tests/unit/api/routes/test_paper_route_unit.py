@@ -34,6 +34,7 @@ from ditto_apps.api.routes.paper import (
     reconcile_paper_session,
     recover_paper_session,
 )
+from ditto_apps.errors import NotFoundError
 from ditto_apps.models.paper import (
     CreatePaperAccountBody,
     CreatePaperSessionBody,
@@ -523,6 +524,55 @@ def test_paper_history_route_rejects_session_account_conflict(tmp_path: Path) ->
                 )
             )
         assert raised.value.error_code == "PAPER_HISTORY_SESSION_ACCOUNT_MISMATCH"
+    store.close()
+    journal.close()
+
+
+def test_paper_history_route_maps_missing_session_to_not_found(tmp_path: Path) -> None:
+    database = str(tmp_path / "paper-history-missing-session.sqlite")
+    journal = SqliteAccountEventJournal(database)
+    store = SqlitePaperSessionStore(database)
+    account_handler = CreatePaperAccountHandler(journal=journal, clock=lambda: NOW)
+    history_query = GetPaperHistoryQuery(
+        journal=journal,
+        session_store=store,
+        snapshot_reader=_SnapshotReader(),
+        valuation_source=_EmptyBars(),
+    )
+
+    with patch("ditto_apps.api.routes.paper.asyncio.to_thread", side_effect=_inline):
+        asyncio.run(
+            _original(create_paper_account)(
+                body=CreatePaperAccountBody(
+                    account_id="paper-history-4",
+                    name="无会话账户",
+                    opened_at=NOW,
+                    trade_date=date(2026, 8, 31),
+                    initial_cash=Decimal("100"),
+                    idempotency_key="paper-history-account-4",
+                ),
+                handler=account_handler,
+            )
+        )
+        events = journal.list_events("paper-history-4")
+        with pytest.raises(NotFoundError) as raised:
+            asyncio.run(
+                _original(get_paper_account_history)(
+                    account_id="paper-history-4",
+                    params=PaperHistoryQueryParams(
+                        session_id="paper-history-session-never-created",
+                        start_date=date(2026, 8, 31),
+                        end_date=date(2026, 9, 1),
+                        knowledge_cutoff=datetime(2026, 9, 1, 12, 0, tzinfo=UTC),
+                        publication_cutoff=datetime(2026, 9, 1, 12, 0, tzinfo=UTC),
+                        source_snapshot_ids=(_history_snapshot().snapshot_id,),
+                        ledger_event_count=len(events),
+                        ledger_hash=ledger_hash(events),
+                    ),
+                    query=history_query,
+                )
+            )
+        assert "paper history query failed closed" in str(raised.value)
     store.close()
     journal.close()
 

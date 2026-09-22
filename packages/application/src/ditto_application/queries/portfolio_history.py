@@ -102,6 +102,7 @@ class _HistoryFlavor:
     """Kind-scoped identities: error codes, result prefix, and account gate."""
 
     account_kind: AccountKind
+    kind_label: str
     code_prefix: str
     failure_context: str
     result_prefix: str
@@ -109,12 +110,14 @@ class _HistoryFlavor:
 
 _MANUAL_FLAVOR = _HistoryFlavor(
     account_kind=AccountKind.MANUAL,
+    kind_label="MANUAL",
     code_prefix="MANUAL_HISTORY",
     failure_context="manual history",
     result_prefix="manual-history:sha256:",
 )
 _PAPER_FLAVOR = _HistoryFlavor(
     account_kind=AccountKind.PAPER,
+    kind_label="PAPER",
     code_prefix="PAPER_HISTORY",
     failure_context="paper history",
     result_prefix="paper-history:sha256:",
@@ -556,7 +559,7 @@ class _AccountHistoryEngine:
             raise _error(
                 self._flavor,
                 "ACCOUNT_KIND_MISMATCH",
-                "account is not the expected account kind",
+                f"account is not a {self._flavor.kind_label} account",
                 account_id=account_id,
             )
         return account

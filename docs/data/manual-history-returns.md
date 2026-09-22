@@ -18,7 +18,7 @@
 两个入口共享同一重放引擎（`packages/application/.../queries/portfolio_history.py`），只差账户种类门、身份锚与错误码前缀：
 
 - Manual：`GET /api/v1/manual/accounts/{account_id}/history`（`manual_get_history`，`GetManualHistoryQuery`，错误码 `MANUAL_HISTORY_*`）；
-- Paper：`GET /api/v1/paper/accounts/{account_id}/history`（`paper_get_account_history`，`GetPaperHistoryQuery`，错误码 `PAPER_HISTORY_*`），请求额外携带 `session_id`：会话必须存在且 `session.account_id == account_id`，否则 `PAPER_HISTORY_SESSION_NOT_FOUND` / `PAPER_HISTORY_SESSION_ACCOUNT_MISMATCH` 拒绝；`session_id` 计入 `result_id`。
+- Paper：`GET /api/v1/paper/accounts/{account_id}/history`（`paper_get_account_history`，`GetPaperHistoryQuery`，错误码 `PAPER_HISTORY_*`），请求额外携带 `session_id`：会话必须存在且 `session.account_id == account_id`，否则 `PAPER_HISTORY_SESSION_NOT_FOUND` / `PAPER_HISTORY_SESSION_ACCOUNT_MISMATCH` 拒绝；`session_id` 计入 `result_id`。HTTP 映射上会话缺失为 404，其余（含账户缺失，与 Manual 路由一致）为 422。
 
 请求必须显式携带：
 

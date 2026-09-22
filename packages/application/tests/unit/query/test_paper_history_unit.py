@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.portfolio_history import (
+    AccountHistoryView,
     GetPaperHistoryQuery,
     PaperHistoryRequest,
 )
@@ -347,7 +348,7 @@ def _run(
     *,
     end_date: str = "2026-03-05",
     session_id: str = _SESSION_ID,
-) -> object:
+) -> AccountHistoryView:
     query, _ = _query(events, bars, session_id=session_id)
     request = _request(
         event_count=len(events),
@@ -356,6 +357,30 @@ def _run(
         session_id=session_id,
     )
     return query.history(request)
+
+
+def test_paper_ledger_revision_hash_mismatch_fails_closed() -> None:
+    events = _base_events()
+    query, _ = _query(events, _base_bars())
+    request = _request(
+        event_count=3,
+        ledger_hash_value="account-ledger:sha256:" + "0" * 64,
+    )
+    with pytest.raises(AppQueryError) as error:
+        query.history(request)
+    assert error.value.details["code"] == "PAPER_HISTORY_LEDGER_REVISION_MISMATCH"
+
+
+def test_paper_ledger_revision_count_beyond_stream_fails_closed() -> None:
+    events = _base_events()
+    query, _ = _query(events, _base_bars())
+    request = _request(
+        event_count=4,
+        ledger_hash_value=ledger_hash(tuple(events)),
+    )
+    with pytest.raises(AppQueryError) as error:
+        query.history(request)
+    assert error.value.details["code"] == "PAPER_HISTORY_LEDGER_REVISION_COUNT_INVALID"
 
 
 def test_paper_session_must_exist() -> None:

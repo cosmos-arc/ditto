@@ -379,12 +379,22 @@ function parseHistoryPoint(value: unknown, boundary: string): ManualHistoryPoint
 	};
 }
 
+type HistoryParseScope = {
+	readonly boundary: string;
+	readonly resultIdPrefix: string;
+};
+
 export function parseManualAccountHistory(
 	value: unknown,
 	expectedAccountId: string,
 	identity: ManualHistoryQueryIdentity,
 ): ManualAccountHistory {
-	return parseAccountHistoryPayload(value, "manualAccountHistory", expectedAccountId, identity);
+	return parseAccountHistoryPayload(
+		value,
+		{ boundary: "manualAccountHistory", resultIdPrefix: "manual-history:sha256:" },
+		expectedAccountId,
+		identity,
+	);
 }
 
 export function parsePaperAccountHistory(
@@ -392,25 +402,35 @@ export function parsePaperAccountHistory(
 	expectedAccountId: string,
 	identity: ManualHistoryQueryIdentity,
 ): PaperAccountHistory {
-	return parseAccountHistoryPayload(value, "paperAccountHistory", expectedAccountId, identity);
+	return parseAccountHistoryPayload(
+		value,
+		{ boundary: "paperAccountHistory", resultIdPrefix: "paper-history:sha256:" },
+		expectedAccountId,
+		identity,
+	);
 }
 
 function parseAccountHistoryPayload(
 	value: unknown,
-	boundary: string,
+	scope: HistoryParseScope,
 	expectedAccountId: string,
 	identity: ManualHistoryQueryIdentity,
 ): ManualAccountHistory {
+	const { boundary, resultIdPrefix } = scope;
 	const record = recordValue(value, boundary);
 	sameValue(record["account_id"], expectedAccountId, boundary, "account_id");
 	sameValue(record["start_date"], identity.start_date, boundary, "start_date");
 	sameValue(record["end_date"], identity.end_date, boundary, "end_date");
 	sameInstant(record["knowledge_cutoff"], identity.knowledge_cutoff, boundary, "knowledge_cutoff");
 	sameInstant(record["publication_cutoff"], identity.publication_cutoff, boundary, "publication_cutoff");
+	const resultId = stringValue(record, "result_id", boundary);
+	if (!resultId.startsWith(resultIdPrefix)) {
+		throw new RuntimeValidationError(boundary, "result_id", `must start with ${resultIdPrefix}`);
+	}
 	const ledgerRevision = parseLedgerRevision(record["ledger_revision"], `${boundary}.ledger_revision`);
 	sameValue(ledgerRevision.ledger_hash, identity.ledger_hash, `${boundary}.ledger_revision`, "ledger_hash");
 	return {
-		result_id: stringValue(record, "result_id", boundary),
+		result_id: resultId,
 		account_id: expectedAccountId,
 		currency: enumValue(record, "currency", ["CNY"] as const, boundary),
 		start_date: identity.start_date,

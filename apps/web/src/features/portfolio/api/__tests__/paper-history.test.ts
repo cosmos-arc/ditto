@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest } from "@/test/request";
-import { fetchPaperAccountHistory, type ManualHistoryQueryIdentity } from "../paper-accounts";
+import { fetchPaperAccountHistory, type PaperHistoryQueryIdentity } from "../paper-accounts";
 
-const identity: ManualHistoryQueryIdentity = {
+const identity: PaperHistoryQueryIdentity = {
+	session_id: "paper-session-1",
 	start_date: "2026-03-02",
 	end_date: "2026-03-04",
 	knowledge_cutoff: "2026-03-04T08:00:00Z",
@@ -93,7 +94,7 @@ describe("paper history API", () => {
 		const fetchMock = stubFetch(historyPayload());
 		vi.stubGlobal("fetch", fetchMock);
 
-		const history = await fetchPaperAccountHistory("paper-main", "paper-session-1", identity);
+		const history = await fetchPaperAccountHistory("paper-main", identity);
 
 		const request = capturedRequest(fetchMock.mock.calls);
 		const url = new URL(request.url);
@@ -114,7 +115,7 @@ describe("paper history API", () => {
 		["account_id", "paper-other"],
 	] as const)("rejects identity drift in %s", async (key, value) => {
 		vi.stubGlobal("fetch", stubFetch(historyPayload({ [key]: value })));
-		await expect(fetchPaperAccountHistory("paper-main", "paper-session-1", identity)).rejects.toThrow();
+		await expect(fetchPaperAccountHistory("paper-main", identity)).rejects.toThrow();
 	});
 
 	it("rejects a ledger revision that differs from the request", async () => {
@@ -126,11 +127,16 @@ describe("paper history API", () => {
 				}),
 			),
 		);
-		await expect(fetchPaperAccountHistory("paper-main", "paper-session-1", identity)).rejects.toThrow();
+		await expect(fetchPaperAccountHistory("paper-main", identity)).rejects.toThrow();
+	});
+
+	it("rejects a manual-series payload delivered through the paper transport", async () => {
+		vi.stubGlobal("fetch", stubFetch(historyPayload({ result_id: "manual-history:sha256:result-1" })));
+		await expect(fetchPaperAccountHistory("paper-main", identity)).rejects.toThrow(/paper-history:sha256:/);
 	});
 
 	it("fails closed on a malformed payload", async () => {
 		vi.stubGlobal("fetch", stubFetch({ segments: "not-a-list" }));
-		await expect(fetchPaperAccountHistory("paper-main", "paper-session-1", identity)).rejects.toThrow();
+		await expect(fetchPaperAccountHistory("paper-main", identity)).rejects.toThrow();
 	});
 });

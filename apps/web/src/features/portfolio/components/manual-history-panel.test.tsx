@@ -93,6 +93,8 @@ afterEach(() => {
 describe("ManualHistoryPanel", () => {
 	it("shows identity guidance before any query is committed", () => {
 		renderPanel();
+		expect(screen.getByText("实盘记录（Manual）")).toBeInTheDocument();
+		expect(screen.queryByText("模拟成交（Paper）")).not.toBeInTheDocument();
 		expect(screen.getByText(/填写区间与价格快照后查询/)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "查询历史" })).toBeDisabled();
 	});
