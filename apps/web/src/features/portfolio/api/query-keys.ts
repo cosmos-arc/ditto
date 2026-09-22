@@ -59,6 +59,26 @@ export const tradingKeys = {
 			[...identity.source_snapshot_ids].sort().join("|"),
 			identity.valuation_snapshot_id ?? "valuation-unresolved",
 		] as const,
+	modelHistory: (identity: {
+		readonly strategy_id: string;
+		readonly start_date: string;
+		readonly end_date: string;
+		readonly initial_capital: number | string;
+		readonly knowledge_cutoff: string;
+		readonly publication_cutoff: string;
+		readonly artifact_ids?: readonly string[];
+	}) =>
+		[
+			...tradingKeys.all,
+			"model-history",
+			identity.strategy_id,
+			identity.start_date,
+			identity.end_date,
+			String(identity.initial_capital),
+			identity.knowledge_cutoff,
+			identity.publication_cutoff,
+			(identity.artifact_ids ?? []).join(","),
+		] as const,
 	manualLedger: (accountId: string, asOf: string) => [...tradingKeys.all, "manual-account", accountId, asOf] as const,
 	manualHistory: (accountId: string, identity: ManualHistoryQueryIdentity) =>
 		[

@@ -18,10 +18,9 @@ the carried price value itself never comes from a bar published after that day's
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime
 from decimal import Decimal
 from hashlib import sha256
-from zoneinfo import ZoneInfo
 
 import orjson
 from ditto_data.catalog.source_snapshot import (
@@ -58,6 +57,19 @@ from ditto_portfolio.errors import PortfolioError
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.account_ledger import LedgerRevision
+from ditto_application.queries.history_valuation import (
+    VALUATION_POLICY_VERSION,
+    HistoryPointView,
+    HistoryQuality,
+    HistorySegmentView,
+    PricedBar,
+    bars_by_instrument,
+    build_history_points,
+    build_history_segments,
+    end_of_day,
+    price_at,
+    trade_day,
+)
 from ditto_application.queries.pit_snapshots import group_dataset_snapshots
 from ditto_application.queries.technical_analysis import (
     TechnicalAnalysisSourcePort,
@@ -75,10 +87,8 @@ __all__ = [
     "PaperHistoryRequest",
 ]
 
-VALUATION_POLICY_VERSION = "account-valuation-stale-evidence-v1"
 _LEDGER_HASH_PREFIX = "account-ledger:sha256:"
 
-_SHANGHAI = ZoneInfo("Asia/Shanghai")
 _ZERO = Decimal("0")
 
 _CASH_FLOW_TYPES = frozenset(
@@ -161,46 +171,6 @@ class PaperHistoryRequest(AccountHistoryRequest):
 
 
 @dataclass(frozen=True, kw_only=True)
-class HistoryQuality:
-    """One machine-readable quality or absence mark."""
-
-    code: str
-    detail: str = ""
-
-
-@dataclass(frozen=True, kw_only=True)
-class HistoryPointView:
-    """One dated valuation row; missing prices leave value gaps."""
-
-    on_date: str
-    valuation_instant: str
-    total_value: Decimal | None
-    cash: Decimal | None
-    external_flow: Decimal
-    period_return: Decimal | None
-    cumulative_return: Decimal | None
-    segment_id: int | None
-    price_time: str | None
-    stale: bool
-    source_snapshot_ids: tuple[str, ...]
-    quality: tuple[HistoryQuality, ...]
-
-
-@dataclass(frozen=True, kw_only=True)
-class HistorySegmentView:
-    """One continuous positive-capital run with its own linked TWR."""
-
-    segment_id: int
-    start_date: str
-    end_date: str
-    start_value: Decimal
-    end_value: Decimal
-    linked_return: Decimal | None
-    closed_reason: str
-    quality: tuple[HistoryQuality, ...]
-
-
-@dataclass(frozen=True, kw_only=True)
 class AccountHistoryView:
     """Complete replayable result for one account and range."""
 
@@ -219,16 +189,6 @@ class AccountHistoryView:
     segments: tuple[HistorySegmentView, ...]
 
 
-@dataclass(frozen=True)
-class _PricedBar:
-    instrument_id: int
-    price: Decimal
-    occurred_at: datetime
-    source_snapshot_id: str
-    price_date: str
-    carried: bool
-
-
 def _error(
     flavor: _HistoryFlavor,
     code_suffix: str,
@@ -243,15 +203,6 @@ def _error(
             **details,
         },
     )
-
-
-def _end_of_day(day: date) -> datetime:
-    return datetime.combine(day, time.max, tzinfo=_SHANGHAI)
-
-
-def _trade_day(instant: datetime) -> date:
-    """Bars carry a Shanghai-midnight occurred_at; map it to the trade date."""
-    return instant.astimezone(_SHANGHAI).date()
 
 
 def _parse_request_date(value: str, field: str, flavor: _HistoryFlavor) -> date:
@@ -296,7 +247,7 @@ def _pit_context(
 
     try:
         return PITQueryContext(
-            as_of=max(_end_of_day(end), request.knowledge_cutoff),
+            as_of=max(end_of_day(end), request.knowledge_cutoff),
             knowledge_cutoff=request.knowledge_cutoff,
             publication_cutoff=request.publication_cutoff,
             source_snapshots=group_dataset_snapshots(
@@ -396,82 +347,12 @@ def _effective_flows(
     return tuple(flows)
 
 
-def _visible_bars(
-    bars: tuple[TechnicalBar, ...],
-    on_date: date,
-) -> tuple[TechnicalBar, ...]:
-    day_end = _end_of_day(on_date)
-    return tuple(
-        bar
-        for bar in bars
-        if _trade_day(bar.occurred_at) <= on_date and bar.publication_at <= day_end
-    )
-
-
-def _price_at(
-    *,
-    instrument_id: int,
-    bars: tuple[TechnicalBar, ...],
-    on_date: date,
-    market_traded_on_date: bool,
-) -> _PricedBar | HistoryQuality:
-    visible = _visible_bars(bars, on_date)
-    if not visible:
-        return HistoryQuality(code="price_missing", detail=str(instrument_id))
-    latest = max(visible, key=lambda bar: bar.occurred_at)
-    price = Decimal(str(latest.close))
-    if not price.is_finite() or price <= 0:
-        return HistoryQuality(
-            code="price_missing", detail=f"{instrument_id}:invalid_close"
-        )
-    candidate_day = _trade_day(latest.occurred_at)
-    carried = candidate_day < on_date
-    if carried:
-        # Carry-forward is only defensible while trading demonstrably
-        # continued after the candidate bar (or the candidate itself is a
-        # suspended row); an unknown delisting residual must stay a gap.
-        resumed_after_candidate = any(
-            _trade_day(bar.occurred_at) > candidate_day for bar in bars
-        )
-        if not (resumed_after_candidate or latest.suspended):
-            return HistoryQuality(
-                code="price_missing",
-                detail=(
-                    f"{instrument_id}:unknown_trading_status_after_"
-                    f"{candidate_day.isoformat()}"
-                ),
-            )
-    return _PricedBar(
-        instrument_id=instrument_id,
-        price=price,
-        occurred_at=latest.occurred_at,
-        source_snapshot_id=latest.source_snapshot_id,
-        price_date=candidate_day.isoformat(),
-        carried=carried and market_traded_on_date,
-    )
-
-
-def _bars_by_instrument(
-    source: TechnicalAnalysisSourcePort,
-    context: PITQueryContext,
-    instrument_ids: tuple[int, ...],
-) -> dict[int, tuple[TechnicalBar, ...]]:
-    bars: dict[int, tuple[TechnicalBar, ...]] = {}
-    for instrument_id in instrument_ids:
-        bars[instrument_id] = source.load(
-            context,
-            instrument_id=InstrumentId(instrument_id),
-            instrument_code=str(instrument_id),
-        )
-    return bars
-
-
 def _result_id(
     request: AccountHistoryRequest,
     *,
     revision: LedgerRevision,
     series: ReturnSeries,
-    priced_dates: tuple[tuple[str, tuple[_PricedBar, ...]], ...],
+    priced_dates: tuple[tuple[str, tuple[PricedBar, ...]], ...],
     flows: tuple[ExternalFlow, ...],
     flavor: _HistoryFlavor,
 ) -> str:
@@ -610,9 +491,9 @@ class _AccountHistoryEngine:
                 }
             )
         )
-        bars = _bars_by_instrument(self._valuation_source, context, instrument_ids)
+        bars = bars_by_instrument(self._valuation_source, context, instrument_ids)
         bar_dates = {
-            _trade_day(bar.occurred_at)
+            trade_day(bar.occurred_at)
             for instrument_bars in bars.values()
             for bar in instrument_bars
         }
@@ -647,7 +528,7 @@ class _AccountHistoryEngine:
         flows: tuple[ExternalFlow, ...],
     ) -> AccountHistoryView:
         observations: list[ValuationObservation] = []
-        priced_dates: list[tuple[str, tuple[_PricedBar, ...]]] = []
+        priced_dates: list[tuple[str, tuple[PricedBar, ...]]] = []
         display_cash: dict[str, Decimal] = {}
         gap_quality: dict[str, tuple[HistoryQuality, ...]] = {}
         previous_valued = False
@@ -659,16 +540,16 @@ class _AccountHistoryEngine:
                 if position.quantity > _ZERO
             }
             market_traded_on_date = day in bar_dates
-            priced: list[_PricedBar] = []
+            priced: list[PricedBar] = []
             missing: list[HistoryQuality] = []
             for instrument_id in sorted(int(item) for item in held):
-                priced_bar = _price_at(
+                priced_bar = price_at(
                     instrument_id=instrument_id,
                     bars=bars.get(instrument_id, ()),
                     on_date=day,
                     market_traded_on_date=market_traded_on_date,
                 )
-                if isinstance(priced_bar, _PricedBar):
+                if isinstance(priced_bar, PricedBar):
                     priced.append(priced_bar)
                 else:
                     missing.append(priced_bar)
@@ -722,30 +603,21 @@ class _AccountHistoryEngine:
             flows=flows,
             flavor=self._flavor,
         )
-        points = self._points(
+        flows_by_date: dict[str, Decimal] = {}
+        for flow in flows:
+            if flow.kind is ExternalFlowKind.CASH:
+                flows_by_date[flow.on_date] = (
+                    flows_by_date.get(flow.on_date, _ZERO) + flow.amount
+                )
+        points = build_history_points(
             series=series,
             valuation_dates=valuation_dates,
-            flows=flows,
             priced_dates=dict(priced_dates),
             display_cash=display_cash,
             gap_quality=gap_quality,
+            flows_by_date=flows_by_date,
         )
-        segments = tuple(
-            HistorySegmentView(
-                segment_id=segment.segment_id,
-                start_date=segment.start_date,
-                end_date=segment.end_date,
-                start_value=segment.start_value,
-                end_value=segment.end_value,
-                linked_return=segment.linked_return,
-                closed_reason=segment.closed_reason,
-                quality=tuple(
-                    HistoryQuality(code=reason.code.value, detail=reason.detail)
-                    for reason in segment.reasons
-                ),
-            )
-            for segment in series.segments
-        )
+        segments = build_history_segments(series)
         return AccountHistoryView(
             result_id=result_id,
             account_id=account.account_id,
@@ -761,81 +633,6 @@ class _AccountHistoryEngine:
             points=points,
             segments=segments,
         )
-
-    def _points(
-        self,
-        *,
-        series: ReturnSeries,
-        valuation_dates: list[date],
-        flows: tuple[ExternalFlow, ...],
-        priced_dates: dict[str, tuple[_PricedBar, ...]],
-        display_cash: dict[str, Decimal],
-        gap_quality: dict[str, tuple[HistoryQuality, ...]],
-    ) -> tuple[HistoryPointView, ...]:
-        by_date = {point.on_date: point for point in series.points}
-        flows_by_date: dict[str, Decimal] = {}
-        for flow in flows:
-            if flow.kind is ExternalFlowKind.CASH:
-                flows_by_date[flow.on_date] = (
-                    flows_by_date.get(flow.on_date, _ZERO) + flow.amount
-                )
-        points: list[HistoryPointView] = []
-        for day in valuation_dates:
-            key = day.isoformat()
-            priced = priced_dates.get(key, ())
-            stale = any(bar.carried for bar in priced)
-            calculator_point = by_date.get(key)
-            quality: tuple[HistoryQuality, ...] = (
-                gap_quality.get(key, ())
-                if calculator_point is None
-                else tuple(
-                    HistoryQuality(code=reason.code.value, detail=reason.detail)
-                    for reason in calculator_point.reasons
-                )
-            )
-            if calculator_point is None:
-                total_value = None
-                period_return = None
-                cumulative_return = None
-                segment_id = None
-            else:
-                total_value = calculator_point.total_value
-                period_return = calculator_point.period_return
-                cumulative_return = calculator_point.cumulative_return
-                segment_id = calculator_point.segment_id
-            if stale:
-                stale_marks = tuple(
-                    HistoryQuality(
-                        code="stale_price",
-                        detail=f"{bar.instrument_id}:{bar.price_date}",
-                    )
-                    for bar in priced
-                    if bar.carried
-                )
-                quality = (*quality, *stale_marks)
-            points.append(
-                HistoryPointView(
-                    on_date=key,
-                    valuation_instant=_end_of_day(day).isoformat(),
-                    total_value=total_value,
-                    cash=display_cash.get(key),
-                    external_flow=flows_by_date.get(key, _ZERO),
-                    period_return=period_return,
-                    cumulative_return=cumulative_return,
-                    segment_id=segment_id,
-                    price_time=(
-                        max(bar.occurred_at for bar in priced).isoformat()
-                        if priced
-                        else None
-                    ),
-                    stale=stale,
-                    source_snapshot_ids=tuple(
-                        sorted({bar.source_snapshot_id for bar in priced})
-                    ),
-                    quality=quality,
-                )
-            )
-        return tuple(points)
 
     def _rebuild(
         self,

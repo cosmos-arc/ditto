@@ -8,6 +8,10 @@ from typing import Annotated
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.exceptions import AppQueryError
+from ditto_application.queries.model_history import (
+    GetModelHistoryQuery,
+    ModelHistoryRequest,
+)
 from ditto_application.queries.portfolio_comparison import (
     GetPortfolioComparisonQuery,
     PortfolioComparisonRequest,
@@ -21,6 +25,8 @@ from fastapi import APIRouter, Query
 from ditto_apps.api.errors import UnprocessableEntityError
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.portfolio_comparison import (
+    ModelHistoryQueryParams,
+    ModelHistoryResponse,
     PortfolioComparisonQueryParams,
     PortfolioComparisonResponse,
     PortfolioScenarioBody,
@@ -71,6 +77,40 @@ async def get_portfolio_comparison(
             else "PORTFOLIO_COMPARISON_INVALID",
         ) from exc
     return APIResponse(data=PortfolioComparisonResponse.model_validate(result))
+
+
+@router.get(
+    "/model-history",
+    response_model=APIResponse[ModelHistoryResponse],
+    operation_id="portfolio_get_model_history",
+)
+@inject
+async def get_model_history(
+    params: Annotated[ModelHistoryQueryParams, Query()],
+    query: Annotated[GetModelHistoryQuery, FromComponent()],
+) -> APIResponse[ModelHistoryResponse]:
+    """Replay saved strategy targets into a cost-free historical series."""
+    try:
+        result = await asyncio.to_thread(
+            query.history,
+            ModelHistoryRequest(
+                strategy_id=params.strategy_id,
+                start_date=params.start_date.isoformat(),
+                end_date=params.end_date.isoformat(),
+                initial_capital=params.initial_capital,
+                knowledge_cutoff=params.knowledge_cutoff,
+                publication_cutoff=params.publication_cutoff,
+                artifact_ids=tuple(params.artifact_ids),
+            ),
+        )
+    except (AppQueryError, ValueError) as exc:
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("code", "MODEL_HISTORY_INVALID"))
+            if isinstance(exc, AppQueryError)
+            else "MODEL_HISTORY_INVALID",
+        ) from exc
+    return APIResponse(data=ModelHistoryResponse.model_validate(result))
 
 
 @router.post(

@@ -1,6 +1,6 @@
-# 账户历史估值与资金流调整收益（Manual / Paper）
+# 账户历史估值与资金流调整收益（Manual / Paper / Model）
 
-规格来源：[#249](https://github.com/cosmos-arc/ditto/issues/249)（三组合历史估值与资金流调整收益）、实施票 [#260](https://github.com/cosmos-arc/ditto/issues/260)（Manual）、[#261](https://github.com/cosmos-arc/ditto/issues/261)（Paper）。本文记录数值与查询合同；Model 腿与三组合共同区间比较由 #262/#263 后续接入，数值合同复用本文。
+规格来源：[#249](https://github.com/cosmos-arc/ditto/issues/249)（三组合历史估值与资金流调整收益）、实施票 [#260](https://github.com/cosmos-arc/ditto/issues/260)（Manual）、[#261](https://github.com/cosmos-arc/ditto/issues/261)（Paper）、[#262](https://github.com/cosmos-arc/ditto/issues/262)（Model 目标重放）。本文记录数值与查询合同；三组合共同区间比较由 #263 后续接入，数值合同复用本文。
 
 ## 记录合同
 
@@ -39,6 +39,17 @@
 
 重放：同一请求身份重算得到相同 `result_id`；账本追加更正后，旧修订结果不变，新修订（新 count+hash）可解释地不同。查询不写任何账本。
 
+## Model 历史目标重放（#262）
+
+入口：`GET /api/v1/portfolio/model-history`（`portfolio_get_model_history`，`GetModelHistoryQuery`，错误码 `MODEL_HISTORY_*`）。请求携带 `strategy_id`、区间、显式 `initial_capital`（正数，Decimal）、PIT 双截止与可选 `artifact_ids`：
+
+- `artifact_ids` **留空**＝解析当前知识截止内可见的 active SIGNAL_PACKAGE（`signal_date` 落在区间、`created_at ≤ knowledge_cutoff`、逐日唯一；同日多个 active → `ARTIFACT_DATE_AMBIGUOUS` 拒绝）；响应 `targets` 回带解析到的 (signal_date, artifact_id, checksum) 供后续钉住。
+- `artifact_ids` **非空**＝精确钉住重放身份：工件必须属于该策略（`ARTIFACT_NOT_FOUND`）、信号日落入区间（`ARTIFACT_DATE_OUT_OF_RANGE`）、checksum 校验通过（`ARTIFACT_INTEGRITY_INVALID`）。工件是不可变行，status 可被后续发布归档，但钉住读取不受影响——**未来目标变化不改写旧身份的重放结果**。
+
+重放语义：从 `initial_capital` 出发，在每个工件自己的 `signal_date` 收盘按保存的 `target_weight` 再平衡（金额量化 0.01、数量量化 0.0001，残差为现金，现金不得为负，违者 `TARGET_INVALID` 拒绝），之间按持有数量以原始收盘价漂移估值。切换日任一持仓或目标标的缺可见价格时，该日按 `price_missing` 断口顺延，再平衡推迟到下一个可定价日——与漂移日缺价同一语义，不整查询失败。逐日价格来自**该生效工件声明的 `dataset_snapshot_ids`**（逐条验证存在且不晚于知识截止），沿用 `account-valuation-stale-evidence-v1` 停牌沿用政策。首个保存目标之前的交易日为显式 `target_missing` 空档（资产/收益留空）；区间内无可见目标时返回空 targets/points/segments 并附 `empty_reason = "no_visible_targets"`，不伪造任何一天。模型腿没有外部资金流（`external_flow` 恒 0）；当前**没有已注册的成本规则**，重放按无费用、无公司行动处理——不会与 Paper/Manual 的实际费用与分红重复计入；未来注册成本规则时必须作为重放身份的一部分被钉住。`result_id`（`model-history:sha256:…`）绑定策略、区间、初始资本、双截止、工件集（日期+id+checksum）与逐日价格 lineage。
+
+Web：组合比较工作台内「历史收益（保存目标重放）」面板（`model-history-panel.tsx`），复用共享的 `AccountHistoryResult` 展示（分段卡、首段曲线、逐日表），并标注「模型目标（Model）」与保存目标工件清单；与 Manual/Paper 面板共用同一后端数值，前端不复制金融规则。
+
 ## 数值规则（首期精确模式）
 
 - 子段收益 = 子段末/子段初 − 1；TWR = 各子段增长因子乘积 − 1；无 Modified Dietz 或其他近似。
@@ -62,6 +73,6 @@
 ## 测试接缝
 
 - 纯数值手算：`packages/portfolio/tests/unit/test_account_returns_unit.py`（入金 0%、10%×10%=21%、费用 −1%、除息 0%、全额赎回/亏损归零/再注资/断口/时点未知等 20 例）。
-- 查询层：`packages/application/tests/unit/query/test_portfolio_history_unit.py`（修订重放、更正隔离、停牌沿用、缺价断口、PIT 重发布不可见等 15 例）与 `test_paper_history_unit.py`（会话绑定、费用/分红内部化、跨账户冲突、会话身份入 result_id 等 9 例）。
-- 真实装配：`apps/backend/tests/integration/test_manual_history_live_fixture_integration.py` 与 `test_paper_history_live_fixture_integration.py`（保留价格 + 真实 DI 容器 + 入金/费用/分红 + 会话冲突 + 更正后旧身份不变）。
+- 查询层：`packages/application/tests/unit/query/test_portfolio_history_unit.py`（修订重放、更正隔离、停牌沿用、缺价断口、PIT 重发布不可见等 15 例）、`test_paper_history_unit.py`（会话绑定、费用/分红内部化、跨账户冲突、会话身份入 result_id 等 11 例）与 `test_model_history_unit.py`（保存目标漂移重放、钉住工件抗替代、首包前空档、缺历史空视图、未来发布不可见、权重/快照/身份反例等 14 例）。
+- 真实装配：`apps/backend/tests/integration/test_manual_history_live_fixture_integration.py`、`test_paper_history_live_fixture_integration.py` 与 `test_model_history_live_fixture_integration.py`（保留价格 + 真实 DI 容器 + 真实工件存储：入金/费用/分红、会话冲突、更正后旧身份不变、目标被替代后钉住重放不变）。
 - 手算验收数值允许误差 1e−10；本切片全部 Decimal 精确断言。

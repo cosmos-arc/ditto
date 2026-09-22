@@ -8,7 +8,15 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ditto_apps.models.account_ledger import (
+    HistoryPointResponse,
+    HistorySegmentResponse,
+)
+
 __all__ = [
+    "ModelHistoryQueryParams",
+    "ModelHistoryResponse",
+    "ModelTargetResponse",
     "NormalizedPortfolioResponse",
     "PortfolioComparisonQueryParams",
     "PortfolioComparisonResponse",
@@ -18,6 +26,7 @@ __all__ = [
 
 _REQUEST_CONFIG = ConfigDict(strict=True, extra="forbid")
 _RESPONSE_CONFIG = ConfigDict(strict=True, frozen=True, from_attributes=True)
+_QUERY_CONFIG = ConfigDict(extra="forbid")
 
 
 class NormalizedPortfolioPositionResponse(BaseModel):
@@ -191,3 +200,53 @@ class PortfolioScenarioPreviewResponse(BaseModel):
     proposed_weights: dict[int, Decimal]
     risk: ScenarioRiskPreviewResponse
     applied_constraints: tuple[str, ...]
+
+
+class ModelHistoryQueryParams(BaseModel):
+    """
+    GET query identity for one MODEL target replay.
+
+    Query strings arrive as plain text, so coercion stays lax here; the
+    application query still rejects every invalid identity fail-closed.
+    """
+
+    model_config = _QUERY_CONFIG
+
+    strategy_id: str = Field(min_length=1)
+    start_date: date = Field(strict=False)
+    end_date: date = Field(strict=False)
+    initial_capital: Decimal = Field(gt=0, strict=False)
+    knowledge_cutoff: datetime = Field(strict=False)
+    publication_cutoff: datetime = Field(strict=False)
+    artifact_ids: tuple[str, ...] = Field(default=(), strict=False)
+
+
+class ModelTargetResponse(BaseModel):
+    """One replayed saved target and its verifiable identity."""
+
+    model_config = _RESPONSE_CONFIG
+
+    signal_date: str
+    artifact_id: str
+    checksum: str
+
+
+class ModelHistoryResponse(BaseModel):
+    """Complete replayable MODEL target-replay result."""
+
+    model_config = _RESPONSE_CONFIG
+
+    result_id: str
+    strategy_id: str
+    currency: Literal["CNY"]
+    start_date: str
+    end_date: str
+    initial_capital: Decimal
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    empty_reason: str | None
+    targets: tuple[ModelTargetResponse, ...]
+    method: str
+    valuation_policy_version: str
+    points: tuple[HistoryPointResponse, ...]
+    segments: tuple[HistorySegmentResponse, ...]

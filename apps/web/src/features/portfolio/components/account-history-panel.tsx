@@ -26,6 +26,7 @@ const QUALITY_LABELS: Readonly<Record<string, string>> = {
 	single_point_segment: "单点分段",
 	price_missing: "缺价",
 	stale_price: "停牌沿用",
+	target_missing: "缺保存目标",
 };
 
 function formatMoney(value: string | null): string {
@@ -49,7 +50,7 @@ function shiftDate(isoDate: string, days: number): string {
 	return parsed.toISOString().slice(0, 10);
 }
 
-function firstSegmentCurve(history: ManualAccountHistory): readonly SparklinePoint[] {
+function firstSegmentCurve(history: Pick<ManualAccountHistory, "points" | "segments">): readonly SparklinePoint[] {
 	if (history.segments.length === 0) return [];
 	const first = history.segments[0];
 	if (first === undefined) return [];
@@ -214,12 +215,24 @@ export function AccountHistoryPanel({
 					</button>
 				</div>
 			)}
-			{historyQuery.data && <HistoryResult history={historyQuery.data} />}
+			{historyQuery.data && <AccountHistoryResult history={historyQuery.data} />}
 		</section>
 	);
 }
 
-function HistoryResult({ history }: { readonly history: ManualAccountHistory }) {
+/**
+ * Shared read-only rendering of one historical series: identity line,
+ * segment cards, first-segment curve, and the per-date table.  Accepts any
+ * view with these fields, so MODEL target replays reuse it unchanged.
+ */
+export function AccountHistoryResult({
+	history,
+}: {
+	readonly history: Pick<
+		ManualAccountHistory,
+		"result_id" | "method" | "valuation_policy_version" | "points" | "segments"
+	>;
+}) {
 	const curve = firstSegmentCurve(history);
 	return (
 		<div className="grid gap-4 border-t border-(--color-border-subtle) px-4 py-4">

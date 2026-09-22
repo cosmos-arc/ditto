@@ -213,6 +213,29 @@ export type PaperHistoryQueryIdentity = ManualHistoryQueryIdentity & {
 	readonly session_id: string;
 };
 
+export interface ModelHistoryTarget {
+	readonly signal_date: string;
+	readonly artifact_id: string;
+	readonly checksum: string;
+}
+
+export interface ModelHistory {
+	readonly result_id: string;
+	readonly strategy_id: string;
+	readonly currency: "CNY";
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly initial_capital: string;
+	readonly knowledge_cutoff: string;
+	readonly publication_cutoff: string;
+	readonly empty_reason: string | null;
+	readonly targets: readonly ModelHistoryTarget[];
+	readonly method: string;
+	readonly valuation_policy_version: string;
+	readonly points: readonly ManualHistoryPoint[];
+	readonly segments: readonly ManualHistorySegment[];
+}
+
 export interface ManualAccountReceipt {
 	readonly account: ManualAccount;
 	readonly event: ManualAccountEvent | null;
