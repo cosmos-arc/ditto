@@ -12,6 +12,7 @@ import {
 	previewPortfolioScenario,
 } from "../api/portfolio-comparison";
 import { tradingKeys } from "../api/query-keys";
+import { ModelHistoryPanel } from "./model-history-panel";
 import { PortfolioDriftChart } from "./portfolio-drift-chart";
 
 interface PortfolioComparisonWorkspaceProps {
@@ -434,6 +435,7 @@ export function PortfolioComparisonWorkspace({ identity }: PortfolioComparisonWo
 			<div className="mt-4 grid gap-4">
 				<PortfolioDriftChart comparison={comparison.data} />
 				<AttributionPanel comparison={comparison.data} />
+				<ModelHistoryPanel strategyId={identity.strategy_id} asOf={identity.as_of} />
 				<ScenarioPanel identity={identity} />
 			</div>
 		</div>

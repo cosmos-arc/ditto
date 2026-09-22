@@ -1,12 +1,15 @@
 import type { components, operations } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
+import type { ModelHistory } from "./account-models";
 
 export type PortfolioComparisonIdentity = operations["portfolio_get_comparison"]["parameters"]["query"];
 export type PortfolioScenarioRequest = components["schemas"]["PortfolioScenarioBody"];
 export type PortfolioComparison = components["schemas"]["PortfolioComparisonResponse"];
 export type PortfolioScenarioPreview = components["schemas"]["PortfolioScenarioPreviewResponse"];
+export type ModelHistoryIdentity = operations["portfolio_get_model_history"]["parameters"]["query"];
+export type { ModelHistory } from "./account-models";
 
-import { assertPortfolioScenarioPreview } from "./runtime-validation";
+import { assertPortfolioScenarioPreview, parseModelHistory } from "./runtime-validation";
 
 function sameSnapshotSet(left: readonly string[], right: readonly string[]): boolean {
 	const sortedLeft = [...left].sort();
@@ -31,6 +34,13 @@ export async function fetchPortfolioComparison(identity: PortfolioComparisonIden
 	});
 	assertComparisonIdentity(identity, comparison);
 	return comparison;
+}
+
+export async function fetchModelHistory(identity: ModelHistoryIdentity): Promise<ModelHistory> {
+	const payload = await apiClient.get("/api/v1/portfolio/model-history", {
+		params: { query: identity },
+	});
+	return parseModelHistory(payload, identity.strategy_id, identity);
 }
 
 export async function previewPortfolioScenario(request: PortfolioScenarioRequest): Promise<PortfolioScenarioPreview> {

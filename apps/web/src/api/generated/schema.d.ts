@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 5bc8b8a8943a6acea18f1303ce9835f357c348f83af65cb34dab6142566c5a57
+ * Schema SHA-256: d573c41a63c765a2afa675d3393abce47c89df1e5094fd6a2351caff3040fa56
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2795,6 +2795,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portfolio/model-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Model History
+         * @description Replay saved strategy targets into a cost-free historical series.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["portfolio_get_model_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolio/scenario-previews": {
         parameters: {
             query?: never;
@@ -4518,6 +4540,13 @@ export interface components {
         APIResponse_MaturityPromotionRevokeResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["MaturityPromotionRevokeResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ModelHistoryResponse] */
+        APIResponse_ModelHistoryResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ModelHistoryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -12830,11 +12859,64 @@ export interface components {
             instrument_id: number;
         };
         /**
+         * ModelHistoryResponse
+         * @description Complete replayable MODEL target-replay result.
+         */
+        ModelHistoryResponse: {
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** End Date */
+            end_date: string;
+            /** Initial Capital */
+            initial_capital: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Method */
+            method: string;
+            /** Points */
+            points: components["schemas"]["HistoryPointResponse"][];
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Result Id */
+            result_id: string;
+            /** Segments */
+            segments: components["schemas"]["HistorySegmentResponse"][];
+            /** Start Date */
+            start_date: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Targets */
+            targets: components["schemas"]["ModelTargetResponse"][];
+            /** Valuation Policy Version */
+            valuation_policy_version: string;
+        };
+        /**
          * ModelProfile
          * @description Approved model-quality profiles; concrete model IDs stay in manifests.
          * @enum {string}
          */
         ModelProfile: "balanced" | "quality";
+        /**
+         * ModelTargetResponse
+         * @description One replayed saved target and its verifiable identity.
+         */
+        ModelTargetResponse: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Checksum */
+            checksum: string;
+            /** Signal Date */
+            signal_date: string;
+        };
         /**
          * MonthlyIcCell
          * @description Monthly IC aggregation cell for the heatmap.
@@ -27759,6 +27841,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_PortfolioComparisonResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portfolio_get_model_history: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                start_date: string;
+                end_date: string;
+                initial_capital: number | string;
+                knowledge_cutoff: string;
+                publication_cutoff: string;
+                artifact_ids?: string[];
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ModelHistoryResponse_"];
                 };
             };
             /** @description Bad request */

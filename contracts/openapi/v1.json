@@ -1561,6 +1561,30 @@
         "title": "APIResponse[MaturityPromotionRevokeResponse]",
         "type": "object"
       },
+      "APIResponse_ModelHistoryResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ModelHistoryResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ModelHistoryResponse]",
+        "type": "object"
+      },
       "APIResponse_PaperAccountLedgerResponse_": {
         "properties": {
           "data": {
@@ -19075,6 +19099,93 @@
         "title": "MemberResponse",
         "type": "object"
       },
+      "ModelHistoryResponse": {
+        "description": "Complete replayable MODEL target-replay result.",
+        "properties": {
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "end_date": {
+            "title": "End Date",
+            "type": "string"
+          },
+          "initial_capital": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Initial Capital",
+            "type": "string"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryPointResponse"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "publication_cutoff": {
+            "format": "date-time",
+            "title": "Publication Cutoff",
+            "type": "string"
+          },
+          "result_id": {
+            "title": "Result Id",
+            "type": "string"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/HistorySegmentResponse"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/ModelTargetResponse"
+            },
+            "title": "Targets",
+            "type": "array"
+          },
+          "valuation_policy_version": {
+            "title": "Valuation Policy Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_id",
+          "strategy_id",
+          "currency",
+          "start_date",
+          "end_date",
+          "initial_capital",
+          "knowledge_cutoff",
+          "publication_cutoff",
+          "targets",
+          "method",
+          "valuation_policy_version",
+          "points",
+          "segments"
+        ],
+        "title": "ModelHistoryResponse",
+        "type": "object"
+      },
       "ModelProfile": {
         "description": "Approved model-quality profiles; concrete model IDs stay in manifests.",
         "enum": [
@@ -19083,6 +19194,30 @@
         ],
         "title": "ModelProfile",
         "type": "string"
+      },
+      "ModelTargetResponse": {
+        "description": "One replayed saved target and its verifiable identity.",
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "checksum": {
+            "title": "Checksum",
+            "type": "string"
+          },
+          "signal_date": {
+            "title": "Signal Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal_date",
+          "artifact_id",
+          "checksum"
+        ],
+        "title": "ModelTargetResponse",
+        "type": "object"
       },
       "MonthlyIcCell": {
         "description": "Monthly IC aggregation cell for the heatmap.",
@@ -43513,6 +43648,194 @@
           }
         },
         "summary": "Get Portfolio Comparison",
+        "tags": [
+          "portfolio"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/portfolio/model-history": {
+      "get": {
+        "description": "Replay saved strategy targets into a cost-free historical series.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "portfolio_get_model_history",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "initial_capital",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ],
+              "title": "Initial Capital"
+            }
+          },
+          {
+            "in": "query",
+            "name": "knowledge_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Knowledge Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "publication_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Publication Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "artifact_ids",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Artifact Ids",
+              "type": "array"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ModelHistoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Model History",
         "tags": [
           "portfolio"
         ],

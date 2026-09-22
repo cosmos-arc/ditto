@@ -21,6 +21,7 @@ import type {
 	ManualHistoryQuality,
 	ManualHistoryQueryIdentity,
 	ManualLedgerRevision,
+	ModelHistory,
 	PaperAccountHistory,
 	PaperAccountIdentity,
 	PaperAccountLedger,
@@ -468,6 +469,85 @@ function parseAccountHistoryPayload(
 
 export function assertManualAccountReceipt(value: unknown): asserts value is ManualAccountReceipt {
 	parseManualAccountReceipt(value);
+}
+
+export function parseModelHistory(
+	value: unknown,
+	strategyId: string,
+	identity: {
+		readonly start_date: string;
+		readonly end_date: string;
+		readonly knowledge_cutoff: string;
+		readonly publication_cutoff: string;
+		readonly initial_capital: number | string;
+	},
+): ModelHistory {
+	const boundary = "modelHistory";
+	const record = recordValue(value, boundary);
+	sameValue(record["strategy_id"], strategyId, boundary, "strategy_id");
+	sameValue(record["start_date"], identity.start_date, boundary, "start_date");
+	sameValue(record["end_date"], identity.end_date, boundary, "end_date");
+	sameInstant(record["knowledge_cutoff"], identity.knowledge_cutoff, boundary, "knowledge_cutoff");
+	sameInstant(record["publication_cutoff"], identity.publication_cutoff, boundary, "publication_cutoff");
+	const initialCapital = decimalValue(record, "initial_capital", boundary);
+	const normalizeDecimal = (input: string): string => {
+		const parts = input.split(".");
+		const integer = parts[0] ?? "";
+		const fraction = parts[1];
+		if (!fraction) return integer;
+		const trimmed = fraction.replace(/0+$/u, "");
+		return trimmed ? `${integer}.${trimmed}` : integer;
+	};
+	if (normalizeDecimal(initialCapital) !== normalizeDecimal(String(identity.initial_capital))) {
+		throw new RuntimeValidationError(boundary, "initial_capital", "differs from the request");
+	}
+	const resultId = stringValue(record, "result_id", boundary);
+	if (!resultId.startsWith("model-history:sha256:")) {
+		throw new RuntimeValidationError(boundary, "result_id", "must start with model-history:sha256:");
+	}
+	return {
+		result_id: resultId,
+		strategy_id: strategyId,
+		currency: enumValue(record, "currency", ["CNY"] as const, boundary),
+		start_date: identity.start_date,
+		end_date: identity.end_date,
+		initial_capital: initialCapital,
+		knowledge_cutoff: identity.knowledge_cutoff,
+		publication_cutoff: identity.publication_cutoff,
+		targets: arrayValue(record, "targets", boundary).map((target, index) => {
+			const targetBoundary = `${boundary}.targets.${index}`;
+			const targetRecord = recordValue(target, targetBoundary);
+			return {
+				signal_date: stringValue(targetRecord, "signal_date", targetBoundary),
+				artifact_id: stringValue(targetRecord, "artifact_id", targetBoundary),
+				checksum: stringValue(targetRecord, "checksum", targetBoundary),
+			};
+		}),
+		method: stringValue(record, "method", boundary),
+		valuation_policy_version: stringValue(record, "valuation_policy_version", boundary),
+		points: arrayValue(record, "points", boundary).map((point, index) =>
+			parseHistoryPoint(point, `${boundary}.points.${index}`),
+		),
+		segments: arrayValue(record, "segments", boundary).map((segment, index) => {
+			const segmentBoundary = `${boundary}.segments.${index}`;
+			const segmentRecord = recordValue(segment, segmentBoundary);
+			return {
+				segment_id: finiteNumberValue(segmentRecord, "segment_id", segmentBoundary),
+				start_date: stringValue(segmentRecord, "start_date", segmentBoundary),
+				end_date: stringValue(segmentRecord, "end_date", segmentBoundary),
+				start_value: decimalValue(segmentRecord, "start_value", segmentBoundary),
+				end_value: decimalValue(segmentRecord, "end_value", segmentBoundary),
+				linked_return: nullableDecimal(segmentRecord, "linked_return", segmentBoundary),
+				closed_reason: enumValue(
+					segmentRecord,
+					"closed_reason",
+					["range_end", "loss_to_zero", "full_withdrawal", "valuation_gap", "negative_equity"] as const,
+					segmentBoundary,
+				),
+				quality: parseHistoryQualities(segmentRecord, "quality", segmentBoundary),
+			};
+		}),
+	};
 }
 
 function parsePaperAccountIdentity(value: unknown, boundary: string): PaperAccountIdentity {

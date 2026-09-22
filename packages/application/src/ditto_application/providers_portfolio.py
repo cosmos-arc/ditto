@@ -29,6 +29,7 @@ from ditto_application.queries.daily_decision_v3 import (
 )
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
+from ditto_application.queries.model_history import GetModelHistoryQuery
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
 from ditto_application.queries.portfolio_comparison import (
     GetPortfolioComparisonQuery,
@@ -118,6 +119,20 @@ class AppPortfolioQueryProvider(Provider):
         return GetPaperHistoryQuery(
             journal=journal,
             session_store=paper_store,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
+        )
+
+    @provide
+    def model_history_query(
+        self,
+        artifact_reader: StrategyArtifactService,
+        snapshot_reader: ProviderSnapshotReader,
+        valuation_source: TechnicalAnalysisSourcePort,
+    ) -> GetModelHistoryQuery:
+        """Replay saved strategy targets into a cost-free return series."""
+        return GetModelHistoryQuery(
+            artifact_reader=artifact_reader,
             snapshot_reader=snapshot_reader,
             valuation_source=valuation_source,
         )

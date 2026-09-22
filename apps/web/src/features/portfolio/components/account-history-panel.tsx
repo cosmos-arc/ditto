@@ -214,13 +214,25 @@ export function AccountHistoryPanel({
 					</button>
 				</div>
 			)}
-			{historyQuery.data && <HistoryResult history={historyQuery.data} />}
+			{historyQuery.data && <AccountHistoryResult history={historyQuery.data} />}
 		</section>
 	);
 }
 
-function HistoryResult({ history }: { readonly history: ManualAccountHistory }) {
-	const curve = firstSegmentCurve(history);
+/**
+ * Shared read-only rendering of one historical series: identity line,
+ * segment cards, first-segment curve, and the per-date table.  Accepts any
+ * view with these fields, so MODEL target replays reuse it unchanged.
+ */
+export function AccountHistoryResult({
+	history,
+}: {
+	readonly history: Pick<
+		ManualAccountHistory,
+		"result_id" | "method" | "valuation_policy_version" | "points" | "segments"
+	>;
+}) {
+	const curve = firstSegmentCurve(history as ManualAccountHistory);
 	return (
 		<div className="grid gap-4 border-t border-(--color-border-subtle) px-4 py-4">
 			<p className="break-all font-data text-xs text-(--color-foreground-tertiary)">
