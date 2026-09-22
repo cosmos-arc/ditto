@@ -32,7 +32,7 @@ from ditto_features.services import (
 from ditto_kernel.exceptions import DittoError
 
 from ditto_application.config import now_iso
-from ditto_application.exceptions import AppProcessError
+from ditto_application.exceptions import AppProcessError, AppQueryError
 from ditto_application.processes.research_dataset_helpers import (
     _attach_known_at,
     _build_dataset_report,
@@ -40,6 +40,7 @@ from ditto_application.processes.research_dataset_helpers import (
     _hydrate_dataset_spec,
     _hydrate_spine_spec,
     _normalize_trade_dates,
+    _parse_cutoff,
     _pit_join,
 )
 from ditto_application.queries.historical_universe import (
@@ -125,7 +126,10 @@ class ResearchDatasetBuildProcess:
         if known_at_policy == KnownAtPolicy.EXPLICIT_CUTOFF:
             if explicit_cutoff is None:
                 raise AppProcessError("explicit_cutoff is required")
-            date.fromisoformat(explicit_cutoff[:10])
+            try:
+                _parse_cutoff(explicit_cutoff)
+            except AppQueryError as error:
+                raise AppProcessError(str(error)) from error
         if universe_sources is None:
             raise AppProcessError(
                 "HISTORY_SNAPSHOT_MISSING: research requires pinned universe sources"
@@ -271,12 +275,10 @@ class ResearchDatasetBuildProcess:
         daily_evidence: list[dict[str, object]] = []
         for day in trade_dates["trade_date"].to_list():
             cutoff = (
-                datetime.fromisoformat(explicit_cutoff)
+                _parse_cutoff(explicit_cutoff)
                 if explicit_cutoff is not None
                 else datetime.combine(day, time.min, ZoneInfo("Asia/Shanghai"))
             )
-            if cutoff.tzinfo is None:
-                cutoff = cutoff.replace(tzinfo=ZoneInfo("Asia/Shanghai"))
             result = pinned_sources.resolve(
                 as_of=day,
                 knowledge_cutoff=cutoff,

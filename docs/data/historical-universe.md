@@ -32,6 +32,7 @@
 - `POST /api/v1/universes/{universe_id}/history` 是只读查询，提交 sources、as_of、knowledge_cutoff、publication_cutoff；返回完整观察池、投资原因及内容寻址的 universe snapshot ID。
 - Selection 输入包添加 universe_sources；universe_snapshot_id 必须匹配上述结果，selection_source_snapshot_ids 包含全部历史来源，instruments 保留完整观察池。字段准入预览与创建都核验历史证据。前端输入区域可查看该时点的历史证券池。
 - `research_dataset_build_flow` / `ResearchDatasetBuildProcess.build` 必须显式传入 universe_sources，与 spine 的 universe_id 一致。逐交易日恢复证券池，不以末日名单做笛卡尔积。sample_time 使用上海时间当日零点，每个交易日独立解析各链当时可见的快照成员（链即按日快照表）；explicit_cutoff 使用明确截止（无时区的既有日期输入按上海时间解释），该口径冻结在工件中。全部固定载荷在构建开始时读取并校验一次，逐日只在内存中投影。
+- 因子 PIT join 保持完整时间戳精度：`known_at` 与来源 `availability_time` 均为时区感知时刻，满足 `availability_time <= known_at`（ADR-041）。带日内时刻的 availability 按精确时刻可见；只有日期精度的来源（含缺失时回退 trade_date）取该日上海时间日末（23:59:59.999999）为保守可见时刻，不默认当日零点已知，也不截断成日期比较。不可解析的 availability 拒绝构建。builder_version 升至 `historical-universe-research-v3`；v2 工件按 #287 视为未通过日内可知性验证，身份保留原样，正式使用前需按 v3 重建。
 - spine manifest 保存逐日 cutoffs、来源、认证与许可引用；数据集保留 investable 和 universe_exclusion_reasons。它们是观察样本属性，构建不删除不可投资行。
 - resolved_inputs 中 `input_kind=universe` 独立于派生因子输入，source_snapshot_ids 包含两者并集。导出重新核验所有来源许可，不得遗漏证券池来源。
 - 新修订创建新的来源/结果身份；相同证据重试复用工件。资格被撤销后不能启动新研究，既有工件仍可按保存身份审计。

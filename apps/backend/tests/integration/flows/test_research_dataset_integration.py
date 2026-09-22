@@ -339,11 +339,13 @@ def research_state(monkeypatch, mocker, tmp_path: Path) -> Path:
             derived_id="factor.alpha",
             version=2,
             rows=[
+                # Date-only availability is conservative: each row is visible to
+                # samples from the next midnight, never its own trade date.
                 {
                     "instrument_id": 1,
                     "trade_date": date(2026, 3, 10),
                     "value": 10.0,
-                    "availability_time": date(2026, 3, 11),
+                    "availability_time": date(2026, 3, 10),
                 },
                 {
                     "instrument_id": 1,
@@ -582,10 +584,21 @@ class TestResearchDatasetBuildFlowIntegration:
             end="2026-03-11",
             explicit_cutoff="2026-03-11",
         )
+        just_before = "2026-03-12T15:29:59.999999+08:00"
+        without_sentinel = _invoke_research_build_flow(
+            dataset_id="research.alpha_flow",
+            start="2026-03-10",
+            end="2026-03-11",
+            explicit_cutoff=just_before,
+        )
         source_path = (
             research_state / "derived/artifacts/series/factor.alpha/v2/2026.parquet"
         )
-        source = pl.read_parquet(source_path)
+        # Date-only and intraday availability share the Utf8 representation while
+        # keeping their distinct visibility semantics.
+        source = pl.read_parquet(source_path).with_columns(
+            pl.col("availability_time").cast(pl.Utf8)
+        )
         pl.concat(
             [
                 source,
@@ -594,7 +607,8 @@ class TestResearchDatasetBuildFlowIntegration:
                         "instrument_id": [1],
                         "trade_date": [date(2026, 3, 11)],
                         "value": [1e9],
-                        "availability_time": [date(2026, 3, 12)],
+                        # Intraday precision: knowable at Mar 12 15:30 CST exactly.
+                        "availability_time": ["2026-03-12T15:30:00+08:00"],
                     }
                 ),
             ]
@@ -606,16 +620,89 @@ class TestResearchDatasetBuildFlowIntegration:
             explicit_cutoff="2026-03-11",
         )
         assert excluded == baseline
+        # One microsecond before the declared instant the sentinel is still future.
+        with_sentinel_before = _invoke_research_build_flow(
+            dataset_id="research.alpha_flow",
+            start="2026-03-10",
+            end="2026-03-11",
+            explicit_cutoff=just_before,
+        )
+        assert (
+            pl.read_parquet(
+                research_state / with_sentinel_before["results"][0]["data_path"]
+            ).to_dicts()
+            == pl.read_parquet(
+                research_state / without_sentinel["results"][0]["data_path"]
+            ).to_dicts()
+        )
+        # Exactly visible: the just-instant cutoff consumes the sentinel.
         included = _invoke_research_build_flow(
             dataset_id="research.alpha_flow",
             start="2026-03-10",
             end="2026-03-11",
-            explicit_cutoff="2026-03-12",
+            explicit_cutoff="2026-03-12T15:30:00+08:00",
         )
         frame = pl.read_parquet(research_state / included["results"][0]["data_path"])
         assert frame["factor.alpha"].to_list() == [1e9, 1e9]
         assert "market:20260311-001" in included["results"][0]["source_snapshot_ids"]
         assert len(included["results"][0]["source_snapshot_ids"]) == 3
+        # The same instant expressed in UTC produces the same values.
+        utc_equivalent = _invoke_research_build_flow(
+            dataset_id="research.alpha_flow",
+            start="2026-03-10",
+            end="2026-03-11",
+            explicit_cutoff="2026-03-12T07:30:00+00:00",
+        )
+        utc_frame = pl.read_parquet(
+            research_state / utc_equivalent["results"][0]["data_path"]
+        )
+        assert utc_frame.equals(frame)
+
+    @pytest.mark.pit
+    def test_same_day_intraday_input_does_not_leak_into_midnight_sample(
+        self, research_state: Path
+    ) -> None:
+        """A factor knowable only at 15:30 must not enter that day's 00:00 sample."""
+        baseline = _invoke_research_build_flow(
+            dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+        )
+        source_path = (
+            research_state / "derived/artifacts/series/factor.alpha/v2/2026.parquet"
+        )
+        source = pl.read_parquet(source_path).with_columns(
+            pl.col("availability_time").cast(pl.Utf8)
+        )
+        pl.concat(
+            [
+                source,
+                pl.DataFrame(
+                    {
+                        "instrument_id": [1],
+                        "trade_date": [date(2026, 3, 10)],
+                        "value": [1e9],
+                        "availability_time": ["2026-03-10T15:30:00+08:00"],
+                    }
+                ),
+            ]
+        ).write_parquet(source_path)
+        with_future = _invoke_research_build_flow(
+            dataset_id="research.alpha_flow", start="2026-03-10", end="2026-03-11"
+        )
+        baseline_frame = pl.read_parquet(
+            research_state / baseline["results"][0]["data_path"]
+        )
+        future_frame = pl.read_parquet(
+            research_state / with_future["results"][0]["data_path"]
+        )
+        baseline_day = baseline_frame.filter(pl.col("trade_date") == date(2026, 3, 10))
+        future_day = future_frame.filter(pl.col("trade_date") == date(2026, 3, 10))
+        assert future_day.to_dicts() == baseline_day.to_dicts()
+        assert future_day["factor.alpha"].to_list() == [None]
+        # By the next midnight both rows are visible, and the date-only row wins:
+        # its conservative end-of-day instant is later than the 15:30 sentinel.
+        assert future_frame.filter(pl.col("trade_date") == date(2026, 3, 11))[
+            "factor.alpha"
+        ].to_list() == [10.0]
 
     @pytest.mark.parametrize("cutoff", [None, "not-a-date"])
     def test_invalid_cutoff_writes_nothing(
@@ -763,7 +850,7 @@ def test_saved_snapshot_export_through_cli(
                     'SELECT "factor.alpha" FROM "research.alpha_flow"'
                 ).fetchall()
             ]
-    assert values == [None, 20.0]
+    assert values == [None, 10.0]
     first = path.read_bytes()
     # The next export still uses the saved bytes even if newer derived inputs appear.
     pl.DataFrame({"future": [999999]}).write_parquet(
@@ -970,7 +1057,8 @@ def test_export_requires_frozen_source_evidence_for_every_input(
                 "instrument_id": 1,
                 "trade_date": date(2026, 3, 11),
                 "value": 30.0,
-                "availability_time": date(2026, 3, 11),
+                # Visible to the Mar 11 sample only from the end of Mar 10.
+                "availability_time": date(2026, 3, 10),
             }
         ],
     )
