@@ -64,6 +64,8 @@ from ditto_application.queries.history_valuation import (
     HistorySegmentView,
     PricedBar,
     bars_by_instrument,
+    build_history_points,
+    build_history_segments,
     end_of_day,
     price_at,
     trade_day,
@@ -601,30 +603,21 @@ class _AccountHistoryEngine:
             flows=flows,
             flavor=self._flavor,
         )
-        points = self._points(
+        flows_by_date: dict[str, Decimal] = {}
+        for flow in flows:
+            if flow.kind is ExternalFlowKind.CASH:
+                flows_by_date[flow.on_date] = (
+                    flows_by_date.get(flow.on_date, _ZERO) + flow.amount
+                )
+        points = build_history_points(
             series=series,
             valuation_dates=valuation_dates,
-            flows=flows,
             priced_dates=dict(priced_dates),
             display_cash=display_cash,
             gap_quality=gap_quality,
+            flows_by_date=flows_by_date,
         )
-        segments = tuple(
-            HistorySegmentView(
-                segment_id=segment.segment_id,
-                start_date=segment.start_date,
-                end_date=segment.end_date,
-                start_value=segment.start_value,
-                end_value=segment.end_value,
-                linked_return=segment.linked_return,
-                closed_reason=segment.closed_reason,
-                quality=tuple(
-                    HistoryQuality(code=reason.code.value, detail=reason.detail)
-                    for reason in segment.reasons
-                ),
-            )
-            for segment in series.segments
-        )
+        segments = build_history_segments(series)
         return AccountHistoryView(
             result_id=result_id,
             account_id=account.account_id,
@@ -640,81 +633,6 @@ class _AccountHistoryEngine:
             points=points,
             segments=segments,
         )
-
-    def _points(
-        self,
-        *,
-        series: ReturnSeries,
-        valuation_dates: list[date],
-        flows: tuple[ExternalFlow, ...],
-        priced_dates: dict[str, tuple[PricedBar, ...]],
-        display_cash: dict[str, Decimal],
-        gap_quality: dict[str, tuple[HistoryQuality, ...]],
-    ) -> tuple[HistoryPointView, ...]:
-        by_date = {point.on_date: point for point in series.points}
-        flows_by_date: dict[str, Decimal] = {}
-        for flow in flows:
-            if flow.kind is ExternalFlowKind.CASH:
-                flows_by_date[flow.on_date] = (
-                    flows_by_date.get(flow.on_date, _ZERO) + flow.amount
-                )
-        points: list[HistoryPointView] = []
-        for day in valuation_dates:
-            key = day.isoformat()
-            priced = priced_dates.get(key, ())
-            stale = any(bar.carried for bar in priced)
-            calculator_point = by_date.get(key)
-            quality: tuple[HistoryQuality, ...] = (
-                gap_quality.get(key, ())
-                if calculator_point is None
-                else tuple(
-                    HistoryQuality(code=reason.code.value, detail=reason.detail)
-                    for reason in calculator_point.reasons
-                )
-            )
-            if calculator_point is None:
-                total_value = None
-                period_return = None
-                cumulative_return = None
-                segment_id = None
-            else:
-                total_value = calculator_point.total_value
-                period_return = calculator_point.period_return
-                cumulative_return = calculator_point.cumulative_return
-                segment_id = calculator_point.segment_id
-            if stale:
-                stale_marks = tuple(
-                    HistoryQuality(
-                        code="stale_price",
-                        detail=f"{bar.instrument_id}:{bar.price_date}",
-                    )
-                    for bar in priced
-                    if bar.carried
-                )
-                quality = (*quality, *stale_marks)
-            points.append(
-                HistoryPointView(
-                    on_date=key,
-                    valuation_instant=end_of_day(day).isoformat(),
-                    total_value=total_value,
-                    cash=display_cash.get(key),
-                    external_flow=flows_by_date.get(key, _ZERO),
-                    period_return=period_return,
-                    cumulative_return=cumulative_return,
-                    segment_id=segment_id,
-                    price_time=(
-                        max(bar.occurred_at for bar in priced).isoformat()
-                        if priced
-                        else None
-                    ),
-                    stale=stale,
-                    source_snapshot_ids=tuple(
-                        sorted({bar.source_snapshot_id for bar in priced})
-                    ),
-                    quality=quality,
-                )
-            )
-        return tuple(points)
 
     def _rebuild(
         self,

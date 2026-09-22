@@ -244,6 +244,7 @@ class ModelHistoryResponse(BaseModel):
     initial_capital: Decimal
     knowledge_cutoff: datetime
     publication_cutoff: datetime
+    empty_reason: str | None
     targets: tuple[ModelTargetResponse, ...]
     method: str
     valuation_policy_version: str

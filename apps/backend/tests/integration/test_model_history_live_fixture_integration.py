@@ -198,6 +198,7 @@ def test_model_history_live_fixture_replays_and_pins_saved_targets(
             monkeypatch.setenv(name, str(path))
         monkeypatch.setenv("ENVIRONMENT", "testing")
 
+        store_before = _store_state(root)
         container = make_app_container()
         try:
             query = container.get(GetModelHistoryQuery)
@@ -205,6 +206,8 @@ def test_model_history_live_fixture_replays_and_pins_saved_targets(
             replay = query.history(_request())
         finally:
             container.close()
+        # GET-style replays leave the artifact and payload stores untouched.
+        assert _store_state(root) == store_before
 
         # 03-02: 60@10 + 40@20 = 100; 03-03 rebalance at 110 (all 600519);
         # 03-04 drift: 10 @ 12.1 = 121.
@@ -288,3 +291,25 @@ def _snapshot_id_of(root: Path) -> str:
         return snapshots[0].snapshot_id
     finally:
         client.close()
+
+
+def _store_state(root: Path) -> tuple[tuple[str, str] | str, ...]:
+    """Artifact ids with statuses plus the retained payload file names."""
+    pool = SQLitePool(str(root / "metadata/metadata.sqlite"))
+    service = StrategyArtifactService(
+        reader=SQLiteStrategyArtifactReader(pool),
+        writer=SQLiteStrategyArtifactWriter(pool),
+    )
+    artifacts = tuple(
+        (record.artifact_id, record.status)
+        for record in sorted(
+            service.list_by_strategy(STRATEGY_ID), key=lambda r: r.artifact_id
+        )
+    )
+    payloads_dir = root / "payloads"
+    payloads = (
+        tuple(sorted(path.name for path in payloads_dir.rglob("*") if path.is_file()))
+        if payloads_dir.exists()
+        else ()
+    )
+    return (*artifacts, *payloads)

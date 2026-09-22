@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: d573c41a63c765a2afa675d3393abce47c89df1e5094fd6a2351caff3040fa56
+ * Schema SHA-256: 67f5dea0586b8f264ce81d8ef6e173647c23ab048d984837b9b99de5ae178324
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -12868,6 +12868,8 @@ export interface components {
              * @constant
              */
             currency: "CNY";
+            /** Empty Reason */
+            empty_reason: string | null;
             /** End Date */
             end_date: string;
             /** Initial Capital */

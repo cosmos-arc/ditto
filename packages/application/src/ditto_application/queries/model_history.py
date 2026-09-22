@@ -49,6 +49,8 @@ from ditto_application.queries.history_valuation import (
     HistorySegmentView,
     PricedBar,
     bars_by_instrument,
+    build_history_points,
+    build_history_segments,
     end_of_day,
     price_at,
     trade_day,
@@ -115,7 +117,12 @@ class ModelTargetView:
 
 @dataclass(frozen=True, kw_only=True)
 class ModelHistoryView:
-    """Complete replayable MODEL result for one strategy and range."""
+    """
+    Complete replayable MODEL result for one strategy and range.
+
+    ``empty_reason`` is None for a normal replay and explains an empty
+    result (``no_visible_targets``) instead of fabricating days.
+    """
 
     result_id: str
     strategy_id: str
@@ -125,6 +132,7 @@ class ModelHistoryView:
     initial_capital: Decimal
     knowledge_cutoff: datetime
     publication_cutoff: datetime
+    empty_reason: str | None
     targets: tuple[ModelTargetView, ...]
     method: str
     valuation_policy_version: str
@@ -467,72 +475,27 @@ def _held_prices_or_missing(
     return priced, missing
 
 
-def _points(
-    *,
-    series: ReturnSeries,
-    valuation_dates: list[date],
-    priced_dates: dict[str, tuple[PricedBar, ...]],
-    display_cash: dict[str, Decimal],
-    gap_quality: dict[str, tuple[HistoryQuality, ...]],
-) -> tuple[HistoryPointView, ...]:
-    by_date = {point.on_date: point for point in series.points}
-    points: list[HistoryPointView] = []
-    for day in valuation_dates:
-        key = day.isoformat()
-        priced = priced_dates.get(key, ())
-        stale = any(bar.carried for bar in priced)
-        calculator_point = by_date.get(key)
-        quality: tuple[HistoryQuality, ...] = (
-            gap_quality.get(key, ())
-            if calculator_point is None
-            else tuple(
-                HistoryQuality(code=reason.code.value, detail=reason.detail)
-                for reason in calculator_point.reasons
-            )
+def _price_targets(
+    weights: Mapping[int, Decimal],
+    bars: Mapping[int, tuple[TechnicalBar, ...]],
+    day: date,
+) -> tuple[list[PricedBar | None], list[HistoryQuality]]:
+    """Price every target instrument; None marks an unpriceable target."""
+    priced: list[PricedBar | None] = []
+    missing: list[HistoryQuality] = []
+    for instrument_id in weights:
+        outcome = price_at(
+            instrument_id=instrument_id,
+            bars=bars.get(instrument_id, ()),
+            on_date=day,
+            market_traded_on_date=True,
         )
-        if calculator_point is None:
-            total_value = None
-            period_return = None
-            cumulative_return = None
-            segment_id = None
+        if isinstance(outcome, PricedBar):
+            priced.append(outcome)
         else:
-            total_value = calculator_point.total_value
-            period_return = calculator_point.period_return
-            cumulative_return = calculator_point.cumulative_return
-            segment_id = calculator_point.segment_id
-        if stale:
-            stale_marks = tuple(
-                HistoryQuality(
-                    code="stale_price",
-                    detail=f"{bar.instrument_id}:{bar.price_date}",
-                )
-                for bar in priced
-                if bar.carried
-            )
-            quality = (*quality, *stale_marks)
-        points.append(
-            HistoryPointView(
-                on_date=key,
-                valuation_instant=end_of_day(day).isoformat(),
-                total_value=total_value,
-                cash=display_cash.get(key),
-                external_flow=_ZERO,
-                period_return=period_return,
-                cumulative_return=cumulative_return,
-                segment_id=segment_id,
-                price_time=(
-                    max(bar.occurred_at for bar in priced).isoformat()
-                    if priced
-                    else None
-                ),
-                stale=stale,
-                source_snapshot_ids=tuple(
-                    sorted({bar.source_snapshot_id for bar in priced})
-                ),
-                quality=quality,
-            )
-        )
-    return tuple(points)
+            priced.append(None)
+            missing.append(outcome)
+    return priced, missing
 
 
 class GetModelHistoryQuery:
@@ -605,11 +568,27 @@ class GetModelHistoryQuery:
                 continue
             package = packages[effective_at]
             package_bars = bars[package.artifact_id]
-            if effective_at > walk.effective_index:
-                self._rebalance(walk, effective_at, package, package_bars, day)
             held_prices, missing = _held_prices_or_missing(
                 walk.quantities, package_bars, day
             )
+            if effective_at > walk.effective_index:
+                # A switch day needs every held and every target instrument
+                # priced; otherwise the rebalance defers to the next priced
+                # day as an explicit gap, exactly like a drift-day gap.
+                target_prices, target_missing = _price_targets(
+                    package.weights, package_bars, day
+                )
+                if target_missing:
+                    missing = [*missing, *target_missing]
+                if not missing:
+                    self._apply_rebalance(
+                        walk,
+                        effective_at,
+                        package,
+                        held_prices,
+                        target_prices,
+                    )
+                    held_prices = [bar for bar in target_prices if bar is not None]
             if missing:
                 day_key = day.isoformat()
                 display_cash[day_key] = walk.cash
@@ -643,45 +622,49 @@ class GetModelHistoryQuery:
             )
         except PortfolioError as exc:
             raise _error("RETURN_SERIES_INVALID", str(exc)) from exc
-        points = _points(
+        points = build_history_points(
             series=series,
             valuation_dates=valuation_dates,
             priced_dates=dict(priced_dates),
             display_cash=display_cash,
             gap_quality=gap_quality,
+            flows_by_date={},
         )
         return self._view(request, packages, series, points, tuple(priced_dates))
 
-    def _rebalance(
-        self,
+    @staticmethod
+    def _apply_rebalance(
         walk: _ReplayWalk,
         effective_at: int,
         package: _ReplayPackage,
-        bars: Mapping[int, tuple[TechnicalBar, ...]],
-        day: date,
+        held_prices: Sequence[PricedBar],
+        target_prices: Sequence[PricedBar | None],
     ) -> None:
         """Roll holdings to current capital, then apply the saved weights."""
-        capital = walk.cash
-        if walk.quantities:
-            capital += sum(
-                (
-                    (walk.quantities[i] * self._required_price(bars, i, day)).quantize(
-                        _MONEY, rounding=ROUND_HALF_UP
-                    )
-                    for i in walk.quantities
-                ),
-                _ZERO,
-            )
+        capital = walk.cash + sum(
+            (
+                (walk.quantities[bar.instrument_id] * bar.price).quantize(
+                    _MONEY, rounding=ROUND_HALF_UP
+                )
+                for bar in held_prices
+            ),
+            _ZERO,
+        )
         quantities: dict[int, Decimal] = {}
         invested = _ZERO
-        for instrument_id, weight in package.weights.items():
-            price = self._required_price(bars, instrument_id, day)
-            target_value = (capital * weight).quantize(_MONEY, rounding=ROUND_HALF_UP)
-            quantity = (target_value / price).quantize(
+        for priced in target_prices:
+            if priced is None:
+                continue
+            target_value = (capital * package.weights[priced.instrument_id]).quantize(
+                _MONEY, rounding=ROUND_HALF_UP
+            )
+            quantity = (target_value / priced.price).quantize(
                 _QUANTITY, rounding=ROUND_HALF_UP
             )
-            quantities[instrument_id] = quantity
-            invested += (quantity * price).quantize(_MONEY, rounding=ROUND_HALF_UP)
+            quantities[priced.instrument_id] = quantity
+            invested += (quantity * priced.price).quantize(
+                _MONEY, rounding=ROUND_HALF_UP
+            )
         cash = (capital - invested).quantize(_MONEY, rounding=ROUND_HALF_UP)
         if cash < _ZERO:
             raise _error(
@@ -693,27 +676,6 @@ class GetModelHistoryQuery:
         walk.cash = cash
         walk.effective_index = effective_at
 
-    @staticmethod
-    def _required_price(
-        bars: Mapping[int, tuple[TechnicalBar, ...]],
-        instrument_id: int,
-        day: date,
-    ) -> Decimal:
-        priced = price_at(
-            instrument_id=instrument_id,
-            bars=bars.get(instrument_id, ()),
-            on_date=day,
-            market_traded_on_date=True,
-        )
-        if not isinstance(priced, PricedBar):
-            raise _error(
-                "REBALANCE_PRICE_MISSING",
-                "rebalance date lacks a visible price for a target instrument",
-                instrument_id=instrument_id,
-                on_date=day.isoformat(),
-            )
-        return priced.price
-
     def _view(
         self,
         request: ModelHistoryRequest,
@@ -722,22 +684,6 @@ class GetModelHistoryQuery:
         points: tuple[HistoryPointView, ...],
         priced_dates: tuple[tuple[str, tuple[PricedBar, ...]], ...],
     ) -> ModelHistoryView:
-        segments = tuple(
-            HistorySegmentView(
-                segment_id=segment.segment_id,
-                start_date=segment.start_date,
-                end_date=segment.end_date,
-                start_value=segment.start_value,
-                end_value=segment.end_value,
-                linked_return=segment.linked_return,
-                closed_reason=segment.closed_reason,
-                quality=tuple(
-                    HistoryQuality(code=reason.code.value, detail=reason.detail)
-                    for reason in segment.reasons
-                ),
-            )
-            for segment in series.segments
-        )
         return ModelHistoryView(
             result_id=self._result_id(request, packages, series, priced_dates),
             strategy_id=request.strategy_id,
@@ -749,6 +695,7 @@ class GetModelHistoryQuery:
             ),
             knowledge_cutoff=request.knowledge_cutoff,
             publication_cutoff=request.publication_cutoff,
+            empty_reason=None if packages else "no_visible_targets",
             targets=tuple(
                 ModelTargetView(
                     signal_date=package.signal_date.isoformat(),
@@ -760,7 +707,7 @@ class GetModelHistoryQuery:
             method=series.method,
             valuation_policy_version=VALUATION_POLICY_VERSION,
             points=points,
-            segments=segments,
+            segments=build_history_segments(series),
         )
 
     @staticmethod

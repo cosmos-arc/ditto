@@ -42,6 +42,7 @@ describe("ModelHistoryPanel", () => {
 							initial_capital: "100000.00",
 							knowledge_cutoff: "2026-03-04T08:00:00Z",
 							publication_cutoff: "2026-03-04T08:00:00Z",
+							empty_reason: null,
 							targets: [
 								{
 									signal_date: "2026-03-02",
@@ -101,9 +102,67 @@ describe("ModelHistoryPanel", () => {
 		const url = new URL(requestedHref ?? "");
 		expect(url.pathname).toBe("/api/v1/portfolio/model-history");
 		expect(url.searchParams.get("strategy_id")).toBe("strategy-model");
-		expect(url.searchParams.get("initial_capital")).toBe("100000");
+		expect(url.searchParams.get("initial_capital")).toBe("100000.00");
 		expect(screen.getByText(/signal-package-a/)).toBeInTheDocument();
 		expect(screen.getByText(/2026-03-02 的保存目标/)).toBeInTheDocument();
+	});
+
+	it("explains an empty replay and labels missing-target gap rows", async () => {
+		const user = userEvent.setup();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(
+				async () =>
+					new Response(
+						JSON.stringify({
+							data: {
+								result_id: "model-history:sha256:empty-1",
+								strategy_id: "strategy-model",
+								currency: "CNY",
+								start_date: "2026-03-02",
+								end_date: "2026-03-04",
+								initial_capital: "100000.00",
+								knowledge_cutoff: "2026-03-04T08:00:00Z",
+								publication_cutoff: "2026-03-04T08:00:00Z",
+								empty_reason: "no_visible_targets",
+								targets: [],
+								method: "twr-linked-v1",
+								valuation_policy_version: "account-valuation-stale-evidence-v1",
+								points: [
+									{
+										on_date: "2026-03-02",
+										valuation_instant: "2026-03-02T23:59:59.999999+08:00",
+										total_value: null,
+										cash: null,
+										external_flow: "0",
+										period_return: null,
+										cumulative_return: null,
+										segment_id: null,
+										price_time: null,
+										stale: false,
+										source_snapshot_ids: [],
+										quality: [{ code: "target_missing", detail: "" }],
+									},
+								],
+								segments: [],
+							},
+						}),
+						{ status: 200, headers: { "Content-Type": "application/json" } },
+					),
+			),
+		);
+		renderPanel();
+
+		await user.clear(screen.getByLabelText("Model 重放开始日期"));
+		await user.type(screen.getByLabelText("Model 重放开始日期"), "2026-03-02");
+		await user.clear(screen.getByLabelText("Model 知识截止"));
+		await user.type(screen.getByLabelText("Model 知识截止"), "2026-03-04T08:00:00Z");
+		await user.click(screen.getByRole("button", { name: "重放目标" }));
+
+		await waitFor(() => {
+			expect(screen.getByText(/区间内没有可见的保存目标，无可重放历史（no_visible_targets）/)).toBeInTheDocument();
+		});
+		expect(screen.getByText("缺保存目标")).toBeInTheDocument();
 	});
 
 	it("renders an error with retry when the replay fails", async () => {

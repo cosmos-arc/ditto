@@ -19107,6 +19107,17 @@
             "title": "Currency",
             "type": "string"
           },
+          "empty_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empty Reason"
+          },
           "end_date": {
             "title": "End Date",
             "type": "string"
@@ -19177,6 +19188,7 @@
           "initial_capital",
           "knowledge_cutoff",
           "publication_cutoff",
+          "empty_reason",
           "targets",
           "method",
           "valuation_policy_version",

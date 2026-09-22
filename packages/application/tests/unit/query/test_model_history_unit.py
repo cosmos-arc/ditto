@@ -199,11 +199,12 @@ def _query(
     records: list[StrategyArtifactRecord],
     *,
     snapshot: ProviderSnapshot | None = None,
+    bars: dict[int, tuple[TechnicalBar, ...]] | None = None,
 ) -> GetModelHistoryQuery:
     return GetModelHistoryQuery(
         artifact_reader=_ArtifactReader(records),
         snapshot_reader=_SnapshotReader(snapshot or _SNAPSHOT),
-        valuation_source=_ValuationSource(_BARS),
+        valuation_source=_ValuationSource(bars or _BARS),
     )
 
 
@@ -252,7 +253,48 @@ def test_replays_saved_targets_with_drift_between_rebalances() -> None:
     assert view.method == "twr-linked-v1"
     assert view.valuation_policy_version == "account-valuation-stale-evidence-v1"
     assert view.initial_capital == _D("100.00")
+    assert view.empty_reason is None
     assert view.result_id.startswith("model-history:sha256:")
+
+
+def test_same_date_active_packages_are_rejected_as_ambiguous() -> None:
+    records = [
+        _artifact("model-a", "2026-03-02", _FIRST),
+        _artifact("model-b1", "2026-03-03", _SECOND),
+        _artifact("model-b2", "2026-03-03", {"1": 0.5, "2": 0.5}),
+    ]
+    with pytest.raises(AppQueryError) as error:
+        _query(records).history(_request())
+    assert error.value.details["code"] == "MODEL_HISTORY_ARTIFACT_DATE_AMBIGUOUS"
+
+
+def test_rounded_targets_exceeding_capital_fail_closed() -> None:
+    # 0.01 capital with two 0.5 weights rounds both targets to 0.01,
+    # leaving negative cash — an invalid target, not a partial replay.
+    records = [_artifact("model-a", "2026-03-02", {"1": 0.5, "2": 0.5})]
+    with pytest.raises(AppQueryError) as error:
+        _query(records).history(_request(initial_capital="0.01"))
+    assert error.value.details["code"] == "MODEL_HISTORY_TARGET_INVALID"
+
+
+def test_rebalance_day_missing_target_price_defers_as_gap() -> None:
+    # Instrument 1 stops trading after 03-02 with no resumption evidence;
+    # the 03-03 target switch cannot price, so both later days defer as
+    # explicit gaps instead of failing the whole replay.
+    bars = {
+        1: (_bar("2026-03-02", 10.0),),
+        2: (
+            _bar("2026-03-02", 20.0),
+            _bar("2026-03-03", 22.0),
+            _bar("2026-03-04", 24.0),
+        ),
+    }
+    view = _query(_base_records(), bars=bars).history(_request())
+    by_date = {point.on_date: point for point in view.points}
+    assert by_date["2026-03-02"].total_value == _D("100.00")
+    assert by_date["2026-03-03"].total_value is None
+    assert by_date["2026-03-04"].total_value is None
+    assert "price_missing" in {mark.code for mark in by_date["2026-03-03"].quality}
 
 
 def test_pinned_artifacts_survive_future_supersession() -> None:
@@ -299,6 +341,7 @@ def test_range_without_visible_packages_reports_missing_targets() -> None:
     assert view.targets == ()
     assert view.segments == ()
     assert view.points == ()
+    assert view.empty_reason == "no_visible_targets"
 
 
 def test_unknown_strategy_is_rejected() -> None:

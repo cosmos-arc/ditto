@@ -119,7 +119,7 @@ export function ModelHistoryPanel({ strategyId, asOf }: { readonly strategyId: s
 								strategy_id: strategyId,
 								start_date: startDate,
 								end_date: endDate,
-								initial_capital: initialCapital,
+								initial_capital: capital.toFixed(2),
 								knowledge_cutoff: cutoff,
 								publication_cutoff: cutoff,
 								...(artifactIds.length > 0 ? { artifact_ids: artifactIds } : {}),
@@ -171,7 +171,9 @@ export function ModelHistoryPanel({ strategyId, asOf }: { readonly strategyId: s
 							</div>
 						))}
 						{historyQuery.data.targets.length === 0 && (
-							<p className="text-xs text-(--color-foreground-tertiary)">区间内没有可见的保存目标，无可重放历史。</p>
+							<p className="text-xs text-(--color-foreground-tertiary)">
+								区间内没有可见的保存目标，无可重放历史（{historyQuery.data.empty_reason ?? "no_targets"}）。
+							</p>
 						)}
 					</div>
 					<AccountHistoryResult history={historyQuery.data} />

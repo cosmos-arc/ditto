@@ -490,21 +490,17 @@ export function parseModelHistory(
 	sameInstant(record["knowledge_cutoff"], identity.knowledge_cutoff, boundary, "knowledge_cutoff");
 	sameInstant(record["publication_cutoff"], identity.publication_cutoff, boundary, "publication_cutoff");
 	const initialCapital = decimalValue(record, "initial_capital", boundary);
-	const normalizeDecimal = (input: string): string => {
-		const parts = input.split(".");
-		const integer = parts[0] ?? "";
-		const fraction = parts[1];
-		if (!fraction) return integer;
-		const trimmed = fraction.replace(/0+$/u, "");
-		return trimmed ? `${integer}.${trimmed}` : integer;
-	};
-	if (normalizeDecimal(initialCapital) !== normalizeDecimal(String(identity.initial_capital))) {
+	const requestedCapital = Number(identity.initial_capital);
+	// Compare capital numerically: the server echoes a 2dp decimal string
+	// while callers may submit "1e5" or ".5" shaped numbers.
+	if (Number(initialCapital) !== requestedCapital) {
 		throw new RuntimeValidationError(boundary, "initial_capital", "differs from the request");
 	}
 	const resultId = stringValue(record, "result_id", boundary);
 	if (!resultId.startsWith("model-history:sha256:")) {
 		throw new RuntimeValidationError(boundary, "result_id", "must start with model-history:sha256:");
 	}
+	const emptyReason = record["empty_reason"] === null ? null : stringValue(record, "empty_reason", boundary);
 	return {
 		result_id: resultId,
 		strategy_id: strategyId,
@@ -514,6 +510,7 @@ export function parseModelHistory(
 		initial_capital: initialCapital,
 		knowledge_cutoff: identity.knowledge_cutoff,
 		publication_cutoff: identity.publication_cutoff,
+		empty_reason: emptyReason,
 		targets: arrayValue(record, "targets", boundary).map((target, index) => {
 			const targetBoundary = `${boundary}.targets.${index}`;
 			const targetRecord = recordValue(target, targetBoundary);

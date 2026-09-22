@@ -26,6 +26,7 @@ const QUALITY_LABELS: Readonly<Record<string, string>> = {
 	single_point_segment: "单点分段",
 	price_missing: "缺价",
 	stale_price: "停牌沿用",
+	target_missing: "缺保存目标",
 };
 
 function formatMoney(value: string | null): string {
@@ -49,7 +50,7 @@ function shiftDate(isoDate: string, days: number): string {
 	return parsed.toISOString().slice(0, 10);
 }
 
-function firstSegmentCurve(history: ManualAccountHistory): readonly SparklinePoint[] {
+function firstSegmentCurve(history: Pick<ManualAccountHistory, "points" | "segments">): readonly SparklinePoint[] {
 	if (history.segments.length === 0) return [];
 	const first = history.segments[0];
 	if (first === undefined) return [];
@@ -232,7 +233,7 @@ export function AccountHistoryResult({
 		"result_id" | "method" | "valuation_policy_version" | "points" | "segments"
 	>;
 }) {
-	const curve = firstSegmentCurve(history as ManualAccountHistory);
+	const curve = firstSegmentCurve(history);
 	return (
 		<div className="grid gap-4 border-t border-(--color-border-subtle) px-4 py-4">
 			<p className="break-all font-data text-xs text-(--color-foreground-tertiary)">

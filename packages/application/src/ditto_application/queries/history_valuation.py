@@ -2,12 +2,13 @@
 Shared retained-price valuation machinery for historical replay queries.
 
 Manual, Paper, and Model history all price instruments from PIT-visible
-retained bars under one stale-carry policy; this module is the single
-authority for that policy and its helpers.
+retained bars under one stale-carry policy and render one point/segment
+view shape; this module is the single authority for those helpers.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
@@ -16,6 +17,7 @@ from zoneinfo import ZoneInfo
 from ditto_data.query.contracts import PITQueryContext
 from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.account_returns import ReturnSeries
 
 from ditto_application.queries.technical_analysis import (
     TechnicalAnalysisSourcePort,
@@ -28,6 +30,8 @@ __all__ = [
     "HistorySegmentView",
     "PricedBar",
     "bars_by_instrument",
+    "build_history_points",
+    "build_history_segments",
     "end_of_day",
     "price_at",
     "trade_day",
@@ -179,3 +183,93 @@ def bars_by_instrument(
             instrument_code=str(instrument_id),
         )
     return bars
+
+
+def build_history_points(
+    *,
+    series: ReturnSeries,
+    valuation_dates: list[date],
+    priced_dates: Mapping[str, tuple[PricedBar, ...]],
+    display_cash: Mapping[str, Decimal],
+    gap_quality: Mapping[str, tuple[HistoryQuality, ...]],
+    flows_by_date: Mapping[str, Decimal],
+) -> tuple[HistoryPointView, ...]:
+    """Render dated rows: gap days keep reasons, stale prices are marked."""
+    by_date = {point.on_date: point for point in series.points}
+    points: list[HistoryPointView] = []
+    for day in valuation_dates:
+        key = day.isoformat()
+        priced = priced_dates.get(key, ())
+        stale = any(bar.carried for bar in priced)
+        calculator_point = by_date.get(key)
+        quality: tuple[HistoryQuality, ...] = (
+            tuple(gap_quality.get(key, ()))
+            if calculator_point is None
+            else tuple(
+                HistoryQuality(code=reason.code.value, detail=reason.detail)
+                for reason in calculator_point.reasons
+            )
+        )
+        if calculator_point is None:
+            total_value = None
+            period_return = None
+            cumulative_return = None
+            segment_id = None
+        else:
+            total_value = calculator_point.total_value
+            period_return = calculator_point.period_return
+            cumulative_return = calculator_point.cumulative_return
+            segment_id = calculator_point.segment_id
+        if stale:
+            stale_marks = tuple(
+                HistoryQuality(
+                    code="stale_price",
+                    detail=f"{bar.instrument_id}:{bar.price_date}",
+                )
+                for bar in priced
+                if bar.carried
+            )
+            quality = (*quality, *stale_marks)
+        points.append(
+            HistoryPointView(
+                on_date=key,
+                valuation_instant=end_of_day(day).isoformat(),
+                total_value=total_value,
+                cash=display_cash.get(key),
+                external_flow=flows_by_date.get(key, _ZERO),
+                period_return=period_return,
+                cumulative_return=cumulative_return,
+                segment_id=segment_id,
+                price_time=(
+                    max(bar.occurred_at for bar in priced).isoformat()
+                    if priced
+                    else None
+                ),
+                stale=stale,
+                source_snapshot_ids=tuple(
+                    sorted({bar.source_snapshot_id for bar in priced})
+                ),
+                quality=quality,
+            )
+        )
+    return tuple(points)
+
+
+def build_history_segments(series: ReturnSeries) -> tuple[HistorySegmentView, ...]:
+    """Map calculator segments to their view shape with reason codes."""
+    return tuple(
+        HistorySegmentView(
+            segment_id=segment.segment_id,
+            start_date=segment.start_date,
+            end_date=segment.end_date,
+            start_value=segment.start_value,
+            end_value=segment.end_value,
+            linked_return=segment.linked_return,
+            closed_reason=segment.closed_reason,
+            quality=tuple(
+                HistoryQuality(code=reason.code.value, detail=reason.detail)
+                for reason in segment.reasons
+            ),
+        )
+        for segment in series.segments
+    )

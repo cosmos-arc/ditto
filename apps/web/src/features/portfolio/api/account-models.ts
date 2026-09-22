@@ -228,6 +228,7 @@ export interface ModelHistory {
 	readonly initial_capital: string;
 	readonly knowledge_cutoff: string;
 	readonly publication_cutoff: string;
+	readonly empty_reason: string | null;
 	readonly targets: readonly ModelHistoryTarget[];
 	readonly method: string;
 	readonly valuation_policy_version: string;

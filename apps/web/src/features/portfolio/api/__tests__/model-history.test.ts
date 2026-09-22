@@ -21,6 +21,7 @@ function historyPayload(overrides?: Record<string, unknown>) {
 		initial_capital: "100.00",
 		knowledge_cutoff: identity.knowledge_cutoff,
 		publication_cutoff: identity.publication_cutoff,
+		empty_reason: null,
 		targets: [
 			{
 				signal_date: "2026-03-02",
@@ -142,6 +143,21 @@ describe("model history API", () => {
 	it("accepts an equivalent capital echo format", async () => {
 		vi.stubGlobal("fetch", stubFetch(historyPayload({ initial_capital: "100" })));
 		await expect(fetchModelHistory(identity)).resolves.toBeTruthy();
+	});
+
+	it("accepts an exponent-shaped request capital against a decimal echo", async () => {
+		vi.stubGlobal("fetch", stubFetch(historyPayload()));
+		await expect(fetchModelHistory({ ...identity, initial_capital: "1e2" })).resolves.toBeTruthy();
+	});
+
+	it("parses the machine-readable empty reason", async () => {
+		vi.stubGlobal(
+			"fetch",
+			stubFetch(historyPayload({ empty_reason: "no_visible_targets", targets: [], points: [], segments: [] })),
+		);
+		const history = await fetchModelHistory(identity);
+		expect(history.empty_reason).toBe("no_visible_targets");
+		expect(history.targets).toHaveLength(0);
 	});
 
 	it("rejects an account-series payload delivered through the model transport", async () => {
