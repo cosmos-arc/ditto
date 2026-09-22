@@ -25,8 +25,8 @@ from ditto_application.exceptions import (
 )
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.portfolio_history import (
+    AccountHistoryRequest,
     GetManualHistoryQuery,
-    ManualHistoryRequest,
 )
 from fastapi import APIRouter, Path, Query, status
 
@@ -239,7 +239,7 @@ async def get_manual_account_history(
     try:
         result = await asyncio.to_thread(
             query.history,
-            ManualHistoryRequest(
+            AccountHistoryRequest(
                 account_id=account_id,
                 start_date=params.start_date.isoformat(),
                 end_date=params.end_date.isoformat(),

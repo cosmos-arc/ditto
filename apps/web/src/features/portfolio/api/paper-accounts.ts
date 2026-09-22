@@ -2,7 +2,9 @@ import { apiClient } from "@/api/transport";
 import type {
 	CreatePaperAccountBody,
 	CreatePaperSessionBody,
+	ManualHistoryQueryIdentity,
 	OperatePaperOrderBody,
+	PaperAccountHistory,
 	PaperAccountLedger,
 	PaperAccountReceipt,
 	PaperExecutionReceipt,
@@ -15,6 +17,7 @@ import type {
 	RecoverPaperSessionBody,
 } from "./account-models";
 import {
+	parsePaperAccountHistory,
 	parsePaperAccountLedger,
 	parsePaperAccountReceipt,
 	parsePaperExecutionReceipt,
@@ -27,7 +30,9 @@ import {
 export type {
 	CreatePaperAccountBody,
 	CreatePaperSessionBody,
+	ManualHistoryQueryIdentity,
 	OperatePaperOrderBody,
+	PaperAccountHistory,
 	PaperAccountLedger,
 	PaperAccountReceipt,
 	PaperExecutionReceipt,
@@ -50,6 +55,29 @@ export async function fetchPaperAccountLedger(accountId: string, asOf: string): 
 		params: { path: { account_id: accountId }, query: { as_of: asOf } },
 	});
 	return parsePaperAccountLedger(payload, accountId, asOf);
+}
+
+export async function fetchPaperAccountHistory(
+	accountId: string,
+	sessionId: string,
+	identity: ManualHistoryQueryIdentity,
+): Promise<PaperAccountHistory> {
+	const payload = await apiClient.get("/api/v1/paper/accounts/{account_id}/history", {
+		params: {
+			path: { account_id: accountId },
+			query: {
+				session_id: sessionId,
+				start_date: identity.start_date,
+				end_date: identity.end_date,
+				knowledge_cutoff: identity.knowledge_cutoff,
+				publication_cutoff: identity.publication_cutoff,
+				source_snapshot_ids: [...identity.source_snapshot_ids],
+				ledger_event_count: identity.ledger_event_count,
+				ledger_hash: identity.ledger_hash,
+			},
+		},
+	});
+	return parsePaperAccountHistory(payload, accountId, identity);
 }
 
 export async function createPaperSession(body: CreatePaperSessionBody): Promise<PaperSessionCommandReceipt> {

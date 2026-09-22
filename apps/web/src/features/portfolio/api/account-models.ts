@@ -207,6 +207,12 @@ export interface ManualHistoryQueryIdentity {
 	readonly ledger_hash: string;
 }
 
+/** PAPER history shares the exact wire shape; its query identity also pins the session. */
+export type PaperAccountHistory = ManualAccountHistory;
+export type PaperHistoryQueryIdentity = ManualHistoryQueryIdentity & {
+	readonly session_id: string;
+};
+
 export interface ManualAccountReceipt {
 	readonly account: ManualAccount;
 	readonly event: ManualAccountEvent | null;

@@ -1,12 +1,14 @@
 """
-Exact-identity historical valuation and flow-adjusted returns (Manual v1).
+Exact-identity historical valuation and flow-adjusted returns (accounts v1).
 
 The query replays an explicit ledger revision day by day against retained
 PIT-visible prices, classifies external cash flows, and delegates linking to
-the pure portfolio contract (:mod:`ditto_portfolio.account_returns`).  It is
-read-only: no backtest runs, no ledger writes, no silent "latest" fallback —
-prices come from exact source snapshots and the ledger from an exact
-append-order revision.
+the pure portfolio contract (:mod:`ditto_portfolio.account_returns`).  The
+engine is account-kind agnostic: MANUAL and PAPER accounts share one replay
+machine and differ only in the account-kind gate, the paper-session binding,
+and the error/result identities.  It is read-only: no backtest runs, no
+ledger writes, no silent "latest" fallback — prices come from exact source
+snapshots and the ledger from an exact append-order revision.
 
 Carry-forward eligibility (whether a stale price may bridge a day) may consult bars
 dated after the valuation day as long as they are visible under the knowledge cutoff;
@@ -27,6 +29,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotReader,
 )
 from ditto_data.query.contracts import PITQueryContext
+from ditto_execution.paper.session import PaperSessionStorePort
 from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.account_ledger import (
@@ -61,17 +64,18 @@ from ditto_application.queries.technical_analysis import (
 )
 
 __all__ = [
-    "MANUAL_VALUATION_POLICY_VERSION",
+    "VALUATION_POLICY_VERSION",
+    "AccountHistoryRequest",
+    "AccountHistoryView",
     "GetManualHistoryQuery",
+    "GetPaperHistoryQuery",
     "HistoryPointView",
     "HistoryQuality",
     "HistorySegmentView",
-    "ManualHistoryRequest",
-    "ManualHistoryView",
+    "PaperHistoryRequest",
 ]
 
-MANUAL_VALUATION_POLICY_VERSION = "manual-valuation-stale-evidence-v1"
-_RESULT_ID_PREFIX = "manual-history:sha256:"
+VALUATION_POLICY_VERSION = "account-valuation-stale-evidence-v1"
 _LEDGER_HASH_PREFIX = "account-ledger:sha256:"
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -93,9 +97,33 @@ _SECURITY_TRANSFER_TYPES = frozenset(
 )
 
 
+@dataclass(frozen=True)
+class _HistoryFlavor:
+    """Kind-scoped identities: error codes, result prefix, and account gate."""
+
+    account_kind: AccountKind
+    code_prefix: str
+    failure_context: str
+    result_prefix: str
+
+
+_MANUAL_FLAVOR = _HistoryFlavor(
+    account_kind=AccountKind.MANUAL,
+    code_prefix="MANUAL_HISTORY",
+    failure_context="manual history",
+    result_prefix="manual-history:sha256:",
+)
+_PAPER_FLAVOR = _HistoryFlavor(
+    account_kind=AccountKind.PAPER,
+    code_prefix="PAPER_HISTORY",
+    failure_context="paper history",
+    result_prefix="paper-history:sha256:",
+)
+
+
 @dataclass(frozen=True, kw_only=True)
-class ManualHistoryRequest:
-    """Exact read identity for one MANUAL historical series."""
+class AccountHistoryRequest:
+    """Exact read identity for one account-kind-scoped historical series."""
 
     account_id: str
     start_date: str
@@ -105,6 +133,28 @@ class ManualHistoryRequest:
     source_snapshot_ids: tuple[str, ...]
     ledger_event_count: int
     ledger_hash: str
+
+    def result_identity(self) -> dict[str, object]:
+        """Request facts bound into the replayable result identity."""
+        return {
+            "account_id": self.account_id,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "knowledge_cutoff": self.knowledge_cutoff.isoformat(),
+            "publication_cutoff": self.publication_cutoff.isoformat(),
+            "source_snapshot_ids": list(self.source_snapshot_ids),
+        }
+
+
+@dataclass(frozen=True, kw_only=True)
+class PaperHistoryRequest(AccountHistoryRequest):
+    """Exact read identity for one PAPER series, anchored to one session."""
+
+    session_id: str
+
+    def result_identity(self) -> dict[str, object]:
+        """Extend the replay identity with the bound session."""
+        return {**super().result_identity(), "session_id": self.session_id}
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -148,7 +198,7 @@ class HistorySegmentView:
 
 
 @dataclass(frozen=True, kw_only=True)
-class ManualHistoryView:
+class AccountHistoryView:
     """Complete replayable result for one account and range."""
 
     result_id: str
@@ -176,10 +226,19 @@ class _PricedBar:
     carried: bool
 
 
-def _error(code: str, reason: str, **details: object) -> AppQueryError:
+def _error(
+    flavor: _HistoryFlavor,
+    code_suffix: str,
+    reason: str,
+    **details: object,
+) -> AppQueryError:
     return AppQueryError(
-        f"manual history query failed closed: {reason}",
-        details={"code": code, "reason": reason, **details},
+        f"{flavor.failure_context} query failed closed: {reason}",
+        details={
+            "code": f"{flavor.code_prefix}_{code_suffix}",
+            "reason": reason,
+            **details,
+        },
     )
 
 
@@ -192,27 +251,46 @@ def _trade_day(instant: datetime) -> date:
     return instant.astimezone(_SHANGHAI).date()
 
 
+def _parse_request_date(value: str, field: str, flavor: _HistoryFlavor) -> date:
+    try:
+        return ledger_parse_date(value, field)
+    except AccountLedgerError as exc:
+        raise _error(
+            flavor,
+            "REQUEST_INVALID",
+            f"{field} must be YYYY-MM-DD",
+            field=field,
+        ) from exc
+
+
 def _pit_context(
-    request: ManualHistoryRequest,
+    request: AccountHistoryRequest,
     snapshot_reader: ProviderSnapshotReader,
+    flavor: _HistoryFlavor,
 ) -> PITQueryContext:
-    end = _parse_request_date(request.end_date, "end_date")
+    end = _parse_request_date(request.end_date, "end_date", flavor)
     snapshots: list[ProviderSnapshot] = []
     for snapshot_id in request.source_snapshot_ids:
         snapshot = snapshot_reader.get_snapshot(snapshot_id)
         if snapshot is None or snapshot.snapshot_id != snapshot_id:
             raise _error(
-                "MANUAL_HISTORY_SOURCE_SNAPSHOT_NOT_FOUND",
+                flavor,
+                "SOURCE_SNAPSHOT_NOT_FOUND",
                 "exact price source snapshot was not found",
                 snapshot_id=snapshot_id,
             )
         if snapshot.created_at > request.knowledge_cutoff:
             raise _error(
-                "MANUAL_HISTORY_SOURCE_SNAPSHOT_FUTURE",
+                flavor,
+                "SOURCE_SNAPSHOT_FUTURE",
                 "price source snapshot is after knowledge cutoff",
                 snapshot_id=snapshot_id,
             )
         snapshots.append(snapshot)
+
+    def snapshot_error(code: str, reason: str, **details: object) -> AppQueryError:
+        return _error(flavor, code, reason, **details)
+
     try:
         return PITQueryContext(
             as_of=max(_end_of_day(end), request.knowledge_cutoff),
@@ -220,68 +298,65 @@ def _pit_context(
             publication_cutoff=request.publication_cutoff,
             source_snapshots=group_dataset_snapshots(
                 snapshots,
-                error=_error,
-                mixed_version_code="MANUAL_HISTORY_SNAPSHOT_SCHEMA_MIXED",
+                error=snapshot_error,
+                mixed_version_code=f"{flavor.code_prefix}_SNAPSHOT_SCHEMA_MIXED",
             ),
         )
     except ValueError as exc:
-        raise _error("MANUAL_HISTORY_PIT_CONTEXT_INVALID", str(exc)) from exc
+        raise _error(flavor, "PIT_CONTEXT_INVALID", str(exc)) from exc
 
 
-def _parse_request_date(value: str, field: str) -> date:
-    try:
-        return ledger_parse_date(value, field)
-    except AccountLedgerError as exc:
-        raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
-            f"{field} must be YYYY-MM-DD",
-            field=field,
-        ) from exc
-
-
-def _validate_request(request: ManualHistoryRequest) -> None:
+def _validate_request(request: AccountHistoryRequest, flavor: _HistoryFlavor) -> None:
     if not request.account_id.strip():
-        raise _error("MANUAL_HISTORY_REQUEST_INVALID", "account_id must be non-empty")
-    start = _parse_request_date(request.start_date, "start_date")
-    end = _parse_request_date(request.end_date, "end_date")
+        raise _error(flavor, "REQUEST_INVALID", "account_id must be non-empty")
+    start = _parse_request_date(request.start_date, "start_date", flavor)
+    end = _parse_request_date(request.end_date, "end_date", flavor)
     if start > end:
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "start_date cannot be after end_date",
         )
     if request.knowledge_cutoff.tzinfo is None:
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "knowledge_cutoff must be timezone-aware",
         )
     if request.publication_cutoff.tzinfo is None:
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "publication_cutoff must be timezone-aware",
         )
     if request.publication_cutoff > request.knowledge_cutoff:
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "publication_cutoff cannot exceed knowledge_cutoff",
         )
     if not request.source_snapshot_ids:
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "at least one price source snapshot is required",
         )
     if len(set(request.source_snapshot_ids)) != len(request.source_snapshot_ids):
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "price source snapshots must be unique",
         )
     if request.ledger_event_count < 1:
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "ledger_event_count must be positive",
         )
     if not request.ledger_hash.startswith(_LEDGER_HASH_PREFIX):
         raise _error(
-            "MANUAL_HISTORY_REQUEST_INVALID",
+            flavor,
+            "REQUEST_INVALID",
             "ledger_hash must be an account-ledger:sha256: identity",
         )
 
@@ -389,26 +464,22 @@ def _bars_by_instrument(
 
 
 def _result_id(
-    request: ManualHistoryRequest,
+    request: AccountHistoryRequest,
     *,
     revision: LedgerRevision,
     series: ReturnSeries,
     priced_dates: tuple[tuple[str, tuple[_PricedBar, ...]], ...],
     flows: tuple[ExternalFlow, ...],
+    flavor: _HistoryFlavor,
 ) -> str:
     payload = {
-        "account_id": request.account_id,
-        "start_date": request.start_date,
-        "end_date": request.end_date,
-        "knowledge_cutoff": request.knowledge_cutoff.isoformat(),
-        "publication_cutoff": request.publication_cutoff.isoformat(),
-        "source_snapshot_ids": list(request.source_snapshot_ids),
+        **request.result_identity(),
         "ledger_revision": {
             "event_count": revision.event_count,
             "ledger_hash": revision.ledger_hash,
         },
         "method": series.method,
-        "policy": MANUAL_VALUATION_POLICY_VERSION,
+        "policy": VALUATION_POLICY_VERSION,
         "priced_dates": [
             (
                 on_date,
@@ -436,11 +507,11 @@ def _result_id(
         ],
     }
     digest = sha256(orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)).hexdigest()
-    return f"{_RESULT_ID_PREFIX}{digest}"
+    return f"{flavor.result_prefix}{digest}"
 
 
-class GetManualHistoryQuery:
-    """Replay one MANUAL ledger revision into a flow-adjusted return series."""
+class _AccountHistoryEngine:
+    """Kind-agnostic replay of one ledger revision into a return series."""
 
     def __init__(
         self,
@@ -448,20 +519,22 @@ class GetManualHistoryQuery:
         journal: AccountEventJournalPort,
         snapshot_reader: ProviderSnapshotReader,
         valuation_source: TechnicalAnalysisSourcePort,
-        rebuilder: AccountLedgerRebuilder | None = None,
+        rebuilder: AccountLedgerRebuilder,
+        flavor: _HistoryFlavor,
     ) -> None:
         self._journal = journal
         self._snapshot_reader = snapshot_reader
         self._valuation_source = valuation_source
-        self._rebuilder = rebuilder or AccountLedgerRebuilder()
+        self._rebuilder = rebuilder
+        self._flavor = flavor
 
-    def history(self, request: ManualHistoryRequest) -> ManualHistoryView:
+    def history(self, request: AccountHistoryRequest) -> AccountHistoryView:
         """Return the exact replayable series or fail closed."""
-        _validate_request(request)
+        _validate_request(request, self._flavor)
         account = self._account(request.account_id)
         prefix = self._ledger_prefix(request)
         effective = resolve_effective_events(prefix)
-        context = _pit_context(request, self._snapshot_reader)
+        context = _pit_context(request, self._snapshot_reader, self._flavor)
         return self._build(
             request=request,
             account=account,
@@ -474,26 +547,29 @@ class GetManualHistoryQuery:
         account = self._journal.get_account(account_id)
         if account is None:
             raise _error(
-                "MANUAL_HISTORY_ACCOUNT_NOT_FOUND",
+                self._flavor,
+                "ACCOUNT_NOT_FOUND",
                 "account not found",
                 account_id=account_id,
             )
-        if account.kind is not AccountKind.MANUAL:
+        if account.kind is not self._flavor.account_kind:
             raise _error(
-                "MANUAL_HISTORY_ACCOUNT_KIND_MISMATCH",
-                "account is not a MANUAL account",
+                self._flavor,
+                "ACCOUNT_KIND_MISMATCH",
+                "account is not the expected account kind",
                 account_id=account_id,
             )
         return account
 
     def _ledger_prefix(
         self,
-        request: ManualHistoryRequest,
+        request: AccountHistoryRequest,
     ) -> tuple[AccountEvent, ...]:
         events = tuple(self._journal.list_events(request.account_id))
         if len(events) < request.ledger_event_count:
             raise _error(
-                "MANUAL_HISTORY_LEDGER_REVISION_COUNT_INVALID",
+                self._flavor,
+                "LEDGER_REVISION_COUNT_INVALID",
                 "ledger stream is shorter than the requested revision",
                 requested=request.ledger_event_count,
                 actual=len(events),
@@ -501,7 +577,8 @@ class GetManualHistoryQuery:
         prefix = events[: request.ledger_event_count]
         if ledger_hash(prefix) != request.ledger_hash:
             raise _error(
-                "MANUAL_HISTORY_LEDGER_REVISION_MISMATCH",
+                self._flavor,
+                "LEDGER_REVISION_MISMATCH",
                 "computed ledger revision hash differs from request",
             )
         return prefix
@@ -509,14 +586,15 @@ class GetManualHistoryQuery:
     def _build(
         self,
         *,
-        request: ManualHistoryRequest,
+        request: AccountHistoryRequest,
         account: AccountDefinition,
         prefix: tuple[AccountEvent, ...],
         effective: tuple[AccountEvent, ...],
         context: PITQueryContext,
-    ) -> ManualHistoryView:
-        start = _parse_request_date(request.start_date, "start_date")
-        end = _parse_request_date(request.end_date, "end_date")
+    ) -> AccountHistoryView:
+        flavor = self._flavor
+        start = _parse_request_date(request.start_date, "start_date", flavor)
+        end = _parse_request_date(request.end_date, "end_date", flavor)
         flows = _effective_flows(
             effective, start=request.start_date, end=request.end_date
         )
@@ -557,14 +635,14 @@ class GetManualHistoryQuery:
     def _series(
         self,
         *,
-        request: ManualHistoryRequest,
+        request: AccountHistoryRequest,
         account: AccountDefinition,
         prefix: tuple[AccountEvent, ...],
         valuation_dates: list[date],
         bars: dict[int, tuple[TechnicalBar, ...]],
         bar_dates: set[date],
         flows: tuple[ExternalFlow, ...],
-    ) -> ManualHistoryView:
+    ) -> AccountHistoryView:
         observations: list[ValuationObservation] = []
         priced_dates: list[tuple[str, tuple[_PricedBar, ...]]] = []
         display_cash: dict[str, Decimal] = {}
@@ -625,7 +703,8 @@ class GetManualHistoryQuery:
             )
         except PortfolioError as exc:
             raise _error(
-                "MANUAL_HISTORY_RETURN_SERIES_INVALID",
+                self._flavor,
+                "RETURN_SERIES_INVALID",
                 str(exc),
             ) from exc
         revision = LedgerRevision(
@@ -638,6 +717,7 @@ class GetManualHistoryQuery:
             series=series,
             priced_dates=tuple(priced_dates),
             flows=flows,
+            flavor=self._flavor,
         )
         points = self._points(
             series=series,
@@ -663,7 +743,7 @@ class GetManualHistoryQuery:
             )
             for segment in series.segments
         )
-        return ManualHistoryView(
+        return AccountHistoryView(
             result_id=result_id,
             account_id=account.account_id,
             currency="CNY",
@@ -674,7 +754,7 @@ class GetManualHistoryQuery:
             source_snapshot_ids=request.source_snapshot_ids,
             ledger_revision=revision,
             method=series.method,
-            valuation_policy_version=MANUAL_VALUATION_POLICY_VERSION,
+            valuation_policy_version=VALUATION_POLICY_VERSION,
             points=points,
             segments=segments,
         )
@@ -770,6 +850,79 @@ class GetManualHistoryQuery:
             )
         except AccountLedgerError as exc:
             raise _error(
-                "MANUAL_HISTORY_LEDGER_REBUILD_FAILED",
+                self._flavor,
+                "LEDGER_REBUILD_FAILED",
                 str(exc),
             ) from exc
+
+
+class GetManualHistoryQuery:
+    """Replay one MANUAL ledger revision into a flow-adjusted return series."""
+
+    def __init__(
+        self,
+        *,
+        journal: AccountEventJournalPort,
+        snapshot_reader: ProviderSnapshotReader,
+        valuation_source: TechnicalAnalysisSourcePort,
+        rebuilder: AccountLedgerRebuilder | None = None,
+    ) -> None:
+        self._engine = _AccountHistoryEngine(
+            journal=journal,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
+            rebuilder=rebuilder or AccountLedgerRebuilder(),
+            flavor=_MANUAL_FLAVOR,
+        )
+
+    def history(self, request: AccountHistoryRequest) -> AccountHistoryView:
+        """Return the exact replayable series or fail closed."""
+        return self._engine.history(request)
+
+
+class GetPaperHistoryQuery:
+    """Replay one PAPER ledger revision, session-bound, into a return series."""
+
+    def __init__(
+        self,
+        *,
+        journal: AccountEventJournalPort,
+        session_store: PaperSessionStorePort,
+        snapshot_reader: ProviderSnapshotReader,
+        valuation_source: TechnicalAnalysisSourcePort,
+        rebuilder: AccountLedgerRebuilder | None = None,
+    ) -> None:
+        self._session_store = session_store
+        self._engine = _AccountHistoryEngine(
+            journal=journal,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
+            rebuilder=rebuilder or AccountLedgerRebuilder(),
+            flavor=_PAPER_FLAVOR,
+        )
+
+    def history(self, request: PaperHistoryRequest) -> AccountHistoryView:
+        """Validate the session-account binding, then replay fail-closed."""
+        if not request.session_id.strip():
+            raise _error(
+                _PAPER_FLAVOR,
+                "REQUEST_INVALID",
+                "session_id must be non-empty",
+            )
+        session = self._session_store.get_session(request.session_id)
+        if session is None:
+            raise _error(
+                _PAPER_FLAVOR,
+                "SESSION_NOT_FOUND",
+                "paper session was not found",
+                session_id=request.session_id,
+            )
+        if session.account_id != request.account_id:
+            raise _error(
+                _PAPER_FLAVOR,
+                "SESSION_ACCOUNT_MISMATCH",
+                "paper session belongs to a different account",
+                session_id=request.session_id,
+                session_account_id=session.account_id,
+            )
+        return self._engine.history(request)

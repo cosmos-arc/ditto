@@ -12,6 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_apps.models.account_ledger import (
     CashSnapshotResponse,
+    HistoryPointResponse,
+    HistorySegmentResponse,
+    LedgerRevisionResponse,
     PortfolioPositionSnapshotResponse,
 )
 
@@ -23,6 +26,8 @@ __all__ = [
     "PaperAccountReceiptResponse",
     "PaperExecutionReceiptResponse",
     "PaperFillAssumptionBody",
+    "PaperHistoryQueryParams",
+    "PaperHistoryResponse",
     "PaperInstrumentRulesBody",
     "PaperMarketSnapshotBody",
     "PaperReconciliationResponse",
@@ -376,3 +381,46 @@ class PaperRecoverResponse(BaseModel):
 
     idempotency_key: str
     recovered_execution_count: int
+
+
+_QUERY_CONFIG = ConfigDict(extra="forbid")
+
+
+class PaperHistoryQueryParams(BaseModel):
+    """
+    GET query identity for one exact PAPER historical series.
+
+    Query strings arrive as plain text, so coercion stays lax here; the
+    application query still rejects every invalid identity fail-closed.
+    """
+
+    model_config = _QUERY_CONFIG
+
+    session_id: str = Field(min_length=1)
+    start_date: date = Field(strict=False)
+    end_date: date = Field(strict=False)
+    knowledge_cutoff: datetime = Field(strict=False)
+    publication_cutoff: datetime = Field(strict=False)
+    source_snapshot_ids: tuple[str, ...] = Field(min_length=1, strict=False)
+    ledger_event_count: int = Field(ge=1, strict=False)
+    ledger_hash: str = Field(min_length=1)
+
+
+class PaperHistoryResponse(BaseModel):
+    """Complete replayable historical result for one session-bound PAPER account."""
+
+    model_config = _RESPONSE_CONFIG
+
+    result_id: str
+    account_id: str
+    currency: Literal["CNY"]
+    start_date: str
+    end_date: str
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    source_snapshot_ids: tuple[str, ...]
+    ledger_revision: LedgerRevisionResponse
+    method: str
+    valuation_policy_version: str
+    points: tuple[HistoryPointResponse, ...]
+    segments: tuple[HistorySegmentResponse, ...]

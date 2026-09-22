@@ -74,5 +74,19 @@ export const tradingKeys = {
 			identity.ledger_hash,
 		] as const,
 	paperLedger: (accountId: string, asOf: string) => [...tradingKeys.all, "paper-account", accountId, asOf] as const,
+	paperHistory: (accountId: string, sessionId: string, identity: ManualHistoryQueryIdentity) =>
+		[
+			...tradingKeys.all,
+			"paper-history",
+			accountId,
+			sessionId,
+			identity.start_date,
+			identity.end_date,
+			identity.knowledge_cutoff,
+			identity.publication_cutoff,
+			identity.source_snapshot_ids.join(","),
+			identity.ledger_event_count,
+			identity.ledger_hash,
+		] as const,
 	paperSession: (sessionId: string) => [...tradingKeys.all, "paper-session", sessionId] as const,
 } as const;

@@ -40,7 +40,10 @@ from ditto_application.queries.portfolio_comparison_evidence import (
 from ditto_application.queries.portfolio_comparison_source import (
     LivePortfolioComparisonSource,
 )
-from ditto_application.queries.portfolio_history import GetManualHistoryQuery
+from ditto_application.queries.portfolio_history import (
+    GetManualHistoryQuery,
+    GetPaperHistoryQuery,
+)
 from ditto_application.queries.portfolio_scenario import PreviewPortfolioScenarioQuery
 from ditto_application.queries.signal import SignalQueryFacade
 from ditto_application.queries.strategy import StrategyQueryFacade
@@ -99,6 +102,22 @@ class AppPortfolioQueryProvider(Provider):
         """Replay one MANUAL ledger revision into flow-adjusted returns."""
         return GetManualHistoryQuery(
             journal=journal,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
+        )
+
+    @provide
+    def paper_history_query(
+        self,
+        journal: AccountEventJournalPort,
+        paper_store: PaperSessionStorePort,
+        snapshot_reader: ProviderSnapshotReader,
+        valuation_source: TechnicalAnalysisSourcePort,
+    ) -> GetPaperHistoryQuery:
+        """Replay one session-bound PAPER ledger revision into returns."""
+        return GetPaperHistoryQuery(
+            journal=journal,
+            session_store=paper_store,
             snapshot_reader=snapshot_reader,
             valuation_source=valuation_source,
         )

@@ -18,8 +18,8 @@ from ditto_application.commands.account_ledger import (
     TradeEventTerms,
 )
 from ditto_application.queries.portfolio_history import (
+    AccountHistoryRequest,
     GetManualHistoryQuery,
-    ManualHistoryRequest,
 )
 from ditto_apps.registry.container import make_app_container
 from ditto_data.catalog import DataAssetRef
@@ -172,8 +172,8 @@ def _request(
     revision_hash: str,
     *,
     event_count: int = 3,
-) -> ManualHistoryRequest:
-    return ManualHistoryRequest(
+) -> AccountHistoryRequest:
+    return AccountHistoryRequest(
         account_id=ACCOUNT_ID,
         start_date="2026-03-02",
         end_date="2026-03-04",

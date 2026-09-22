@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
 	createPaperAccount,
 	createPaperSession,
+	fetchPaperAccountHistory,
 	fetchPaperAccountLedger,
 	fetchPaperSession,
 	operatePaperOrder,
@@ -16,6 +17,7 @@ import {
 	recoverPaperSession,
 } from "../api/paper-accounts";
 import { tradingKeys } from "../api/query-keys";
+import { AccountHistoryPanel } from "./account-history-panel";
 import { AccountIdentityStrip } from "./account-identity-strip";
 
 const INPUT_CLASS =
@@ -783,6 +785,21 @@ export function PaperAccountWorkspace({
 					</div>
 					<div className="grid content-start gap-4">
 						<FillInspector execution={selectedExecution} />
+						<AccountHistoryPanel
+							scopeLabel="模拟成交（Paper）"
+							scopeNote={`只读重放：模拟账本修订 ${ledger.snapshot.event_count} 条事件；会话 ${selectedSessionId} 已绑定账户，不读取实盘账本`}
+							asOf={session.session.trade_date}
+							ledgerRevision={{
+								event_count: ledger.snapshot.event_count,
+								ledger_hash: ledger.snapshot.ledger_hash,
+							}}
+							queryKeyFor={(identity) =>
+								tradingKeys.paperHistory(ledger.account.account_id, selectedSessionId, identity)
+							}
+							fetchHistory={(identity) =>
+								fetchPaperAccountHistory(ledger.account.account_id, selectedSessionId, identity)
+							}
+						/>
 						<DriftAttribution executions={session.executions} />
 						<section className="rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-panel-base) p-4">
 							<div className="grid gap-2 sm:grid-cols-3">

@@ -21,6 +21,7 @@ import type {
 	ManualHistoryQuality,
 	ManualHistoryQueryIdentity,
 	ManualLedgerRevision,
+	PaperAccountHistory,
 	PaperAccountIdentity,
 	PaperAccountLedger,
 	PaperAccountReceipt,
@@ -383,7 +384,23 @@ export function parseManualAccountHistory(
 	expectedAccountId: string,
 	identity: ManualHistoryQueryIdentity,
 ): ManualAccountHistory {
-	const boundary = "manualAccountHistory";
+	return parseAccountHistoryPayload(value, "manualAccountHistory", expectedAccountId, identity);
+}
+
+export function parsePaperAccountHistory(
+	value: unknown,
+	expectedAccountId: string,
+	identity: ManualHistoryQueryIdentity,
+): PaperAccountHistory {
+	return parseAccountHistoryPayload(value, "paperAccountHistory", expectedAccountId, identity);
+}
+
+function parseAccountHistoryPayload(
+	value: unknown,
+	boundary: string,
+	expectedAccountId: string,
+	identity: ManualHistoryQueryIdentity,
+): ManualAccountHistory {
 	const record = recordValue(value, boundary);
 	sameValue(record["account_id"], expectedAccountId, boundary, "account_id");
 	sameValue(record["start_date"], identity.start_date, boundary, "start_date");

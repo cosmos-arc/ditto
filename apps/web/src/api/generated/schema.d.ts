@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 3232913782106099dc9828a17cb2fa5cd870dc90cd291db2a4600269d9d2e027
+ * Schema SHA-256: 5bc8b8a8943a6acea18f1303ce9835f357c348f83af65cb34dab6142566c5a57
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2597,6 +2597,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/paper/accounts/{account_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Paper Account History
+         * @description Replay one session-bound PAPER revision into a return series.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["paper_get_account_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/paper/accounts/{account_id}/ledger": {
         parameters: {
             query?: never;
@@ -4517,6 +4539,13 @@ export interface components {
         APIResponse_PaperExecutionReceiptResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["PaperExecutionReceiptResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperHistoryResponse] */
+        APIResponse_PaperHistoryResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperHistoryResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -13181,6 +13210,46 @@ export interface components {
             trade_date: string;
             /** Transfer Fee */
             transfer_fee: number;
+        };
+        /**
+         * PaperHistoryResponse
+         * @description Complete replayable historical result for one session-bound PAPER account.
+         */
+        PaperHistoryResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** End Date */
+            end_date: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            ledger_revision: components["schemas"]["LedgerRevisionResponse"];
+            /** Method */
+            method: string;
+            /** Points */
+            points: components["schemas"]["HistoryPointResponse"][];
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Result Id */
+            result_id: string;
+            /** Segments */
+            segments: components["schemas"]["HistorySegmentResponse"][];
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Start Date */
+            start_date: string;
+            /** Valuation Policy Version */
+            valuation_policy_version: string;
         };
         /**
          * PaperInstrumentRulesBody
@@ -26860,6 +26929,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_PaperAccountReceiptResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    paper_get_account_history: {
+        parameters: {
+            query: {
+                session_id: string;
+                start_date: string;
+                end_date: string;
+                knowledge_cutoff: string;
+                publication_cutoff: string;
+                source_snapshot_ids: string[];
+                ledger_event_count: number;
+                ledger_hash: string;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperHistoryResponse_"];
                 };
             };
             /** @description Bad request */
