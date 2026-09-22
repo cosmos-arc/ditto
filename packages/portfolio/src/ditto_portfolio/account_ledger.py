@@ -35,6 +35,7 @@ __all__ = [
     "AccountEventType",
     "AccountKind",
     "AccountLedgerError",
+    "FlowPosition",
     "ManualAccountEvent",
     "ManualCorrectionEvent",
     "ManualLedgerEvent",
@@ -69,6 +70,19 @@ class AccountEventSource(StrEnum):
     PAPER_ENGINE = "paper_engine"
 
 
+class FlowPosition(StrEnum):
+    """
+    Declared position of an external cash flow relative to the day close.
+
+    Legacy events carry ``None``; their timing is unknown and return
+    calculations must fail that sub-period closed instead of guessing.
+    """
+
+    START_OF_DAY = "start_of_day"
+    END_OF_DAY = "end_of_day"
+    INTRADAY = "intraday"
+
+
 class AccountEventType(StrEnum):
     """Append-only v1 account event vocabulary."""
 
@@ -92,6 +106,9 @@ class AccountEventType(StrEnum):
 
 
 _TRADE_TYPES = frozenset({AccountEventType.BUY, AccountEventType.SELL})
+_EXTERNAL_FLOW_TYPES = frozenset(
+    {AccountEventType.DEPOSIT, AccountEventType.WITHDRAWAL}
+)
 _POSITION_IN_TYPES = frozenset(
     {AccountEventType.OPENING_POSITION, AccountEventType.TRANSFER_IN}
 )
@@ -197,6 +214,7 @@ class AccountEventDraft:
     fees: Decimal = _ZERO
     tax: Decimal = _ZERO
     net_cash: Decimal | None = None
+    flow_position: FlowPosition | None = None
     note: str = ""
     attachment_refs: tuple[str, ...] = ()
     external_reference: str | None = None
@@ -227,6 +245,7 @@ class AccountEvent:
     fees: Decimal
     tax: Decimal
     net_cash: Decimal
+    flow_position: FlowPosition | None = None
     note: str
     attachment_refs: tuple[str, ...]
     external_reference: str | None
@@ -344,6 +363,9 @@ def create_account_event(
         "corrects_event_id": draft.corrects_event_id,
         "replacement_event_type": draft.replacement_event_type,
     }
+    if draft.flow_position is not None:
+        # Absent-when-unset keeps pre-#260 event hashes byte-stable.
+        values["flow_position"] = draft.flow_position
     _validate_event_values(values)
     event_hash = _event_hash(values)
     event_class: type[AccountEvent]
@@ -375,6 +397,7 @@ def create_account_event(
         fees=normalized_fees,
         tax=normalized_tax,
         net_cash=normalized_net_cash,
+        flow_position=draft.flow_position,
         note=draft.note,
         attachment_refs=tuple(draft.attachment_refs),
         external_reference=draft.external_reference,
@@ -395,6 +418,14 @@ def _validate_event_values(values: Mapping[str, object]) -> None:
     if event_type is AccountEventType.REVERSAL:
         _validate_reversal(values)
         return
+    effective_type = values["replacement_event_type"] or event_type
+    if not isinstance(effective_type, AccountEventType):
+        raise AccountLedgerError("replacement_event_type is invalid")
+    flow_position = values.get("flow_position")
+    if flow_position is not None and effective_type not in _EXTERNAL_FLOW_TYPES:
+        raise AccountLedgerError(
+            "flow_position is only valid on deposit or withdrawal events"
+        )
     if event_type is AccountEventType.CORRECTION:
         _validate_correction(values)
         return
@@ -529,7 +560,7 @@ def _derived_net_cash(
 
 
 def _event_values(event: AccountEvent) -> dict[str, object]:
-    return {
+    values: dict[str, object] = {
         "event_id": event.event_id,
         "account_id": event.account_id,
         "account_kind": event.account_kind,
@@ -555,6 +586,9 @@ def _event_values(event: AccountEvent) -> dict[str, object]:
         "corrects_event_id": event.corrects_event_id,
         "replacement_event_type": event.replacement_event_type,
     }
+    if event.flow_position is not None:
+        values["flow_position"] = event.flow_position
+    return values
 
 
 def _event_hash(values: Mapping[str, object]) -> str:

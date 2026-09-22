@@ -26,6 +26,7 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    FlowPosition,
     create_account_event,
 )
 
@@ -318,6 +319,9 @@ def _serialize_event(event: AccountEvent) -> str:
         ),
         "event_hash": event.event_hash,
     }
+    if event.flow_position is not None:
+        # Absent-when-unset keeps pre-#260 payloads byte-stable.
+        payload["flow_position"] = event.flow_position.value
     return orjson.dumps(payload, option=orjson.OPT_SORT_KEYS).decode()
 
 
@@ -336,6 +340,7 @@ def _deserialize_event(payload_json: str, account: AccountDefinition) -> Account
     ):
         raise ValueError("attachment_refs must be a sequence")
     attachments = tuple(str(item) for item in cast("Sequence[object]", attachment_raw))
+    flow_position_raw = _optional_text(payload, "flow_position")
     event = create_account_event(
         account=account,
         draft=AccountEventDraft(
@@ -355,6 +360,11 @@ def _deserialize_event(payload_json: str, account: AccountDefinition) -> Account
             fees=Decimal(_text(payload, "fees")),
             tax=Decimal(_text(payload, "tax")),
             net_cash=Decimal(_text(payload, "net_cash")),
+            flow_position=(
+                FlowPosition(flow_position_raw)
+                if flow_position_raw is not None
+                else None
+            ),
             note=_text(payload, "note"),
             attachment_refs=attachments,
             external_reference=_optional_text(payload, "external_reference"),

@@ -13,6 +13,7 @@ from ditto_portfolio.account_ledger import (
     AccountEvent,
     AccountEventJournalPort,
     AccountLedgerError,
+    ledger_hash,
 )
 from ditto_portfolio.account_projection import (
     AccountLedgerRebuilder,
@@ -21,7 +22,19 @@ from ditto_portfolio.account_projection import (
 
 from ditto_application.exceptions import AppQueryError
 
-__all__ = ["AccountLedgerQuery", "AccountLedgerReadModel"]
+__all__ = [
+    "AccountLedgerQuery",
+    "AccountLedgerReadModel",
+    "LedgerRevision",
+]
+
+
+@dataclass(frozen=True, kw_only=True)
+class LedgerRevision:
+    """Append-order prefix identity of one complete ledger stream."""
+
+    event_count: int
+    ledger_hash: str
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -31,6 +44,7 @@ class AccountLedgerReadModel:
     account: AccountDefinition
     events: tuple[AccountEvent, ...]
     snapshot: PortfolioSnapshot
+    ledger_revision: LedgerRevision
 
 
 class AccountLedgerQuery:
@@ -69,11 +83,8 @@ class AccountLedgerQuery:
                 code="ACCOUNT_NOT_FOUND",
                 account_id=account_id,
             )
-        events = tuple(
-            event
-            for event in self._journal.list_events(account_id)
-            if event.trade_date <= as_of
-        )
+        full_stream = tuple(self._journal.list_events(account_id))
+        events = tuple(event for event in full_stream if event.trade_date <= as_of)
         try:
             snapshot = self._rebuilder.rebuild(
                 account=account,
@@ -93,6 +104,10 @@ class AccountLedgerQuery:
             account=account,
             events=events,
             snapshot=snapshot,
+            ledger_revision=LedgerRevision(
+                event_count=len(full_stream),
+                ledger_hash=ledger_hash(full_stream),
+            ),
         )
 
     def get_manual(

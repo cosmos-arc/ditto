@@ -11,6 +11,7 @@ from ditto_execution.contracts import (
     PositionDataPort,
 )
 from ditto_execution.paper.session import PaperSessionStorePort
+from ditto_portfolio.account_ledger import AccountEventJournalPort
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -39,6 +40,7 @@ from ditto_application.queries.portfolio_comparison_evidence import (
 from ditto_application.queries.portfolio_comparison_source import (
     LivePortfolioComparisonSource,
 )
+from ditto_application.queries.portfolio_history import GetManualHistoryQuery
 from ditto_application.queries.portfolio_scenario import PreviewPortfolioScenarioQuery
 from ditto_application.queries.signal import SignalQueryFacade
 from ditto_application.queries.strategy import StrategyQueryFacade
@@ -86,6 +88,20 @@ class AppPortfolioQueryProvider(Provider):
     ) -> PreviewPortfolioScenarioQuery:
         """Expose deterministic read-only scenario previews."""
         return PreviewPortfolioScenarioQuery(comparison=comparison)
+
+    @provide
+    def manual_history_query(
+        self,
+        journal: AccountEventJournalPort,
+        snapshot_reader: ProviderSnapshotReader,
+        valuation_source: TechnicalAnalysisSourcePort,
+    ) -> GetManualHistoryQuery:
+        """Replay one MANUAL ledger revision into flow-adjusted returns."""
+        return GetManualHistoryQuery(
+            journal=journal,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
+        )
 
     @provide
     def portfolio_comparison_evidence_query(

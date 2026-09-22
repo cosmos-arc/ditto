@@ -16,6 +16,7 @@ import {
 import { tradingKeys } from "../api/query-keys";
 import { AccountIdentityStrip } from "./account-identity-strip";
 import { ManualAccountEventComposer } from "./manual-account-event-composer";
+import { ManualHistoryPanel } from "./manual-history-panel";
 
 const INPUT_CLASS =
 	"rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-sm text-(--color-foreground) disabled:opacity-60";
@@ -517,6 +518,11 @@ export function ManualAccountWorkspace({
 						{message}
 					</div>
 				)}
+				<ManualHistoryPanel
+					accountId={account.account_id}
+					asOf={effectiveAsOf}
+					ledgerRevision={ledgerQuery.data.ledger_revision}
+				/>
 				<div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.75fr)]">
 					<div className="grid content-start gap-4">
 						<ManualAccountEventComposer

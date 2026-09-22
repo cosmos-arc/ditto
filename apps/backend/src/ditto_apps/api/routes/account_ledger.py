@@ -24,6 +24,10 @@ from ditto_application.exceptions import (
     AppQueryError,
 )
 from ditto_application.queries.account_ledger import AccountLedgerQuery
+from ditto_application.queries.portfolio_history import (
+    GetManualHistoryQuery,
+    ManualHistoryRequest,
+)
 from fastapi import APIRouter, Path, Query, status
 
 from ditto_apps.api.errors import (
@@ -37,6 +41,8 @@ from ditto_apps.models.account_ledger import (
     CorrectManualEventBody,
     CreateManualAccountBody,
     ManualEventBody,
+    ManualHistoryQueryParams,
+    ManualHistoryResponse,
     ReverseManualEventBody,
 )
 from ditto_apps.models.common import APIResponse
@@ -76,6 +82,11 @@ def _event_input(body: ManualEventBody) -> ManualEventInput:
         fees=body.fees,
         tax=body.tax,
         net_cash=body.net_cash,
+        flow_position=(
+            ManualEventInput.parse_flow_position(body.flow_position)
+            if body.flow_position
+            else None
+        ),
         note=body.note,
         attachment_refs=body.attachment_refs,
         external_reference=body.external_reference,
@@ -211,3 +222,39 @@ async def get_manual_account_ledger(
     except AppQueryError as exc:
         _raise_query_error(exc)
     return APIResponse(data=AccountLedgerResponse.model_validate(result))
+
+
+@router.get(
+    "/{account_id}/history",
+    response_model=APIResponse[ManualHistoryResponse],
+    operation_id="manual_get_history",
+)
+@inject
+async def get_manual_account_history(
+    params: Annotated[ManualHistoryQueryParams, Query()],
+    query: Annotated[GetManualHistoryQuery, FromComponent()],
+    account_id: Annotated[str, Path(min_length=1)],
+) -> APIResponse[ManualHistoryResponse]:
+    """Replay one exact ledger revision into a flow-adjusted return series."""
+    try:
+        result = await asyncio.to_thread(
+            query.history,
+            ManualHistoryRequest(
+                account_id=account_id,
+                start_date=params.start_date.isoformat(),
+                end_date=params.end_date.isoformat(),
+                knowledge_cutoff=params.knowledge_cutoff,
+                publication_cutoff=params.publication_cutoff,
+                source_snapshot_ids=tuple(params.source_snapshot_ids),
+                ledger_event_count=params.ledger_event_count,
+                ledger_hash=params.ledger_hash,
+            ),
+        )
+    except (AppQueryError, ValueError) as exc:
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("code", "MANUAL_HISTORY_INVALID"))
+            if isinstance(exc, AppQueryError)
+            else "MANUAL_HISTORY_INVALID",
+        ) from exc
+    return APIResponse(data=ManualHistoryResponse.model_validate(result))

@@ -17,6 +17,8 @@ export type ManualBusinessEventType =
 
 export type ManualAccountEventType = ManualBusinessEventType | "reversal" | "correction";
 
+export type ManualFlowPosition = "start_of_day" | "end_of_day" | "intraday";
+
 export interface CreateManualAccountBody {
 	account_id: string;
 	currency: "CNY";
@@ -40,6 +42,7 @@ export interface ManualEventBody {
 	settlement_date: string;
 	tax: number | string;
 	trade_date: string;
+	flow_position?: ManualFlowPosition | null;
 }
 
 export interface CorrectManualEventBody {
@@ -76,6 +79,7 @@ export interface ManualAccountEvent {
 	readonly event_type: ManualAccountEventType;
 	readonly external_reference: string | null;
 	readonly fees: string;
+	readonly flow_position: ManualFlowPosition | null;
 	readonly gross_amount: string;
 	readonly idempotency_key: string;
 	readonly instrument_id: number | null;
@@ -127,10 +131,80 @@ export interface ManualPortfolioSnapshot {
 	readonly valuation_complete: boolean;
 }
 
+export interface ManualLedgerRevision {
+	readonly event_count: number;
+	readonly ledger_hash: string;
+}
+
 export interface ManualAccountLedger {
 	readonly account: ManualAccount;
 	readonly events: readonly ManualAccountEvent[];
+	readonly ledger_revision: ManualLedgerRevision;
 	readonly snapshot: ManualPortfolioSnapshot;
+}
+
+export interface ManualHistoryQuality {
+	readonly code: string;
+	readonly detail: string;
+}
+
+export interface ManualHistoryPoint {
+	readonly on_date: string;
+	readonly valuation_instant: string;
+	readonly total_value: string | null;
+	readonly cash: string | null;
+	readonly external_flow: string;
+	readonly period_return: string | null;
+	readonly cumulative_return: string | null;
+	readonly segment_id: number | null;
+	readonly price_time: string | null;
+	readonly stale: boolean;
+	readonly source_snapshot_ids: readonly string[];
+	readonly quality: readonly ManualHistoryQuality[];
+}
+
+export type ManualHistoryClosedReason =
+	| "range_end"
+	| "loss_to_zero"
+	| "full_withdrawal"
+	| "valuation_gap"
+	| "negative_equity";
+
+export interface ManualHistorySegment {
+	readonly segment_id: number;
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly start_value: string;
+	readonly end_value: string;
+	readonly linked_return: string | null;
+	readonly closed_reason: ManualHistoryClosedReason;
+	readonly quality: readonly ManualHistoryQuality[];
+}
+
+export interface ManualAccountHistory {
+	readonly result_id: string;
+	readonly account_id: string;
+	readonly currency: "CNY";
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly knowledge_cutoff: string;
+	readonly publication_cutoff: string;
+	readonly source_snapshot_ids: readonly string[];
+	readonly ledger_revision: ManualLedgerRevision;
+	readonly method: string;
+	readonly valuation_policy_version: string;
+	readonly points: readonly ManualHistoryPoint[];
+	readonly segments: readonly ManualHistorySegment[];
+}
+
+export interface ManualHistoryQueryIdentity {
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly knowledge_cutoff: string;
+	readonly publication_cutoff: string;
+	readonly source_snapshot_ids: readonly string[];
+	readonly ledger_event_count: number;
+	readonly ledger_hash: string;
 }
 
 export interface ManualAccountReceipt {

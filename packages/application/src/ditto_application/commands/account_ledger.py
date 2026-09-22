@@ -19,6 +19,7 @@ from ditto_portfolio.account_ledger import (
     AccountEventType,
     AccountKind,
     AccountLedgerError,
+    FlowPosition,
     create_account_event,
 )
 from ditto_portfolio.account_projection import AccountLedgerRebuilder
@@ -115,6 +116,7 @@ class ManualEventInput:
     fees: Decimal = Decimal("0")
     tax: Decimal = Decimal("0")
     net_cash: Decimal | None = None
+    flow_position: FlowPosition | None = None
     note: str = ""
     attachment_refs: tuple[str, ...] = ()
     external_reference: str | None = None
@@ -129,6 +131,14 @@ class ManualEventInput:
         if resolved_type in {AccountEventType.CORRECTION, AccountEventType.REVERSAL}:
             raise AppCommandError("business event cannot be a control event")
         return resolved_type
+
+    @staticmethod
+    def parse_flow_position(value: str) -> FlowPosition:
+        """Parse one declared external-flow position for hosts."""
+        try:
+            return FlowPosition(value)
+        except ValueError as exc:
+            raise AppCommandError(f"unknown flow position: {value}") from exc
 
     @classmethod
     def buy_or_sell(
@@ -175,8 +185,9 @@ class ManualEventInput:
         idempotency_key: str,
         actor: str,
         amount: Decimal,
+        flow_position: FlowPosition | None = None,
     ) -> ManualEventInput:
-        """Build a cash-only manual event."""
+        """Build a cash-only manual event with an optional flow position."""
         return cls(
             event_type=AccountEventType(event_type),
             trade_date=trade_date,
@@ -184,6 +195,7 @@ class ManualEventInput:
             idempotency_key=idempotency_key,
             actor=actor,
             gross_amount=amount,
+            flow_position=flow_position,
         )
 
 
@@ -419,6 +431,7 @@ def _event_draft(
         fees=input_.fees,
         tax=input_.tax,
         net_cash=input_.net_cash,
+        flow_position=input_.flow_position,
         note=input_.note,
         attachment_refs=input_.attachment_refs,
         external_reference=input_.external_reference,
