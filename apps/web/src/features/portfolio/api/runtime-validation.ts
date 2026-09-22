@@ -13,9 +13,14 @@ import type {
 	AccountPositionSnapshot,
 	ManualAccount,
 	ManualAccountEvent,
+	ManualAccountHistory,
 	ManualAccountLedger,
 	ManualAccountReceipt,
 	ManualBusinessEventType,
+	ManualHistoryPoint,
+	ManualHistoryQuality,
+	ManualHistoryQueryIdentity,
+	ManualLedgerRevision,
 	PaperAccountIdentity,
 	PaperAccountLedger,
 	PaperAccountReceipt,
@@ -53,6 +58,8 @@ const MANUAL_BUSINESS_EVENT_TYPES = [
 ] as const satisfies readonly ManualBusinessEventType[];
 
 const MANUAL_EVENT_TYPES = [...MANUAL_BUSINESS_EVENT_TYPES, "reversal", "correction"] as const;
+
+const MANUAL_FLOW_POSITIONS = ["start_of_day", "end_of_day", "intraday"] as const;
 
 type ManualReceiptExpectation =
 	| { readonly accountId: string; readonly kind: "account" }
@@ -205,6 +212,10 @@ function parseManualEvent(value: unknown, accountId: string, boundary: string): 
 		event_type: eventType,
 		external_reference: nullableTextValue(record, "external_reference", boundary),
 		fees: decimalValue(record, "fees", boundary),
+		flow_position:
+			record["flow_position"] === null || record["flow_position"] === undefined
+				? null
+				: enumValue(record, "flow_position", MANUAL_FLOW_POSITIONS, boundary),
 		gross_amount: decimalValue(record, "gross_amount", boundary),
 		idempotency_key: stringValue(record, "idempotency_key", boundary),
 		instrument_id: nullableIntegerValue(record, "instrument_id", boundary),
@@ -305,7 +316,116 @@ export function parseManualAccountLedger(
 		events: arrayValue(record, "events", boundary).map((event, index) =>
 			parseManualEvent(event, expectedAccountId, `${boundary}.events.${index}`),
 		),
+		ledger_revision: parseLedgerRevision(record["ledger_revision"], `${boundary}.ledger_revision`),
 		snapshot: parseManualSnapshot(record["snapshot"], expectedAccountId, expectedAsOf, `${boundary}.snapshot`),
+	};
+}
+
+function parseLedgerRevision(value: unknown, boundary: string): ManualLedgerRevision {
+	const record = recordValue(value, boundary);
+	return {
+		event_count: finiteNumberValue(record, "event_count", boundary),
+		ledger_hash: stringValue(record, "ledger_hash", boundary),
+	};
+}
+
+function sameInstant(actual: unknown, expected: string, boundary: string, field: string): void {
+	if (typeof actual !== "string" || !Number.isFinite(Date.parse(actual))) {
+		throw new RuntimeValidationError(boundary, field, "expected an RFC3339 timestamp");
+	}
+	if (Date.parse(actual) !== Date.parse(expected)) {
+		throw new RuntimeValidationError(boundary, field, `${field} instant mismatch`);
+	}
+}
+
+function parseHistoryQuality(value: unknown, boundary: string): ManualHistoryQuality {
+	const record = recordValue(value, boundary);
+	return {
+		code: stringValue(record, "code", boundary),
+		detail: typeof record["detail"] === "string" ? record["detail"] : "",
+	};
+}
+
+function parseHistoryQualities(
+	record: Readonly<Record<string, unknown>>,
+	field: string,
+	boundary: string,
+): ManualHistoryQuality[] {
+	return arrayValue(record, field, boundary).map((item, index) =>
+		parseHistoryQuality(item, `${boundary}.${field}.${index}`),
+	);
+}
+
+function nullableDecimal(record: Readonly<Record<string, unknown>>, field: string, boundary: string): string | null {
+	return record[field] === null ? null : decimalValue(record, field, boundary);
+}
+
+function parseHistoryPoint(value: unknown, boundary: string): ManualHistoryPoint {
+	const record = recordValue(value, boundary);
+	return {
+		on_date: stringValue(record, "on_date", boundary),
+		valuation_instant: stringValue(record, "valuation_instant", boundary),
+		total_value: nullableDecimal(record, "total_value", boundary),
+		cash: nullableDecimal(record, "cash", boundary),
+		external_flow: decimalValue(record, "external_flow", boundary),
+		period_return: nullableDecimal(record, "period_return", boundary),
+		cumulative_return: nullableDecimal(record, "cumulative_return", boundary),
+		segment_id: record["segment_id"] === null ? null : integerValue(record, "segment_id", boundary),
+		price_time: nullableTextValue(record, "price_time", boundary),
+		stale: booleanValue(record, "stale", boundary),
+		source_snapshot_ids: parseStringArray(record, "source_snapshot_ids", boundary),
+		quality: parseHistoryQualities(record, "quality", boundary),
+	};
+}
+
+export function parseManualAccountHistory(
+	value: unknown,
+	expectedAccountId: string,
+	identity: ManualHistoryQueryIdentity,
+): ManualAccountHistory {
+	const boundary = "manualAccountHistory";
+	const record = recordValue(value, boundary);
+	sameValue(record["account_id"], expectedAccountId, boundary, "account_id");
+	sameValue(record["start_date"], identity.start_date, boundary, "start_date");
+	sameValue(record["end_date"], identity.end_date, boundary, "end_date");
+	sameInstant(record["knowledge_cutoff"], identity.knowledge_cutoff, boundary, "knowledge_cutoff");
+	sameInstant(record["publication_cutoff"], identity.publication_cutoff, boundary, "publication_cutoff");
+	const ledgerRevision = parseLedgerRevision(record["ledger_revision"], `${boundary}.ledger_revision`);
+	sameValue(ledgerRevision.ledger_hash, identity.ledger_hash, `${boundary}.ledger_revision`, "ledger_hash");
+	return {
+		result_id: stringValue(record, "result_id", boundary),
+		account_id: expectedAccountId,
+		currency: enumValue(record, "currency", ["CNY"] as const, boundary),
+		start_date: identity.start_date,
+		end_date: identity.end_date,
+		knowledge_cutoff: identity.knowledge_cutoff,
+		publication_cutoff: identity.publication_cutoff,
+		source_snapshot_ids: parseStringArray(record, "source_snapshot_ids", boundary),
+		ledger_revision: ledgerRevision,
+		method: stringValue(record, "method", boundary),
+		valuation_policy_version: stringValue(record, "valuation_policy_version", boundary),
+		points: arrayValue(record, "points", boundary).map((point, index) =>
+			parseHistoryPoint(point, `${boundary}.points.${index}`),
+		),
+		segments: arrayValue(record, "segments", boundary).map((segment, index) => {
+			const segmentBoundary = `${boundary}.segments.${index}`;
+			const segmentRecord = recordValue(segment, segmentBoundary);
+			return {
+				segment_id: finiteNumberValue(segmentRecord, "segment_id", segmentBoundary),
+				start_date: stringValue(segmentRecord, "start_date", segmentBoundary),
+				end_date: stringValue(segmentRecord, "end_date", segmentBoundary),
+				start_value: decimalValue(segmentRecord, "start_value", segmentBoundary),
+				end_value: decimalValue(segmentRecord, "end_value", segmentBoundary),
+				linked_return: nullableDecimal(segmentRecord, "linked_return", segmentBoundary),
+				closed_reason: enumValue(
+					segmentRecord,
+					"closed_reason",
+					["range_end", "loss_to_zero", "full_withdrawal", "valuation_gap", "negative_equity"] as const,
+					segmentBoundary,
+				),
+				quality: parseHistoryQualities(segmentRecord, "quality", segmentBoundary),
+			};
+		}),
 	};
 }
 

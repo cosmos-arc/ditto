@@ -37,6 +37,7 @@ const ledger: Ledger = {
 			gross_amount: "100000.00",
 			idempotency_key: "opening-cash-001",
 			instrument_id: null,
+			flow_position: null,
 			net_cash: "100000.00",
 			note: "券商对账单期初余额",
 			price: "0.0000",
@@ -50,6 +51,10 @@ const ledger: Ledger = {
 			trade_date: "2026-08-01",
 		},
 	],
+	ledger_revision: {
+		event_count: 3,
+		ledger_hash: "account-ledger:sha256:ledger-001",
+	},
 	snapshot: {
 		account_id: "manual-a",
 		account_kind: "manual",

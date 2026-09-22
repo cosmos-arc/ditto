@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 import orjson
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
-from ditto_data.query.contracts import DatasetSnapshot, PITQueryContext
+from ditto_data.query.contracts import PITQueryContext
 from ditto_execution.paper.session import PaperSessionStorePort
 from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_kernel.identity import InstrumentId
@@ -26,6 +26,7 @@ from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.account_ledger import AccountLedgerQuery
+from ditto_application.queries.pit_snapshots import group_dataset_snapshots
 from ditto_application.queries.portfolio_comparison import (
     PortfolioComparisonRequest,
     PortfolioComparisonSource,
@@ -63,35 +64,6 @@ def _error(code: str, reason: str, **details: object) -> AppQueryError:
     )
 
 
-def _dataset_snapshots(
-    snapshots: tuple[ProviderSnapshot, ...],
-) -> tuple[DatasetSnapshot, ...]:
-    grouped: dict[str, list[ProviderSnapshot]] = {}
-    for snapshot in snapshots:
-        grouped.setdefault(snapshot.dataset_id, []).append(snapshot)
-    result: list[DatasetSnapshot] = []
-    for dataset_id, values in sorted(grouped.items()):
-        versions = {item.schema_version for item in values}
-        if len(versions) != 1:
-            raise _error(
-                "PORTFOLIO_VALUATION_SCHEMA_MIXED",
-                "valuation snapshot set has mixed dataset versions",
-                dataset_id=dataset_id,
-            )
-        result.append(
-            DatasetSnapshot(
-                dataset_id=dataset_id,
-                dataset_version=next(iter(versions)),
-                source_snapshot_ids=tuple(
-                    item.snapshot_id
-                    for item in sorted(values, key=lambda item: item.snapshot_id)
-                ),
-                created_at=max(item.created_at for item in values),
-            )
-        )
-    return tuple(result)
-
-
 def _context(
     request: PortfolioComparisonRequest,
     snapshot_reader: ProviderSnapshotReader,
@@ -121,7 +93,11 @@ def _context(
             as_of=datetime.combine(as_of_date, time.max, tzinfo=_SHANGHAI),
             knowledge_cutoff=request.knowledge_cutoff,
             publication_cutoff=request.publication_cutoff,
-            source_snapshots=_dataset_snapshots(tuple(snapshots)),
+            source_snapshots=group_dataset_snapshots(
+                snapshots,
+                error=_error,
+                mixed_version_code="PORTFOLIO_VALUATION_SCHEMA_MIXED",
+            ),
         )
     except ValueError as exc:
         raise _error("PORTFOLIO_PIT_CONTEXT_INVALID", str(exc)) from exc

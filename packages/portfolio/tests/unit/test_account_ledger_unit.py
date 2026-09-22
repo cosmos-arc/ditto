@@ -14,10 +14,12 @@ from ditto_portfolio.account_ledger import (
     AccountEventType,
     AccountKind,
     AccountLedgerError,
+    FlowPosition,
     ManualCorrectionEvent,
     ManualLedgerEvent,
     ManualReversalEvent,
     create_account_event,
+    ledger_event_values,
 )
 from ditto_portfolio.account_projection import AccountLedgerRebuilder
 
@@ -45,6 +47,7 @@ def _event(
     fees: str = "0",
     tax: str = "0",
     net_cash: str | None = None,
+    flow_position: FlowPosition | None = None,
     reverses_event_id: str | None = None,
     corrects_event_id: str | None = None,
     replacement_event_type: AccountEventType | None = None,
@@ -69,6 +72,7 @@ def _event(
             fees=Decimal(fees),
             tax=Decimal(tax),
             net_cash=None if net_cash is None else Decimal(net_cash),
+            flow_position=flow_position,
             reverses_event_id=reverses_event_id,
             corrects_event_id=corrects_event_id,
             replacement_event_type=replacement_event_type,
@@ -433,3 +437,49 @@ def test_settlement_date_cannot_precede_trade_date() -> None:
             gross_amount="100",
             settlement_date="2026-08-30",
         )
+
+
+def test_flow_position_is_accepted_on_deposits_and_withdrawals_only() -> None:
+    deposit = _event(
+        event_type=AccountEventType.DEPOSIT,
+        event_id="deposit-positioned",
+        gross_amount="1000",
+        flow_position=FlowPosition.START_OF_DAY,
+    )
+    assert deposit.flow_position is FlowPosition.START_OF_DAY
+
+    with pytest.raises(AccountLedgerError, match="flow_position"):
+        _event(
+            event_type=AccountEventType.BUY,
+            event_id="buy-positioned",
+            instrument_id=InstrumentId(600519),
+            quantity="10",
+            price="10",
+            flow_position=FlowPosition.END_OF_DAY,
+        )
+    with pytest.raises(AccountLedgerError, match="flow_position"):
+        _event(
+            event_type=AccountEventType.FEE,
+            event_id="fee-positioned",
+            gross_amount="1",
+            flow_position=FlowPosition.END_OF_DAY,
+        )
+
+
+def test_unset_flow_position_keeps_pre260_event_hash_byte_stable() -> None:
+    legacy = _event(
+        event_type=AccountEventType.DEPOSIT,
+        event_id="legacy-deposit",
+        gross_amount="1000",
+    )
+    positioned = _event(
+        event_type=AccountEventType.DEPOSIT,
+        event_id="legacy-deposit",
+        gross_amount="1000",
+        flow_position=FlowPosition.END_OF_DAY,
+    )
+
+    assert legacy.flow_position is None
+    assert "flow_position" not in ledger_event_values(legacy)
+    assert "flow_position" in ledger_event_values(positioned)
+    assert positioned.event_hash != legacy.event_hash

@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { ManualAccountEvent, ManualBusinessEventType, ManualEventBody } from "../api/manual-accounts";
+import type {
+	ManualAccountEvent,
+	ManualBusinessEventType,
+	ManualEventBody,
+	ManualFlowPosition,
+} from "../api/manual-accounts";
 
 const INPUT_CLASS =
 	"rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-sm text-(--color-foreground) disabled:opacity-60";
@@ -36,6 +41,7 @@ interface EventFormState {
 	readonly note: string;
 	readonly attachmentRefs: string;
 	readonly externalReference: string;
+	readonly flowPosition: string;
 }
 
 function emptyForm(asOf: string, event?: ManualAccountEvent): EventFormState {
@@ -56,6 +62,7 @@ function emptyForm(asOf: string, event?: ManualAccountEvent): EventFormState {
 		note: event?.note ?? "",
 		attachmentRefs: event?.attachment_refs.join(", ") ?? "",
 		externalReference: event?.external_reference ?? "",
+		flowPosition: event?.flow_position ?? "",
 	};
 }
 
@@ -89,6 +96,12 @@ function preview(form: EventFormState): { readonly netCash: number; readonly pos
 	return { netCash, positionDelta };
 }
 
+const FLOW_POSITION_OPTIONS: readonly { readonly value: ManualFlowPosition; readonly label: string }[] = [
+	{ value: "start_of_day", label: "开盘前" },
+	{ value: "end_of_day", label: "收盘后" },
+	{ value: "intraday", label: "盘中" },
+];
+
 function idempotencyKey(prefix: string): string {
 	return `${prefix}:${crypto.randomUUID()}`;
 }
@@ -113,6 +126,10 @@ function toBody(form: EventFormState, prefix: string): ManualEventBody {
 		settlement_date: form.settlementDate,
 		tax: form.tax || "0",
 		trade_date: form.tradeDate,
+		flow_position:
+			form.eventType === "deposit" || form.eventType === "withdrawal"
+				? (FLOW_POSITION_OPTIONS.find((option) => option.value === form.flowPosition)?.value ?? null)
+				: null,
 	};
 }
 
@@ -210,6 +227,24 @@ export function ManualAccountEventComposer({
 					value={form.externalReference}
 					onChange={(value) => change("externalReference", value)}
 				/>
+				{(form.eventType === "deposit" || form.eventType === "withdrawal") && (
+					<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
+						资金流时点
+						<select
+							aria-label="资金流时点"
+							className={INPUT_CLASS}
+							value={form.flowPosition}
+							onChange={(event) => change("flowPosition", event.currentTarget.value)}
+						>
+							<option value="">未声明（该日收益留空）</option>
+							{FLOW_POSITION_OPTIONS.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</select>
+					</label>
+				)}
 				<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary) sm:col-span-2">
 					附件引用（逗号分隔）
 					<input

@@ -66,6 +66,7 @@ __all__ = [
     "CashSnapshot",
     "PortfolioPositionSnapshot",
     "PortfolioSnapshot",
+    "resolve_effective_events",
 ]
 
 
@@ -157,7 +158,7 @@ class AccountLedgerRebuilder:
         _parse_date(as_of, "as_of")
         retained = tuple(event for event in events if event.trade_date <= as_of)
         self._validate_stream(account, retained)
-        active, replacements = self._resolve_controls(retained)
+        active, replacements = _resolve_controls(retained)
         projection = _ProjectionState(
             available_cash=_ZERO,
             settled_cash=_ZERO,
@@ -268,29 +269,6 @@ class AccountLedgerRebuilder:
             event_ids.add(event.event_id)
             idempotency_keys.add(event.idempotency_key)
             prior[event.event_id] = event
-
-    @staticmethod
-    def _resolve_controls(
-        events: tuple[AccountEvent, ...],
-    ) -> tuple[set[str], dict[str, AccountEvent]]:
-        suppressed: set[str] = set()
-        replacements: dict[str, AccountEvent] = {}
-        for event in reversed(events):
-            if event.event_id in suppressed:
-                continue
-            if event.event_type is AccountEventType.REVERSAL:
-                if event.reverses_event_id is not None:
-                    suppressed.add(event.reverses_event_id)
-            elif (
-                event.event_type is AccountEventType.CORRECTION
-                and event.corrects_event_id is not None
-            ):
-                suppressed.add(event.corrects_event_id)
-                replacements[event.corrects_event_id] = event
-        active = {
-            event.event_id for event in events if event.event_id not in suppressed
-        }
-        return active, replacements
 
     @staticmethod
     def _apply(
@@ -439,3 +417,52 @@ def _apply_corporate_action(
         realized_pnl=state.realized_pnl,
         total_fees=state.total_fees,
     )
+
+
+def _resolve_controls(
+    events: tuple[AccountEvent, ...],
+) -> tuple[set[str], dict[str, AccountEvent]]:
+    suppressed: set[str] = set()
+    replacements: dict[str, AccountEvent] = {}
+    for event in reversed(events):
+        if event.event_id in suppressed:
+            continue
+        if event.event_type is AccountEventType.REVERSAL:
+            if event.reverses_event_id is not None:
+                suppressed.add(event.reverses_event_id)
+        elif (
+            event.event_type is AccountEventType.CORRECTION
+            and event.corrects_event_id is not None
+        ):
+            suppressed.add(event.corrects_event_id)
+            replacements[event.corrects_event_id] = event
+    active = {event.event_id for event in events if event.event_id not in suppressed}
+    return active, replacements
+
+
+def resolve_effective_events(
+    events: Iterable[AccountEvent],
+) -> tuple[AccountEvent, ...]:
+    """
+    Return business events after reversal/correction resolution.
+
+    Corrected events are replaced by their correction payload applied with
+    the declared replacement type; reversed events disappear.  The returned
+    order matches the original application order.  Stream validation itself
+    belongs to :meth:`AccountLedgerRebuilder.rebuild`.
+    """
+    retained = tuple(events)
+    active, replacements = _resolve_controls(retained)
+    effective: list[AccountEvent] = []
+    for event in retained:
+        if event.event_type in {
+            AccountEventType.CORRECTION,
+            AccountEventType.REVERSAL,
+        }:
+            continue
+        replacement = replacements.get(event.event_id)
+        if replacement is not None:
+            effective.append(replacement)
+        elif event.event_id in active:
+            effective.append(event)
+    return tuple(effective)

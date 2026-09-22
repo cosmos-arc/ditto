@@ -15,10 +15,12 @@ from ditto_application.commands.account_ledger import (
     ManualAccountCommandHandler,
 )
 from ditto_application.queries.account_ledger import AccountLedgerQuery
+from ditto_application.queries.portfolio_history import GetManualHistoryQuery
 from ditto_apps.api.errors import NotFoundError
 from ditto_apps.api.routes.account_ledger import (
     correct_manual_event,
     create_manual_account,
+    get_manual_account_history,
     get_manual_account_ledger,
     record_manual_event,
     reverse_manual_event,
@@ -27,10 +29,18 @@ from ditto_apps.models.account_ledger import (
     CorrectManualEventBody,
     CreateManualAccountBody,
     ManualEventBody,
+    ManualHistoryQueryParams,
     ReverseManualEventBody,
 )
 from ditto_apps.openapi_contract import create_openapi_app
+from ditto_data.catalog import DataAssetRef
+from ditto_data.catalog.source_snapshot import (
+    ProviderSnapshot,
+    ProviderSnapshotDraft,
+)
+from ditto_data.query.contracts import PITQueryContext
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
+from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_kernel.identity import InstrumentId
 from pydantic import ValidationError
 
@@ -252,7 +262,191 @@ def test_manual_openapi_surface_has_stable_operation_ids() -> None:
         "/api/v1/manual/accounts/{account_id}/corrections": ("manual_correct_event"),
         "/api/v1/manual/accounts/{account_id}/reversals": "manual_reverse_event",
         "/api/v1/manual/accounts/{account_id}/ledger": "manual_get_ledger",
+        "/api/v1/manual/accounts/{account_id}/history": "manual_get_history",
     }
     for path, operation_id in expected.items():
-        method = "get" if path.endswith("/ledger") else "post"
+        method = (
+            "get" if path.endswith("/ledger") or path.endswith("/history") else "post"
+        )
         assert schema["paths"][path][method]["operationId"] == operation_id
+
+
+class _SnapshotReader:
+    def __init__(self) -> None:
+        self._snapshot = _history_snapshot()
+
+    def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
+        snapshot = self._snapshot
+        return snapshot if snapshot.snapshot_id == snapshot_id else None
+
+    def get_observed_at(self, snapshot_id: str) -> datetime | None:
+        del snapshot_id
+        return None
+
+    def get_predecessor(self, snapshot_id: str) -> str | None:
+        del snapshot_id
+        return None
+
+    def list_snapshots(
+        self,
+        *,
+        dataset_id: str | None = None,
+        source: str | None = None,
+        canonical_asset: DataAssetRef | None = None,
+    ) -> tuple[ProviderSnapshot, ...]:
+        del dataset_id, source, canonical_asset
+        return ()
+
+
+class _EmptyBars:
+    def load(
+        self,
+        context: PITQueryContext,
+        *,
+        instrument_id: InstrumentId,
+        instrument_code: str,
+    ) -> tuple[TechnicalBar, ...]:
+        del context, instrument_id, instrument_code
+        return ()
+
+
+def _history_query(journal: SqliteAccountEventJournal) -> GetManualHistoryQuery:
+    return GetManualHistoryQuery(
+        journal=journal,
+        snapshot_reader=_SnapshotReader(),
+        valuation_source=_EmptyBars(),
+    )
+
+
+def _history_snapshot() -> ProviderSnapshot:
+    return ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="stock_daily",
+            source="route-fixture",
+            request_start="2026-08-31",
+            request_end="2026-09-01",
+            schema_version="market.stock_daily.v1",
+            checksum="sha256:route-bars",
+            canonical_asset=DataAssetRef("stock_daily", "market"),
+            request_parameters_hash="sha256:params",
+            response_metadata=(("rows", "0"),),
+            license_record_id="license:fixture",
+            row_count=0,
+            payload_uri="file:///tmp/route-bars.parquet",
+            payload_retained=True,
+            created_at=NOW,
+        )
+    )
+
+
+def test_manual_history_route_replays_cash_flow_adjusted_series(tmp_path) -> None:
+    journal = SqliteAccountEventJournal(str(tmp_path / "account.sqlite"))
+    create_handler = CreateAccountHandler(journal=journal)
+    manual_handler = ManualAccountCommandHandler(journal=journal, clock=lambda: NOW)
+    history_query = _history_query(journal)
+
+    with patch(
+        "ditto_apps.api.routes.account_ledger.asyncio.to_thread",
+        side_effect=_inline,
+    ):
+        asyncio.run(
+            _original(create_manual_account)(
+                body=CreateManualAccountBody(
+                    account_id="manual-history",
+                    name="历史账户",
+                    opened_at=NOW,
+                ),
+                handler=create_handler,
+            )
+        )
+        asyncio.run(
+            _original(record_manual_event)(
+                account_id="manual-history",
+                body=ManualEventBody(
+                    event_type="opening_cash",
+                    trade_date=date(2026, 8, 31),
+                    settlement_date=date(2026, 8, 31),
+                    idempotency_key="opening",
+                    actor="user:chevy",
+                    gross_amount=Decimal("100"),
+                ),
+                handler=manual_handler,
+            )
+        )
+        asyncio.run(
+            _original(record_manual_event)(
+                account_id="manual-history",
+                body=ManualEventBody(
+                    event_type="deposit",
+                    trade_date=date(2026, 9, 1),
+                    settlement_date=date(2026, 9, 1),
+                    idempotency_key="deposit",
+                    actor="user:chevy",
+                    gross_amount=Decimal("100"),
+                    flow_position="start_of_day",
+                ),
+                handler=manual_handler,
+            )
+        )
+        ledger = asyncio.run(
+            _original(get_manual_account_ledger)(
+                account_id="manual-history",
+                as_of=date(2026, 9, 1),
+                query=AccountLedgerQuery(journal=journal),
+            )
+        )
+        result = asyncio.run(
+            _original(get_manual_account_history)(
+                account_id="manual-history",
+                params=ManualHistoryQueryParams(
+                    start_date=date(2026, 8, 31),
+                    end_date=date(2026, 9, 1),
+                    knowledge_cutoff=datetime(2026, 9, 1, 12, 0, tzinfo=UTC),
+                    publication_cutoff=datetime(2026, 9, 1, 12, 0, tzinfo=UTC),
+                    source_snapshot_ids=(_history_snapshot().snapshot_id,),
+                    ledger_event_count=ledger.data.ledger_revision.event_count,
+                    ledger_hash=ledger.data.ledger_revision.ledger_hash,
+                ),
+                query=history_query,
+            )
+        )
+
+    points = result.data.points
+    assert [point.on_date for point in points] == ["2026-08-31", "2026-09-01"]
+    assert [point.total_value for point in points] == [
+        Decimal("100.00"),
+        Decimal("200.00"),
+    ]
+    assert points[1].period_return == Decimal("0")
+    assert result.data.segments[0].linked_return == Decimal("0")
+    assert result.data.method == "twr-linked-v1"
+    assert result.data.currency == "CNY"
+    assert result.data.result_id.startswith("manual-history:sha256:")
+    journal.close()
+
+
+def test_manual_history_query_params_coerce_plain_query_strings() -> None:
+    """FastAPI hands query params as strings; the model must coerce them."""
+    params = ManualHistoryQueryParams.model_validate(
+        {
+            "start_date": "2026-08-31",
+            "end_date": "2026-09-01",
+            "knowledge_cutoff": "2026-09-01T12:00:00+08:00",
+            "publication_cutoff": "2026-09-01T12:00:00+08:00",
+            "source_snapshot_ids": ["snapshot:stock_daily:1"],
+            "ledger_event_count": "2",
+            "ledger_hash": "account-ledger:sha256:x",
+        }
+    )
+    assert params.start_date == date(2026, 8, 31)
+    assert params.end_date == date(2026, 9, 1)
+    assert params.ledger_event_count == 2
+    assert params.source_snapshot_ids == ("snapshot:stock_daily:1",)
+
+
+def test_manual_history_openapi_declares_flow_position_and_revision() -> None:
+    schema = create_openapi_app().openapi()
+    schemas = schema["components"]["schemas"]
+    assert "flow_position" in schemas["ManualEventBody"]["properties"]
+    assert "ledger_revision" in schemas["AccountLedgerResponse"]["properties"]
+    assert "ManualHistoryResponse" in schemas

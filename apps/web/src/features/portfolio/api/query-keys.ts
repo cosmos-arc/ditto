@@ -1,3 +1,4 @@
+import type { ManualHistoryQueryIdentity } from "./account-models";
 export const DEFAULT_STRATEGY_ID = "seed_etf_industry_rotation";
 
 export const tradingKeys = {
@@ -59,6 +60,19 @@ export const tradingKeys = {
 			identity.valuation_snapshot_id ?? "valuation-unresolved",
 		] as const,
 	manualLedger: (accountId: string, asOf: string) => [...tradingKeys.all, "manual-account", accountId, asOf] as const,
+	manualHistory: (accountId: string, identity: ManualHistoryQueryIdentity) =>
+		[
+			...tradingKeys.all,
+			"manual-history",
+			accountId,
+			identity.start_date,
+			identity.end_date,
+			identity.knowledge_cutoff,
+			identity.publication_cutoff,
+			identity.source_snapshot_ids.join(","),
+			identity.ledger_event_count,
+			identity.ledger_hash,
+		] as const,
 	paperLedger: (accountId: string, asOf: string) => [...tradingKeys.all, "paper-account", accountId, asOf] as const,
 	paperSession: (sessionId: string) => [...tradingKeys.all, "paper-session", sessionId] as const,
 } as const;

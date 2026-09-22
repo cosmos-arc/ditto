@@ -43,6 +43,7 @@ const manualAccountLedger: ManualAccountLedger = {
 			event_hash: "account-event:sha256:7a4db91c8f2e",
 			event_id: "manual-a-opening-cash",
 			event_type: "opening_cash",
+			flow_position: null,
 			external_reference: "broker-20260801",
 			fees: "0.00",
 			gross_amount: "100000.00",
@@ -61,6 +62,10 @@ const manualAccountLedger: ManualAccountLedger = {
 			trade_date: "2026-08-01",
 		},
 	],
+	ledger_revision: {
+		event_count: 1,
+		ledger_hash: "account-ledger:sha256:189c7d3e5f284f55",
+	},
 	snapshot: {
 		account_id: "manual-a",
 		account_kind: "manual",

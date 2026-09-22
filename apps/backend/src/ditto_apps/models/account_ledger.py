@@ -17,7 +17,13 @@ __all__ = [
     "CashSnapshotResponse",
     "CorrectManualEventBody",
     "CreateManualAccountBody",
+    "HistoryPointResponse",
+    "HistoryQualityResponse",
+    "HistorySegmentResponse",
+    "LedgerRevisionResponse",
     "ManualEventBody",
+    "ManualHistoryQueryParams",
+    "ManualHistoryResponse",
     "PortfolioPositionSnapshotResponse",
     "PortfolioSnapshotResponse",
     "ReverseManualEventBody",
@@ -92,6 +98,7 @@ class ManualEventBody(BaseModel):
     fees: Decimal = Field(default=Decimal("0"), ge=0, strict=False)
     tax: Decimal = Field(default=Decimal("0"), ge=0, strict=False)
     net_cash: Decimal | None = Field(default=None, strict=False)
+    flow_position: Literal["start_of_day", "end_of_day", "intraday"] | None = None
     note: str = Field(default="", max_length=4000)
     attachment_refs: tuple[str, ...] = Field(default=(), strict=False)
     external_reference: str | None = Field(default=None, max_length=512)
@@ -154,6 +161,7 @@ class AccountEventResponse(BaseModel):
     fees: Decimal
     tax: Decimal
     net_cash: Decimal
+    flow_position: Literal["start_of_day", "end_of_day", "intraday"] | None = None
     note: str
     attachment_refs: tuple[str, ...]
     external_reference: str | None
@@ -228,3 +236,104 @@ class AccountLedgerResponse(BaseModel):
     account: AccountResponse
     events: tuple[AccountEventResponse, ...]
     snapshot: PortfolioSnapshotResponse
+    ledger_revision: LedgerRevisionResponse
+
+
+class LedgerRevisionResponse(BaseModel):
+    """Append-order prefix identity of the complete ledger stream."""
+
+    model_config = _RESPONSE_CONFIG
+
+    event_count: int
+    ledger_hash: str
+
+
+_QUERY_CONFIG = ConfigDict(extra="forbid")
+
+
+class ManualHistoryQueryParams(BaseModel):
+    """
+    GET query identity for one exact MANUAL historical series.
+
+    Query strings arrive as plain text, so coercion stays lax here; the
+    application query still rejects every invalid identity fail-closed.
+    """
+
+    model_config = _QUERY_CONFIG
+
+    start_date: date = Field(strict=False)
+    end_date: date = Field(strict=False)
+    knowledge_cutoff: datetime = Field(strict=False)
+    publication_cutoff: datetime = Field(strict=False)
+    source_snapshot_ids: tuple[str, ...] = Field(min_length=1, strict=False)
+    ledger_event_count: int = Field(ge=1, strict=False)
+    ledger_hash: str = Field(min_length=1)
+
+
+class HistoryQualityResponse(BaseModel):
+    """One machine-readable quality or absence mark."""
+
+    model_config = _RESPONSE_CONFIG
+
+    code: str
+    detail: str = ""
+
+
+class HistoryPointResponse(BaseModel):
+    """One dated valuation row; missing prices leave value gaps."""
+
+    model_config = _RESPONSE_CONFIG
+
+    on_date: str
+    valuation_instant: str
+    total_value: Decimal | None
+    cash: Decimal | None
+    external_flow: Decimal
+    period_return: Decimal | None
+    cumulative_return: Decimal | None
+    segment_id: int | None
+    price_time: str | None
+    stale: bool
+    source_snapshot_ids: tuple[str, ...]
+    quality: tuple[HistoryQualityResponse, ...]
+
+
+class HistorySegmentResponse(BaseModel):
+    """One continuous positive-capital run with its own linked TWR."""
+
+    model_config = _RESPONSE_CONFIG
+
+    segment_id: int
+    start_date: str
+    end_date: str
+    start_value: Decimal
+    end_value: Decimal
+    linked_return: Decimal | None
+    closed_reason: Literal[
+        "range_end",
+        "loss_to_zero",
+        "full_withdrawal",
+        "valuation_gap",
+        "negative_equity",
+    ]
+    quality: tuple[HistoryQualityResponse, ...]
+
+
+class ManualHistoryResponse(BaseModel):
+    """Complete replayable historical result for one MANUAL account."""
+
+    model_config = _RESPONSE_CONFIG
+
+    result_id: str
+    account_id: str
+    currency: Literal["CNY"]
+    start_date: str
+    end_date: str
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    source_snapshot_ids: tuple[str, ...]
+    ledger_revision: LedgerRevisionResponse
+    method: str
+    valuation_policy_version: str
+    points: tuple[HistoryPointResponse, ...]
+    segments: tuple[HistorySegmentResponse, ...]

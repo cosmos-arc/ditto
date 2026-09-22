@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 75592d9130f4d699a87684d4c71eb0fa157b487096a9f4af1592dc4ce64634a7
+ * Schema SHA-256: 3232913782106099dc9828a17cb2fa5cd870dc90cd291db2a4600269d9d2e027
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -608,6 +608,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/manual/account-baseline": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/manual/accounts/{account_id}/history": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2240,6 +2250,13 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["account_id", "signal_date", "strategy_id"],
+    },
+  },
+  "get /api/v1/manual/accounts/{account_id}/history": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["account_id"],
+      "query": ["end_date", "knowledge_cutoff", "ledger_event_count", "ledger_hash", "publication_cutoff", "source_snapshot_ids", "start_date"],
     },
   },
   "get /api/v1/manual/accounts/{account_id}/ledger": {

@@ -220,7 +220,15 @@ describe("manual account runtime boundary", () => {
 	});
 
 	it("rejects a structurally incomplete ledger success payload", async () => {
-		vi.stubGlobal("fetch", respondWith({ account: manualAccount, events: [], snapshot: { account_kind: "manual" } }));
+		vi.stubGlobal(
+			"fetch",
+			respondWith({
+				account: manualAccount,
+				events: [],
+				ledger_revision: { event_count: 0, ledger_hash: "account-ledger:sha256:x" },
+				snapshot: { account_kind: "manual" },
+			}),
+		);
 
 		await expect(fetchManualAccountLedger("manual-a", "2026-09-04")).rejects.toThrow(/snapshot/u);
 	});

@@ -1465,6 +1465,30 @@
         "title": "APIResponse[LineageResponse]",
         "type": "object"
       },
+      "APIResponse_ManualHistoryResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ManualHistoryResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ManualHistoryResponse]",
+        "type": "object"
+      },
       "APIResponse_MarketContextResponse_": {
         "properties": {
           "data": {
@@ -3869,6 +3893,22 @@
             "title": "Fees",
             "type": "string"
           },
+          "flow_position": {
+            "anyOf": [
+              {
+                "enum": [
+                  "start_of_day",
+                  "end_of_day",
+                  "intraday"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Position"
+          },
           "gross_amount": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Gross Amount",
@@ -4021,6 +4061,9 @@
             "title": "Events",
             "type": "array"
           },
+          "ledger_revision": {
+            "$ref": "#/components/schemas/LedgerRevisionResponse"
+          },
           "snapshot": {
             "$ref": "#/components/schemas/PortfolioSnapshotResponse"
           }
@@ -4028,7 +4071,8 @@
         "required": [
           "account",
           "events",
-          "snapshot"
+          "snapshot",
+          "ledger_revision"
         ],
         "title": "AccountLedgerResponse",
         "type": "object"
@@ -16405,6 +16449,216 @@
         "title": "HistoricalUniverseSourcesBody",
         "type": "object"
       },
+      "HistoryPointResponse": {
+        "description": "One dated valuation row; missing prices leave value gaps.",
+        "properties": {
+          "cash": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash"
+          },
+          "cumulative_return": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Return"
+          },
+          "external_flow": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "External Flow",
+            "type": "string"
+          },
+          "on_date": {
+            "title": "On Date",
+            "type": "string"
+          },
+          "period_return": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Return"
+          },
+          "price_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Time"
+          },
+          "quality": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryQualityResponse"
+            },
+            "title": "Quality",
+            "type": "array"
+          },
+          "segment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Id"
+          },
+          "source_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Snapshot Ids",
+            "type": "array"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "total_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Value"
+          },
+          "valuation_instant": {
+            "title": "Valuation Instant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "on_date",
+          "valuation_instant",
+          "total_value",
+          "cash",
+          "external_flow",
+          "period_return",
+          "cumulative_return",
+          "segment_id",
+          "price_time",
+          "stale",
+          "source_snapshot_ids",
+          "quality"
+        ],
+        "title": "HistoryPointResponse",
+        "type": "object"
+      },
+      "HistoryQualityResponse": {
+        "description": "One machine-readable quality or absence mark.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "HistoryQualityResponse",
+        "type": "object"
+      },
+      "HistorySegmentResponse": {
+        "description": "One continuous positive-capital run with its own linked TWR.",
+        "properties": {
+          "closed_reason": {
+            "enum": [
+              "range_end",
+              "loss_to_zero",
+              "full_withdrawal",
+              "valuation_gap",
+              "negative_equity"
+            ],
+            "title": "Closed Reason",
+            "type": "string"
+          },
+          "end_date": {
+            "title": "End Date",
+            "type": "string"
+          },
+          "end_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "End Value",
+            "type": "string"
+          },
+          "linked_return": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Return"
+          },
+          "quality": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryQualityResponse"
+            },
+            "title": "Quality",
+            "type": "array"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          },
+          "start_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Start Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "segment_id",
+          "start_date",
+          "end_date",
+          "start_value",
+          "end_value",
+          "linked_return",
+          "closed_reason",
+          "quality"
+        ],
+        "title": "HistorySegmentResponse",
+        "type": "object"
+      },
       "HoldoutEvaluationReceiptResponse": {
         "description": "API projection of one committed or exactly replayed holdout claim.",
         "properties": {
@@ -17486,6 +17740,25 @@
           }
         ]
       },
+      "LedgerRevisionResponse": {
+        "description": "Append-order prefix identity of the complete ledger stream.",
+        "properties": {
+          "event_count": {
+            "title": "Event Count",
+            "type": "integer"
+          },
+          "ledger_hash": {
+            "title": "Ledger Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_count",
+          "ledger_hash"
+        ],
+        "title": "LedgerRevisionResponse",
+        "type": "object"
+      },
       "LimitStateRequest": {
         "enum": [
           "normal",
@@ -17658,6 +17931,22 @@
             "default": "0",
             "title": "Fees"
           },
+          "flow_position": {
+            "anyOf": [
+              {
+                "enum": [
+                  "start_of_day",
+                  "end_of_day",
+                  "intraday"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Position"
+          },
           "gross_amount": {
             "anyOf": [
               {
@@ -17772,6 +18061,91 @@
           "actor"
         ],
         "title": "ManualEventBody",
+        "type": "object"
+      },
+      "ManualHistoryResponse": {
+        "description": "Complete replayable historical result for one MANUAL account.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "end_date": {
+            "title": "End Date",
+            "type": "string"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "ledger_revision": {
+            "$ref": "#/components/schemas/LedgerRevisionResponse"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryPointResponse"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "publication_cutoff": {
+            "format": "date-time",
+            "title": "Publication Cutoff",
+            "type": "string"
+          },
+          "result_id": {
+            "title": "Result Id",
+            "type": "string"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/HistorySegmentResponse"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "source_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Snapshot Ids",
+            "type": "array"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          },
+          "valuation_policy_version": {
+            "title": "Valuation Policy Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_id",
+          "account_id",
+          "currency",
+          "start_date",
+          "end_date",
+          "knowledge_cutoff",
+          "publication_cutoff",
+          "source_snapshot_ids",
+          "ledger_revision",
+          "method",
+          "valuation_policy_version",
+          "points",
+          "segments"
+        ],
+        "title": "ManualHistoryResponse",
         "type": "object"
       },
       "Margin": {
@@ -37689,6 +38063,196 @@
           }
         },
         "summary": "Record Manual Event",
+        "tags": [
+          "manual"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/manual/accounts/{account_id}/history": {
+      "get": {
+        "description": "Replay one exact ledger revision into a flow-adjusted return series.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "manual_get_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "knowledge_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Knowledge Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "publication_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Publication Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_snapshot_ids",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "title": "Source Snapshot Ids",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ledger_event_count",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Ledger Event Count",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ledger_hash",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Ledger Hash",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ManualHistoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Manual Account History",
         "tags": [
           "manual"
         ],

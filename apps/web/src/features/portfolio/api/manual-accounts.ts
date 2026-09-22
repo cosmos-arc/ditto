@@ -2,22 +2,28 @@ import { apiClient } from "@/api/transport";
 import type {
 	CorrectManualEventBody,
 	CreateManualAccountBody,
+	ManualAccountHistory,
 	ManualAccountLedger,
 	ManualAccountReceipt,
 	ManualEventBody,
+	ManualHistoryQueryIdentity,
 	ReverseManualEventBody,
 } from "./account-models";
-import { parseManualAccountLedger, parseManualAccountReceipt } from "./runtime-validation";
+import { parseManualAccountHistory, parseManualAccountLedger, parseManualAccountReceipt } from "./runtime-validation";
 
 export type {
 	CorrectManualEventBody,
 	CreateManualAccountBody,
 	ManualAccount,
 	ManualAccountEvent,
+	ManualAccountHistory,
 	ManualAccountLedger,
 	ManualAccountReceipt,
 	ManualBusinessEventType,
 	ManualEventBody,
+	ManualFlowPosition,
+	ManualHistoryQueryIdentity,
+	ManualLedgerRevision,
 	ReverseManualEventBody,
 } from "./account-models";
 
@@ -31,6 +37,27 @@ export async function fetchManualAccountLedger(accountId: string, asOf: string):
 		params: { path: { account_id: accountId }, query: { as_of: asOf } },
 	});
 	return parseManualAccountLedger(payload, accountId, asOf);
+}
+
+export async function fetchManualAccountHistory(
+	accountId: string,
+	identity: ManualHistoryQueryIdentity,
+): Promise<ManualAccountHistory> {
+	const payload = await apiClient.get("/api/v1/manual/accounts/{account_id}/history", {
+		params: {
+			path: { account_id: accountId },
+			query: {
+				start_date: identity.start_date,
+				end_date: identity.end_date,
+				knowledge_cutoff: identity.knowledge_cutoff,
+				publication_cutoff: identity.publication_cutoff,
+				source_snapshot_ids: [...identity.source_snapshot_ids],
+				ledger_event_count: identity.ledger_event_count,
+				ledger_hash: identity.ledger_hash,
+			},
+		},
+	});
+	return parseManualAccountHistory(payload, accountId, identity);
 }
 
 export async function recordManualAccountEvent(

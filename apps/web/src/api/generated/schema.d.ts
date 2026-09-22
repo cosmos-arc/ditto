@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 75592d9130f4d699a87684d4c71eb0fa157b487096a9f4af1592dc4ce64634a7
+ * Schema SHA-256: 3232913782106099dc9828a17cb2fa5cd870dc90cd291db2a4600269d9d2e027
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -1953,6 +1953,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["manual_record_event"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manual/accounts/{account_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Manual Account History
+         * @description Replay one exact ledger revision into a flow-adjusted return series.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_get_history"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4449,6 +4471,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[ManualHistoryResponse] */
+        APIResponse_ManualHistoryResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ManualHistoryResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[MarketContextResponse] */
         APIResponse_MarketContextResponse_: {
             /** @description 响应数据 */
@@ -5265,6 +5294,8 @@ export interface components {
             external_reference: string | null;
             /** Fees */
             fees: string;
+            /** Flow Position */
+            flow_position?: ("start_of_day" | "end_of_day" | "intraday") | null;
             /** Gross Amount */
             gross_amount: string;
             /** Idempotency Key */
@@ -5309,6 +5340,7 @@ export interface components {
             account: components["schemas"]["AccountResponse"];
             /** Events */
             events: components["schemas"]["AccountEventResponse"][];
+            ledger_revision: components["schemas"]["LedgerRevisionResponse"];
             snapshot: components["schemas"]["PortfolioSnapshotResponse"];
         };
         /**
@@ -11469,6 +11501,74 @@ export interface components {
             universe_id: string;
         };
         /**
+         * HistoryPointResponse
+         * @description One dated valuation row; missing prices leave value gaps.
+         */
+        HistoryPointResponse: {
+            /** Cash */
+            cash: string | null;
+            /** Cumulative Return */
+            cumulative_return: string | null;
+            /** External Flow */
+            external_flow: string;
+            /** On Date */
+            on_date: string;
+            /** Period Return */
+            period_return: string | null;
+            /** Price Time */
+            price_time: string | null;
+            /** Quality */
+            quality: components["schemas"]["HistoryQualityResponse"][];
+            /** Segment Id */
+            segment_id: number | null;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Stale */
+            stale: boolean;
+            /** Total Value */
+            total_value: string | null;
+            /** Valuation Instant */
+            valuation_instant: string;
+        };
+        /**
+         * HistoryQualityResponse
+         * @description One machine-readable quality or absence mark.
+         */
+        HistoryQualityResponse: {
+            /** Code */
+            code: string;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+        };
+        /**
+         * HistorySegmentResponse
+         * @description One continuous positive-capital run with its own linked TWR.
+         */
+        HistorySegmentResponse: {
+            /**
+             * Closed Reason
+             * @enum {string}
+             */
+            closed_reason: "range_end" | "loss_to_zero" | "full_withdrawal" | "valuation_gap" | "negative_equity";
+            /** End Date */
+            end_date: string;
+            /** End Value */
+            end_value: string;
+            /** Linked Return */
+            linked_return: string | null;
+            /** Quality */
+            quality: components["schemas"]["HistoryQualityResponse"][];
+            /** Segment Id */
+            segment_id: number;
+            /** Start Date */
+            start_date: string;
+            /** Start Value */
+            start_value: string;
+        };
+        /**
          * HoldoutEvaluationReceiptResponse
          * @description API projection of one committed or exactly replayed holdout claim.
          */
@@ -12006,6 +12106,16 @@ export interface components {
         "JsonValue-Output": components["schemas"]["JsonPrimitive"] | components["schemas"]["JsonValue-Output"][] | {
             [key: string]: components["schemas"]["JsonValue-Output"];
         };
+        /**
+         * LedgerRevisionResponse
+         * @description Append-order prefix identity of the complete ledger stream.
+         */
+        LedgerRevisionResponse: {
+            /** Event Count */
+            event_count: number;
+            /** Ledger Hash */
+            ledger_hash: string;
+        };
         /** @enum {string} */
         LimitStateRequest: "normal" | "limit_up" | "limit_down";
         /**
@@ -12090,6 +12200,8 @@ export interface components {
              * @default 0
              */
             fees: number | string;
+            /** Flow Position */
+            flow_position?: ("start_of_day" | "end_of_day" | "intraday") | null;
             /**
              * Gross Amount
              * @default 0
@@ -12131,6 +12243,46 @@ export interface components {
              * Format: date
              */
             trade_date: string;
+        };
+        /**
+         * ManualHistoryResponse
+         * @description Complete replayable historical result for one MANUAL account.
+         */
+        ManualHistoryResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** End Date */
+            end_date: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            ledger_revision: components["schemas"]["LedgerRevisionResponse"];
+            /** Method */
+            method: string;
+            /** Points */
+            points: components["schemas"]["HistoryPointResponse"][];
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Result Id */
+            result_id: string;
+            /** Segments */
+            segments: components["schemas"]["HistorySegmentResponse"][];
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Start Date */
+            start_date: string;
+            /** Valuation Policy Version */
+            valuation_policy_version: string;
         };
         /**
          * Margin
@@ -24115,6 +24267,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_AccountCommandReceiptResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    manual_get_history: {
+        parameters: {
+            query: {
+                start_date: string;
+                end_date: string;
+                knowledge_cutoff: string;
+                publication_cutoff: string;
+                source_snapshot_ids: string[];
+                ledger_event_count: number;
+                ledger_hash: string;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ManualHistoryResponse_"];
                 };
             };
             /** @description Bad request */
