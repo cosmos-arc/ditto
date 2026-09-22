@@ -370,3 +370,94 @@ def test_read_snapshot_outputs_audit_content_and_closes_container(runner, monkey
     query.read_for_audit.assert_called_once_with("pinned-id")
     container.get.assert_called_once_with(ProviderSnapshotQuery)
     container.close.assert_called_once()
+
+
+def test_record_specimen_appends_validated_adjudication(runner, monkeypatch, tmp_path):
+    from ditto_application.commands.data_product_specimen import (
+        DataProductSpecimenCommands,
+    )
+
+    commands = MagicMock(spec=DataProductSpecimenCommands)
+    commands.record.return_value = SimpleNamespace(
+        to_payload=lambda: {"specimen_id": "specimen:dividend_etf:sha256:x"}
+    )
+    container = MagicMock()
+    container.get.return_value = commands
+    monkeypatch.setattr(
+        "ditto_apps.cli.commands.data_products.make_app_container", lambda: container
+    )
+    payload = tmp_path / "specimen.json"
+    payload.write_bytes(orjson.dumps({"category": "dividend_etf"}))
+
+    result = runner.invoke(app, ["data-products", "record-specimen", str(payload)])
+
+    assert result.exit_code == 0, result.output
+    assert orjson.loads(result.output) == {
+        "specimen_id": "specimen:dividend_etf:sha256:x"
+    }
+    commands.record.assert_called_once_with({"category": "dividend_etf"})
+    container.close.assert_called_once()
+
+
+def test_record_specimen_rejects_invalid_payload_without_side_effects(
+    runner, monkeypatch, tmp_path
+):
+    from ditto_application.commands.data_product_specimen import (
+        DataProductSpecimenCommands,
+    )
+    from ditto_application.exceptions import AppCommandError
+
+    commands = MagicMock(spec=DataProductSpecimenCommands)
+    commands.record.side_effect = AppCommandError(
+        "invalid specimen adjudication: unverified specimen cannot claim allowed uses",
+        command="record_data_specimen",
+    )
+    container = MagicMock()
+    container.get.return_value = commands
+    monkeypatch.setattr(
+        "ditto_apps.cli.commands.data_products.make_app_container", lambda: container
+    )
+    payload = tmp_path / "specimen.json"
+    payload.write_bytes(orjson.dumps({"allowed_uses": ["exploration"]}))
+
+    result = runner.invoke(app, ["data-products", "record-specimen", str(payload)])
+
+    assert result.exit_code == 2
+    container.close.assert_called_once()
+
+
+def test_specimens_lists_five_categories_with_explicit_gaps(runner, monkeypatch):
+    from ditto_application.queries.data_specimen import (
+        DataSpecimenQuery,
+        SpecimenCategorySummary,
+    )
+
+    query = MagicMock(spec=DataSpecimenQuery)
+    query.summarize.return_value = tuple(
+        SpecimenCategorySummary(
+            category=category,
+            specimens=(),
+            unresolved_gaps=("SPECIMEN_NOT_COLLECTED",),
+        )
+        for category in ("financial_restatement", "delisted_security")
+    )
+    container = MagicMock()
+    container.get.return_value = query
+    monkeypatch.setattr(
+        "ditto_apps.cli.commands.data_products.make_app_container", lambda: container
+    )
+
+    result = runner.invoke(app, ["data-products", "specimens"])
+
+    assert result.exit_code == 0, result.output
+    payload = orjson.loads(result.output)
+    assert [item["category"] for item in payload["categories"]] == [
+        "financial_restatement",
+        "delisted_security",
+    ]
+    assert all(
+        item["collected"] is False and item["latest"] is None
+        for item in payload["categories"]
+    )
+    container.get.assert_called_once_with(DataSpecimenQuery)
+    container.close.assert_called_once()

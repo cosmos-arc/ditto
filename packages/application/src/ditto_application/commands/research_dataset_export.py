@@ -9,11 +9,14 @@ from ditto_analysis.errors import ExperimentIntegrityError
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.research.specs import DatasetSnapshot
-from ditto_data.catalog.field_admission import license_reasons
+from ditto_data.catalog.field_admission import DataUse, license_reasons
 from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.catalog.specimen import DataSpecimen, SpecimenReader
 
 from ditto_application.exceptions import AppQueryError
+
+EXPORT_USE: DataUse = "formal_research"
 
 
 class ResearchDatasetExport:
@@ -26,11 +29,13 @@ class ResearchDatasetExport:
         research_catalog_service: ResearchCatalogService,
         snapshots: ProviderSnapshotReader,
         licenses: DatasetLicenseReader,
+        specimens: SpecimenReader,
     ) -> None:
         self._artifacts = research_artifact_service
         self._catalog = research_catalog_service
         self._snapshots = snapshots
         self._licenses = licenses
+        self._specimens = specimens
 
     def export(
         self, snapshot: DatasetSnapshot, fmt: str, path: Path
@@ -47,6 +52,7 @@ class ResearchDatasetExport:
                 "research export requires the exact saved snapshot"
             )
         license_ids = self._check_licenses(snapshot)
+        specimen_restrictions = self._check_specimens(snapshot)
         root = self._artifacts.artifact_root
         target = path if path.is_absolute() else root / path
         try:
@@ -62,6 +68,7 @@ class ResearchDatasetExport:
             provenance={
                 **asdict(snapshot),
                 "license_record_ids": license_ids,
+                "specimens": specimen_restrictions,
                 "usage": "personal_local_research_only",
             },
         )
@@ -128,3 +135,64 @@ class ResearchDatasetExport:
                 )
             license_ids.add(record.record_id)
         return tuple(sorted(license_ids))
+
+    def _check_specimens(
+        self, snapshot: DatasetSnapshot
+    ) -> tuple[dict[str, object], ...]:
+        """
+        Verified exploration-only conclusions must not launder into exports.
+
+        Every specimen bound to an export source dataset gates the export and
+        travels in the receipt: same-dataset re-adjudications or sibling
+        categories cannot hide an older restriction behind a newer verdict.
+        A dataset without any specimen is unaffected: specimen evidence is
+        optional per-category evidence, never a prerequisite for other paths.
+        """
+        dataset_ids = {
+            source.dataset_id
+            for snapshot_id in snapshot.source_snapshot_ids
+            if (source := self._snapshots.get_snapshot(snapshot_id)) is not None
+        }
+        restrictions: list[dict[str, object]] = []
+        for dataset_id in sorted(dataset_ids):
+            for specimen in self._specimens.list_specimens(dataset_id=dataset_id):
+                gaps = list(specimen.gaps)
+                gaps.extend(self._dangling_reference_gaps(specimen))
+                restrictions.append(
+                    {
+                        "specimen_id": specimen.specimen_id,
+                        "category": specimen.category,
+                        "dataset_id": specimen.dataset_id,
+                        "verification_status": specimen.verification_status,
+                        "allowed_uses": list(specimen.allowed_uses),
+                        "gaps": list(dict.fromkeys(gaps)),
+                    }
+                )
+                if (
+                    specimen.verification_status == "verified"
+                    and EXPORT_USE not in specimen.allowed_uses
+                ):
+                    raise AppQueryError(
+                        "试样裁决不允许该用途导出",
+                        details={
+                            "specimen_id": specimen.specimen_id,
+                            "dataset_id": dataset_id,
+                            "allowed_uses": list(specimen.allowed_uses),
+                            "gaps": list(specimen.gaps),
+                        },
+                    )
+        return tuple(restrictions)
+
+    def _dangling_reference_gaps(self, specimen: DataSpecimen) -> list[str]:
+        """Surface cited evidence that no longer resolves, without rewriting."""
+        gaps: list[str] = []
+        for item in specimen.sources:
+            if (
+                item.provider_snapshot_id is not None
+                and self._snapshots.get_snapshot(item.provider_snapshot_id) is None
+            ):
+                gaps.append("SPECIMEN_SOURCE_SNAPSHOT_MISSING")
+        for record_id in specimen.license_record_ids:
+            if self._licenses.get_license(record_id) is None:
+                gaps.append("SPECIMEN_LICENSE_MISSING")
+        return gaps

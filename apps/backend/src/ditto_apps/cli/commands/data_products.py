@@ -32,7 +32,14 @@ from ditto_application.commands.data_product_operations import (
     confirm_data_product_operation,
     preview_data_product_operation,
 )
+from ditto_application.commands.data_product_specimen import (
+    DataProductSpecimenCommands,
+)
 from ditto_application.exceptions import AppCommandError, AppProcessError, AppQueryError
+from ditto_application.queries.data_specimen import (
+    SPECIMEN_RULE_VERSION,
+    DataSpecimenQuery,
+)
 from ditto_application.queries.field_admission import FieldAdmissionRequest
 from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 from pydantic import TypeAdapter, ValidationError
@@ -562,6 +569,52 @@ def revoke(
             reason=reason,
         ),
     )
+
+
+@app.command("record-specimen")
+def record_specimen(
+    payload_file: Path = typer.Argument(..., exists=True, dir_okay=False),
+) -> None:
+    """Record one human-adjudicated five-category specimen evidence pack."""
+    container = make_app_container()
+    try:
+        payload = orjson.loads(payload_file.read_bytes())
+        if not isinstance(payload, dict):
+            raise typer.BadParameter("specimen payload must be a JSON object")
+        specimen = container.get(DataProductSpecimenCommands).record(payload)
+        output_json_dict(specimen.to_payload())
+    except (OSError, ValueError, AppCommandError) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(2) from error
+    finally:
+        container.close()
+
+
+@app.command("specimens")
+def specimens() -> None:
+    """List all five specimen categories with conclusions and unresolved gaps."""
+    container = make_app_container()
+    try:
+        summaries = container.get(DataSpecimenQuery).summarize()
+        output_json_dict(
+            {
+                "rule_version": SPECIMEN_RULE_VERSION,
+                "categories": [
+                    {
+                        "category": summary.category,
+                        "collected": summary.collected,
+                        "unresolved_gaps": list(summary.unresolved_gaps),
+                        "latest": asdict(summary.latest) if summary.latest else None,
+                    }
+                    for summary in summaries
+                ],
+            }
+        )
+    except AppQueryError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(2) from error
+    finally:
+        container.close()
 
 
 @app.command("read-snapshot")

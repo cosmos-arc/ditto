@@ -14,4 +14,5 @@ export {
 	useDataProductQuality,
 	useDataProductRuns,
 	useDataProducts,
+	useDataSpecimens,
 } from "./use-data-products";

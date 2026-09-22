@@ -24,6 +24,7 @@ from ditto_data.catalog.remediation import (
     CatalogRemediationApprovalWriter,
 )
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.catalog.specimen import SpecimenReader, SpecimenWriter
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
@@ -86,6 +87,9 @@ from ditto_application.commands.data_product_certification_builder import (
     DataProductCertificationBuilder,
 )
 from ditto_application.commands.data_product_license import DataProductLicenseCommands
+from ditto_application.commands.data_product_specimen import (
+    DataProductSpecimenCommands,
+)
 from ditto_application.commands.experiments import (
     CancelExperimentHandler,
     ClaimHoldoutCandidateHandler,
@@ -160,6 +164,7 @@ class AppCommandProvider(Provider):
         research_catalog_service: ResearchCatalogService,
         snapshots: ProviderSnapshotReader,
         licenses: DatasetLicenseReader,
+        specimens: SpecimenReader,
     ) -> ResearchDatasetExport:
         """Wire saved snapshot export and reviewed source permissions."""
         return ResearchDatasetExport(
@@ -167,6 +172,7 @@ class AppCommandProvider(Provider):
             research_catalog_service=research_catalog_service,
             snapshots=snapshots,
             licenses=licenses,
+            specimens=specimens,
         )
 
     @provide
@@ -245,6 +251,14 @@ class AppCommandProvider(Provider):
     ) -> DataProductLicenseCommands:
         """Append one application-validated human license review."""
         return DataProductLicenseCommands(writer)
+
+    @provide
+    def data_product_specimen_commands(
+        self,
+        writer: SpecimenWriter,
+    ) -> DataProductSpecimenCommands:
+        """Append one application-validated human specimen adjudication."""
+        return DataProductSpecimenCommands(writer)
 
     @provide
     def data_product_certification_builder(
