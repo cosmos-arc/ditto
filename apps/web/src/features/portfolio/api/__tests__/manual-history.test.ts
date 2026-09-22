@@ -27,7 +27,7 @@ function historyPayload(overrides?: Record<string, unknown>) {
 			ledger_hash: identity.ledger_hash,
 		},
 		method: "twr-linked-v1",
-		valuation_policy_version: "manual-valuation-stale-evidence-v1",
+		valuation_policy_version: "account-valuation-stale-evidence-v1",
 		points: [
 			{
 				on_date: "2026-03-02",

@@ -18,7 +18,7 @@ function historyPayload() {
 		source_snapshot_ids: ["snapshot:stock_daily:1"],
 		ledger_revision: LEDGER_REVISION,
 		method: "twr-linked-v1",
-		valuation_policy_version: "manual-valuation-stale-evidence-v1",
+		valuation_policy_version: "account-valuation-stale-evidence-v1",
 		points: [
 			{
 				on_date: "2026-03-02",
@@ -93,6 +93,8 @@ afterEach(() => {
 describe("ManualHistoryPanel", () => {
 	it("shows identity guidance before any query is committed", () => {
 		renderPanel();
+		expect(screen.getByText("实盘记录（Manual）")).toBeInTheDocument();
+		expect(screen.queryByText("模拟成交（Paper）")).not.toBeInTheDocument();
 		expect(screen.getByText(/填写区间与价格快照后查询/)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "查询历史" })).toBeDisabled();
 	});

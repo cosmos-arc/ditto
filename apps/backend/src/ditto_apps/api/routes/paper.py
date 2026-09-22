@@ -37,6 +37,10 @@ from ditto_application.processes.execution.operate_paper_session import (
 )
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.paper_session import GetPaperSessionQuery
+from ditto_application.queries.portfolio_history import (
+    GetPaperHistoryQuery,
+    PaperHistoryRequest,
+)
 from fastapi import APIRouter, Path, Query, status
 
 from ditto_apps.api.errors import (
@@ -52,6 +56,8 @@ from ditto_apps.models.paper import (
     PaperAccountLedgerResponse,
     PaperAccountReceiptResponse,
     PaperExecutionReceiptResponse,
+    PaperHistoryQueryParams,
+    PaperHistoryResponse,
     PaperReconciliationResponse,
     PaperRecoverResponse,
     PaperSessionCommandResponse,
@@ -130,6 +136,48 @@ async def get_paper_account_ledger(
     except AppQueryError as exc:
         _raise_error(exc)
     return APIResponse(data=PaperAccountLedgerResponse.model_validate(result))
+
+
+@router.get(
+    "/accounts/{account_id}/history",
+    response_model=APIResponse[PaperHistoryResponse],
+    operation_id="paper_get_account_history",
+)
+@inject
+async def get_paper_account_history(
+    params: Annotated[PaperHistoryQueryParams, Query()],
+    query: Annotated[GetPaperHistoryQuery, FromComponent()],
+    account_id: Annotated[str, Path(min_length=1)],
+) -> APIResponse[PaperHistoryResponse]:
+    """Replay one session-bound PAPER revision into a return series."""
+    try:
+        result = await asyncio.to_thread(
+            query.history,
+            PaperHistoryRequest(
+                account_id=account_id,
+                session_id=params.session_id,
+                start_date=params.start_date.isoformat(),
+                end_date=params.end_date.isoformat(),
+                knowledge_cutoff=params.knowledge_cutoff,
+                publication_cutoff=params.publication_cutoff,
+                source_snapshot_ids=tuple(params.source_snapshot_ids),
+                ledger_event_count=params.ledger_event_count,
+                ledger_hash=params.ledger_hash,
+            ),
+        )
+    except (AppQueryError, ValueError) as exc:
+        if (
+            isinstance(exc, AppQueryError)
+            and exc.details.get("code") == "PAPER_HISTORY_SESSION_NOT_FOUND"
+        ):
+            raise NotFoundError(str(exc)) from exc
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("code", "PAPER_HISTORY_INVALID"))
+            if isinstance(exc, AppQueryError)
+            else "PAPER_HISTORY_INVALID",
+        ) from exc
+    return APIResponse(data=PaperHistoryResponse.model_validate(result))
 
 
 @router.post(

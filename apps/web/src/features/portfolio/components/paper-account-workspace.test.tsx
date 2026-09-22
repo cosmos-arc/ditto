@@ -292,6 +292,81 @@ describe("PaperAccountWorkspace", () => {
 		);
 	});
 
+	it("renders the simulated-scope history panel bound to the session", async () => {
+		const user = userEvent.setup();
+		let historyHref: string | undefined;
+		useReadHandlers();
+		server.use(
+			http.get("/api/v1/paper/accounts/paper-a/history", ({ request }) => {
+				const url = new URL(request.url);
+				historyHref = url.toString();
+				const query = (key: string) => url.searchParams.get(key) ?? "";
+				return HttpResponse.json({
+					data: {
+						result_id: "paper-history:sha256:paper-1",
+						account_id: "paper-a",
+						currency: "CNY",
+						start_date: query("start_date"),
+						end_date: query("end_date"),
+						knowledge_cutoff: query("knowledge_cutoff"),
+						publication_cutoff: query("publication_cutoff"),
+						source_snapshot_ids: ["snapshot:stock_daily:1"],
+						ledger_revision: {
+							event_count: 2,
+							ledger_hash: "account-ledger:sha256:paper-ledger-1",
+						},
+						method: "twr-linked-v1",
+						valuation_policy_version: "account-valuation-stale-evidence-v1",
+						points: [
+							{
+								on_date: "2026-08-31",
+								valuation_instant: "2026-08-31T23:59:59.999999+08:00",
+								total_value: "99995.00",
+								cash: "98994.00",
+								external_flow: "0",
+								period_return: null,
+								cumulative_return: "0",
+								segment_id: 0,
+								price_time: "2026-08-31T07:00:00Z",
+								stale: false,
+								source_snapshot_ids: ["snapshot:stock_daily:1"],
+								quality: [],
+							},
+						],
+						segments: [
+							{
+								segment_id: 0,
+								start_date: "2026-08-31",
+								end_date: "2026-08-31",
+								start_value: "99995.00",
+								end_value: "99995.00",
+								linked_return: null,
+								closed_reason: "range_end",
+								quality: [],
+							},
+						],
+					},
+				});
+			}),
+		);
+
+		render(<PaperAccountWorkspace accountId="paper-a" sessionId="paper-s-1" asOf="2026-08-31" />, {
+			wrapper: createWrapper(),
+		});
+
+		await screen.findByText("模拟成交（Paper）");
+		expect(screen.getByText(/会话 paper-s-1 已绑定账户/)).toBeInTheDocument();
+		expect(screen.queryByText("实盘记录（Manual）")).not.toBeInTheDocument();
+		await user.type(screen.getByLabelText("价格快照"), "snapshot:stock_daily:1");
+		await user.click(screen.getByRole("button", { name: "查询历史" }));
+
+		await screen.findByText(/paper-history:sha256:paper-1/);
+		const url = new URL(historyHref ?? "");
+		expect(url.searchParams.get("session_id")).toBe("paper-s-1");
+		expect(url.searchParams.get("ledger_event_count")).toBe("2");
+		expect(url.searchParams.get("ledger_hash")).toBe("account-ledger:sha256:paper-ledger-1");
+	});
+
 	it("creates an isolated PAPER account and running session during onboarding", async () => {
 		const user = userEvent.setup();
 		const selected = vi.fn();
