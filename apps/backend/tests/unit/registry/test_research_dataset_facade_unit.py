@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
+from zoneinfo import ZoneInfo
 
 import orjson
 import polars as pl
@@ -321,7 +322,7 @@ class TestResearchDatasetBuildProcess:
             )
             assert snapshot_record is not None
             assert snapshot.dataset_spec_version == 1
-            assert snapshot.builder_version == "historical-universe-research-v2"
+            assert snapshot.builder_version == "historical-universe-research-v3"
             assert snapshot_record.resolved_versions == {
                 "factor.alpha": 2,
                 "factor.beta": 1,
@@ -344,24 +345,29 @@ class TestResearchDatasetBuildProcess:
             assert snapshot_record.manifest_hash
 
             frame = pl.read_parquet(tmp_path / snapshot.data_path)
+            shanghai = ZoneInfo("Asia/Shanghai")
             assert frame.to_dicts() == [
                 {
                     "instrument_id": 1,
                     "trade_date": date(2026, 3, 10),
                     "investable": True,
                     "universe_exclusion_reasons": "",
-                    "known_at": date(2026, 3, 10),
+                    "known_at": datetime(2026, 3, 10, tzinfo=shanghai),
+                    # Both alpha rows declare Mar 11 availability: invisible to
+                    # every sample in this build at date precision.
                     "factor.alpha": None,
-                    "factor.beta": 100.0,
+                    # No declared availability: trade_date applies conservatively,
+                    # so the Mar 10 row is first visible to the Mar 11 sample.
+                    "factor.beta": None,
                 },
                 {
                     "instrument_id": 1,
                     "trade_date": date(2026, 3, 11),
                     "investable": True,
                     "universe_exclusion_reasons": "",
-                    "known_at": date(2026, 3, 11),
-                    "factor.alpha": 20.0,
-                    "factor.beta": 200.0,
+                    "known_at": datetime(2026, 3, 11, tzinfo=shanghai),
+                    "factor.alpha": None,
+                    "factor.beta": 100.0,
                 },
             ]
         finally:
@@ -453,19 +459,23 @@ class TestResearchDatasetBuildProcess:
                 start="2026-03-11",
                 end="2026-03-11",
                 version_overrides={"factor.alpha": 3},
-                explicit_cutoff="2026-03-11",
+                # The Mar 11 row is date-only evidence: it becomes visible at the
+                # end of its day, so the cutoff must observe from Mar 12 midnight.
+                explicit_cutoff="2026-03-12",
             )
 
             record = research_catalog.get_dataset_snapshot(snapshot.snapshot_id)
             assert record is not None
             assert record.known_at_policy == "explicit_cutoff"
-            assert record.effective_cutoff == "2026-03-11"
+            assert record.effective_cutoff == "2026-03-12"
             assert record.resolved_versions == {"factor.alpha": 3}
-            assert snapshot.effective_cutoff == "2026-03-11"
+            assert snapshot.effective_cutoff == "2026-03-12"
 
             frame = pl.read_parquet(tmp_path / snapshot.data_path)
             assert frame["factor.alpha"].to_list() == [30.0]
-            assert frame["known_at"].to_list() == [date(2026, 3, 11)]
+            assert frame["known_at"].to_list() == [
+                datetime(2026, 3, 12, tzinfo=ZoneInfo("Asia/Shanghai"))
+            ]
         finally:
             container.close()
 
@@ -606,7 +616,7 @@ class TestResearchDatasetBuildProcess:
                         "instrument_id": 1,
                         "trade_date": date(2026, 3, 10),
                         "value": 10.0,
-                        "availability_time": date(2026, 3, 11),
+                        "availability_time": date(2026, 3, 10),
                     },
                     {
                         "instrument_id": 1,
@@ -661,7 +671,7 @@ class TestResearchDatasetBuildProcess:
                 "source_snapshot_ids": sorted(
                     ["market:20260311-001", *sources.snapshot_ids]
                 ),
-                "builder_version": "historical-universe-research-v2",
+                "builder_version": "historical-universe-research-v3",
             }
             report_path = tmp_path / snapshot.data_path
             assert report_path.parent.joinpath("build_report.json").exists() is True
