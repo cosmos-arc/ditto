@@ -9,6 +9,7 @@ from ditto_kernel.identity import InstrumentId
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from ditto_apps.models.technical_analysis import HttpDateTime
+from ditto_apps.models.universe import HistoricalUniverseSourcesBody
 
 __all__ = [
     "CreateResearchCaseBody",
@@ -263,6 +264,7 @@ class CreateSelectionRunBody(BaseModel):
     data_fields: HttpTuple[SelectionFieldRequirementBody] = ()
     data_from: HttpDate = None
     data_to: HttpDate = None
+    universe_sources: HistoricalUniverseSourcesBody | None = None
 
 
 class IndustryRotationContributionResponse(BaseModel):

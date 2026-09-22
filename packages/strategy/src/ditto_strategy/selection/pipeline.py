@@ -60,6 +60,10 @@ def _hard_filter(
     value: SelectionInstrumentInput,
     spec: SelectionSpec,
 ) -> tuple[SelectionExclusionReason, str] | None:
+    if value.universe_exclusion_reasons:
+        return SelectionExclusionReason.UNIVERSE_INELIGIBLE, ",".join(
+            value.universe_exclusion_reasons
+        )
     missing = _required_missing(value, spec)
     if missing:
         return SelectionExclusionReason.MISSING_DATA, ",".join(missing)

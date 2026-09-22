@@ -98,7 +98,7 @@ def _request() -> CreateSelectionRunRequest:
 
 
 def _facade(
-    writer: _Writer, admission: FieldAdmissionQuery
+    writer: _Writer, admission: FieldAdmissionQuery, history
 ) -> SelectionWorkspaceFacade:
     return SelectionWorkspaceFacade(
         RunIndustryAndSecuritySelection(
@@ -108,14 +108,15 @@ def _facade(
             run_writer=writer,
         ),
         admission=admission,
+        historical_universe=history,
     )
 
 
 def test_facade_maps_typed_etf_request_to_exact_process_receipt() -> None:
     writer = _Writer()
 
-    with certified_selection(_request()) as (admission, request):
-        receipt = _facade(writer, admission).create(request)
+    with certified_selection(_request()) as (admission, request, history):
+        receipt = _facade(writer, admission, history).create(request)
 
     assert receipt.selection_run.asset_kind == "etf"
     assert [item.instrument_id for item in receipt.selection_run.candidates] == [
@@ -132,10 +133,32 @@ def test_facade_maps_domain_validation_to_application_process_error() -> None:
         factor_weights=(SelectionFactorWeightDraft("momentum", 0.5),),
     )
 
-    with certified_selection(request) as (admission, bound):
+    with certified_selection(request) as (admission, bound, history):
         with pytest.raises(AppProcessError, match="weights"):
-            _facade(writer, admission).create(
+            _facade(writer, admission, history).create(
                 replace(bound, selection_spec=invalid_spec)
             )
 
     assert writer.saved == []
+
+
+@pytest.mark.pit
+def test_selection_keeps_delisted_instrument_as_explicit_exclusion():
+    writer = _Writer()
+    with certified_selection(_request(), delist_on=_AS_OF.date()) as (
+        admission,
+        request,
+        history,
+    ):
+        facade = _facade(writer, admission, history)
+        receipt = facade.create(request)
+        assert receipt.selection_run.candidates == ()
+        assert len(receipt.selection_run.exclusions) == 1
+        assert receipt.selection_run.exclusions[0].reason_code == "universe_ineligible"
+        assert receipt.selection_run.exclusions[0].detail == "DELISTED"
+        assert (
+            receipt.selection_run.universe_snapshot_id == request.universe_snapshot_id
+        )
+        with pytest.raises(AppProcessError):
+            facade.create(replace(request, instruments=()))
+    assert len(writer.saved) == 1

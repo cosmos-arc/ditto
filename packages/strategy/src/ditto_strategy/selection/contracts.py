@@ -109,6 +109,7 @@ class SelectionExclusionReason(StrEnum):
     PRICE_LIMITED = "price_limited"
     EXCESSIVE_TRACKING_ERROR = "excessive_tracking_error"
     BELOW_TOP_K = "below_top_k"
+    UNIVERSE_INELIGIBLE = "universe_ineligible"
 
 
 class SelectionRunStatus(StrEnum):
@@ -295,9 +296,17 @@ class SelectionInstrumentInput:
     limit_state: SelectionLimitState | None
     tracking_error: float | None
     declared_missing_inputs: tuple[str, ...] = ()
+    universe_exclusion_reasons: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """Freeze factor facts and validate hard-filter observations."""
+        object.__setattr__(
+            self,
+            "universe_exclusion_reasons",
+            _text_set(
+                self.universe_exclusion_reasons, field_name="universe_exclusion_reasons"
+            ),
+        )
         _positive_int(self.instrument_id, field_name="instrument_id")
         object.__setattr__(
             self,

@@ -45,7 +45,7 @@ __all__ = [
 # Shared frozen contract (used by facade methods *and* report builder)
 # ---------------------------------------------------------------------------
 
-_RESEARCH_BUILDER_VERSION = "unified-derived-research-v1"
+_RESEARCH_BUILDER_VERSION = "historical-universe-research-v2"
 
 
 @dataclass(frozen=True)

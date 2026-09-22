@@ -1297,6 +1297,30 @@
         "title": "APIResponse[FillResponse]",
         "type": "object"
       },
+      "APIResponse_HistoricalUniverseResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HistoricalUniverseResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[HistoricalUniverseResponse]",
+        "type": "object"
+      },
       "APIResponse_HoldoutEvaluationReceiptResponse_": {
         "properties": {
           "data": {
@@ -10536,6 +10560,16 @@
             "minLength": 1,
             "title": "Universe Snapshot Id",
             "type": "string"
+          },
+          "universe_sources": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoricalUniverseSourcesBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -15836,6 +15870,215 @@
           "features"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HistoricalUniverseBody": {
+        "additionalProperties": false,
+        "description": "Read-only historical resolution request.",
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "publication_cutoff": {
+            "format": "date-time",
+            "title": "Publication Cutoff",
+            "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/HistoricalUniverseSourcesBody"
+          }
+        },
+        "required": [
+          "sources",
+          "as_of",
+          "knowledge_cutoff",
+          "publication_cutoff"
+        ],
+        "title": "HistoricalUniverseBody",
+        "type": "object"
+      },
+      "HistoricalUniverseMemberResponse": {
+        "description": "Observation membership is separate from investment eligibility.",
+        "properties": {
+          "delist_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delist Date"
+          },
+          "exclusion_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exclusion Reasons",
+            "type": "array"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "investable": {
+            "title": "Investable",
+            "type": "boolean"
+          },
+          "is_suspended": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Suspended"
+          },
+          "list_date": {
+            "format": "date",
+            "title": "List Date",
+            "type": "string"
+          },
+          "tracking_index": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tracking Index"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "list_date",
+          "delist_date",
+          "is_suspended",
+          "investable",
+          "exclusion_reasons"
+        ],
+        "title": "HistoricalUniverseMemberResponse",
+        "type": "object"
+      },
+      "HistoricalUniverseResponse": {
+        "description": "Exact scope, time and snapshot identity for a historical universe.",
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/HistoricalUniverseMemberResponse"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "publication_cutoff": {
+            "format": "date-time",
+            "title": "Publication Cutoff",
+            "type": "string"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/HistoricalUniverseSourcesBody"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "sources",
+          "as_of",
+          "knowledge_cutoff",
+          "publication_cutoff",
+          "rule_version",
+          "members"
+        ],
+        "title": "HistoricalUniverseResponse",
+        "type": "object"
+      },
+      "HistoricalUniverseSourcesBody": {
+        "additionalProperties": false,
+        "description": "Pinned evidence needed to reconstruct a historical observation pool.",
+        "properties": {
+          "asset_kind": {
+            "enum": [
+              "stock",
+              "etf"
+            ],
+            "title": "Asset Kind",
+            "type": "string"
+          },
+          "index_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Index Id"
+          },
+          "master_snapshot_id": {
+            "minLength": 1,
+            "title": "Master Snapshot Id",
+            "type": "string"
+          },
+          "membership_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Membership Snapshot Id"
+          },
+          "status_snapshot_id": {
+            "minLength": 1,
+            "title": "Status Snapshot Id",
+            "type": "string"
+          },
+          "universe_id": {
+            "minLength": 1,
+            "title": "Universe Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "universe_id",
+          "asset_kind",
+          "master_snapshot_id",
+          "status_snapshot_id"
+        ],
+        "title": "HistoricalUniverseSourcesBody",
         "type": "object"
       },
       "HoldoutEvaluationReceiptResponse": {
@@ -49431,6 +49674,132 @@
           }
         },
         "summary": "Update Universe",
+        "tags": [
+          "universes"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/universes/{universe_id}/history": {
+      "post": {
+        "description": "Resolve retained evidence without ingesting or approving data.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "universes_resolve_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "universe_id",
+            "required": true,
+            "schema": {
+              "title": "Universe Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoricalUniverseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_HistoricalUniverseResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Resolve History",
         "tags": [
           "universes"
         ],

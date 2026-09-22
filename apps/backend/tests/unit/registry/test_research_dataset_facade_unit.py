@@ -29,6 +29,9 @@ from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import DerivedCatalogService
 from ditto_platform.foundation import SQLiteClient
+from packages.application.tests.integration.historical_universe_support import (
+    seed_history,
+)
 
 
 def _sources_provider() -> Provider:
@@ -305,7 +308,9 @@ class TestResearchDatasetBuildProcess:
                 )
             )
 
+            sources = seed_history(sqlite_client, tmp_path)
             snapshot = facade.build(
+                universe_sources=sources,
                 dataset_id="research.alpha_beta",
                 start="2026-03-10",
                 end="2026-03-11",
@@ -316,13 +321,13 @@ class TestResearchDatasetBuildProcess:
             )
             assert snapshot_record is not None
             assert snapshot.dataset_spec_version == 1
-            assert snapshot.builder_version == "unified-derived-research-v1"
+            assert snapshot.builder_version == "historical-universe-research-v2"
             assert snapshot_record.resolved_versions == {
                 "factor.alpha": 2,
                 "factor.beta": 1,
             }
             assert snapshot_record.dataset_spec_version == 1
-            assert snapshot_record.resolved_inputs == (
+            assert snapshot_record.resolved_inputs[:-1] == (
                 {
                     "derived_id": "factor.alpha",
                     "version": 2,
@@ -343,6 +348,8 @@ class TestResearchDatasetBuildProcess:
                 {
                     "instrument_id": 1,
                     "trade_date": date(2026, 3, 10),
+                    "investable": True,
+                    "universe_exclusion_reasons": "",
                     "known_at": date(2026, 3, 10),
                     "factor.alpha": None,
                     "factor.beta": 100.0,
@@ -350,6 +357,8 @@ class TestResearchDatasetBuildProcess:
                 {
                     "instrument_id": 1,
                     "trade_date": date(2026, 3, 11),
+                    "investable": True,
+                    "universe_exclusion_reasons": "",
                     "known_at": date(2026, 3, 11),
                     "factor.alpha": 20.0,
                     "factor.beta": 200.0,
@@ -437,7 +446,9 @@ class TestResearchDatasetBuildProcess:
                 )
             )
 
+            sources = seed_history(sqlite_client, tmp_path)
             snapshot = facade.build(
+                universe_sources=sources,
                 dataset_id="research.alpha_override",
                 start="2026-03-11",
                 end="2026-03-11",
@@ -539,7 +550,9 @@ class TestResearchDatasetBuildProcess:
                 )
             )
 
+            sources = seed_history(sqlite_client, tmp_path)
             snapshot = facade.build(
+                universe_sources=sources,
                 dataset_id="research.alpha_beta_cutoff",
                 start="2026-03-11",
                 end="2026-03-11",
@@ -549,14 +562,14 @@ class TestResearchDatasetBuildProcess:
             record = research_catalog.get_dataset_snapshot(snapshot.snapshot_id)
             assert record is not None
             assert record.effective_cutoff == "2026-03-11"
-            assert record.source_snapshot_ids == (
+            assert set(record.source_snapshot_ids) == set(sources.snapshot_ids) | {
                 "market:20260310-001",
                 "market:20260311-001",
-            )
-            assert snapshot.source_snapshot_ids == (
+            }
+            assert set(snapshot.source_snapshot_ids) == set(sources.snapshot_ids) | {
                 "market:20260310-001",
                 "market:20260311-001",
-            )
+            }
         finally:
             container.close()
 
@@ -628,7 +641,9 @@ class TestResearchDatasetBuildProcess:
                 )
             )
 
+            sources = seed_history(sqlite_client, tmp_path)
             snapshot = facade.build(
+                universe_sources=sources,
                 dataset_id="research.alpha_report",
                 start="2026-03-10",
                 end="2026-03-11",
@@ -643,8 +658,10 @@ class TestResearchDatasetBuildProcess:
                 "resolved_versions": {"factor.alpha": 2},
                 "known_at_policy": "sample_time",
                 "effective_cutoff": None,
-                "source_snapshot_ids": ["market:20260311-001"],
-                "builder_version": "unified-derived-research-v1",
+                "source_snapshot_ids": sorted(
+                    ["market:20260311-001", *sources.snapshot_ids]
+                ),
+                "builder_version": "historical-universe-research-v2",
             }
             report_path = tmp_path / snapshot.data_path
             assert report_path.parent.joinpath("build_report.json").exists() is True

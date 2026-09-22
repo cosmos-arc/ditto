@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, datetime, time
 from typing import NamedTuple
+from zoneinfo import ZoneInfo
 
 import polars as pl
 from ditto_analysis.research.artifact_service import ResearchArtifactService
@@ -40,6 +41,10 @@ from ditto_application.processes.research_dataset_helpers import (
     _hydrate_spine_spec,
     _normalize_trade_dates,
     _pit_join,
+)
+from ditto_application.queries.historical_universe import (
+    HistoricalUniverseQuery,
+    HistoricalUniverseSources,
 )
 
 __all__ = ["ResearchDatasetBuildProcess"]
@@ -83,11 +88,13 @@ class ResearchDatasetBuildProcess:
         research_catalog_service: ResearchCatalogService,
         artifact_reader: DerivedArtifactReader,
         research_artifact_service: ResearchArtifactService,
+        historical_universe: HistoricalUniverseQuery,
     ) -> None:
         self._metadata_service = metadata_service
         self._research_catalog_service = research_catalog_service
         self._artifact_reader = artifact_reader
         self._artifact_service = research_artifact_service
+        self._historical_universe = historical_universe
 
     def build(
         self,
@@ -97,6 +104,7 @@ class ResearchDatasetBuildProcess:
         end: str,
         version_overrides: dict[str, int] | None = None,
         explicit_cutoff: str | None = None,
+        universe_sources: HistoricalUniverseSources | None = None,
     ) -> DatasetSnapshot:
         """Build one immutable research dataset snapshot."""
         dataset_spec = _hydrate_dataset_spec(
@@ -118,10 +126,18 @@ class ResearchDatasetBuildProcess:
             if explicit_cutoff is None:
                 raise AppProcessError("explicit_cutoff is required")
             date.fromisoformat(explicit_cutoff[:10])
+        if universe_sources is None:
+            raise AppProcessError(
+                "HISTORY_SNAPSHOT_MISSING: research requires pinned universe sources"
+            )
+        if universe_sources.universe_id != spine_spec.universe_id:
+            raise AppProcessError("HISTORY_SCOPE_CONFLICT")
         spine_snapshot = self._build_spine_snapshot(
             spine_spec=spine_spec,
             start=start,
             end=end,
+            sources=universe_sources,
+            explicit_cutoff=explicit_cutoff,
         )
         spine_frame = self._artifact_service.read_parquet(spine_snapshot.data_path)
         dataset_frame = _attach_known_at(
@@ -146,8 +162,17 @@ class ResearchDatasetBuildProcess:
             known_at_policy=known_at_policy,
             effective_cutoff=explicit_cutoff,
             resolved_versions=resolved.versions,
-            resolved_inputs=resolved.inputs,
-            source_snapshot_ids=resolved.source_ids,
+            resolved_inputs=(
+                *resolved.inputs,
+                {
+                    "input_kind": "universe",
+                    "universe_id": universe_sources.universe_id,
+                    "source_snapshot_ids": list(universe_sources.snapshot_ids),
+                },
+            ),
+            source_snapshot_ids=tuple(
+                sorted(set(resolved.source_ids) | set(universe_sources.snapshot_ids))
+            ),
         )
         build_report = _build_dataset_report(
             dataset_frame=dataset_frame,
@@ -230,6 +255,8 @@ class ResearchDatasetBuildProcess:
         spine_spec: SpineSpec,
         start: str,
         end: str,
+        sources: HistoricalUniverseSources,
+        explicit_cutoff: str | None,
     ) -> SpineSnapshot:
         calendar_frame = self._metadata_service.calendar.list_calendar_range(
             start=start,
@@ -237,30 +264,44 @@ class ResearchDatasetBuildProcess:
             only_open=True,
         )
         trade_dates = _normalize_trade_dates(calendar_frame)
-        instrument_ids = self._metadata_service.get_universe(
-            spine_spec.universe_id,
-            asof=end,
-        )
-        if trade_dates.is_empty() or not instrument_ids:
-            spine_frame = pl.DataFrame(
-                schema={
-                    "instrument_id": pl.Int64,
-                    "trade_date": pl.Date,
-                }
+        daily_frames: list[pl.DataFrame] = []
+        daily_evidence: list[dict[str, object]] = []
+        for day in trade_dates["trade_date"].to_list():
+            cutoff = (
+                datetime.fromisoformat(explicit_cutoff)
+                if explicit_cutoff is not None
+                else datetime.combine(day, time.min, ZoneInfo("Asia/Shanghai"))
             )
-        else:
-            spine_frame = (
-                trade_dates.join(
-                    pl.DataFrame({"instrument_id": instrument_ids}),
-                    how="cross",
+            if cutoff.tzinfo is None:
+                cutoff = cutoff.replace(tzinfo=ZoneInfo("Asia/Shanghai"))
+            result = self._historical_universe.resolve(
+                sources,
+                as_of=day,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+            )
+            daily_frames.append(
+                result.frame.with_columns(
+                    pl.lit(day).alias("trade_date"),
+                    pl.col("exclusion_reasons")
+                    .list.join("|")
+                    .alias("universe_exclusion_reasons"),
+                ).select(
+                    "instrument_id",
+                    "trade_date",
+                    "investable",
+                    "universe_exclusion_reasons",
                 )
-                .select(["instrument_id", "trade_date"])
-                .sort(["instrument_id", "trade_date"])
             )
+            daily_evidence.append(result.evidence)
+        if not daily_frames:
+            raise AppProcessError("HISTORY_CALENDAR_EMPTY")
+        spine_frame = pl.concat(daily_frames).sort(["instrument_id", "trade_date"])
 
         metadata: dict[str, object] = {
             "spine_id": spine_spec.spine_id,
             "universe_id": spine_spec.universe_id,
+            "universe_history": daily_evidence,
             "calendar": spine_spec.calendar,
             "grain": spine_spec.grain,
             "entity_key": spine_spec.entity_key,

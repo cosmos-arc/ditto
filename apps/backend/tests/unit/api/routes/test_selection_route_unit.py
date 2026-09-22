@@ -38,6 +38,7 @@ from ditto_apps.models.selection import (
     SelectionInstrumentRequest,
     StockSelectionSpecRequest,
 )
+from ditto_apps.models.universe import HistoricalUniverseSourcesBody
 from ditto_apps.registry.research_case import AnalysisResearchCaseFactory
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.industry_rotation.contracts import IndustryRotationSnapshot
@@ -139,7 +140,9 @@ def _body(*, seed: int = 17) -> CreateSelectionRunBody:
     )
 
 
-def _facade(store: _Store, admission: FieldAdmissionQuery) -> SelectionWorkspaceFacade:
+def _facade(
+    store: _Store, admission: FieldAdmissionQuery, history
+) -> SelectionWorkspaceFacade:
     return SelectionWorkspaceFacade(
         RunIndustryAndSecuritySelection(
             rotation_service=IndustryRotationService(),
@@ -148,6 +151,7 @@ def _facade(store: _Store, admission: FieldAdmissionQuery) -> SelectionWorkspace
             run_writer=store,
         ),
         admission=admission,
+        historical_universe=history,
     )
 
 
@@ -162,13 +166,13 @@ def test_create_handler_is_content_idempotent_and_preserves_evidence(admission) 
         first = asyncio.run(
             handler(
                 body=_body().model_copy(update=admission[1]),
-                facade=_facade(store, admission[0]),
+                facade=_facade(store, admission[0], admission[2]),
             )
         )
         second = asyncio.run(
             handler(
                 body=_body().model_copy(update=admission[1]),
-                facade=_facade(store, admission[0]),
+                facade=_facade(store, admission[0], admission[2]),
             )
         )
 
@@ -180,7 +184,7 @@ def test_create_handler_is_content_idempotent_and_preserves_evidence(admission) 
 
 def test_get_and_compare_handlers_read_exact_saved_runs(admission) -> None:
     store = _Store()
-    facade = _facade(store, admission[0])
+    facade = _facade(store, admission[0], admission[2])
     create_handler = _original(create_selection_run)
     with patch(
         "ditto_apps.api.routes.selection.asyncio.to_thread",
@@ -227,7 +231,7 @@ def test_create_research_case_handler_returns_exact_selection_lineage(
     admission,
 ) -> None:
     store = _Store()
-    facade = _facade(store, admission[0])
+    facade = _facade(store, admission[0], admission[2])
     create_run_handler = _original(create_selection_run)
     create_case_handler = _original(create_research_case)
 
@@ -273,7 +277,11 @@ def test_research_case_request_accepts_json_candidate_array() -> None:
 
 @pytest.fixture
 def admission():
-    with certified_selection(_application_request(_body())) as (query, request):
+    with certified_selection(_application_request(_body())) as (
+        query,
+        request,
+        history,
+    ):
         yield (
             query,
             {
@@ -287,9 +295,14 @@ def admission():
                     )
                     for item in request.data_fields
                 ),
+                "universe_sources": HistoricalUniverseSourcesBody.model_validate(
+                    asdict(request.universe_sources)
+                ),
+                "universe_snapshot_id": request.universe_snapshot_id,
                 "data_from": request.data_from,
                 "data_to": request.data_to,
                 "rotation_source_snapshot_ids": request.rotation_source_snapshot_ids,
                 "selection_source_snapshot_ids": request.selection_source_snapshot_ids,
             },
+            history,
         )

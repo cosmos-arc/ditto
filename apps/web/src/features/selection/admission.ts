@@ -7,6 +7,12 @@ const PURPOSES: Record<string, string> = {
 	promotion_paper: "晋级/Paper 数据输入",
 };
 const REASONS: Record<string, string> = {
+	HISTORY_SNAPSHOT_MISSING: "请绑定历史证券池的主数据、交易状态及必要的成分关系快照。",
+	HISTORY_SNAPSHOT_CONFLICT: "历史证券池身份或来源不一致，请重新读取指定时点的证券池。",
+	HISTORY_ROSTER_CONFLICT: "输入名单与历史观察池不一致，请保留退市及不可投资样本。",
+	HISTORY_FIELDS_MISSING: "来源缺少历史有效区间或可知时间，不能用今日名单代替。",
+	HISTORY_NOT_OBSERVED: "该来源在知识截止前尚未被观察，无法证明当时可用。",
+	HISTORY_ADMISSION_BLOCKED: "历史证券池字段尚未通过许可、覆盖和认证检查。",
 	FIELD_EVIDENCE_MISSING: "请补齐该字段的认证与范围证据，再重新检查。",
 	CONSUMER_INPUT_MISMATCH: "输入内容、区间或依赖与审核证据不一致，请恢复原输入包或重新验证。",
 	CONSUMER_BINDING_MISSING: "输入缺少经审核的字段来源绑定，请补齐输入包。",

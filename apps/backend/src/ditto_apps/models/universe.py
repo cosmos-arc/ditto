@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import date
+from typing import Any, Literal
 
+from ditto_application.queries.historical_universe import HistoricalUniverseSources
 from pydantic import BaseModel, ConfigDict, Field
+
+from ditto_apps.models.technical_analysis import HttpDateTime
 
 
 class UniverseResponse(BaseModel):
@@ -66,3 +70,53 @@ __all__ = [
     "UpdateUniverseRequest",
     "to_universe_response",
 ]
+
+
+class HistoricalUniverseSourcesBody(BaseModel):
+    """Pinned evidence needed to reconstruct a historical observation pool."""
+
+    model_config = ConfigDict(extra="forbid")
+    universe_id: str = Field(min_length=1)
+    asset_kind: Literal["stock", "etf"]
+    master_snapshot_id: str = Field(min_length=1)
+    status_snapshot_id: str = Field(min_length=1)
+    membership_snapshot_id: str | None = None
+    index_id: str | None = None
+
+    def to_application(self) -> HistoricalUniverseSources:
+        """Adapt transport values without claiming qualification."""
+        return HistoricalUniverseSources(**self.model_dump())
+
+
+class HistoricalUniverseBody(BaseModel):
+    """Read-only historical resolution request."""
+
+    model_config = ConfigDict(extra="forbid")
+    sources: HistoricalUniverseSourcesBody
+    as_of: date
+    knowledge_cutoff: HttpDateTime
+    publication_cutoff: HttpDateTime
+
+
+class HistoricalUniverseMemberResponse(BaseModel):
+    """Observation membership is separate from investment eligibility."""
+
+    instrument_id: int
+    list_date: date
+    delist_date: date | None
+    is_suspended: bool | None
+    tracking_index: str | None = None
+    investable: bool
+    exclusion_reasons: list[str]
+
+
+class HistoricalUniverseResponse(BaseModel):
+    """Exact scope, time and snapshot identity for a historical universe."""
+
+    snapshot_id: str
+    sources: HistoricalUniverseSourcesBody
+    as_of: date
+    knowledge_cutoff: HttpDateTime
+    publication_cutoff: HttpDateTime
+    rule_version: str
+    members: list[HistoricalUniverseMemberResponse]

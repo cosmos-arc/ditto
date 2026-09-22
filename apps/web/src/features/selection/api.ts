@@ -50,3 +50,33 @@ export function assessSelectionAdmission(body: CreateSelectionRunBody, instrumen
 		params: { query: instrumentId === undefined ? {} : { instrument_id: instrumentId } },
 	});
 }
+
+export async function resolveSelectionUniverse(input: CreateSelectionRunBody) {
+	if (!input.universe_sources) throw new Error("输入包缺少历史证券池来源");
+	const asOf = new Intl.DateTimeFormat("en-CA", {
+		timeZone: "Asia/Shanghai",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(new Date(input.as_of));
+	const value = await apiClient.post("/api/v1/universes/{universe_id}/history", {
+		params: { path: { universe_id: input.universe_sources.universe_id } },
+		body: {
+			sources: input.universe_sources,
+			as_of: asOf,
+			knowledge_cutoff: input.knowledge_cutoff,
+			publication_cutoff: input.publication_cutoff,
+		},
+	});
+	return {
+		snapshotId: value.snapshot_id,
+		asOf: value.as_of,
+		knowledgeCutoff: value.knowledge_cutoff,
+		publicationCutoff: value.publication_cutoff,
+		members: value.members.map((member) => ({
+			instrumentId: member.instrument_id,
+			investable: member.investable,
+			reasons: member.exclusion_reasons.join("、") || "符合历史池条件",
+		})),
+	};
+}

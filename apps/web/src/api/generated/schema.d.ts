@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 90e41e35c441af9f60bcbd8cb163110dbc9062e81929dd67224b566f47bfae2b
+ * Schema SHA-256: 8448c7537eb0142138d3b2dfe0cde7dd2559639b57145475b84f2675245a9d41
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3908,6 +3908,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/universes/{universe_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve History
+         * @description Resolve retained evidence without ingesting or approving data.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["universes_resolve_history"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/universes/{universe_id}/members": {
         parameters: {
             query?: never;
@@ -4353,6 +4375,13 @@ export interface components {
         APIResponse_FillResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["FillResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[HistoricalUniverseResponse] */
+        APIResponse_HistoricalUniverseResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["HistoricalUniverseResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -8773,6 +8802,7 @@ export interface components {
             selection_spec: components["schemas"]["SelectionSpecRequest"];
             /** Universe Snapshot Id */
             universe_snapshot_id: string;
+            universe_sources?: components["schemas"]["HistoricalUniverseSourcesBody"] | null;
         };
         /**
          * CreateStrategyRequest
@@ -11219,6 +11249,100 @@ export interface components {
             status: "ok";
             /** Timestamp */
             timestamp: number;
+        };
+        /**
+         * HistoricalUniverseBody
+         * @description Read-only historical resolution request.
+         */
+        HistoricalUniverseBody: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            sources: components["schemas"]["HistoricalUniverseSourcesBody"];
+        };
+        /**
+         * HistoricalUniverseMemberResponse
+         * @description Observation membership is separate from investment eligibility.
+         */
+        HistoricalUniverseMemberResponse: {
+            /** Delist Date */
+            delist_date: string | null;
+            /** Exclusion Reasons */
+            exclusion_reasons: string[];
+            /** Instrument Id */
+            instrument_id: number;
+            /** Investable */
+            investable: boolean;
+            /** Is Suspended */
+            is_suspended: boolean | null;
+            /**
+             * List Date
+             * Format: date
+             */
+            list_date: string;
+            /** Tracking Index */
+            tracking_index?: string | null;
+        };
+        /**
+         * HistoricalUniverseResponse
+         * @description Exact scope, time and snapshot identity for a historical universe.
+         */
+        HistoricalUniverseResponse: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Members */
+            members: components["schemas"]["HistoricalUniverseMemberResponse"][];
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Rule Version */
+            rule_version: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            sources: components["schemas"]["HistoricalUniverseSourcesBody"];
+        };
+        /**
+         * HistoricalUniverseSourcesBody
+         * @description Pinned evidence needed to reconstruct a historical observation pool.
+         */
+        HistoricalUniverseSourcesBody: {
+            /**
+             * Asset Kind
+             * @enum {string}
+             */
+            asset_kind: "stock" | "etf";
+            /** Index Id */
+            index_id?: string | null;
+            /** Master Snapshot Id */
+            master_snapshot_id: string;
+            /** Membership Snapshot Id */
+            membership_snapshot_id?: string | null;
+            /** Status Snapshot Id */
+            status_snapshot_id: string;
+            /** Universe Id */
+            universe_id: string;
         };
         /**
          * HoldoutEvaluationReceiptResponse
@@ -32187,6 +32311,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_bool_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    universes_resolve_history: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                universe_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HistoricalUniverseBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_HistoricalUniverseResponse_"];
                 };
             };
             /** @description Bad request */

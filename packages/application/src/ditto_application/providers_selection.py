@@ -25,6 +25,7 @@ from ditto_application.processes.selection.run_industry_and_security_selection i
     RunIndustryAndSecuritySelection,
 )
 from ditto_application.queries.field_admission import FieldAdmissionQuery
+from ditto_application.queries.historical_universe import HistoricalUniverseQuery
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 from ditto_application.queries.selection_evidence import (
@@ -63,9 +64,12 @@ class AppSelectionProvider(Provider):
         self,
         process: RunIndustryAndSecuritySelection,
         admission: FieldAdmissionQuery,
+        historical_universe: HistoricalUniverseQuery,
     ) -> SelectionWorkspaceFacade:
         """Expose typed create-selection requests to transport adapters."""
-        return SelectionWorkspaceFacade(process, admission=admission)
+        return SelectionWorkspaceFacade(
+            process, admission=admission, historical_universe=historical_universe
+        )
 
     @provide
     def create_research_case_from_selection(
@@ -129,5 +133,18 @@ class AppSelectionProvider(Provider):
     ) -> ProviderSnapshotQuery:
         """Bind exact replay to data-owned immutable reads and current qualification."""
         return ProviderSnapshotQuery(
+            SnapshotReadService(snapshots, payloads, lifecycle), admission
+        )
+
+    @provide
+    def historical_universe_query(
+        self,
+        snapshots: ProviderSnapshotReader,
+        payloads: ProviderPayloadReader,
+        lifecycle: PartitionLifecycleReader,
+        admission: FieldAdmissionQuery,
+    ) -> HistoricalUniverseQuery:
+        """Resolve qualified historical scopes from completed retained evidence."""
+        return HistoricalUniverseQuery(
             SnapshotReadService(snapshots, payloads, lifecycle), admission
         )

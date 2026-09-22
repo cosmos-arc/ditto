@@ -115,6 +115,9 @@ def _application_request(body: CreateSelectionRunBody) -> CreateSelectionRunRequ
         ),
         rotation_missing_inputs=body.rotation_missing_inputs,
         universe_snapshot_id=body.universe_snapshot_id,
+        universe_sources=(
+            body.universe_sources.to_application() if body.universe_sources else None
+        ),
         selection_source_snapshot_ids=body.selection_source_snapshot_ids,
         selection_spec=selection_spec,
         seed=body.seed,

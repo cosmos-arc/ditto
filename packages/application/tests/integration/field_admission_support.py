@@ -211,7 +211,7 @@ def field_evidence(
 
 
 @contextmanager
-def certified_selection(request):
+def certified_selection(request, *, delist_on=None):
     """Supply explicitly reviewed synthetic fields for transport regression tests."""
     with field_evidence(day=request.as_of.date(), visible=request.knowledge_cutoff) as (
         query,
@@ -219,72 +219,85 @@ def certified_selection(request):
         reports,
         old,
     ):
-        consumer_fields = (
-            "universe_snapshot_id",
-            "membership_version",
-            "market_context_feature_set_id",
-            "instruments.instrument_id",
-            "instruments.instrument_name",
-            "instruments.industry_id",
-            "instruments.average_turnover",
-            "instruments.is_st",
-            "instruments.is_suspended",
-            "instruments.listing_days",
-            "instruments.limit_state",
-            "instruments.tracking_error",
-            "industries.industry_id",
-            "industries.industry_name",
-            "industries.relative_strength_5d",
-            "industries.relative_strength_20d",
-            "industries.relative_strength_60d",
-            "industries.advancing_count",
-            "industries.declining_count",
-            "industries.member_count",
-            "industries.trend_score",
-            "industries.fundamental_score",
-            "industries.regime_alignment_score",
-            *(
-                f"instruments.factor_values.{item.name}"
-                for item in request.selection_spec.factor_weights
-            ),
+        from packages.application.tests.integration.historical_universe_support import (
+            selection_history,
         )
-        snapshot_id = old.evidence.snapshot_ids[0]
-        bound = replace(
-            request,
-            data_fields=tuple(
-                FieldRequirement("stock_daily", "amount", snapshot_id, consumer)
-                for consumer in consumer_fields
-            ),
-            data_from=old.coverage.target_from,
-            data_to=old.coverage.target_to,
-            rotation_source_snapshot_ids=(snapshot_id,),
-            selection_source_snapshot_ids=(snapshot_id,),
-        )
-        field = replace(
-            old.evidence.certified_fields[0],
-            instrument_ids=tuple(
-                int(item.instrument_id) for item in request.instruments
-            ),
-            available_at=request.knowledge_cutoff,
-            publication_at=request.publication_cutoff,
-            consumer_bindings=tuple(
-                (name, consumer_input_digest(selection_field_payload(bound, name)))
-                for name in consumer_fields
-            ),
-        )
-        reports.revoke_report(
-            old.report_id,
-            revoked_by="human",
-            revoked_at=_VISIBLE,
-            reason="synthetic request scope",
-        )
-        report = DatasetCertificationReport.create(
-            dataset_id=old.dataset_id,
-            profile=old.profile,
-            coverage=old.coverage,
-            evidence=replace(old.evidence, certified_fields=(field,)),
-            generated_at=_VISIBLE,
-        )
-        reports.append_report(report)
-        reports.approve_report(report.report_id, reviewer="human", reviewed_at=_VISIBLE)
-        yield query, bound
+
+        with selection_history(request, delist_on=delist_on) as (
+            history,
+            sources,
+            universe_id,
+        ):
+            consumer_fields = (
+                "universe_snapshot_id",
+                "membership_version",
+                "market_context_feature_set_id",
+                "instruments.instrument_id",
+                "instruments.instrument_name",
+                "instruments.industry_id",
+                "instruments.average_turnover",
+                "instruments.is_st",
+                "instruments.is_suspended",
+                "instruments.listing_days",
+                "instruments.limit_state",
+                "instruments.tracking_error",
+                "industries.industry_id",
+                "industries.industry_name",
+                "industries.relative_strength_5d",
+                "industries.relative_strength_20d",
+                "industries.relative_strength_60d",
+                "industries.advancing_count",
+                "industries.declining_count",
+                "industries.member_count",
+                "industries.trend_score",
+                "industries.fundamental_score",
+                "industries.regime_alignment_score",
+                *(
+                    f"instruments.factor_values.{item.name}"
+                    for item in request.selection_spec.factor_weights
+                ),
+            )
+            snapshot_id = old.evidence.snapshot_ids[0]
+            bound = replace(
+                request,
+                data_fields=tuple(
+                    FieldRequirement("stock_daily", "amount", snapshot_id, consumer)
+                    for consumer in consumer_fields
+                ),
+                data_from=old.coverage.target_from,
+                data_to=old.coverage.target_to,
+                rotation_source_snapshot_ids=(snapshot_id,),
+                selection_source_snapshot_ids=(snapshot_id, *sources.snapshot_ids),
+                universe_sources=sources,
+                universe_snapshot_id=universe_id,
+            )
+            field = replace(
+                old.evidence.certified_fields[0],
+                instrument_ids=tuple(
+                    int(item.instrument_id) for item in request.instruments
+                ),
+                available_at=request.knowledge_cutoff,
+                publication_at=request.publication_cutoff,
+                consumer_bindings=tuple(
+                    (name, consumer_input_digest(selection_field_payload(bound, name)))
+                    for name in consumer_fields
+                ),
+            )
+            reports.revoke_report(
+                old.report_id,
+                revoked_by="human",
+                revoked_at=_VISIBLE,
+                reason="synthetic request scope",
+            )
+            report = DatasetCertificationReport.create(
+                dataset_id=old.dataset_id,
+                profile=old.profile,
+                coverage=old.coverage,
+                evidence=replace(old.evidence, certified_fields=(field,)),
+                generated_at=_VISIBLE,
+            )
+            reports.append_report(report)
+            reports.approve_report(
+                report.report_id, reviewer="human", reviewed_at=_VISIBLE
+            )
+            yield query, bound, history

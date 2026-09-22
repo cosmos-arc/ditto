@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 90e41e35c441af9f60bcbd8cb163110dbc9062e81929dd67224b566f47bfae2b
+ * Schema SHA-256: 8448c7537eb0142138d3b2dfe0cde7dd2559639b57145475b84f2675245a9d41
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1818,6 +1818,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "post /api/v1/universes/{universe_id}/history": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "put /api/v1/manual/intents/{intent_id}/status": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -2919,6 +2929,12 @@ export const operationRequestContracts = {
   "post /api/v1/universes": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
+  "post /api/v1/universes/{universe_id}/history": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["universe_id"],
     },
   },
   "put /api/v1/manual/intents/{intent_id}/status": {
