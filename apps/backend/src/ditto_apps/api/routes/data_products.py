@@ -8,6 +8,7 @@ from typing import Annotated
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.queries.data_products import DataProductsQueryFacade
+from ditto_application.queries.data_specimen import DataSpecimenQuery
 from fastapi import APIRouter, Query
 
 from ditto_apps.api.errors import NotFoundError
@@ -19,12 +20,14 @@ from ditto_apps.models.data_products import (
     DataProductQualityResponse,
     DataProductRunResponse,
     DataProductViewResponse,
+    DataSpecimenCategoryResponse,
     to_data_product_coverage,
     to_data_product_evidence,
     to_data_product_license,
     to_data_product_quality,
     to_data_product_run,
     to_data_product_view,
+    to_specimen_category,
 )
 
 router = APIRouter(prefix="/data-products", tags=["data-products"])
@@ -52,6 +55,20 @@ async def list_data_products(
     """List the 22 independent R2 dataset specs and active reports."""
     rows = await asyncio.to_thread(facade.list_products, profile=profile)
     return APIResponse(data=[to_data_product_view(row) for row in rows])
+
+
+@router.get(
+    "/specimens",
+    response_model=APIResponse[list[DataSpecimenCategoryResponse]],
+    operation_id="data_products_list_specimens",
+)
+@inject
+async def list_specimens(
+    query: Annotated[DataSpecimenQuery, FromComponent()],
+) -> APIResponse[list[DataSpecimenCategoryResponse]]:
+    """List all five specimen categories with conclusions and unresolved gaps."""
+    summaries = await asyncio.to_thread(query.summarize)
+    return APIResponse(data=[to_specimen_category(summary) for summary in summaries])
 
 
 @router.get(

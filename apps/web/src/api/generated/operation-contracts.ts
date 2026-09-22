@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: d2a67554e8eb46544c85cf3dde4b701d2569f7da2971c1c712df754830a0aa4e
+ * Schema SHA-256: 75592d9130f4d699a87684d4c71eb0fa157b487096a9f4af1592dc4ce64634a7
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -298,6 +298,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/data-products": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/data-products/specimens": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2040,6 +2050,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["profile"],
+    },
+  },
+  "get /api/v1/data-products/specimens": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "get /api/v1/data-products/{dataset_id}/coverage": {

@@ -58,6 +58,8 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotWriter,
 )
 from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
+from ditto_data.catalog.specimen import SpecimenReader, SpecimenWriter
+from ditto_data.catalog.specimen_store import SQLiteSpecimenStore
 from ditto_data.catalog.sqlite_store import SQLiteDataCatalog
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.freeze_store import (
@@ -222,6 +224,30 @@ class RuntimeProvider(Provider):
     ) -> DatasetLicenseReader:
         """Dataset license read port."""
         return dataset_license_store
+
+    @provide
+    def data_specimen_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteSpecimenStore:
+        """Append-only five-category specimen evidence ledger."""
+        return SQLiteSpecimenStore(sqlite_client)
+
+    @provide
+    def data_specimen_writer(
+        self,
+        data_specimen_store: SQLiteSpecimenStore,
+    ) -> SpecimenWriter:
+        """Specimen evidence write port."""
+        return data_specimen_store
+
+    @provide
+    def data_specimen_reader(
+        self,
+        data_specimen_store: SQLiteSpecimenStore,
+    ) -> SpecimenReader:
+        """Specimen evidence read port."""
+        return data_specimen_store
 
     @provide
     def dataset_certification_store(

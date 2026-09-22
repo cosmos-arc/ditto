@@ -8,12 +8,21 @@ import {
 	fetchDataProductQuality,
 	fetchDataProductRuns,
 	fetchDataProducts,
+	fetchDataSpecimens,
 } from "../api";
 
 export function useDataProducts(profile = DEFAULT_DATA_PRODUCT_PROFILE) {
 	return useQuery({
 		queryKey: dataProductKeys.list(profile),
 		queryFn: () => fetchDataProducts(profile),
+	});
+}
+
+export function useDataSpecimens(enabled = true) {
+	return useQuery({
+		queryKey: dataProductKeys.specimens(),
+		queryFn: () => fetchDataSpecimens(),
+		enabled,
 	});
 }
 

@@ -1103,6 +1103,168 @@ def test_export_requires_frozen_source_evidence_for_every_input(
     ].to_list() == [None, 30.0]
 
 
+@pytest.mark.integration
+def test_exploration_only_specimen_blocks_formal_export(
+    export_snapshot, research_state: Path
+) -> None:
+    """A verified exploration-only verdict cannot launder into formal exports."""
+    from datetime import UTC, datetime
+
+    from ditto_application.exceptions import AppQueryError
+    from ditto_data.catalog.specimen import DataSpecimen, SpecimenSource, SpecimenWriter
+
+    original = next(
+        item for item in export_snapshot.source_snapshot_ids if "stock_basic" in item
+    )
+    with closing(_make_test_container()) as container:
+        container.get(SpecimenWriter).append_specimen(
+            DataSpecimen(
+                category="delisted_security",
+                dataset_id="stock_basic",
+                anchor="000003.SZ",
+                sources=(
+                    SpecimenSource(source="recorded", provider_snapshot_id=original),
+                ),
+                coverage_from=date(2026, 1, 1),
+                coverage_to=date(2026, 6, 30),
+                knowable_from=datetime(2026, 7, 1, tzinfo=UTC),
+                time_precision="date",
+                as_of_counterexample="delist announcement hidden before cutoff",
+                license_record_ids=("license:unused",),
+                allowed_uses=("display", "exploration"),
+                verification_status="verified",
+                adjudicated_by="test",
+                adjudicated_at=datetime(2026, 9, 20, tzinfo=UTC),
+            )
+        )
+        command = container.get(ResearchDatasetExport)
+        with pytest.raises(AppQueryError, match="试样"):
+            command.export(export_snapshot, "csv", Path("exports/blocked.csv"))
+    assert not (research_state / "exports").exists()
+
+
+@pytest.mark.integration
+def test_older_same_dataset_restriction_cannot_hide_behind_newer_verdict(
+    export_snapshot, research_state: Path
+) -> None:
+    """Every bound specimen gates; a newer permissive verdict cannot launder."""
+    from datetime import UTC, datetime
+
+    from ditto_application.exceptions import AppQueryError
+    from ditto_data.catalog.specimen import DataSpecimen, SpecimenSource, SpecimenWriter
+
+    original = next(
+        item for item in export_snapshot.source_snapshot_ids if "stock_basic" in item
+    )
+    with closing(_make_test_container()) as container:
+        writer = container.get(SpecimenWriter)
+        # Older verified exploration-only verdict on a shared dataset.
+        writer.append_specimen(
+            DataSpecimen(
+                category="delisted_security",
+                dataset_id="stock_basic",
+                anchor="000003.SZ",
+                sources=(
+                    SpecimenSource(source="recorded", provider_snapshot_id=original),
+                ),
+                coverage_from=date(2026, 1, 1),
+                knowable_from=datetime(2026, 7, 1, tzinfo=UTC),
+                time_precision="date",
+                as_of_counterexample="delist announcement hidden before cutoff",
+                license_record_ids=("license:unused",),
+                allowed_uses=("display", "exploration"),
+                verification_status="verified",
+                adjudicated_by="test",
+                adjudicated_at=datetime(2026, 9, 1, tzinfo=UTC),
+            )
+        )
+        # Newer permissive verdict on the same dataset from another category.
+        writer.append_specimen(
+            DataSpecimen(
+                category="financial_restatement",
+                dataset_id="stock_basic",
+                anchor="600000.SH",
+                sources=(
+                    SpecimenSource(source="recorded", provider_snapshot_id=original),
+                ),
+                coverage_from=date(2026, 1, 1),
+                knowable_from=datetime(2026, 7, 1, tzinfo=UTC),
+                time_precision="date",
+                as_of_counterexample="restatement hidden before cutoff",
+                license_record_ids=("license:unused",),
+                allowed_uses=(
+                    "display",
+                    "exploration",
+                    "formal_research",
+                    "promotion_paper",
+                ),
+                verification_status="verified",
+                adjudicated_by="test",
+                adjudicated_at=datetime(2026, 9, 20, tzinfo=UTC),
+            )
+        )
+        command = container.get(ResearchDatasetExport)
+        with pytest.raises(AppQueryError, match="试样"):
+            command.export(export_snapshot, "csv", Path("exports/hidden.csv"))
+    assert not (research_state / "exports").exists()
+
+
+@pytest.mark.integration
+def test_specimen_restrictions_travel_in_the_export_receipt(
+    export_snapshot, research_state: Path
+) -> None:
+    """Permissive or unverified specimens never block; the receipt keeps them."""
+    from ditto_data.catalog.specimen import (
+        DataSpecimen,
+        SpecimenProcurement,
+        SpecimenSource,
+        SpecimenWriter,
+    )
+
+    with closing(_make_test_container()) as container:
+        writer = container.get(SpecimenWriter)
+        # Unverified specimen: missing evidence blocks nothing by itself.
+        specimen = DataSpecimen(
+            category="cross_border_etf",
+            dataset_id="market.daily",
+            anchor="513100.SH",
+            sources=(SpecimenSource(source="tushare"),),
+            gaps=("REAL_SAMPLE_NOT_COLLECTED",),
+            procurement=(
+                SpecimenProcurement(option="professional", quote_status="unknown"),
+            ),
+        )
+        writer.append_specimen(specimen)
+        receipt = container.get(ResearchDatasetExport).export(
+            export_snapshot, "csv", Path("exports/specimen.csv")
+        )
+
+    manifest = orjson.loads(
+        (research_state / "exports/specimen.csv.manifest.json").read_bytes()
+    )
+    recorded = manifest["source"]["specimens"]
+    assert [item["specimen_id"] for item in recorded] == [specimen.specimen_id]
+    assert recorded[0]["verification_status"] == "unverified"
+    assert "QUOTE_UNKNOWN" in recorded[0]["gaps"]
+    assert receipt["row_count"] == 2
+
+
+@pytest.mark.integration
+def test_no_specimen_leaves_export_unchanged(
+    export_snapshot, research_state: Path
+) -> None:
+    """Datasets without specimen evidence export exactly as before."""
+    with closing(_make_test_container()) as container:
+        receipt = container.get(ResearchDatasetExport).export(
+            export_snapshot, "csv", Path("exports/plain.csv")
+        )
+    manifest = orjson.loads(
+        (research_state / "exports/plain.csv.manifest.json").read_bytes()
+    )
+    assert manifest["source"]["specimens"] == []
+    assert receipt["row_count"] == 2
+
+
 @pytest.mark.parametrize("old_sources", [[], ["unlicensed-old-source"]])
 def test_export_does_not_let_latest_run_hide_older_evidence(
     export_snapshot, research_state: Path, old_sources

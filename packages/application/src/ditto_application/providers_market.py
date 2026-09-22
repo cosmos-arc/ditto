@@ -10,6 +10,7 @@ from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader
 from ditto_data.catalog.certification import CertificationReader
 from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
+from ditto_data.catalog.license import DatasetLicenseReader
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
@@ -17,6 +18,7 @@ from ditto_data.catalog.promotion import (
 )
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.catalog.specimen import SpecimenReader
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
@@ -38,6 +40,7 @@ from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
 from ditto_application.queries.data_products import DataProductsQueryFacade
+from ditto_application.queries.data_specimen import DataSpecimenQuery
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.evaluation import FactorEvaluationFacade
 from ditto_application.queries.forward_return_service import ForwardReturnService
@@ -175,6 +178,20 @@ class AppMarketQueryProvider(Provider):
     ) -> DataProductsQueryFacade:
         """R2 data-product workbench read models."""
         return DataProductsQueryFacade(certification_reader=certification_reader)
+
+    @provide
+    def data_specimen_query(
+        self,
+        specimens: SpecimenReader,
+        snapshots: ProviderSnapshotReader,
+        licenses: DatasetLicenseReader,
+    ) -> DataSpecimenQuery:
+        """Five-category specimen summaries with reference re-verification."""
+        return DataSpecimenQuery(
+            specimens=specimens,
+            snapshots=snapshots,
+            licenses=licenses,
+        )
 
     @provide
     def forward_return_service(

@@ -13,6 +13,12 @@ from ditto_application.queries.data_products import (
     DataProductRunView,
     DataProductView,
 )
+from ditto_application.queries.data_specimen import (
+    SpecimenCategorySummary,
+    SpecimenProcurementView,
+    SpecimenSourceView,
+    SpecimenView,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
@@ -23,12 +29,17 @@ __all__ = [
     "DataProductQualityResponse",
     "DataProductRunResponse",
     "DataProductViewResponse",
+    "DataSpecimenCategoryResponse",
+    "DataSpecimenProcurementResponse",
+    "DataSpecimenResponse",
+    "DataSpecimenSourceResponse",
     "to_data_product_coverage",
     "to_data_product_evidence",
     "to_data_product_license",
     "to_data_product_quality",
     "to_data_product_run",
     "to_data_product_view",
+    "to_specimen_category",
 ]
 
 
@@ -138,6 +149,64 @@ class DataProductLicenseResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class DataSpecimenSourceResponse(BaseModel):
+    """One provider's collected original for the specimen anchor."""
+
+    source: str
+    provider_snapshot_id: str | None
+    upstream_group: str | None
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataSpecimenProcurementResponse(BaseModel):
+    """One procurement track; unknown quotes stay unknown."""
+
+    option: str = Field(description="in_budget or professional track")
+    quote_status: str = Field(description="unknown until a real quote is recorded")
+    notes: str | None
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataSpecimenResponse(BaseModel):
+    """One adjudicated five-category specimen evidence pack."""
+
+    specimen_id: str
+    category: str
+    dataset_id: str
+    anchor: str = Field(description="Concrete security/event sample identifier")
+    sources: list[DataSpecimenSourceResponse]
+    upstream_independent: bool
+    convention_alignment: str
+    coverage_from: date | None
+    coverage_to: date | None
+    knowable_from: datetime | None
+    time_precision: str
+    as_of_counterexample: str | None
+    license_record_ids: list[str]
+    gaps: list[str]
+    allowed_uses: list[str]
+    verification_status: str
+    procurement: list[DataSpecimenProcurementResponse]
+    adjudicated_by: str | None
+    adjudicated_at: datetime | None
+    evidence_uri: str | None
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataSpecimenCategoryResponse(BaseModel):
+    """One category's conclusion; missing stays explicitly unverified."""
+
+    category: str
+    collected: bool
+    unresolved_gaps: list[str]
+    latest: DataSpecimenResponse | None
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 def to_data_product_view(value: DataProductView) -> DataProductViewResponse:
     """Map the application dataset projection to the public API model."""
     return DataProductViewResponse(
@@ -242,4 +311,59 @@ def to_data_product_license(
         profile=value.profile,
         report_id=value.report_id,
         license_record_ids=list(value.license_record_ids),
+    )
+
+
+def _specimen_source(value: SpecimenSourceView) -> DataSpecimenSourceResponse:
+    return DataSpecimenSourceResponse(
+        source=value.source,
+        provider_snapshot_id=value.provider_snapshot_id,
+        upstream_group=value.upstream_group,
+    )
+
+
+def _specimen_procurement(
+    value: SpecimenProcurementView,
+) -> DataSpecimenProcurementResponse:
+    return DataSpecimenProcurementResponse(
+        option=value.option,
+        quote_status=value.quote_status,
+        notes=value.notes,
+    )
+
+
+def _specimen(value: SpecimenView) -> DataSpecimenResponse:
+    return DataSpecimenResponse(
+        specimen_id=value.specimen_id,
+        category=value.category,
+        dataset_id=value.dataset_id,
+        anchor=value.anchor,
+        sources=[_specimen_source(item) for item in value.sources],
+        upstream_independent=value.upstream_independent,
+        convention_alignment=value.convention_alignment,
+        coverage_from=value.coverage_from,
+        coverage_to=value.coverage_to,
+        knowable_from=value.knowable_from,
+        time_precision=value.time_precision,
+        as_of_counterexample=value.as_of_counterexample,
+        license_record_ids=list(value.license_record_ids),
+        gaps=list(value.gaps),
+        allowed_uses=list(value.allowed_uses),
+        verification_status=value.verification_status,
+        procurement=[_specimen_procurement(item) for item in value.procurement],
+        adjudicated_by=value.adjudicated_by,
+        adjudicated_at=value.adjudicated_at,
+        evidence_uri=value.evidence_uri,
+    )
+
+
+def to_specimen_category(
+    summary: SpecimenCategorySummary,
+) -> DataSpecimenCategoryResponse:
+    """Map one category summary to the public API model."""
+    return DataSpecimenCategoryResponse(
+        category=summary.category,
+        collected=summary.collected,
+        unresolved_gaps=list(summary.unresolved_gaps),
+        latest=_specimen(summary.latest) if summary.latest is not None else None,
     )

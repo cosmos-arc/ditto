@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,9 +19,12 @@ from ditto_application.queries.data_products import (
     DataProductsQueryFacade,
     DataProductView,
 )
+from ditto_application.queries.data_specimen import DataSpecimenQuery
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.data_products import router
 from ditto_apps.middleware import api_error_handler
+from ditto_data.catalog.specimen import DataSpecimen, SpecimenSource
+from ditto_data.catalog.specimen_store import SQLiteSpecimenStore
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -195,3 +199,65 @@ def test_missing_product_report_returns_404(
     with TestClient(app) as client:
         response = client.get("/api/v1/data-products/unknown/coverage")
     assert response.status_code == 404
+
+
+@pytest.mark.integration
+def test_specimens_expose_all_five_categories_with_explicit_gaps(
+    tmp_path: Path,
+) -> None:
+    """The specimen endpoint keeps missing categories explicitly unverified."""
+    from ditto_platform.foundation import SQLiteClient, SQLitePool
+
+    pool = SQLitePool(str(tmp_path / "catalog.sqlite"))
+    client = SQLiteClient(pool)
+    try:
+        SQLiteSpecimenStore(client).append_specimen(
+            DataSpecimen(
+                category="cross_border_etf",
+                dataset_id="etf_nav",
+                anchor="513100.SH",
+                sources=(SpecimenSource(source="tushare"),),
+                gaps=("REAL_SAMPLE_NOT_COLLECTED",),
+                procurement=(),
+            )
+        )
+        query = DataSpecimenQuery(
+            specimens=SQLiteSpecimenStore(client),
+            snapshots=MagicMock(),
+            licenses=MagicMock(),
+        )
+    finally:
+        pool.close_all()
+
+    class SpecimenProvider(Provider):
+        scope = Scope.APP
+
+        @provide
+        def data_specimen_query(self) -> DataSpecimenQuery:
+            return query
+
+    specimen_app = FastAPI()
+    setup_dishka(container=make_async_container(SpecimenProvider()), app=specimen_app)
+    specimen_app.include_router(router, prefix="/api/v1")
+    specimen_app.add_exception_handler(APIError, api_error_handler)
+
+    with TestClient(specimen_app) as test_client:
+        response = test_client.get("/api/v1/data-products/specimens")
+
+    assert response.status_code == 200
+    categories = response.json()["data"]
+    assert [item["category"] for item in categories] == [
+        "financial_restatement",
+        "delisted_security",
+        "index_rebalance",
+        "dividend_etf",
+        "cross_border_etf",
+    ]
+    cross_border = categories[-1]
+    assert cross_border["collected"] is True
+    assert cross_border["latest"]["verification_status"] == "unverified"
+    assert cross_border["unresolved_gaps"] == ["REAL_SAMPLE_NOT_COLLECTED"]
+    for item in categories[:-1]:
+        assert item["collected"] is False
+        assert item["latest"] is None
+        assert item["unresolved_gaps"] == ["SPECIMEN_NOT_COLLECTED"]

@@ -10,10 +10,13 @@ export type DataProductQuality = components["schemas"]["DataProductQualityRespon
 export type DataProductRun = components["schemas"]["DataProductRunResponse"];
 export type DataProductEvidence = components["schemas"]["DataProductEvidenceResponse"];
 export type DataProductLicense = components["schemas"]["DataProductLicenseResponse"];
+export type DataSpecimenCategory = components["schemas"]["DataSpecimenCategoryResponse"];
+export type DataSpecimen = components["schemas"]["DataSpecimenResponse"];
 
 export const dataProductKeys = {
 	all: ["data-products"] as const,
 	list: (profile: string) => [...dataProductKeys.all, "list", profile] as const,
+	specimens: () => [...dataProductKeys.all, "specimens"] as const,
 	detail: (datasetId: string, profile: string) => [...dataProductKeys.all, datasetId, profile] as const,
 	coverage: (datasetId: string, profile: string) =>
 		[...dataProductKeys.detail(datasetId, profile), "coverage"] as const,
@@ -71,4 +74,8 @@ export function fetchDataProductLicense(
 	return apiClient.get("/api/v1/data-products/{dataset_id}/license", {
 		params: { path: { dataset_id: datasetId }, query: { profile } },
 	});
+}
+
+export function fetchDataSpecimens(): Promise<readonly DataSpecimenCategory[]> {
+	return apiClient.get("/api/v1/data-products/specimens");
 }

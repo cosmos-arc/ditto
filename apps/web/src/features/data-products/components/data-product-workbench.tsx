@@ -8,6 +8,7 @@ import {
 	useDataProductQuality,
 	useDataProductRuns,
 	useDataProducts,
+	useDataSpecimens,
 } from "../hooks";
 import { DataProductCatalog } from "./data-product-catalog";
 import { DataProductCoverage } from "./data-product-coverage";
@@ -16,6 +17,7 @@ import { DataProductOperations } from "./data-product-operations";
 import { DataProductOverview as DataProductOverviewView } from "./data-product-overview";
 import { DataProductQuality } from "./data-product-quality";
 import { DataProductRuns } from "./data-product-runs";
+import { DataProductSpecimens } from "./data-product-specimens";
 import { DataProductToolbar, type WorkbenchView } from "./data-product-toolbar";
 
 const PRODUCT_SKELETON_KEYS = ["one", "two", "three", "four", "five", "six", "seven", "eight"] as const;
@@ -60,6 +62,7 @@ export function DataProductWorkbench() {
 	const runsQuery = useDataProductRuns(activeId, undefined, view === "runs");
 	const evidenceQuery = useDataProductEvidence(activeId, undefined, view === "evidence" && hasActiveCertification);
 	const licenseQuery = useDataProductLicense(activeId, undefined, view === "evidence" && hasActiveCertification);
+	const specimensQuery = useDataSpecimens(view === "specimens");
 
 	function detailPanel() {
 		if (!activeProduct) return <WorkbenchEmpty />;
@@ -99,6 +102,14 @@ export function DataProductWorkbench() {
 					license={licenseQuery.data}
 					isLoading={evidenceQuery.isLoading || licenseQuery.isLoading}
 					isError={evidenceQuery.isError || licenseQuery.isError}
+				/>
+			);
+		if (view === "specimens")
+			return (
+				<DataProductSpecimens
+					categories={specimensQuery.data}
+					isLoading={specimensQuery.isLoading}
+					isError={specimensQuery.isError}
 				/>
 			);
 		if (view === "operations") return <DataProductOperations datasetId={activeId} />;

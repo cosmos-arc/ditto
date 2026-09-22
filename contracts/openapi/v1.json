@@ -2857,6 +2857,34 @@
         "title": "APIResponse[list[DataProductViewResponse]]",
         "type": "object"
       },
+      "APIResponse_list_DataSpecimenCategoryResponse__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/DataSpecimenCategoryResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[DataSpecimenCategoryResponse]]",
+        "type": "object"
+      },
       "APIResponse_list_Dividend__": {
         "properties": {
           "data": {
@@ -13028,6 +13056,293 @@
           "active_certification_report_id"
         ],
         "title": "DataProductViewResponse",
+        "type": "object"
+      },
+      "DataSpecimenCategoryResponse": {
+        "description": "One category's conclusion; missing stays explicitly unverified.",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "collected": {
+            "title": "Collected",
+            "type": "boolean"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataSpecimenResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unresolved_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unresolved Gaps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "collected",
+          "unresolved_gaps",
+          "latest"
+        ],
+        "title": "DataSpecimenCategoryResponse",
+        "type": "object"
+      },
+      "DataSpecimenProcurementResponse": {
+        "description": "One procurement track; unknown quotes stay unknown.",
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "option": {
+            "description": "in_budget or professional track",
+            "title": "Option",
+            "type": "string"
+          },
+          "quote_status": {
+            "description": "unknown until a real quote is recorded",
+            "title": "Quote Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "option",
+          "quote_status",
+          "notes"
+        ],
+        "title": "DataSpecimenProcurementResponse",
+        "type": "object"
+      },
+      "DataSpecimenResponse": {
+        "description": "One adjudicated five-category specimen evidence pack.",
+        "properties": {
+          "adjudicated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudicated At"
+          },
+          "adjudicated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudicated By"
+          },
+          "allowed_uses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Uses",
+            "type": "array"
+          },
+          "anchor": {
+            "description": "Concrete security/event sample identifier",
+            "title": "Anchor",
+            "type": "string"
+          },
+          "as_of_counterexample": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Counterexample"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "convention_alignment": {
+            "title": "Convention Alignment",
+            "type": "string"
+          },
+          "coverage_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage From"
+          },
+          "coverage_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage To"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "evidence_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Uri"
+          },
+          "gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "knowable_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowable From"
+          },
+          "license_record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "License Record Ids",
+            "type": "array"
+          },
+          "procurement": {
+            "items": {
+              "$ref": "#/components/schemas/DataSpecimenProcurementResponse"
+            },
+            "title": "Procurement",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/DataSpecimenSourceResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "specimen_id": {
+            "title": "Specimen Id",
+            "type": "string"
+          },
+          "time_precision": {
+            "title": "Time Precision",
+            "type": "string"
+          },
+          "upstream_independent": {
+            "title": "Upstream Independent",
+            "type": "boolean"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "specimen_id",
+          "category",
+          "dataset_id",
+          "anchor",
+          "sources",
+          "upstream_independent",
+          "convention_alignment",
+          "coverage_from",
+          "coverage_to",
+          "knowable_from",
+          "time_precision",
+          "as_of_counterexample",
+          "license_record_ids",
+          "gaps",
+          "allowed_uses",
+          "verification_status",
+          "procurement",
+          "adjudicated_by",
+          "adjudicated_at",
+          "evidence_uri"
+        ],
+        "title": "DataSpecimenResponse",
+        "type": "object"
+      },
+      "DataSpecimenSourceResponse": {
+        "description": "One provider's collected original for the specimen anchor.",
+        "properties": {
+          "provider_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Snapshot Id"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "upstream_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Group"
+          }
+        },
+        "required": [
+          "source",
+          "provider_snapshot_id",
+          "upstream_group"
+        ],
+        "title": "DataSpecimenSourceResponse",
         "type": "object"
       },
       "DatasetMaturitySummaryResponse": {
@@ -31072,6 +31387,113 @@
           }
         },
         "summary": "List Data Products",
+        "tags": [
+          "data-products"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/data-products/specimens": {
+      "get": {
+        "description": "List all five specimen categories with conclusions and unresolved gaps.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "data_products_list_specimens",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_DataSpecimenCategoryResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Specimens",
         "tags": [
           "data-products"
         ],

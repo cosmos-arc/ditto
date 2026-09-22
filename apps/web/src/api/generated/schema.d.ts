@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: d2a67554e8eb46544c85cf3dde4b701d2569f7da2971c1c712df754830a0aa4e
+ * Schema SHA-256: 75592d9130f4d699a87684d4c71eb0fa157b487096a9f4af1592dc4ce64634a7
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -927,6 +927,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["data_products_list_data_products"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-products/specimens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Specimens
+         * @description List all five specimen categories with conclusions and unresolved gaps.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["data_products_list_specimens"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4860,6 +4882,16 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["DataProductViewResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[DataSpecimenCategoryResponse]] */
+        APIResponse_list_DataSpecimenCategoryResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["DataSpecimenCategoryResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -9876,6 +9908,98 @@ export interface components {
              * @description Canonical dataset timezone
              */
             timezone: string;
+        };
+        /**
+         * DataSpecimenCategoryResponse
+         * @description One category's conclusion; missing stays explicitly unverified.
+         */
+        DataSpecimenCategoryResponse: {
+            /** Category */
+            category: string;
+            /** Collected */
+            collected: boolean;
+            latest: components["schemas"]["DataSpecimenResponse"] | null;
+            /** Unresolved Gaps */
+            unresolved_gaps: string[];
+        };
+        /**
+         * DataSpecimenProcurementResponse
+         * @description One procurement track; unknown quotes stay unknown.
+         */
+        DataSpecimenProcurementResponse: {
+            /** Notes */
+            notes: string | null;
+            /**
+             * Option
+             * @description in_budget or professional track
+             */
+            option: string;
+            /**
+             * Quote Status
+             * @description unknown until a real quote is recorded
+             */
+            quote_status: string;
+        };
+        /**
+         * DataSpecimenResponse
+         * @description One adjudicated five-category specimen evidence pack.
+         */
+        DataSpecimenResponse: {
+            /** Adjudicated At */
+            adjudicated_at: string | null;
+            /** Adjudicated By */
+            adjudicated_by: string | null;
+            /** Allowed Uses */
+            allowed_uses: string[];
+            /**
+             * Anchor
+             * @description Concrete security/event sample identifier
+             */
+            anchor: string;
+            /** As Of Counterexample */
+            as_of_counterexample: string | null;
+            /** Category */
+            category: string;
+            /** Convention Alignment */
+            convention_alignment: string;
+            /** Coverage From */
+            coverage_from: string | null;
+            /** Coverage To */
+            coverage_to: string | null;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Evidence Uri */
+            evidence_uri: string | null;
+            /** Gaps */
+            gaps: string[];
+            /** Knowable From */
+            knowable_from: string | null;
+            /** License Record Ids */
+            license_record_ids: string[];
+            /** Procurement */
+            procurement: components["schemas"]["DataSpecimenProcurementResponse"][];
+            /** Sources */
+            sources: components["schemas"]["DataSpecimenSourceResponse"][];
+            /** Specimen Id */
+            specimen_id: string;
+            /** Time Precision */
+            time_precision: string;
+            /** Upstream Independent */
+            upstream_independent: boolean;
+            /** Verification Status */
+            verification_status: string;
+        };
+        /**
+         * DataSpecimenSourceResponse
+         * @description One provider's collected original for the specimen anchor.
+         */
+        DataSpecimenSourceResponse: {
+            /** Provider Snapshot Id */
+            provider_snapshot_id: string | null;
+            /** Source */
+            source: string;
+            /** Upstream Group */
+            upstream_group: string | null;
         };
         /**
          * DatasetMaturitySummaryResponse
@@ -19794,6 +19918,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_DataProductViewResponse__"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    data_products_list_specimens: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_DataSpecimenCategoryResponse__"];
                 };
             };
             /** @description Bad request */
