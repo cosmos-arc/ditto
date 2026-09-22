@@ -42,6 +42,7 @@ def assess_selection_fields(
     consumed_fields: frozenset[str],
     instrument_ids: tuple[int, ...],
     snapshot_bindings: Mapping[str, tuple[str, frozenset[str]]],
+    qualified_selection_sources: frozenset[str] = frozenset(),
 ) -> FieldAdmissionReport:
     """
     Ignore unrelated inputs and refuse omitted or foreign dependencies.
@@ -67,7 +68,11 @@ def assess_selection_fields(
         missing_field(snapshot_id, "SNAPSHOT_UNBOUND")
         for stage, sources in declared.items()
         if sources
-        for snapshot_id in sorted(sources - referenced.get(stage, set()))
+        for snapshot_id in sorted(
+            sources
+            - referenced.get(stage, set())
+            - (qualified_selection_sources if stage == "selection" else frozenset())
+        )
     )
     if not bound or not instrument_ids:
         return FieldAdmissionReport(

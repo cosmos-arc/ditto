@@ -75,6 +75,7 @@ class TestResearchDatasetBuildFlow:
             end="2026-03-11",
             version_overrides=None,
             explicit_cutoff=None,
+            universe_sources=None,
         )
         bundle.research_dataset_query.load_build_report.assert_called_once_with(
             snapshot

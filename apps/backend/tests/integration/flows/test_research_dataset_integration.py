@@ -45,6 +45,9 @@ from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import DerivedCatalogService
 from ditto_platform.foundation import SQLiteClient
+from packages.application.tests.integration.historical_universe_support import (
+    seed_history,
+)
 
 pytestmark = pytest.mark.serial
 
@@ -83,6 +86,17 @@ def _invoke_research_build_flow(**kwargs: Any) -> dict[str, Any]:
         "fn",
         research_dataset_build_flow,
     )
+    if "universe_sources" not in kwargs:
+        with closing(_make_test_container()) as container:
+            from ditto_data.config.data_store import DataStoreSettings
+
+            kwargs.setdefault(
+                "universe_sources",
+                seed_history(
+                    container.get(SQLiteClient),
+                    container.get(DataStoreSettings).data_root,
+                ),
+            )
     return flow_entrypoint(**kwargs)
 
 
@@ -600,7 +614,8 @@ class TestResearchDatasetBuildFlowIntegration:
         )
         frame = pl.read_parquet(research_state / included["results"][0]["data_path"])
         assert frame["factor.alpha"].to_list() == [1e9, 1e9]
-        assert included["results"][0]["source_snapshot_ids"] == ("market:20260311-001",)
+        assert "market:20260311-001" in included["results"][0]["source_snapshot_ids"]
+        assert len(included["results"][0]["source_snapshot_ids"]) == 3
 
     @pytest.mark.parametrize("cutoff", [None, "not-a-date"])
     def test_invalid_cutoff_writes_nothing(
@@ -1029,3 +1044,145 @@ def test_export_does_not_let_latest_run_hide_older_evidence(
                 snapshot, "csv", Path("exports/incremental.csv")
             )
     assert not (research_state / "exports").exists()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+@pytest.mark.parametrize("asset_kind", ["stock", "etf"])
+def test_historical_spine_retains_delisted_rows_and_replays_exact_sources(
+    research_state, asset_kind
+):
+    from ditto_application.queries.historical_universe import HistoricalUniverseSources
+    from packages.application.tests.integration.historical_universe_support import (
+        history_frames,
+        retain_history,
+    )
+
+    with closing(_make_test_container()) as container:
+        client = container.get(SQLiteClient)
+        master, status = history_frames((1, 2), asset_kind=asset_kind)
+        master = master.with_columns(
+            pl.when(pl.col("instrument_id") == 2)
+            .then(pl.lit(date(2026, 3, 11)))
+            .otherwise(None)
+            .cast(pl.Date)
+            .alias("delist_date")
+        )
+        primary = retain_history(client, research_state, f"{asset_kind}_basic", master)
+        trading = retain_history(
+            client,
+            research_state,
+            "stock_status" if asset_kind == "stock" else "etf_daily",
+            status,
+        )
+        sources = HistoricalUniverseSources(
+            "universe.cn.all",
+            asset_kind,
+            (primary.snapshot_id,),
+            (trading.snapshot_id,),
+        )
+    result = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow",
+        start="2026-03-10",
+        end="2026-03-11",
+        universe_sources=sources,
+    )
+    frame = pl.read_parquet(research_state / result["results"][0]["data_path"])
+    assert frame.select("instrument_id", "trade_date", "investable").rows() == [
+        (1, date(2026, 3, 10), True),
+        (1, date(2026, 3, 11), True),
+        (2, date(2026, 3, 10), True),
+        (2, date(2026, 3, 11), False),
+    ]
+    assert frame["universe_exclusion_reasons"].to_list() == ["", "", "", "DELISTED"]
+    replay = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow",
+        start="2026-03-10",
+        end="2026-03-11",
+        universe_sources=sources,
+    )
+    assert replay == result
+    assert set(sources.snapshot_ids).issubset(
+        result["results"][0]["source_snapshot_ids"]
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_sample_time_spine_resolves_day_visible_snapshots(research_state, monkeypatch):
+    """Each trade date uses only chain members its own midnight had observed."""
+    from datetime import UTC, datetime
+
+    from ditto_application.queries.historical_universe import HistoricalUniverseSources
+    from ditto_data.catalog.snapshot_reader import SnapshotReadService
+    from packages.application.tests.integration.historical_universe_support import (
+        certify_snapshots,
+        history_frames,
+        retain_history,
+    )
+
+    reads = {"count": 0}
+    original_read = SnapshotReadService.read
+
+    def counting_read(self, snapshot_id):
+        reads["count"] += 1
+        return original_read(self, snapshot_id)
+
+    with closing(_make_test_container()) as container:
+        client = container.get(SQLiteClient)
+        master, status = history_frames()
+        primary = retain_history(client, research_state, "stock_basic", master)
+        first_observed = datetime(2026, 3, 9, 12, tzinfo=UTC)
+        second_observed = datetime(2026, 3, 10, 12, tzinfo=UTC)
+        first = retain_history(
+            client,
+            research_state,
+            "stock_status",
+            status,
+            observed=first_observed,
+            certify=False,
+        )
+        # Revision knowable only after the Mar 10 close and present only in the
+        # member observed Mar 10 20:00 CST — invisible to a Mar 10 midnight cutoff.
+        revised = status.with_columns(
+            pl.lit(True).alias("is_suspended"),
+            pl.lit(second_observed).alias("available_at"),
+            pl.lit(second_observed).alias("publication_at"),
+        )
+        second = retain_history(
+            client,
+            research_state,
+            "stock_status",
+            revised,
+            observed=second_observed,
+            certify=False,
+        )
+        certify_snapshots(
+            client,
+            "stock_status",
+            (
+                (first, status, first_observed),
+                (second, revised, second_observed),
+            ),
+        )
+        sources = HistoricalUniverseSources(
+            "universe.cn.all",
+            "stock",
+            (primary.snapshot_id,),
+            (first.snapshot_id, second.snapshot_id),
+        )
+    monkeypatch.setattr(SnapshotReadService, "read", counting_read)
+    result = _invoke_research_build_flow(
+        dataset_id="research.alpha_flow",
+        start="2026-03-10",
+        end="2026-03-11",
+        universe_sources=sources,
+    )
+    frame = pl.read_parquet(research_state / result["results"][0]["data_path"])
+    assert frame.select("instrument_id", "trade_date", "investable").rows() == [
+        (1, date(2026, 3, 10), True),
+        (1, date(2026, 3, 11), False),
+    ]
+    assert frame["universe_exclusion_reasons"].to_list() == ["", "SUSPENDED"]
+    # Pinned payloads are read exactly once per build, not once per trade date.
+    assert reads["count"] == 3

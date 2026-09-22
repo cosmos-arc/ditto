@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.field_evidence import consumer_input_digest
 from ditto_kernel.identity import InstrumentId
@@ -39,6 +40,11 @@ from ditto_application.queries.field_admission import (
     FieldAdmissionReport,
     FieldAdmissionRequest,
     FieldRequirement,
+)
+from ditto_application.queries.historical_universe import (
+    HistoricalUniverseQuery,
+    HistoricalUniverseResult,
+    HistoricalUniverseSources,
 )
 from ditto_application.queries.selection_views import (
     SelectionWorkspaceReceiptView,
@@ -160,6 +166,7 @@ class CreateSelectionRunRequest:
     data_fields: tuple[FieldRequirement, ...] = ()
     data_from: date | None = None
     data_to: date | None = None
+    universe_sources: HistoricalUniverseSources | None = None
 
 
 def _factor_weights(
@@ -268,21 +275,16 @@ class SelectionWorkspaceFacade:
         process: RunIndustryAndSecuritySelection,
         *,
         admission: FieldAdmissionQuery,
+        historical_universe: HistoricalUniverseQuery | None = None,
     ) -> None:
         self._process = process
         self._admission = admission
+        self._historical_universe = historical_universe
 
     def assess_admission(
         self, request: CreateSelectionRunRequest, *, instrument_id: int | None = None
     ) -> FieldAdmissionReport:
-        """
-        Preview the data gate for a declared or incomplete binding.
-
-        Requests without a complete binding get the missing-binding verdict
-        instead of a per-field assessment. During the /api/v1 deprecation
-        window create enforces this verdict only for requests that declare
-        a data binding.
-        """
+        """Preview the same field and historical universe gates used by create."""
         if (
             not request.data_fields
             or request.data_from is None
@@ -301,8 +303,25 @@ class SelectionWorkspaceFacade:
                     details={"reason": "invalid_admission_instrument"},
                 )
             instrument_ids = (instrument_id,)
+        history_failure = ()
+        qualified_sources: frozenset[str] = frozenset()
         try:
-            return assess_selection_fields(
+            self._resolve_history(request)
+            if request.universe_sources is not None:
+                qualified_sources = frozenset(request.universe_sources.snapshot_ids)
+        except AppProcessError as error:
+            historical_report = error.details.get("report")
+            history_failure = (
+                tuple(
+                    replace(item, consumer_field=f"universe_sources.{item.field}")
+                    for item in historical_report.fields
+                    if item.reason_codes
+                )
+                if isinstance(historical_report, FieldAdmissionReport)
+                else (missing_field("universe_sources", str(error)),)
+            )
+        try:
+            report = assess_selection_fields(
                 self._admission,
                 FieldAdmissionRequest(
                     fields=tuple(
@@ -325,6 +344,12 @@ class SelectionWorkspaceFacade:
                 consumed_fields=_consumed_fields(request),
                 instrument_ids=instrument_ids,
                 snapshot_bindings=_snapshot_bindings(request),
+                qualified_selection_sources=qualified_sources,
+            )
+            return replace(
+                report,
+                allowed=report.allowed and not history_failure,
+                fields=(*report.fields, *history_failure),
             )
         except AppQueryError as exc:
             raise AppProcessError(
@@ -347,23 +372,24 @@ class SelectionWorkspaceFacade:
                 str(exc),
                 details={"reason": "invalid_selection_request", **details},
             ) from exc
-        if _declares_data_binding(request):
-            admission = self.assess_admission(request)
-            if not admission.allowed:
-                reasons = sorted(
-                    {
-                        reason
-                        for item in admission.fields
-                        for reason in item.reason_codes
-                    }
-                )
-                raise AppProcessError(
-                    "数据准入未通过:" + ", ".join(reasons),
-                    details={
-                        "reason": "SELECTION_DATA_ADMISSION_BLOCKED",
-                        "reason_codes": reasons,
-                    },
-                )
+        admission = self.assess_admission(request)
+        if not admission.allowed:
+            reasons = sorted(
+                {reason for item in admission.fields for reason in item.reason_codes}
+            )
+            raise AppProcessError(
+                "数据准入未通过:" + ", ".join(reasons),
+                details={
+                    "reason": "SELECTION_DATA_ADMISSION_BLOCKED",
+                    "reason_codes": reasons,
+                },
+            )
+        process_request = replace(
+            process_request,
+            selection_input=self._bind_history(
+                request, process_request.selection_input
+            ),
+        )
         try:
             receipt = self._process.execute(process_request)
         except StrategySpecError as exc:
@@ -376,18 +402,63 @@ class SelectionWorkspaceFacade:
             receipt.selection_run,
         )
 
+    def _bind_history(
+        self,
+        request: CreateSelectionRunRequest,
+        value: SelectionInputBundle,
+    ) -> SelectionInputBundle:
+        history = self._resolve_history(request)
+        rows = {row["instrument_id"]: row for row in history.frame.to_dicts()}
+        return replace(
+            value,
+            instruments=tuple(
+                replace(
+                    item,
+                    is_suspended=rows[int(item.instrument_id)]["is_suspended"],
+                    listing_days=max(
+                        0,
+                        (
+                            request.as_of.astimezone(ZoneInfo("Asia/Shanghai")).date()
+                            - rows[int(item.instrument_id)]["list_date"]
+                        ).days,
+                    ),
+                    universe_exclusion_reasons=tuple(
+                        rows[int(item.instrument_id)]["exclusion_reasons"]
+                    ),
+                )
+                for item in value.instruments
+            ),
+        )
 
-def _declares_data_binding(request: CreateSelectionRunRequest) -> bool:
-    """
-    Pre-#256 v1 requests carry no binding and keep the ungated legacy path.
-
-    Declaring any binding part opts the request into the admission gate.
-    """
-    return (
-        bool(request.data_fields)
-        or request.data_from is not None
-        or request.data_to is not None
-    )
+    def _resolve_history(
+        self, request: CreateSelectionRunRequest
+    ) -> HistoricalUniverseResult:
+        if request.universe_sources is None or self._historical_universe is None:
+            raise AppProcessError("HISTORY_SNAPSHOT_MISSING")
+        sources = request.universe_sources
+        if sources.asset_kind != (
+            "etf"
+            if isinstance(request.selection_spec, EtfSelectionSpecDraft)
+            else "stock"
+        ):
+            raise AppProcessError("HISTORY_ASSET_KIND_CONFLICT")
+        try:
+            history = self._historical_universe.resolve(
+                sources,
+                as_of=request.as_of.astimezone(ZoneInfo("Asia/Shanghai")).date(),
+                knowledge_cutoff=request.knowledge_cutoff,
+                publication_cutoff=request.publication_cutoff,
+            )
+        except AppQueryError as error:
+            raise AppProcessError(str(error), details=error.details) from error
+        if history.snapshot_id != request.universe_snapshot_id or not set(
+            sources.snapshot_ids
+        ).issubset(request.selection_source_snapshot_ids):
+            raise AppProcessError("HISTORY_SNAPSHOT_CONFLICT")
+        rows = {row["instrument_id"]: row for row in history.frame.to_dicts()}
+        if set(rows) != {int(item.instrument_id) for item in request.instruments}:
+            raise AppProcessError("HISTORY_ROSTER_CONFLICT")
+        return history
 
 
 def _snapshot_bindings(

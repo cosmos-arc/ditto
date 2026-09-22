@@ -25,7 +25,8 @@ from ditto_application.commands.universe import (
     UpdateCustomUniverseCommand,
     UpdateCustomUniverseHandler,
 )
-from ditto_application.exceptions import AppCommandError
+from ditto_application.exceptions import AppCommandError, AppQueryError
+from ditto_application.queries.historical_universe import HistoricalUniverseQuery
 from ditto_application.queries.universe import UniverseQueryFacade
 from fastapi import APIRouter, Depends, Query
 
@@ -37,6 +38,9 @@ from ditto_apps.models.common import (
 )
 from ditto_apps.models.universe import (
     CreateUniverseRequest,
+    HistoricalUniverseBody,
+    HistoricalUniverseMemberResponse,
+    HistoricalUniverseResponse,
     MemberResponse,
     UniverseResponse,
     UpdateUniverseRequest,
@@ -196,3 +200,43 @@ async def delete_universe(
     except ValueError as exc:
         raise BadRequestError(str(exc)) from exc
     return APIResponse(data=result)
+
+
+@router.post(
+    "/{universe_id}/history",
+    response_model=APIResponse[HistoricalUniverseResponse],
+    operation_id="universes_resolve_history",
+)
+@inject
+async def resolve_history(
+    universe_id: str,
+    body: HistoricalUniverseBody,
+    query: Annotated[HistoricalUniverseQuery, FromComponent()],
+) -> APIResponse[HistoricalUniverseResponse]:
+    """Resolve retained evidence without ingesting or approving data."""
+    if universe_id != body.sources.universe_id:
+        raise BadRequestError("HISTORY_SCOPE_CONFLICT")
+    try:
+        result = await asyncio.to_thread(
+            query.resolve,
+            body.sources.to_application(),
+            as_of=body.as_of,
+            knowledge_cutoff=body.knowledge_cutoff,
+            publication_cutoff=body.publication_cutoff,
+        )
+    except AppQueryError as error:
+        raise BadRequestError(str(error)) from error
+    return APIResponse(
+        data=HistoricalUniverseResponse(
+            snapshot_id=result.snapshot_id,
+            sources=body.sources,
+            as_of=body.as_of,
+            knowledge_cutoff=body.knowledge_cutoff,
+            publication_cutoff=body.publication_cutoff,
+            rule_version=str(result.evidence["rule_version"]),
+            members=[
+                HistoricalUniverseMemberResponse.model_validate(row)
+                for row in result.frame.to_dicts()
+            ],
+        )
+    )

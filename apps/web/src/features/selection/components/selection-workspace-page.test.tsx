@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { selectionRunInputFixture } from "@/mocks/fixtures/selection";
@@ -108,4 +109,41 @@ it("previews field admission and clears stale qualification when the input chang
 	expect(screen.getByRole("combobox", { name: "选择输入字段" })).toBeInTheDocument();
 	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), { target: { value: "{}" } });
 	expect(screen.queryByRole("combobox", { name: "选择输入字段" })).not.toBeInTheDocument();
+});
+
+it("shows the historical roster and hides it after editing its bound input", async () => {
+	const user = userEvent.setup();
+	const sources = {
+		universe_id: "pool",
+		asset_kind: "stock",
+		master_snapshot_ids: ["master"],
+		status_snapshot_ids: ["status"],
+	};
+	server.use(
+		http.post("/api/v1/universes/pool/history", async ({ request }) => {
+			const input = (await request.json()) as Record<string, unknown>;
+			return HttpResponse.json({
+				data: {
+					...input,
+					rule_version: "historical-universe-v1",
+					snapshot_id: `universe:sha256:${"a".repeat(64)}`,
+					members: [
+						{ instrument_id: 1, investable: true, exclusion_reasons: [] },
+						{ instrument_id: 2, investable: false, exclusion_reasons: ["DELISTED"] },
+					],
+				},
+			});
+		}),
+	);
+	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+	await user.click(screen.getByText("新建运行 · 导入规范化输入包"));
+	const input = { ...selectionRunInputFixture, universe_sources: sources };
+	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), { target: { value: JSON.stringify(input) } });
+	await user.click(screen.getByRole("button", { name: "查看历史证券池" }));
+	expect(await screen.findByRole("region", { name: "历史证券池" })).toHaveTextContent("2 只证券");
+	expect(screen.getByText("2 · 不可投资 · DELISTED")).toBeInTheDocument();
+	fireEvent.change(screen.getByLabelText("Selection 输入 JSON"), {
+		target: { value: JSON.stringify({ ...input, as_of: "2026-09-01T00:00:00Z" }) },
+	});
+	expect(screen.queryByRole("region", { name: "历史证券池" })).not.toBeInTheDocument();
 });

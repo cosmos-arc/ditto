@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
+from ditto_application.queries.historical_universe import HistoricalUniverseSources
 from prefect import flow
 
 from ditto_apps.registry import create_materialization_bundle
@@ -33,6 +34,7 @@ def research_dataset_build_flow(
     end: str,
     version_overrides: dict[str, int] | None = None,
     explicit_cutoff: str | None = None,
+    universe_sources: HistoricalUniverseSources | None = None,
 ) -> dict[str, object]:
     """Build one immutable research dataset snapshot."""
     with create_materialization_bundle() as bundle:
@@ -42,6 +44,7 @@ def research_dataset_build_flow(
             end=end,
             version_overrides=version_overrides,
             explicit_cutoff=explicit_cutoff,
+            universe_sources=universe_sources,
         )
         build_report = bundle.research_dataset_query.load_build_report(snapshot)
 

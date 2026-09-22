@@ -174,6 +174,7 @@ from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.data_readiness import (
     DataReadinessQueryFacade,
 )
+from ditto_application.queries.historical_universe import HistoricalUniverseQuery
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.research_certification import (
@@ -231,6 +232,7 @@ class AppProcessProvider(Provider):
         research_catalog_service: ResearchCatalogService,
         derived_catalog_service: DerivedCatalogService,
         research_artifact_service: ResearchArtifactService,
+        historical_universe: HistoricalUniverseQuery,
         settings: DataStoreSettings,
     ) -> ResearchDatasetBuildProcess:
         """研究数据集快照构建 facade."""
@@ -242,6 +244,7 @@ class AppProcessProvider(Provider):
                 artifact_root=Path(settings.data_root),
             ),
             research_artifact_service=research_artifact_service,
+            historical_universe=historical_universe,
         )
 
     @provide

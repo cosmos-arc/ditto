@@ -86,3 +86,73 @@ describe("selection API", () => {
 		expect(() => compareSelectionRuns("same", "same")).toThrow("distinct exact run IDs");
 	});
 });
+
+it("resolves the full historical pool with Shanghai date and pinned sources", async () => {
+	const { resolveSelectionUniverse } = await import("./api");
+	const sources = {
+		universe_id: "pool",
+		asset_kind: "stock" as const,
+		master_snapshot_ids: ["master"],
+		status_snapshot_ids: ["status"],
+	};
+	server.use(
+		http.post("/api/v1/universes/pool/history", async ({ request }) => {
+			expect(await request.json()).toEqual({
+				sources,
+				as_of: "2026-09-01",
+				knowledge_cutoff: runBody.knowledge_cutoff,
+				publication_cutoff: runBody.publication_cutoff,
+			});
+			return HttpResponse.json({
+				data: {
+					snapshot_id: `universe:sha256:${"a".repeat(64)}`,
+					sources,
+					rule_version: "historical-universe-v1",
+					as_of: "2026-09-01",
+					knowledge_cutoff: runBody.knowledge_cutoff,
+					publication_cutoff: runBody.publication_cutoff,
+					members: [{ instrument_id: 1, investable: false, exclusion_reasons: ["DELISTED"] }],
+				},
+			});
+		}),
+	);
+	const result = await resolveSelectionUniverse({
+		...runBody,
+		as_of: "2026-08-31T18:00:00Z",
+		universe_sources: sources,
+	});
+	expect(result.members).toEqual([{ instrumentId: 1, investable: false, reasons: "DELISTED" }]);
+	expect(result.snapshotId).toBe(`universe:sha256:${"a".repeat(64)}`);
+});
+
+it.each(["identity", "eligibility", "duplicates"])("refuses a malformed historical %s response", async (failure) => {
+	const { resolveSelectionUniverse } = await import("./api");
+	const sources = {
+		universe_id: "pool",
+		asset_kind: "stock" as const,
+		master_snapshot_ids: ["master"],
+		status_snapshot_ids: ["status"],
+	};
+	server.use(
+		http.post("/api/v1/universes/pool/history", () =>
+			HttpResponse.json({
+				data: {
+					sources: { ...sources, index_id: failure === "identity" ? "unexpected" : null },
+					as_of: "2026-08-31",
+					knowledge_cutoff: runBody.knowledge_cutoff,
+					publication_cutoff: runBody.publication_cutoff,
+					rule_version: "historical-universe-v1",
+					snapshot_id: `universe:sha256:${"a".repeat(64)}`,
+					members: Array.from({ length: failure === "duplicates" ? 2 : 1 }, () => ({
+						instrument_id: 1,
+						investable: true,
+						exclusion_reasons: failure === "eligibility" ? ["DELISTED"] : [],
+					})),
+				},
+			}),
+		),
+	);
+	await expect(resolveSelectionUniverse({ ...runBody, universe_sources: sources })).rejects.toThrow(
+		"历史证券池响应的身份或投资资格无效",
+	);
+});

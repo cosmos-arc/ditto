@@ -84,7 +84,7 @@ def test_unused_unknown_field_does_not_block_and_scope_cannot_be_forged(evidence
     ).allowed
 
 
-def _gate_facade(query: FieldAdmissionQuery):
+def _gate_facade(query: FieldAdmissionQuery, history=None):
     """Real admission gate over isolated in-memory run stores."""
     pool = SQLitePool(":memory:")
     runs = SQLiteSelectionRunStore(pool)
@@ -99,6 +99,7 @@ def _gate_facade(query: FieldAdmissionQuery):
             run_writer=runs,
         ),
         admission=query,
+        historical_universe=history,
     )
     return facade, runs, pool
 
@@ -113,20 +114,20 @@ def test_selection_cannot_save_a_run_without_complete_consumed_field_bindings(ev
     pool.close()
 
 
-def test_legacy_request_without_any_data_binding_keeps_v1_behavior(evidence):
-    """/api/v1 compat: pre-#256 requests stay ungated during the window."""
+def test_request_without_data_binding_is_rejected(evidence):
+    """Unreleased legacy requests must not bypass formal admission."""
     query, _, _, _ = evidence
     facade, runs, pool = _gate_facade(query)
-    receipt = facade.create(selection_request())
-    assert [item.instrument_id for item in receipt.selection_run.candidates] == [600000]
-    assert len(runs.list_by_spec("admission-test")) == 1
+    with pytest.raises(AppProcessError, match="准入"):
+        facade.create(selection_request())
+    assert runs.list_by_spec("admission-test") == []
     pool.close()
 
 
 def test_admission_binds_each_stage_to_its_own_declared_sources():
     """A snapshot declared only for rotation cannot serve selection inputs."""
-    with certified_selection(selection_request()) as (query, request):
-        facade, _, pool = _gate_facade(query)
+    with certified_selection(selection_request()) as (query, request, history):
+        facade, _, pool = _gate_facade(query, history)
         report = facade.assess_admission(
             replace(request, selection_source_snapshot_ids=("unbound",))
         )
@@ -144,8 +145,8 @@ def test_admission_binds_each_stage_to_its_own_declared_sources():
 
 def test_admission_rejects_stage_sources_no_binding_claims():
     """A declared source no consumed field claims cannot enter saved lineage."""
-    with certified_selection(selection_request()) as (query, request):
-        facade, _, pool = _gate_facade(query)
+    with certified_selection(selection_request()) as (query, request, history):
+        facade, _, pool = _gate_facade(query, history)
         report = facade.assess_admission(
             replace(
                 request,
@@ -165,10 +166,10 @@ def test_admission_rejects_stage_sources_no_binding_claims():
 
 def test_admission_tracks_stage_usage_by_identity_not_shared_contents():
     """Identical declared sets must not merge the two stages' usage."""
-    with certified_selection(selection_request()) as (query, request):
+    with certified_selection(selection_request()) as (query, request, history):
         certified = request.rotation_source_snapshot_ids[0]
         shared = (certified, "extra")
-        facade, _, pool = _gate_facade(query)
+        facade, _, pool = _gate_facade(query, history)
         report = facade.assess_admission(
             replace(
                 request,

@@ -78,6 +78,9 @@ class _InstrumentInput(Protocol):
     def declared_missing_inputs(self) -> tuple[str, ...]: ...
 
     @property
+    def universe_exclusion_reasons(self) -> tuple[str, ...]: ...
+
+    @property
     def factor_values(self) -> tuple[_FactorValue, ...]: ...
 
     @property
@@ -274,6 +277,11 @@ def _instrument_payload(value: _InstrumentInput) -> dict[str, object]:
     return {
         "average_turnover": value.average_turnover,
         "declared_missing_inputs": list(value.declared_missing_inputs),
+        **(
+            {"universe_exclusion_reasons": list(value.universe_exclusion_reasons)}
+            if value.universe_exclusion_reasons
+            else {}
+        ),
         "factor_values": [
             {"name": item.name, "value": item.value} for item in value.factor_values
         ],

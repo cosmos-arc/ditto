@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toAdmissionView } from "../admission";
-import { assessSelectionAdmission, type CreateSelectionRunBody } from "../api";
+import { assessSelectionAdmission, type CreateSelectionRunBody, resolveSelectionUniverse } from "../api";
 import { SelectionAdmission } from "./selection-admission";
 
 const STORAGE_KEY = "ditto.selection-run-input.v1";
@@ -39,6 +39,10 @@ export function SelectionRunInput({
 		mutationFn: async ({ raw, instrument }: { raw: string; instrument: string }) =>
 			toAdmissionView(await assessSelectionAdmission(parseRunInput(raw), instrument ? Number(instrument) : undefined)),
 	});
+	const universe = useMutation({
+		mutationFn: (raw: string) => resolveSelectionUniverse(parseRunInput(raw)),
+	});
+	const historical = universe.variables === value ? universe.data : undefined;
 	const currentInspection = inspection.variables?.raw === value && inspection.variables.instrument === instrument;
 	let instruments: CreateSelectionRunBody["instruments"] = [];
 	try {
@@ -79,7 +83,7 @@ export function SelectionRunInput({
 			</summary>
 			<div className="grid gap-3 px-4 pb-4">
 				<p className="max-w-3xl text-xs leading-5 text-(--color-foreground-tertiary)">
-					输入包需绑定字段来源及数据区间。检查许可、认证与时点后，服务端会在执行时再次校验。
+					输入包需绑定字段来源、数据区间及历史证券池快照。观察池须保留退市与不可投资证券；服务端会核对完整名单、许可、认证和时点。
 				</p>
 				<textarea
 					aria-label="Selection 输入 JSON"
@@ -120,6 +124,14 @@ export function SelectionRunInput({
 					>
 						{inspection.isPending ? "检查中…" : "检查字段准入"}
 					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						disabled={universe.isPending || !value.trim()}
+						onClick={() => universe.mutate(value)}
+					>
+						{universe.isPending ? "读取中…" : "查看历史证券池"}
+					</Button>
 					<Button type="button" variant="outline" onClick={save}>
 						校验并保存输入
 					</Button>
@@ -140,6 +152,29 @@ export function SelectionRunInput({
 					)}
 				</div>
 				{currentInspection && inspection.isError && <p role="alert">{inspection.error.message}</p>}
+				{universe.variables === value && universe.isError && <p role="alert">{universe.error.message}</p>}
+				{historical && (
+					<section aria-label="历史证券池" className="space-y-2 text-xs">
+						<p>
+							历史观察池 · {historical.asOf} · {historical.members.length} 只证券
+						</p>
+						<p className="break-all">快照：{historical.snapshotId}</p>
+						<p>
+							知识截止：{historical.knowledgeCutoff} · 披露截止：{historical.publicationCutoff}
+						</p>
+						{historical.members.length === 0 ? (
+							<p>该时点没有可见证券。</p>
+						) : (
+							<ul className="max-h-48 overflow-auto">
+								{historical.members.map((member) => (
+									<li key={member.instrumentId}>
+										{member.instrumentId} · {member.investable ? "可投资" : "不可投资"} · {member.reasons}
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
+				)}
 				{admission && (
 					<SelectionAdmission
 						key={`${value}:${instrument}`}

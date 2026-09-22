@@ -71,7 +71,21 @@ class ResearchDatasetExport:
             raise AppQueryError("导出缺少来源快照, 无法验证许可")
         versions: dict[str, int] = {}
         bound_sources: set[str] = set()
+        universe_inputs = 0
         for item in snapshot.resolved_inputs:
+            if item.get("input_kind") == "universe":
+                sources = item.get("source_snapshot_ids")
+                universe_inputs += 1
+                if (
+                    universe_inputs != 1
+                    or not item.get("universe_id")
+                    or not isinstance(sources, list)
+                    or not sources
+                    or any(type(source) is not str or not source for source in sources)
+                ):
+                    raise AppQueryError("历史证券池来源绑定不完整")
+                bound_sources.update(sources)
+                continue
             derived_id = item.get("derived_id")
             version = item.get("version")
             sources = item.get("source_snapshot_ids")
