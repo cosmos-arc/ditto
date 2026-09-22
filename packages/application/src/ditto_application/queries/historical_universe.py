@@ -141,10 +141,10 @@ class HistoricalUniverseQuery:
                         publication_cutoff=publication_cutoff,
                     )["instrument_id"]
                     if ids.dtype != pl.Int64 or ids.null_count():
-                        raise ValueError("HISTORY_INSTRUMENT_INVALID")
+                        raise AppQueryError("HISTORY_INSTRUMENT_INVALID")
                     scope_ids = tuple(sorted(set(ids.to_list())))
                     if not scope_ids:
-                        raise ValueError("HISTORY_SCOPE_EMPTY")
+                        raise AppQueryError("HISTORY_SCOPE_EMPTY")
                 report = self._admission.assess(
                     FieldAdmissionRequest(
                         fields=tuple(
@@ -160,7 +160,15 @@ class HistoricalUniverseQuery:
                     )
                 )
                 if not report.allowed:
-                    raise AppQueryError("HISTORY_ADMISSION_BLOCKED", report=report)
+                    reasons = "; ".join(
+                        f"{item.dataset_id}.{item.field}: "
+                        + ", ".join(item.reason_codes)
+                        for item in report.fields
+                        if item.reason_codes
+                    )
+                    raise AppQueryError(
+                        f"HISTORY_ADMISSION_BLOCKED: {reasons}", report=report
+                    )
                 reports.append(
                     {
                         "snapshot_id": snapshot_id,
@@ -215,10 +223,10 @@ class HistoricalUniverseQuery:
         knowledge_cutoff: datetime,
     ) -> None:
         if contents.snapshot.dataset_id != dataset_id:
-            raise ValueError("HISTORY_SNAPSHOT_CONFLICT")
+            raise AppQueryError("HISTORY_SNAPSHOT_CONFLICT")
         if contents.observed_at is None or contents.observed_at > knowledge_cutoff:
-            raise ValueError("HISTORY_NOT_OBSERVED")
+            raise AppQueryError("HISTORY_NOT_OBSERVED")
         if contents.snapshot.schema_fingerprint is None:
-            raise ValueError("HISTORY_SCHEMA_EVIDENCE_MISSING")
+            raise AppQueryError("HISTORY_SCHEMA_EVIDENCE_MISSING")
         if not set(fields).issubset(contents.frame.columns):
-            raise ValueError("HISTORY_FIELDS_MISSING")
+            raise AppQueryError("HISTORY_FIELDS_MISSING")

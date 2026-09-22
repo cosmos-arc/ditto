@@ -310,7 +310,16 @@ class SelectionWorkspaceFacade:
             if request.universe_sources is not None:
                 qualified_sources = frozenset(request.universe_sources.snapshot_ids)
         except AppProcessError as error:
-            history_failure = (missing_field("universe_sources", str(error)),)
+            historical_report = error.details.get("report")
+            history_failure = (
+                tuple(
+                    replace(item, consumer_field=f"universe_sources.{item.field}")
+                    for item in historical_report.fields
+                    if item.reason_codes
+                )
+                if isinstance(historical_report, FieldAdmissionReport)
+                else (missing_field("universe_sources", str(error)),)
+            )
         try:
             report = assess_selection_fields(
                 self._admission,

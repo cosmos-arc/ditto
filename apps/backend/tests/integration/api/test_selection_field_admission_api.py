@@ -121,6 +121,7 @@ async def test_http_admission_and_create_share_the_gate_and_retry_identity(tmp_p
 
 
 async def _assert_tampering_rejected(client, body):
+    await _assert_historical_coverage_failure(client, body)
     for field_name, forged in (
         ("average_turnover", 999999.0),
         ("average_turnover", None),
@@ -161,3 +162,29 @@ async def _assert_historical_scope(client, request, body):
     assert historical.status_code == 200, historical.text
     assert historical.json()["data"]["snapshot_id"] == request.universe_snapshot_id
     assert historical.json()["data"]["members"][0]["investable"] is True
+
+
+async def _assert_historical_coverage_failure(client, body):
+    outside = deepcopy(body)
+    outside["as_of"] = "2027-01-15T00:00:00+08:00"
+    response = await client.post(
+        f"/api/v1/universes/{body['universe_sources']['universe_id']}/history",
+        json={
+            "sources": body["universe_sources"],
+            "as_of": "2027-01-15",
+            "knowledge_cutoff": body["knowledge_cutoff"],
+            "publication_cutoff": body["publication_cutoff"],
+        },
+    )
+    assert response.status_code == 400
+    assert "stock_basic.list_date" in response.json()["detail"]
+    assert "SNAPSHOT_COVERAGE_MISSING" in response.json()["detail"]
+    preview = await client.post("/api/v1/selections/admission", json=outside)
+    assert preview.status_code == 200
+    assert preview.json()["data"]["allowed"] is False
+    assert any(
+        item["dataset_id"] == "stock_basic"
+        and item["field"] == "list_date"
+        and "SNAPSHOT_COVERAGE_MISSING" in item["reason_codes"]
+        for item in preview.json()["data"]["fields"]
+    )

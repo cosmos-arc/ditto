@@ -68,6 +68,36 @@ export async function resolveSelectionUniverse(input: CreateSelectionRunBody) {
 			publication_cutoff: input.publication_cutoff,
 		},
 	});
+	if (
+		!/^universe:sha256:[a-f0-9]{64}$/.test(value.snapshot_id) ||
+		value.rule_version !== "historical-universe-v1" ||
+		value.as_of !== asOf ||
+		Date.parse(value.knowledge_cutoff) !== Date.parse(input.knowledge_cutoff) ||
+		Date.parse(value.publication_cutoff) !== Date.parse(input.publication_cutoff) ||
+		!value.sources ||
+		(
+			[
+				"universe_id",
+				"asset_kind",
+				"master_snapshot_id",
+				"status_snapshot_id",
+				"membership_snapshot_id",
+				"index_id",
+			] as const
+		).some((key) => (value.sources[key] ?? null) !== (input.universe_sources?.[key] ?? null)) ||
+		!Array.isArray(value.members) ||
+		value.members.some(
+			(member) =>
+				!Number.isSafeInteger(member.instrument_id) ||
+				member.instrument_id <= 0 ||
+				typeof member.investable !== "boolean" ||
+				!Array.isArray(member.exclusion_reasons) ||
+				member.exclusion_reasons.some((reason) => typeof reason !== "string" || !reason) ||
+				member.investable !== (member.exclusion_reasons.length === 0),
+		) ||
+		new Set(value.members.map((member) => member.instrument_id)).size !== value.members.length
+	)
+		throw new Error("历史证券池响应的身份或投资资格无效");
 	return {
 		snapshotId: value.snapshot_id,
 		asOf: value.as_of,
