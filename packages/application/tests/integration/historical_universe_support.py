@@ -33,7 +33,16 @@ START = date(2026, 1, 1)
 END = date(2026, 12, 31)
 
 
-def retain_history(client, root, dataset_id, frame, *, complete=True, observed=VISIBLE):
+def retain_history(
+    client,
+    root,
+    dataset_id,
+    frame,
+    *,
+    complete=True,
+    observed=VISIBLE,
+    certify=True,
+):
     payload = FilesystemProviderPayloadStore(root).retain_payload(
         dataset_id=dataset_id,
         source="recorded",
@@ -121,22 +130,31 @@ def retain_history(client, root, dataset_id, frame, *, complete=True, observed=V
             )
     if not complete:
         return snapshot
+    if certify:
+        certify_snapshots(client, dataset_id, ((snapshot, frame, observed),))
+    return snapshot
+
+
+def certify_snapshots(client, dataset_id, members):
+    """One active report covering every retained chain member of a dataset."""
     check = (EvidenceCheck("recorded", "evidence://synthetic", True),)
-    fields = tuple(
-        CertifiedField(
-            field=field,
-            snapshot_id=chunk,
-            instrument_ids=tuple(sorted(set(frame["instrument_id"].to_list()))),
-            covered_from=START,
-            covered_to=END,
-            available_at=VISIBLE,
-            publication_at=VISIBLE,
-            time_precision="timestamp",
-            observed_at=observed,
-            evidence_uri="evidence://synthetic",
+    fields: list[CertifiedField] = []
+    for snapshot, frame, observed in members:
+        fields.extend(
+            CertifiedField(
+                field=field,
+                snapshot_id=snapshot.snapshot_id,
+                instrument_ids=tuple(sorted(set(frame["instrument_id"].to_list()))),
+                covered_from=START,
+                covered_to=END,
+                available_at=VISIBLE,
+                publication_at=VISIBLE,
+                time_precision="timestamp",
+                observed_at=observed,
+                evidence_uri="evidence://synthetic",
+            )
+            for field in frame.columns
         )
-        for field in frame.columns
-    )
     report = DatasetCertificationReport.create(
         dataset_id=dataset_id,
         profile="selection-fields-v1",
@@ -151,16 +169,18 @@ def retain_history(client, root, dataset_id, frame, *, complete=True, observed=V
             actual_to=END,
             raw_from=START,
             complete_from=START,
-            expected_partitions=1,
-            actual_partitions=1,
+            expected_partitions=len(members),
+            actual_partitions=len(members),
             gaps=(),
             exceptions=(),
             collected_at=VISIBLE,
         ),
         evidence=CertificationEvidence(
             source_ids=("recorded",),
-            schema_versions=(snapshot.schema_version,),
-            snapshot_ids=(chunk,),
+            schema_versions=tuple(
+                dict.fromkeys(snapshot.schema_version for snapshot, _, _ in members)
+            ),
+            snapshot_ids=tuple(snapshot.snapshot_id for snapshot, _, _ in members),
             dq_rule_version="test-v1",
             dq_results=check,
             pit_replay_results=check,
@@ -168,16 +188,18 @@ def retain_history(client, root, dataset_id, frame, *, complete=True, observed=V
             override_history=(),
             freshness_results=check,
             recovery_results=check,
-            license_record_ids=(license_record.record_id,),
+            license_record_ids=tuple(
+                dict.fromkeys(snapshot.license_record_id for snapshot, _, _ in members)
+            ),
             consumer_results=check,
-            certified_fields=fields,
+            certified_fields=tuple(fields),
         ),
         generated_at=VISIBLE,
     )
     reports = SQLiteCertificationStore(client)
     reports.append_report(report)
     reports.approve_report(report.report_id, reviewer="test", reviewed_at=VISIBLE)
-    return snapshot
+    return report
 
 
 def history_frames(ids=(1,), *, asset_kind="stock"):
@@ -222,7 +244,10 @@ def seed_history(
         client, root, "stock_status" if asset_kind == "stock" else "etf_daily", status
     )
     return HistoricalUniverseSources(
-        universe_id, asset_kind, primary.snapshot_id, trading.snapshot_id
+        universe_id,
+        asset_kind,
+        (primary.snapshot_id,),
+        (trading.snapshot_id,),
     )
 
 

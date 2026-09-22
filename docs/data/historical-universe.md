@@ -4,7 +4,7 @@
 
 ## 输入证据
 
-`HistoricalUniverseSources` 固定 universe_id、asset_kind、master_snapshot_id、status_snapshot_id，以及可选的 index_id / membership_snapshot_id。股票使用 stock_basic + stock_status；ETF 使用 etf_basic + etf_daily。股票按指数筛选时额外固定 index_weight；ETF 的 index_id 指跟踪标的，来自 etf_basic 的历史 tracking_index。
+`HistoricalUniverseSources` 固定 universe_id、asset_kind、master_snapshot_ids、status_snapshot_ids，以及可选的 index_id / membership_snapshot_ids；每个槽位是一条显式快照链（至少一个成员），整链预先固定。股票使用 stock_basic + stock_status；ETF 使用 etf_basic + etf_daily。股票按指数筛选时额外固定 index_weight；ETF 的 index_id 指跟踪标的，来自 etf_basic 的历史 tracking_index。每次解析在每条链中选取知识截止前本地已观察的最新成员；链上没有任何成员在该截止前被观察时按 HISTORY_NOT_OBSERVED 拒绝。
 
 每个来源必须是已完成摄取、保留载荷、具有可信物理 schema 指纹且在知识截止前已观察的 ProviderSnapshot；实际消费字段还必须通过现有许可、覆盖和认证准入。字段证据不会因为文件存在或可读而自动成立。
 
@@ -31,7 +31,7 @@
 
 - `POST /api/v1/universes/{universe_id}/history` 是只读查询，提交 sources、as_of、knowledge_cutoff、publication_cutoff；返回完整观察池、投资原因及内容寻址的 universe snapshot ID。
 - Selection 输入包添加 universe_sources；universe_snapshot_id 必须匹配上述结果，selection_source_snapshot_ids 包含全部历史来源，instruments 保留完整观察池。字段准入预览与创建都核验历史证据。前端输入区域可查看该时点的历史证券池。
-- `research_dataset_build_flow` / `ResearchDatasetBuildProcess.build` 必须显式传入 universe_sources，与 spine 的 universe_id 一致。逐交易日恢复证券池，不以末日名单做笛卡尔积。sample_time 使用上海时间当日零点；explicit_cutoff 使用明确截止（无时区的既有日期输入按上海时间解释），该口径冻结在工件中。
+- `research_dataset_build_flow` / `ResearchDatasetBuildProcess.build` 必须显式传入 universe_sources，与 spine 的 universe_id 一致。逐交易日恢复证券池，不以末日名单做笛卡尔积。sample_time 使用上海时间当日零点，每个交易日独立解析各链当时可见的快照成员（链即按日快照表）；explicit_cutoff 使用明确截止（无时区的既有日期输入按上海时间解释），该口径冻结在工件中。全部固定载荷在构建开始时读取并校验一次，逐日只在内存中投影。
 - spine manifest 保存逐日 cutoffs、来源、认证与许可引用；数据集保留 investable 和 universe_exclusion_reasons。它们是观察样本属性，构建不删除不可投资行。
 - resolved_inputs 中 `input_kind=universe` 独立于派生因子输入，source_snapshot_ids 包含两者并集。导出重新核验所有来源许可，不得遗漏证券池来源。
 - 新修订创建新的来源/结果身份；相同证据重试复用工件。资格被撤销后不能启动新研究，既有工件仍可按保存身份审计。

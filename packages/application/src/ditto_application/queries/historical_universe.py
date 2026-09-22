@@ -26,25 +26,38 @@ from ditto_application.queries.field_admission import (
 
 @dataclass(frozen=True, slots=True)
 class HistoricalUniverseSources:
-    """Explicit retained sources; mutable metadata is never a fallback."""
+    """
+    Explicit retained source chains; mutable metadata is never a fallback.
+
+    Each chain is pinned up front; a resolution picks, per dataset, the latest
+    member already observed locally by that point's knowledge cutoff, so a
+    multi-day build replays exactly what the local catalog could see each day.
+    """
 
     universe_id: str
     asset_kind: Literal["stock", "etf"]
-    master_snapshot_id: str
-    status_snapshot_id: str
-    membership_snapshot_id: str | None = None
+    master_snapshot_ids: tuple[str, ...]
+    status_snapshot_ids: tuple[str, ...]
+    membership_snapshot_ids: tuple[str, ...] = ()
     index_id: str | None = None
 
     def __post_init__(self) -> None:
         """Reject incomplete source and relation bindings."""
         if not self.universe_id or self.asset_kind not in {"stock", "etf"}:
             raise AppQueryError("HISTORY_SCOPE_INVALID")
-        if not self.master_snapshot_id or not self.status_snapshot_id:
+        chains = (
+            self.master_snapshot_ids,
+            self.status_snapshot_ids,
+            self.membership_snapshot_ids,
+        )
+        if not self.master_snapshot_ids or not self.status_snapshot_ids:
+            raise AppQueryError("HISTORY_SNAPSHOT_MISSING")
+        if any(not item.strip() for chain in chains for item in chain):
             raise AppQueryError("HISTORY_SNAPSHOT_MISSING")
         if self.asset_kind == "stock":
-            if (self.membership_snapshot_id is None) != (self.index_id is None):
+            if bool(self.membership_snapshot_ids) != (self.index_id is not None):
                 raise AppQueryError("MEMBERSHIP_SCOPE_MISSING")
-        elif self.membership_snapshot_id is not None:
+        elif self.membership_snapshot_ids:
             raise AppQueryError("ETF_INDEX_MEMBERSHIP_UNSUPPORTED")
         if self.index_id is not None and not self.index_id.strip():
             raise AppQueryError("MEMBERSHIP_SCOPE_MISSING")
@@ -55,13 +68,9 @@ class HistoricalUniverseSources:
         return tuple(
             sorted(
                 {
-                    self.master_snapshot_id,
-                    self.status_snapshot_id,
-                    *(
-                        ()
-                        if self.membership_snapshot_id is None
-                        else (self.membership_snapshot_id,)
-                    ),
+                    *self.master_snapshot_ids,
+                    *self.status_snapshot_ids,
+                    *self.membership_snapshot_ids,
                 }
             )
         )
@@ -82,18 +91,18 @@ class HistoricalUniverseResult:
         return f"universe:sha256:{digest}"
 
 
-class HistoricalUniverseQuery:
-    """Read exact completed artifacts, qualify fields, then project historical rows."""
+@dataclass(frozen=True, slots=True)
+class PinnedHistoricalUniverse:
+    """Pinned evidence loaded once; each resolve projects one exact time point."""
 
-    def __init__(
-        self, reader: SnapshotReadService, admission: FieldAdmissionQuery
-    ) -> None:
-        self._reader = reader
-        self._admission = admission
+    sources: HistoricalUniverseSources
+    admission: FieldAdmissionQuery
+    master: tuple[SnapshotContents, ...]
+    status: tuple[SnapshotContents, ...]
+    membership: tuple[SnapshotContents, ...] = ()
 
     def resolve(
         self,
-        sources: HistoricalUniverseSources,
         *,
         as_of: date,
         knowledge_cutoff: datetime,
@@ -106,32 +115,35 @@ class HistoricalUniverseQuery:
             or publication_cutoff > knowledge_cutoff
         ):
             raise AppQueryError("HISTORY_CUTOFF_INVALID")
-        definitions: list[tuple[str, str, tuple[str, ...]]] = [
+        definitions: list[
+            tuple[str, tuple[SnapshotContents, ...], str, tuple[str, ...]]
+        ] = [
             (
-                sources.master_snapshot_id,
-                f"{sources.asset_kind}_basic",
+                "master",
+                self.master,
+                f"{self.sources.asset_kind}_basic",
                 (
                     *MASTER_FIELDS,
-                    *(("tracking_index",) if sources.asset_kind == "etf" else ()),
+                    *(("tracking_index",) if self.sources.asset_kind == "etf" else ()),
                 ),
             ),
             (
-                sources.status_snapshot_id,
-                "stock_status" if sources.asset_kind == "stock" else "etf_daily",
+                "status",
+                self.status,
+                "stock_status" if self.sources.asset_kind == "stock" else "etf_daily",
                 STATUS_FIELDS,
             ),
         ]
-        if sources.membership_snapshot_id is not None:
+        if self.membership:
             definitions.append(
-                (sources.membership_snapshot_id, "index_weight", MEMBERSHIP_FIELDS)
+                ("membership", self.membership, "index_weight", MEMBERSHIP_FIELDS)
             )
         frames: dict[str, pl.DataFrame] = {}
         reports: list[dict[str, object]] = []
         scope_ids: tuple[int, ...] = ()
         try:
-            for snapshot_id, dataset_id, fields in definitions:
-                contents = self._reader.read(snapshot_id)
-                self._validate_contents(contents, dataset_id, fields, knowledge_cutoff)
+            for _slot, chain, dataset_id, fields in definitions:
+                contents = self._observed_by(chain, knowledge_cutoff)
                 if not scope_ids:
                     ids = visible_history(
                         contents.frame,
@@ -145,10 +157,12 @@ class HistoricalUniverseQuery:
                     scope_ids = tuple(sorted(set(ids.to_list())))
                     if not scope_ids:
                         raise AppQueryError("HISTORY_SCOPE_EMPTY")
-                report = self._admission.assess(
+                report = self.admission.assess(
                     FieldAdmissionRequest(
                         fields=tuple(
-                            FieldRequirement(dataset_id, field, snapshot_id)
+                            FieldRequirement(
+                                dataset_id, field, contents.snapshot.snapshot_id
+                            )
                             for field in fields
                         ),
                         instrument_ids=scope_ids,
@@ -171,7 +185,7 @@ class HistoricalUniverseQuery:
                     )
                 reports.append(
                     {
-                        "snapshot_id": snapshot_id,
+                        "snapshot_id": contents.snapshot.snapshot_id,
                         "certification_report_ids": sorted(
                             {
                                 item.certification_report_id
@@ -189,22 +203,25 @@ class HistoricalUniverseQuery:
                         "rule_version": report.rule_version,
                     }
                 )
-                frames[snapshot_id] = contents.frame.select(fields)
+                frames[_slot] = contents.frame.select(fields)
             frame = project_historical_universe(
-                frames[sources.master_snapshot_id],
-                frames[sources.status_snapshot_id],
+                frames["master"],
+                frames["status"],
                 as_of=as_of,
                 knowledge_cutoff=knowledge_cutoff,
                 publication_cutoff=publication_cutoff,
-                membership=frames.get(sources.membership_snapshot_id or ""),
-                index_id=sources.index_id,
+                membership=frames.get("membership"),
+                index_id=self.sources.index_id,
             )
         except ValueError as error:
             raise AppQueryError(str(error)) from error
+        # Evidence is persisted as JSON (spine manifests): normalize tuple chains
+        # to lists so the round-tripped manifest still compares equal.
+        sources_evidence = orjson.loads(orjson.dumps(asdict(self.sources)))
         return HistoricalUniverseResult(
             frame,
             {
-                "sources": asdict(sources),
+                "sources": sources_evidence,
                 "as_of": as_of.isoformat(),
                 "knowledge_cutoff": knowledge_cutoff.isoformat(),
                 "publication_cutoff": publication_cutoff.isoformat(),
@@ -216,17 +233,101 @@ class HistoricalUniverseQuery:
         )
 
     @staticmethod
-    def _validate_contents(
-        contents: SnapshotContents,
-        dataset_id: str,
-        fields: tuple[str, ...],
-        knowledge_cutoff: datetime,
-    ) -> None:
-        if contents.snapshot.dataset_id != dataset_id:
-            raise AppQueryError("HISTORY_SNAPSHOT_CONFLICT")
-        if contents.observed_at is None or contents.observed_at > knowledge_cutoff:
+    def _observed_by(
+        chain: tuple[SnapshotContents, ...], knowledge_cutoff: datetime
+    ) -> SnapshotContents:
+        """Pick the latest member already observed locally by the cutoff."""
+        observed = [
+            (contents.observed_at, contents.snapshot.snapshot_id, contents)
+            for contents in chain
+            if contents.observed_at is not None
+            and contents.observed_at <= knowledge_cutoff
+        ]
+        if not observed:
             raise AppQueryError("HISTORY_NOT_OBSERVED")
-        if contents.snapshot.schema_fingerprint is None:
-            raise AppQueryError("HISTORY_SCHEMA_EVIDENCE_MISSING")
-        if not set(fields).issubset(contents.frame.columns):
-            raise AppQueryError("HISTORY_FIELDS_MISSING")
+        return max(observed, key=lambda item: (item[0], item[1]))[2]
+
+
+def _validate_contents(
+    contents: SnapshotContents,
+    dataset_id: str,
+    fields: tuple[str, ...],
+) -> None:
+    if contents.snapshot.dataset_id != dataset_id:
+        raise AppQueryError("HISTORY_SNAPSHOT_CONFLICT")
+    if contents.snapshot.schema_fingerprint is None:
+        raise AppQueryError("HISTORY_SCHEMA_EVIDENCE_MISSING")
+    if not set(fields).issubset(contents.frame.columns):
+        raise AppQueryError("HISTORY_FIELDS_MISSING")
+
+
+class HistoricalUniverseQuery:
+    """Read exact completed artifacts, qualify fields, then project historical rows."""
+
+    def __init__(
+        self, reader: SnapshotReadService, admission: FieldAdmissionQuery
+    ) -> None:
+        self._reader = reader
+        self._admission = admission
+
+    def pin(self, sources: HistoricalUniverseSources) -> PinnedHistoricalUniverse:
+        """Load and structurally validate every pinned member exactly once."""
+        definitions: list[tuple[str, tuple[str, ...], str, tuple[str, ...]]] = [
+            (
+                "master",
+                sources.master_snapshot_ids,
+                f"{sources.asset_kind}_basic",
+                (
+                    *MASTER_FIELDS,
+                    *(("tracking_index",) if sources.asset_kind == "etf" else ()),
+                ),
+            ),
+            (
+                "status",
+                sources.status_snapshot_ids,
+                "stock_status" if sources.asset_kind == "stock" else "etf_daily",
+                STATUS_FIELDS,
+            ),
+        ]
+        if sources.membership_snapshot_ids:
+            definitions.append(
+                (
+                    "membership",
+                    sources.membership_snapshot_ids,
+                    "index_weight",
+                    MEMBERSHIP_FIELDS,
+                )
+            )
+        chains: dict[str, tuple[SnapshotContents, ...]] = {}
+        try:
+            for slot, snapshot_ids, dataset_id, fields in definitions:
+                members: list[SnapshotContents] = []
+                for snapshot_id in snapshot_ids:
+                    contents = self._reader.read(snapshot_id)
+                    _validate_contents(contents, dataset_id, fields)
+                    members.append(contents)
+                chains[slot] = tuple(members)
+        except ValueError as error:
+            raise AppQueryError(str(error)) from error
+        return PinnedHistoricalUniverse(
+            sources=sources,
+            admission=self._admission,
+            master=chains["master"],
+            status=chains["status"],
+            membership=chains.get("membership", ()),
+        )
+
+    def resolve(
+        self,
+        sources: HistoricalUniverseSources,
+        *,
+        as_of: date,
+        knowledge_cutoff: datetime,
+        publication_cutoff: datetime,
+    ) -> HistoricalUniverseResult:
+        """Return an auditable scope or refuse unproven historical evidence."""
+        return self.pin(sources).resolve(
+            as_of=as_of,
+            knowledge_cutoff=knowledge_cutoff,
+            publication_cutoff=publication_cutoff,
+        )

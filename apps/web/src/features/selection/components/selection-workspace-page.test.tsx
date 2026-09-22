@@ -116,8 +116,8 @@ it("shows the historical roster and hides it after editing its bound input", asy
 	const sources = {
 		universe_id: "pool",
 		asset_kind: "stock",
-		master_snapshot_id: "master",
-		status_snapshot_id: "status",
+		master_snapshot_ids: ["master"],
+		status_snapshot_ids: ["status"],
 	};
 	server.use(
 		http.post("/api/v1/universes/pool/history", async ({ request }) => {

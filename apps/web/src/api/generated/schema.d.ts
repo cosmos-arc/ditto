@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 8448c7537eb0142138d3b2dfe0cde7dd2559639b57145475b84f2675245a9d41
+ * Schema SHA-256: d2a67554e8eb46544c85cf3dde4b701d2569f7da2971c1c712df754830a0aa4e
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -11325,7 +11325,7 @@ export interface components {
         };
         /**
          * HistoricalUniverseSourcesBody
-         * @description Pinned evidence needed to reconstruct a historical observation pool.
+         * @description Pinned evidence chains needed to reconstruct a historical observation pool.
          */
         HistoricalUniverseSourcesBody: {
             /**
@@ -11335,12 +11335,12 @@ export interface components {
             asset_kind: "stock" | "etf";
             /** Index Id */
             index_id?: string | null;
-            /** Master Snapshot Id */
-            master_snapshot_id: string;
-            /** Membership Snapshot Id */
-            membership_snapshot_id?: string | null;
-            /** Status Snapshot Id */
-            status_snapshot_id: string;
+            /** Master Snapshot Ids */
+            master_snapshot_ids: string[];
+            /** Membership Snapshot Ids */
+            membership_snapshot_ids?: string[] | null;
+            /** Status Snapshot Ids */
+            status_snapshot_ids: string[];
             /** Universe Id */
             universe_id: string;
         };

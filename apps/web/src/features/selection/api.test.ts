@@ -92,8 +92,8 @@ it("resolves the full historical pool with Shanghai date and pinned sources", as
 	const sources = {
 		universe_id: "pool",
 		asset_kind: "stock" as const,
-		master_snapshot_id: "master",
-		status_snapshot_id: "status",
+		master_snapshot_ids: ["master"],
+		status_snapshot_ids: ["status"],
 	};
 	server.use(
 		http.post("/api/v1/universes/pool/history", async ({ request }) => {
@@ -130,8 +130,8 @@ it.each(["identity", "eligibility", "duplicates"])("refuses a malformed historic
 	const sources = {
 		universe_id: "pool",
 		asset_kind: "stock" as const,
-		master_snapshot_id: "master",
-		status_snapshot_id: "status",
+		master_snapshot_ids: ["master"],
+		status_snapshot_ids: ["status"],
 	};
 	server.use(
 		http.post("/api/v1/universes/pool/history", () =>

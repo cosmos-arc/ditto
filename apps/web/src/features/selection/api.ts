@@ -75,16 +75,12 @@ export async function resolveSelectionUniverse(input: CreateSelectionRunBody) {
 		Date.parse(value.knowledge_cutoff) !== Date.parse(input.knowledge_cutoff) ||
 		Date.parse(value.publication_cutoff) !== Date.parse(input.publication_cutoff) ||
 		!value.sources ||
-		(
-			[
-				"universe_id",
-				"asset_kind",
-				"master_snapshot_id",
-				"status_snapshot_id",
-				"membership_snapshot_id",
-				"index_id",
-			] as const
-		).some((key) => (value.sources[key] ?? null) !== (input.universe_sources?.[key] ?? null)) ||
+		(["universe_id", "asset_kind", "index_id"] as const).some(
+			(key) => (value.sources[key] ?? null) !== (input.universe_sources?.[key] ?? null),
+		) ||
+		(["master_snapshot_ids", "status_snapshot_ids", "membership_snapshot_ids"] as const).some(
+			(key) => JSON.stringify(value.sources[key] ?? null) !== JSON.stringify(input.universe_sources?.[key] ?? null),
+		) ||
 		!Array.isArray(value.members) ||
 		value.members.some(
 			(member) =>

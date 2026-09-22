@@ -264,6 +264,9 @@ class ResearchDatasetBuildProcess:
             only_open=True,
         )
         trade_dates = _normalize_trade_dates(calendar_frame)
+        # One immutable source set per build: pinned payloads are read once and
+        # each day resolves only the members its own cutoff had observed.
+        pinned_sources = self._historical_universe.pin(sources)
         daily_frames: list[pl.DataFrame] = []
         daily_evidence: list[dict[str, object]] = []
         for day in trade_dates["trade_date"].to_list():
@@ -274,8 +277,7 @@ class ResearchDatasetBuildProcess:
             )
             if cutoff.tzinfo is None:
                 cutoff = cutoff.replace(tzinfo=ZoneInfo("Asia/Shanghai"))
-            result = self._historical_universe.resolve(
-                sources,
+            result = pinned_sources.resolve(
                 as_of=day,
                 knowledge_cutoff=cutoff,
                 publication_cutoff=cutoff,

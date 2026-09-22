@@ -16024,7 +16024,7 @@
       },
       "HistoricalUniverseSourcesBody": {
         "additionalProperties": false,
-        "description": "Pinned evidence needed to reconstruct a historical observation pool.",
+        "description": "Pinned evidence chains needed to reconstruct a historical observation pool.",
         "properties": {
           "asset_kind": {
             "enum": [
@@ -16045,26 +16045,35 @@
             ],
             "title": "Index Id"
           },
-          "master_snapshot_id": {
-            "minLength": 1,
-            "title": "Master Snapshot Id",
-            "type": "string"
+          "master_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Master Snapshot Ids",
+            "type": "array"
           },
-          "membership_snapshot_id": {
+          "membership_snapshot_ids": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Membership Snapshot Id"
+            "title": "Membership Snapshot Ids"
           },
-          "status_snapshot_id": {
-            "minLength": 1,
-            "title": "Status Snapshot Id",
-            "type": "string"
+          "status_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Status Snapshot Ids",
+            "type": "array"
           },
           "universe_id": {
             "minLength": 1,
@@ -16075,8 +16084,8 @@
         "required": [
           "universe_id",
           "asset_kind",
-          "master_snapshot_id",
-          "status_snapshot_id"
+          "master_snapshot_ids",
+          "status_snapshot_ids"
         ],
         "title": "HistoricalUniverseSourcesBody",
         "type": "object"

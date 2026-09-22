@@ -73,19 +73,26 @@ __all__ = [
 
 
 class HistoricalUniverseSourcesBody(BaseModel):
-    """Pinned evidence needed to reconstruct a historical observation pool."""
+    """Pinned evidence chains needed to reconstruct a historical observation pool."""
 
     model_config = ConfigDict(extra="forbid")
     universe_id: str = Field(min_length=1)
     asset_kind: Literal["stock", "etf"]
-    master_snapshot_id: str = Field(min_length=1)
-    status_snapshot_id: str = Field(min_length=1)
-    membership_snapshot_id: str | None = None
+    master_snapshot_ids: list[str] = Field(min_length=1)
+    status_snapshot_ids: list[str] = Field(min_length=1)
+    membership_snapshot_ids: list[str] | None = None
     index_id: str | None = None
 
     def to_application(self) -> HistoricalUniverseSources:
         """Adapt transport values without claiming qualification."""
-        return HistoricalUniverseSources(**self.model_dump())
+        return HistoricalUniverseSources(
+            universe_id=self.universe_id,
+            asset_kind=self.asset_kind,
+            master_snapshot_ids=tuple(self.master_snapshot_ids),
+            status_snapshot_ids=tuple(self.status_snapshot_ids),
+            membership_snapshot_ids=tuple(self.membership_snapshot_ids or ()),
+            index_id=self.index_id,
+        )
 
 
 class HistoricalUniverseBody(BaseModel):
