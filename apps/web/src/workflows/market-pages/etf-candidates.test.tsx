@@ -60,7 +60,7 @@ it("selects a real ETF entity and exposes asynchronous NAV and missing evidence"
 	await screen.findByRole("option", { name: "snapshot:recorded:etf:one" });
 	await user.selectOptions(await screen.findByLabelText("来源快照"), "snapshot:recorded:etf:one");
 	await user.type(screen.getByLabelText("指数暴露"), "NDX");
-	await user.click(await screen.findByText(/跨境 ETF · 513100/));
+	await user.click(await screen.findByText(/跨境 ETF · 513100 · NDX/));
 	const nav = screen.getByText("最近已披露 NAV").parentElement;
 	expect(nav).toHaveTextContent("2026-09-27");
 	expect(screen.getByText("IOPV").parentElement).toHaveTextContent("no_qualified_observation");

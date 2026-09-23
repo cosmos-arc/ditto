@@ -1,4 +1,5 @@
 export { fetchDailyDecisionV3 } from "./api/daily-decision";
+export { type ETFAllocationVersion, listETFAllocationVersions, saveETFAllocationVersion } from "./api/etf-allocations";
 export { resolveTradingExecutionScope } from "./api/execution-scope";
 export { tradingKeys } from "./api/query-keys";
 export { AccountIdentityStrip } from "./components/account-identity-strip";
