@@ -83,6 +83,12 @@ FROM account_journal_accounts
 WHERE account_id = ?
 """
 
+_LIST_ACCOUNTS = """
+SELECT account_id, account_kind, account_name, opened_at, currency
+FROM account_journal_accounts
+ORDER BY account_id ASC
+"""
+
 _INSERT_EVENT = """
 INSERT INTO account_journal_events
     (event_id, account_id, idempotency_key, event_hash, payload_json)
@@ -169,6 +175,11 @@ class SqliteAccountEventJournal(AbstractContextManager["SqliteAccountEventJourna
         if row is None:
             return None
         return _account_from_row(row)
+
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        """Read every account identity in deterministic id order."""
+        rows = self._db.execute(_LIST_ACCOUNTS).fetchall()
+        return tuple(_account_from_row(row) for row in rows)
 
     def append(self, event: AccountEvent) -> AccountEvent:
         """Append exactly one immutable event."""

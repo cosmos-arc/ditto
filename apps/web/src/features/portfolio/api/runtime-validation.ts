@@ -10,7 +10,12 @@ import {
 } from "@/api/validation";
 import type {
 	AccountCashSnapshot,
+	AccountCatalogEntry,
 	AccountPositionSnapshot,
+	HistoryComparison,
+	HistoryComparisonLeg,
+	HistoryComparisonRun,
+	HistoryComparisonRunPoint,
 	ManualAccount,
 	ManualAccountEvent,
 	ManualAccountHistory,
@@ -33,6 +38,7 @@ import type {
 	PaperReconciliation,
 	PaperRecoverReceipt,
 	PaperSession,
+	PaperSessionCatalogEntry,
 	PaperSessionCommandReceipt,
 	PaperSessionRead,
 } from "./account-models";
@@ -556,6 +562,191 @@ function parsePaperAccountIdentity(value: unknown, boundary: string): PaperAccou
 		name: stringValue(record, "name", boundary),
 		opened_at: stringValue(record, "opened_at", boundary),
 	};
+}
+
+const COMPARISON_LEG_KINDS = ["model", "paper", "manual"] as const;
+
+function parseLegDecimalRecord(
+	container: Readonly<Record<string, unknown>>,
+	field: "growth" | "assets",
+	boundary: string,
+): Readonly<Record<(typeof COMPARISON_LEG_KINDS)[number], string>> {
+	const record = recordValue(container[field], `${boundary}.${field}`);
+	const result = {} as Record<(typeof COMPARISON_LEG_KINDS)[number], string>;
+	for (const kind of COMPARISON_LEG_KINDS) {
+		result[kind] = decimalValue(record, kind, `${boundary}.${field}`);
+	}
+	return result;
+}
+
+function parseLegReturnRecord(
+	container: Readonly<Record<string, unknown>>,
+	boundary: string,
+): Readonly<Record<(typeof COMPARISON_LEG_KINDS)[number], string | null>> {
+	const record = recordValue(container["window_returns"], `${boundary}.window_returns`);
+	const result = {} as Record<(typeof COMPARISON_LEG_KINDS)[number], string | null>;
+	for (const kind of COMPARISON_LEG_KINDS) {
+		result[kind] = nullableDecimal(record, kind, `${boundary}.window_returns`);
+	}
+	return result;
+}
+
+export function parseHistoryComparison(
+	value: unknown,
+	identity: {
+		readonly strategy_id: string;
+		readonly paper_account_id: string;
+		readonly paper_session_id: string;
+		readonly manual_account_id: string;
+		readonly start_date: string;
+		readonly end_date: string;
+		readonly model_initial_capital: number | string;
+		readonly knowledge_cutoff: string;
+		readonly publication_cutoff: string;
+	},
+): HistoryComparison {
+	const boundary = "historyComparison";
+	const record = recordValue(value, boundary);
+	sameValue(record["strategy_id"], identity.strategy_id, boundary, "strategy_id");
+	sameValue(record["paper_account_id"], identity.paper_account_id, boundary, "paper_account_id");
+	sameValue(record["paper_session_id"], identity.paper_session_id, boundary, "paper_session_id");
+	sameValue(record["manual_account_id"], identity.manual_account_id, boundary, "manual_account_id");
+	sameValue(record["start_date"], identity.start_date, boundary, "start_date");
+	sameValue(record["end_date"], identity.end_date, boundary, "end_date");
+	sameInstant(record["knowledge_cutoff"], identity.knowledge_cutoff, boundary, "knowledge_cutoff");
+	sameInstant(record["publication_cutoff"], identity.publication_cutoff, boundary, "publication_cutoff");
+	const capital = decimalValue(record, "model_initial_capital", boundary);
+	if (Number(capital) !== Number(identity.model_initial_capital)) {
+		throw new RuntimeValidationError(boundary, "model_initial_capital", "differs from the request");
+	}
+	const resultId = stringValue(record, "result_id", boundary);
+	if (!resultId.startsWith("history-comparison:sha256:")) {
+		throw new RuntimeValidationError(boundary, "result_id", "must start with history-comparison:sha256:");
+	}
+	const status = enumValue(record, "status", ["comparable", "single_common_point", "incomparable"] as const, boundary);
+	const emptyReason = record["empty_reason"] === null ? null : stringValue(record, "empty_reason", boundary);
+	const runs: HistoryComparisonRun[] = arrayValue(record, "runs", boundary).map((run, runIndex) => {
+		const runBoundary = `${boundary}.runs.${runIndex}`;
+		const runRecord = recordValue(run, runBoundary);
+		const points: HistoryComparisonRunPoint[] = arrayValue(runRecord, "points", runBoundary).map(
+			(point, pointIndex) => {
+				const pointBoundary = `${runBoundary}.points.${pointIndex}`;
+				const pointRecord = recordValue(point, pointBoundary);
+				return {
+					on_date: stringValue(pointRecord, "on_date", pointBoundary),
+					growth: parseLegDecimalRecord(pointRecord, "growth", pointBoundary),
+					assets: parseLegDecimalRecord(pointRecord, "assets", pointBoundary),
+				};
+			},
+		);
+		return {
+			start_date: stringValue(runRecord, "start_date", runBoundary),
+			end_date: stringValue(runRecord, "end_date", runBoundary),
+			point_count: finiteNumberValue(runRecord, "point_count", runBoundary),
+			points,
+			window_returns: parseLegReturnRecord(runRecord, runBoundary),
+		};
+	});
+	const legs: HistoryComparisonLeg[] = arrayValue(record, "legs", boundary).map((leg, legIndex) => {
+		const legBoundary = `${boundary}.legs.${legIndex}`;
+		const legRecord = recordValue(leg, legBoundary);
+		const revision = legRecord["ledger_revision"];
+		const ledgerRevision: ManualLedgerRevision | null =
+			revision === null
+				? null
+				: {
+						event_count: finiteNumberValue(
+							recordValue(revision, `${legBoundary}.ledger_revision`),
+							"event_count",
+							`${legBoundary}.ledger_revision`,
+						),
+						ledger_hash: stringValue(
+							recordValue(revision, `${legBoundary}.ledger_revision`),
+							"ledger_hash",
+							`${legBoundary}.ledger_revision`,
+						),
+					};
+		return {
+			kind: enumValue(legRecord, "kind", COMPARISON_LEG_KINDS, legBoundary),
+			result_id: stringValue(legRecord, "result_id", legBoundary),
+			currency: enumValue(legRecord, "currency", ["CNY"] as const, legBoundary),
+			empty_reason: nullableStringValue(legRecord, "empty_reason", legBoundary),
+			point_count: finiteNumberValue(legRecord, "point_count", legBoundary),
+			valued_point_count: finiteNumberValue(legRecord, "valued_point_count", legBoundary),
+			gap_count: finiteNumberValue(legRecord, "gap_count", legBoundary),
+			segment_count: finiteNumberValue(legRecord, "segment_count", legBoundary),
+			first_valued_date: nullableStringValue(legRecord, "first_valued_date", legBoundary),
+			last_valued_date: nullableStringValue(legRecord, "last_valued_date", legBoundary),
+			ledger_revision: ledgerRevision,
+			target_count: nullableIntegerValue(legRecord, "target_count", legBoundary),
+		};
+	});
+	return {
+		result_id: resultId,
+		strategy_id: identity.strategy_id,
+		paper_account_id: identity.paper_account_id,
+		paper_session_id: identity.paper_session_id,
+		manual_account_id: identity.manual_account_id,
+		model_initial_capital: capital,
+		currency: enumValue(record, "currency", ["CNY"] as const, boundary),
+		method: stringValue(record, "method", boundary),
+		valuation_policy_version: stringValue(record, "valuation_policy_version", boundary),
+		comparison_policy_version: stringValue(record, "comparison_policy_version", boundary),
+		status,
+		empty_reason: emptyReason,
+		start_date: identity.start_date,
+		end_date: identity.end_date,
+		knowledge_cutoff: identity.knowledge_cutoff,
+		publication_cutoff: identity.publication_cutoff,
+		runs,
+		legs,
+	};
+}
+
+function parseAccountEntry(value: unknown, kind: "manual" | "paper", boundary: string): AccountCatalogEntry {
+	const record = recordValue(value, boundary);
+	return {
+		account_id: stringValue(record, "account_id", boundary),
+		account_kind: sameKind(record["account_kind"], kind, boundary),
+		account_name: stringValue(record, "account_name", boundary),
+		currency: enumValue(record, "currency", ["CNY"] as const, boundary),
+		opened_at: stringValue(record, "opened_at", boundary),
+	};
+}
+
+function sameKind(actual: unknown, expected: "manual" | "paper", boundary: string): "manual" | "paper" {
+	if (actual !== expected) {
+		throw new RuntimeValidationError(boundary, "account_kind", `expected ${expected}`);
+	}
+	return expected;
+}
+
+export function parseAccountCatalog(value: unknown, kind: "manual" | "paper"): readonly AccountCatalogEntry[] {
+	const boundary = `${kind}AccountCatalog`;
+	const record = recordValue(value, boundary);
+	return arrayValue(record, "accounts", boundary).map((entry, index) =>
+		parseAccountEntry(entry, kind, `${boundary}.accounts.${index}`),
+	);
+}
+
+export function parsePaperSessionCatalog(value: unknown, accountId: string): readonly PaperSessionCatalogEntry[] {
+	const boundary = "paperSessionCatalog";
+	const record = recordValue(value, boundary);
+	return arrayValue(record, "sessions", boundary).map((entry, index) => {
+		const entryBoundary = `${boundary}.sessions.${index}`;
+		const entryRecord = recordValue(entry, entryBoundary);
+		sameValue(entryRecord["account_id"], accountId, entryBoundary, "account_id");
+		return {
+			session_id: stringValue(entryRecord, "session_id", entryBoundary),
+			account_id: accountId,
+			strategy_id: stringValue(entryRecord, "strategy_id", entryBoundary),
+			trade_date: stringValue(entryRecord, "trade_date", entryBoundary),
+			status: enumValue(entryRecord, "status", ["created", "running", "paused"] as const, entryBoundary),
+			revision: finiteNumberValue(entryRecord, "revision", entryBoundary),
+			created_at: stringValue(entryRecord, "created_at", entryBoundary),
+			updated_at: stringValue(entryRecord, "updated_at", entryBoundary),
+		};
+	});
 }
 
 function parsePaperLedgerEvent(value: unknown, accountId: string, boundary: string): PaperLedgerEvent {

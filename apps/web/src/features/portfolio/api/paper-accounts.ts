@@ -1,5 +1,6 @@
 import { apiClient } from "@/api/transport";
 import type {
+	AccountCatalogEntry,
 	CreatePaperAccountBody,
 	CreatePaperSessionBody,
 	OperatePaperOrderBody,
@@ -10,6 +11,7 @@ import type {
 	PaperHistoryQueryIdentity,
 	PaperReconciliation,
 	PaperRecoverReceipt,
+	PaperSessionCatalogEntry,
 	PaperSessionCommandReceipt,
 	PaperSessionRead,
 	PausePaperSessionBody,
@@ -17,17 +19,20 @@ import type {
 	RecoverPaperSessionBody,
 } from "./account-models";
 import {
+	parseAccountCatalog,
 	parsePaperAccountHistory,
 	parsePaperAccountLedger,
 	parsePaperAccountReceipt,
 	parsePaperExecutionReceipt,
 	parsePaperReconciliation,
 	parsePaperRecoverReceipt,
+	parsePaperSessionCatalog,
 	parsePaperSessionCommandReceipt,
 	parsePaperSessionRead,
 } from "./runtime-validation";
 
 export type {
+	AccountCatalogEntry,
 	CreatePaperAccountBody,
 	CreatePaperSessionBody,
 	OperatePaperOrderBody,
@@ -38,6 +43,7 @@ export type {
 	PaperHistoryQueryIdentity,
 	PaperReconciliation,
 	PaperRecoverReceipt,
+	PaperSessionCatalogEntry,
 	PaperSessionCommandReceipt,
 	PaperSessionRead,
 	PausePaperSessionBody,
@@ -48,6 +54,18 @@ export type {
 export async function createPaperAccount(body: CreatePaperAccountBody): Promise<PaperAccountReceipt> {
 	const payload = await apiClient.post("/api/v1/paper/accounts", { body });
 	return parsePaperAccountReceipt(payload, body.account_id);
+}
+
+export async function fetchPaperAccounts(): Promise<readonly AccountCatalogEntry[]> {
+	const payload = await apiClient.get("/api/v1/paper/accounts");
+	return parseAccountCatalog(payload, "paper");
+}
+
+export async function fetchPaperSessions(accountId: string): Promise<readonly PaperSessionCatalogEntry[]> {
+	const payload = await apiClient.get("/api/v1/paper/accounts/{account_id}/sessions", {
+		params: { path: { account_id: accountId } },
+	});
+	return parsePaperSessionCatalog(payload, accountId);
 }
 
 export async function fetchPaperAccountLedger(accountId: string, asOf: string): Promise<PaperAccountLedger> {

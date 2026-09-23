@@ -11,9 +11,15 @@ from pydantic import BaseModel, ConfigDict, Field
 from ditto_apps.models.account_ledger import (
     HistoryPointResponse,
     HistorySegmentResponse,
+    LedgerRevisionResponse,
 )
 
 __all__ = [
+    "HistoryComparisonLegResponse",
+    "HistoryComparisonQueryParams",
+    "HistoryComparisonResponse",
+    "HistoryComparisonRunPointResponse",
+    "HistoryComparisonRunResponse",
     "ModelHistoryQueryParams",
     "ModelHistoryResponse",
     "ModelTargetResponse",
@@ -250,3 +256,92 @@ class ModelHistoryResponse(BaseModel):
     valuation_policy_version: str
     points: tuple[HistoryPointResponse, ...]
     segments: tuple[HistorySegmentResponse, ...]
+
+
+class HistoryComparisonQueryParams(BaseModel):
+    """
+    GET query identity for the three-leg common-window comparison.
+
+    Query strings arrive as plain text, so coercion stays lax here; the
+    application query still rejects every invalid identity fail-closed.
+    """
+
+    model_config = _QUERY_CONFIG
+
+    strategy_id: str = Field(min_length=1)
+    paper_account_id: str = Field(min_length=1)
+    paper_session_id: str = Field(min_length=1)
+    manual_account_id: str = Field(min_length=1)
+    start_date: date = Field(strict=False)
+    end_date: date = Field(strict=False)
+    model_initial_capital: Decimal = Field(gt=0, strict=False)
+    knowledge_cutoff: datetime = Field(strict=False)
+    publication_cutoff: datetime = Field(strict=False)
+    source_snapshot_ids: tuple[str, ...] = Field(strict=False, min_length=1)
+    model_artifact_ids: tuple[str, ...] = Field(default=(), strict=False)
+
+
+class HistoryComparisonRunPointResponse(BaseModel):
+    """One common date: growth anchors to 1 at the run start."""
+
+    model_config = _RESPONSE_CONFIG
+
+    on_date: str
+    growth: dict[str, Decimal]
+    assets: dict[str, Decimal]
+
+
+class HistoryComparisonRunResponse(BaseModel):
+    """One common continuous run with per-leg window returns."""
+
+    model_config = _RESPONSE_CONFIG
+
+    start_date: str
+    end_date: str
+    point_count: int
+    points: tuple[HistoryComparisonRunPointResponse, ...]
+    window_returns: dict[str, Decimal | None]
+
+
+class HistoryComparisonLegResponse(BaseModel):
+    """Per-leg provenance; identity stays the leg's own result_id."""
+
+    model_config = _RESPONSE_CONFIG
+
+    kind: Literal["model", "paper", "manual"]
+    result_id: str
+    currency: Literal["CNY"]
+    empty_reason: str | None
+    point_count: int
+    valued_point_count: int
+    gap_count: int
+    segment_count: int
+    first_valued_date: str | None
+    last_valued_date: str | None
+    ledger_revision: LedgerRevisionResponse | None
+    target_count: int | None
+
+
+class HistoryComparisonResponse(BaseModel):
+    """Complete replayable common-window comparison result."""
+
+    model_config = _RESPONSE_CONFIG
+
+    result_id: str
+    strategy_id: str
+    paper_account_id: str
+    paper_session_id: str
+    manual_account_id: str
+    model_initial_capital: Decimal
+    currency: Literal["CNY"]
+    method: str
+    valuation_policy_version: str
+    comparison_policy_version: str
+    status: Literal["comparable", "single_common_point", "incomparable"]
+    empty_reason: str | None
+    start_date: str
+    end_date: str
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    runs: tuple[HistoryComparisonRunResponse, ...]
+    legs: tuple[HistoryComparisonLegResponse, ...]

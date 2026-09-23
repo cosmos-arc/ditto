@@ -59,6 +59,9 @@ class _Journal:
     def list_events(self, account_id: str) -> tuple[AccountEvent, ...]:
         return self.events if account_id == self.account.account_id else ()
 
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        return (self.account,)
+
 
 def _fixture() -> tuple[AccountDefinition, tuple[AccountEvent, ...]]:
     account = AccountDefinition(

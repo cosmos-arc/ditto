@@ -16,6 +16,10 @@ from ditto_application.processes.execution.operate_paper_session import (
 from ditto_application.processes.execution.reconcile_paper_account import (
     ReconcilePaperAccount,
 )
+from ditto_application.queries.account_catalog import (
+    ListPaperAccountsQuery,
+    ListPaperSessionsQuery,
+)
 from ditto_application.queries.paper_session import GetPaperSessionQuery
 
 __all__ = ["AppPaperProvider"]
@@ -80,3 +84,19 @@ class AppPaperProvider(Provider):
     ) -> GetPaperSessionQuery:
         """Build the exact paper-session query facade."""
         return GetPaperSessionQuery(store=store)
+
+    @provide
+    def paper_accounts_query(
+        self,
+        account_journal: AccountEventJournalPort,
+    ) -> ListPaperAccountsQuery:
+        """List PAPER accounts for pickers without hand-typed identifiers."""
+        return ListPaperAccountsQuery(journal=account_journal)
+
+    @provide
+    def paper_sessions_query(
+        self,
+        store: PaperSessionStorePort,
+    ) -> ListPaperSessionsQuery:
+        """List one account's paper sessions for pickers."""
+        return ListPaperSessionsQuery(store=store)

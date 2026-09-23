@@ -22,6 +22,8 @@ __all__ = [
     "CreatePaperAccountBody",
     "CreatePaperSessionBody",
     "OperatePaperOrderBody",
+    "PaperAccountCatalogEntryResponse",
+    "PaperAccountCatalogResponse",
     "PaperAccountLedgerResponse",
     "PaperAccountReceiptResponse",
     "PaperExecutionReceiptResponse",
@@ -32,6 +34,8 @@ __all__ = [
     "PaperMarketSnapshotBody",
     "PaperReconciliationResponse",
     "PaperRecoverResponse",
+    "PaperSessionCatalogEntryResponse",
+    "PaperSessionCatalogResponse",
     "PaperSessionCommandResponse",
     "PaperSessionReadResponse",
     "PausePaperSessionBody",
@@ -197,6 +201,26 @@ class PaperAccountIdentityResponse(BaseModel):
     currency: Literal["CNY"]
 
 
+class PaperAccountCatalogEntryResponse(BaseModel):
+    """One selectable PAPER account identity."""
+
+    model_config = _RESPONSE_CONFIG
+
+    account_id: str
+    account_kind: Literal["paper"]
+    account_name: str
+    opened_at: datetime
+    currency: Literal["CNY"]
+
+
+class PaperAccountCatalogResponse(BaseModel):
+    """Every PAPER account in deterministic id order."""
+
+    model_config = _RESPONSE_CONFIG
+
+    accounts: tuple[PaperAccountCatalogEntryResponse, ...]
+
+
 class PaperLedgerEventResponse(BaseModel):
     """Immutable PAPER engine event and tamper-evident hash."""
 
@@ -269,6 +293,29 @@ class PaperSessionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     pause_reason: str | None
+
+
+class PaperSessionCatalogEntryResponse(BaseModel):
+    """One selectable paper session bound to one PAPER account."""
+
+    model_config = _RESPONSE_CONFIG
+
+    session_id: str
+    account_id: str
+    strategy_id: str
+    trade_date: str
+    status: Literal["created", "running", "paused"]
+    revision: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class PaperSessionCatalogResponse(BaseModel):
+    """One account's paper sessions in deterministic trade-date order."""
+
+    model_config = _RESPONSE_CONFIG
+
+    sessions: tuple[PaperSessionCatalogEntryResponse, ...]
 
 
 class PaperSessionCommandResponse(BaseModel):

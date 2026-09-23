@@ -1,15 +1,17 @@
 import type { components, operations } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
-import type { ModelHistory } from "./account-models";
+import { RuntimeValidationError, recordValue, stringValue } from "@/api/validation";
+import type { HistoryComparison, ModelHistory } from "./account-models";
 
 export type PortfolioComparisonIdentity = operations["portfolio_get_comparison"]["parameters"]["query"];
 export type PortfolioScenarioRequest = components["schemas"]["PortfolioScenarioBody"];
 export type PortfolioComparison = components["schemas"]["PortfolioComparisonResponse"];
 export type PortfolioScenarioPreview = components["schemas"]["PortfolioScenarioPreviewResponse"];
 export type ModelHistoryIdentity = operations["portfolio_get_model_history"]["parameters"]["query"];
-export type { ModelHistory } from "./account-models";
+export type HistoryComparisonIdentity = operations["portfolio_get_history_comparison"]["parameters"]["query"];
+export type { HistoryComparison, ModelHistory } from "./account-models";
 
-import { assertPortfolioScenarioPreview, parseModelHistory } from "./runtime-validation";
+import { assertPortfolioScenarioPreview, parseHistoryComparison, parseModelHistory } from "./runtime-validation";
 
 function sameSnapshotSet(left: readonly string[], right: readonly string[]): boolean {
 	const sortedLeft = [...left].sort();
@@ -41,6 +43,40 @@ export async function fetchModelHistory(identity: ModelHistoryIdentity): Promise
 		params: { query: identity },
 	});
 	return parseModelHistory(payload, identity.strategy_id, identity);
+}
+
+export async function fetchHistoryComparison(identity: HistoryComparisonIdentity): Promise<HistoryComparison> {
+	const payload = await apiClient.get("/api/v1/portfolio/history-comparison", {
+		params: { query: identity },
+	});
+	return parseHistoryComparison(payload, identity);
+}
+
+export interface StrategyOption {
+	readonly strategy_id: string;
+	readonly name: string;
+}
+
+/**
+ * Strategy picker options via the shared typed transport (no peer-feature
+ * import). The endpoint returns a bare array; the first 100 strategies cover
+ * the local-first catalog and the cap matches the backend `le` bound.
+ */
+export async function fetchStrategyOptions(): Promise<readonly StrategyOption[]> {
+	const payload = await apiClient.get("/api/v1/strategies", {
+		params: { query: { limit: 100 } },
+	});
+	if (!Array.isArray(payload)) {
+		throw new RuntimeValidationError("strategyOptions", "payload", "expected an array");
+	}
+	return payload.map((entry, index) => {
+		const boundary = `strategyOptions.${index}`;
+		const entryRecord = recordValue(entry, boundary);
+		return {
+			strategy_id: stringValue(entryRecord, "strategy_id", boundary),
+			name: stringValue(entryRecord, "name", boundary),
+		};
+	});
 }
 
 export async function previewPortfolioScenario(request: PortfolioScenarioRequest): Promise<PortfolioScenarioPreview> {

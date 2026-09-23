@@ -275,9 +275,10 @@ def test_paper_routes_complete_local_workflow(tmp_path: Path) -> None:
 def test_paper_openapi_surface_has_stable_operation_ids() -> None:
     schema = create_openapi_app().openapi()
     expected = {
-        "/api/v1/paper/accounts": "paper_create_account",
+        "/api/v1/paper/accounts": "paper_list_accounts",
         "/api/v1/paper/accounts/{account_id}/ledger": "paper_get_account_ledger",
         "/api/v1/paper/accounts/{account_id}/history": "paper_get_account_history",
+        "/api/v1/paper/accounts/{account_id}/sessions": "paper_list_account_sessions",
         "/api/v1/paper/sessions": "paper_create_session",
         "/api/v1/paper/sessions/{session_id}": "paper_get_session",
         "/api/v1/paper/sessions/{session_id}/orders": "paper_operate_order",
@@ -609,3 +610,105 @@ def test_paper_history_openapi_declares_the_series_contract() -> None:
     parameter_names = {parameter["name"] for parameter in operation["parameters"]}
     assert "session_id" in parameter_names
     assert "ledger_event_count" in parameter_names
+
+
+def test_paper_catalog_routes_list_kind_filtered_accounts_and_sessions(
+    tmp_path: Path,
+) -> None:
+    from ditto_application.queries.account_catalog import (
+        ListPaperAccountsQuery,
+        ListPaperSessionsQuery,
+    )
+    from ditto_apps.api.routes.paper import (
+        list_paper_account_sessions,
+        list_paper_accounts,
+    )
+    from ditto_portfolio.account_ledger import AccountDefinition, AccountKind
+
+    database = str(tmp_path / "paper-catalog.sqlite")
+    journal = SqliteAccountEventJournal(database)
+    store = SqlitePaperSessionStore(database)
+    reconciler = ReconcilePaperAccount(store=store, account_journal=journal)
+    session_handler = PaperSessionCommandHandler(
+        store=store,
+        account_journal=journal,
+        clock=lambda: NOW,
+        reconciler=reconciler,
+    )
+    account_handler = CreatePaperAccountHandler(journal=journal, clock=lambda: NOW)
+    journal.create_account(
+        AccountDefinition(
+            account_id="manual-bystander",
+            kind=AccountKind.MANUAL,
+            name="实盘账户-不应出现在 PAPER 目录",
+            opened_at=NOW,
+        )
+    )
+
+    with patch("ditto_apps.api.routes.paper.asyncio.to_thread", side_effect=_inline):
+        for account_id, name, opened in (
+            ("paper-catalog-2", "模拟账户乙", date(2026, 8, 31)),
+            ("paper-catalog-1", "模拟账户甲", date(2026, 8, 28)),
+        ):
+            asyncio.run(
+                _original(create_paper_account)(
+                    body=CreatePaperAccountBody(
+                        account_id=account_id,
+                        name=name,
+                        opened_at=NOW,
+                        trade_date=opened,
+                        initial_cash=Decimal("100"),
+                        idempotency_key=f"paper-catalog-{account_id}",
+                    ),
+                    handler=account_handler,
+                )
+            )
+        for day, suffix in ((date(2026, 8, 31), "a"), (date(2026, 9, 1), "b")):
+            asyncio.run(
+                _original(create_paper_session)(
+                    body=CreatePaperSessionBody(
+                        session_id=f"paper-catalog-session-{suffix}",
+                        account_id="paper-catalog-1",
+                        strategy_id="strategy-catalog",
+                        trade_date=day,
+                        idempotency_key=f"paper-catalog-session-{suffix}",
+                        start_immediately=True,
+                    ),
+                    handler=session_handler,
+                )
+            )
+        accounts = asyncio.run(
+            _original(list_paper_accounts)(
+                query=ListPaperAccountsQuery(journal=journal),
+            )
+        )
+        sessions = asyncio.run(
+            _original(list_paper_account_sessions)(
+                account_id="paper-catalog-1",
+                query=ListPaperSessionsQuery(store=store),
+            )
+        )
+        other_sessions = asyncio.run(
+            _original(list_paper_account_sessions)(
+                account_id="paper-catalog-2",
+                query=ListPaperSessionsQuery(store=store),
+            )
+        )
+
+    assert [entry.account_id for entry in accounts.data.accounts] == [
+        "paper-catalog-1",
+        "paper-catalog-2",
+    ]
+    first = accounts.data.accounts[0]
+    assert first.account_kind == "paper"
+    assert first.account_name == "模拟账户甲"
+    assert first.currency == "CNY"
+    assert [entry.session_id for entry in sessions.data.sessions] == [
+        "paper-catalog-session-a",
+        "paper-catalog-session-b",
+    ]
+    assert sessions.data.sessions[0].trade_date == "2026-08-31"
+    assert sessions.data.sessions[0].status == "running"
+    assert other_sessions.data.sessions == ()
+    store.close()
+    journal.close()

@@ -8,6 +8,10 @@ from typing import Annotated
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.exceptions import AppQueryError
+from ditto_application.queries.history_comparison import (
+    GetHistoryComparisonQuery,
+    HistoryComparisonRequest,
+)
 from ditto_application.queries.model_history import (
     GetModelHistoryQuery,
     ModelHistoryRequest,
@@ -25,6 +29,8 @@ from fastapi import APIRouter, Query
 from ditto_apps.api.errors import UnprocessableEntityError
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.portfolio_comparison import (
+    HistoryComparisonQueryParams,
+    HistoryComparisonResponse,
     ModelHistoryQueryParams,
     ModelHistoryResponse,
     PortfolioComparisonQueryParams,
@@ -111,6 +117,44 @@ async def get_model_history(
             else "MODEL_HISTORY_INVALID",
         ) from exc
     return APIResponse(data=ModelHistoryResponse.model_validate(result))
+
+
+@router.get(
+    "/history-comparison",
+    response_model=APIResponse[HistoryComparisonResponse],
+    operation_id="portfolio_get_history_comparison",
+)
+@inject
+async def get_history_comparison(
+    params: Annotated[HistoryComparisonQueryParams, Query()],
+    query: Annotated[GetHistoryComparisonQuery, FromComponent()],
+) -> APIResponse[HistoryComparisonResponse]:
+    """Compose the three leg replays into one common-window comparison."""
+    try:
+        result = await asyncio.to_thread(
+            query.history,
+            HistoryComparisonRequest(
+                strategy_id=params.strategy_id,
+                paper_account_id=params.paper_account_id,
+                paper_session_id=params.paper_session_id,
+                manual_account_id=params.manual_account_id,
+                start_date=params.start_date.isoformat(),
+                end_date=params.end_date.isoformat(),
+                model_initial_capital=params.model_initial_capital,
+                knowledge_cutoff=params.knowledge_cutoff,
+                publication_cutoff=params.publication_cutoff,
+                source_snapshot_ids=tuple(params.source_snapshot_ids),
+                model_artifact_ids=tuple(params.model_artifact_ids),
+            ),
+        )
+    except (AppQueryError, ValueError) as exc:
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("code", "HISTORY_COMPARISON_INVALID"))
+            if isinstance(exc, AppQueryError)
+            else "HISTORY_COMPARISON_INVALID",
+        ) from exc
+    return APIResponse(data=HistoryComparisonResponse.model_validate(result))
 
 
 @router.post(

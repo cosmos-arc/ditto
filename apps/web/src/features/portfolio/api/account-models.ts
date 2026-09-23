@@ -236,6 +236,79 @@ export interface ModelHistory {
 	readonly segments: readonly ManualHistorySegment[];
 }
 
+export type ComparisonLegKind = "model" | "paper" | "manual";
+
+export interface AccountCatalogEntry {
+	readonly account_id: string;
+	readonly account_kind: string;
+	readonly account_name: string;
+	readonly currency: "CNY";
+	readonly opened_at: string;
+}
+
+export interface PaperSessionCatalogEntry {
+	readonly session_id: string;
+	readonly account_id: string;
+	readonly strategy_id: string;
+	readonly trade_date: string;
+	readonly status: "created" | "running" | "paused";
+	readonly revision: number;
+	readonly created_at: string;
+	readonly updated_at: string;
+}
+
+export interface HistoryComparisonLeg {
+	readonly kind: ComparisonLegKind;
+	readonly result_id: string;
+	readonly currency: "CNY";
+	readonly empty_reason: string | null;
+	readonly point_count: number;
+	readonly valued_point_count: number;
+	readonly gap_count: number;
+	readonly segment_count: number;
+	readonly first_valued_date: string | null;
+	readonly last_valued_date: string | null;
+	readonly ledger_revision: ManualLedgerRevision | null;
+	readonly target_count: number | null;
+}
+
+export interface HistoryComparisonRunPoint {
+	readonly on_date: string;
+	readonly growth: Readonly<Record<ComparisonLegKind, string>>;
+	readonly assets: Readonly<Record<ComparisonLegKind, string>>;
+}
+
+export interface HistoryComparisonRun {
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly point_count: number;
+	readonly points: readonly HistoryComparisonRunPoint[];
+	readonly window_returns: Readonly<Record<ComparisonLegKind, string | null>>;
+}
+
+export type HistoryComparisonStatus = "comparable" | "single_common_point" | "incomparable";
+
+export interface HistoryComparison {
+	readonly result_id: string;
+	readonly strategy_id: string;
+	readonly paper_account_id: string;
+	readonly paper_session_id: string;
+	readonly manual_account_id: string;
+	readonly model_initial_capital: string;
+	readonly currency: "CNY";
+	readonly method: string;
+	readonly valuation_policy_version: string;
+	readonly comparison_policy_version: string;
+	readonly status: HistoryComparisonStatus;
+	readonly empty_reason: string | null;
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly knowledge_cutoff: string;
+	readonly publication_cutoff: string;
+	readonly runs: readonly HistoryComparisonRun[];
+	readonly legs: readonly HistoryComparisonLeg[];
+}
+
 export interface ManualAccountReceipt {
 	readonly account: ManualAccount;
 	readonly event: ManualAccountEvent | null;

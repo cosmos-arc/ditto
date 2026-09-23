@@ -54,6 +54,9 @@ class _Journal:
     def list_events(self, account_id: str) -> tuple[AccountEvent, ...]:
         return (self._event,) if account_id == self._account.account_id else ()
 
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        return (self._account,)
+
 
 def _facade() -> tuple[AccountEventEvidenceQueryFacade, AccountEvent]:
     account = AccountDefinition(

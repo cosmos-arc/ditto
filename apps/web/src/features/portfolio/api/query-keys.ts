@@ -109,4 +109,36 @@ export const tradingKeys = {
 			identity.ledger_hash,
 		] as const,
 	paperSession: (sessionId: string) => [...tradingKeys.all, "paper-session", sessionId] as const,
+	manualAccounts: () => [...tradingKeys.all, "manual-accounts"] as const,
+	paperAccounts: () => [...tradingKeys.all, "paper-accounts"] as const,
+	paperSessions: (accountId: string) => [...tradingKeys.all, "paper-sessions", accountId] as const,
+	strategyOptions: () => [...tradingKeys.all, "strategy-options"] as const,
+	historyComparison: (identity: {
+		readonly strategy_id: string;
+		readonly paper_account_id: string;
+		readonly paper_session_id: string;
+		readonly manual_account_id: string;
+		readonly start_date: string;
+		readonly end_date: string;
+		readonly model_initial_capital: number | string;
+		readonly knowledge_cutoff: string;
+		readonly publication_cutoff: string;
+		readonly source_snapshot_ids: readonly string[];
+		readonly model_artifact_ids?: readonly string[];
+	}) =>
+		[
+			...tradingKeys.all,
+			"history-comparison",
+			identity.strategy_id,
+			identity.paper_account_id,
+			identity.paper_session_id,
+			identity.manual_account_id,
+			identity.start_date,
+			identity.end_date,
+			String(identity.model_initial_capital),
+			identity.knowledge_cutoff,
+			identity.publication_cutoff,
+			[...identity.source_snapshot_ids].sort().join("|"),
+			(identity.model_artifact_ids ?? []).join(","),
+		] as const,
 } as const;

@@ -7,6 +7,7 @@ import { shouldUsePrototypeMocks } from "../api/runtime";
 import { useComparisonAttribution, useDailyDecisionV3 } from "../hooks";
 import { AccountIdentityStrip } from "./account-identity-strip";
 import { FillLedgerList } from "./fill-ledger-list";
+import { HistoryComparisonPanel } from "./history-comparison-panel";
 import { ManualAccountWorkspace } from "./manual-account-workspace";
 import { PaperAccountWorkspace } from "./paper-account-workspace";
 import { PortfolioComparisonWorkspace } from "./portfolio-comparison-workspace";
@@ -125,7 +126,12 @@ export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}
 	});
 
 	if (liveMode && accountMode === "comparison") {
-		return <PortfolioComparisonWorkspace identity={comparisonIdentity} />;
+		return (
+			<div className="flex flex-col gap-6">
+				<HistoryComparisonPanel />
+				<PortfolioComparisonWorkspace identity={comparisonIdentity} />
+			</div>
+		);
 	}
 
 	if (accountMode === "manual") {

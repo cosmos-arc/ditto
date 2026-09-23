@@ -11,6 +11,7 @@ from ditto_application.commands.account_ledger import (
     CreateAccountHandler,
     ManualAccountCommandHandler,
 )
+from ditto_application.queries.account_catalog import ListManualAccountsQuery
 from ditto_application.queries.account_event_evidence import (
     AccountEventEvidenceQueryFacade,
 )
@@ -58,3 +59,11 @@ class AppAccountLedgerProvider(Provider):
     ) -> AccountEventEvidenceQueryFacade:
         """Expose Manual Account facts only through the privacy-scoped facade."""
         return AccountEventEvidenceQueryFacade(query=query)
+
+    @provide
+    def manual_accounts_query(
+        self,
+        journal: AccountEventJournalPort,
+    ) -> ListManualAccountsQuery:
+        """List MANUAL accounts for pickers without hand-typed identifiers."""
+        return ListManualAccountsQuery(journal=journal)

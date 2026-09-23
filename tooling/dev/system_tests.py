@@ -487,6 +487,25 @@ def main() -> int:
                 ),
             )
 
+            # The three-leg history comparison (#263) drives the production
+            # common-window query with catalog pickers, a gap-limited window,
+            # one-shot retry recovery, and identity-stamped exports.
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.portfolio_history_app:app", api_port
+                    ),
+                    prefix="ditto-system-portfolio-history-",
+                    spec="portfolio-history-comparison.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The normal product profile keeps Agent disabled. This fixture
             # mounts the production router over real SQLite and pre-issued,
             # fictional actions without a model, credentials, or write tool.
