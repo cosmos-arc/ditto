@@ -1,6 +1,6 @@
 # 账户历史估值与资金流调整收益（Manual / Paper / Model / 共同区间比较）
 
-规格来源：[#249](https://github.com/cosmos-arc/ditto/issues/249)（三组合历史估值与资金流调整收益）、实施票 [#260](https://github.com/cosmos-arc/ditto/issues/260)（Manual）、[#261](https://github.com/cosmos-arc/ditto/issues/261)（Paper）、[#262](https://github.com/cosmos-arc/ditto/issues/262)（Model 目标重放）、[#263](https://github.com/cosmos-arc/ditto/issues/263)（共同区间比较）、[#296](https://github.com/cosmos-arc/ditto/issues/296)（比较层钉住账本修订）。本文记录数值与查询合同。
+规格来源：[#249](https://github.com/cosmos-arc/ditto/issues/249)（三组合历史估值与资金流调整收益）、实施票 [#260](https://github.com/cosmos-arc/ditto/issues/260)（Manual）、[#261](https://github.com/cosmos-arc/ditto/issues/261)（Paper）、[#262](https://github.com/cosmos-arc/ditto/issues/262)（Model 目标重放）、[#263](https://github.com/cosmos-arc/ditto/issues/263)（共同区间比较）、[#296](https://github.com/cosmos-arc/ditto/issues/296)（比较层钉住账本修订）、[#297](https://github.com/cosmos-arc/ditto/issues/297)（声明式基准序列）。本文记录数值与查询合同。
 
 ## 记录合同
 
@@ -60,7 +60,13 @@ Web：组合比较工作台内「历史收益（保存目标重放）」面板�
 
 选择器基础设施：`GET /api/v1/manual/accounts`（`manual_list_accounts`）、`GET /api/v1/paper/accounts`（`paper_list_accounts`）与 `GET /api/v1/paper/accounts/{account_id}/sessions`（`paper_list_account_sessions`）为只读目录（journal `list_accounts()` 与 session store `list_sessions()` 端口，按 id/交易日确定序），比较面板据此免手填内部 ID。
 
-Web：比较工作台（`/portfolio/?mode=comparison`）顶部「三组合共同区间比较」面板（`history-comparison-panel.tsx`）：策略/Paper 账户+会话/Manual 账户下拉（策略经共享 typed transport 直读 `GET /api/v1/strategies`，不引入特性间依赖）+ 区间/双截止/初始资本/价格快照。结果按共同段展示：段选择页签、逐腿段收益卡、SVG 三线归一曲线、逐日表（归一 4 位 + 资产）与逐腿下钻卡；Paper/Manual 下钻卡可将显示修订回填为钉住参数并按同一身份重放（再点解除恢复服务端解析；运行时校验断言钉住修订与腿回显一致，钉住参数也入 query key 防缓存碰撞）；CSV 与 PNG 导出（SVG 光栅化 + 身份页脚）都以同一后端 `result_id`/方法/币种落款，前端不复制金融规则。jsdom 无 canvas 时 PNG 导出显式降级提示；真实浏览器旅程（`portfolio-history-comparison.spec.ts` + `portfolio_history_app` fixture）验证选择、缺口截断、一次性失败后的重试恢复与两类导出下载。
+### 声明式基准序列（#297）
+
+请求可选声明基准（`benchmark_symbol` + `benchmark_type`，成对或留空；首版仅 `price`，`total_return` 留合同位——`adj_factor` 本地复权路径待出现长窗口需求再启用；非数字代码与非本币基准在 FX 实现前显式拒绝/排除）。数据来源裁决为 A3：首版用已接线 `etf_daily` 保留快照中的 ETF 收盘价序列（如 510300≈沪深300、510500≈中证500），与三腿估值同 PIT 语义同快照体系（同一 `pit_context` + `price_at` 停牌沿用政策），零新增数据集准入；真指数点位经 #251 准入后作为后续可选基准，result_id 摘要中基准按列表绑定以留多基准扩展位。ETF 二级市场价格近似全收益口径（成分股分红留存净值、极少分红），文档明示其比 000300 价格指数点位更接近 GIPS 推荐的全收益基准。
+
+基准是**叠加序列，不参与窗口计算**：共同窗口仍由三腿决定，基准缺价绝不截断或收窄共同段。每个共同段从自己的锚定价（段起始日的可见价）归一：锚定缺价→该段基准全 null；段中/段末缺价→仅该点/该段收益为 null（价格序列无资金流，跨自身缺日的估值比即增长，不伪造中间点）；单点段基准与腿同约只报锚定水平（`window_return` 为 null）；全程不可见→`empty_reason = "benchmark_price_not_visible"`，比较本身无可对齐共同段（incomparable）→`"no_common_window"`，均为显式结论而非错误。类型传播进 result_id（symbol/type/currency + 逐日解析价系列），不跨类型解释。
+
+Web：比较工作台（`/portfolio/?mode=comparison`）顶部「三组合共同区间比较」面板（`history-comparison-panel.tsx`）：策略/Paper 账户+会话/Manual 账户下拉（策略经共享 typed transport 直读 `GET /api/v1/strategies`，不引入特性间依赖）+ 区间/双截止/初始资本/价格快照 + 基准代码输入（可选，类型固定 price）。结果按共同段展示：段选择页签、逐腿段收益卡、SVG 归一曲线（基准为第四条虚线，缺价日留断口，参与共享 y 量表）、基准摘要行、逐日表（归一 4 位 + 资产 + 基准归一列，缺价「—」）与逐腿下钻卡；Paper/Manual 下钻卡可将显示修订回填为钉住参数并按同一身份重放（再点解除恢复服务端解析；运行时校验断言钉住修订与腿回显一致，钉住参数也入 query key 防缓存碰撞）；运行时校验同时断言基准块仅随声明出现、回显 symbol/type、逐段边界与比较段一致；CSV（含 `# benchmark=… type=price` 落款与 benchmark_growth 列）与 PNG 导出（SVG 光栅化 + 身份页脚含基准段收益）都以同一后端 `result_id`/方法/币种落款，前端不复制金融规则。jsdom 无 canvas 时 PNG 导出显式降级提示；真实浏览器旅程（`portfolio-history-comparison.spec.ts` + `portfolio_history_app` fixture）验证选择、缺口截断、一次性失败后的重试恢复与两类导出下载。
 
 ## 数值规则（首期精确模式）
 
@@ -85,7 +91,7 @@ Web：比较工作台（`/portfolio/?mode=comparison`）顶部「三组合共同
 ## 测试接缝
 
 - 纯数值手算：`packages/portfolio/tests/unit/test_account_returns_unit.py`（入金 0%、10%×10%=21%、费用 −1%、除息 0%、全额赎回/亏损归零/再注资/断口/时点未知等 20 例）与 `test_history_window_comparison_unit.py`（归一、外部流链乘、缺口/再注资/时序截断、非共同日复合、单点、空交集、孤立点分段等 12 例）。
-- 查询层：`packages/application/tests/unit/query/test_portfolio_history_unit.py`（修订重放、更正隔离、停牌沿用、缺价断口、PIT 重发布不可见等 15 例）、`test_paper_history_unit.py`（会话绑定、费用/分红内部化、跨账户冲突、会话身份入 result_id 等 11 例）、`test_model_history_unit.py`（保存目标漂移重放、钉住工件抗替代、首包前空档、缺历史空视图、未来发布不可见、权重/快照/身份反例等 14 例）与 `test_history_comparison_unit.py`（三腿组合手算、服务端修订解析绑定身份、钉住修订更正后重放不变、混钉、流不符 fail closed、账户/会话/策略错误透传、缺口限窗、无交集、单点等 12 例）。
-- 真实装配：`apps/backend/tests/integration/test_manual_history_live_fixture_integration.py`、`test_paper_history_live_fixture_integration.py`、`test_model_history_live_fixture_integration.py` 与 `test_history_comparison_live_fixture_integration.py`（保留价格 + 真实 DI 容器 + 真实工件存储：入金/费用/分红、会话冲突、更正后旧身份不变、目标被替代后钉住重放不变；比较切片含 GET 前后存储不变、修订回显与更正后钉住重放不变）。
+- 查询层：`packages/application/tests/unit/query/test_portfolio_history_unit.py`（修订重放、更正隔离、停牌沿用、缺价断口、PIT 重发布不可见等 15 例）、`test_paper_history_unit.py`（会话绑定、费用/分红内部化、跨账户冲突、会话身份入 result_id 等 11 例）、`test_model_history_unit.py`（保存目标漂移重放、钉住工件抗替代、首包前空档、缺历史空视图、未来发布不可见、权重/快照/身份反例等 14 例）与 `test_history_comparison_unit.py`（三腿组合手算、服务端修订解析绑定身份、钉住修订更正后重放不变、混钉、流不符 fail closed、基准叠加/不可见显式空/声明反例、账户/会话/策略错误透传、缺口限窗、无交集、单点等 18 例）与 `packages/portfolio/tests/unit/test_history_window_comparison_unit.py`（纯窗口规则 + 基准 overlay 锚定/缺锚/中缺/全不可见等 16 例）。
+- 真实装配：`apps/backend/tests/integration/test_manual_history_live_fixture_integration.py`、`test_paper_history_live_fixture_integration.py`、`test_model_history_live_fixture_integration.py` 与 `test_history_comparison_live_fixture_integration.py`（保留价格 + 真实 DI 容器 + 真实工件存储：入金/费用/分红、会话冲突、更正后旧身份不变、目标被替代后钉住重放不变；比较切片含 GET 前后存储不变、修订回显、更正后钉住重放不变与保留快照 510300 基准叠加/不可见基准显式空）。
 - 浏览器旅程：`tests/system/portfolio-history-comparison.spec.ts` 经 `tests/system/fixtures/portfolio_history_app.py`（生产 DI + `scripts/evidence/portfolio_history_comparison_live_fixture.py` 种子）验证选择、缺口窗口、一次性失败重试恢复、CSV/PNG 下载与零 console error。
 - 手算验收数值允许误差 1e−10；本切片全部 Decimal 精确断言。

@@ -16593,6 +16593,119 @@
         "title": "HistoricalUniverseSourcesBody",
         "type": "object"
       },
+      "HistoryComparisonBenchmarkPointResponse": {
+        "description": "One common date's benchmark growth; missing prices stay null.",
+        "properties": {
+          "growth": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Growth"
+          },
+          "on_date": {
+            "title": "On Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "on_date",
+          "growth"
+        ],
+        "title": "HistoryComparisonBenchmarkPointResponse",
+        "type": "object"
+      },
+      "HistoryComparisonBenchmarkResponse": {
+        "description": "Declared benchmark price series aligned onto the comparison's runs.",
+        "properties": {
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "empty_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empty Reason"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryComparisonBenchmarkRunResponse"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "type": {
+            "const": "price",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "type",
+          "currency",
+          "empty_reason",
+          "runs"
+        ],
+        "title": "HistoryComparisonBenchmarkResponse",
+        "type": "object"
+      },
+      "HistoryComparisonBenchmarkRunResponse": {
+        "description": "One run's benchmark overlay, anchored to 1 at the run start.",
+        "properties": {
+          "end_date": {
+            "title": "End Date",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryComparisonBenchmarkPointResponse"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          },
+          "window_return": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Return"
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date",
+          "window_return",
+          "points"
+        ],
+        "title": "HistoryComparisonBenchmarkRunResponse",
+        "type": "object"
+      },
       "HistoryComparisonLegResponse": {
         "description": "Per-leg provenance; identity stays the leg's own result_id.",
         "properties": {
@@ -16705,6 +16818,16 @@
       "HistoryComparisonResponse": {
         "description": "Complete replayable common-window comparison result.",
         "properties": {
+          "benchmark": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryComparisonBenchmarkResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "comparison_policy_version": {
             "title": "Comparison Policy Version",
             "type": "string"
@@ -44775,6 +44898,40 @@
                 }
               ],
               "title": "Manual Ledger Hash"
+            }
+          },
+          {
+            "in": "query",
+            "name": "benchmark_symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Benchmark Symbol"
+            }
+          },
+          {
+            "in": "query",
+            "name": "benchmark_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Benchmark Type"
             }
           },
           {

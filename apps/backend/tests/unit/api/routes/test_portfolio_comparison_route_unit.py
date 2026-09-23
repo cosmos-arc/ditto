@@ -574,6 +574,8 @@ def _comparison_fixture(
         ),
         model_query=model_query,
         journal=journal,
+        snapshot_reader=snapshot_reader,
+        valuation_source=valuation_source,
     )
     return query, snapshot, journal, store
 
@@ -586,6 +588,8 @@ def _comparison_params(
     paper_ledger_hash: str | None = None,
     manual_ledger_event_count: int | None = None,
     manual_ledger_hash: str | None = None,
+    benchmark_symbol: str | None = None,
+    benchmark_type: str | None = None,
 ) -> HistoryComparisonQueryParams:
     return HistoryComparisonQueryParams(
         strategy_id="strategy-model",
@@ -602,6 +606,8 @@ def _comparison_params(
         paper_ledger_hash=paper_ledger_hash,
         manual_ledger_event_count=manual_ledger_event_count,
         manual_ledger_hash=manual_ledger_hash,
+        benchmark_symbol=benchmark_symbol,
+        benchmark_type=benchmark_type,
     )
 
 
@@ -757,6 +763,59 @@ def test_history_comparison_route_maps_account_errors_to_422(
     assert raised.value.error_code == "HISTORY_COMPARISON_ACCOUNT_NOT_FOUND"
 
 
+def test_history_comparison_route_overlays_declared_benchmark(
+    tmp_path: Any,
+) -> None:
+    query, snapshot, journal, store = _comparison_fixture(tmp_path)
+    try:
+        with patch(
+            "ditto_apps.api.routes.portfolio_comparison.asyncio.to_thread",
+            side_effect=_inline,
+        ):
+            plain = asyncio.run(
+                _original(get_history_comparison)(
+                    params=_comparison_params(snapshot.snapshot_id),
+                    query=query,
+                )
+            )
+            benchmarked = asyncio.run(
+                _original(get_history_comparison)(
+                    params=_comparison_params(
+                        snapshot.snapshot_id,
+                        benchmark_symbol="510300",
+                        benchmark_type="price",
+                    ),
+                    query=query,
+                )
+            )
+    finally:
+        store.close()
+        journal.close()
+
+    assert plain.data.benchmark is None
+    assert benchmarked.data.benchmark is not None
+    benchmark = benchmarked.data.benchmark
+    assert benchmark.symbol == "510300"
+    assert benchmark.type == "price"
+    assert benchmark.currency == "CNY"
+    assert benchmark.empty_reason is None
+    # 510300 closes 20.0 / 22.0 / 20.0 anchor the overlay per run.
+    assert len(benchmark.runs) == len(benchmarked.data.runs)
+    overlay_run = benchmark.runs[0]
+    assert (overlay_run.start_date, overlay_run.end_date) == (
+        "2026-08-31",
+        "2026-09-02",
+    )
+    assert [point.growth for point in overlay_run.points] == [
+        Decimal("1"),
+        Decimal("1.1"),
+        Decimal("1"),
+    ]
+    assert overlay_run.window_return == Decimal("0")
+    assert benchmarked.data.runs == plain.data.runs
+    assert benchmarked.data.result_id != plain.data.result_id
+
+
 def test_history_comparison_route_rejects_half_pinned_revisions(
     tmp_path: Any,
 ) -> None:
@@ -800,6 +859,8 @@ def test_history_comparison_query_params_coerce_plain_query_strings() -> None:
             "paper_ledger_hash": "account-ledger:sha256:paper",
             "manual_ledger_event_count": "2",
             "manual_ledger_hash": "account-ledger:sha256:manual",
+            "benchmark_symbol": "510300",
+            "benchmark_type": "price",
         }
     )
     assert params.start_date == date(2026, 8, 31)
@@ -810,6 +871,8 @@ def test_history_comparison_query_params_coerce_plain_query_strings() -> None:
     assert params.paper_ledger_hash == "account-ledger:sha256:paper"
     assert params.manual_ledger_event_count == 2
     assert params.manual_ledger_hash == "account-ledger:sha256:manual"
+    assert params.benchmark_symbol == "510300"
+    assert params.benchmark_type == "price"
 
     omitted = HistoryComparisonQueryParams.model_validate(
         {
@@ -829,6 +892,8 @@ def test_history_comparison_query_params_coerce_plain_query_strings() -> None:
     assert omitted.paper_ledger_hash is None
     assert omitted.manual_ledger_event_count is None
     assert omitted.manual_ledger_hash is None
+    assert omitted.benchmark_symbol is None
+    assert omitted.benchmark_type is None
 
 
 def test_history_comparison_openapi_declares_the_contract() -> None:
@@ -836,8 +901,9 @@ def test_history_comparison_openapi_declares_the_contract() -> None:
     schemas = schema["components"]["schemas"]
     assert "HistoryComparisonResponse" in schemas
     properties = schemas["HistoryComparisonResponse"]["properties"]
-    for field in ("runs", "legs", "status", "comparison_policy_version"):
+    for field in ("runs", "legs", "status", "comparison_policy_version", "benchmark"):
         assert field in properties
+    assert "HistoryComparisonBenchmarkResponse" in schemas
     operation = schema["paths"]["/api/v1/portfolio/history-comparison"]["get"]
     parameter_names = {parameter["name"] for parameter in operation["parameters"]}
     for name in (
@@ -852,5 +918,7 @@ def test_history_comparison_openapi_declares_the_contract() -> None:
         "paper_ledger_hash",
         "manual_ledger_event_count",
         "manual_ledger_hash",
+        "benchmark_symbol",
+        "benchmark_type",
     ):
         assert name in parameter_names

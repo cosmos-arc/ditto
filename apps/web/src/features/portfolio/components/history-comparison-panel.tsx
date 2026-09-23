@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ComparisonLegKind, HistoryComparison, HistoryComparisonRun } from "../api/account-models";
+import type {
+	ComparisonLegKind,
+	HistoryComparison,
+	HistoryComparisonBenchmarkRun,
+	HistoryComparisonRun,
+} from "../api/account-models";
 import { fetchManualAccounts } from "../api/manual-accounts";
 import { fetchPaperAccounts, fetchPaperSessions } from "../api/paper-accounts";
 import {
@@ -20,6 +25,8 @@ const LEG_COLORS: Readonly<Record<ComparisonLegKind, string>> = {
 	manual: "var(--chart-palette-3)",
 };
 
+const BENCHMARK_COLOR = "var(--chart-palette-4)";
+
 const LEG_TEXT_CLASSES: Readonly<Record<ComparisonLegKind, string>> = {
 	model: "text-blue-700",
 	paper: "text-emerald-700",
@@ -31,6 +38,8 @@ const LEG_LABELS: Readonly<Record<ComparisonLegKind, string>> = {
 	paper: "PAPER",
 	manual: "MANUAL",
 };
+
+const BENCHMARK_LABEL = "BENCHMARK";
 
 const STATUS_LABELS: Readonly<Record<HistoryComparison["status"], string>> = {
 	comparable: "可比区间",
@@ -102,12 +111,20 @@ function downloadBlob(blob: Blob, filename: string): void {
 	URL.revokeObjectURL(url);
 }
 
-function buildComparisonCsv(comparison: HistoryComparison, run: HistoryComparisonRun): string {
+function buildComparisonCsv(
+	comparison: HistoryComparison,
+	run: HistoryComparisonRun,
+	benchmarkRun: HistoryComparisonBenchmarkRun | null,
+): string {
+	const benchmarkGrowthByDate = new Map(benchmarkRun?.points.map((point) => [point.on_date, point.growth]) ?? []);
 	const lines = [
 		`# result_id=${comparison.result_id}`,
 		`# method=${comparison.method} valuation=${comparison.valuation_policy_version} comparison=${comparison.comparison_policy_version}`,
 		`# currency=${comparison.currency} run=${run.start_date}..${run.end_date}`,
-		"date,model_growth,paper_growth,manual_growth,model_assets,paper_assets,manual_assets",
+		...(comparison.benchmark !== null
+			? [`# benchmark=${comparison.benchmark.symbol} type=${comparison.benchmark.type}`]
+			: []),
+		"date,model_growth,paper_growth,manual_growth,benchmark_growth,model_assets,paper_assets,manual_assets",
 	];
 	for (const point of run.points) {
 		lines.push(
@@ -116,6 +133,7 @@ function buildComparisonCsv(comparison: HistoryComparison, run: HistoryCompariso
 				point.growth.model,
 				point.growth.paper,
 				point.growth.manual,
+				benchmarkGrowthByDate.get(point.on_date) ?? "",
 				point.assets.model,
 				point.assets.paper,
 				point.assets.manual,
@@ -128,6 +146,7 @@ function buildComparisonCsv(comparison: HistoryComparison, run: HistoryCompariso
 			run.window_returns.model ?? "",
 			run.window_returns.paper ?? "",
 			run.window_returns.manual ?? "",
+			benchmarkRun?.window_return ?? "",
 			"",
 			"",
 			"",
@@ -140,6 +159,7 @@ async function exportChartPng(
 	svg: SVGSVGElement,
 	comparison: HistoryComparison,
 	run: HistoryComparisonRun,
+	benchmarkRun: HistoryComparisonBenchmarkRun | null,
 ): Promise<void> {
 	const canvas = document.createElement("canvas");
 	const context = canvas.getContext("2d");
@@ -160,6 +180,11 @@ async function exportChartPng(
 		comparison.result_id,
 		`${comparison.method} · ${comparison.valuation_policy_version} · ${comparison.comparison_policy_version} · ${comparison.currency}`,
 		`共同段 ${run.start_date} ~ ${run.end_date} · MODEL ${formatWindowReturn(run.window_returns.model)} · PAPER ${formatWindowReturn(run.window_returns.paper)} · MANUAL ${formatWindowReturn(run.window_returns.manual)}`,
+		...(comparison.benchmark !== null
+			? [
+					`基准 ${comparison.benchmark.symbol}（${comparison.benchmark.type}）${formatWindowReturn(benchmarkRun?.window_return ?? null)}`,
+				]
+			: []),
 	];
 	const footerHeight = 16 * footerLines.length + 16;
 	canvas.width = CHART_WIDTH * scale;
@@ -188,9 +213,11 @@ async function exportChartPng(
 
 function ComparisonRunChart({
 	run,
+	benchmarkRun,
 	svgRef,
 }: {
 	readonly run: HistoryComparisonRun;
+	readonly benchmarkRun: HistoryComparisonBenchmarkRun | null;
 	readonly svgRef: React.RefObject<SVGSVGElement | null>;
 }) {
 	// One shared y scale across all legs (anchored at 1) so the normalized
@@ -198,8 +225,14 @@ function ComparisonRunChart({
 	const allValues = (Object.keys(LEG_LABELS) as readonly ComparisonLegKind[]).flatMap((kind) =>
 		run.points.map((point) => Number(point.growth[kind])),
 	);
-	const min = Math.min(1, ...allValues);
-	const max = Math.max(1, ...allValues);
+	// The benchmark joins the shared scale only where it actually has prices;
+	// missing-price days stay explicit gaps instead of being interpolated.
+	const benchmarkValues = (benchmarkRun?.points ?? [])
+		.map((point) => point.growth)
+		.filter((growth): growth is string => growth !== null)
+		.map(Number);
+	const min = Math.min(1, ...allValues, ...benchmarkValues);
+	const max = Math.max(1, ...allValues, ...benchmarkValues);
 	const span = max > min ? max - min : 0.01;
 	const step = run.points.length > 1 ? (CHART_WIDTH - CHART_PADDING * 2) / (run.points.length - 1) : 0;
 	const polylineOf = (kind: ComparisonLegKind) =>
@@ -213,6 +246,25 @@ function ComparisonRunChart({
 				return `${x.toFixed(1)},${y.toFixed(1)}`;
 			})
 			.join(" ");
+	// One polyline per contiguous non-null stretch: a missing benchmark price
+	// stays an explicit gap instead of a connecting segment.
+	const benchmarkSegments: string[][] = [];
+	let benchmarkCurrentSegment: string[] | null = null;
+	for (const [index, point] of (benchmarkRun?.points ?? []).entries()) {
+		if (point.growth === null) {
+			benchmarkCurrentSegment = null;
+			continue;
+		}
+		const x = CHART_PADDING + index * step;
+		const y = CHART_HEIGHT - CHART_PADDING - ((Number(point.growth) - min) / span) * (CHART_HEIGHT - CHART_PADDING * 2);
+		const coordinate = `${x.toFixed(1)},${y.toFixed(1)}`;
+		if (benchmarkCurrentSegment === null) {
+			benchmarkCurrentSegment = [coordinate];
+			benchmarkSegments.push(benchmarkCurrentSegment);
+		} else {
+			benchmarkCurrentSegment.push(coordinate);
+		}
+	}
 	const dateLabels = [run.points[0]?.on_date, run.points[run.points.length - 1]?.on_date];
 	return (
 		<svg
@@ -236,6 +288,18 @@ function ComparisonRunChart({
 					strokeWidth={2}
 				/>
 			))}
+			{benchmarkRun !== null &&
+				benchmarkSegments.map((segment) => (
+					<polyline
+						key={`benchmark-segment-${segment[0] ?? ""}`}
+						data-testid="history-comparison-line-benchmark"
+						points={segment.join(" ")}
+						fill="none"
+						stroke={BENCHMARK_COLOR}
+						strokeWidth={2}
+						strokeDasharray="6 3"
+					/>
+				))}
 			<text x={CHART_PADDING} y={18} fontSize={11} fill="var(--chart-series-neutral)">
 				{dateLabels[0] ?? ""}
 			</text>
@@ -247,6 +311,11 @@ function ComparisonRunChart({
 					■ {LEG_LABELS[kind]}
 				</text>
 			))}
+			{benchmarkRun !== null && (
+				<text x={CHART_PADDING + 96 * 3} y={CHART_HEIGHT - 8} fontSize={11} fill={BENCHMARK_COLOR}>
+					■ {BENCHMARK_LABEL}
+				</text>
+			)}
 		</svg>
 	);
 }
@@ -287,6 +356,7 @@ export function HistoryComparisonPanel() {
 	const [capitalText, setCapitalText] = useState("100000");
 	const [snapshotsText, setSnapshotsText] = useState("");
 	const [artifactsText, setArtifactsText] = useState("");
+	const [benchmarkText, setBenchmarkText] = useState("");
 	const [identity, setIdentity] = useState<HistoryComparisonIdentity | null>(null);
 	const [pinnedPaper, setPinnedPaper] = useState<PinnedLedgerRevision | null>(null);
 	const [pinnedManual, setPinnedManual] = useState<PinnedLedgerRevision | null>(null);
@@ -360,10 +430,14 @@ export function HistoryComparisonPanel() {
 	const runs = comparison?.runs ?? [];
 	const runIndex = Math.min(selectedRunIndex, Math.max(runs.length - 1, 0));
 	const selectedRun = runs[runIndex] ?? null;
+	const selectedBenchmarkRun = comparison?.benchmark?.runs[runIndex] ?? null;
 
 	const csvText = useMemo(
-		() => (comparison !== null && selectedRun !== null ? buildComparisonCsv(comparison, selectedRun) : ""),
-		[comparison, selectedRun],
+		() =>
+			comparison !== null && selectedRun !== null
+				? buildComparisonCsv(comparison, selectedRun, selectedBenchmarkRun)
+				: "",
+		[comparison, selectedRun, selectedBenchmarkRun],
 	);
 
 	// Backfill the displayed leg revision as a pin (or clear it) and replay
@@ -528,6 +602,16 @@ export function HistoryComparisonPanel() {
 						onChange={(event) => setArtifactsText(event.currentTarget.value)}
 					/>
 				</label>
+				<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary) sm:col-span-2">
+					基准序列（可选，ETF 代码）
+					<input
+						aria-label="比较基准代码"
+						className={INPUT_CLASS}
+						placeholder="如 510300；留空不叠加基准，类型固定 price"
+						value={benchmarkText}
+						onChange={(event) => setBenchmarkText(event.currentTarget.value)}
+					/>
+				</label>
 				<div className="flex items-end">
 					<button
 						type="button"
@@ -551,6 +635,9 @@ export function HistoryComparisonPanel() {
 								source_snapshot_ids: [...snapshots],
 								...(artifactIds.length > 0 ? { model_artifact_ids: [...artifactIds] } : {}),
 								...pinnedRevisionParams(pinnedPaper, pinnedManual),
+								...(benchmarkText.trim() !== ""
+									? { benchmark_symbol: benchmarkText.trim(), benchmark_type: "price" }
+									: {}),
 							});
 						}}
 					>
@@ -635,6 +722,21 @@ export function HistoryComparisonPanel() {
 							三类组合在请求区间内没有共同有效估值日，仅可独立查看各自资产。
 						</p>
 					)}
+					{comparison.benchmark !== null && (
+						<p
+							className="text-xs text-(--color-foreground-secondary)"
+							data-testid="history-comparison-benchmark-summary"
+						>
+							基准 {comparison.benchmark.symbol}（{comparison.benchmark.type}）
+							{comparison.benchmark.empty_reason === "no_common_window"
+								? " · 无可对齐的共同段"
+								: comparison.benchmark.empty_reason !== null
+									? ` 在该区间无可见价格：${comparison.benchmark.empty_reason}`
+									: selectedBenchmarkRun !== null
+										? ` · 共同段收益 ${formatWindowReturn(selectedBenchmarkRun.window_return)}`
+										: ""}
+						</p>
+					)}
 					{runs.length > 1 && (
 						<div className="flex flex-wrap gap-2" role="tablist" aria-label="共同连续段">
 							{runs.map((run, index) => (
@@ -675,7 +777,7 @@ export function HistoryComparisonPanel() {
 								))}
 							</div>
 							{selectedRun.points.length >= 2 ? (
-								<ComparisonRunChart run={selectedRun} svgRef={chartRef} />
+								<ComparisonRunChart run={selectedRun} benchmarkRun={selectedBenchmarkRun} svgRef={chartRef} />
 							) : (
 								<p
 									className="text-xs text-(--color-foreground-tertiary)"
@@ -714,7 +816,7 @@ export function HistoryComparisonPanel() {
 											setExportError("图表尚未渲染，无法导出 PNG");
 											return;
 										}
-										void exportChartPng(svg, comparison, selectedRun).catch((error: unknown) => {
+										void exportChartPng(svg, comparison, selectedRun, selectedBenchmarkRun).catch((error: unknown) => {
 											setExportError(String(error));
 										});
 									}}
@@ -734,6 +836,11 @@ export function HistoryComparisonPanel() {
 													{LEG_LABELS[kind]} 归一
 												</th>
 											))}
+											{comparison.benchmark !== null && (
+												<th key="growth-benchmark" className="px-3 py-2 font-medium">
+													{BENCHMARK_LABEL} 归一
+												</th>
+											)}
 											{(Object.keys(LEG_LABELS) as readonly ComparisonLegKind[]).map((kind) => (
 												<th key={`assets-${kind}`} className="px-3 py-2 font-medium">
 													{LEG_LABELS[kind]} 资产
@@ -753,6 +860,18 @@ export function HistoryComparisonPanel() {
 														{formatGrowth(point.growth[kind])}
 													</td>
 												))}
+												{comparison.benchmark !== null && (
+													<td key={`growth-${point.on_date}-benchmark`} className="px-3 py-2 font-data tabular-nums">
+														{selectedBenchmarkRun === null
+															? "—"
+															: (() => {
+																	const growth =
+																		selectedBenchmarkRun.points.find((entry) => entry.on_date === point.on_date)
+																			?.growth ?? null;
+																	return growth === null ? "—" : formatGrowth(growth);
+																})()}
+													</td>
+												)}
 												{(Object.keys(LEG_LABELS) as readonly ComparisonLegKind[]).map((kind) => (
 													<td key={`assets-${point.on_date}-${kind}`} className="px-3 py-2 font-data tabular-nums">
 														{formatMoney(point.assets[kind])}

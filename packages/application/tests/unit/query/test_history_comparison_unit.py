@@ -443,6 +443,8 @@ def _query(
             valuation_source=valuation_source,
         ),
         journal=journal,
+        snapshot_reader=snapshot_reader,
+        valuation_source=valuation_source,
     )
     return query, journal
 
@@ -870,3 +872,158 @@ def test_single_common_point_reports_assets_only() -> None:
         "paper": _D("100.00"),
         "manual": _D("100.00"),
     }
+
+
+def _benchmark_bars() -> dict[int, tuple[TechnicalBar, ...]]:
+    return {
+        **_base_bars(),
+        510300: (
+            _bar("2026-03-02", 4.0),
+            _bar("2026-03-03", 4.4),
+            _bar("2026-03-04", 4.8),
+        ),
+    }
+
+
+def test_declared_benchmark_overlays_the_common_window() -> None:
+    query, _ = _query(bars=_benchmark_bars())
+
+    plain = query.history(_request())
+    view = query.history(_request(benchmark_symbol="510300", benchmark_type="price"))
+
+    assert view.benchmark is not None
+    benchmark = view.benchmark
+    assert benchmark.symbol == "510300"
+    assert benchmark.type == "price"
+    assert benchmark.currency == "CNY"
+    assert benchmark.empty_reason is None
+    # The benchmark never gates the window: the three-leg runs and the
+    # comparison identity facts stay byte-identical apart from the overlay.
+    assert view.runs == plain.runs
+    assert view.legs == plain.legs
+    assert view.status == plain.status
+    assert view.result_id != plain.result_id
+    assert len(benchmark.runs) == len(view.runs)
+    overlay_run = benchmark.runs[0]
+    assert (overlay_run.start_date, overlay_run.end_date) == (
+        view.runs[0].start_date,
+        view.runs[0].end_date,
+    )
+    assert [point.on_date for point in overlay_run.points] == [
+        "2026-03-02",
+        "2026-03-03",
+        "2026-03-04",
+    ]
+    assert [point.growth for point in overlay_run.points] == [
+        _D("1"),
+        _D("4.4") / _D("4"),
+        _D("4.8") / _D("4"),
+    ]
+    assert overlay_run.window_return == _D("4.8") / _D("4") - _D("1")
+
+
+def test_omitted_benchmark_keeps_the_view_without_overlay() -> None:
+    query, _ = _query(bars=_benchmark_bars())
+
+    view = query.history(_request())
+
+    assert view.benchmark is None
+
+
+def test_benchmark_without_visible_prices_is_an_explicit_empty() -> None:
+    query, _ = _query(bars=_benchmark_bars())
+
+    view = query.history(_request(benchmark_symbol="999999", benchmark_type="price"))
+
+    assert view.benchmark is not None
+    benchmark = view.benchmark
+    assert benchmark.empty_reason == "benchmark_price_not_visible"
+    assert all(point.growth is None for run in benchmark.runs for point in run.points)
+    assert all(run.window_return is None for run in benchmark.runs)
+    # The three-leg comparison itself stays comparable.
+    assert view.status == "comparable"
+
+
+def test_benchmark_declaration_replays_stably() -> None:
+    query, _ = _query(bars=_benchmark_bars())
+    request = _request(benchmark_symbol="510300", benchmark_type="price")
+
+    first = query.history(request)
+    replay = query.history(request)
+
+    assert replay.result_id == first.result_id
+    other_symbol = query.history(
+        _request(benchmark_symbol="159915", benchmark_type="price")
+    )
+    assert other_symbol.result_id != first.result_id
+
+
+def test_benchmark_declarations_fail_closed() -> None:
+    query, _ = _query(bars=_benchmark_bars())
+    invalid: tuple[tuple[str, dict[str, object]], ...] = (
+        ("symbol only", {"benchmark_symbol": "510300"}),
+        ("type only", {"benchmark_type": "price"}),
+        (
+            "unsupported type",
+            {"benchmark_symbol": "510300", "benchmark_type": "total_return"},
+        ),
+        (
+            "non numeric symbol",
+            {"benchmark_symbol": "000300.SH", "benchmark_type": "price"},
+        ),
+        ("blank symbol", {"benchmark_symbol": " ", "benchmark_type": "price"}),
+        (
+            "superscript digit",
+            {"benchmark_symbol": "²", "benchmark_type": "price"},
+        ),
+        (
+            "arabic-indic digits",
+            {"benchmark_symbol": "١٢٣", "benchmark_type": "price"},
+        ),
+    )
+    for label, overrides in invalid:
+        with pytest.raises(AppQueryError, match="failed closed") as raised:
+            query.history(_request(**overrides))
+        assert raised.value.details["code"] == "HISTORY_COMPARISON_REQUEST_INVALID", (
+            label
+        )
+
+
+def test_benchmark_prices_respect_the_publication_cutoff() -> None:
+    # Every 510300 bar is published after the knowledge cutoff, so the
+    # benchmark must stay fully invisible even though rows exist.
+    def _late_bar(day: str, close: float) -> TechnicalBar:
+        occurred = datetime.fromisoformat(f"{day}T07:00:00+00:00")
+        published = datetime.fromisoformat("2026-03-06T12:00:00+00:00")
+        return TechnicalBar(
+            occurred_at=occurred,
+            knowledge_at=published,
+            publication_at=published,
+            source_snapshot_id=_SNAPSHOT_ID,
+            open=close,
+            high=close,
+            low=close,
+            close=close,
+            volume=1000.0,
+            turnover=close * 1000.0,
+            adjustment_factor=1.0,
+            suspended=False,
+        )
+
+    bars = {
+        **_base_bars(),
+        510300: (
+            _late_bar("2026-03-02", 4.0),
+            _late_bar("2026-03-03", 4.4),
+            _late_bar("2026-03-04", 4.8),
+        ),
+    }
+    query, _ = _query(bars=bars)
+
+    view = query.history(_request(benchmark_symbol="510300", benchmark_type="price"))
+
+    assert view.benchmark is not None
+    assert view.benchmark.empty_reason == "benchmark_price_not_visible"
+    assert all(
+        point.growth is None for run in view.benchmark.runs for point in run.points
+    )

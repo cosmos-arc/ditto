@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: b1c354b9b557c8f2b207ee1b72c2b59b50b62cfb16d6640f452bbb7323b39afa
+ * Schema SHA-256: a8af2556ed510fa3be5efa306bd67b48b742f7d1fbd97045f4fa0dad0267423e
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -11643,6 +11643,52 @@ export interface components {
             universe_id: string;
         };
         /**
+         * HistoryComparisonBenchmarkPointResponse
+         * @description One common date's benchmark growth; missing prices stay null.
+         */
+        HistoryComparisonBenchmarkPointResponse: {
+            /** Growth */
+            growth: string | null;
+            /** On Date */
+            on_date: string;
+        };
+        /**
+         * HistoryComparisonBenchmarkResponse
+         * @description Declared benchmark price series aligned onto the comparison's runs.
+         */
+        HistoryComparisonBenchmarkResponse: {
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Empty Reason */
+            empty_reason: string | null;
+            /** Runs */
+            runs: components["schemas"]["HistoryComparisonBenchmarkRunResponse"][];
+            /** Symbol */
+            symbol: string;
+            /**
+             * Type
+             * @constant
+             */
+            type: "price";
+        };
+        /**
+         * HistoryComparisonBenchmarkRunResponse
+         * @description One run's benchmark overlay, anchored to 1 at the run start.
+         */
+        HistoryComparisonBenchmarkRunResponse: {
+            /** End Date */
+            end_date: string;
+            /** Points */
+            points: components["schemas"]["HistoryComparisonBenchmarkPointResponse"][];
+            /** Start Date */
+            start_date: string;
+            /** Window Return */
+            window_return: string | null;
+        };
+        /**
          * HistoryComparisonLegResponse
          * @description Per-leg provenance; identity stays the leg's own result_id.
          */
@@ -11682,6 +11728,7 @@ export interface components {
          * @description Complete replayable common-window comparison result.
          */
         HistoryComparisonResponse: {
+            benchmark?: components["schemas"]["HistoryComparisonBenchmarkResponse"] | null;
             /** Comparison Policy Version */
             comparison_policy_version: string;
             /**
@@ -28500,6 +28547,8 @@ export interface operations {
                 paper_ledger_hash?: string | null;
                 manual_ledger_event_count?: number | null;
                 manual_ledger_hash?: string | null;
+                benchmark_symbol?: string | null;
+                benchmark_type?: string | null;
             };
             header?: {
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */

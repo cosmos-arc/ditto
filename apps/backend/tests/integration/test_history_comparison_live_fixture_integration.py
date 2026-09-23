@@ -328,6 +328,8 @@ def _request(
     paper_ledger_hash: str | None = None,
     manual_ledger_event_count: int | None = None,
     manual_ledger_hash: str | None = None,
+    benchmark_symbol: str | None = None,
+    benchmark_type: str | None = None,
 ) -> HistoryComparisonRequest:
     return HistoryComparisonRequest(
         strategy_id=STRATEGY_ID,
@@ -344,6 +346,8 @@ def _request(
         paper_ledger_hash=paper_ledger_hash,
         manual_ledger_event_count=manual_ledger_event_count,
         manual_ledger_hash=manual_ledger_hash,
+        benchmark_symbol=benchmark_symbol,
+        benchmark_type=benchmark_type,
     )
 
 
@@ -548,6 +552,91 @@ def test_history_comparison_live_fixture_pinned_revisions_replay_after_correctio
             pinned_legs["manual"].ledger_revision.event_count,
             pinned_legs["manual"].ledger_revision.ledger_hash,
         ) == revisions[MANUAL_ACCOUNT]
+
+
+@pytest.mark.integration
+def test_history_comparison_live_fixture_overlays_declared_benchmark(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with tempfile.TemporaryDirectory(
+        prefix="ditto-history-comparison-benchmark-"
+    ) as temporary:
+        root = Path(temporary)
+        snapshot_id = _seed(root)
+        _container_env(monkeypatch, root)
+
+        container = make_app_container()
+        try:
+            query = container.get(GetHistoryComparisonQuery)
+            plain = query.history(_request(snapshot_id))
+            benchmarked = query.history(
+                _request(
+                    snapshot_id,
+                    benchmark_symbol="510300",
+                    benchmark_type="price",
+                )
+            )
+            replay = query.history(
+                _request(
+                    snapshot_id,
+                    benchmark_symbol="510300",
+                    benchmark_type="price",
+                )
+            )
+        finally:
+            container.close()
+
+        assert plain.benchmark is None
+        # The retained snapshot prices 510300 at 20.0/22.0/20.0.
+        assert benchmarked.benchmark is not None
+        benchmark = benchmarked.benchmark
+        assert benchmark.symbol == "510300"
+        assert benchmark.type == "price"
+        assert benchmark.currency == "CNY"
+        assert benchmark.empty_reason is None
+        assert benchmarked.runs == plain.runs
+        assert benchmarked.status == plain.status
+        assert benchmarked.result_id != plain.result_id
+        assert replay.result_id == benchmarked.result_id
+        overlay_run = benchmark.runs[0]
+        assert (overlay_run.start_date, overlay_run.end_date) == (
+            "2026-03-02",
+            "2026-03-04",
+        )
+        assert [point.growth for point in overlay_run.points] == [
+            _D("1"),
+            _D("22") / _D("20"),
+            _D("1"),
+        ]
+        assert overlay_run.window_return == _D("0")
+
+
+@pytest.mark.integration
+def test_history_comparison_live_fixture_invisible_benchmark_is_explicit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with tempfile.TemporaryDirectory(
+        prefix="ditto-history-comparison-benchmark-empty-"
+    ) as temporary:
+        root = Path(temporary)
+        snapshot_id = _seed(root)
+        _container_env(monkeypatch, root)
+
+        container = make_app_container()
+        try:
+            query = container.get(GetHistoryComparisonQuery)
+            view = query.history(
+                _request(snapshot_id, benchmark_symbol="999999", benchmark_type="price")
+            )
+        finally:
+            container.close()
+
+        assert view.status == "comparable"
+        assert view.benchmark is not None
+        assert view.benchmark.empty_reason == "benchmark_price_not_visible"
+        assert all(
+            point.growth is None for run in view.benchmark.runs for point in run.points
+        )
 
 
 @pytest.mark.integration
