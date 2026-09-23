@@ -17,6 +17,7 @@ the carried price value itself never comes from a bar published after that day's
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -85,6 +86,7 @@ __all__ = [
     "HistoryQuality",
     "HistorySegmentView",
     "PaperHistoryRequest",
+    "pit_context",
 ]
 
 _LEDGER_HASH_PREFIX = "account-ledger:sha256:"
@@ -217,47 +219,65 @@ def _parse_request_date(value: str, field: str, flavor: _HistoryFlavor) -> date:
         ) from exc
 
 
-def _pit_context(
-    request: AccountHistoryRequest,
+def pit_context(
+    *,
     snapshot_reader: ProviderSnapshotReader,
-    flavor: _HistoryFlavor,
+    source_snapshot_ids: tuple[str, ...],
+    end: date,
+    knowledge_cutoff: datetime,
+    publication_cutoff: datetime,
+    error: Callable[..., AppQueryError],
+    mixed_version_code: str,
 ) -> PITQueryContext:
-    end = _parse_request_date(request.end_date, "end_date", flavor)
+    """Build the shared PIT query context for exact price snapshots."""
     snapshots: list[ProviderSnapshot] = []
-    for snapshot_id in request.source_snapshot_ids:
+    for snapshot_id in source_snapshot_ids:
         snapshot = snapshot_reader.get_snapshot(snapshot_id)
         if snapshot is None or snapshot.snapshot_id != snapshot_id:
-            raise _error(
-                flavor,
+            raise error(
                 "SOURCE_SNAPSHOT_NOT_FOUND",
                 "exact price source snapshot was not found",
                 snapshot_id=snapshot_id,
             )
-        if snapshot.created_at > request.knowledge_cutoff:
-            raise _error(
-                flavor,
+        if snapshot.created_at > knowledge_cutoff:
+            raise error(
                 "SOURCE_SNAPSHOT_FUTURE",
                 "price source snapshot is after knowledge cutoff",
                 snapshot_id=snapshot_id,
             )
         snapshots.append(snapshot)
-
-    def snapshot_error(code: str, reason: str, **details: object) -> AppQueryError:
-        return _error(flavor, code, reason, **details)
-
     try:
         return PITQueryContext(
-            as_of=max(end_of_day(end), request.knowledge_cutoff),
-            knowledge_cutoff=request.knowledge_cutoff,
-            publication_cutoff=request.publication_cutoff,
+            as_of=max(end_of_day(end), knowledge_cutoff),
+            knowledge_cutoff=knowledge_cutoff,
+            publication_cutoff=publication_cutoff,
             source_snapshots=group_dataset_snapshots(
                 snapshots,
-                error=snapshot_error,
-                mixed_version_code=f"{flavor.code_prefix}_SNAPSHOT_SCHEMA_MIXED",
+                error=error,
+                mixed_version_code=mixed_version_code,
             ),
         )
     except ValueError as exc:
-        raise _error(flavor, "PIT_CONTEXT_INVALID", str(exc)) from exc
+        raise error("PIT_CONTEXT_INVALID", str(exc)) from exc
+
+
+def _pit_context(
+    request: AccountHistoryRequest,
+    snapshot_reader: ProviderSnapshotReader,
+    flavor: _HistoryFlavor,
+) -> PITQueryContext:
+    def flavor_error(code: str, reason: str, **details: object) -> AppQueryError:
+        return _error(flavor, code, reason, **details)
+
+    return pit_context(
+        snapshot_reader=snapshot_reader,
+        source_snapshot_ids=request.source_snapshot_ids,
+        end=_parse_request_date(request.end_date, "end_date", flavor),
+        knowledge_cutoff=request.knowledge_cutoff,
+        publication_cutoff=request.publication_cutoff,
+        error=flavor_error,
+        mixed_version_code=f"{flavor.code_prefix}_SNAPSHOT_SCHEMA_MIXED",
+    )
 
 
 def _validate_request(request: AccountHistoryRequest, flavor: _HistoryFlavor) -> None:

@@ -288,6 +288,26 @@ export interface HistoryComparisonRun {
 
 export type HistoryComparisonStatus = "comparable" | "single_common_point" | "incomparable";
 
+export interface HistoryComparisonBenchmarkPoint {
+	readonly on_date: string;
+	readonly growth: string | null;
+}
+
+export interface HistoryComparisonBenchmarkRun {
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly window_return: string | null;
+	readonly points: readonly HistoryComparisonBenchmarkPoint[];
+}
+
+export interface HistoryComparisonBenchmark {
+	readonly symbol: string;
+	readonly type: "price";
+	readonly currency: "CNY";
+	readonly empty_reason: string | null;
+	readonly runs: readonly HistoryComparisonBenchmarkRun[];
+}
+
 export interface HistoryComparison {
 	readonly result_id: string;
 	readonly strategy_id: string;
@@ -307,6 +327,7 @@ export interface HistoryComparison {
 	readonly publication_cutoff: string;
 	readonly runs: readonly HistoryComparisonRun[];
 	readonly legs: readonly HistoryComparisonLeg[];
+	readonly benchmark: HistoryComparisonBenchmark | null;
 }
 
 export interface ManualAccountReceipt {

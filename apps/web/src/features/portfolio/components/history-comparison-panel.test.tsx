@@ -254,9 +254,70 @@ describe("HistoryComparisonPanel", () => {
 		const csv = await (created[0] as Blob).text();
 		expect(csv).toContain("# result_id=history-comparison:sha256:panel-1");
 		expect(csv).toContain("# method=twr-linked-v1");
-		expect(csv).toContain("date,model_growth,paper_growth,manual_growth,model_assets,paper_assets,manual_assets");
-		expect(csv).toContain("2026-03-04,1.21,1.105,1.168,121000.00,110500.00,116800.00");
-		expect(csv).toContain("window_return,0.21,0.105,0.168");
+		expect(csv).toContain(
+			"date,model_growth,paper_growth,manual_growth,benchmark_growth,model_assets,paper_assets,manual_assets",
+		);
+		expect(csv).toContain("2026-03-04,1.21,1.105,1.168,,121000.00,110500.00,116800.00");
+		expect(csv).toContain("window_return,0.21,0.105,0.168,");
+	});
+
+	it("declares a benchmark, renders the fourth line, and exports it", async () => {
+		const user = userEvent.setup();
+		const benchmarkPayload = {
+			symbol: "510300",
+			type: "price",
+			currency: "CNY",
+			empty_reason: null,
+			runs: [
+				{
+					start_date: "2026-03-02",
+					end_date: "2026-03-04",
+					window_return: "0.1",
+					points: [
+						{ on_date: "2026-03-02", growth: "1" },
+						{ on_date: "2026-03-03", growth: null },
+						{ on_date: "2026-03-04", growth: "1.1" },
+					],
+				},
+			],
+		};
+		const { fetchMock, requests } = stubApi({
+			...COMPARISON_PAYLOAD,
+			benchmark: benchmarkPayload,
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		const created: Blob[] = [];
+		vi.spyOn(URL, "createObjectURL").mockImplementation((object: Blob | MediaSource) => {
+			created.push(object as Blob);
+			return "blob:mock";
+		});
+		vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+		renderPanel();
+
+		await fillFormAndSubmit(user);
+		await user.type(await screen.findByLabelText("比较基准代码"), "510300");
+		await user.click(screen.getByTestId("history-comparison-submit"));
+
+		await screen.findByTestId("history-comparison-result");
+		const url = new URL(requests.filter((href) => href.includes("/portfolio/history-comparison")).at(-1) ?? "");
+		expect(url.searchParams.get("benchmark_symbol")).toBe("510300");
+		expect(url.searchParams.get("benchmark_type")).toBe("price");
+
+		const summary = screen.getByTestId("history-comparison-benchmark-summary");
+		expect(summary).toHaveTextContent("基准 510300（price）");
+		expect(summary).toHaveTextContent("+10.00%");
+		// The missing 03-03 price stays a gap: two disjoint polylines, each
+		// anchored at its own known day, never a connecting segment.
+		const benchmarkLines = screen.getAllByTestId("history-comparison-line-benchmark");
+		expect(benchmarkLines).toHaveLength(2);
+		expect(benchmarkLines[0]?.getAttribute("points")?.trim().split(" ")).toHaveLength(1);
+		expect(benchmarkLines[1]?.getAttribute("points")?.trim().split(" ")).toHaveLength(1);
+
+		await user.click(screen.getByTestId("history-comparison-export-csv"));
+		const csv = await (created[0] as Blob).text();
+		expect(csv).toContain("# benchmark=510300 type=price");
+		expect(csv).toContain("2026-03-04,1.21,1.105,1.168,1.1,121000.00,110500.00,116800.00");
+		expect(csv).toContain("window_return,0.21,0.105,0.168,0.1");
 	});
 
 	it("reports single common points as assets only", async () => {

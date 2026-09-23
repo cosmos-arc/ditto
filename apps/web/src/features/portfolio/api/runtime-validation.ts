@@ -13,6 +13,8 @@ import type {
 	AccountCatalogEntry,
 	AccountPositionSnapshot,
 	HistoryComparison,
+	HistoryComparisonBenchmark,
+	HistoryComparisonBenchmarkRun,
 	HistoryComparisonLeg,
 	HistoryComparisonRun,
 	HistoryComparisonRunPoint,
@@ -632,6 +634,8 @@ export function parseHistoryComparison(
 		readonly paper_ledger_hash?: string | null;
 		readonly manual_ledger_event_count?: number | null;
 		readonly manual_ledger_hash?: string | null;
+		readonly benchmark_symbol?: string | null;
+		readonly benchmark_type?: string | null;
 	},
 ): HistoryComparison {
 	const boundary = "historyComparison";
@@ -741,6 +745,103 @@ export function parseHistoryComparison(
 		publication_cutoff: identity.publication_cutoff,
 		runs,
 		legs,
+		benchmark: parseBenchmarkOverlay(record["benchmark"], runs, identity, boundary),
+	};
+}
+
+/**
+ * Parse the optional benchmark overlay and assert it honors the declaration:
+ * present only when declared, echoing symbol/type, one run per comparison run
+ * with the same bounds, and per-point growth where missing prices stay null.
+ */
+function parseBenchmarkOverlay(
+	value: unknown,
+	runs: readonly HistoryComparisonRun[],
+	identity: {
+		readonly benchmark_symbol?: string | null;
+		readonly benchmark_type?: string | null;
+	},
+	boundary: string,
+): HistoryComparisonBenchmark | null {
+	const declared =
+		identity.benchmark_symbol !== undefined &&
+		identity.benchmark_symbol !== null &&
+		identity.benchmark_type !== undefined &&
+		identity.benchmark_type !== null;
+	if (value === null || value === undefined) {
+		if (declared) {
+			throw new RuntimeValidationError(`${boundary}.benchmark`, "benchmark", "missing for a declared request");
+		}
+		return null;
+	}
+	if (!declared) {
+		throw new RuntimeValidationError(`${boundary}.benchmark`, "benchmark", "present for an undeclared request");
+	}
+	const benchmarkBoundary = `${boundary}.benchmark`;
+	const record = recordValue(value, benchmarkBoundary);
+	sameValue(record["symbol"], identity.benchmark_symbol, benchmarkBoundary, "symbol");
+	sameValue(record["type"], identity.benchmark_type, benchmarkBoundary, "type");
+	const benchmarkRuns: HistoryComparisonBenchmarkRun[] = arrayValue(record, "runs", benchmarkBoundary).map(
+		(run, runIndex) => {
+			const runBoundary = `${benchmarkBoundary}.runs.${runIndex}`;
+			const runRecord = recordValue(run, runBoundary);
+			return {
+				start_date: stringValue(runRecord, "start_date", runBoundary),
+				end_date: stringValue(runRecord, "end_date", runBoundary),
+				window_return: nullableDecimal(runRecord, "window_return", runBoundary),
+				points: arrayValue(runRecord, "points", runBoundary).map((point, pointIndex) => {
+					const pointBoundary = `${runBoundary}.points.${pointIndex}`;
+					const pointRecord = recordValue(point, pointBoundary);
+					return {
+						on_date: stringValue(pointRecord, "on_date", pointBoundary),
+						growth: nullableDecimal(pointRecord, "growth", pointBoundary),
+					};
+				}),
+			};
+		},
+	);
+	if (benchmarkRuns.length !== runs.length) {
+		throw new RuntimeValidationError(benchmarkBoundary, "runs", "must align with the comparison runs");
+	}
+	benchmarkRuns.forEach((run, index) => {
+		const comparisonRun = runs[index];
+		if (
+			comparisonRun === undefined ||
+			run.start_date !== comparisonRun.start_date ||
+			run.end_date !== comparisonRun.end_date
+		) {
+			throw new RuntimeValidationError(
+				`${benchmarkBoundary}.runs.${index}`,
+				"start_date",
+				"must match the comparison run bounds",
+			);
+		}
+		// Points must align date-by-date: the chart positions by index while
+		// the table joins by date, so a drifted list would misrender silently.
+		if (run.points.length !== comparisonRun.points.length) {
+			throw new RuntimeValidationError(
+				`${benchmarkBoundary}.runs.${index}.points`,
+				"points",
+				"must align with the comparison run points",
+			);
+		}
+		run.points.forEach((point, pointIndex) => {
+			const comparisonPoint = comparisonRun.points[pointIndex];
+			if (comparisonPoint === undefined || point.on_date !== comparisonPoint.on_date) {
+				throw new RuntimeValidationError(
+					`${benchmarkBoundary}.runs.${index}.points.${pointIndex}`,
+					"on_date",
+					"must align with the comparison run point",
+				);
+			}
+		});
+	});
+	return {
+		symbol: stringValue(record, "symbol", benchmarkBoundary),
+		type: enumValue(record, "type", ["price"] as const, benchmarkBoundary),
+		currency: enumValue(record, "currency", ["CNY"] as const, benchmarkBoundary),
+		empty_reason: nullableStringValue(record, "empty_reason", benchmarkBoundary),
+		runs: benchmarkRuns,
 	};
 }
 

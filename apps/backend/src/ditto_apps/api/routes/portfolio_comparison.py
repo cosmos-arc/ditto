@@ -149,6 +149,8 @@ async def get_history_comparison(
                 paper_ledger_hash=params.paper_ledger_hash,
                 manual_ledger_event_count=params.manual_ledger_event_count,
                 manual_ledger_hash=params.manual_ledger_hash,
+                benchmark_symbol=params.benchmark_symbol,
+                benchmark_type=params.benchmark_type,
             ),
         )
     except (AppQueryError, ValueError) as exc:

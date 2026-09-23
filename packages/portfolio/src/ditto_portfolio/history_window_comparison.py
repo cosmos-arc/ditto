@@ -7,6 +7,11 @@ first date all legs value, continues only while every leg stays inside one
 of its own segments with computable per-day returns, and never links across
 a gap, a re-funding segment, or an unknown flow-timing break. Every run is
 normalized to 1 at its own start; a single-point run reports assets only.
+
+A declared benchmark price series overlays the same runs without joining
+the window computation: each run normalizes the benchmark from its own
+anchor price, and any date without a visible benchmark price stays an
+explicit null instead of a fabricated or carried point.
 """
 
 from __future__ import annotations
@@ -19,16 +24,25 @@ from itertools import pairwise
 from ditto_portfolio.errors import PortfolioError
 
 __all__ = [
+    "BENCHMARK_EMPTY_NOT_VISIBLE",
+    "BENCHMARK_EMPTY_NO_WINDOW",
     "COMMON_WINDOW_POLICY_VERSION",
+    "BenchmarkOverlay",
+    "BenchmarkPoint",
+    "BenchmarkRun",
     "WindowComparison",
     "WindowLeg",
     "WindowLegPoint",
     "WindowRun",
     "WindowRunPoint",
+    "build_benchmark_overlay",
     "compare_common_windows",
 ]
 
 COMMON_WINDOW_POLICY_VERSION = "common-window-twr-v1"
+
+BENCHMARK_EMPTY_NOT_VISIBLE = "benchmark_price_not_visible"
+BENCHMARK_EMPTY_NO_WINDOW = "no_common_window"
 
 _ONE = Decimal("1")
 _MIN_LEGS = 2
@@ -215,3 +229,100 @@ def compare_common_windows(legs: Sequence[WindowLeg]) -> WindowComparison:
         else "single_common_point"
     )
     return WindowComparison(status=status, empty_reason=None, runs=tuple(runs))
+
+
+@dataclass(frozen=True, kw_only=True)
+class BenchmarkPoint:
+    """One common date's benchmark growth; missing prices stay null."""
+
+    on_date: str
+    growth: Decimal | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class BenchmarkRun:
+    """One run's benchmark overlay, anchored to 1 at the run start."""
+
+    start_date: str
+    end_date: str
+    window_return: Decimal | None
+    points: tuple[BenchmarkPoint, ...]
+
+
+@dataclass(frozen=True, kw_only=True)
+class BenchmarkOverlay:
+    """Declared benchmark series aligned onto the comparison's runs."""
+
+    symbol: str
+    kind: str
+    currency: str
+    empty_reason: str | None
+    runs: tuple[BenchmarkRun, ...]
+
+
+def build_benchmark_overlay(
+    *,
+    symbol: str,
+    kind: str,
+    currency: str,
+    runs: Sequence[WindowRun],
+    prices: Mapping[str, Decimal | None],
+) -> BenchmarkOverlay:
+    """
+    Align one declared price series onto already-computed common runs.
+
+    ``prices`` carries the PIT-resolved benchmark price per common date (or
+    ``None`` when no visible price exists there). Each run anchors from its
+    own start price: a missing anchor nulls that whole run, a missing mid or
+    end price nulls only that point/return. A single-point run reports the
+    anchored level only (``window_return`` stays null), matching the leg
+    contract. An entirely invisible series is an explicit empty overlay;
+    with no runs to align onto at all the empty reason says so instead.
+    """
+    overlay_runs: list[BenchmarkRun] = []
+    any_anchor = False
+    for run in runs:
+        anchor = prices.get(run.start_date)
+        if anchor is not None and anchor > 0:
+            any_anchor = True
+        points: list[BenchmarkPoint] = []
+        end_price: Decimal | None = None
+        for point in run.points:
+            price = prices.get(point.on_date)
+            growth = (
+                price / anchor
+                if price is not None and price > 0 and anchor is not None and anchor > 0
+                else None
+            )
+            if point.on_date == run.end_date:
+                end_price = price if price is not None and price > 0 else None
+            points.append(BenchmarkPoint(on_date=point.on_date, growth=growth))
+        window_return = (
+            end_price / anchor - _ONE
+            if len(run.points) > 1
+            and end_price is not None
+            and anchor is not None
+            and anchor > 0
+            else None
+        )
+        overlay_runs.append(
+            BenchmarkRun(
+                start_date=run.start_date,
+                end_date=run.end_date,
+                window_return=window_return,
+                points=tuple(points),
+            )
+        )
+    if any_anchor:
+        empty_reason = None
+    elif not runs:
+        empty_reason = BENCHMARK_EMPTY_NO_WINDOW
+    else:
+        empty_reason = BENCHMARK_EMPTY_NOT_VISIBLE
+    return BenchmarkOverlay(
+        symbol=symbol,
+        kind=kind,
+        currency=currency,
+        empty_reason=empty_reason,
+        runs=tuple(overlay_runs),
+    )

@@ -6,6 +6,7 @@ from ditto_portfolio.history_window_comparison import (
     COMMON_WINDOW_POLICY_VERSION,
     WindowLeg,
     WindowLegPoint,
+    build_benchmark_overlay,
     compare_common_windows,
 )
 
@@ -414,3 +415,184 @@ def test_isolated_common_point_between_breaks_is_its_own_run() -> None:
     assert all(
         value is None for run in result.runs for value in run.window_returns.values()
     )
+
+
+def _two_run_comparison():
+    """Two continuous runs: 03-02..03-03, then 03-05..03-06."""
+    model = _leg(
+        "model",
+        (
+            ("2026-03-02", "100", None, 0),
+            ("2026-03-03", "110", "0.1", 0),
+            ("2026-03-05", "100", None, 1),
+            ("2026-03-06", "120", "0.2", 1),
+        ),
+    )
+    paper = _leg(
+        "paper",
+        (
+            ("2026-03-02", "100", None, 0),
+            ("2026-03-03", "105", "0.05", 0),
+            ("2026-03-05", "100", None, 1),
+            ("2026-03-06", "110", "0.1", 1),
+        ),
+    )
+    manual = _leg(
+        "manual",
+        (
+            ("2026-03-02", "100", None, 0),
+            ("2026-03-03", "102", "0.02", 0),
+            ("2026-03-05", "100", None, 1),
+            ("2026-03-06", "104", "0.04", 1),
+        ),
+    )
+    return compare_common_windows((model, paper, manual))
+
+
+def test_benchmark_overlay_normalizes_from_each_run_anchor() -> None:
+    comparison = _two_run_comparison()
+    assert [(run.start_date, run.end_date) for run in comparison.runs] == [
+        ("2026-03-02", "2026-03-03"),
+        ("2026-03-05", "2026-03-06"),
+    ]
+
+    overlay = build_benchmark_overlay(
+        symbol="510300",
+        kind="price",
+        currency="CNY",
+        runs=comparison.runs,
+        prices={
+            "2026-03-02": D("4.00"),
+            "2026-03-03": D("4.40"),
+            "2026-03-05": D("4.00"),
+            "2026-03-06": D("3.80"),
+        },
+    )
+
+    assert overlay.symbol == "510300"
+    assert overlay.kind == "price"
+    assert overlay.currency == "CNY"
+    assert overlay.empty_reason is None
+    assert [(run.start_date, run.end_date) for run in overlay.runs] == [
+        ("2026-03-02", "2026-03-03"),
+        ("2026-03-05", "2026-03-06"),
+    ]
+    first, second = overlay.runs
+    assert [(point.on_date, point.growth) for point in first.points] == [
+        ("2026-03-02", D("1")),
+        ("2026-03-03", D("4.4") / D("4")),
+    ]
+    assert first.window_return == D("4.4") / D("4") - D("1")
+    assert [(point.on_date, point.growth) for point in second.points] == [
+        ("2026-03-05", D("1")),
+        ("2026-03-06", D("3.8") / D("4")),
+    ]
+    assert second.window_return == D("3.8") / D("4") - D("1")
+
+
+def test_benchmark_overlay_missing_anchor_nulls_that_run_only() -> None:
+    comparison = _two_run_comparison()
+
+    # No visible benchmark price on the second run's anchor date: that run
+    # stays explicitly null while the first run still aligns.
+    overlay = build_benchmark_overlay(
+        symbol="510300",
+        kind="price",
+        currency="CNY",
+        runs=comparison.runs,
+        prices={
+            "2026-03-02": D("4.00"),
+            "2026-03-03": D("4.40"),
+            "2026-03-05": None,
+            "2026-03-06": D("3.80"),
+        },
+    )
+
+    assert overlay.empty_reason is None
+    assert overlay.runs[0].window_return == D("4.4") / D("4") - D("1")
+    second = overlay.runs[1]
+    assert second.window_return is None
+    assert [point.growth for point in second.points] == [None, None]
+
+
+def test_benchmark_overlay_missing_mid_price_leaves_that_point_null() -> None:
+    comparison = _two_run_comparison()
+
+    overlay = build_benchmark_overlay(
+        symbol="510300",
+        kind="price",
+        currency="CNY",
+        runs=comparison.runs,
+        prices={
+            "2026-03-02": D("4.00"),
+            "2026-03-03": None,
+            "2026-03-05": D("4.00"),
+            "2026-03-06": D("3.80"),
+        },
+    )
+
+    first, second = overlay.runs
+    assert [(point.on_date, point.growth) for point in first.points] == [
+        ("2026-03-02", D("1")),
+        ("2026-03-03", None),
+    ]
+    # A missing end price cannot report a window return.
+    assert first.window_return is None
+    assert second.points[1].growth == D("3.8") / D("4")
+
+
+def test_benchmark_overlay_invisible_series_is_an_explicit_empty() -> None:
+    comparison = _two_run_comparison()
+
+    overlay = build_benchmark_overlay(
+        symbol="999999",
+        kind="price",
+        currency="CNY",
+        runs=comparison.runs,
+        prices={
+            "2026-03-02": None,
+            "2026-03-03": None,
+            "2026-03-05": None,
+            "2026-03-06": None,
+        },
+    )
+
+    assert overlay.empty_reason == "benchmark_price_not_visible"
+    assert all(point.growth is None for run in overlay.runs for point in run.points)
+    assert all(run.window_return is None for run in overlay.runs)
+
+
+def test_benchmark_overlay_single_point_run_reports_level_only() -> None:
+    # One single-point comparison run: the overlay anchors but, matching the
+    # leg contract, reports no window return for a single point.
+    model = _leg("model", (("2026-03-02", "100", None, 0),))
+    paper = _leg("paper", (("2026-03-02", "100", None, 0),))
+    manual = _leg("manual", (("2026-03-02", "100", None, 0),))
+    comparison = compare_common_windows((model, paper, manual))
+
+    overlay = build_benchmark_overlay(
+        symbol="510300",
+        kind="price",
+        currency="CNY",
+        runs=comparison.runs,
+        prices={"2026-03-02": D("4.00")},
+    )
+
+    assert overlay.empty_reason is None
+    assert overlay.runs[0].window_return is None
+    assert overlay.runs[0].points[0].growth == D("1")
+
+
+def test_benchmark_overlay_without_runs_reports_no_window() -> None:
+    # An incomparable comparison has no runs to align onto; the empty reason
+    # must not blame the benchmark's prices.
+    overlay = build_benchmark_overlay(
+        symbol="510300",
+        kind="price",
+        currency="CNY",
+        runs=(),
+        prices={},
+    )
+
+    assert overlay.runs == ()
+    assert overlay.empty_reason == "no_common_window"

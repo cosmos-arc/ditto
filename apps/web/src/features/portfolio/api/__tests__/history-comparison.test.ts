@@ -108,7 +108,29 @@ function comparisonPayload(overrides?: Record<string, unknown>) {
 		publication_cutoff: identity.publication_cutoff,
 		runs: [runPayload()],
 		legs: legPayload(),
+		benchmark: null,
 		...overrides,
+	};
+}
+
+function benchmarkPayload() {
+	return {
+		symbol: "510300",
+		type: "price",
+		currency: "CNY",
+		empty_reason: null,
+		runs: [
+			{
+				start_date: "2026-03-02",
+				end_date: "2026-03-04",
+				window_return: "0.1",
+				points: [
+					{ on_date: "2026-03-02", growth: "1" },
+					{ on_date: "2026-03-03", growth: "1.05" },
+					{ on_date: "2026-03-04", growth: null },
+				],
+			},
+		],
 	};
 }
 
@@ -284,13 +306,124 @@ describe("history comparison API", () => {
 		const fetchMock = stubFetch(comparisonPayload());
 		vi.stubGlobal("fetch", fetchMock);
 
-		await expect(fetchHistoryComparison(identity)).resolves.toBeTruthy();
+		const comparison = await fetchHistoryComparison(identity);
+		expect(comparison.benchmark).toBeNull();
 
 		const url = new URL(capturedRequest(fetchMock.mock.calls).url);
 		expect(url.searchParams.has("paper_ledger_event_count")).toBe(false);
 		expect(url.searchParams.has("paper_ledger_hash")).toBe(false);
 		expect(url.searchParams.has("manual_ledger_event_count")).toBe(false);
 		expect(url.searchParams.has("manual_ledger_hash")).toBe(false);
+		expect(url.searchParams.has("benchmark_symbol")).toBe(false);
+		expect(url.searchParams.has("benchmark_type")).toBe(false);
+	});
+
+	it("sends a declared benchmark and parses the aligned overlay", async () => {
+		const fetchMock = stubFetch(comparisonPayload({ benchmark: benchmarkPayload() }));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const comparison = await fetchHistoryComparison({
+			...identity,
+			benchmark_symbol: "510300",
+			benchmark_type: "price",
+		});
+
+		const url = new URL(capturedRequest(fetchMock.mock.calls).url);
+		expect(url.searchParams.get("benchmark_symbol")).toBe("510300");
+		expect(url.searchParams.get("benchmark_type")).toBe("price");
+
+		expect(comparison.benchmark).not.toBeNull();
+		const benchmark = comparison.benchmark;
+		if (benchmark === null) throw new Error("unreachable");
+		expect(benchmark.symbol).toBe("510300");
+		expect(benchmark.type).toBe("price");
+		expect(benchmark.currency).toBe("CNY");
+		expect(benchmark.empty_reason).toBeNull();
+		expect(benchmark.runs).toHaveLength(1);
+		expect(benchmark.runs[0]?.window_return).toBe("0.1");
+		expect(benchmark.runs[0]?.points[2]?.growth).toBeNull();
+	});
+
+	it("rejects a declared benchmark the response omits", async () => {
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ benchmark: null })));
+		await expect(
+			fetchHistoryComparison({
+				...identity,
+				benchmark_symbol: "510300",
+				benchmark_type: "price",
+			}),
+		).rejects.toThrow(/benchmark/);
+	});
+
+	it("rejects a benchmark echo on an undeclared request", async () => {
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ benchmark: benchmarkPayload() })));
+		await expect(fetchHistoryComparison(identity)).rejects.toThrow(/benchmark/);
+	});
+
+	it("rejects a benchmark run that drifts from the comparison run bounds", async () => {
+		const drifted = benchmarkPayload();
+		const first = drifted.runs[0];
+		if (first) {
+			first.start_date = "2026-03-01";
+		}
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ benchmark: drifted })));
+		await expect(
+			fetchHistoryComparison({
+				...identity,
+				benchmark_symbol: "510300",
+				benchmark_type: "price",
+			}),
+		).rejects.toThrow(/must match the comparison run bounds/);
+	});
+
+	it("rejects benchmark points that drift from the comparison run points", async () => {
+		const drifted = benchmarkPayload();
+		const firstRun = drifted.runs[0];
+		if (firstRun) {
+			firstRun.points = [
+				{ on_date: "2026-03-02", growth: "1" },
+				{ on_date: "2026-03-09", growth: "1.05" },
+				{ on_date: "2026-03-04", growth: null },
+			];
+		}
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ benchmark: drifted })));
+		await expect(
+			fetchHistoryComparison({
+				...identity,
+				benchmark_symbol: "510300",
+				benchmark_type: "price",
+			}),
+		).rejects.toThrow(/must align with the comparison run point/);
+	});
+
+	it("rejects a non-finite benchmark growth string", async () => {
+		const drifted = benchmarkPayload();
+		const firstRun = drifted.runs[0];
+		if (firstRun) {
+			const secondPoint = firstRun.points[1];
+			if (secondPoint) {
+				secondPoint.growth = "oops";
+			}
+		}
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ benchmark: drifted })));
+		await expect(
+			fetchHistoryComparison({
+				...identity,
+				benchmark_symbol: "510300",
+				benchmark_type: "price",
+			}),
+		).rejects.toThrow(/growth/);
+	});
+
+	it("rejects a benchmark echo whose symbol drifts from the request", async () => {
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ benchmark: benchmarkPayload() })));
+		await expect(
+			fetchHistoryComparison({
+				...identity,
+				benchmark_symbol: "510500",
+				benchmark_type: "price",
+			}),
+		).rejects.toThrow(/symbol/);
 	});
 });
 

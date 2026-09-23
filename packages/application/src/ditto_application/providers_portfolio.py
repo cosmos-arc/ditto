@@ -145,6 +145,8 @@ class AppPortfolioQueryProvider(Provider):
         paper_history: GetPaperHistoryQuery,
         model_history: GetModelHistoryQuery,
         journal: AccountEventJournalPort,
+        snapshot_reader: ProviderSnapshotReader,
+        valuation_source: TechnicalAnalysisSourcePort,
     ) -> GetHistoryComparisonQuery:
         """Compose the three leg replays into one common-window comparison."""
         return GetHistoryComparisonQuery(
@@ -152,6 +154,8 @@ class AppPortfolioQueryProvider(Provider):
             paper_query=paper_history,
             model_query=model_history,
             journal=journal,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
         )
 
     @provide

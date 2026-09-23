@@ -15,6 +15,9 @@ from ditto_apps.models.account_ledger import (
 )
 
 __all__ = [
+    "HistoryComparisonBenchmarkPointResponse",
+    "HistoryComparisonBenchmarkResponse",
+    "HistoryComparisonBenchmarkRunResponse",
     "HistoryComparisonLegResponse",
     "HistoryComparisonQueryParams",
     "HistoryComparisonResponse",
@@ -266,7 +269,8 @@ class HistoryComparisonQueryParams(BaseModel):
     application query still rejects every invalid identity fail-closed.
     Optional ledger revision pins (count + hash, both or neither per leg)
     replay that leg against a pinned append-order prefix; when omitted the
-    server resolves the current revision.
+    server resolves the current revision. An optional benchmark declaration
+    (symbol + type, both or neither) overlays one declared price series.
     """
 
     model_config = _QUERY_CONFIG
@@ -286,6 +290,8 @@ class HistoryComparisonQueryParams(BaseModel):
     paper_ledger_hash: str | None = Field(default=None, min_length=1)
     manual_ledger_event_count: int | None = Field(default=None, ge=1, strict=False)
     manual_ledger_hash: str | None = Field(default=None, min_length=1)
+    benchmark_symbol: str | None = Field(default=None, min_length=1)
+    benchmark_type: str | None = Field(default=None, min_length=1)
 
 
 class HistoryComparisonRunPointResponse(BaseModel):
@@ -329,6 +335,38 @@ class HistoryComparisonLegResponse(BaseModel):
     target_count: int | None
 
 
+class HistoryComparisonBenchmarkPointResponse(BaseModel):
+    """One common date's benchmark growth; missing prices stay null."""
+
+    model_config = _RESPONSE_CONFIG
+
+    on_date: str
+    growth: Decimal | None
+
+
+class HistoryComparisonBenchmarkRunResponse(BaseModel):
+    """One run's benchmark overlay, anchored to 1 at the run start."""
+
+    model_config = _RESPONSE_CONFIG
+
+    start_date: str
+    end_date: str
+    window_return: Decimal | None
+    points: tuple[HistoryComparisonBenchmarkPointResponse, ...]
+
+
+class HistoryComparisonBenchmarkResponse(BaseModel):
+    """Declared benchmark price series aligned onto the comparison's runs."""
+
+    model_config = _RESPONSE_CONFIG
+
+    symbol: str
+    type: Literal["price"]
+    currency: Literal["CNY"]
+    empty_reason: str | None
+    runs: tuple[HistoryComparisonBenchmarkRunResponse, ...]
+
+
 class HistoryComparisonResponse(BaseModel):
     """Complete replayable common-window comparison result."""
 
@@ -352,3 +390,4 @@ class HistoryComparisonResponse(BaseModel):
     publication_cutoff: datetime
     runs: tuple[HistoryComparisonRunResponse, ...]
     legs: tuple[HistoryComparisonLegResponse, ...]
+    benchmark: HistoryComparisonBenchmarkResponse | None = None

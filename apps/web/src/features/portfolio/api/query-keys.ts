@@ -129,6 +129,8 @@ export const tradingKeys = {
 		readonly paper_ledger_hash?: string | null;
 		readonly manual_ledger_event_count?: number | null;
 		readonly manual_ledger_hash?: string | null;
+		readonly benchmark_symbol?: string | null;
+		readonly benchmark_type?: string | null;
 	}) =>
 		[
 			...tradingKeys.all,
@@ -148,5 +150,7 @@ export const tradingKeys = {
 			identity.paper_ledger_hash ?? "",
 			identity.manual_ledger_event_count ?? "",
 			identity.manual_ledger_hash ?? "",
+			identity.benchmark_symbol ?? "",
+			identity.benchmark_type ?? "",
 		] as const,
 } as const;

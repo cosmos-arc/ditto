@@ -7,8 +7,10 @@ leg keeps its own PIT context, ledger revision identity, and replayable
 ``result_id``. The server resolves the current PAPER/MANUAL ledger revisions
 — or replays a caller-pinned append-order prefix — and binds the revision
 into the result; the numeric common-window rule itself lives in
-:mod:`ditto_portfolio.history_window_comparison`. Read-only: no backtest,
-no ledger write, no "latest" fallback.
+:mod:`ditto_portfolio.history_window_comparison`. A declared benchmark price
+series (ETF close, ``price`` type) overlays the same runs under the same PIT
+context without gating the window. Read-only: no backtest, no ledger write,
+no "latest" fallback.
 """
 
 from __future__ import annotations
@@ -20,6 +22,8 @@ from decimal import Decimal
 from hashlib import sha256
 
 import orjson
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.account_ledger import (
     AccountEvent,
     AccountEventJournalPort,
@@ -32,6 +36,7 @@ from ditto_portfolio.history_window_comparison import (
     WindowLeg,
     WindowLegPoint,
     WindowRun,
+    build_benchmark_overlay,
     compare_common_windows,
 )
 
@@ -40,6 +45,9 @@ from ditto_application.queries.account_ledger import LedgerRevision
 from ditto_application.queries.history_valuation import (
     VALUATION_POLICY_VERSION,
     HistoryPointView,
+    PricedBar,
+    price_at,
+    trade_day,
 )
 from ditto_application.queries.model_history import (
     GetModelHistoryQuery,
@@ -52,11 +60,18 @@ from ditto_application.queries.portfolio_history import (
     GetManualHistoryQuery,
     GetPaperHistoryQuery,
     PaperHistoryRequest,
+    pit_context,
+)
+from ditto_application.queries.technical_analysis import (
+    TechnicalAnalysisSourcePort,
 )
 
 __all__ = [
     "COMPARISON_POLICY_VERSION",
     "GetHistoryComparisonQuery",
+    "HistoryComparisonBenchmarkPointView",
+    "HistoryComparisonBenchmarkRunView",
+    "HistoryComparisonBenchmarkView",
     "HistoryComparisonLegView",
     "HistoryComparisonRequest",
     "HistoryComparisonRunPointView",
@@ -67,6 +82,8 @@ __all__ = [
 COMPARISON_POLICY_VERSION = COMMON_WINDOW_POLICY_VERSION
 _RESULT_PREFIX = "history-comparison:sha256:"
 _ZERO = Decimal("0")
+_BENCHMARK_TYPE_PRICE = "price"
+_BENCHMARK_CURRENCY = "CNY"
 
 
 def _error(code: str, reason: str, **details: object) -> AppQueryError:
@@ -89,6 +106,10 @@ class HistoryComparisonRequest:
     both or neither) replays that leg against the pinned append-order
     prefix instead of the server-resolved current revision, so an old
     comparison stays replayable after future ledger corrections.
+
+    A benchmark declaration (``benchmark_symbol`` + ``benchmark_type``,
+    both or neither) overlays one declared price series onto the same
+    common runs; the benchmark never gates the window computation.
     """
 
     strategy_id: str
@@ -106,6 +127,8 @@ class HistoryComparisonRequest:
     paper_ledger_hash: str | None = None
     manual_ledger_event_count: int | None = None
     manual_ledger_hash: str | None = None
+    benchmark_symbol: str | None = None
+    benchmark_type: str | None = None
 
     def result_identity(self) -> dict[str, object]:
         """Request facts bound into the comparison result identity."""
@@ -163,6 +186,35 @@ class HistoryComparisonRunView:
 
 
 @dataclass(frozen=True, kw_only=True)
+class HistoryComparisonBenchmarkPointView:
+    """One common date's benchmark growth; missing prices stay null."""
+
+    on_date: str
+    growth: Decimal | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class HistoryComparisonBenchmarkRunView:
+    """One run's benchmark overlay, anchored to 1 at the run start."""
+
+    start_date: str
+    end_date: str
+    window_return: Decimal | None
+    points: tuple[HistoryComparisonBenchmarkPointView, ...]
+
+
+@dataclass(frozen=True, kw_only=True)
+class HistoryComparisonBenchmarkView:
+    """Declared benchmark series aligned onto the comparison's runs."""
+
+    symbol: str
+    type: str
+    currency: str
+    empty_reason: str | None
+    runs: tuple[HistoryComparisonBenchmarkRunView, ...]
+
+
+@dataclass(frozen=True, kw_only=True)
 class HistoryComparisonView:
     """Complete replayable common-window comparison result."""
 
@@ -184,6 +236,7 @@ class HistoryComparisonView:
     publication_cutoff: datetime
     runs: tuple[HistoryComparisonRunView, ...]
     legs: tuple[HistoryComparisonLegView, ...]
+    benchmark: HistoryComparisonBenchmarkView | None = None
 
 
 def _parse_date(value: str, field: str) -> date:
@@ -197,6 +250,7 @@ def _validate_request(request: HistoryComparisonRequest) -> None:
     _validate_entities_and_range(request)
     _validate_research_context(request)
     _validate_revision_pins(request)
+    _validate_benchmark(request)
 
 
 def _validate_entities_and_range(request: HistoryComparisonRequest) -> None:
@@ -254,6 +308,27 @@ def _validate_revision_pins(request: HistoryComparisonRequest) -> None:
             raise _error("REQUEST_INVALID", f"{fields} must be pinned together")
 
 
+def _validate_benchmark(request: HistoryComparisonRequest) -> None:
+    if (request.benchmark_symbol is None) != (request.benchmark_type is None):
+        raise _error(
+            "REQUEST_INVALID",
+            "benchmark_symbol and benchmark_type must be declared together",
+        )
+    if request.benchmark_symbol is None:
+        return
+    if request.benchmark_type != _BENCHMARK_TYPE_PRICE:
+        raise _error(
+            "REQUEST_INVALID",
+            "benchmark_type must be price; total_return is reserved for later",
+        )
+    symbol = request.benchmark_symbol
+    if not symbol.isascii() or not symbol.isdigit():
+        raise _error(
+            "REQUEST_INVALID",
+            "benchmark_symbol must be numeric (ETF prices first; FX before non-CNY)",
+        )
+
+
 class GetHistoryComparisonQuery:
     """Compose the three leg replays into one common-window comparison."""
 
@@ -264,11 +339,15 @@ class GetHistoryComparisonQuery:
         paper_query: GetPaperHistoryQuery,
         model_query: GetModelHistoryQuery,
         journal: AccountEventJournalPort,
+        snapshot_reader: ProviderSnapshotReader,
+        valuation_source: TechnicalAnalysisSourcePort,
     ) -> None:
         self._manual = manual_query
         self._paper = paper_query
         self._model = model_query
         self._journal = journal
+        self._snapshot_reader = snapshot_reader
+        self._valuation_source = valuation_source
 
     def history(self, request: HistoryComparisonRequest) -> HistoryComparisonView:
         """Return the exact common-window comparison or fail closed."""
@@ -330,8 +409,11 @@ class GetHistoryComparisonQuery:
                 _leg_input("manual", manual.points),
             )
         )
+        benchmark_prices = self._benchmark_prices(request, comparison)
         return HistoryComparisonView(
-            result_id=_result_id(request, manual, paper, model, comparison),
+            result_id=_result_id(
+                request, manual, paper, model, comparison, benchmark_prices
+            ),
             strategy_id=request.strategy_id,
             paper_account_id=request.paper_account_id,
             paper_session_id=request.paper_session_id,
@@ -386,7 +468,56 @@ class GetHistoryComparisonQuery:
                     ),
                 ),
             ),
+            benchmark=(
+                _benchmark_view(request, comparison, benchmark_prices)
+                if benchmark_prices is not None
+                else None
+            ),
         )
+
+    def _benchmark_prices(
+        self,
+        request: HistoryComparisonRequest,
+        comparison: WindowComparison,
+    ) -> dict[str, Decimal | None] | None:
+        """Resolve the declared benchmark's PIT-visible prices per run date."""
+        if request.benchmark_symbol is None or request.benchmark_type is None:
+            return None
+        symbol_id = int(request.benchmark_symbol)
+        context = pit_context(
+            snapshot_reader=self._snapshot_reader,
+            source_snapshot_ids=request.source_snapshot_ids,
+            end=_parse_date(request.end_date, "end_date"),
+            knowledge_cutoff=request.knowledge_cutoff,
+            publication_cutoff=request.publication_cutoff,
+            error=_error,
+            mixed_version_code="HISTORY_COMPARISON_SNAPSHOT_SCHEMA_MIXED",
+        )
+        bars = self._valuation_source.load(
+            context,
+            instrument_id=InstrumentId(symbol_id),
+            instrument_code=request.benchmark_symbol,
+        )
+        bar_days = {trade_day(bar.occurred_at) for bar in bars}
+        run_days = sorted(
+            {
+                date.fromisoformat(point.on_date)
+                for run in comparison.runs
+                for point in run.points
+            }
+        )
+        prices: dict[str, Decimal | None] = {}
+        for day in run_days:
+            priced = price_at(
+                instrument_id=symbol_id,
+                bars=bars,
+                on_date=day,
+                market_traded_on_date=day in bar_days,
+            )
+            prices[day.isoformat()] = (
+                priced.price if isinstance(priced, PricedBar) else None
+            )
+        return prices
 
     def _pinned_revision(
         self,
@@ -541,12 +672,48 @@ def _run_view(run: WindowRun) -> HistoryComparisonRunView:
     )
 
 
+def _benchmark_view(
+    request: HistoryComparisonRequest,
+    comparison: WindowComparison,
+    prices: dict[str, Decimal | None],
+) -> HistoryComparisonBenchmarkView:
+    overlay = build_benchmark_overlay(
+        symbol=request.benchmark_symbol or "",
+        kind=request.benchmark_type or "",
+        currency=_BENCHMARK_CURRENCY,
+        runs=comparison.runs,
+        prices=prices,
+    )
+    return HistoryComparisonBenchmarkView(
+        symbol=overlay.symbol,
+        type=overlay.kind,
+        currency=overlay.currency,
+        empty_reason=overlay.empty_reason,
+        runs=tuple(
+            HistoryComparisonBenchmarkRunView(
+                start_date=run.start_date,
+                end_date=run.end_date,
+                window_return=run.window_return,
+                points=tuple(
+                    HistoryComparisonBenchmarkPointView(
+                        on_date=point.on_date,
+                        growth=point.growth,
+                    )
+                    for point in run.points
+                ),
+            )
+            for run in overlay.runs
+        ),
+    )
+
+
 def _result_id(
     request: HistoryComparisonRequest,
     manual: AccountHistoryView,
     paper: AccountHistoryView,
     model: ModelHistoryView,
     comparison: WindowComparison,
+    benchmark_prices: dict[str, Decimal | None] | None,
 ) -> str:
     payload = {
         **request.result_identity(),
@@ -564,5 +731,19 @@ def _result_id(
         "comparison_policy": COMPARISON_POLICY_VERSION,
         "method": manual.method,
     }
+    if benchmark_prices is not None:
+        # One entry per declared benchmark; the list shape keeps the identity
+        # extensible when index benchmarks are admitted later (#251).
+        payload["benchmarks"] = [
+            {
+                "symbol": request.benchmark_symbol,
+                "type": request.benchmark_type,
+                "currency": _BENCHMARK_CURRENCY,
+                "prices": [
+                    [day, str(price) if price is not None else None]
+                    for day, price in sorted(benchmark_prices.items())
+                ],
+            }
+        ]
     digest = sha256(orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)).hexdigest()
     return f"{_RESULT_PREFIX}{digest}"
