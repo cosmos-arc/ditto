@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -36,6 +37,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 from ditto_portfolio.account_ledger import (
     AccountDefinition,
+    AccountEvent,
     AccountEventDraft,
     AccountEventSource,
     AccountEventType,
@@ -130,7 +132,7 @@ def _event(
     gross_amount: str = "0",
     source: AccountEventSource,
     actor: str,
-) -> object:
+) -> AccountEvent:
     return create_account_event(
         account=account,
         draft=AccountEventDraft(
@@ -334,14 +336,10 @@ def _request(snapshot_id: str) -> HistoryComparisonRequest:
     )
 
 
-def _store_state(
-    root: Path,
-) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+def _store_state(root: Path) -> tuple[tuple[str, ...], ...]:
     """Account/session rows plus retained payloads plus artifact statuses."""
 
-    def table_rows(database: Path, query: str) -> tuple[tuple[str, ...], ...]:
-        import sqlite3
-
+    def table_rows(database: Path, query: str) -> tuple[str, ...]:
         connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
         try:
             return tuple(sorted(str(row) for row in connection.execute(query)))
