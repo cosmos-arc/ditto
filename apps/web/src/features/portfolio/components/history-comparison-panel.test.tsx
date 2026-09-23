@@ -99,8 +99,13 @@ function jsonResponse(data: unknown, status = 200) {
 	});
 }
 
-function stubApi(payload: unknown = COMPARISON_PAYLOAD, comparisonStatus = 200) {
+function stubApi(
+	payload: unknown = COMPARISON_PAYLOAD,
+	comparisonStatus = 200,
+	onComparisonCall?: (call: number, url: URL) => Response | undefined,
+) {
 	const requests: string[] = [];
+	let comparisonCalls = 0;
 	const fetchMock = vi.fn<typeof fetch>(async (input) => {
 		const href = input instanceof Request ? input.url : String(input);
 		requests.push(href);
@@ -162,7 +167,8 @@ function stubApi(payload: unknown = COMPARISON_PAYLOAD, comparisonStatus = 200) 
 			});
 		}
 		if (url.pathname === "/api/v1/portfolio/history-comparison") {
-			return jsonResponse(payload, comparisonStatus);
+			comparisonCalls += 1;
+			return onComparisonCall?.(comparisonCalls, url) ?? jsonResponse(payload, comparisonStatus);
 		}
 		throw new Error(`Unhandled mock API request: ${href}`);
 	});
@@ -321,5 +327,66 @@ describe("HistoryComparisonPanel", () => {
 		await waitFor(() => {
 			expect(screen.getByText(/当前环境不支持 PNG 导出/)).toBeInTheDocument();
 		});
+	});
+
+	it("pins a displayed leg revision, replays it, and can unpin back to server resolution", async () => {
+		const user = userEvent.setup();
+		const { fetchMock, requests } = stubApi();
+		vi.stubGlobal("fetch", fetchMock);
+		renderPanel();
+
+		await fillFormAndSubmit(user);
+		await screen.findByTestId("history-comparison-result");
+
+		await user.click(screen.getByTestId("history-comparison-pin-paper"));
+
+		await waitFor(() => {
+			const pinnedUrl = new URL(requests.filter((href) => href.includes("/portfolio/history-comparison")).at(-1) ?? "");
+			expect(pinnedUrl.searchParams.get("paper_ledger_event_count")).toBe("3");
+			expect(pinnedUrl.searchParams.get("paper_ledger_hash")).toBe("account-ledger:sha256:abc");
+			expect(pinnedUrl.searchParams.has("manual_ledger_event_count")).toBe(false);
+		});
+		expect(await screen.findByText("解除钉住（解析当前）")).toBeInTheDocument();
+		const chips = screen.getByTestId("history-comparison-pin-chips");
+		expect(chips).toHaveTextContent("Paper 钉住 3@account-ledger:sha256:abc");
+
+		await user.click(screen.getByTestId("history-comparison-pin-paper"));
+
+		await waitFor(() => {
+			const unpinnedUrl = new URL(
+				requests.filter((href) => href.includes("/portfolio/history-comparison")).at(-1) ?? "",
+			);
+			expect(unpinnedUrl.searchParams.has("paper_ledger_event_count")).toBe(false);
+			expect(unpinnedUrl.searchParams.has("paper_ledger_hash")).toBe(false);
+		});
+		await waitFor(() => {
+			expect(screen.getByTestId("history-comparison-pin-paper")).toHaveTextContent("按此修订重放");
+		});
+	});
+
+	it("keeps a pinned chip with an escape hatch while the pinned replay errors", async () => {
+		const user = userEvent.setup();
+		const { fetchMock, requests } = stubApi(COMPARISON_PAYLOAD, 200, (call) =>
+			// The pinned replay itself fails (e.g. the ledger moved on).
+			call === 2 ? jsonResponse({}, 500) : undefined,
+		);
+		vi.stubGlobal("fetch", fetchMock);
+		renderPanel();
+
+		await fillFormAndSubmit(user);
+		await screen.findByTestId("history-comparison-result");
+		await user.click(screen.getByTestId("history-comparison-pin-paper"));
+
+		// No result renders, but the pinned chip stays reachable.
+		await screen.findByRole("alert");
+		expect(screen.queryByTestId("history-comparison-result")).not.toBeInTheDocument();
+		expect(screen.getByTestId("history-comparison-pin-chips")).toHaveTextContent("Paper 钉住");
+
+		await user.click(screen.getByTestId("history-comparison-pin-clear-paper"));
+
+		await screen.findByTestId("history-comparison-result");
+		const lastUrl = new URL(requests.filter((href) => href.includes("/portfolio/history-comparison")).at(-1) ?? "");
+		expect(lastUrl.searchParams.has("paper_ledger_event_count")).toBe(false);
+		expect(screen.queryByTestId("history-comparison-pin-chips")).not.toBeInTheDocument();
 	});
 });

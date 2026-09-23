@@ -321,7 +321,14 @@ def _seed(root: Path, *, gap: bool = False, manual_start: str = "2026-03-02") ->
         trading_client.close()
 
 
-def _request(snapshot_id: str) -> HistoryComparisonRequest:
+def _request(
+    snapshot_id: str,
+    *,
+    paper_ledger_event_count: int | None = None,
+    paper_ledger_hash: str | None = None,
+    manual_ledger_event_count: int | None = None,
+    manual_ledger_hash: str | None = None,
+) -> HistoryComparisonRequest:
     return HistoryComparisonRequest(
         strategy_id=STRATEGY_ID,
         paper_account_id=PAPER_ACCOUNT,
@@ -333,6 +340,10 @@ def _request(snapshot_id: str) -> HistoryComparisonRequest:
         knowledge_cutoff=KNOWLEDGE,
         publication_cutoff=KNOWLEDGE,
         source_snapshot_ids=(snapshot_id,),
+        paper_ledger_event_count=paper_ledger_event_count,
+        paper_ledger_hash=paper_ledger_hash,
+        manual_ledger_event_count=manual_ledger_event_count,
+        manual_ledger_hash=manual_ledger_hash,
     )
 
 
@@ -460,6 +471,83 @@ def test_history_comparison_live_fixture_composes_three_legs(
         ) == revisions[MANUAL_ACCOUNT]
         assert legs["model"].target_count == 2
         assert replay.result_id == view.result_id
+
+
+@pytest.mark.integration
+def test_history_comparison_live_fixture_pinned_revisions_replay_after_correction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with tempfile.TemporaryDirectory(
+        prefix="ditto-history-comparison-pin-"
+    ) as temporary:
+        root = Path(temporary)
+        snapshot_id = _seed(root)
+        _container_env(monkeypatch, root)
+        revisions = _revisions(root)
+
+        container = make_app_container()
+        try:
+            query = container.get(GetHistoryComparisonQuery)
+            first = query.history(_request(snapshot_id))
+        finally:
+            container.close()
+
+        # A future correction lands on both ledgers after the compared range.
+        client = SQLiteClient(SQLitePool(str(root / "trading/trading.sqlite")))
+        try:
+            journal = SqliteAccountEventJournal(client)
+            for account_id, source in (
+                (PAPER_ACCOUNT, AccountEventSource.PAPER_ENGINE),
+                (MANUAL_ACCOUNT, AccountEventSource.MANUAL_ENTRY),
+            ):
+                account = journal.get_account(account_id)
+                assert account is not None
+                journal.append(
+                    _event(
+                        account,
+                        f"cmp-{account_id}-deposit-late",
+                        AccountEventType.DEPOSIT,
+                        trade_date="2026-03-09",
+                        gross_amount="500",
+                        source=source,
+                        actor="user:fixture",
+                    )
+                )
+            journal.close()
+        finally:
+            client.close()
+
+        container = make_app_container()
+        try:
+            query = container.get(GetHistoryComparisonQuery)
+            pinned = query.history(
+                _request(
+                    snapshot_id,
+                    paper_ledger_event_count=revisions[PAPER_ACCOUNT][0],
+                    paper_ledger_hash=revisions[PAPER_ACCOUNT][1],
+                    manual_ledger_event_count=revisions[MANUAL_ACCOUNT][0],
+                    manual_ledger_hash=revisions[MANUAL_ACCOUNT][1],
+                )
+            )
+            unpinned = query.history(_request(snapshot_id))
+        finally:
+            container.close()
+
+        assert pinned.result_id == first.result_id
+        assert pinned.runs == first.runs
+        assert pinned.legs == first.legs
+        assert unpinned.result_id != first.result_id
+        pinned_legs = {leg.kind: leg for leg in pinned.legs}
+        assert pinned_legs["paper"].ledger_revision is not None
+        assert (
+            pinned_legs["paper"].ledger_revision.event_count,
+            pinned_legs["paper"].ledger_revision.ledger_hash,
+        ) == revisions[PAPER_ACCOUNT]
+        assert pinned_legs["manual"].ledger_revision is not None
+        assert (
+            pinned_legs["manual"].ledger_revision.event_count,
+            pinned_legs["manual"].ledger_revision.ledger_hash,
+        ) == revisions[MANUAL_ACCOUNT]
 
 
 @pytest.mark.integration

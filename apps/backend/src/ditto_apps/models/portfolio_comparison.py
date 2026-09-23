@@ -264,6 +264,9 @@ class HistoryComparisonQueryParams(BaseModel):
 
     Query strings arrive as plain text, so coercion stays lax here; the
     application query still rejects every invalid identity fail-closed.
+    Optional ledger revision pins (count + hash, both or neither per leg)
+    replay that leg against a pinned append-order prefix; when omitted the
+    server resolves the current revision.
     """
 
     model_config = _QUERY_CONFIG
@@ -279,6 +282,10 @@ class HistoryComparisonQueryParams(BaseModel):
     publication_cutoff: datetime = Field(strict=False)
     source_snapshot_ids: tuple[str, ...] = Field(strict=False, min_length=1)
     model_artifact_ids: tuple[str, ...] = Field(default=(), strict=False)
+    paper_ledger_event_count: int | None = Field(default=None, ge=1, strict=False)
+    paper_ledger_hash: str | None = Field(default=None, min_length=1)
+    manual_ledger_event_count: int | None = Field(default=None, ge=1, strict=False)
+    manual_ledger_hash: str | None = Field(default=None, min_length=1)
 
 
 class HistoryComparisonRunPointResponse(BaseModel):

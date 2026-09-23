@@ -125,6 +125,10 @@ export const tradingKeys = {
 		readonly publication_cutoff: string;
 		readonly source_snapshot_ids: readonly string[];
 		readonly model_artifact_ids?: readonly string[];
+		readonly paper_ledger_event_count?: number | null;
+		readonly paper_ledger_hash?: string | null;
+		readonly manual_ledger_event_count?: number | null;
+		readonly manual_ledger_hash?: string | null;
 	}) =>
 		[
 			...tradingKeys.all,
@@ -140,5 +144,9 @@ export const tradingKeys = {
 			identity.publication_cutoff,
 			[...identity.source_snapshot_ids].sort().join("|"),
 			(identity.model_artifact_ids ?? []).join(","),
+			identity.paper_ledger_event_count ?? "",
+			identity.paper_ledger_hash ?? "",
+			identity.manual_ledger_event_count ?? "",
+			identity.manual_ledger_hash ?? "",
 		] as const,
 } as const;

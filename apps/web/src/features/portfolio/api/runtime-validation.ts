@@ -591,6 +591,31 @@ function parseLegReturnRecord(
 	return result;
 }
 
+/**
+ * A pinned ledger revision must come back as that leg's resolved revision:
+ * the server replays the pinned append-order prefix, so any other echo means
+ * the pin was not honored.
+ */
+function assertPinnedRevision(
+	legs: readonly HistoryComparisonLeg[],
+	kind: "paper" | "manual",
+	pin: {
+		readonly event_count?: number | null | undefined;
+		readonly ledger_hash?: string | null | undefined;
+	},
+	boundary: string,
+): void {
+	const { event_count: eventCount, ledger_hash: ledgerHash } = pin;
+	if (eventCount === undefined || eventCount === null || ledgerHash === undefined || ledgerHash === null) {
+		return;
+	}
+	const leg = legs.find((entry) => entry.kind === kind);
+	const revision = leg?.ledger_revision ?? null;
+	if (revision === null || revision.event_count !== eventCount || revision.ledger_hash !== ledgerHash) {
+		throw new RuntimeValidationError(`${boundary}.legs.${kind}`, "ledger_revision", "differs from the pinned request");
+	}
+}
+
 export function parseHistoryComparison(
 	value: unknown,
 	identity: {
@@ -603,6 +628,10 @@ export function parseHistoryComparison(
 		readonly model_initial_capital: number | string;
 		readonly knowledge_cutoff: string;
 		readonly publication_cutoff: string;
+		readonly paper_ledger_event_count?: number | null;
+		readonly paper_ledger_hash?: string | null;
+		readonly manual_ledger_event_count?: number | null;
+		readonly manual_ledger_hash?: string | null;
 	},
 ): HistoryComparison {
 	const boundary = "historyComparison";
@@ -681,6 +710,18 @@ export function parseHistoryComparison(
 			target_count: nullableIntegerValue(legRecord, "target_count", legBoundary),
 		};
 	});
+	assertPinnedRevision(
+		legs,
+		"paper",
+		{ event_count: identity.paper_ledger_event_count, ledger_hash: identity.paper_ledger_hash },
+		boundary,
+	);
+	assertPinnedRevision(
+		legs,
+		"manual",
+		{ event_count: identity.manual_ledger_event_count, ledger_hash: identity.manual_ledger_hash },
+		boundary,
+	);
 	return {
 		result_id: resultId,
 		strategy_id: identity.strategy_id,

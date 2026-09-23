@@ -38,6 +38,31 @@ const STATUS_LABELS: Readonly<Record<HistoryComparison["status"], string>> = {
 	incomparable: "不可比",
 };
 
+type PinnedLedgerRevision = { readonly event_count: number; readonly ledger_hash: string };
+
+function pinnedRevisionParams(
+	paper: PinnedLedgerRevision | null,
+	manual: PinnedLedgerRevision | null,
+): Partial<HistoryComparisonIdentity> {
+	return {
+		...(paper !== null ? { paper_ledger_event_count: paper.event_count, paper_ledger_hash: paper.ledger_hash } : {}),
+		...(manual !== null
+			? { manual_ledger_event_count: manual.event_count, manual_ledger_hash: manual.ledger_hash }
+			: {}),
+	};
+}
+
+function identityWithoutPins(identity: HistoryComparisonIdentity): HistoryComparisonIdentity {
+	const {
+		paper_ledger_event_count: _paperCount,
+		paper_ledger_hash: _paperHash,
+		manual_ledger_event_count: _manualCount,
+		manual_ledger_hash: _manualHash,
+		...rest
+	} = identity;
+	return rest;
+}
+
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 240;
 const CHART_PADDING = 36;
@@ -263,6 +288,8 @@ export function HistoryComparisonPanel() {
 	const [snapshotsText, setSnapshotsText] = useState("");
 	const [artifactsText, setArtifactsText] = useState("");
 	const [identity, setIdentity] = useState<HistoryComparisonIdentity | null>(null);
+	const [pinnedPaper, setPinnedPaper] = useState<PinnedLedgerRevision | null>(null);
+	const [pinnedManual, setPinnedManual] = useState<PinnedLedgerRevision | null>(null);
 	const [selectedRunIndex, setSelectedRunIndex] = useState(0);
 	const [exportError, setExportError] = useState<string | null>(null);
 	const chartRef = useRef<SVGSVGElement | null>(null);
@@ -339,6 +366,17 @@ export function HistoryComparisonPanel() {
 		[comparison, selectedRun],
 	);
 
+	// Backfill the displayed leg revision as a pin (or clear it) and replay
+	// the exact same request identity against that ledger revision.
+	const pinLedgerRevision = (kind: ComparisonLegKind, revision: PinnedLedgerRevision | null) => {
+		if (kind === "model" || identity === null) return;
+		const nextPaper = kind === "paper" ? revision : pinnedPaper;
+		const nextManual = kind === "manual" ? revision : pinnedManual;
+		setPinnedPaper(nextPaper);
+		setPinnedManual(nextManual);
+		setIdentity({ ...identityWithoutPins(identity), ...pinnedRevisionParams(nextPaper, nextManual) });
+	};
+
 	return (
 		<section
 			aria-label="三组合共同区间比较"
@@ -382,6 +420,8 @@ export function HistoryComparisonPanel() {
 						onChange={(event) => {
 							setPaperAccountId(event.currentTarget.value);
 							setPaperSessionId("");
+							// A pin belongs to one account's ledger stream.
+							setPinnedPaper(null);
 						}}
 					>
 						{paperAccounts.length === 0 && <option value="">（暂无模拟账户）</option>}
@@ -415,7 +455,11 @@ export function HistoryComparisonPanel() {
 						aria-label="Manual 账户"
 						className={INPUT_CLASS}
 						value={manualAccountId}
-						onChange={(event) => setManualAccountId(event.currentTarget.value)}
+						onChange={(event) => {
+							setManualAccountId(event.currentTarget.value);
+							// A pin belongs to one account's ledger stream.
+							setPinnedManual(null);
+						}}
 					>
 						{manualAccounts.length === 0 && <option value="">（暂无实盘账户）</option>}
 						{manualAccounts.map((account) => (
@@ -506,6 +550,7 @@ export function HistoryComparisonPanel() {
 								publication_cutoff: cutoff,
 								source_snapshot_ids: [...snapshots],
 								...(artifactIds.length > 0 ? { model_artifact_ids: [...artifactIds] } : {}),
+								...pinnedRevisionParams(pinnedPaper, pinnedManual),
 							});
 						}}
 					>
@@ -515,8 +560,44 @@ export function HistoryComparisonPanel() {
 			</div>
 			{identity === null && (
 				<p className="px-4 pb-4 text-xs text-(--color-foreground-tertiary)">
-					选择三类组合与区间后比较；Paper/Manual 账本修订由服务端解析并绑定进结果身份。
+					选择三类组合与区间后比较；Paper/Manual
+					账本修订默认由服务端解析并绑定进结果身份，加载后可在腿卡片按显示修订钉住重放。
 				</p>
+			)}
+			{(pinnedPaper !== null || pinnedManual !== null) && (
+				<div
+					className="flex flex-wrap items-center gap-2 px-4 pb-3 text-xs text-(--color-foreground-secondary)"
+					data-testid="history-comparison-pin-chips"
+				>
+					{pinnedPaper !== null && (
+						<span className="flex items-center gap-1 rounded-full bg-(--color-surface-strip) px-2 py-0.5">
+							Paper 钉住 {pinnedPaper.event_count}@{pinnedPaper.ledger_hash}
+							<button
+								type="button"
+								aria-label="解除 Paper 账本钉住"
+								data-testid="history-comparison-pin-clear-paper"
+								className="underline"
+								onClick={() => pinLedgerRevision("paper", null)}
+							>
+								解除
+							</button>
+						</span>
+					)}
+					{pinnedManual !== null && (
+						<span className="flex items-center gap-1 rounded-full bg-(--color-surface-strip) px-2 py-0.5">
+							Manual 钉住 {pinnedManual.event_count}@{pinnedManual.ledger_hash}
+							<button
+								type="button"
+								aria-label="解除 Manual 账本钉住"
+								data-testid="history-comparison-pin-clear-manual"
+								className="underline"
+								onClick={() => pinLedgerRevision("manual", null)}
+							>
+								解除
+							</button>
+						</span>
+					)}
+				</div>
 			)}
 			{comparisonQuery.isError && (
 				<div
@@ -685,28 +766,41 @@ export function HistoryComparisonPanel() {
 						</>
 					)}
 					<section aria-label="来源下钻" className="grid gap-2 md:grid-cols-3">
-						{comparison.legs.map((leg) => (
-							<div
-								key={leg.kind}
-								data-testid={`history-comparison-leg-${leg.kind}`}
-								className="rounded-(--radius-sm) border border-(--color-border-subtle) px-3 py-2"
-							>
-								<p className={`text-[11px] font-semibold ${LEG_TEXT_CLASSES[leg.kind]}`}>{LEG_LABELS[leg.kind]}</p>
-								<p className="mt-1 break-all font-data text-[11px] text-(--color-foreground-tertiary)">
-									{leg.result_id}
-								</p>
-								<p className="mt-1 text-[11px] text-(--color-foreground-secondary)">
-									{leg.point_count} 点 · 缺口 {leg.gap_count} · 分段 {leg.segment_count}
-									{leg.ledger_revision !== null
-										? ` · 账本 ${leg.ledger_revision.event_count}@${leg.ledger_revision.ledger_hash}`
-										: ""}
-									{leg.target_count !== null ? ` · 目标 ${leg.target_count}` : ""}
-								</p>
-								<p className="text-[11px] text-(--color-foreground-tertiary)">
-									有效日 {leg.first_valued_date ?? "—"} ~ {leg.last_valued_date ?? "—"}
-								</p>
-							</div>
-						))}
+						{comparison.legs.map((leg) => {
+							const pinned = leg.kind === "paper" ? pinnedPaper : leg.kind === "manual" ? pinnedManual : null;
+							return (
+								<div
+									key={leg.kind}
+									data-testid={`history-comparison-leg-${leg.kind}`}
+									className="rounded-(--radius-sm) border border-(--color-border-subtle) px-3 py-2"
+								>
+									<p className={`text-[11px] font-semibold ${LEG_TEXT_CLASSES[leg.kind]}`}>{LEG_LABELS[leg.kind]}</p>
+									<p className="mt-1 break-all font-data text-[11px] text-(--color-foreground-tertiary)">
+										{leg.result_id}
+									</p>
+									<p className="mt-1 text-[11px] text-(--color-foreground-secondary)">
+										{leg.point_count} 点 · 缺口 {leg.gap_count} · 分段 {leg.segment_count}
+										{leg.ledger_revision !== null
+											? ` · 账本 ${leg.ledger_revision.event_count}@${leg.ledger_revision.ledger_hash}`
+											: ""}
+										{leg.target_count !== null ? ` · 目标 ${leg.target_count}` : ""}
+									</p>
+									<p className="text-[11px] text-(--color-foreground-tertiary)">
+										有效日 {leg.first_valued_date ?? "—"} ~ {leg.last_valued_date ?? "—"}
+									</p>
+									{leg.kind !== "model" && leg.ledger_revision !== null && identity !== null && (
+										<button
+											type="button"
+											data-testid={`history-comparison-pin-${leg.kind}`}
+											className="mt-1 text-[11px] underline"
+											onClick={() => pinLedgerRevision(leg.kind, pinned === null ? leg.ledger_revision : null)}
+										>
+											{pinned === null ? "按此修订重放" : "解除钉住（解析当前）"}
+										</button>
+									)}
+								</div>
+							);
+						})}
 					</section>
 				</div>
 			)}

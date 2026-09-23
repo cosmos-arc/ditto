@@ -50,7 +50,9 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    FlowPosition,
     create_account_event,
+    ledger_hash,
 )
 from ditto_portfolio.portfolio_comparison import (
     PortfolioHoldingInput,
@@ -580,6 +582,10 @@ def _comparison_params(
     snapshot_id: str,
     *,
     manual_account_id: str = "cmp-manual",
+    paper_ledger_event_count: int | None = None,
+    paper_ledger_hash: str | None = None,
+    manual_ledger_event_count: int | None = None,
+    manual_ledger_hash: str | None = None,
 ) -> HistoryComparisonQueryParams:
     return HistoryComparisonQueryParams(
         strategy_id="strategy-model",
@@ -592,6 +598,10 @@ def _comparison_params(
         knowledge_cutoff=datetime(2026, 9, 3, 12, tzinfo=UTC),
         publication_cutoff=datetime(2026, 9, 3, 12, tzinfo=UTC),
         source_snapshot_ids=(snapshot_id,),
+        paper_ledger_event_count=paper_ledger_event_count,
+        paper_ledger_hash=paper_ledger_hash,
+        manual_ledger_event_count=manual_ledger_event_count,
+        manual_ledger_hash=manual_ledger_hash,
     )
 
 
@@ -642,6 +652,86 @@ def test_history_comparison_route_composes_three_legs(tmp_path: Any) -> None:
     assert legs["model"].ledger_revision is None
 
 
+def test_history_comparison_route_pins_ledger_revisions(tmp_path: Any) -> None:
+    query, snapshot, journal, store = _comparison_fixture(tmp_path)
+    try:
+        with patch(
+            "ditto_apps.api.routes.portfolio_comparison.asyncio.to_thread",
+            side_effect=_inline,
+        ):
+            first = asyncio.run(
+                _original(get_history_comparison)(
+                    params=_comparison_params(snapshot.snapshot_id),
+                    query=query,
+                )
+            )
+        paper_revision = journal.list_events("cmp-paper")
+        manual_revision = journal.list_events("cmp-manual")
+        pinned_params = _comparison_params(
+            snapshot.snapshot_id,
+            paper_ledger_event_count=len(paper_revision),
+            paper_ledger_hash=ledger_hash(paper_revision),
+            manual_ledger_event_count=len(manual_revision),
+            manual_ledger_hash=ledger_hash(manual_revision),
+        )
+        # Future corrections land on both ledgers after the compared range.
+        for account, event_id in (
+            ("cmp-paper", "cmp-paper-deposit-late"),
+            ("cmp-manual", "cmp-manual-deposit-late"),
+        ):
+            definition = journal.get_account(account)
+            assert definition is not None
+            journal.append(
+                create_account_event(
+                    account=definition,
+                    draft=AccountEventDraft(
+                        event_type=AccountEventType.DEPOSIT,
+                        event_id=event_id,
+                        trade_date="2026-09-10",
+                        settlement_date="2026-09-10",
+                        recorded_at=NOW,
+                        idempotency_key=f"idem-{event_id}",
+                        actor="user:fixture",
+                        source=(
+                            AccountEventSource.PAPER_ENGINE
+                            if account == "cmp-paper"
+                            else AccountEventSource.MANUAL_ENTRY
+                        ),
+                        gross_amount=Decimal("500"),
+                        flow_position=FlowPosition.START_OF_DAY,
+                    ),
+                )
+            )
+        with patch(
+            "ditto_apps.api.routes.portfolio_comparison.asyncio.to_thread",
+            side_effect=_inline,
+        ):
+            pinned = asyncio.run(
+                _original(get_history_comparison)(
+                    params=pinned_params,
+                    query=query,
+                )
+            )
+            unpinned = asyncio.run(
+                _original(get_history_comparison)(
+                    params=_comparison_params(snapshot.snapshot_id),
+                    query=query,
+                )
+            )
+    finally:
+        store.close()
+        journal.close()
+
+    assert pinned.data.result_id == first.data.result_id
+    assert pinned.data.runs == first.data.runs
+    assert unpinned.data.result_id != first.data.result_id
+    pinned_legs = {leg.kind: leg for leg in pinned.data.legs}
+    assert pinned_legs["paper"].ledger_revision is not None
+    assert pinned_legs["paper"].ledger_revision.event_count == len(paper_revision)
+    assert pinned_legs["manual"].ledger_revision is not None
+    assert pinned_legs["manual"].ledger_revision.event_count == len(manual_revision)
+
+
 def test_history_comparison_route_maps_account_errors_to_422(
     tmp_path: Any,
 ) -> None:
@@ -667,6 +757,31 @@ def test_history_comparison_route_maps_account_errors_to_422(
     assert raised.value.error_code == "HISTORY_COMPARISON_ACCOUNT_NOT_FOUND"
 
 
+def test_history_comparison_route_rejects_half_pinned_revisions(
+    tmp_path: Any,
+) -> None:
+    query, snapshot, journal, store = _comparison_fixture(tmp_path)
+    try:
+        with patch(
+            "ditto_apps.api.routes.portfolio_comparison.asyncio.to_thread",
+            side_effect=_inline,
+        ):
+            with pytest.raises(UnprocessableEntityError) as raised:
+                asyncio.run(
+                    _original(get_history_comparison)(
+                        params=_comparison_params(
+                            snapshot.snapshot_id,
+                            paper_ledger_event_count=3,
+                        ),
+                        query=query,
+                    )
+                )
+    finally:
+        store.close()
+        journal.close()
+    assert raised.value.error_code == "HISTORY_COMPARISON_REQUEST_INVALID"
+
+
 def test_history_comparison_query_params_coerce_plain_query_strings() -> None:
     params = HistoryComparisonQueryParams.model_validate(
         {
@@ -681,12 +796,39 @@ def test_history_comparison_query_params_coerce_plain_query_strings() -> None:
             "publication_cutoff": "2026-09-01T12:00:00+08:00",
             "source_snapshot_ids": ["snapshot:stock_daily:1"],
             "model_artifact_ids": ["model-route-a"],
+            "paper_ledger_event_count": "3",
+            "paper_ledger_hash": "account-ledger:sha256:paper",
+            "manual_ledger_event_count": "2",
+            "manual_ledger_hash": "account-ledger:sha256:manual",
         }
     )
     assert params.start_date == date(2026, 8, 31)
     assert params.model_initial_capital == Decimal("100.00")
     assert params.source_snapshot_ids == ("snapshot:stock_daily:1",)
     assert params.model_artifact_ids == ("model-route-a",)
+    assert params.paper_ledger_event_count == 3
+    assert params.paper_ledger_hash == "account-ledger:sha256:paper"
+    assert params.manual_ledger_event_count == 2
+    assert params.manual_ledger_hash == "account-ledger:sha256:manual"
+
+    omitted = HistoryComparisonQueryParams.model_validate(
+        {
+            "strategy_id": "strategy-model",
+            "paper_account_id": "cmp-paper",
+            "paper_session_id": "cmp-paper-session",
+            "manual_account_id": "cmp-manual",
+            "start_date": "2026-08-31",
+            "end_date": "2026-09-02",
+            "model_initial_capital": "100.00",
+            "knowledge_cutoff": "2026-09-01T12:00:00+08:00",
+            "publication_cutoff": "2026-09-01T12:00:00+08:00",
+            "source_snapshot_ids": ["snapshot:stock_daily:1"],
+        }
+    )
+    assert omitted.paper_ledger_event_count is None
+    assert omitted.paper_ledger_hash is None
+    assert omitted.manual_ledger_event_count is None
+    assert omitted.manual_ledger_hash is None
 
 
 def test_history_comparison_openapi_declares_the_contract() -> None:
@@ -706,5 +848,9 @@ def test_history_comparison_openapi_declares_the_contract() -> None:
         "model_initial_capital",
         "source_snapshot_ids",
         "model_artifact_ids",
+        "paper_ledger_event_count",
+        "paper_ledger_hash",
+        "manual_ledger_event_count",
+        "manual_ledger_hash",
     ):
         assert name in parameter_names
