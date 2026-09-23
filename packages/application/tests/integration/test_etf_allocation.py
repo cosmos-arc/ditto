@@ -170,6 +170,21 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
             ).paper_status
             == "review_pending"
         )
+        existing_receipt = artifacts.get_artifact(
+            f"{version.version_id}:review:approve"
+        )
+        assert existing_receipt is not None
+        assert not artifacts.transition_with_receipt(
+            revision.version_id, "approved", "review", existing_receipt
+        )
+        assert (
+            next(
+                item.paper_status
+                for item in command.list_versions("demo")
+                if item.version_id == revision.version_id
+            )
+            == "review_pending"
+        )
         rejected = command.review(
             replace(
                 approve,
@@ -187,5 +202,6 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
                     idempotency_key="approve-two",
                 )
             )
+        assert artifacts.get_artifact(f"{revision.version_id}:review:approve") is None
     finally:
         pool.close_all()

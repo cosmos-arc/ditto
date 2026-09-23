@@ -291,6 +291,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 					<p>
 						已保存 {saved.versionId} · {saved.paperStatus} · 规则 {saved.ruleVersion}
 					</p>
+					<p>研究审查结果不授权 Paper 执行。</p>
 					<p>
 						现金 {saved.cashWeight}；同指数暴露{" "}
 						{Object.entries(saved.trackingExposure)
@@ -336,7 +337,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 										disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}
 										onClick={() => review.mutate("approve")}
 									>
-										批准此版本
+										研究审查通过
 									</button>
 									<button
 										type="button"

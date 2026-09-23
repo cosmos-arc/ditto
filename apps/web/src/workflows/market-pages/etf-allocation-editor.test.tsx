@@ -102,9 +102,9 @@ it("retries one save with the same identity and restores the saved version", asy
 	await user.type(screen.getByLabelText("审查人"), "operator");
 	await user.type(screen.getByLabelText("审查理由"), "checked");
 	await user.click(screen.getByRole("button", { name: "提交审查" }));
-	await screen.findByRole("button", { name: "批准此版本" });
+	await screen.findByRole("button", { name: "研究审查通过" });
 	expect(reviewAttempts[0]).toEqual(reviewAttempts[1]);
-	await user.click(screen.getByRole("button", { name: "批准此版本" }));
+	await user.click(screen.getByRole("button", { name: "研究审查通过" }));
 	await screen.findByText(/· review_approved ·/);
 	expect(reviewAttempts[2]?.action).toBe("approve");
 });

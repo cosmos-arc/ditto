@@ -65,7 +65,9 @@ export async function saveETFAllocationVersion(
 		params: { path: { allocation_id: allocationId }, header: { "Idempotency-Key": key } },
 		body,
 	});
-	return toVersion(result);
+	const version = toVersion(result);
+	if (version.allocationId !== allocationId) throw new Error("ETF 配置响应身份不匹配");
+	return version;
 }
 
 export async function reviewETFAllocationVersion(
@@ -81,5 +83,9 @@ export async function reviewETFAllocationVersion(
 			body,
 		},
 	);
-	return toVersion(result);
+	const version = toVersion(result);
+	if (version.allocationId !== allocationId || version.versionId !== versionId) {
+		throw new Error("ETF 审批响应版本不匹配");
+	}
+	return version;
 }

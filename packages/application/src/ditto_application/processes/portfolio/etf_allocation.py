@@ -188,12 +188,8 @@ class ETFAllocationCommand:
             is None
         ):
             raise AppConflictError("ETF allocation review submission is missing")
-        try:
-            self._artifacts.save_artifact(receipt)
-        except ValueError as exc:
-            raise AppConflictError("ETF allocation review decision conflict") from exc
-        if not self._artifacts.transition_artifact(
-            request.version_id, target, expected_current=(current,)
+        if not self._artifacts.transition_with_receipt(
+            request.version_id, target, current, receipt
         ):
             raise AppConflictError("ETF allocation review state conflict")
         updated = self._artifacts.get_artifact(request.version_id)
