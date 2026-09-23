@@ -7,6 +7,8 @@ from typing import Any
 import polars as pl
 from ditto_data.services.metadata_service import MetadataService
 
+from ditto_application.queries.etf_candidates import ETFCandidate, ETFCandidateQuery
+
 __all__ = ["MetadataQueryFacade"]
 
 
@@ -20,6 +22,30 @@ class MetadataQueryFacade:
 
     def __init__(self, metadata_service: MetadataService) -> None:
         self._service = metadata_service
+
+    def list_etf_reference_snapshots(self, *, cutoff: str) -> list[str]:
+        """List ETF reference source snapshots visible at the cutoff."""
+        return ETFCandidateQuery(self._service).snapshots(cutoff=cutoff)
+
+    def list_etf_candidates(
+        self,
+        *,
+        asof: str,
+        cutoff: str,
+        source_snapshot_id: str,
+        exposure: str | None = None,
+        search: str | None = None,
+        sort_field: str = "ticker",
+    ) -> list[ETFCandidate]:
+        """Compare ETF candidates at one exact reference snapshot."""
+        return ETFCandidateQuery(self._service).list_candidates(
+            asof=asof,
+            cutoff=cutoff,
+            source_snapshot_id=source_snapshot_id,
+            exposure=exposure,
+            search=search,
+            sort_field=sort_field,
+        )
 
     def get_instrument(self, instrument_id: int) -> dict[str, Any] | None:
         """

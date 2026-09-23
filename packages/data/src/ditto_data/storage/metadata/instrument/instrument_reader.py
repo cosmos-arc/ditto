@@ -375,6 +375,40 @@ class InstrumentReader:
             infer_schema_length=None,
         )
 
+    def list_etf_reference_snapshots(self, *, cutoff: str) -> list[str]:
+        """List snapshots with evidence published by the explicit cutoff."""
+        rows = self._client.fetchall(
+            """SELECT DISTINCT source_snapshot_id FROM etf_reference_observation
+            WHERE published_at <= ? ORDER BY source_snapshot_id""",
+            [cutoff],
+        )
+        return [str(row["source_snapshot_id"]) for row in rows]
+
+    def find_etf_reference(
+        self, *, asof: str, cutoff: str, source_snapshot_id: str
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Read exact-snapshot ETF identity and published, effective observations."""
+        instruments = self._client.fetchall(
+            """SELECT s.instrument_id, s.ticker, s.name, s.exchange, s.is_active
+            FROM instrument s
+            WHERE s.asset_class = 'etf' AND s.list_date <= ?
+              AND (s.delist_date IS NULL OR s.delist_date > ?)
+            ORDER BY s.instrument_id""",
+            [asof, asof],
+        )
+        observations = self._client.fetchall(
+            """SELECT instrument_id, field, value, unit, observed_on, published_at,
+                      effective_from, effective_to, source, source_snapshot_id
+            FROM etf_reference_observation
+            WHERE source_snapshot_id = ? AND observed_on <= ?
+              AND published_at <= ? AND effective_from <= ?
+              AND (field = 'daily_amount' OR effective_to IS NULL
+                   OR effective_to > ?)
+            ORDER BY instrument_id, field, observed_on DESC, published_at DESC""",
+            [source_snapshot_id, asof, cutoff, asof, asof],
+        )
+        return instruments, observations
+
     def list_instrument_ids(
         self,
         asset_class: str | None = None,

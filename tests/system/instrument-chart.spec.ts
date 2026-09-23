@@ -90,6 +90,25 @@ test.describe
 			expect(browserErrors.filter((line) => !line.includes("status of 400"))).toEqual([]);
 		});
 
+		test("selects ETF exposure and inspects dated comparison evidence through the production API", async ({ page }) => {
+			await page.goto(`${webOrigin}/markets`);
+			const comparison = page.locator('[data-info-unit="etf-candidates"]');
+			await expect(comparison).toBeVisible();
+			await comparison.getByLabel("来源快照").selectOption("snapshot:recorded:etf-system");
+			await comparison.getByLabel("指数暴露").fill("000300.SH");
+			await expect(comparison.locator("details")).toHaveCount(2);
+			const domestic = comparison.locator("details").filter({ hasText: "510300" });
+			await domestic.locator("summary").click();
+			await expect(domestic.getByText("规模", { exact: true }).locator("..")).toContainText("500000000 CNY");
+			await expect(domestic.getByText("托管费", { exact: true }).locator("..")).toContainText("no_qualified_observation");
+			await comparison.getByLabel("指数暴露").fill("NDX");
+			await expect(comparison.locator("details")).toHaveCount(1);
+			const crossBorder = comparison.locator("details").filter({ hasText: "513100" });
+			await crossBorder.locator("summary").click();
+			await expect(crossBorder.getByText("最近已披露 NAV", { exact: true }).locator("..")).toContainText("2026-05-18");
+			await expect(crossBorder.getByText("原始收盘价", { exact: true }).locator("..")).toContainText("2026-05-20");
+		});
+
 		test("stocks stay fail-closed until the explicit experimental opt-in, then adjust locally", async ({
 			page,
 		}) => {

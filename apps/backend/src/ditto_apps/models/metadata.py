@@ -70,6 +70,33 @@ class Instrument(BaseModel):
     )
 
 
+class ETFFieldResponse(BaseModel):
+    """One ETF comparison field and its source and availability."""
+
+    value: str | float | None
+    unit: str | None
+    observed_on: str | None
+    published_at: str | None
+    source: str | None
+    source_snapshot_id: str | None
+    eligibility: str | None
+    missing_reason: str | None
+    sample_count: int | None = None
+    effective_from: str | None = None
+    effective_to: str | None = None
+
+
+class ETFCandidateResponse(BaseModel):
+    """One ETF entity with exact-snapshot comparison evidence."""
+
+    instrument_id: int
+    ticker: str
+    name: str
+    exchange: str
+    is_active: bool
+    fields: dict[str, ETFFieldResponse]
+
+
 def to_instrument(row: dict[str, Any]) -> Instrument:
     """
     将数据库行转换为 Instrument 模型.

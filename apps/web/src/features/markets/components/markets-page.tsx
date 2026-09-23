@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain/context-section";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
@@ -241,9 +241,11 @@ function EvidenceRail({
 export function MarketsPage({
 	catalogQuery,
 	contextQuery,
+	etfCandidates,
 }: {
 	readonly catalogQuery: MarketCatalogQuery;
 	readonly contextQuery: MarketContextQuery;
+	readonly etfCandidates?: ReactNode;
 }) {
 	const [activeOverlay, setActiveOverlay] = useState<MarketsOverviewOverlayId | null>(null);
 	const items = catalogQuery.data?.items ?? [];
@@ -362,6 +364,7 @@ export function MarketsPage({
 								</div>
 							</ContextSection>
 						)}
+						{etfCandidates}
 					</div>
 				}
 				rightRail={<EvidenceRail context={context} exchangeCounts={exchangeCounts} />}

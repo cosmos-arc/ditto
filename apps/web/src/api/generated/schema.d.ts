@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: a8af2556ed510fa3be5efa306bd67b48b742f7d1fbd97045f4fa0dad0267423e
+ * Schema SHA-256: f65e074b5ea9396af9e5328333b67389a18161d35471daa521b4b0ea05dfedeb
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2509,6 +2509,50 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["market_get_regime"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metadata/etf-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Etf Candidates
+         * @description Compare ETFs by exposure using one explicit published reference snapshot.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["metadata_list_etf_candidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metadata/etf-reference-snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Etf Reference Snapshots
+         * @description List source snapshots published by the selected knowledge cutoff.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["metadata_list_etf_reference_snapshots"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5076,6 +5120,16 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[list[ETFCandidateResponse]] */
+        APIResponse_list_ETFCandidateResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ETFCandidateResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[list[ExperimentArtifactResponse]] */
         APIResponse_list_ExperimentArtifactResponse__: {
             /**
@@ -5333,6 +5387,16 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["Valuation"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[list[str]] */
+        APIResponse_list_str__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: string[];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -10418,6 +10482,54 @@ export interface components {
              * @description 标的 ID
              */
             instrument_id: number;
+        };
+        /**
+         * ETFCandidateResponse
+         * @description One ETF entity with exact-snapshot comparison evidence.
+         */
+        ETFCandidateResponse: {
+            /** Exchange */
+            exchange: string;
+            /** Fields */
+            fields: {
+                [key: string]: components["schemas"]["ETFFieldResponse"];
+            };
+            /** Instrument Id */
+            instrument_id: number;
+            /** Is Active */
+            is_active: boolean;
+            /** Name */
+            name: string;
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * ETFFieldResponse
+         * @description One ETF comparison field and its source and availability.
+         */
+        ETFFieldResponse: {
+            /** Effective From */
+            effective_from?: string | null;
+            /** Effective To */
+            effective_to?: string | null;
+            /** Eligibility */
+            eligibility: string | null;
+            /** Missing Reason */
+            missing_reason: string | null;
+            /** Observed On */
+            observed_on: string | null;
+            /** Published At */
+            published_at: string | null;
+            /** Sample Count */
+            sample_count?: number | null;
+            /** Source */
+            source: string | null;
+            /** Source Snapshot Id */
+            source_snapshot_id: string | null;
+            /** Unit */
+            unit: string | null;
+            /** Value */
+            value: string | number | null;
         };
         /**
          * ErrorResponse
@@ -27186,6 +27298,187 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_RegimeDiagnosticsResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    metadata_list_etf_candidates: {
+        parameters: {
+            query: {
+                asof: string;
+                cutoff: string;
+                source_snapshot_id: string;
+                exposure?: string | null;
+                search?: string | null;
+                sort_field?: string;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ETFCandidateResponse__"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    metadata_list_etf_reference_snapshots: {
+        parameters: {
+            query: {
+                cutoff: string;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_str__"];
                 };
             };
             /** @description Bad request */

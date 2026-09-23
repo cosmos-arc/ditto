@@ -40,6 +40,8 @@ const INSTRUMENTS = [
 ] as const;
 
 export const instrumentsHandlers: RequestHandler[] = [
+	http.get("/api/v1/metadata/etf-reference-snapshots", () => HttpResponse.json({ data: [] })),
+	http.get("/api/v1/metadata/etf-candidates", () => HttpResponse.json({ data: [] })),
 	http.get("/api/v1/metadata/instruments", ({ request }) => {
 		const query = new URL(request.url).searchParams;
 		const assetClass = query.get("asset_class");
