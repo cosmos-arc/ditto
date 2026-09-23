@@ -23,6 +23,7 @@ class ArtifactKind(StrEnum):
     DECISION_FRAME = "decision_frame"
     SIGNAL_SNAPSHOT = "signal_snapshot"
     TARGET_PORTFOLIO = "target_portfolio"
+    ETF_ALLOCATION_REVIEW = "etf_allocation_review"
     REBALANCE_PLAN = "rebalance_plan"
     SIGNAL_PACKAGE = "signal_package"
     # 执行层输出

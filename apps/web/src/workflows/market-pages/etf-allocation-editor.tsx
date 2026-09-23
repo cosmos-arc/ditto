@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ETFCandidate } from "@/features/instruments";
-import { listETFAllocationVersions, saveETFAllocationVersion } from "@/features/portfolio";
+import { listETFAllocationVersions, reviewETFAllocationVersion, saveETFAllocationVersion } from "@/features/portfolio";
 
 type Props = {
 	readonly items: readonly ETFCandidate[];
@@ -13,6 +13,8 @@ type Props = {
 
 type SaveBody = Parameters<typeof saveETFAllocationVersion>[2];
 type PendingSave = { id: string; key: string; fingerprint: string; body: SaveBody };
+type ReviewAction = "submit" | "approve" | "reject";
+type PendingReview = { fingerprint: string; key: string };
 
 function savedIdentity(): { allocationId: string; versionId: string } {
 	const query = new URLSearchParams(window.location.search);
@@ -34,6 +36,15 @@ function pendingSave(): PendingSave | null {
 		: null;
 }
 
+function pendingReview(): PendingReview | null {
+	const state: unknown = window.history.state;
+	const pending =
+		state && typeof state === "object" ? (state as Record<string, unknown>)["etfAllocationReviewPending"] : null;
+	if (!pending || typeof pending !== "object") return null;
+	const value = pending as Partial<PendingReview>;
+	return typeof value.fingerprint === "string" && typeof value.key === "string" ? (value as PendingReview) : null;
+}
+
 export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot }: Props) {
 	const initial = savedIdentity();
 	const pending = useRef(pendingSave()).current;
@@ -49,6 +60,9 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 		),
 	);
 	const [reason, setReason] = useState(pending?.body.reason ?? "");
+	const [reviewActor, setReviewActor] = useState("");
+	const [reviewReason, setReviewReason] = useState("");
+	const reviewRetry = useRef<PendingReview | null>(pendingReview());
 	const retry = useRef<{ body: string; key: string } | null>(
 		pending ? { body: pending.fingerprint, key: pending.key } : null,
 	);
@@ -120,6 +134,30 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			void queryClient.invalidateQueries({ queryKey: ["etf-allocation-versions", result.allocationId] });
 		},
 	});
+	const review = useMutation({
+		mutationFn: (action: ReviewAction) => {
+			if (!saved) throw new Error("请先选择已保存版本");
+			const body = { action, actor: reviewActor.trim(), reason: reviewReason.trim() };
+			const fingerprint = JSON.stringify([saved.allocationId, saved.versionId, body]);
+			if (reviewRetry.current?.fingerprint !== fingerprint) {
+				reviewRetry.current = { fingerprint, key: crypto.randomUUID() };
+			}
+			const state = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+			window.history.replaceState({ ...state, etfAllocationReviewPending: reviewRetry.current }, "");
+			return reviewETFAllocationVersion(saved.allocationId, saved.versionId, reviewRetry.current.key, body);
+		},
+		onSuccess: (result) => {
+			queryClient.setQueryData<Awaited<ReturnType<typeof listETFAllocationVersions>>>(
+				["etf-allocation-versions", result.allocationId],
+				(current) => current?.map((item) => (item.versionId === result.versionId ? result : item)),
+			);
+			const state: Record<string, unknown> =
+				window.history.state && typeof window.history.state === "object" ? { ...window.history.state } : {};
+			delete state["etfAllocationReviewPending"];
+			window.history.replaceState(state, "");
+			reviewRetry.current = null;
+		},
+	});
 	const unchanged =
 		saved &&
 		saved.asof === asof &&
@@ -138,7 +176,9 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 	return (
 		<section aria-label="ETF 配置" className="space-y-3 rounded border border-(--color-border-subtle) p-3">
 			<h3 className="font-medium">保存研究配置</h3>
-			<p>保存仅生成研究候选；Paper 需要合格数据、策略晋级和独立审批，Manual 账本不会随保存改变。</p>
+			<p>
+				保存仅生成研究候选；审查批准只确认精确版本，Paper 还需单独校验交易资格。保存或批准不会改变 Paper、Manual 账本。
+			</p>
 			<label>
 				配置名称{" "}
 				<input
@@ -263,6 +303,53 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 							.map(([key, weight]) => `${key}: ${weight}`)
 							.join("，")}
 					</p>
+					{["research_only", "review_pending"].includes(saved.paperStatus) && (
+						<div className="space-y-2">
+							<label className="block">
+								审查人{" "}
+								<input
+									aria-label="审查人"
+									value={reviewActor}
+									onChange={(event) => setReviewActor(event.target.value)}
+								/>
+							</label>
+							<label className="block">
+								审查理由{" "}
+								<input
+									aria-label="审查理由"
+									value={reviewReason}
+									onChange={(event) => setReviewReason(event.target.value)}
+								/>
+							</label>
+							{saved.paperStatus === "research_only" ? (
+								<button
+									type="button"
+									disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}
+									onClick={() => review.mutate("submit")}
+								>
+									提交审查
+								</button>
+							) : (
+								<>
+									<button
+										type="button"
+										disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}
+										onClick={() => review.mutate("approve")}
+									>
+										批准此版本
+									</button>
+									<button
+										type="button"
+										disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}
+										onClick={() => review.mutate("reject")}
+									>
+										拒绝此版本
+									</button>
+								</>
+							)}
+						</div>
+					)}
+					{review.isError && <p role="alert">审查失败：{String(review.error)}</p>}
 				</div>
 			)}
 		</section>

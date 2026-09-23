@@ -29,6 +29,7 @@ afterEach(() => window.history.replaceState(null, "", "/"));
 it("retries one save with the same identity and restores the saved version", async () => {
 	const user = userEvent.setup();
 	const attempts: Array<{ id: string; key: string }> = [];
+	const reviewAttempts: Array<{ action: string; key: string }> = [];
 	let stored: Record<string, unknown> | null = null;
 	server.use(
 		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
@@ -57,6 +58,13 @@ it("retries one save with the same identity and restores the saved version", asy
 			};
 			return HttpResponse.json({ data: stored }, { status: 201 });
 		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/review", async ({ request }) => {
+			const body = (await request.json()) as { action: string };
+			reviewAttempts.push({ action: body.action, key: request.headers.get("Idempotency-Key") ?? "" });
+			if (reviewAttempts.length === 1) return HttpResponse.json({ error: { code: "TEMPORARY" } }, { status: 503 });
+			stored = { ...stored, paper_status: body.action === "submit" ? "review_pending" : "review_approved" };
+			return HttpResponse.json({ data: stored });
+		}),
 	);
 	const editor = (
 		<ETFAllocationEditor
@@ -75,7 +83,7 @@ it("retries one save with the same identity and restores the saved version", asy
 	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
 	await screen.findByRole("alert");
 	view.unmount();
-	render(editor, { wrapper: wrapper() });
+	const restored = render(editor, { wrapper: wrapper() });
 	expect(screen.getByRole("checkbox", { name: /沪深300 ETF/ })).toBeChecked();
 	expect(screen.getByLabelText("配置理由")).toHaveValue("broad exposure");
 	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
@@ -83,5 +91,20 @@ it("retries one save with the same identity and restores the saved version", asy
 	expect(attempts).toHaveLength(2);
 	expect(attempts[0]).toEqual(attempts[1]);
 	expect(new URLSearchParams(window.location.search).get("etfVersion")).toBe("version-one");
-	expect(screen.getByText(/Paper 需要合格数据/)).toBeInTheDocument();
+	expect(screen.getByText(/审查批准只确认精确版本/)).toBeInTheDocument();
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByText(/审查失败/);
+	restored.unmount();
+	render(editor, { wrapper: wrapper() });
+	await screen.findByRole("button", { name: "提交审查" });
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByRole("button", { name: "批准此版本" });
+	expect(reviewAttempts[0]).toEqual(reviewAttempts[1]);
+	await user.click(screen.getByRole("button", { name: "批准此版本" }));
+	await screen.findByText(/· review_approved ·/);
+	expect(reviewAttempts[2]?.action).toBe("approve");
 });

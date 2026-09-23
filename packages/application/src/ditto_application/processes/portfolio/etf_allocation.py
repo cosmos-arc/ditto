@@ -48,6 +48,18 @@ class ETFAllocationRequest:
 
 
 @dataclass(frozen=True)
+class ETFAllocationReviewRequest:
+    """Explicit human decision for one immutable target version."""
+
+    allocation_id: str
+    version_id: str
+    action: Literal["submit", "approve", "reject"]
+    actor: str
+    reason: str
+    idempotency_key: str
+
+
+@dataclass(frozen=True)
 class ETFAllocationVersion:
     """Saved research target that has no Paper execution authority."""
 
@@ -148,6 +160,95 @@ class ETFAllocationCommand:
             return _version(self._artifacts.save_artifact(record))
         except ValueError as exc:
             raise AppConflictError("allocation version conflict") from exc
+
+    def review(self, request: ETFAllocationReviewRequest) -> ETFAllocationVersion:
+        """Record and apply a separate, exact-version review decision."""
+        strategy_id = _strategy_id(request.allocation_id)
+        transitions = {
+            "submit": ("draft", "review"),
+            "approve": ("review", "approved"),
+            "reject": ("review", "rejected"),
+        }
+        version = _validate_review_target(
+            request, self._artifacts.get_artifact(request.version_id), strategy_id
+        )
+        current, target = transitions[request.action]
+        receipt_id = f"{request.version_id}:review:{request.action}"
+        receipt = _review_receipt(request, version, strategy_id, receipt_id)
+        prior = self._artifacts.get_artifact(receipt_id)
+        if prior is not None and prior.metadata != receipt.metadata:
+            raise AppConflictError("ETF allocation review decision conflict")
+        if version.status == target and prior is not None:
+            return _version(version)
+        if version.status != current:
+            raise AppConflictError("ETF allocation review state conflict")
+        if (
+            request.action == "approve"
+            and self._artifacts.get_artifact(f"{request.version_id}:review:submit")
+            is None
+        ):
+            raise AppConflictError("ETF allocation review submission is missing")
+        try:
+            self._artifacts.save_artifact(receipt)
+        except ValueError as exc:
+            raise AppConflictError("ETF allocation review decision conflict") from exc
+        if not self._artifacts.transition_artifact(
+            request.version_id, target, expected_current=(current,)
+        ):
+            raise AppConflictError("ETF allocation review state conflict")
+        updated = self._artifacts.get_artifact(request.version_id)
+        if updated is None:
+            raise AppConflictError("ETF allocation review result disappeared")
+        return _version(updated)
+
+
+def _review_receipt(
+    request: ETFAllocationReviewRequest,
+    version: StrategyArtifactRecord,
+    strategy_id: str,
+    receipt_id: str,
+) -> StrategyArtifactRecord:
+    return StrategyArtifactRecord(
+        artifact_id=receipt_id,
+        strategy_id=strategy_id,
+        run_id=request.version_id,
+        artifact_type=ArtifactKind.ETF_ALLOCATION_REVIEW,
+        file_path="",
+        metadata={
+            "version_id": request.version_id,
+            "target_request_hash": version.metadata["request_hash"],
+            "action": request.action,
+            "actor": request.actor.strip(),
+            "reason": request.reason.strip(),
+            "idempotency_key": request.idempotency_key,
+        },
+        status="active",
+        created_at=datetime.now(UTC).isoformat(),
+    )
+
+
+def _validate_review_target(
+    request: ETFAllocationReviewRequest,
+    version: StrategyArtifactRecord | None,
+    strategy_id: str,
+) -> StrategyArtifactRecord:
+    if (
+        not request.actor.strip()
+        or not request.reason.strip()
+        or not request.idempotency_key
+        or len(request.idempotency_key) > _MAX_KEY_LENGTH
+    ):
+        raise AppCommandError("review actor, reason and idempotency_key are required")
+    if request.action not in {"submit", "approve", "reject"}:
+        raise AppCommandError("unsupported ETF allocation review action")
+    if (
+        version is None
+        or version.strategy_id != strategy_id
+        or version.artifact_type is not ArtifactKind.TARGET_PORTFOLIO
+        or version.metadata.get("kind") != "etf_allocation"
+    ):
+        raise AppConflictError("ETF allocation version was not found")
+    return version
 
 
 def _check_request(request: ETFAllocationRequest) -> None:
@@ -310,6 +411,11 @@ def _version(record: StrategyArtifactRecord) -> ETFAllocationVersion:
         tracking_exposure={str(i): str(w) for i, w in exposure_values.items()},
         reason=str(payload["reason"]),
         rule_version=str(payload["rule_version"]),
-        paper_status=str(payload["paper_status"]),
+        paper_status={
+            "draft": "research_only",
+            "review": "review_pending",
+            "approved": "review_approved",
+            "rejected": "rejected",
+        }.get(record.status, "research_only"),
         created_at=record.created_at,
     )

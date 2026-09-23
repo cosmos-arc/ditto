@@ -12,6 +12,7 @@ from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationCommand,
     ETFAllocationRequest,
+    ETFAllocationReviewRequest,
 )
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
 from ditto_application.queries.metadata import MetadataQueryFacade
@@ -115,5 +116,76 @@ def test_save_revise_restore_and_reject_invalid_weights(tmp_path: Path) -> None:
                 )
             )
         assert len(service.list_versions("demo")) == 2
+    finally:
+        pool.close_all()
+
+
+def test_exact_version_review_is_explicit_durable_and_idempotent(
+    tmp_path: Path,
+) -> None:
+    pool = SQLitePool(str(tmp_path / "review.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    artifacts = StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    command = ETFAllocationCommand(metadata, artifacts)
+    try:
+        version = command.save(_request())
+        approve = ETFAllocationReviewRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            action="approve",
+            actor="operator",
+            reason="checked target",
+            idempotency_key="approve-one",
+        )
+        with pytest.raises(AppConflictError):
+            command.review(approve)
+        submit = replace(approve, action="submit", idempotency_key="submit-one")
+        assert command.review(submit).paper_status == "review_pending"
+        assert command.review(submit).paper_status == "review_pending"
+        assert command.review(approve).paper_status == "review_approved"
+        assert command.review(approve).paper_status == "review_approved"
+        assert command.list_versions("demo")[0].paper_status == "review_approved"
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, reason="different"))
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, version_id="other"))
+        revision = command.save(
+            replace(
+                _request(),
+                idempotency_key="revision",
+                parent_version_id=version.version_id,
+            )
+        )
+        assert revision.paper_status == "research_only"
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, version_id=revision.version_id))
+        assert (
+            command.review(
+                replace(
+                    submit, version_id=revision.version_id, idempotency_key="submit-two"
+                )
+            ).paper_status
+            == "review_pending"
+        )
+        rejected = command.review(
+            replace(
+                approve,
+                version_id=revision.version_id,
+                action="reject",
+                idempotency_key="reject-two",
+            )
+        )
+        assert rejected.paper_status == "rejected"
+        with pytest.raises(AppConflictError):
+            command.review(
+                replace(
+                    approve,
+                    version_id=revision.version_id,
+                    idempotency_key="approve-two",
+                )
+            )
     finally:
         pool.close_all()

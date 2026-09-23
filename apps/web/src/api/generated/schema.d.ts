@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: e1a4b1063928b33a2a8412201862d7db354c2aa429c0ef35bbbc0f75e54a00e9
+ * Schema SHA-256: ce968c742d53b80450366d1c2770c604d4b6cc4aafa1519c5dae886f0e6cf5fd
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2895,6 +2895,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["portfolio_save_etf_allocation_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Etf Allocation Version
+         * @description Submit, approve or reject one immutable ETF target version.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["portfolio_review_etf_allocation_version"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10564,6 +10586,21 @@ export interface components {
             reason: string;
             /** Source Snapshot Id */
             source_snapshot_id: string;
+        };
+        /**
+         * ETFAllocationReviewBody
+         * @description Human decision bound to a saved ETF target and retry key.
+         */
+        ETFAllocationReviewBody: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "submit" | "approve" | "reject";
+            /** Actor */
+            actor: string;
+            /** Reason */
+            reason: string;
         };
         /**
          * ETFAllocationVersionResponse
@@ -29059,6 +29096,100 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ETFAllocationVersionResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portfolio_review_etf_allocation_version: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                allocation_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ETFAllocationReviewBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

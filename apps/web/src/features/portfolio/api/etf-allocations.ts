@@ -23,7 +23,11 @@ export type ETFAllocationVersion = {
 };
 
 function toVersion(value: VersionDTO): ETFAllocationVersion {
-	if (!value.version_id || !value.allocation_id || value.paper_status !== "research_only") {
+	if (
+		!value.version_id ||
+		!value.allocation_id ||
+		!["research_only", "review_pending", "review_approved", "rejected"].includes(value.paper_status)
+	) {
 		throw new Error("ETF 配置版本身份或审批状态无效");
 	}
 	return {
@@ -61,5 +65,21 @@ export async function saveETFAllocationVersion(
 		params: { path: { allocation_id: allocationId }, header: { "Idempotency-Key": key } },
 		body,
 	});
+	return toVersion(result);
+}
+
+export async function reviewETFAllocationVersion(
+	allocationId: string,
+	versionId: string,
+	key: string,
+	body: components["schemas"]["ETFAllocationReviewBody"],
+): Promise<ETFAllocationVersion> {
+	const result = await apiClient.post(
+		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review",
+		{
+			params: { path: { allocation_id: allocationId, version_id: versionId }, header: { "Idempotency-Key": key } },
+			body,
+		},
+	);
 	return toVersion(result);
 }

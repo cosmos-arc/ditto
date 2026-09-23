@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: e1a4b1063928b33a2a8412201862d7db354c2aa429c0ef35bbbc0f75e54a00e9
+ * Schema SHA-256: ce968c742d53b80450366d1c2770c604d4b6cc4aafa1519c5dae886f0e6cf5fd
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1708,6 +1708,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "post /api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "post /api/v1/portfolio/scenario-previews": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -2988,6 +2998,12 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["Idempotency-Key", "X-Ditto-API-Contract-Version"],
       "path": ["allocation_id"],
+    },
+  },
+  "post /api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review": {
+    parameters: {
+      "header": ["Idempotency-Key", "X-Ditto-API-Contract-Version"],
+      "path": ["allocation_id", "version_id"],
     },
   },
   "post /api/v1/portfolio/scenario-previews": {

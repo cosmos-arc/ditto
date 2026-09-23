@@ -125,6 +125,36 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
                 revised.json()["data"]["parent_version_id"] == first_data["version_id"]
             )
             assert len(web.get(endpoint).json()["data"]) == 2
+            review = f"{endpoint}/{first_data['version_id']}/review"
+            approval = {"action": "approve", "actor": "operator", "reason": "checked"}
+            assert (
+                web.post(
+                    review, json=approval, headers={"Idempotency-Key": "a"}
+                ).status_code
+                == 409
+            )
+            submission = {**approval, "action": "submit"}
+            assert (
+                web.post(
+                    review, json=submission, headers={"Idempotency-Key": "s"}
+                ).json()["data"]["paper_status"]
+                == "review_pending"
+            )
+            approved = web.post(review, json=approval, headers={"Idempotency-Key": "a"})
+            assert approved.status_code == 200, approved.text
+            assert approved.json()["data"]["paper_status"] == "review_approved"
+            assert (
+                web.post(review, json=approval, headers={"Idempotency-Key": "a"}).json()
+                == approved.json()
+            )
+            assert (
+                web.post(
+                    review,
+                    json={**approval, "reason": "changed"},
+                    headers={"Idempotency-Key": "a"},
+                ).status_code
+                == 409
+            )
     finally:
         pool.close_all()
     reopened, pool = _app(path)
@@ -133,5 +163,9 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             versions = web.get(endpoint)
             assert versions.status_code == 200
             assert len(versions.json()["data"]) == 2
+            assert any(
+                item["paper_status"] == "review_approved"
+                for item in versions.json()["data"]
+            )
     finally:
         pool.close_all()
