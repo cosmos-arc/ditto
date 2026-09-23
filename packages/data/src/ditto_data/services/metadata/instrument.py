@@ -87,6 +87,18 @@ class InstrumentService:
         self._instrument_id_allocator = deps.instrument_id_allocator
         self._exchange_transformers = deps.exchange_transformers
 
+    def list_etf_reference_snapshots(self, *, cutoff: str) -> list[str]:
+        """List published ETF reference snapshot identities."""
+        return self._instrument_reader.list_etf_reference_snapshots(cutoff=cutoff)
+
+    def find_etf_reference(
+        self, *, asof: str, cutoff: str, source_snapshot_id: str
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Read ETF identities and exact-snapshot reference observations."""
+        return self._instrument_reader.find_etf_reference(
+            asof=asof, cutoff=cutoff, source_snapshot_id=source_snapshot_id
+        )
+
     # ============ Identity 解析 ============
 
     @traced("metadata.identity.resolve_instrument_id")

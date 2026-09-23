@@ -3,27 +3,83 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import asdict
+from datetime import UTC, datetime
 from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_kernel.instrument import AssetClass
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from ditto_apps.api.deps import paginate, pagination_params
-from ditto_apps.api.errors import NotFoundError
+from ditto_apps.api.errors import BadRequestError, NotFoundError
 from ditto_apps.models.common import (
     APIResponse,
     PaginationRequest,
 )
 from ditto_apps.models.metadata import (
+    ETFCandidateQueryParams,
+    ETFCandidateResponse,
     Instrument,
     to_instrument,
     to_instrument_list,
 )
 
 router = APIRouter(prefix="/metadata", tags=["metadata"])
+
+
+@router.get(
+    "/etf-reference-snapshots",
+    response_model=APIResponse[list[str]],
+    operation_id="metadata_list_etf_reference_snapshots",
+)
+@inject
+async def list_etf_reference_snapshots(
+    facade: Annotated[MetadataQueryFacade, FromComponent()],
+    cutoff: datetime,
+) -> APIResponse[list[str]]:
+    """List source snapshots published by the selected knowledge cutoff."""
+    if cutoff.tzinfo is None:
+        raise BadRequestError("knowledge cutoff must include a UTC offset")
+    snapshots = await asyncio.to_thread(
+        facade.list_etf_reference_snapshots,
+        cutoff=cutoff.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+    return APIResponse(data=snapshots)
+
+
+@router.get(
+    "/etf-candidates",
+    response_model=APIResponse[list[ETFCandidateResponse]],
+    operation_id="metadata_list_etf_candidates",
+)
+@inject
+async def list_etf_candidates(
+    facade: Annotated[MetadataQueryFacade, FromComponent()],
+    query: Annotated[ETFCandidateQueryParams, Query()],
+) -> APIResponse[list[ETFCandidateResponse]]:
+    """Compare ETFs by exposure using one explicit published reference snapshot."""
+    if query.cutoff.tzinfo is None:
+        raise BadRequestError("knowledge cutoff must include a UTC offset")
+    try:
+        rows = await asyncio.to_thread(
+            facade.list_etf_candidates,
+            asof=query.asof.isoformat(),
+            cutoff=query.cutoff.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            source_snapshot_id=query.source_snapshot_id,
+            exposure=query.exposure,
+            asset_exposure=query.asset_exposure,
+            search=query.search,
+            sort_field=query.sort_field,
+        )
+    except AppQueryError as exc:
+        raise BadRequestError(str(exc)) from exc
+    return APIResponse(
+        data=[ETFCandidateResponse.model_validate(asdict(row)) for row in rows]
+    )
 
 
 @router.get(

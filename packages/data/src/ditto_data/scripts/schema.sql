@@ -75,6 +75,27 @@ CREATE TABLE IF NOT EXISTS instrument_etf (
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 
+-- Published ETF reference observations. Each row is bound to a source snapshot;
+-- absent observations are never inferred from the current instrument extension.
+CREATE TABLE IF NOT EXISTS etf_reference_observation (
+    instrument_id INTEGER NOT NULL REFERENCES instrument(instrument_id),
+    field TEXT NOT NULL,
+    value TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    observed_on DATE NOT NULL,
+    published_at TEXT NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    source TEXT NOT NULL,
+    source_snapshot_id TEXT NOT NULL,
+    PRIMARY KEY (instrument_id, field, observed_on, source_snapshot_id),
+    CHECK (effective_to IS NULL OR effective_to > effective_from),
+    CHECK (published_at GLOB '????-??-??T??:??:??Z'),
+    CHECK (length(source_snapshot_id) > 0)
+);
+CREATE INDEX IF NOT EXISTS idx_etf_reference_snapshot
+    ON etf_reference_observation(source_snapshot_id, instrument_id, field);
+
 -- 指数扩展表
 CREATE TABLE IF NOT EXISTS instrument_index (
     instrument_id INTEGER PRIMARY KEY,

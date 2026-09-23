@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 import polars as pl
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
+
+from ditto_application.queries.etf_candidates import ETFCandidate, ETFCandidateQuery
+from ditto_application.queries.field_admission import FieldAdmissionQuery
 
 __all__ = ["MetadataQueryFacade"]
 
@@ -18,8 +22,45 @@ class MetadataQueryFacade:
     对外只暴露原始参数和 pl.DataFrame 返回值。
     """
 
-    def __init__(self, metadata_service: MetadataService) -> None:
+    def __init__(
+        self,
+        metadata_service: MetadataService,
+        admission: FieldAdmissionQuery | None = None,
+        snapshots: ProviderSnapshotReader | None = None,
+    ) -> None:
         self._service = metadata_service
+        self._admission = admission
+        self._snapshots = snapshots
+
+    def list_etf_reference_snapshots(self, *, cutoff: str) -> list[str]:
+        """List ETF reference source snapshots visible at the cutoff."""
+        return ETFCandidateQuery(
+            self._service, self._admission, self._snapshots
+        ).snapshots(cutoff=cutoff)
+
+    def list_etf_candidates(
+        self,
+        *,
+        asof: str,
+        cutoff: str,
+        source_snapshot_id: str,
+        exposure: str | None = None,
+        asset_exposure: str | None = None,
+        search: str | None = None,
+        sort_field: str = "ticker",
+    ) -> list[ETFCandidate]:
+        """Compare ETF candidates at one exact reference snapshot."""
+        return ETFCandidateQuery(
+            self._service, self._admission, self._snapshots
+        ).list_candidates(
+            asof=asof,
+            cutoff=cutoff,
+            source_snapshot_id=source_snapshot_id,
+            exposure=exposure,
+            asset_exposure=asset_exposure,
+            search=search,
+            sort_field=sort_field,
+        )
 
     def get_instrument(self, instrument_id: int) -> dict[str, Any] | None:
         """

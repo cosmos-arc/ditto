@@ -8,6 +8,7 @@ import {
 	WatchlistPage as WatchlistView,
 } from "@/features/markets";
 import { useCurrentMarketContext } from "@/workflows/market-context";
+import { ETFCandidates } from "./etf-candidates";
 
 const marketCatalogKeys = {
 	all: ["market-page-catalog"] as const,
@@ -26,7 +27,7 @@ function useMarketCatalog(filter: InstrumentCatalogFilter = {}) {
 export function MarketsPage() {
 	const catalogQuery = useMarketCatalog({ limit: 100 });
 	const contextQuery = useCurrentMarketContext();
-	return <MarketsView catalogQuery={catalogQuery} contextQuery={contextQuery} />;
+	return <MarketsView catalogQuery={catalogQuery} contextQuery={contextQuery} etfCandidates={<ETFCandidates />} />;
 }
 
 /** Cross-feature composition for the A-share identity catalog. */

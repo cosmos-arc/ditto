@@ -34,6 +34,7 @@ os.environ.update(
 
 ETF_ID = 2_000_001
 ETF_NO_NAV_ID = 2_000_002
+ETF_CROSS_BORDER_ID = 2_000_003
 STOCK_ID = 1_000_001
 # 固定日历：2026-01-05 起 95 个交易日（跳过周末），索引 40–45 挖空演示断口。
 _TRADING_DAYS: list[date] = []
@@ -131,6 +132,43 @@ def _seed(root: Path) -> None:
             list_date="2011-12-09",
         ),
     )
+    writer.register(
+        ETF_CROSS_BORDER_ID,
+        InstrumentRegistration(
+            source_ticker="513100.SH",
+            ticker="513100",
+            name="跨境ETF-比较验收",
+            exchange="SSE",
+            asset_class="etf",
+            list_date="2020-01-01",
+        ),
+    )
+    reference = "snapshot:recorded:etf-system"
+    rows = [
+        (ETF_ID, "tracking_index", "000300.SH", "index", "2026-01-01"),
+        (ETF_NO_NAV_ID, "tracking_index", "000300.SH", "index", "2026-01-01"),
+        (ETF_CROSS_BORDER_ID, "tracking_index", "NDX", "index", "2026-01-01"),
+        (ETF_ID, "asset_class", "A股宽基", "text", "2026-01-01"),
+        (ETF_NO_NAV_ID, "asset_class", "A股宽基", "text", "2026-01-01"),
+        (ETF_CROSS_BORDER_ID, "asset_class", "跨境股票", "text", "2026-01-01"),
+        (ETF_ID, "management_fee", "0.5", "%/year", "2026-01-01"),
+        (ETF_NO_NAV_ID, "management_fee", "0.2", "%/year", "2026-01-01"),
+        (ETF_ID, "aum", "500000000", "CNY", "2026-05-20"),
+        (ETF_CROSS_BORDER_ID, "price_close", "1.2", "CNY", "2026-05-20"),
+        (ETF_CROSS_BORDER_ID, "nav", "1.1", "CNY", "2026-05-18"),
+    ]
+    client.executemany(
+        """INSERT INTO etf_reference_observation
+           (instrument_id, field, value, unit, observed_on, published_at,
+            effective_from, source, source_snapshot_id)
+           VALUES (?, ?, ?, ?, ?, '2026-05-21T09:00:00Z', ?,
+                   'recorded', ?)""",
+        [
+            [instrument_id, field, value, unit, observed_on, observed_on, reference]
+            for instrument_id, field, value, unit, observed_on in rows
+        ],
+    )
+    client.commit()
     store = ParquetStore(
         root / "state",
         key_columns=("instrument_id", "trade_date"),

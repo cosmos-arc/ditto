@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: a8af2556ed510fa3be5efa306bd67b48b742f7d1fbd97045f4fa0dad0267423e
+ * Schema SHA-256: 252dceb48d71a69b5f833a266cfaa45fa106d2714f5b8b67102ea0e0defce5cb
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -788,6 +788,26 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/market/regime": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/metadata/etf-candidates": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/metadata/etf-reference-snapshots": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2420,6 +2440,18 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["benchmark_instrument_id", "end_date", "knowledge_cutoff", "snapshot_id", "snapshot_manifest_hash", "start_date"],
+    },
+  },
+  "get /api/v1/metadata/etf-candidates": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["asof", "asset_exposure", "cutoff", "exposure", "search", "sort_field", "source_snapshot_id"],
+    },
+  },
+  "get /api/v1/metadata/etf-reference-snapshots": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["cutoff"],
     },
   },
   "get /api/v1/metadata/instruments": {
