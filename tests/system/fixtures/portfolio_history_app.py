@@ -63,8 +63,12 @@ async def _one_shot_comparison_failure(request, call_next):
         _failure_armed["active"] = False
         from fastapi.responses import JSONResponse
 
+        # Echo the browser origin so the injected failure stays a plain HTTP
+        # 500 instead of degrading into a CORS console error.
         return JSONResponse(
-            {"detail": "fixture injected comparison failure"}, status_code=500
+            {"detail": "fixture injected comparison failure"},
+            status_code=500,
+            headers={"Access-Control-Allow-Origin": request.headers.get("origin", "*")},
         )
     return await call_next(request)
 
