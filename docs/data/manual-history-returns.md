@@ -1,6 +1,6 @@
 # 账户历史估值与资金流调整收益（Manual / Paper / Model / 共同区间比较）
 
-规格来源：[#249](https://github.com/cosmos-arc/ditto/issues/249)（三组合历史估值与资金流调整收益）、实施票 [#260](https://github.com/cosmos-arc/ditto/issues/260)（Manual）、[#261](https://github.com/cosmos-arc/ditto/issues/261)（Paper）、[#262](https://github.com/cosmos-arc/ditto/issues/262)（Model 目标重放）。本文记录数值与查询合同；三组合共同区间比较由 #263 后续接入，数值合同复用本文。
+规格来源：[#249](https://github.com/cosmos-arc/ditto/issues/249)（三组合历史估值与资金流调整收益）、实施票 [#260](https://github.com/cosmos-arc/ditto/issues/260)（Manual）、[#261](https://github.com/cosmos-arc/ditto/issues/261)（Paper）、[#262](https://github.com/cosmos-arc/ditto/issues/262)（Model 目标重放）、[#263](https://github.com/cosmos-arc/ditto/issues/263)（共同区间比较）。本文记录数值与查询合同。
 
 ## 记录合同
 

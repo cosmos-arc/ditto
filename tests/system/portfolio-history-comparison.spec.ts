@@ -138,6 +138,12 @@ test.describe.serial("portfolio history comparison over the live fixture", () =>
 			["critical", "serious"].includes(violation.impact ?? ""),
 		);
 		expect(serious).toEqual([]);
+
+		// The whole journey is read-only: business rows stay byte-identical.
+		const after = await (
+			await request.get(`${apiOrigin}/system-fixture/portfolio-history`)
+		).json();
+		expect(after.business_hashes).toEqual(fixture.business_hashes);
 		expect(browserErrors).toEqual([]);
 	});
 });

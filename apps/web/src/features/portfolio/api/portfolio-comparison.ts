@@ -1,6 +1,6 @@
 import type { components, operations } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
-import { arrayValue, recordValue, stringValue } from "@/api/validation";
+import { recordValue, RuntimeValidationError, stringValue } from "@/api/validation";
 import type { HistoryComparison, ModelHistory } from "./account-models";
 
 export type PortfolioComparisonIdentity = operations["portfolio_get_comparison"]["parameters"]["query"];
@@ -57,14 +57,20 @@ export interface StrategyOption {
 	readonly name: string;
 }
 
-/** Strategy picker options via the shared typed transport (no peer-feature import). */
+/**
+ * Strategy picker options via the shared typed transport (no peer-feature
+ * import). The endpoint returns a bare array; the first 100 strategies cover
+ * the local-first catalog and the cap matches the backend `le` bound.
+ */
 export async function fetchStrategyOptions(): Promise<readonly StrategyOption[]> {
 	const payload = await apiClient.get("/api/v1/strategies", {
 		params: { query: { limit: 100 } },
 	});
-	const record = recordValue(payload, "strategyOptions");
-	return arrayValue(record, "strategies", "strategyOptions").map((entry, index) => {
-		const boundary = `strategyOptions.strategies.${index}`;
+	if (!Array.isArray(payload)) {
+		throw new RuntimeValidationError("strategyOptions", "payload", "expected an array");
+	}
+	return payload.map((entry, index) => {
+		const boundary = `strategyOptions.${index}`;
 		const entryRecord = recordValue(entry, boundary);
 		return {
 			strategy_id: stringValue(entryRecord, "strategy_id", boundary),

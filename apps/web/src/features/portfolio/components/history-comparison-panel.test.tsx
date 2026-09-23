@@ -106,19 +106,18 @@ function stubApi(payload: unknown = COMPARISON_PAYLOAD, comparisonStatus = 200) 
 		requests.push(href);
 		const url = new URL(href);
 		if (url.pathname === "/api/v1/strategies") {
-			return jsonResponse({
-				strategies: [
-					{
-						strategy_id: "strategy-compare",
-						name: "比较策略",
-						version: 1,
-						status: "active",
-						lifecycle_state: "active",
-						created_at: "2026-01-01T00:00:00Z",
-						tags: [],
-					},
-				],
-			});
+			// The real endpoint unwraps to a bare StrategyResponse[] array.
+			return jsonResponse([
+				{
+					strategy_id: "strategy-compare",
+					name: "比较策略",
+					version: 1,
+					status: "active",
+					lifecycle_state: "active",
+					created_at: "2026-01-01T00:00:00Z",
+					tags: [],
+				},
+			]);
 		}
 		if (url.pathname === "/api/v1/manual/accounts") {
 			return jsonResponse({
@@ -182,7 +181,7 @@ async function fillFormAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 	await screen.findByText("比较策略");
 	await screen.findByText("模拟甲");
 	await screen.findByText("实盘甲");
-	await screen.findByText("2026-03-02");
+	await screen.findByText(/2026-03-02 · paper-session-1/);
 	await user.clear(screen.getByLabelText("比较开始日期"));
 	await user.type(screen.getByLabelText("比较开始日期"), "2026-03-02");
 	await user.clear(screen.getByLabelText("比较结束日期"));

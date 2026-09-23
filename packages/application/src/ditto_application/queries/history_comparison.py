@@ -64,7 +64,6 @@ __all__ = [
 
 COMPARISON_POLICY_VERSION = COMMON_WINDOW_POLICY_VERSION
 _RESULT_PREFIX = "history-comparison:sha256:"
-_KINDS = ("model", "paper", "manual")
 _ZERO = Decimal("0")
 
 

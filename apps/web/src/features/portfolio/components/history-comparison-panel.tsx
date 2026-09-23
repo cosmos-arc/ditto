@@ -15,9 +15,9 @@ const INPUT_CLASS =
 	"rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) px-2 py-1.5 font-data text-sm text-(--color-foreground) disabled:opacity-60";
 
 const LEG_COLORS: Readonly<Record<ComparisonLegKind, string>> = {
-	model: "#2563eb",
-	paper: "#059669",
-	manual: "#d97706",
+	model: "var(--chart-palette-1)",
+	paper: "var(--chart-palette-2)",
+	manual: "var(--chart-palette-3)",
 };
 
 const LEG_TEXT_CLASSES: Readonly<Record<ComparisonLegKind, string>> = {
@@ -133,16 +133,23 @@ async function exportChartPng(
 	const scale = 2;
 	const footerLines = [
 		comparison.result_id,
-		`${comparison.method} · ${comparison.comparison_policy_version} · ${comparison.currency}`,
+		`${comparison.method} · ${comparison.valuation_policy_version} · ${comparison.comparison_policy_version} · ${comparison.currency}`,
 		`共同段 ${run.start_date} ~ ${run.end_date} · MODEL ${formatWindowReturn(run.window_returns.model)} · PAPER ${formatWindowReturn(run.window_returns.paper)} · MANUAL ${formatWindowReturn(run.window_returns.manual)}`,
 	];
 	const footerHeight = 16 * footerLines.length + 16;
 	canvas.width = CHART_WIDTH * scale;
 	canvas.height = (CHART_HEIGHT + footerHeight) * scale;
-	context.fillStyle = "#ffffff";
-	context.fillRect(0, 0, canvas.width, canvas.height);
+	const styles = getComputedStyle(document.documentElement);
+	const background = styles.getPropertyValue("--color-surface-1").trim();
+	if (background !== "") {
+		context.fillStyle = background;
+		context.fillRect(0, 0, canvas.width, canvas.height);
+	}
 	context.drawImage(image, 0, 0, CHART_WIDTH * scale, CHART_HEIGHT * scale);
-	context.fillStyle = "#475569";
+	const footerColor = styles.getPropertyValue("--color-foreground-secondary").trim();
+	if (footerColor !== "") {
+		context.fillStyle = footerColor;
+	}
 	context.font = `${12 * scale}px monospace`;
 	footerLines.forEach((line, index) => {
 		context.fillText(line, 8 * scale, (CHART_HEIGHT + 20 + index * 16) * scale);
@@ -161,13 +168,17 @@ function ComparisonRunChart({
 	readonly run: HistoryComparisonRun;
 	readonly svgRef: React.RefObject<SVGSVGElement | null>;
 }) {
-	const polylineOf = (kind: ComparisonLegKind) => {
-		const values = run.points.map((point) => Number(point.growth[kind]));
-		const min = Math.min(...values);
-		const max = Math.max(...values);
-		const span = max > min ? max - min : 0.01;
-		const step = run.points.length > 1 ? (CHART_WIDTH - CHART_PADDING * 2) / (run.points.length - 1) : 0;
-		return run.points
+	// One shared y scale across all legs (anchored at 1) so the normalized
+	// lines stay visually comparable; per-leg scaling would erase the signal.
+	const allValues = (Object.keys(LEG_LABELS) as readonly ComparisonLegKind[]).flatMap((kind) =>
+		run.points.map((point) => Number(point.growth[kind])),
+	);
+	const min = Math.min(1, ...allValues);
+	const max = Math.max(1, ...allValues);
+	const span = max > min ? max - min : 0.01;
+	const step = run.points.length > 1 ? (CHART_WIDTH - CHART_PADDING * 2) / (run.points.length - 1) : 0;
+	const polylineOf = (kind: ComparisonLegKind) =>
+		run.points
 			.map((point, index) => {
 				const x = CHART_PADDING + index * step;
 				const y =
@@ -177,7 +188,6 @@ function ComparisonRunChart({
 				return `${x.toFixed(1)},${y.toFixed(1)}`;
 			})
 			.join(" ");
-	};
 	const dateLabels = [run.points[0]?.on_date, run.points[run.points.length - 1]?.on_date];
 	return (
 		<svg
@@ -190,7 +200,7 @@ function ComparisonRunChart({
 			viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
 			fontFamily="monospace"
 		>
-			<rect x={0} y={0} width={CHART_WIDTH} height={CHART_HEIGHT} fill="#ffffff" />
+			<rect x={0} y={0} width={CHART_WIDTH} height={CHART_HEIGHT} fill="var(--color-surface-1)" />
 			{(Object.keys(LEG_LABELS) as readonly ComparisonLegKind[]).map((kind) => (
 				<polyline
 					key={kind}
@@ -201,10 +211,16 @@ function ComparisonRunChart({
 					strokeWidth={2}
 				/>
 			))}
-			<text x={CHART_PADDING} y={18} fontSize={11} fill="#64748b">
+			<text x={CHART_PADDING} y={18} fontSize={11} fill="var(--chart-series-neutral)">
 				{dateLabels[0] ?? ""}
 			</text>
-			<text x={CHART_WIDTH - CHART_PADDING} y={18} fontSize={11} fill="#64748b" textAnchor="end">
+			<text
+				x={CHART_WIDTH - CHART_PADDING}
+				y={18}
+				fontSize={11}
+				fill="var(--chart-series-neutral)"
+				textAnchor="end"
+			>
 				{dateLabels[1] ?? ""}
 			</text>
 			{(Object.keys(LEG_LABELS) as readonly ComparisonLegKind[]).map((kind, index) => (
@@ -394,7 +410,7 @@ export function HistoryComparisonPanel() {
 						{sessions.length === 0 && <option value="">（该账户暂无会话）</option>}
 						{sessions.map((session) => (
 							<option key={session.session_id} value={session.session_id}>
-								{session.trade_date}
+								{session.trade_date} · {session.session_id}
 							</option>
 						))}
 					</select>

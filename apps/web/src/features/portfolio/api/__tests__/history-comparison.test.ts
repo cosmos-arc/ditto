@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest } from "@/test/request";
-import { fetchHistoryComparison, type HistoryComparisonIdentity } from "../portfolio-comparison";
+import {
+	fetchHistoryComparison,
+	fetchStrategyOptions,
+	type HistoryComparisonIdentity,
+} from "../portfolio-comparison";
 
 const identity: HistoryComparisonIdentity = {
 	strategy_id: "strategy-compare",
@@ -228,5 +232,53 @@ describe("history comparison API", () => {
 		}
 		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ runs: [brokenRun] })));
 		await expect(fetchHistoryComparison(identity)).rejects.toThrow(/manual/);
+	});
+});
+
+describe("strategy options API", () => {
+	it("parses the bare strategy array the endpoint really returns", async () => {
+		const fetchMock = vi.fn<typeof fetch>(
+			async () =>
+				new Response(
+					JSON.stringify({
+						data: [
+							{
+								strategy_id: "strategy-compare",
+								name: "比较策略",
+								version: 1,
+								status: "active",
+								lifecycle_state: "active",
+								created_at: "2026-01-01T00:00:00Z",
+								tags: [],
+							},
+						],
+						pagination: { total: 1, limit: 100, offset: 0 },
+					}),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		const options = await fetchStrategyOptions();
+
+		const request = capturedRequest(fetchMock.mock.calls);
+		const url = new URL(request.url);
+		expect(url.pathname).toBe("/api/v1/strategies");
+		expect(url.searchParams.get("limit")).toBe("100");
+		expect(options).toEqual([{ strategy_id: "strategy-compare", name: "比较策略" }]);
+	});
+
+	it("fails closed on a malformed strategy entry", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(
+				async () =>
+					new Response(JSON.stringify({ data: [{ strategy_id: "strategy-compare" }] }), {
+						status: 200,
+						headers: { "Content-Type": "application/json" },
+					}),
+			),
+		);
+		await expect(fetchStrategyOptions()).rejects.toThrow(/name/);
 	});
 });

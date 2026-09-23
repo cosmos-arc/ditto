@@ -45,13 +45,20 @@ from ditto_portfolio.account_ledger import (
     AccountKind,
     create_account_event,
 )
-from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
+from ditto_strategy.models import (
+    ArtifactKind,
+    StrategyArtifactRecord,
+    StrategySpecRecord,
+)
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 from ditto_strategy.storage.sqlite.strategy_artifact_store import (
     SQLiteStrategyArtifactReader,
     SQLiteStrategyArtifactWriter,
+)
+from ditto_strategy.storage.sqlite.strategy_spec_store import (
+    SQLiteStrategySpecWriter,
 )
 
 STRATEGY_ID = "live-history-comparison"
@@ -238,6 +245,21 @@ def seed(root: Path) -> dict[str, object]:
         service.save_artifact(
             _package_record(
                 "cmp-journey-b", "2026-03-03", {600519: 1.0}, snapshot.snapshot_id
+            )
+        )
+
+        # The strategies catalog feeds the picker; a bare spec row is enough
+        # for the comparison journey (targets come from signal packages).
+        spec_writer = SQLiteStrategySpecWriter(pool)
+        spec_writer.init_schema()
+        spec_writer.save(
+            StrategySpecRecord(
+                strategy_id=STRATEGY_ID,
+                name="共同区间比较策略",
+                spec_json={"kind": "history-comparison-fixture"},
+                version=1,
+                created_at=NOW.isoformat(),
+                tags=(),
             )
         )
 
