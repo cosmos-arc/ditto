@@ -206,10 +206,10 @@ class ETFCandidateQuery:
         ):
             return field
         if self._admission is None or self._snapshots is None:
-            return replace(field, eligibility_reasons=("ADMISSION_UNAVAILABLE",))
+            return _unregistered(field, "ADMISSION_UNAVAILABLE")
         snapshot = self._snapshots.get_snapshot(field.source_snapshot_id)
         if snapshot is None:
-            return replace(field, eligibility_reasons=("SNAPSHOT_NOT_REGISTERED",))
+            return _unregistered(field, "SNAPSHOT_NOT_REGISTERED")
         required_from = (
             date.fromisoformat(liquidity_start)
             if field_name == "daily_amount" and liquidity_start is not None
@@ -242,6 +242,22 @@ class ETFCandidateQuery:
             eligibility_reasons=report.fields[0].reason_codes,
             missing_reason="display_admission_denied",
         )
+
+
+def _unregistered(field: ETFField, reason: str) -> ETFField:
+    if (
+        field.source == "recorded"
+        and field.source_snapshot_id is not None
+        and field.source_snapshot_id.startswith("snapshot:recorded:")
+    ):
+        return replace(field, eligibility_reasons=("RECORDED_REFERENCE_ONLY",))
+    return replace(
+        field,
+        value=None,
+        eligibility="display_denied",
+        eligibility_reasons=(reason,),
+        missing_reason="display_admission_denied",
+    )
 
 
 def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:

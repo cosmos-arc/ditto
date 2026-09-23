@@ -44,6 +44,7 @@ export function ETFCandidates() {
 	const snapshots = useQuery({
 		queryKey: ["etf-reference-snapshots", cutoffUTC],
 		queryFn: () => fetchETFReferenceSnapshots(cutoffUTC),
+		staleTime: 60_000,
 		enabled: Boolean(cutoffUTC),
 	});
 	const candidates = useQuery({
@@ -58,11 +59,13 @@ export function ETFCandidates() {
 				search,
 				sortField,
 			}),
+		staleTime: 60_000,
 		enabled: Boolean(asof && cutoffUTC && snapshot),
 	});
 	const exposureCatalog = useQuery({
 		queryKey: ["etf-exposure-catalog", asof, cutoffUTC, snapshot],
 		queryFn: () => fetchETFCandidates({ asof, cutoff: cutoffUTC, sourceSnapshotId: snapshot }),
+		staleTime: 60_000,
 		enabled: Boolean(asof && cutoffUTC && snapshot),
 	});
 	const items = candidates.data ?? [];
@@ -174,6 +177,23 @@ export function ETFCandidates() {
 				{(snapshots.isRefetching || exposureCatalog.isRefetching || candidates.isRefetching) && (
 					<p>正在更新比较数据，当前结果可能过期。</p>
 				)}
+				{((snapshots.data && snapshots.isStale) ||
+					(exposureCatalog.data && exposureCatalog.isStale) ||
+					(candidates.data && candidates.isStale)) &&
+					!snapshots.isRefetching &&
+					!exposureCatalog.isRefetching &&
+					!candidates.isRefetching && (
+						<button
+							type="button"
+							onClick={() => {
+								void snapshots.refetch();
+								void exposureCatalog.refetch();
+								void candidates.refetch();
+							}}
+						>
+							缓存数据可能过期，刷新
+						</button>
+					)}
 				{candidates.isError && (
 					<button type="button" onClick={() => void candidates.refetch()}>
 						比较失败，重试

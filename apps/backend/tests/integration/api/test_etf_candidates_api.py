@@ -30,6 +30,7 @@ def _setup(
     *,
     admission: FieldAdmissionQuery | None = None,
     snapshots: ProviderSnapshotReader | None = None,
+    source: str = "recorded",
 ) -> tuple[FastAPI, SQLitePool, str]:
     """Build an isolated recorded ETF source and its HTTP reader."""
     schema = Path(str(files("ditto_data.scripts") / "schema.sql"))
@@ -40,6 +41,7 @@ def _setup(
         (2000001, "510300", "沪深300甲 ETF"),
         (2000002, "510310", "沪深300乙 ETF"),
         (2000003, "513100", "跨境 ETF"),
+        (2000004, "510900", "改指 ETF"),
     ):
         client.execute(
             """INSERT INTO instrument
@@ -54,7 +56,7 @@ def _setup(
             [instrument_id, ticker + ".SH"],
         )
 
-    snapshot = "snapshot:recorded:etf:one"
+    snapshot = f"snapshot:{source}:etf:one"
 
     def add(
         instrument_id: int,
@@ -69,7 +71,7 @@ def _setup(
             """INSERT INTO etf_reference_observation
                (instrument_id, field, value, unit, observed_on, published_at,
                 effective_from, effective_to, source, source_snapshot_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'recorded', ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 instrument_id,
                 field,
@@ -79,6 +81,7 @@ def _setup(
                 published_at,
                 observed_on,
                 effective_to,
+                source,
                 snapshot,
             ],
         )
@@ -87,6 +90,8 @@ def _setup(
         add(instrument_id, "tracking_index", "000300.SH", "2020-01-01")
         add(instrument_id, "asset_class", "A股宽基", "2020-01-01")
     add(2000003, "tracking_index", "NDX", "2020-01-01")
+    add(2000004, "tracking_index", "OLD", "2020-01-01", effective_to="2026-09-29")
+    add(2000004, "tracking_index", "NEW", "2026-09-29")
     add(2000003, "asset_class", "跨境股票", "2020-01-01")
     add(2000001, "management_fee", "0.5", "2026-01-01", unit="%/year")
     add(2000001, "custody_fee", "0.1", "2026-01-01", unit="%/year")
@@ -224,6 +229,30 @@ def test_etf_candidate_snapshot_and_20_session_comparison(tmp_path: Path) -> Non
             2000001,
             2000002,
         ]
+        old_relation = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-28",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+                "exposure": "OLD",
+            },
+        )
+        new_relation = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+                "exposure": "NEW",
+            },
+        )
+        assert [item["instrument_id"] for item in old_relation.json()["data"]] == [
+            2000004
+        ]
+        assert [item["instrument_id"] for item in new_relation.json()["data"]] == [
+            2000004
+        ]
         searched = web.get(
             "/api/v1/metadata/etf-candidates",
             params={
@@ -246,6 +275,27 @@ def test_etf_candidate_snapshot_and_20_session_comparison(tmp_path: Path) -> Non
         )
         assert by_asset.status_code == 200, by_asset.text
         assert [item["instrument_id"] for item in by_asset.json()["data"]] == [2000003]
+    pool.close()
+
+
+@pytest.mark.integration
+def test_unregistered_provider_snapshot_hides_reference_values(tmp_path: Path) -> None:
+    """Only isolated recorded fixtures can be inspected without catalog evidence."""
+    app, pool, snapshot = _setup(tmp_path, source="provider")
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert response.status_code == 200, response.text
+        field = response.json()["data"][0]["fields"]["tracking_index"]
+        assert field["value"] is None
+        assert field["eligibility"] == "display_denied"
+        assert field["eligibility_reasons"] == ["ADMISSION_UNAVAILABLE"]
     pool.close()
 
 
