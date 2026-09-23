@@ -1,6 +1,6 @@
 import type { components, operations } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
-import { recordValue, RuntimeValidationError, stringValue } from "@/api/validation";
+import { RuntimeValidationError, recordValue, stringValue } from "@/api/validation";
 import type { HistoryComparison, ModelHistory } from "./account-models";
 
 export type PortfolioComparisonIdentity = operations["portfolio_get_comparison"]["parameters"]["query"];

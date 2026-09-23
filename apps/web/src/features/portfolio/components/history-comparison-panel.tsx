@@ -214,13 +214,7 @@ function ComparisonRunChart({
 			<text x={CHART_PADDING} y={18} fontSize={11} fill="var(--chart-series-neutral)">
 				{dateLabels[0] ?? ""}
 			</text>
-			<text
-				x={CHART_WIDTH - CHART_PADDING}
-				y={18}
-				fontSize={11}
-				fill="var(--chart-series-neutral)"
-				textAnchor="end"
-			>
+			<text x={CHART_WIDTH - CHART_PADDING} y={18} fontSize={11} fill="var(--chart-series-neutral)" textAnchor="end">
 				{dateLabels[1] ?? ""}
 			</text>
 			{(Object.keys(LEG_LABELS) as readonly ComparisonLegKind[]).map((kind, index) => (

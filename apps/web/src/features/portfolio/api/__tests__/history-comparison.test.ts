@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest } from "@/test/request";
-import {
-	fetchHistoryComparison,
-	fetchStrategyOptions,
-	type HistoryComparisonIdentity,
-} from "../portfolio-comparison";
+import { fetchHistoryComparison, fetchStrategyOptions, type HistoryComparisonIdentity } from "../portfolio-comparison";
 
 const identity: HistoryComparisonIdentity = {
 	strategy_id: "strategy-compare",
