@@ -23,6 +23,7 @@ from ditto_application.exceptions import (
     AppNotFoundError,
     AppQueryError,
 )
+from ditto_application.queries.account_catalog import ListManualAccountsQuery
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.portfolio_history import (
     AccountHistoryRequest,
@@ -40,6 +41,7 @@ from ditto_apps.models.account_ledger import (
     AccountLedgerResponse,
     CorrectManualEventBody,
     CreateManualAccountBody,
+    ManualAccountCatalogResponse,
     ManualEventBody,
     ManualHistoryQueryParams,
     ManualHistoryResponse,
@@ -118,6 +120,22 @@ async def create_manual_account(
     except AppCommandError as exc:
         _raise_command_error(exc)
     return APIResponse(data=AccountCommandReceiptResponse.model_validate(receipt))
+
+
+@router.get(
+    "",
+    response_model=APIResponse[ManualAccountCatalogResponse],
+    operation_id="manual_list_accounts",
+)
+@inject
+async def list_manual_accounts(
+    query: Annotated[ListManualAccountsQuery, FromComponent()],
+) -> APIResponse[ManualAccountCatalogResponse]:
+    """List every MANUAL account in deterministic id order."""
+    accounts = await asyncio.to_thread(query.list)
+    return APIResponse(
+        data=ManualAccountCatalogResponse.model_validate({"accounts": accounts}),
+    )
 
 
 @router.post(

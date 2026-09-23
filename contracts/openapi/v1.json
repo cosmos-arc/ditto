@@ -1321,6 +1321,30 @@
         "title": "APIResponse[HistoricalUniverseResponse]",
         "type": "object"
       },
+      "APIResponse_HistoryComparisonResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HistoryComparisonResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[HistoryComparisonResponse]",
+        "type": "object"
+      },
       "APIResponse_HoldoutEvaluationReceiptResponse_": {
         "properties": {
           "data": {
@@ -1465,6 +1489,30 @@
         "title": "APIResponse[LineageResponse]",
         "type": "object"
       },
+      "APIResponse_ManualAccountCatalogResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ManualAccountCatalogResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ManualAccountCatalogResponse]",
+        "type": "object"
+      },
       "APIResponse_ManualHistoryResponse_": {
         "properties": {
           "data": {
@@ -1583,6 +1631,30 @@
           "data"
         ],
         "title": "APIResponse[ModelHistoryResponse]",
+        "type": "object"
+      },
+      "APIResponse_PaperAccountCatalogResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PaperAccountCatalogResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[PaperAccountCatalogResponse]",
         "type": "object"
       },
       "APIResponse_PaperAccountLedgerResponse_": {
@@ -1727,6 +1799,30 @@
           "data"
         ],
         "title": "APIResponse[PaperRecoverResponse]",
+        "type": "object"
+      },
+      "APIResponse_PaperSessionCatalogResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PaperSessionCatalogResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[PaperSessionCatalogResponse]",
         "type": "object"
       },
       "APIResponse_PaperSessionCommandResponse_": {
@@ -16497,6 +16593,316 @@
         "title": "HistoricalUniverseSourcesBody",
         "type": "object"
       },
+      "HistoryComparisonLegResponse": {
+        "description": "Per-leg provenance; identity stays the leg's own result_id.",
+        "properties": {
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "empty_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empty Reason"
+          },
+          "first_valued_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Valued Date"
+          },
+          "gap_count": {
+            "title": "Gap Count",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "model",
+              "paper",
+              "manual"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_valued_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Valued Date"
+          },
+          "ledger_revision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerRevisionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "point_count": {
+            "title": "Point Count",
+            "type": "integer"
+          },
+          "result_id": {
+            "title": "Result Id",
+            "type": "string"
+          },
+          "segment_count": {
+            "title": "Segment Count",
+            "type": "integer"
+          },
+          "target_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Count"
+          },
+          "valued_point_count": {
+            "title": "Valued Point Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "result_id",
+          "currency",
+          "empty_reason",
+          "point_count",
+          "valued_point_count",
+          "gap_count",
+          "segment_count",
+          "first_valued_date",
+          "last_valued_date",
+          "ledger_revision",
+          "target_count"
+        ],
+        "title": "HistoryComparisonLegResponse",
+        "type": "object"
+      },
+      "HistoryComparisonResponse": {
+        "description": "Complete replayable common-window comparison result.",
+        "properties": {
+          "comparison_policy_version": {
+            "title": "Comparison Policy Version",
+            "type": "string"
+          },
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "empty_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empty Reason"
+          },
+          "end_date": {
+            "title": "End Date",
+            "type": "string"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryComparisonLegResponse"
+            },
+            "title": "Legs",
+            "type": "array"
+          },
+          "manual_account_id": {
+            "title": "Manual Account Id",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "model_initial_capital": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Model Initial Capital",
+            "type": "string"
+          },
+          "paper_account_id": {
+            "title": "Paper Account Id",
+            "type": "string"
+          },
+          "paper_session_id": {
+            "title": "Paper Session Id",
+            "type": "string"
+          },
+          "publication_cutoff": {
+            "format": "date-time",
+            "title": "Publication Cutoff",
+            "type": "string"
+          },
+          "result_id": {
+            "title": "Result Id",
+            "type": "string"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryComparisonRunResponse"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "comparable",
+              "single_common_point",
+              "incomparable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "valuation_policy_version": {
+            "title": "Valuation Policy Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_id",
+          "strategy_id",
+          "paper_account_id",
+          "paper_session_id",
+          "manual_account_id",
+          "model_initial_capital",
+          "currency",
+          "method",
+          "valuation_policy_version",
+          "comparison_policy_version",
+          "status",
+          "empty_reason",
+          "start_date",
+          "end_date",
+          "knowledge_cutoff",
+          "publication_cutoff",
+          "runs",
+          "legs"
+        ],
+        "title": "HistoryComparisonResponse",
+        "type": "object"
+      },
+      "HistoryComparisonRunPointResponse": {
+        "description": "One common date: growth anchors to 1 at the run start.",
+        "properties": {
+          "assets": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Assets",
+            "type": "object"
+          },
+          "growth": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Growth",
+            "type": "object"
+          },
+          "on_date": {
+            "title": "On Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "on_date",
+          "growth",
+          "assets"
+        ],
+        "title": "HistoryComparisonRunPointResponse",
+        "type": "object"
+      },
+      "HistoryComparisonRunResponse": {
+        "description": "One common continuous run with per-leg window returns.",
+        "properties": {
+          "end_date": {
+            "title": "End Date",
+            "type": "string"
+          },
+          "point_count": {
+            "title": "Point Count",
+            "type": "integer"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryComparisonRunPointResponse"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          },
+          "window_returns": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Window Returns",
+            "type": "object"
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date",
+          "point_count",
+          "points",
+          "window_returns"
+        ],
+        "title": "HistoryComparisonRunResponse",
+        "type": "object"
+      },
       "HistoryPointResponse": {
         "description": "One dated valuation row; missing prices leave value gaps.",
         "properties": {
@@ -17910,6 +18316,60 @@
           }
         },
         "title": "ManifestDiffResponse",
+        "type": "object"
+      },
+      "ManualAccountCatalogEntryResponse": {
+        "description": "One selectable MANUAL account identity.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_kind": {
+            "const": "manual",
+            "title": "Account Kind",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_kind",
+          "account_name",
+          "opened_at",
+          "currency"
+        ],
+        "title": "ManualAccountCatalogEntryResponse",
+        "type": "object"
+      },
+      "ManualAccountCatalogResponse": {
+        "description": "Every MANUAL account in deterministic id order.",
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ManualAccountCatalogEntryResponse"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "ManualAccountCatalogResponse",
         "type": "object"
       },
       "ManualBusinessEventType": {
@@ -19718,6 +20178,60 @@
         "title": "PaginationResponse",
         "type": "object"
       },
+      "PaperAccountCatalogEntryResponse": {
+        "description": "One selectable PAPER account identity.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_kind": {
+            "const": "paper",
+            "title": "Account Kind",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "currency": {
+            "const": "CNY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_kind",
+          "account_name",
+          "opened_at",
+          "currency"
+        ],
+        "title": "PaperAccountCatalogEntryResponse",
+        "type": "object"
+      },
+      "PaperAccountCatalogResponse": {
+        "description": "Every PAPER account in deterministic id order.",
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/PaperAccountCatalogEntryResponse"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "PaperAccountCatalogResponse",
+        "type": "object"
+      },
       "PaperAccountIdentityResponse": {
         "description": "Read-only PAPER account identity.",
         "properties": {
@@ -20650,6 +21164,79 @@
           "recovered_execution_count"
         ],
         "title": "PaperRecoverResponse",
+        "type": "object"
+      },
+      "PaperSessionCatalogEntryResponse": {
+        "description": "One selectable paper session bound to one PAPER account.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "created",
+              "running",
+              "paused"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "account_id",
+          "strategy_id",
+          "trade_date",
+          "status",
+          "revision",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PaperSessionCatalogEntryResponse",
+        "type": "object"
+      },
+      "PaperSessionCatalogResponse": {
+        "description": "One account's paper sessions in deterministic trade-date order.",
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/PaperSessionCatalogEntryResponse"
+            },
+            "title": "Sessions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sessions"
+        ],
+        "title": "PaperSessionCatalogResponse",
         "type": "object"
       },
       "PaperSessionCommandResponse": {
@@ -37955,6 +38542,111 @@
       }
     },
     "/api/v1/manual/accounts": {
+      "get": {
+        "description": "List every MANUAL account in deterministic id order.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "manual_list_accounts",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ManualAccountCatalogResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Manual Accounts",
+        "tags": [
+          "manual"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      },
       "post": {
         "description": "Create or exactly replay one permanently MANUAL account identity.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "manual_create_account",
@@ -42265,6 +42957,111 @@
       }
     },
     "/api/v1/paper/accounts": {
+      "get": {
+        "description": "List every PAPER account in deterministic id order.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "paper_list_accounts",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_PaperAccountCatalogResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Paper Accounts",
+        "tags": [
+          "paper"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      },
       "post": {
         "description": "Create or replay a PAPER account with immutable opening cash.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "paper_create_account",
@@ -42702,6 +43499,123 @@
           }
         },
         "summary": "Get Paper Account Ledger",
+        "tags": [
+          "paper"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/paper/accounts/{account_id}/sessions": {
+      "get": {
+        "description": "List one account's paper sessions in deterministic trade-date order.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "paper_list_account_sessions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_PaperSessionCatalogResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Paper Account Sessions",
         "tags": [
           "paper"
         ],
@@ -43660,6 +44574,237 @@
           }
         },
         "summary": "Get Portfolio Comparison",
+        "tags": [
+          "portfolio"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/portfolio/history-comparison": {
+      "get": {
+        "description": "Compose the three leg replays into one common-window comparison.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "portfolio_get_history_comparison",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "paper_account_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Paper Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "paper_session_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Paper Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "manual_account_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Manual Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "model_initial_capital",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ],
+              "title": "Model Initial Capital"
+            }
+          },
+          {
+            "in": "query",
+            "name": "knowledge_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Knowledge Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "publication_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Publication Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_snapshot_ids",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "title": "Source Snapshot Ids",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "model_artifact_ids",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Model Artifact Ids",
+              "type": "array"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_HistoryComparisonResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get History Comparison",
         "tags": [
           "portfolio"
         ],

@@ -35,6 +35,10 @@ from ditto_application.processes.execution.operate_paper_session import (
     OperatePaperOrderCommand,
     OperatePaperSession,
 )
+from ditto_application.queries.account_catalog import (
+    ListPaperAccountsQuery,
+    ListPaperSessionsQuery,
+)
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.paper_session import GetPaperSessionQuery
 from ditto_application.queries.portfolio_history import (
@@ -53,6 +57,7 @@ from ditto_apps.models.paper import (
     CreatePaperAccountBody,
     CreatePaperSessionBody,
     OperatePaperOrderBody,
+    PaperAccountCatalogResponse,
     PaperAccountLedgerResponse,
     PaperAccountReceiptResponse,
     PaperExecutionReceiptResponse,
@@ -60,6 +65,7 @@ from ditto_apps.models.paper import (
     PaperHistoryResponse,
     PaperReconciliationResponse,
     PaperRecoverResponse,
+    PaperSessionCatalogResponse,
     PaperSessionCommandResponse,
     PaperSessionReadResponse,
     PaperSessionResponse,
@@ -178,6 +184,39 @@ async def get_paper_account_history(
             else "PAPER_HISTORY_INVALID",
         ) from exc
     return APIResponse(data=PaperHistoryResponse.model_validate(result))
+
+
+@router.get(
+    "/accounts",
+    response_model=APIResponse[PaperAccountCatalogResponse],
+    operation_id="paper_list_accounts",
+)
+@inject
+async def list_paper_accounts(
+    query: Annotated[ListPaperAccountsQuery, FromComponent()],
+) -> APIResponse[PaperAccountCatalogResponse]:
+    """List every PAPER account in deterministic id order."""
+    accounts = await asyncio.to_thread(query.list)
+    return APIResponse(
+        data=PaperAccountCatalogResponse.model_validate({"accounts": accounts}),
+    )
+
+
+@router.get(
+    "/accounts/{account_id}/sessions",
+    response_model=APIResponse[PaperSessionCatalogResponse],
+    operation_id="paper_list_account_sessions",
+)
+@inject
+async def list_paper_account_sessions(
+    account_id: Annotated[str, Path(min_length=1)],
+    query: Annotated[ListPaperSessionsQuery, FromComponent()],
+) -> APIResponse[PaperSessionCatalogResponse]:
+    """List one account's paper sessions in deterministic trade-date order."""
+    sessions = await asyncio.to_thread(query.list, account_id)
+    return APIResponse(
+        data=PaperSessionCatalogResponse.model_validate({"sessions": sessions}),
+    )
 
 
 @router.post(

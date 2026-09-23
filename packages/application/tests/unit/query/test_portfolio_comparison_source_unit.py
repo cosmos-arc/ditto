@@ -96,6 +96,11 @@ class _AccountJournal:
     def list_events(self, account_id: str) -> tuple[AccountEvent, ...]:
         return tuple(event for event in self._events if event.account_id == account_id)
 
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        return tuple(
+            sorted(self._accounts.values(), key=lambda account: account.account_id)
+        )
+
 
 class _SnapshotReader:
     def __init__(self, snapshot: ProviderSnapshot) -> None:

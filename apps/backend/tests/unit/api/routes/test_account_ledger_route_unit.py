@@ -257,18 +257,83 @@ def test_manual_openapi_surface_has_stable_operation_ids() -> None:
     schema = create_openapi_app().openapi()
 
     expected = {
-        "/api/v1/manual/accounts": "manual_create_account",
-        "/api/v1/manual/accounts/{account_id}/events": "manual_record_event",
-        "/api/v1/manual/accounts/{account_id}/corrections": ("manual_correct_event"),
-        "/api/v1/manual/accounts/{account_id}/reversals": "manual_reverse_event",
-        "/api/v1/manual/accounts/{account_id}/ledger": "manual_get_ledger",
-        "/api/v1/manual/accounts/{account_id}/history": "manual_get_history",
+        ("/api/v1/manual/accounts", "post"): "manual_create_account",
+        ("/api/v1/manual/accounts", "get"): "manual_list_accounts",
+        (
+            "/api/v1/manual/accounts/{account_id}/events",
+            "post",
+        ): "manual_record_event",
+        (
+            "/api/v1/manual/accounts/{account_id}/corrections",
+            "post",
+        ): "manual_correct_event",
+        (
+            "/api/v1/manual/accounts/{account_id}/reversals",
+            "post",
+        ): "manual_reverse_event",
+        (
+            "/api/v1/manual/accounts/{account_id}/ledger",
+            "get",
+        ): "manual_get_ledger",
+        (
+            "/api/v1/manual/accounts/{account_id}/history",
+            "get",
+        ): "manual_get_history",
     }
-    for path, operation_id in expected.items():
-        method = (
-            "get" if path.endswith("/ledger") or path.endswith("/history") else "post"
-        )
+    for (path, method), operation_id in expected.items():
         assert schema["paths"][path][method]["operationId"] == operation_id
+
+
+def test_manual_catalog_route_lists_only_manual_accounts(tmp_path) -> None:
+    from ditto_application.queries.account_catalog import ListManualAccountsQuery
+    from ditto_apps.api.routes.account_ledger import list_manual_accounts
+    from ditto_portfolio.account_ledger import AccountDefinition, AccountKind
+
+    journal = SqliteAccountEventJournal(str(tmp_path / "manual-catalog.sqlite"))
+    journal.create_account(
+        AccountDefinition(
+            account_id="manual-catalog-2",
+            kind=AccountKind.MANUAL,
+            name="实盘账户乙",
+            opened_at=NOW,
+        )
+    )
+    journal.create_account(
+        AccountDefinition(
+            account_id="manual-catalog-1",
+            kind=AccountKind.MANUAL,
+            name="实盘账户甲",
+            opened_at=NOW,
+        )
+    )
+    journal.create_account(
+        AccountDefinition(
+            account_id="paper-bystander",
+            kind=AccountKind.PAPER,
+            name="模拟账户-不应出现在 MANUAL 目录",
+            opened_at=NOW,
+        )
+    )
+
+    with patch(
+        "ditto_apps.api.routes.account_ledger.asyncio.to_thread",
+        side_effect=_inline,
+    ):
+        result = asyncio.run(
+            _original(list_manual_accounts)(
+                query=ListManualAccountsQuery(journal=journal),
+            )
+        )
+
+    assert [entry.account_id for entry in result.data.accounts] == [
+        "manual-catalog-1",
+        "manual-catalog-2",
+    ]
+    first = result.data.accounts[0]
+    assert first.account_kind == "manual"
+    assert first.account_name == "实盘账户甲"
+    assert first.currency == "CNY"
+    journal.close()
 
 
 class _SnapshotReader:

@@ -21,6 +21,8 @@ __all__ = [
     "HistoryQualityResponse",
     "HistorySegmentResponse",
     "LedgerRevisionResponse",
+    "ManualAccountCatalogEntryResponse",
+    "ManualAccountCatalogResponse",
     "ManualEventBody",
     "ManualHistoryQueryParams",
     "ManualHistoryResponse",
@@ -136,6 +138,26 @@ class AccountResponse(BaseModel):
     name: str
     opened_at: datetime
     currency: Literal["CNY"]
+
+
+class ManualAccountCatalogEntryResponse(BaseModel):
+    """One selectable MANUAL account identity."""
+
+    model_config = _RESPONSE_CONFIG
+
+    account_id: str
+    account_kind: Literal["manual"]
+    account_name: str
+    opened_at: datetime
+    currency: Literal["CNY"]
+
+
+class ManualAccountCatalogResponse(BaseModel):
+    """Every MANUAL account in deterministic id order."""
+
+    model_config = _RESPONSE_CONFIG
+
+    accounts: tuple[ManualAccountCatalogEntryResponse, ...]
 
 
 class AccountEventResponse(BaseModel):

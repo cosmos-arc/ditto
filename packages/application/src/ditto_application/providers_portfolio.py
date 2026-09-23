@@ -29,6 +29,7 @@ from ditto_application.queries.daily_decision_v3 import (
 )
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
+from ditto_application.queries.history_comparison import GetHistoryComparisonQuery
 from ditto_application.queries.model_history import GetModelHistoryQuery
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
 from ditto_application.queries.portfolio_comparison import (
@@ -135,6 +136,22 @@ class AppPortfolioQueryProvider(Provider):
             artifact_reader=artifact_reader,
             snapshot_reader=snapshot_reader,
             valuation_source=valuation_source,
+        )
+
+    @provide
+    def history_comparison_query(
+        self,
+        manual_history: GetManualHistoryQuery,
+        paper_history: GetPaperHistoryQuery,
+        model_history: GetModelHistoryQuery,
+        journal: AccountEventJournalPort,
+    ) -> GetHistoryComparisonQuery:
+        """Compose the three leg replays into one common-window comparison."""
+        return GetHistoryComparisonQuery(
+            manual_query=manual_history,
+            paper_query=paper_history,
+            model_query=model_history,
+            journal=journal,
         )
 
     @provide

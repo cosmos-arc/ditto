@@ -166,6 +166,10 @@ class PaperSessionStorePort(Protocol):
         """Read one exact session."""
         ...
 
+    def list_sessions(self, account_id: str) -> tuple[PaperSession, ...]:
+        """Read one account's sessions in deterministic trade-date order."""
+        ...
+
     def update_session(
         self,
         session: PaperSession,
@@ -256,6 +260,15 @@ class InMemoryPaperSessionStore:
     def get_session(self, session_id: str) -> PaperSession | None:
         """Read one in-memory session."""
         return self._sessions.get(session_id)
+
+    def list_sessions(self, account_id: str) -> tuple[PaperSession, ...]:
+        """Read one account's in-memory sessions in trade-date order."""
+        owned = [
+            session
+            for session in self._sessions.values()
+            if session.account_id == account_id
+        ]
+        return tuple(sorted(owned, key=lambda s: (s.trade_date, s.session_id)))
 
     def update_session(
         self,

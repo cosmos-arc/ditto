@@ -70,6 +70,11 @@ class _MemoryJournal:
     def list_events(self, account_id: str) -> tuple[AccountEvent, ...]:
         return tuple(self.events.get(account_id, []))
 
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        return tuple(
+            sorted(self.accounts.values(), key=lambda account: account.account_id)
+        )
+
 
 def _create(journal: _MemoryJournal) -> CreateAccountHandler:
     return CreateAccountHandler(journal=journal)

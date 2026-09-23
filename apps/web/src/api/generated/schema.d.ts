@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 67f5dea0586b8f264ce81d8ef6e173647c23ab048d984837b9b99de5ae178324
+ * Schema SHA-256: 37933f257c803a784d4014c983a7e0b75d29de0d5ea6b0d54cfb49c6539f64f4
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -1900,7 +1900,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Manual Accounts
+         * @description List every MANUAL account in deterministic id order.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["manual_list_accounts"];
         put?: never;
         /**
          * Create Manual Account
@@ -2582,7 +2588,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Paper Accounts
+         * @description List every PAPER account in deterministic id order.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["paper_list_accounts"];
         put?: never;
         /**
          * Create Paper Account
@@ -2633,6 +2645,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["paper_get_account_ledger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/paper/accounts/{account_id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Paper Account Sessions
+         * @description List one account's paper sessions in deterministic trade-date order.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["paper_list_account_sessions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2787,6 +2821,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["portfolio_get_comparison"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio/history-comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get History Comparison
+         * @description Compose the three leg replays into one common-window comparison.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["portfolio_get_history_comparison"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4473,6 +4529,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[HistoryComparisonResponse] */
+        APIResponse_HistoryComparisonResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["HistoryComparisonResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[HoldoutEvaluationReceiptResponse] */
         APIResponse_HoldoutEvaluationReceiptResponse_: {
             /** @description 响应数据 */
@@ -4515,6 +4578,13 @@ export interface components {
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
+        /** APIResponse[ManualAccountCatalogResponse] */
+        APIResponse_ManualAccountCatalogResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ManualAccountCatalogResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
         /** APIResponse[ManualHistoryResponse] */
         APIResponse_ManualHistoryResponse_: {
             /** @description 响应数据 */
@@ -4547,6 +4617,13 @@ export interface components {
         APIResponse_ModelHistoryResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["ModelHistoryResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperAccountCatalogResponse] */
+        APIResponse_PaperAccountCatalogResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperAccountCatalogResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -4589,6 +4666,13 @@ export interface components {
         APIResponse_PaperRecoverResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["PaperRecoverResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[PaperSessionCatalogResponse] */
+        APIResponse_PaperSessionCatalogResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["PaperSessionCatalogResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -11559,6 +11643,129 @@ export interface components {
             universe_id: string;
         };
         /**
+         * HistoryComparisonLegResponse
+         * @description Per-leg provenance; identity stays the leg's own result_id.
+         */
+        HistoryComparisonLegResponse: {
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Empty Reason */
+            empty_reason: string | null;
+            /** First Valued Date */
+            first_valued_date: string | null;
+            /** Gap Count */
+            gap_count: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "model" | "paper" | "manual";
+            /** Last Valued Date */
+            last_valued_date: string | null;
+            ledger_revision: components["schemas"]["LedgerRevisionResponse"] | null;
+            /** Point Count */
+            point_count: number;
+            /** Result Id */
+            result_id: string;
+            /** Segment Count */
+            segment_count: number;
+            /** Target Count */
+            target_count: number | null;
+            /** Valued Point Count */
+            valued_point_count: number;
+        };
+        /**
+         * HistoryComparisonResponse
+         * @description Complete replayable common-window comparison result.
+         */
+        HistoryComparisonResponse: {
+            /** Comparison Policy Version */
+            comparison_policy_version: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /** Empty Reason */
+            empty_reason: string | null;
+            /** End Date */
+            end_date: string;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Legs */
+            legs: components["schemas"]["HistoryComparisonLegResponse"][];
+            /** Manual Account Id */
+            manual_account_id: string;
+            /** Method */
+            method: string;
+            /** Model Initial Capital */
+            model_initial_capital: string;
+            /** Paper Account Id */
+            paper_account_id: string;
+            /** Paper Session Id */
+            paper_session_id: string;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Result Id */
+            result_id: string;
+            /** Runs */
+            runs: components["schemas"]["HistoryComparisonRunResponse"][];
+            /** Start Date */
+            start_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "comparable" | "single_common_point" | "incomparable";
+            /** Strategy Id */
+            strategy_id: string;
+            /** Valuation Policy Version */
+            valuation_policy_version: string;
+        };
+        /**
+         * HistoryComparisonRunPointResponse
+         * @description One common date: growth anchors to 1 at the run start.
+         */
+        HistoryComparisonRunPointResponse: {
+            /** Assets */
+            assets: {
+                [key: string]: string;
+            };
+            /** Growth */
+            growth: {
+                [key: string]: string;
+            };
+            /** On Date */
+            on_date: string;
+        };
+        /**
+         * HistoryComparisonRunResponse
+         * @description One common continuous run with per-leg window returns.
+         */
+        HistoryComparisonRunResponse: {
+            /** End Date */
+            end_date: string;
+            /** Point Count */
+            point_count: number;
+            /** Points */
+            points: components["schemas"]["HistoryComparisonRunPointResponse"][];
+            /** Start Date */
+            start_date: string;
+            /** Window Returns */
+            window_returns: {
+                [key: string]: string | null;
+            };
+        };
+        /**
          * HistoryPointResponse
          * @description One dated valuation row; missing prices leave value gaps.
          */
@@ -12235,6 +12442,39 @@ export interface components {
              * @description 版本差异列表
              */
             version_diffs?: string[];
+        };
+        /**
+         * ManualAccountCatalogEntryResponse
+         * @description One selectable MANUAL account identity.
+         */
+        ManualAccountCatalogEntryResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "manual";
+            /** Account Name */
+            account_name: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+        };
+        /**
+         * ManualAccountCatalogResponse
+         * @description Every MANUAL account in deterministic id order.
+         */
+        ManualAccountCatalogResponse: {
+            /** Accounts */
+            accounts: components["schemas"]["ManualAccountCatalogEntryResponse"][];
         };
         /** @enum {string} */
         ManualBusinessEventType: "opening_cash" | "opening_position" | "buy" | "sell" | "deposit" | "withdrawal" | "fee" | "tax" | "interest" | "dividend" | "transfer_in" | "transfer_out" | "split" | "merge" | "other_corporate_action";
@@ -13146,6 +13386,39 @@ export interface components {
             total: number;
         };
         /**
+         * PaperAccountCatalogEntryResponse
+         * @description One selectable PAPER account identity.
+         */
+        PaperAccountCatalogEntryResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @constant
+             */
+            account_kind: "paper";
+            /** Account Name */
+            account_name: string;
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "CNY";
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+        };
+        /**
+         * PaperAccountCatalogResponse
+         * @description Every PAPER account in deterministic id order.
+         */
+        PaperAccountCatalogResponse: {
+            /** Accounts */
+            accounts: components["schemas"]["PaperAccountCatalogEntryResponse"][];
+        };
+        /**
          * PaperAccountIdentityResponse
          * @description Read-only PAPER account identity.
          */
@@ -13562,6 +13835,45 @@ export interface components {
             idempotency_key: string;
             /** Recovered Execution Count */
             recovered_execution_count: number;
+        };
+        /**
+         * PaperSessionCatalogEntryResponse
+         * @description One selectable paper session bound to one PAPER account.
+         */
+        PaperSessionCatalogEntryResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Revision */
+            revision: number;
+            /** Session Id */
+            session_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "created" | "running" | "paused";
+            /** Strategy Id */
+            strategy_id: string;
+            /** Trade Date */
+            trade_date: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * PaperSessionCatalogResponse
+         * @description One account's paper sessions in deterministic trade-date order.
+         */
+        PaperSessionCatalogResponse: {
+            /** Sessions */
+            sessions: components["schemas"]["PaperSessionCatalogEntryResponse"][];
         };
         /**
          * PaperSessionCommandResponse
@@ -24213,6 +24525,92 @@ export interface operations {
             };
         };
     };
+    manual_list_accounts: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ManualAccountCatalogResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     manual_create_account: {
         parameters: {
             query?: never;
@@ -26990,6 +27388,92 @@ export interface operations {
             };
         };
     };
+    paper_list_accounts: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperAccountCatalogResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     paper_create_account: {
         parameters: {
             query?: never;
@@ -27200,6 +27684,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_PaperAccountLedgerResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    paper_list_account_sessions: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_PaperSessionCatalogResponse_"];
                 };
             };
             /** @description Bad request */
@@ -27843,6 +28415,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_PortfolioComparisonResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portfolio_get_history_comparison: {
+        parameters: {
+            query: {
+                strategy_id: string;
+                paper_account_id: string;
+                paper_session_id: string;
+                manual_account_id: string;
+                start_date: string;
+                end_date: string;
+                model_initial_capital: number | string;
+                knowledge_cutoff: string;
+                publication_cutoff: string;
+                source_snapshot_ids: string[];
+                model_artifact_ids?: string[];
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_HistoryComparisonResponse_"];
                 };
             };
             /** @description Bad request */

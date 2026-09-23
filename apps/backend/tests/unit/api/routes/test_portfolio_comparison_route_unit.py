@@ -9,6 +9,8 @@ from decimal import Decimal
 from typing import Any, cast
 from unittest.mock import patch
 
+import pytest
+from ditto_application.queries.history_comparison import GetHistoryComparisonQuery
 from ditto_application.queries.model_history import GetModelHistoryQuery
 from ditto_application.queries.portfolio_comparison import (
     GetPortfolioComparisonQuery,
@@ -18,11 +20,14 @@ from ditto_application.queries.portfolio_comparison import (
 from ditto_application.queries.portfolio_scenario import PreviewPortfolioScenarioQuery
 from ditto_application.signal_package_contract import compute_signal_package_checksum
 from ditto_apps.api.routes.portfolio_comparison import (
+    get_history_comparison,
     get_model_history,
     get_portfolio_comparison,
     preview_portfolio_scenario,
 )
+from ditto_apps.errors import UnprocessableEntityError
 from ditto_apps.models.portfolio_comparison import (
+    HistoryComparisonQueryParams,
     ModelHistoryQueryParams,
     PortfolioComparisonQueryParams,
     PortfolioScenarioBody,
@@ -34,8 +39,19 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotDraft,
 )
 from ditto_data.query.contracts import PITQueryContext
+from ditto_execution.paper.session import PaperSession, PaperSessionStatus
+from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
+from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.account_ledger import (
+    AccountDefinition,
+    AccountEventDraft,
+    AccountEventSource,
+    AccountEventType,
+    AccountKind,
+    create_account_event,
+)
 from ditto_portfolio.portfolio_comparison import (
     PortfolioHoldingInput,
     PortfolioValuationInput,
@@ -396,3 +412,299 @@ def test_model_history_query_params_coerce_plain_query_strings() -> None:
     assert params.start_date == date(2026, 8, 31)
     assert params.initial_capital == Decimal("100.00")
     assert params.artifact_ids == ("model-route-a",)
+
+
+def _comparison_fixture(
+    tmp_path: Any,
+) -> tuple[
+    GetHistoryComparisonQuery,
+    ProviderSnapshot,
+    SqliteAccountEventJournal,
+    SqlitePaperSessionStore,
+]:
+    from ditto_application.queries.portfolio_history import (
+        GetManualHistoryQuery,
+        GetPaperHistoryQuery,
+    )
+
+    model_query, snapshot = _model_fixture()
+    database = str(tmp_path / "history-comparison.sqlite")
+    journal = SqliteAccountEventJournal(database)
+    store = SqlitePaperSessionStore(database)
+    paper = AccountDefinition(
+        account_id="cmp-paper",
+        kind=AccountKind.PAPER,
+        name="比较模拟账户",
+        opened_at=NOW,
+    )
+    manual = AccountDefinition(
+        account_id="cmp-manual",
+        kind=AccountKind.MANUAL,
+        name="比较实盘账户",
+        opened_at=NOW,
+    )
+    journal.create_account(paper)
+    journal.create_account(manual)
+    store.create_session(
+        PaperSession(
+            session_id="cmp-paper-session",
+            account_id="cmp-paper",
+            strategy_id="strategy-model",
+            trade_date="2026-08-31",
+            status=PaperSessionStatus.RUNNING,
+            revision=1,
+            created_at=NOW,
+            updated_at=NOW,
+        )
+    )
+    for account, source, events in (
+        (
+            paper,
+            AccountEventSource.PAPER_ENGINE,
+            (
+                (
+                    "cmp-opening-paper",
+                    AccountEventType.OPENING_CASH,
+                    None,
+                    "0",
+                    "0",
+                    "100",
+                ),
+                (
+                    "cmp-buy-600519",
+                    AccountEventType.BUY,
+                    600519,
+                    "5",
+                    "10",
+                    "0",
+                ),
+                (
+                    "cmp-buy-510300",
+                    AccountEventType.BUY,
+                    510300,
+                    "2",
+                    "20",
+                    "0",
+                ),
+            ),
+        ),
+        (
+            manual,
+            AccountEventSource.MANUAL_ENTRY,
+            (
+                (
+                    "cmp-opening-manual",
+                    AccountEventType.OPENING_CASH,
+                    None,
+                    "0",
+                    "0",
+                    "100",
+                ),
+                (
+                    "cmp-buy-manual",
+                    AccountEventType.BUY,
+                    600519,
+                    "8",
+                    "10",
+                    "0",
+                ),
+            ),
+        ),
+    ):
+        for event_id, event_type, instrument, quantity, price, gross in events:
+            journal.append(
+                create_account_event(
+                    account=account,
+                    draft=AccountEventDraft(
+                        event_type=event_type,
+                        event_id=event_id,
+                        trade_date="2026-08-31",
+                        settlement_date="2026-08-31",
+                        recorded_at=NOW,
+                        idempotency_key=f"idem-{event_id}",
+                        actor=(
+                            "paper-session:cmp-paper-session"
+                            if source is AccountEventSource.PAPER_ENGINE
+                            else "user:fixture"
+                        ),
+                        source=source,
+                        instrument_id=(
+                            InstrumentId(instrument) if instrument is not None else None
+                        ),
+                        quantity=Decimal(quantity),
+                        price=Decimal(price),
+                        gross_amount=Decimal(gross),
+                    ),
+                )
+            )
+    snapshot_reader = _ModelSnapshotReader(snapshot)
+    valuation_source = _ModelValuationSource(
+        {
+            600519: tuple(
+                _model_bar(day, close, snapshot.snapshot_id)
+                for day, close in (
+                    ("2026-08-31", 10.0),
+                    ("2026-09-01", 11.0),
+                    ("2026-09-02", 12.1),
+                )
+            ),
+            510300: tuple(
+                _model_bar(day, close, snapshot.snapshot_id)
+                for day, close in (
+                    ("2026-08-31", 20.0),
+                    ("2026-09-01", 22.0),
+                    ("2026-09-02", 20.0),
+                )
+            ),
+        }
+    )
+    query = GetHistoryComparisonQuery(
+        manual_query=GetManualHistoryQuery(
+            journal=journal,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
+        ),
+        paper_query=GetPaperHistoryQuery(
+            journal=journal,
+            session_store=store,
+            snapshot_reader=snapshot_reader,
+            valuation_source=valuation_source,
+        ),
+        model_query=model_query,
+        journal=journal,
+    )
+    return query, snapshot, journal, store
+
+
+def _comparison_params(
+    snapshot_id: str,
+    *,
+    manual_account_id: str = "cmp-manual",
+) -> HistoryComparisonQueryParams:
+    return HistoryComparisonQueryParams(
+        strategy_id="strategy-model",
+        paper_account_id="cmp-paper",
+        paper_session_id="cmp-paper-session",
+        manual_account_id=manual_account_id,
+        start_date=date(2026, 8, 31),
+        end_date=date(2026, 9, 2),
+        model_initial_capital=Decimal("100"),
+        knowledge_cutoff=datetime(2026, 9, 3, 12, tzinfo=UTC),
+        publication_cutoff=datetime(2026, 9, 3, 12, tzinfo=UTC),
+        source_snapshot_ids=(snapshot_id,),
+    )
+
+
+def test_history_comparison_route_composes_three_legs(tmp_path: Any) -> None:
+    query, snapshot, journal, store = _comparison_fixture(tmp_path)
+    try:
+        with patch(
+            "ditto_apps.api.routes.portfolio_comparison.asyncio.to_thread",
+            side_effect=_inline,
+        ):
+            result = asyncio.run(
+                _original(get_history_comparison)(
+                    params=_comparison_params(snapshot.snapshot_id),
+                    query=query,
+                )
+            )
+        paper_events = journal.list_events("cmp-paper")
+    finally:
+        store.close()
+        journal.close()
+
+    data = result.data
+    assert data.status == "comparable"
+    assert data.result_id.startswith("history-comparison:sha256:")
+    assert data.strategy_id == "strategy-model"
+    assert data.paper_account_id == "cmp-paper"
+    assert data.paper_session_id == "cmp-paper-session"
+    assert data.manual_account_id == "cmp-manual"
+    assert data.model_initial_capital == Decimal("100.00")
+    assert data.currency == "CNY"
+    assert data.method == "twr-linked-v1"
+    assert data.comparison_policy_version == "common-window-twr-v1"
+    assert [(run.start_date, run.end_date) for run in data.runs] == [
+        ("2026-08-31", "2026-09-02")
+    ]
+    run = data.runs[0]
+    assert run.points[2].growth["model"] == Decimal("1.21")
+    assert run.points[2].growth["paper"] == Decimal("1.09") * (
+        Decimal("110.5") / Decimal("109")
+    )
+    assert run.points[2].growth["manual"] == Decimal("1.08") * (
+        Decimal("116.8") / Decimal("108")
+    )
+    legs = {leg.kind: leg for leg in data.legs}
+    assert legs["paper"].ledger_revision is not None
+    assert legs["paper"].ledger_revision.event_count == len(paper_events)
+    assert legs["model"].target_count == 2
+    assert legs["model"].ledger_revision is None
+
+
+def test_history_comparison_route_maps_account_errors_to_422(
+    tmp_path: Any,
+) -> None:
+    query, snapshot, journal, store = _comparison_fixture(tmp_path)
+    try:
+        with patch(
+            "ditto_apps.api.routes.portfolio_comparison.asyncio.to_thread",
+            side_effect=_inline,
+        ):
+            with pytest.raises(UnprocessableEntityError) as raised:
+                asyncio.run(
+                    _original(get_history_comparison)(
+                        params=_comparison_params(
+                            snapshot.snapshot_id,
+                            manual_account_id="missing-manual",
+                        ),
+                        query=query,
+                    )
+                )
+    finally:
+        store.close()
+        journal.close()
+    assert raised.value.error_code == "HISTORY_COMPARISON_ACCOUNT_NOT_FOUND"
+
+
+def test_history_comparison_query_params_coerce_plain_query_strings() -> None:
+    params = HistoryComparisonQueryParams.model_validate(
+        {
+            "strategy_id": "strategy-model",
+            "paper_account_id": "cmp-paper",
+            "paper_session_id": "cmp-paper-session",
+            "manual_account_id": "cmp-manual",
+            "start_date": "2026-08-31",
+            "end_date": "2026-09-02",
+            "model_initial_capital": "100.00",
+            "knowledge_cutoff": "2026-09-01T12:00:00+08:00",
+            "publication_cutoff": "2026-09-01T12:00:00+08:00",
+            "source_snapshot_ids": ["snapshot:stock_daily:1"],
+            "model_artifact_ids": ["model-route-a"],
+        }
+    )
+    assert params.start_date == date(2026, 8, 31)
+    assert params.model_initial_capital == Decimal("100.00")
+    assert params.source_snapshot_ids == ("snapshot:stock_daily:1",)
+    assert params.model_artifact_ids == ("model-route-a",)
+
+
+def test_history_comparison_openapi_declares_the_contract() -> None:
+    schema = create_openapi_app().openapi()
+    schemas = schema["components"]["schemas"]
+    assert "HistoryComparisonResponse" in schemas
+    properties = schemas["HistoryComparisonResponse"]["properties"]
+    for field in ("runs", "legs", "status", "comparison_policy_version"):
+        assert field in properties
+    operation = schema["paths"]["/api/v1/portfolio/history-comparison"]["get"]
+    parameter_names = {parameter["name"] for parameter in operation["parameters"]}
+    for name in (
+        "strategy_id",
+        "paper_account_id",
+        "paper_session_id",
+        "manual_account_id",
+        "model_initial_capital",
+        "source_snapshot_ids",
+        "model_artifact_ids",
+    ):
+        assert name in parameter_names

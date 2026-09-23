@@ -1,6 +1,7 @@
 export { DailyDecisionV3Workspace } from "./daily-decision-v3-workspace";
 export { EquityPnlBlock } from "./equity-pnl-block";
 export { FillLedgerList } from "./fill-ledger-list";
+export { HistoryComparisonPanel } from "./history-comparison-panel";
 export { PortfolioComparisonWorkspace } from "./portfolio-comparison-workspace";
 export { PortfolioConstructionEvidence } from "./portfolio-construction-evidence";
 export { PortfolioOverviewOrdersPanel } from "./portfolio-overview-orders-panel";

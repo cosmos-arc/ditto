@@ -135,6 +135,9 @@ class _Journal:
     def list_events(self, account_id: str) -> tuple[AccountEvent, ...]:
         return tuple(event for event in self.events if event.account_id == account_id)
 
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        return (self._account,)
+
 
 class _SnapshotReader:
     def __init__(

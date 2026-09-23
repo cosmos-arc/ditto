@@ -1,5 +1,6 @@
 import { apiClient } from "@/api/transport";
 import type {
+	AccountCatalogEntry,
 	CorrectManualEventBody,
 	CreateManualAccountBody,
 	ManualAccountHistory,
@@ -9,9 +10,15 @@ import type {
 	ManualHistoryQueryIdentity,
 	ReverseManualEventBody,
 } from "./account-models";
-import { parseManualAccountHistory, parseManualAccountLedger, parseManualAccountReceipt } from "./runtime-validation";
+import {
+	parseAccountCatalog,
+	parseManualAccountHistory,
+	parseManualAccountLedger,
+	parseManualAccountReceipt,
+} from "./runtime-validation";
 
 export type {
+	AccountCatalogEntry,
 	CorrectManualEventBody,
 	CreateManualAccountBody,
 	ManualAccount,
@@ -30,6 +37,11 @@ export type {
 export async function createManualAccount(body: CreateManualAccountBody): Promise<ManualAccountReceipt> {
 	const payload = await apiClient.post("/api/v1/manual/accounts", { body });
 	return parseManualAccountReceipt(payload, { accountId: body.account_id, kind: "account" });
+}
+
+export async function fetchManualAccounts(): Promise<readonly AccountCatalogEntry[]> {
+	const payload = await apiClient.get("/api/v1/manual/accounts");
+	return parseAccountCatalog(payload, "manual");
 }
 
 export async function fetchManualAccountLedger(accountId: string, asOf: string): Promise<ManualAccountLedger> {

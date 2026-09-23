@@ -141,6 +141,13 @@ class SqlitePaperSessionStore(AbstractContextManager["SqlitePaperSessionStore"])
         ).fetchone()
         return _session(_load(row[0])) if row is not None else None
 
+    def list_sessions(self, account_id: str) -> tuple[PaperSession, ...]:
+        """Read one account's sessions in deterministic trade-date order."""
+        rows = self._db.execute("SELECT payload_json FROM paper_sessions")
+        sessions = (_session(_load(row[0])) for row in rows.fetchall())
+        owned = (session for session in sessions if session.account_id == account_id)
+        return tuple(sorted(owned, key=lambda s: (s.trade_date, s.session_id)))
+
     def update_session(
         self,
         session: PaperSession,

@@ -287,6 +287,10 @@ class AccountEventJournalPort(Protocol):
         """Read one exact account identity."""
         ...
 
+    def list_accounts(self) -> tuple[AccountDefinition, ...]:
+        """Read every account identity in deterministic id order."""
+        ...
+
     def append(self, event: AccountEvent) -> AccountEvent:
         """Append one event atomically; existing rows may never be overwritten."""
         ...
