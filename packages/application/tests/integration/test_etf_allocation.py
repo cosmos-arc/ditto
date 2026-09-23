@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import MagicMock
+from threading import Barrier
+from unittest.mock import MagicMock, patch
 
 import pytest
 from ditto_application.exceptions import AppCommandError, AppConflictError
@@ -17,6 +19,7 @@ from ditto_application.processes.portfolio.etf_allocation import (
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_platform.foundation import SQLitePool
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -147,6 +150,12 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
         assert command.review(submit).paper_status == "review_pending"
         assert command.review(approve).paper_status == "review_approved"
         assert command.review(approve).paper_status == "review_approved"
+        assert command.review(submit).paper_status == "review_approved"
+        approved_receipt = artifacts.get_artifact(
+            f"{version.version_id}:review:approve"
+        )
+        assert approved_receipt is not None
+        assert approved_receipt.artifact_type is ArtifactKind.DIAGNOSTICS
         assert command.list_versions("demo")[0].paper_status == "review_approved"
         with pytest.raises(AppConflictError):
             command.review(replace(approve, reason="different"))
@@ -203,5 +212,57 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
                 )
             )
         assert artifacts.get_artifact(f"{revision.version_id}:review:approve") is None
+    finally:
+        pool.close_all()
+
+
+def test_concurrent_identical_review_retries_return_the_committed_result(
+    tmp_path: Path,
+) -> None:
+    pool = SQLitePool(str(tmp_path / "concurrent-review.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    artifacts = StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    command = ETFAllocationCommand(metadata, artifacts)
+    try:
+        version = command.save(_request())
+        review = ETFAllocationReviewRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            action="submit",
+            actor="operator",
+            reason="checked target",
+            idempotency_key="submit-once",
+        )
+        barrier = Barrier(2)
+        transition = artifacts.transition_with_receipt
+
+        def race(
+            artifact_id: str,
+            status: str,
+            expected_current: str,
+            receipt: StrategyArtifactRecord,
+        ) -> bool:
+            barrier.wait(timeout=10)
+            return transition(artifact_id, status, expected_current, receipt)
+
+        with patch.object(artifacts, "transition_with_receipt", side_effect=race):
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [executor.submit(command.review, review) for _ in range(2)]
+                assert [
+                    future.result(timeout=15).paper_status for future in futures
+                ] == [
+                    "review_pending",
+                    "review_pending",
+                ]
+        assert (
+            sum(
+                record.artifact_id == f"{version.version_id}:review:submit"
+                for record in artifacts.list_by_strategy("etf-allocation:demo")
+            )
+            == 1
+        )
     finally:
         pool.close_all()

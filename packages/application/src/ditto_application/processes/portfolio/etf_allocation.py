@@ -173,12 +173,17 @@ class ETFAllocationCommand:
             request, self._artifacts.get_artifact(request.version_id), strategy_id
         )
         current, target = transitions[request.action]
+        completed_statuses = (
+            {"review", "approved", "rejected"}
+            if request.action == "submit"
+            else {target}
+        )
         receipt_id = f"{request.version_id}:review:{request.action}"
         receipt = _review_receipt(request, version, strategy_id, receipt_id)
         prior = self._artifacts.get_artifact(receipt_id)
-        if prior is not None and prior.metadata != receipt.metadata:
+        if prior is not None and not _same_review_receipt(prior, receipt):
             raise AppConflictError("ETF allocation review decision conflict")
-        if version.status == target and prior is not None:
+        if version.status in completed_statuses and prior is not None:
             return _version(version)
         if version.status != current:
             raise AppConflictError("ETF allocation review state conflict")
@@ -191,6 +196,15 @@ class ETFAllocationCommand:
         if not self._artifacts.transition_with_receipt(
             request.version_id, target, current, receipt
         ):
+            updated = self._artifacts.get_artifact(request.version_id)
+            committed = self._artifacts.get_artifact(receipt_id)
+            if (
+                updated is not None
+                and updated.status in completed_statuses
+                and committed is not None
+                and _same_review_receipt(committed, receipt)
+            ):
+                return _version(updated)
             raise AppConflictError("ETF allocation review state conflict")
         updated = self._artifacts.get_artifact(request.version_id)
         if updated is None:
@@ -208,7 +222,7 @@ def _review_receipt(
         artifact_id=receipt_id,
         strategy_id=strategy_id,
         run_id=request.version_id,
-        artifact_type=ArtifactKind.ETF_ALLOCATION_REVIEW,
+        artifact_type=ArtifactKind.DIAGNOSTICS,
         file_path="",
         metadata={
             "version_id": request.version_id,
@@ -220,6 +234,21 @@ def _review_receipt(
         },
         status="active",
         created_at=datetime.now(UTC).isoformat(),
+    )
+
+
+def _same_review_receipt(
+    existing: StrategyArtifactRecord, expected: StrategyArtifactRecord
+) -> bool:
+    return (
+        existing.status == "active"
+        and existing.artifact_id == expected.artifact_id
+        and existing.file_path == expected.file_path
+        and existing.strategy_id == expected.strategy_id
+        and existing.run_id == expected.run_id
+        and existing.artifact_type
+        in {ArtifactKind.DIAGNOSTICS, ArtifactKind.ETF_ALLOCATION_REVIEW}
+        and existing.metadata == expected.metadata
     )
 
 
