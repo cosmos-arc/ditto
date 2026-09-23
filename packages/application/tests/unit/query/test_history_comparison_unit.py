@@ -560,6 +560,181 @@ def test_server_resolved_ledger_revisions_bind_the_result_identity() -> None:
     )
 
 
+def _late_deposit(account_id: str, event_id: str, *, kind: AccountKind) -> AccountEvent:
+    """A future correction appended after the compared range ends."""
+    return _event(
+        _account(account_id, kind),
+        event_id,
+        AccountEventType.DEPOSIT,
+        trade_date="2026-03-09",
+        gross_amount="500",
+        flow_position=FlowPosition.START_OF_DAY,
+        source=(
+            AccountEventSource.PAPER_ENGINE
+            if kind is AccountKind.PAPER
+            else AccountEventSource.MANUAL_ENTRY
+        ),
+    )
+
+
+def test_pinned_revisions_replay_the_original_identity_after_future_correction() -> (
+    None
+):
+    query, journal = _query()
+    first = query.history(_request())
+    paper_revision = _revision_of(journal, _PAPER_ACCOUNT)
+    manual_revision = _revision_of(journal, _MANUAL_ACCOUNT)
+
+    journal.append(
+        _late_deposit(_PAPER_ACCOUNT, "paper-deposit-late", kind=AccountKind.PAPER)
+    )
+    journal.append(
+        _late_deposit(_MANUAL_ACCOUNT, "manual-deposit-late", kind=AccountKind.MANUAL)
+    )
+
+    # Both changed ledgers pinned: the comparison replays byte-identically.
+    pinned = query.history(
+        _request(
+            paper_ledger_event_count=paper_revision.event_count,
+            paper_ledger_hash=paper_revision.ledger_hash,
+            manual_ledger_event_count=manual_revision.event_count,
+            manual_ledger_hash=manual_revision.ledger_hash,
+        )
+    )
+    assert pinned.result_id == first.result_id
+    assert pinned.runs == first.runs
+    assert pinned.legs == first.legs
+
+    # Mixed pinning keeps the unpinned leg on the current stream: the manual
+    # revision advances, so the comparison identity moves with it while the
+    # in-range runs stay unchanged.
+    partially_pinned = query.history(
+        _request(
+            paper_ledger_event_count=paper_revision.event_count,
+            paper_ledger_hash=paper_revision.ledger_hash,
+        )
+    )
+    assert partially_pinned.result_id != first.result_id
+    partially_paper = next(leg for leg in partially_pinned.legs if leg.kind == "paper")
+    assert partially_paper.ledger_revision == paper_revision
+    partially_manual = next(
+        leg for leg in partially_pinned.legs if leg.kind == "manual"
+    )
+    assert partially_manual.ledger_revision is not None
+    assert partially_manual.ledger_revision.event_count == (
+        manual_revision.event_count + 1
+    )
+    assert [run.start_date for run in partially_pinned.runs] == [
+        run.start_date for run in first.runs
+    ]
+
+
+def test_pinning_the_current_revisions_matches_the_unpinned_result() -> None:
+    query, journal = _query()
+    unpinned = query.history(_request())
+    paper_revision = _revision_of(journal, _PAPER_ACCOUNT)
+    manual_revision = _revision_of(journal, _MANUAL_ACCOUNT)
+
+    pinned = query.history(
+        _request(
+            paper_ledger_event_count=paper_revision.event_count,
+            paper_ledger_hash=paper_revision.ledger_hash,
+            manual_ledger_event_count=manual_revision.event_count,
+            manual_ledger_hash=manual_revision.ledger_hash,
+        )
+    )
+
+    assert pinned == unpinned
+
+
+def test_partial_revision_pins_fail_closed() -> None:
+    query, _ = _query()
+    partial: tuple[tuple[str, dict[str, object]], ...] = (
+        ("paper count only", {"paper_ledger_event_count": 3}),
+        ("paper hash only", {"paper_ledger_hash": "account-ledger:sha256:x"}),
+        ("manual count only", {"manual_ledger_event_count": 2}),
+        ("manual hash only", {"manual_ledger_hash": "account-ledger:sha256:x"}),
+    )
+    for label, overrides in partial:
+        with pytest.raises(AppQueryError, match="failed closed") as raised:
+            query.history(_request(**overrides))
+        assert raised.value.details["code"] == "HISTORY_COMPARISON_REQUEST_INVALID", (
+            label
+        )
+
+
+def test_pinned_revision_stream_mismatch_fails_closed() -> None:
+    query, journal = _query()
+    manual_revision = _revision_of(journal, _MANUAL_ACCOUNT)
+    paper_revision = _revision_of(journal, _PAPER_ACCOUNT)
+
+    with pytest.raises(AppQueryError) as raised:
+        query.history(
+            _request(
+                manual_ledger_event_count=manual_revision.event_count + 10,
+                manual_ledger_hash=manual_revision.ledger_hash,
+            )
+        )
+    assert (
+        raised.value.details["code"] == "MANUAL_HISTORY_LEDGER_REVISION_COUNT_INVALID"
+    )
+
+    with pytest.raises(AppQueryError) as raised:
+        query.history(
+            _request(
+                manual_ledger_event_count=manual_revision.event_count,
+                manual_ledger_hash="account-ledger:sha256:not-the-stream",
+            )
+        )
+    assert raised.value.details["code"] == "MANUAL_HISTORY_LEDGER_REVISION_MISMATCH"
+
+    with pytest.raises(AppQueryError) as raised:
+        query.history(
+            _request(
+                paper_ledger_event_count=paper_revision.event_count,
+                paper_ledger_hash="account-ledger:sha256:not-the-stream",
+            )
+        )
+    assert raised.value.details["code"] == "PAPER_HISTORY_LEDGER_REVISION_MISMATCH"
+
+
+def test_pinned_account_gates_keep_comparison_error_codes() -> None:
+    query, _ = _query()
+
+    # The same precondition fails with the same code whether or not a pin is
+    # supplied; only stream-vs-pin validation delegates to the leg level.
+    with pytest.raises(AppQueryError) as raised:
+        query.history(
+            _request(
+                paper_ledger_event_count=3,
+                paper_ledger_hash="account-ledger:sha256:x",
+                paper_account_id="missing-account",
+            )
+        )
+    assert raised.value.details["code"] == "HISTORY_COMPARISON_ACCOUNT_NOT_FOUND"
+
+    with pytest.raises(AppQueryError) as raised:
+        query.history(
+            _request(
+                manual_ledger_event_count=2,
+                manual_ledger_hash="account-ledger:sha256:x",
+                manual_account_id=_PAPER_ACCOUNT,
+            )
+        )
+    assert raised.value.details["code"] == "HISTORY_COMPARISON_ACCOUNT_KIND_MISMATCH"
+
+    query, journal = _query()
+    journal.events.clear()
+    with pytest.raises(AppQueryError) as raised:
+        query.history(
+            _request(
+                paper_ledger_event_count=3,
+                paper_ledger_hash="account-ledger:sha256:x",
+            )
+        )
+    assert raised.value.details["code"] == "HISTORY_COMPARISON_LEDGER_EMPTY"
+
+
 def test_missing_or_mismatched_accounts_fail_closed() -> None:
     query, _ = _query()
 

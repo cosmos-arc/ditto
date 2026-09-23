@@ -145,6 +145,10 @@ async def get_history_comparison(
                 publication_cutoff=params.publication_cutoff,
                 source_snapshot_ids=tuple(params.source_snapshot_ids),
                 model_artifact_ids=tuple(params.model_artifact_ids),
+                paper_ledger_event_count=params.paper_ledger_event_count,
+                paper_ledger_hash=params.paper_ledger_hash,
+                manual_ledger_event_count=params.manual_ledger_event_count,
+                manual_ledger_hash=params.manual_ledger_hash,
             ),
         )
     except (AppQueryError, ValueError) as exc:

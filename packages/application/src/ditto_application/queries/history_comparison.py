@@ -5,8 +5,9 @@ The query reuses the three leg history queries (MODEL target replay, the
 session-bound PAPER revision replay, and the MANUAL revision replay) so every
 leg keeps its own PIT context, ledger revision identity, and replayable
 ``result_id``. The server resolves the current PAPER/MANUAL ledger revisions
-and binds them into the result; the numeric common-window rule itself lives
-in :mod:`ditto_portfolio.history_window_comparison`. Read-only: no backtest,
+— or replays a caller-pinned append-order prefix — and binds the revision
+into the result; the numeric common-window rule itself lives in
+:mod:`ditto_portfolio.history_window_comparison`. Read-only: no backtest,
 no ledger write, no "latest" fallback.
 """
 
@@ -20,6 +21,7 @@ from hashlib import sha256
 
 import orjson
 from ditto_portfolio.account_ledger import (
+    AccountEvent,
     AccountEventJournalPort,
     AccountKind,
     ledger_hash,
@@ -80,7 +82,14 @@ def _error(code: str, reason: str, **details: object) -> AppQueryError:
 
 @dataclass(frozen=True, kw_only=True)
 class HistoryComparisonRequest:
-    """Caller-selected identities shared by all three legs."""
+    """
+    Caller-selected identities shared by all three legs.
+
+    A ledger revision pin (``*_ledger_event_count`` + ``*_ledger_hash``,
+    both or neither) replays that leg against the pinned append-order
+    prefix instead of the server-resolved current revision, so an old
+    comparison stays replayable after future ledger corrections.
+    """
 
     strategy_id: str
     paper_account_id: str
@@ -93,6 +102,10 @@ class HistoryComparisonRequest:
     publication_cutoff: datetime
     source_snapshot_ids: tuple[str, ...]
     model_artifact_ids: tuple[str, ...] = ()
+    paper_ledger_event_count: int | None = None
+    paper_ledger_hash: str | None = None
+    manual_ledger_event_count: int | None = None
+    manual_ledger_hash: str | None = None
 
     def result_identity(self) -> dict[str, object]:
         """Request facts bound into the comparison result identity."""
@@ -183,6 +196,7 @@ def _parse_date(value: str, field: str) -> date:
 def _validate_request(request: HistoryComparisonRequest) -> None:
     _validate_entities_and_range(request)
     _validate_research_context(request)
+    _validate_revision_pins(request)
 
 
 def _validate_entities_and_range(request: HistoryComparisonRequest) -> None:
@@ -230,6 +244,16 @@ def _validate_research_context(request: HistoryComparisonRequest) -> None:
         raise _error("REQUEST_INVALID", "model_artifact_ids must be unique")
 
 
+def _validate_revision_pins(request: HistoryComparisonRequest) -> None:
+    for leg, event_count, ledger_hash_value in (
+        ("paper", request.paper_ledger_event_count, request.paper_ledger_hash),
+        ("manual", request.manual_ledger_event_count, request.manual_ledger_hash),
+    ):
+        if (event_count is None) != (ledger_hash_value is None):
+            fields = f"{leg}_ledger_event_count and {leg}_ledger_hash"
+            raise _error("REQUEST_INVALID", f"{fields} must be pinned together")
+
+
 class GetHistoryComparisonQuery:
     """Compose the three leg replays into one common-window comparison."""
 
@@ -249,12 +273,16 @@ class GetHistoryComparisonQuery:
     def history(self, request: HistoryComparisonRequest) -> HistoryComparisonView:
         """Return the exact common-window comparison or fail closed."""
         _validate_request(request)
-        manual_revision = self._resolve_revision(
-            request.manual_account_id,
+        manual_revision = self._pinned_revision(
+            request.manual_ledger_event_count,
+            request.manual_ledger_hash,
+            account_id=request.manual_account_id,
             kind=AccountKind.MANUAL,
         )
-        paper_revision = self._resolve_revision(
-            request.paper_account_id,
+        paper_revision = self._pinned_revision(
+            request.paper_ledger_event_count,
+            request.paper_ledger_hash,
+            account_id=request.paper_account_id,
             kind=AccountKind.PAPER,
         )
         manual = self._manual.history(
@@ -360,12 +388,37 @@ class GetHistoryComparisonQuery:
             ),
         )
 
-    def _resolve_revision(
+    def _pinned_revision(
+        self,
+        event_count: int | None,
+        ledger_hash_value: str | None,
+        *,
+        account_id: str,
+        kind: AccountKind,
+    ) -> LedgerRevision:
+        """
+        Use the pinned revision, or resolve the current stream revision.
+
+        The account gates run for both paths so comparison error codes stay
+        stable whether or not the caller pinned a revision.
+        """
+        events = self._account_events(account_id, kind=kind)
+        if event_count is not None and ledger_hash_value is not None:
+            return LedgerRevision(
+                event_count=event_count,
+                ledger_hash=ledger_hash_value,
+            )
+        return LedgerRevision(
+            event_count=len(events),
+            ledger_hash=ledger_hash(events),
+        )
+
+    def _account_events(
         self,
         account_id: str,
         *,
         kind: AccountKind,
-    ) -> LedgerRevision:
+    ) -> tuple[AccountEvent, ...]:
         account = self._journal.get_account(account_id)
         if account is None:
             raise _error(
@@ -388,10 +441,7 @@ class GetHistoryComparisonQuery:
                 "account has no recorded events to replay",
                 account_id=account_id,
             )
-        return LedgerRevision(
-            event_count=len(events),
-            ledger_hash=ledger_hash(events),
-        )
+        return events
 
     def _shared_currency(
         self,

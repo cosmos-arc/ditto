@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 37933f257c803a784d4014c983a7e0b75d29de0d5ea6b0d54cfb49c6539f64f4
+ * Schema SHA-256: b1c354b9b557c8f2b207ee1b72c2b59b50b62cfb16d6640f452bbb7323b39afa
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -28496,6 +28496,10 @@ export interface operations {
                 publication_cutoff: string;
                 source_snapshot_ids: string[];
                 model_artifact_ids?: string[];
+                paper_ledger_event_count?: number | null;
+                paper_ledger_hash?: string | null;
+                manual_ledger_event_count?: number | null;
+                manual_ledger_hash?: string | null;
             };
             header?: {
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */

@@ -229,6 +229,69 @@ describe("history comparison API", () => {
 		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ runs: [brokenRun] })));
 		await expect(fetchHistoryComparison(identity)).rejects.toThrow(/manual/);
 	});
+
+	it("sends pinned ledger revisions and asserts the echoed leg revisions", async () => {
+		const fetchMock = stubFetch(comparisonPayload());
+		vi.stubGlobal("fetch", fetchMock);
+
+		await fetchHistoryComparison({
+			...identity,
+			paper_ledger_event_count: 3,
+			paper_ledger_hash: "account-ledger:sha256:abc",
+			manual_ledger_event_count: 2,
+			manual_ledger_hash: "account-ledger:sha256:def",
+		});
+
+		const url = new URL(capturedRequest(fetchMock.mock.calls).url);
+		expect(url.searchParams.get("paper_ledger_event_count")).toBe("3");
+		expect(url.searchParams.get("paper_ledger_hash")).toBe("account-ledger:sha256:abc");
+		expect(url.searchParams.get("manual_ledger_event_count")).toBe("2");
+		expect(url.searchParams.get("manual_ledger_hash")).toBe("account-ledger:sha256:def");
+	});
+
+	it.each([
+		["paper", "account-ledger:sha256:other"],
+		["manual", "account-ledger:sha256:other"],
+	] as const)("rejects a %s leg revision that differs from the pin", async (kind, ledgerHash) => {
+		const legs = legPayload().map((leg) =>
+			leg.kind === kind ? { ...leg, ledger_revision: { event_count: 9, ledger_hash: ledgerHash } } : leg,
+		);
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ legs })));
+		await expect(
+			fetchHistoryComparison({
+				...identity,
+				paper_ledger_event_count: 3,
+				paper_ledger_hash: "account-ledger:sha256:abc",
+				manual_ledger_event_count: 2,
+				manual_ledger_hash: "account-ledger:sha256:def",
+			}),
+		).rejects.toThrow(/ledger_revision/);
+	});
+
+	it("rejects a pinned leg whose revision echo is null", async () => {
+		const legs = legPayload().map((leg) => (leg.kind === "manual" ? { ...leg, ledger_revision: null } : leg));
+		vi.stubGlobal("fetch", stubFetch(comparisonPayload({ legs })));
+		await expect(
+			fetchHistoryComparison({
+				...identity,
+				manual_ledger_event_count: 2,
+				manual_ledger_hash: "account-ledger:sha256:def",
+			}),
+		).rejects.toThrow(/ledger_revision/);
+	});
+
+	it("accepts unpinned requests without leg revision assertions", async () => {
+		const fetchMock = stubFetch(comparisonPayload());
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(fetchHistoryComparison(identity)).resolves.toBeTruthy();
+
+		const url = new URL(capturedRequest(fetchMock.mock.calls).url);
+		expect(url.searchParams.has("paper_ledger_event_count")).toBe(false);
+		expect(url.searchParams.has("paper_ledger_hash")).toBe(false);
+		expect(url.searchParams.has("manual_ledger_event_count")).toBe(false);
+		expect(url.searchParams.has("manual_ledger_hash")).toBe(false);
+	});
 });
 
 describe("strategy options API", () => {

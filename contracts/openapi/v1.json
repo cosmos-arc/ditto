@@ -44710,6 +44710,74 @@
             }
           },
           {
+            "in": "query",
+            "name": "paper_ledger_event_count",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Paper Ledger Event Count"
+            }
+          },
+          {
+            "in": "query",
+            "name": "paper_ledger_hash",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Paper Ledger Hash"
+            }
+          },
+          {
+            "in": "query",
+            "name": "manual_ledger_event_count",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Manual Ledger Event Count"
+            }
+          },
+          {
+            "in": "query",
+            "name": "manual_ledger_hash",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Manual Ledger Hash"
+            }
+          },
+          {
             "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
             "in": "header",
             "name": "X-Ditto-API-Contract-Version",
