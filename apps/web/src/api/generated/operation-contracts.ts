@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: f65e074b5ea9396af9e5328333b67389a18161d35471daa521b4b0ea05dfedeb
+ * Schema SHA-256: 252dceb48d71a69b5f833a266cfaa45fa106d2714f5b8b67102ea0e0defce5cb
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -2445,7 +2445,7 @@ export const operationRequestContracts = {
   "get /api/v1/metadata/etf-candidates": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["asof", "cutoff", "exposure", "search", "sort_field", "source_snapshot_id"],
+      "query": ["asof", "asset_exposure", "cutoff", "exposure", "search", "sort_field", "source_snapshot_id"],
     },
   },
   "get /api/v1/metadata/etf-reference-snapshots": {

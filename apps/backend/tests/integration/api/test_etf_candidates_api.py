@@ -11,8 +11,13 @@ from typing import cast
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
+from ditto_application.queries.field_admission import (
+    FieldAdmissionQuery,
+    FieldAdmissionRequest,
+)
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_apps.api.routes.metadata import router
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.storage.metadata.instrument.instrument_reader import InstrumentReader
 from ditto_platform.foundation import SQLiteClient, SQLitePool
@@ -20,7 +25,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
-def _setup(tmp_path: Path) -> tuple[FastAPI, SQLitePool, str]:
+def _setup(
+    tmp_path: Path,
+    *,
+    admission: FieldAdmissionQuery | None = None,
+    snapshots: ProviderSnapshotReader | None = None,
+) -> tuple[FastAPI, SQLitePool, str]:
     """Build an isolated recorded ETF source and its HTTP reader."""
     schema = Path(str(files("ditto_data.scripts") / "schema.sql"))
     pool = SQLitePool(str(tmp_path / "etf.sqlite"), schema_path=schema)
@@ -75,7 +85,9 @@ def _setup(tmp_path: Path) -> tuple[FastAPI, SQLitePool, str]:
 
     for instrument_id in (2000001, 2000002):
         add(instrument_id, "tracking_index", "000300.SH", "2020-01-01")
+        add(instrument_id, "asset_class", "A股宽基", "2020-01-01")
     add(2000003, "tracking_index", "NDX", "2020-01-01")
+    add(2000003, "asset_class", "跨境股票", "2020-01-01")
     add(2000001, "management_fee", "0.5", "2026-01-01", unit="%/year")
     add(2000001, "custody_fee", "0.1", "2026-01-01", unit="%/year")
     add(2000002, "management_fee", "0.2", "2026-01-01", unit="%/year")
@@ -130,7 +142,9 @@ def _setup(tmp_path: Path) -> tuple[FastAPI, SQLitePool, str]:
 
         @provide
         def metadata(self) -> MetadataQueryFacade:
-            return MetadataQueryFacade(metadata_service=service)
+            return MetadataQueryFacade(
+                metadata_service=service, admission=admission, snapshots=snapshots
+            )
 
     app = FastAPI()
     setup_dishka(container=make_async_container(TestProvider()), app=app)
@@ -183,7 +197,7 @@ def test_etf_candidate_snapshot_and_20_session_comparison(tmp_path: Path) -> Non
         assert cross_border.json()["data"][0]["is_active"] is False
         assert fields["price_close"]["observed_on"] == "2026-09-29"
         assert fields["nav"]["observed_on"] == "2026-09-27"
-        assert fields["iopv"]["missing_reason"] == "no_qualified_observation"
+        assert fields["iopv"]["missing_reason"] == "no_observation"
         assert fields["daily_amount"]["missing_reason"] == "invalid_amount_observation"
         later = web.get(
             "/api/v1/metadata/etf-candidates",
@@ -196,6 +210,20 @@ def test_etf_candidate_snapshot_and_20_session_comparison(tmp_path: Path) -> Non
         )
         assert later.status_code == 200, later.text
         assert later.json()["data"][0]["instrument_id"] == 2000001
+        historical = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-28",
+                "cutoff": "2026-10-02T00:00:00Z",
+                "source_snapshot_id": snapshot,
+                "exposure": "000300.SH",
+            },
+        )
+        assert historical.status_code == 200, historical.text
+        assert [item["instrument_id"] for item in historical.json()["data"]] == [
+            2000001,
+            2000002,
+        ]
         searched = web.get(
             "/api/v1/metadata/etf-candidates",
             params={
@@ -207,4 +235,60 @@ def test_etf_candidate_snapshot_and_20_session_comparison(tmp_path: Path) -> Non
         )
         assert searched.status_code == 200, searched.text
         assert [item["instrument_id"] for item in searched.json()["data"]] == [2000002]
+        by_asset = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+                "asset_exposure": "跨境股票",
+            },
+        )
+        assert by_asset.status_code == 200, by_asset.text
+        assert [item["instrument_id"] for item in by_asset.json()["data"]] == [2000003]
+    pool.close()
+
+
+@pytest.mark.integration
+def test_registered_snapshot_requires_field_display_admission(tmp_path: Path) -> None:
+    """A registered but denied field cannot be displayed or sorted by value."""
+    allowed = {"value": False}
+    requests: list[FieldAdmissionRequest] = []
+
+    def assess(request: FieldAdmissionRequest) -> SimpleNamespace:
+        requests.append(request)
+        return SimpleNamespace(
+            allowed=allowed["value"],
+            fields=(SimpleNamespace(reason_codes=("LICENSE_RESTRICTED",)),),
+        )
+
+    admission = cast(FieldAdmissionQuery, SimpleNamespace(assess=assess))
+    snapshots = cast(
+        ProviderSnapshotReader,
+        SimpleNamespace(
+            get_snapshot=lambda _id: SimpleNamespace(dataset_id="etf_reference")
+        ),
+    )
+    app, pool, snapshot = _setup(tmp_path, admission=admission, snapshots=snapshots)
+    params = {
+        "asof": "2026-09-30",
+        "cutoff": "2026-09-30T18:00:00Z",
+        "source_snapshot_id": snapshot,
+    }
+    with TestClient(app) as web:
+        blocked = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert blocked.status_code == 200, blocked.text
+        field = blocked.json()["data"][0]["fields"]["tracking_index"]
+        assert field["value"] is None
+        assert field["eligibility"] == "display_denied"
+        assert field["eligibility_reasons"] == ["LICENSE_RESTRICTED"]
+        assert field["missing_reason"] == "display_admission_denied"
+        assert requests
+        assert all(request.purpose == "display" for request in requests)
+        allowed["value"] = True
+        admitted = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert admitted.status_code == 200, admitted.text
+        field = admitted.json()["data"][0]["fields"]["tracking_index"]
+        assert field["value"] == "000300.SH"
+        assert field["eligibility"] == "display_allowed"
     pool.close()

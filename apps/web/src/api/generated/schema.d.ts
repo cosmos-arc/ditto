@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: f65e074b5ea9396af9e5328333b67389a18161d35471daa521b4b0ea05dfedeb
+ * Schema SHA-256: 252dceb48d71a69b5f833a266cfaa45fa106d2714f5b8b67102ea0e0defce5cb
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -10514,6 +10514,11 @@ export interface components {
             effective_to?: string | null;
             /** Eligibility */
             eligibility: string | null;
+            /**
+             * Eligibility Reasons
+             * @default []
+             */
+            eligibility_reasons: string[];
             /** Missing Reason */
             missing_reason: string | null;
             /** Observed On */
@@ -27372,6 +27377,7 @@ export interface operations {
                 cutoff: string;
                 source_snapshot_id: string;
                 exposure?: string | null;
+                asset_exposure?: string | null;
                 search?: string | null;
                 sort_field?: string;
             };

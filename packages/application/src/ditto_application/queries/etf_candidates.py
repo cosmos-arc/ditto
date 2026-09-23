@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from math import isfinite
 from statistics import median
 from typing import Any
 
+from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
+
+from ditto_application.exceptions import AppQueryError
+from ditto_application.queries.field_admission import (
+    FieldAdmissionQuery,
+    FieldAdmissionRequest,
+    FieldRequirement,
+)
 
 _FIELDS = (
     "tracking_index",
@@ -51,6 +59,7 @@ class ETFField:
     source_snapshot_id: str | None
     eligibility: str | None
     missing_reason: str | None
+    eligibility_reasons: tuple[str, ...] = ()
     sample_count: int | None = None
     effective_from: str | None = None
     effective_to: str | None = None
@@ -71,8 +80,15 @@ class ETFCandidate:
 class ETFCandidateQuery:
     """Read-only application projection. The result never grants trading eligibility."""
 
-    def __init__(self, metadata: MetadataService) -> None:
+    def __init__(
+        self,
+        metadata: MetadataService,
+        admission: FieldAdmissionQuery | None = None,
+        snapshots: ProviderSnapshotReader | None = None,
+    ) -> None:
         self._metadata = metadata
+        self._admission = admission
+        self._snapshots = snapshots
 
     def snapshots(self, *, cutoff: str) -> list[str]:
         """List reference snapshot identities visible by the cutoff."""
@@ -86,15 +102,16 @@ class ETFCandidateQuery:
         cutoff: str,
         source_snapshot_id: str,
         exposure: str | None = None,
+        asset_exposure: str | None = None,
         search: str | None = None,
         sort_field: str = "ticker",
     ) -> list[ETFCandidate]:
         """Project candidates using exact evidence and a fixed research time."""
         decision_day = date.fromisoformat(asof)
         if _validate_cutoff(cutoff).date() < decision_day:
-            raise ValueError("knowledge cutoff must not precede as-of date")
+            raise AppQueryError("knowledge cutoff must not precede as-of date")
         if not source_snapshot_id:
-            raise ValueError("source snapshot is required")
+            raise AppQueryError("source snapshot is required")
         if sort_field not in {
             "ticker",
             "aum",
@@ -102,7 +119,7 @@ class ETFCandidateQuery:
             "custody_fee",
             "daily_amount",
         }:
-            raise ValueError("unsupported ETF sort field")
+            raise AppQueryError("unsupported ETF sort field")
         identities, observations = self._metadata.instrument.find_etf_reference(
             asof=asof, cutoff=cutoff, source_snapshot_id=source_snapshot_id
         )
@@ -130,8 +147,22 @@ class ETFCandidateQuery:
                 if field != "daily_amount"
             }
             fields["daily_amount"] = _liquidity(rows.get("daily_amount", []), sessions)
+            fields = {
+                field_name: self._admit(
+                    field_name,
+                    field,
+                    instrument_id=instrument_id,
+                    cutoff=cutoff,
+                    liquidity_start=sessions[0]
+                    if len(sessions) == _LIQUIDITY_DAYS
+                    else None,
+                )
+                for field_name, field in fields.items()
+            }
             tracking = fields["tracking_index"].value
-            if exposure and tracking != exposure:
+            if (exposure and tracking != exposure) or (
+                asset_exposure and fields["asset_class"].value != asset_exposure
+            ):
                 continue
             candidates.append(
                 ETFCandidate(
@@ -158,12 +189,64 @@ class ETFCandidateQuery:
             ),
         )
 
+    def _admit(
+        self,
+        field_name: str,
+        field: ETFField,
+        *,
+        instrument_id: int,
+        cutoff: str,
+        liquidity_start: str | None,
+    ) -> ETFField:
+        """Apply reviewed display permission when an exact catalog snapshot exists."""
+        if (
+            field.value is None
+            or field.source_snapshot_id is None
+            or field.observed_on is None
+        ):
+            return field
+        if self._admission is None or self._snapshots is None:
+            return replace(field, eligibility_reasons=("ADMISSION_UNAVAILABLE",))
+        snapshot = self._snapshots.get_snapshot(field.source_snapshot_id)
+        if snapshot is None:
+            return replace(field, eligibility_reasons=("SNAPSHOT_NOT_REGISTERED",))
+        required_from = (
+            date.fromisoformat(liquidity_start)
+            if field_name == "daily_amount" and liquidity_start is not None
+            else date.fromisoformat(field.observed_on)
+        )
+        required_to = date.fromisoformat(field.observed_on)
+        report = self._admission.assess(
+            FieldAdmissionRequest(
+                fields=(
+                    FieldRequirement(
+                        dataset_id=snapshot.dataset_id,
+                        field=field_name,
+                        snapshot_id=field.source_snapshot_id,
+                    ),
+                ),
+                instrument_ids=(instrument_id,),
+                required_from=required_from,
+                required_to=required_to,
+                knowledge_cutoff=_validate_cutoff(cutoff),
+                publication_cutoff=_validate_cutoff(cutoff),
+                purpose="display",
+            )
+        )
+        if report.allowed:
+            return replace(field, eligibility="display_allowed")
+        return replace(
+            field,
+            value=None,
+            eligibility="display_denied",
+            eligibility_reasons=report.fields[0].reason_codes,
+            missing_reason="display_admission_denied",
+        )
+
 
 def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:
     if not rows:
-        return ETFField(
-            None, None, None, None, None, None, None, "no_qualified_observation"
-        )
+        return ETFField(None, None, None, None, None, None, None, "no_observation")
     row = rows[0]
     value = _number(row["value"]) if numeric else str(row["value"])
     if value is None:
@@ -195,7 +278,7 @@ def _validate_cutoff(value: str) -> datetime:
         or offset is None
         or offset.total_seconds() != 0
     ):
-        raise ValueError(
+        raise AppQueryError(
             "knowledge cutoff must be canonical UTC (YYYY-MM-DDTHH:MM:SSZ)"
         )
     return parsed

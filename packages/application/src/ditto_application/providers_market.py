@@ -43,6 +43,7 @@ from ditto_application.queries.data_products import DataProductsQueryFacade
 from ditto_application.queries.data_specimen import DataSpecimenQuery
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.evaluation import FactorEvaluationFacade
+from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.forward_return_service import ForwardReturnService
 from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_application.queries.fx import FXQueryFacade
@@ -293,9 +294,15 @@ class AppMarketQueryProvider(Provider):
     def metadata_query_facade(
         self,
         metadata_service: MetadataService,
+        admission: FieldAdmissionQuery,
+        snapshots: ProviderSnapshotReader,
     ) -> MetadataQueryFacade:
         """元数据查询 facade — 隐藏 SecurityQuery 和内部类型."""
-        return MetadataQueryFacade(metadata_service=metadata_service)
+        return MetadataQueryFacade(
+            metadata_service=metadata_service,
+            admission=admission,
+            snapshots=snapshots,
+        )
 
     @provide
     def capital_query_facade(

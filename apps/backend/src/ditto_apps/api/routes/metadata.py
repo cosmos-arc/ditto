@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import asdict
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_kernel.instrument import AssetClass
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from ditto_apps.api.deps import paginate, pagination_params
 from ditto_apps.api.errors import BadRequestError, NotFoundError
@@ -20,6 +21,7 @@ from ditto_apps.models.common import (
     PaginationRequest,
 )
 from ditto_apps.models.metadata import (
+    ETFCandidateQueryParams,
     ETFCandidateResponse,
     Instrument,
     to_instrument,
@@ -57,27 +59,23 @@ async def list_etf_reference_snapshots(
 @inject
 async def list_etf_candidates(
     facade: Annotated[MetadataQueryFacade, FromComponent()],
-    asof: date,
-    cutoff: datetime,
-    source_snapshot_id: str,
-    exposure: str | None = None,
-    search: str | None = None,
-    sort_field: str = "ticker",
+    query: Annotated[ETFCandidateQueryParams, Query()],
 ) -> APIResponse[list[ETFCandidateResponse]]:
     """Compare ETFs by exposure using one explicit published reference snapshot."""
-    if cutoff.tzinfo is None:
+    if query.cutoff.tzinfo is None:
         raise BadRequestError("knowledge cutoff must include a UTC offset")
     try:
         rows = await asyncio.to_thread(
             facade.list_etf_candidates,
-            asof=asof.isoformat(),
-            cutoff=cutoff.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            source_snapshot_id=source_snapshot_id,
-            exposure=exposure,
-            search=search,
-            sort_field=sort_field,
+            asof=query.asof.isoformat(),
+            cutoff=query.cutoff.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            source_snapshot_id=query.source_snapshot_id,
+            exposure=query.exposure,
+            asset_exposure=query.asset_exposure,
+            search=query.search,
+            sort_field=query.sort_field,
         )
-    except ValueError as exc:
+    except AppQueryError as exc:
         raise BadRequestError(str(exc)) from exc
     return APIResponse(
         data=[ETFCandidateResponse.model_validate(asdict(row)) for row in rows]

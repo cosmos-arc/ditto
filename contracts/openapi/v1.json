@@ -14058,6 +14058,14 @@
             ],
             "title": "Eligibility"
           },
+          "eligibility_reasons": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Eligibility Reasons",
+            "type": "array"
+          },
           "missing_reason": {
             "anyOf": [
               {
@@ -43068,6 +43076,22 @@
                 }
               ],
               "title": "Exposure"
+            }
+          },
+          {
+            "in": "query",
+            "name": "asset_exposure",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Asset Exposure"
             }
           },
           {

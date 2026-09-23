@@ -100,13 +100,22 @@ test.describe
 			const domestic = comparison.locator("details").filter({ hasText: "510300" });
 			await domestic.locator("summary").click();
 			await expect(domestic.getByText("规模", { exact: true }).locator("..")).toContainText("500000000 CNY");
-			await expect(domestic.getByText("托管费", { exact: true }).locator("..")).toContainText("no_qualified_observation");
+			await expect(domestic.getByText("托管费", { exact: true }).locator("..")).toContainText("no_observation");
 			await comparison.getByLabel("指数暴露").fill("NDX");
 			await expect(comparison.locator("details")).toHaveCount(1);
 			const crossBorder = comparison.locator("details").filter({ hasText: "513100" });
 			await crossBorder.locator("summary").click();
 			await expect(crossBorder.getByText("最近已披露 NAV", { exact: true }).locator("..")).toContainText("2026-05-18");
 			await expect(crossBorder.getByText("原始收盘价", { exact: true }).locator("..")).toContainText("2026-05-20");
+			await comparison.getByLabel("指数暴露").fill("");
+			await comparison.getByLabel("资产暴露").fill("跨境股票");
+			await expect(comparison.locator("details")).toHaveCount(1);
+			await page.route("**/api/v1/metadata/etf-candidates?**", (route) => route.fulfill({ status: 503, body: "unavailable" }));
+			await comparison.getByLabel("代码或名称").fill("513100");
+			await expect(comparison.getByRole("button", { name: "比较失败，重试" })).toBeVisible();
+			await page.unroute("**/api/v1/metadata/etf-candidates?**");
+			await comparison.getByRole("button", { name: "比较失败，重试" }).click();
+			await expect(comparison.locator("details")).toHaveCount(1);
 		});
 
 		test("stocks stay fail-closed until the explicit experimental opt-in, then adjust locally", async ({

@@ -10,6 +10,7 @@ Metadata 域 API 模型.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Any
 
 import polars as pl
@@ -81,9 +82,22 @@ class ETFFieldResponse(BaseModel):
     source_snapshot_id: str | None
     eligibility: str | None
     missing_reason: str | None
+    eligibility_reasons: tuple[str, ...] = ()
     sample_count: int | None = None
     effective_from: str | None = None
     effective_to: str | None = None
+
+
+class ETFCandidateQueryParams(BaseModel):
+    """Explicit temporal and comparison inputs for ETF candidates."""
+
+    asof: date
+    cutoff: datetime
+    source_snapshot_id: str
+    exposure: str | None = None
+    asset_exposure: str | None = None
+    search: str | None = None
+    sort_field: str = "ticker"
 
 
 class ETFCandidateResponse(BaseModel):
