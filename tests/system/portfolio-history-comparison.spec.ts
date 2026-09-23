@@ -25,12 +25,36 @@ function captureBrowserErrors(page: Page): string[] {
 
 test.use({ acceptDownloads: true });
 
+interface JourneyWindow {
+	readonly start: string;
+	readonly end: string;
+	readonly model_return: string;
+	readonly paper_return: string;
+	readonly manual_return: string;
+}
+
+interface JourneyIdentity {
+	readonly strategy_id: string;
+	readonly paper_account_id: string;
+	readonly paper_session_id: string;
+	readonly gap_paper_account_id: string;
+	readonly gap_paper_session_id: string;
+	readonly manual_account_id: string;
+	readonly snapshot_id: string;
+	readonly start_date: string;
+	readonly end_date: string;
+	readonly knowledge_cutoff: string;
+	readonly frontend_path?: string;
+	readonly expected_window: JourneyWindow;
+	readonly expected_gap_window: JourneyWindow;
+}
+
 test.describe.serial("portfolio history comparison over the live fixture", () => {
 	test("selects entities, compares the common window, exports, and recovers", async ({ page, request }) => {
 		test.setTimeout(120_000);
 		const browserErrors = captureBrowserErrors(page);
 		const fixture = await (await request.get(`${apiOrigin}/system-fixture/portfolio-history`)).json();
-		const identity = fixture.identity as Record<string, string>;
+		const identity = fixture.identity as JourneyIdentity;
 
 		await page.goto(identity.frontend_path ?? "/portfolio/?mode=comparison");
 		const panel = page.getByTestId("history-comparison-panel");
@@ -58,7 +82,7 @@ test.describe.serial("portfolio history comparison over the live fixture", () =>
 		// 共同窗口：Model +21.00% / Paper +10.50% / Manual +16.80%。
 		const result = page.getByTestId("history-comparison-result");
 		await expect(result).toBeVisible();
-		const window = identity.expected_window as Record<string, string>;
+		const window = identity.expected_window;
 		await expect(page.getByTestId("history-comparison-window-return-model")).toContainText(
 			window.model_return,
 		);
@@ -97,7 +121,7 @@ test.describe.serial("portfolio history comparison over the live fixture", () =>
 		await page.getByLabel("Paper 账户").selectOption(identity.gap_paper_account_id);
 		await expect(page.getByLabel("Paper 会话")).toHaveValue(identity.gap_paper_session_id);
 		await page.getByTestId("history-comparison-submit").click();
-		const gapWindow = identity.expected_gap_window as Record<string, string>;
+		const gapWindow = identity.expected_gap_window;
 		await expect(page.getByTestId("history-comparison-window-return-model")).toContainText(
 			gapWindow.model_return,
 		);
