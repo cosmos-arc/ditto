@@ -15,6 +15,8 @@ from ditto_apps.models.account_ledger import (
 )
 
 __all__ = [
+    "ETFAllocationBody",
+    "ETFAllocationVersionResponse",
     "HistoryComparisonBenchmarkPointResponse",
     "HistoryComparisonBenchmarkResponse",
     "HistoryComparisonBenchmarkRunResponse",
@@ -36,6 +38,45 @@ __all__ = [
 _REQUEST_CONFIG = ConfigDict(strict=True, extra="forbid")
 _RESPONSE_CONFIG = ConfigDict(strict=True, frozen=True, from_attributes=True)
 _QUERY_CONFIG = ConfigDict(extra="forbid")
+
+
+class ETFAllocationBody(BaseModel):
+    """One explicit ETF research allocation revision."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    parent_version_id: str | None = None
+    asof: date
+    knowledge_cutoff: datetime
+    source_snapshot_id: str = Field(min_length=1)
+    instrument_ids: tuple[int, ...] = Field(min_length=1)
+    mode: Literal["equal", "manual"]
+    cash_weight: Decimal
+    max_position_weight: Decimal
+    manual_weights: dict[int, Decimal] = Field(default_factory=dict)
+    reason: str = Field(min_length=1)
+
+
+class ETFAllocationVersionResponse(BaseModel):
+    """Immutable saved target with explicit Paper review status."""
+
+    model_config = _RESPONSE_CONFIG
+
+    version_id: str
+    allocation_id: str
+    parent_version_id: str | None
+    asof: str
+    knowledge_cutoff: str
+    source_snapshot_id: str
+    mode: str
+    weights: dict[int, str]
+    cash_weight: str
+    max_position_weight: str
+    tracking_exposure: dict[str, str]
+    reason: str
+    rule_version: str
+    paper_status: str
+    created_at: str
 
 
 class NormalizedPortfolioPositionResponse(BaseModel):

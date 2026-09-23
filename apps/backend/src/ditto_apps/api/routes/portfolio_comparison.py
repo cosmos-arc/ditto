@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC
 from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.exceptions import AppQueryError
+from ditto_application.exceptions import (
+    AppCommandError,
+    AppConflictError,
+    AppQueryError,
+)
+from ditto_application.processes.portfolio.etf_allocation import (
+    ETFAllocationCommand,
+    ETFAllocationRequest,
+)
 from ditto_application.queries.history_comparison import (
     GetHistoryComparisonQuery,
     HistoryComparisonRequest,
@@ -24,11 +33,14 @@ from ditto_application.queries.portfolio_scenario import (
     PortfolioScenarioRequest,
     PreviewPortfolioScenarioQuery,
 )
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, status
 
-from ditto_apps.api.errors import UnprocessableEntityError
+from ditto_apps.api.errors import ConflictError, UnprocessableEntityError
+from ditto_apps.api.mutation_idempotency import IdempotencyKeyHeader
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.portfolio_comparison import (
+    ETFAllocationBody,
+    ETFAllocationVersionResponse,
     HistoryComparisonQueryParams,
     HistoryComparisonResponse,
     ModelHistoryQueryParams,
@@ -40,6 +52,75 @@ from ditto_apps.models.portfolio_comparison import (
 )
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
+
+
+@router.get(
+    "/etf-allocations/{allocation_id}/versions",
+    response_model=APIResponse[list[ETFAllocationVersionResponse]],
+    operation_id="portfolio_list_etf_allocation_versions",
+)
+@inject
+async def list_etf_allocation_versions(
+    allocation_id: str,
+    command: Annotated[ETFAllocationCommand, FromComponent()],
+) -> APIResponse[list[ETFAllocationVersionResponse]]:
+    """Restore all saved versions of one ETF research allocation."""
+    try:
+        versions = await asyncio.to_thread(command.list_versions, allocation_id)
+    except AppCommandError as exc:
+        raise UnprocessableEntityError(
+            str(exc), error_code="ETF_ALLOCATION_INVALID"
+        ) from exc
+    return APIResponse(
+        data=[ETFAllocationVersionResponse.model_validate(item) for item in versions]
+    )
+
+
+@router.post(
+    "/etf-allocations/{allocation_id}/versions",
+    response_model=APIResponse[ETFAllocationVersionResponse],
+    status_code=status.HTTP_201_CREATED,
+    operation_id="portfolio_save_etf_allocation_version",
+)
+@inject
+async def save_etf_allocation_version(
+    allocation_id: str,
+    body: ETFAllocationBody,
+    idempotency_key: IdempotencyKeyHeader,
+    command: Annotated[ETFAllocationCommand, FromComponent()],
+) -> APIResponse[ETFAllocationVersionResponse]:
+    """Save or replay one evidence-bound ETF research target."""
+    if body.knowledge_cutoff.tzinfo is None:
+        raise UnprocessableEntityError(
+            "knowledge_cutoff needs a timezone", error_code="ETF_ALLOCATION_INVALID"
+        )
+    try:
+        version = await asyncio.to_thread(
+            command.save,
+            ETFAllocationRequest(
+                allocation_id=allocation_id,
+                idempotency_key=idempotency_key,
+                parent_version_id=body.parent_version_id,
+                asof=body.asof.isoformat(),
+                knowledge_cutoff=body.knowledge_cutoff.astimezone(UTC).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                source_snapshot_id=body.source_snapshot_id,
+                instrument_ids=body.instrument_ids,
+                mode=body.mode,
+                cash_weight=body.cash_weight,
+                max_position_weight=body.max_position_weight,
+                manual_weights=body.manual_weights,
+                reason=body.reason,
+            ),
+        )
+    except AppConflictError as exc:
+        raise ConflictError(str(exc), error_code="ETF_ALLOCATION_CONFLICT") from exc
+    except (AppCommandError, AppQueryError, ValueError) as exc:
+        raise UnprocessableEntityError(
+            str(exc), error_code="ETF_ALLOCATION_INVALID"
+        ) from exc
+    return APIResponse(data=ETFAllocationVersionResponse.model_validate(version))
 
 
 def _request(

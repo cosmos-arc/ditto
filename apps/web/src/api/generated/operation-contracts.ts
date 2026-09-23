@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 252dceb48d71a69b5f833a266cfaa45fa106d2714f5b8b67102ea0e0defce5cb
+ * Schema SHA-256: e1a4b1063928b33a2a8412201862d7db354c2aa429c0ef35bbbc0f75e54a00e9
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -897,6 +897,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/portfolio/history-comparison": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -1680,6 +1690,16 @@ export const operationResponseContracts = {
   },
   "post /api/v1/paper/sessions/{session_id}/recover": {
     "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "post /api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
+    "201": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
     "404": ["application/json"],
@@ -2503,6 +2523,12 @@ export const operationRequestContracts = {
       "query": ["as_of", "knowledge_cutoff", "manual_account_id", "model_portfolio_id", "paper_account_id", "paper_session_id", "publication_cutoff", "source_snapshot_ids", "strategy_id", "valuation_snapshot_id"],
     },
   },
+  "get /api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["allocation_id"],
+    },
+  },
   "get /api/v1/portfolio/history-comparison": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2956,6 +2982,12 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["session_id"],
+    },
+  },
+  "post /api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
+    parameters: {
+      "header": ["Idempotency-Key", "X-Ditto-API-Contract-Version"],
+      "path": ["allocation_id"],
     },
   },
   "post /api/v1/portfolio/scenario-previews": {

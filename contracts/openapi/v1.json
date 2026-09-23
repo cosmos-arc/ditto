@@ -1009,6 +1009,30 @@
         "title": "APIResponse[DeviationResponse]",
         "type": "object"
       },
+      "APIResponse_ETFAllocationVersionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ETFAllocationVersionResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ETFAllocationVersionResponse]",
+        "type": "object"
+      },
       "APIResponse_EtfNavResponse_": {
         "properties": {
           "data": {
@@ -3079,6 +3103,34 @@
           "data"
         ],
         "title": "APIResponse[list[Dividend]]",
+        "type": "object"
+      },
+      "APIResponse_list_ETFAllocationVersionResponse__": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/ETFAllocationVersionResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[list[ETFAllocationVersionResponse]]",
         "type": "object"
       },
       "APIResponse_list_ETFCandidateResponse__": {
@@ -13978,6 +14030,207 @@
           "amount"
         ],
         "title": "Dividend",
+        "type": "object"
+      },
+      "ETFAllocationBody": {
+        "additionalProperties": false,
+        "description": "One explicit ETF research allocation revision.",
+        "properties": {
+          "asof": {
+            "format": "date",
+            "title": "Asof",
+            "type": "string"
+          },
+          "cash_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Cash Weight"
+          },
+          "instrument_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Instrument Ids",
+            "type": "array"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "manual_weights": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Manual Weights",
+            "type": "object"
+          },
+          "max_position_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Max Position Weight"
+          },
+          "mode": {
+            "enum": [
+              "equal",
+              "manual"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "parent_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Version Id"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_snapshot_id": {
+            "minLength": 1,
+            "title": "Source Snapshot Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asof",
+          "knowledge_cutoff",
+          "source_snapshot_id",
+          "instrument_ids",
+          "mode",
+          "cash_weight",
+          "max_position_weight",
+          "reason"
+        ],
+        "title": "ETFAllocationBody",
+        "type": "object"
+      },
+      "ETFAllocationVersionResponse": {
+        "description": "Immutable saved target with explicit Paper review status.",
+        "properties": {
+          "allocation_id": {
+            "title": "Allocation Id",
+            "type": "string"
+          },
+          "asof": {
+            "title": "Asof",
+            "type": "string"
+          },
+          "cash_weight": {
+            "title": "Cash Weight",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "knowledge_cutoff": {
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "max_position_weight": {
+            "title": "Max Position Weight",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "paper_status": {
+            "title": "Paper Status",
+            "type": "string"
+          },
+          "parent_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Version Id"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          },
+          "source_snapshot_id": {
+            "title": "Source Snapshot Id",
+            "type": "string"
+          },
+          "tracking_exposure": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tracking Exposure",
+            "type": "object"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "string"
+          },
+          "weights": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Weights",
+            "type": "object"
+          }
+        },
+        "required": [
+          "version_id",
+          "allocation_id",
+          "parent_version_id",
+          "asof",
+          "knowledge_cutoff",
+          "source_snapshot_id",
+          "mode",
+          "weights",
+          "cash_weight",
+          "max_position_weight",
+          "tracking_exposure",
+          "reason",
+          "rule_version",
+          "paper_status",
+          "created_at"
+        ],
+        "title": "ETFAllocationVersionResponse",
         "type": "object"
       },
       "ETFCandidateResponse": {
@@ -45255,6 +45508,255 @@
           }
         },
         "summary": "Get Portfolio Comparison",
+        "tags": [
+          "portfolio"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
+      "get": {
+        "description": "Restore all saved versions of one ETF research allocation.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "portfolio_list_etf_allocation_versions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_list_ETFAllocationVersionResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Etf Allocation Versions",
+        "tags": [
+          "portfolio"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      },
+      "post": {
+        "description": "Save or replay one evidence-bound ETF research target.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "portfolio_save_etf_allocation_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ETFAllocationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ETFAllocationVersionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Save Etf Allocation Version",
         "tags": [
           "portfolio"
         ],

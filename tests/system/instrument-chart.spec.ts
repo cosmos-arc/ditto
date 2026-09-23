@@ -118,6 +118,36 @@ test.describe
 			await expect(comparison.locator("details")).toHaveCount(1);
 		});
 
+		test("saves and restores an ETF research allocation without Paper execution", async ({ page }) => {
+			await page.goto(`${webOrigin}/markets`);
+			const comparison = page.locator('[data-info-unit="etf-candidates"]');
+			await comparison.getByLabel("来源快照").selectOption("snapshot:recorded:etf-system");
+			await comparison.getByLabel("指数暴露").fill("000300.SH");
+			await expect(comparison.locator("details")).toHaveCount(2);
+			await comparison.getByRole("checkbox", { name: /沪深300ETF-图表验收/ }).check();
+			await comparison.getByRole("checkbox", { name: /创业板ETF-无净值验收/ }).check();
+			await comparison.getByLabel("配置理由").fill("equal broad exposure");
+			await comparison.getByRole("button", { name: "保存候选版本" }).click();
+			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
+			await expect(comparison.getByText(/research_only/)).toBeVisible();
+			const version = new URL(page.url()).searchParams.get("etfVersion");
+			expect(version).toMatch(/^etf-allocation-/);
+			const cutoff = await comparison.getByLabel("知识截止").inputValue();
+			await page.reload();
+			await expect(comparison.getByLabel("知识截止")).toHaveValue(cutoff);
+			await expect(comparison.getByRole("checkbox", { name: /沪深300ETF-图表验收/ })).toBeChecked();
+			await expect(comparison.getByRole("checkbox", { name: /创业板ETF-无净值验收/ })).toBeChecked();
+			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
+			await comparison.getByLabel("权重模式").selectOption("manual");
+			await comparison.getByLabel("ETF 2000001 权重").fill("0.3");
+			await comparison.getByLabel("ETF 2000002 权重").fill("0.5");
+			await comparison.getByLabel("配置理由").fill("manual revision");
+			await comparison.getByRole("button", { name: "保存候选版本" }).click();
+			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
+			await expect.poll(() => new URL(page.url()).searchParams.get("etfVersion")).not.toBe(version);
+			await expect(comparison.getByLabel("已保存版本").locator("option")).toHaveCount(3);
+		});
+
 		test("stocks stay fail-closed until the explicit experimental opt-in, then adjust locally", async ({
 			page,
 		}) => {

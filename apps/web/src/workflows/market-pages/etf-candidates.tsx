@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ContextSection } from "@/components/domain/context-section";
 import { type ETFField, fetchETFCandidates, fetchETFReferenceSnapshots } from "@/features/instruments";
+import { ETFAllocationEditor } from "./etf-allocation-editor";
 
 const FIELD_LABELS = [
 	["tracking_index", "跟踪指数"],
@@ -32,9 +33,10 @@ function FieldValue({ field }: { readonly field: ETFField | undefined }) {
 
 export function ETFCandidates() {
 	const today = new Date().toISOString().slice(0, 10);
-	const [asof, setAsof] = useState(today);
-	const [cutoff, setCutoff] = useState(`${today}T23:59:59`);
-	const [snapshot, setSnapshot] = useState("");
+	const params = new URLSearchParams(window.location.search);
+	const [asof, setAsof] = useState(params.get("etfAsof") ?? today);
+	const [cutoff, setCutoff] = useState(params.get("etfCutoff") ?? `${today}T23:59:59`);
+	const [snapshot, setSnapshot] = useState(params.get("etfSnapshot") ?? "");
 	const [exposure, setExposure] = useState("");
 	const [assetExposure, setAssetExposure] = useState("");
 	const [search, setSearch] = useState("");
@@ -201,6 +203,7 @@ export function ETFCandidates() {
 				)}
 				{snapshot && candidates.isLoading && <p>正在读取候选…</p>}
 				{snapshot && candidates.isSuccess && items.length === 0 && <p>该条件下没有 ETF 候选或合格暴露关系。</p>}
+				<ETFAllocationEditor items={items} asof={asof} cutoff={cutoffUTC} cutoffInput={cutoff} snapshot={snapshot} />
 				{items.map((item) => (
 					<details key={item.instrumentId} className="rounded border border-(--color-border-subtle) p-3">
 						<summary className="cursor-pointer font-medium">

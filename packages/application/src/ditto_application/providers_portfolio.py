@@ -19,6 +19,7 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
 
+from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.daily_decision import DailyDecisionQueryFacade
@@ -30,6 +31,7 @@ from ditto_application.queries.daily_decision_v3 import (
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
 from ditto_application.queries.history_comparison import GetHistoryComparisonQuery
+from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.model_history import GetModelHistoryQuery
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
 from ditto_application.queries.portfolio_comparison import (
@@ -59,6 +61,13 @@ class AppPortfolioQueryProvider(Provider):
     """App Query 层 DI Provider — 组合/交易查询服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def etf_allocation_command(
+        self, metadata: MetadataQueryFacade, artifacts: StrategyArtifactService
+    ) -> ETFAllocationCommand:
+        """Validate and save ETF research allocation revisions."""
+        return ETFAllocationCommand(metadata, artifacts)
 
     @provide
     def portfolio_comparison_source(
