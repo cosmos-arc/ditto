@@ -78,6 +78,11 @@ def test_save_revise_restore_and_reject_invalid_weights(tmp_path: Path) -> None:
         assert first.tracking_exposure == {"CSI300": "0.80000000"}
         assert first.paper_status == "research_only"
         assert service.save(_request()) == first
+        metadata.list_etf_candidates.side_effect = RuntimeError("snapshot unavailable")
+        assert service.save(_request()) == first
+        with pytest.raises(AppConflictError):
+            service.save(replace(_request(), reason="changed"))
+        metadata.list_etf_candidates.side_effect = None
         assert len(service.list_versions("demo")) == 1
         manual = replace(
             _request(),
@@ -98,6 +103,15 @@ def test_save_revise_restore_and_reject_invalid_weights(tmp_path: Path) -> None:
                     manual,
                     idempotency_key="three",
                     manual_weights={1: Decimal("0.2"), 2: Decimal("0.5")},
+                )
+            )
+        metadata.list_etf_candidates.return_value = [_candidate(1)]
+        with pytest.raises(AppCommandError, match="not visible at this snapshot"):
+            service.save(
+                replace(
+                    manual,
+                    idempotency_key="future",
+                    parent_version_id=second.version_id,
                 )
             )
         assert len(service.list_versions("demo")) == 2

@@ -11,24 +11,49 @@ type Props = {
 	readonly snapshot: string;
 };
 
+type SaveBody = Parameters<typeof saveETFAllocationVersion>[2];
+type PendingSave = { id: string; key: string; fingerprint: string; body: SaveBody };
+
 function savedIdentity(): { allocationId: string; versionId: string } {
 	const query = new URLSearchParams(window.location.search);
 	return { allocationId: query.get("etfAllocation") ?? "", versionId: query.get("etfVersion") ?? "" };
 }
 
+function pendingSave(): PendingSave | null {
+	const state: unknown = window.history.state;
+	const pending =
+		state && typeof state === "object" ? (state as Record<string, unknown>)["etfAllocationPending"] : null;
+	if (!pending || typeof pending !== "object") return null;
+	const value = pending as Partial<PendingSave>;
+	return typeof value.id === "string" &&
+		typeof value.key === "string" &&
+		typeof value.fingerprint === "string" &&
+		value.body &&
+		typeof value.body === "object"
+		? (value as PendingSave)
+		: null;
+}
+
 export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot }: Props) {
 	const initial = savedIdentity();
-	const [allocationId, setAllocationId] = useState(initial.allocationId);
-	const [versionId, setVersionId] = useState(initial.versionId);
-	const [selected, setSelected] = useState<number[]>([]);
-	const [mode, setMode] = useState<"equal" | "manual">("equal");
-	const [cashWeight, setCashWeight] = useState("0.2");
-	const [maxWeight, setMaxWeight] = useState("0.5");
-	const [manualWeights, setManualWeights] = useState<Record<number, string>>({});
-	const [reason, setReason] = useState("");
-	const retry = useRef<{ body: string; key: string } | null>(null);
-	const generatedId = useRef(`etf-${crypto.randomUUID()}`);
-	const restoredVersion = useRef("");
+	const pending = useRef(pendingSave()).current;
+	const [allocationId, setAllocationId] = useState(pending?.id ?? initial.allocationId);
+	const [versionId, setVersionId] = useState(pending?.body.parent_version_id ?? initial.versionId);
+	const [selected, setSelected] = useState<number[]>(pending?.body.instrument_ids ?? []);
+	const [mode, setMode] = useState<"equal" | "manual">(pending?.body.mode ?? "equal");
+	const [cashWeight, setCashWeight] = useState(String(pending?.body.cash_weight ?? "0.2"));
+	const [maxWeight, setMaxWeight] = useState(String(pending?.body.max_position_weight ?? "0.5"));
+	const [manualWeights, setManualWeights] = useState<Record<number, string>>(
+		Object.fromEntries(
+			Object.entries(pending?.body.manual_weights ?? {}).map(([id, weight]) => [Number(id), String(weight)]),
+		),
+	);
+	const [reason, setReason] = useState(pending?.body.reason ?? "");
+	const retry = useRef<{ body: string; key: string } | null>(
+		pending ? { body: pending.fingerprint, key: pending.key } : null,
+	);
+	const generatedId = useRef(pending?.id ?? `etf-${crypto.randomUUID()}`);
+	const restoredVersion = useRef(pending?.body.parent_version_id ?? "");
 	const queryClient = useQueryClient();
 	const versions = useQuery({
 		queryKey: ["etf-allocation-versions", allocationId],
@@ -66,6 +91,17 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			};
 			const fingerprint = JSON.stringify([id, body]);
 			if (retry.current?.body !== fingerprint) retry.current = { body: fingerprint, key: crypto.randomUUID() };
+			const url = new URL(window.location.href);
+			url.searchParams.set("etfAllocation", id);
+			url.searchParams.set("etfAsof", asof);
+			url.searchParams.set("etfCutoff", cutoffInput);
+			url.searchParams.set("etfSnapshot", snapshot);
+			const state = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+			window.history.replaceState(
+				{ ...state, etfAllocationPending: { id, key: retry.current.key, fingerprint, body } },
+				"",
+				url,
+			);
 			return saveETFAllocationVersion(id, retry.current.key, body);
 		},
 		onSuccess: (result) => {
@@ -77,7 +113,10 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			url.searchParams.set("etfAsof", asof);
 			url.searchParams.set("etfCutoff", cutoffInput);
 			url.searchParams.set("etfSnapshot", snapshot);
-			window.history.replaceState(null, "", url);
+			const state: Record<string, unknown> =
+				window.history.state && typeof window.history.state === "object" ? { ...window.history.state } : {};
+			delete state["etfAllocationPending"];
+			window.history.replaceState(state, "", url);
 			void queryClient.invalidateQueries({ queryKey: ["etf-allocation-versions", result.allocationId] });
 		},
 	});

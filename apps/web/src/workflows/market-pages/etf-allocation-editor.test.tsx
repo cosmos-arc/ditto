@@ -58,22 +58,26 @@ it("retries one save with the same identity and restores the saved version", asy
 			return HttpResponse.json({ data: stored }, { status: 201 });
 		}),
 	);
-	render(
+	const editor = (
 		<ETFAllocationEditor
 			items={[candidate]}
 			asof="2026-09-01"
 			cutoff="2026-09-01T09:00:00Z"
 			cutoffInput="2026-09-01T17:00:00"
 			snapshot="snapshot:recorded:etf"
-		/>,
-		{ wrapper: wrapper() },
+		/>
 	);
+	const view = render(editor, { wrapper: wrapper() });
 	await user.click(screen.getByRole("checkbox", { name: /沪深300 ETF/ }));
 	await user.clear(screen.getByLabelText("单仓上限"));
 	await user.type(screen.getByLabelText("单仓上限"), "1");
 	await user.type(screen.getByLabelText("配置理由"), "broad exposure");
 	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
 	await screen.findByRole("alert");
+	view.unmount();
+	render(editor, { wrapper: wrapper() });
+	expect(screen.getByRole("checkbox", { name: /沪深300 ETF/ })).toBeChecked();
+	expect(screen.getByLabelText("配置理由")).toHaveValue("broad exposure");
 	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
 	await screen.findByText(/已保存 version-one/);
 	expect(attempts).toHaveLength(2);

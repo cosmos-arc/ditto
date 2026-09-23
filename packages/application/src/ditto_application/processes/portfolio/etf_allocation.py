@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from hashlib import sha256
 from typing import Literal, cast
 
 import orjson
+from ditto_portfolio.target_portfolios.explicit import explicit_target_weights
 from ditto_risk.portfolio_scenario import (
     PortfolioScenarioInput,
     ScenarioPosition,
@@ -23,8 +24,6 @@ from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.queries.etf_candidates import ETFCandidate
 from ditto_application.queries.metadata import MetadataQueryFacade
 
-_ONE = Decimal("1")
-_PRECISION = Decimal("0.00000001")
 _RULE_VERSION = "etf-allocation-v1"
 _MAX_KEY_LENGTH = 128
 _MAX_ID_LENGTH = 80
@@ -97,13 +96,34 @@ class ETFAllocationCommand:
             ).hexdigest()[:32]
         )
         prior = self._artifacts.get_artifact(version_id)
+        request_hash = _request_hash(request)
+        if prior is not None:
+            if (
+                prior.strategy_id != _strategy_id(request.allocation_id)
+                or prior.metadata.get("request_hash") != request_hash
+            ):
+                raise AppConflictError(
+                    "idempotency_key was reused with different input"
+                )
+            return _version(prior)
         versions = self.list_versions(request.allocation_id)
-        if request.parent_version_id is None and versions and prior is None:
+        if request.parent_version_id is None and versions:
             raise AppConflictError("existing allocation requires parent_version_id")
         if request.parent_version_id is not None and request.parent_version_id not in {
             item.version_id for item in versions
         }:
             raise AppConflictError("parent allocation version was not found")
+        try:
+            weights = explicit_target_weights(
+                request.instrument_ids,
+                request.mode,
+                request.cash_weight,
+                request.max_position_weight,
+                request.manual_weights,
+            )
+        except ValueError as exc:
+            raise AppCommandError(str(exc)) from exc
+        _check_risk(request, weights)
         candidates = {
             item.instrument_id: item
             for item in self._metadata.list_etf_candidates(
@@ -113,18 +133,7 @@ class ETFAllocationCommand:
             )
         }
         selected = _select_candidates(request, candidates)
-        weights = _weights(request)
-        _check_risk(request, weights)
-        payload = _payload(request, selected, weights)
-        if prior is not None:
-            if (
-                prior.strategy_id != _strategy_id(request.allocation_id)
-                or prior.metadata != payload
-            ):
-                raise AppConflictError(
-                    "idempotency_key was reused with different input"
-                )
-            return _version(prior)
+        payload = _payload(request, selected, weights, request_hash)
         record = StrategyArtifactRecord(
             artifact_id=version_id,
             strategy_id=_strategy_id(request.allocation_id),
@@ -155,12 +164,6 @@ def _check_request(request: ETFAllocationRequest) -> None:
         raise AppCommandError("selected ETF identities must be non-empty and unique")
     if any(item <= 0 for item in request.instrument_ids):
         raise AppCommandError("selected ETF identities must be positive")
-    if not _valid_weight(request.cash_weight, allow_one=False):
-        raise AppCommandError(
-            "cash_weight must be between zero and one at eight-decimal precision"
-        )
-    if not _valid_weight(request.max_position_weight, allow_zero=False):
-        raise AppCommandError("max_position_weight must be positive and at most one")
     try:
         day = date.fromisoformat(request.asof)
         cutoff = datetime.fromisoformat(request.knowledge_cutoff.replace("Z", "+00:00"))
@@ -182,31 +185,6 @@ def _select_candidates(
             )
         selected.append(item)
     return selected
-
-
-def _weights(request: ETFAllocationRequest) -> dict[int, Decimal]:
-    budget = _ONE - request.cash_weight
-    if request.mode == "equal":
-        if request.manual_weights:
-            raise AppCommandError("equal mode must not include manual_weights")
-        each = (budget / Decimal(len(request.instrument_ids))).quantize(_PRECISION)
-        weights = dict.fromkeys(request.instrument_ids, each)
-        weights[request.instrument_ids[-1]] += budget - sum(weights.values())
-    elif request.mode == "manual":
-        if set(request.manual_weights) != set(request.instrument_ids):
-            raise AppCommandError("manual_weights must cover exactly the selected ETFs")
-        weights = dict(request.manual_weights)
-        if any(not _valid_weight(weight) for weight in weights.values()):
-            raise AppCommandError(
-                "manual_weights must be non-negative at eight-decimal precision"
-            )
-        if sum(weights.values()) != budget:
-            raise AppCommandError("manual_weights plus cash_weight must equal one")
-    else:
-        raise AppCommandError("unsupported ETF allocation mode")
-    if any(weight > request.max_position_weight for weight in weights.values()):
-        raise AppCommandError("selected ETF weight exceeds max_position_weight")
-    return weights
 
 
 def _check_risk(request: ETFAllocationRequest, weights: dict[int, Decimal]) -> None:
@@ -235,6 +213,7 @@ def _payload(
     request: ETFAllocationRequest,
     selected: list[ETFCandidate],
     weights: dict[int, Decimal],
+    request_hash: str,
 ) -> dict[str, object]:
     exposure: dict[str, Decimal] = {}
     for item in selected:
@@ -260,21 +239,33 @@ def _payload(
         "reason": request.reason,
         "rule_version": _RULE_VERSION,
         "paper_status": "research_only",
+        "request_hash": request_hash,
     }
-    payload["request_hash"] = sha256(
+    return payload
+
+
+def _request_hash(request: ETFAllocationRequest) -> str:
+    return sha256(
         orjson.dumps(
             {
+                "allocation_id": request.allocation_id,
                 "idempotency_key": request.idempotency_key,
+                "parent_version_id": request.parent_version_id,
+                "asof": request.asof,
+                "knowledge_cutoff": request.knowledge_cutoff,
+                "source_snapshot_id": request.source_snapshot_id,
                 "instrument_ids": request.instrument_ids,
+                "mode": request.mode,
+                "cash_weight": str(request.cash_weight),
+                "max_position_weight": str(request.max_position_weight),
                 "manual_weights": {
                     str(i): str(w) for i, w in sorted(request.manual_weights.items())
                 },
-                **payload,
+                "reason": request.reason,
             },
             option=orjson.OPT_SORT_KEYS,
         )
     ).hexdigest()
-    return payload
 
 
 def _strategy_id(allocation_id: str) -> str:
@@ -290,20 +281,6 @@ def _strategy_id(allocation_id: str) -> str:
             "allocation_id must use ASCII letters, digits, dash or underscore"
         )
     return f"etf-allocation:{allocation_id}"
-
-
-def _valid_weight(
-    value: Decimal, *, allow_zero: bool = True, allow_one: bool = True
-) -> bool:
-    try:
-        return (
-            value.is_finite()
-            and (value >= 0 if allow_zero else value > 0)
-            and (value <= 1 if allow_one else value < 1)
-            and value == value.quantize(_PRECISION)
-        )
-    except (InvalidOperation, AttributeError):
-        return False
 
 
 def _version(record: StrategyArtifactRecord) -> ETFAllocationVersion:

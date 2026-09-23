@@ -127,6 +127,21 @@ test.describe
 			await comparison.getByRole("checkbox", { name: /沪深300ETF-图表验收/ }).check();
 			await comparison.getByRole("checkbox", { name: /创业板ETF-无净值验收/ }).check();
 			await comparison.getByLabel("配置理由").fill("equal broad exposure");
+			let droppedResponse = false;
+			await page.route("**/api/v1/portfolio/etf-allocations/*/versions", async (route) => {
+				if (route.request().method() === "POST" && !droppedResponse) {
+					droppedResponse = true;
+					await route.fetch();
+					await route.fulfill({ status: 503, body: "response lost" });
+					return;
+				}
+				await route.continue();
+			});
+			await comparison.getByRole("button", { name: "保存候选版本" }).click();
+			await expect(comparison.getByRole("alert")).toContainText("保存失败");
+			await page.reload();
+			await expect(comparison.getByRole("checkbox", { name: /沪深300ETF-图表验收/ })).toBeChecked();
+			await expect(comparison.getByLabel("配置理由")).toHaveValue("equal broad exposure");
 			await comparison.getByRole("button", { name: "保存候选版本" }).click();
 			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
 			await expect(comparison.getByText(/research_only/)).toBeVisible();
