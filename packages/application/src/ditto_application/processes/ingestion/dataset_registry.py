@@ -345,7 +345,9 @@ _METADATA_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         daily_fetch_factory=lambda ctx: (
             lambda: ctx.fetchers.metadata.fetch_calendar(
                 ctx.trade_date[:4] + "-01-01",
-                ctx.trade_date[:4] + "-12-31",
+                # Carry one forward month past the year boundary so a
+                # year-end Paper handoff can see the next open session.
+                f"{int(ctx.trade_date[:4]) + 1}-01-31",
             )
         ),
     ),
