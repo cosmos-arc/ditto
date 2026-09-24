@@ -57,6 +57,7 @@ class ETFAllocationReviewView:
     account_kind: str
     account_id: str
     as_of: str
+    knowledge_cutoff: str
     valuation_snapshot_id: str
     source_snapshot_ids: tuple[str, ...]
     ledger_hash: str
@@ -226,7 +227,13 @@ class GetETFAllocationReviewQuery:
         source = next(iter(sources))
         instrument_codes = {
             instrument_id: self._metadata.get_source_ticker(
-                instrument_id, source=source, asof=request.as_of
+                instrument_id,
+                source=source,
+                asof=request.as_of,
+                # The provider identity itself is PIT evidence: a mapping
+                # recorded after the cutoff must stay invisible so a
+                # corrected identity cannot select a different price row.
+                cutoff=request.knowledge_cutoff.isoformat(),
             )
             or str(instrument_id)
             for instrument_id in instrument_ids
@@ -287,6 +294,7 @@ class GetETFAllocationReviewQuery:
             account_kind=request.account_kind,
             account_id=request.account_id,
             as_of=request.as_of,
+            knowledge_cutoff=request.knowledge_cutoff.isoformat(),
             valuation_snapshot_id=computed_snapshot_id,
             source_snapshot_ids=request.source_snapshot_ids,
             ledger_hash=valued.snapshot.ledger_hash,

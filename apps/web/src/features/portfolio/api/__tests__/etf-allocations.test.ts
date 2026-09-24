@@ -72,6 +72,7 @@ describe("fetchETFAllocationReview", () => {
 		account_kind: "paper",
 		account_id: "paper-a",
 		as_of: "2026-09-02",
+		knowledge_cutoff: "2026-09-02T09:00:00Z",
 		source_snapshot_ids: ["price-1"],
 		valuation_snapshot_id: "valuation-1",
 		ledger_hash: "ledger-1",
@@ -88,6 +89,7 @@ describe("fetchETFAllocationReview", () => {
 	it("maps validated server values into the review view model", async () => {
 		vi.stubGlobal("fetch", fetchMock(response));
 		await expect(fetchETFAllocationReview("demo", "version-one", query)).resolves.toEqual({
+			knowledgeCutoff: "2026-09-02T09:00:00Z",
 			valuationSnapshotId: "valuation-1",
 			ledgerHash: "ledger-1",
 			targetCashWeight: "0.2",
@@ -105,6 +107,7 @@ describe("fetchETFAllocationReview", () => {
 		["account_kind", "manual"],
 		["account_id", "other"],
 		["as_of", "2026-09-03"],
+		["knowledge_cutoff", "2026-09-02T10:00:00Z"],
 		["source_snapshot_ids", ["other"]],
 		["actual", { valuation_snapshot_id: "other", cash_weight: "0.1" }],
 	])("rejects a review with mismatched %s", async (field, value) => {

@@ -14275,6 +14275,10 @@
           "drift": {
             "$ref": "#/components/schemas/PortfolioDriftResponse"
           },
+          "knowledge_cutoff": {
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
           "ledger_hash": {
             "title": "Ledger Hash",
             "type": "string"
@@ -14318,6 +14322,7 @@
           "account_kind",
           "account_id",
           "as_of",
+          "knowledge_cutoff",
           "valuation_snapshot_id",
           "source_snapshot_ids",
           "ledger_hash",

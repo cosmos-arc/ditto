@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 5aca7fabb5d411dcc394889fede0b47b36981da76dcb571e0f1bbec4a7240547
+ * Schema SHA-256: 1a6455967f566b814f406c72e9a3a1687bfbc73a8937890a93c68c33636d23c4
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -10717,6 +10717,8 @@ export interface components {
             /** As Of */
             as_of: string;
             drift: components["schemas"]["PortfolioDriftResponse"];
+            /** Knowledge Cutoff */
+            knowledge_cutoff: string;
             /** Ledger Hash */
             ledger_hash: string;
             /** Source Snapshot Ids */

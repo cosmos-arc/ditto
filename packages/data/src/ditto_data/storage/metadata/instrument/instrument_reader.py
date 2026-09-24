@@ -269,35 +269,50 @@ class InstrumentReader:
         instrument_id: int,
         source: str = "tushare",
         asof: str | None = None,
+        *,
+        cutoff: str | None = None,
     ) -> str | None:
         """
-        反向查询：instrument_id 到 source_ticker。
+        反向查询：instrument_id 到 source_ticker.
 
         Args:
             instrument_id: 证券 ID
             source: 数据源标识符
             asof: Point-in-Time 日期
+            cutoff: 知识截止时刻；提供时隐藏该时刻之后才记录的映射行，
+                使修正/回填的映射不会泄漏进 cutoff 绑定的读取
 
         Returns:
             source_ticker 或 None（未找到时）
 
         """
+        visibility = (
+            " AND datetime(created_at) <= datetime(?)" if cutoff is not None else ""
+        )
         if asof:
-            row = self._client.fetchone(
-                """SELECT source_ticker FROM instrument_mapping
+            sql = f"""
+                SELECT source_ticker FROM instrument_mapping
                 WHERE instrument_id = ? AND source = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
+                  {visibility}
                 ORDER BY effective_from DESC
-                LIMIT 1""",
-                [instrument_id, source, asof, asof],
+                LIMIT 1
+            """  # noqa: S608 - visibility 为固定字面量片段，值全部参数化
+            row = self._client.fetchone(
+                sql, [instrument_id, source, asof, asof, *([cutoff] if cutoff else [])]
             )
         else:
-            row = self._client.fetchone(
-                """SELECT source_ticker FROM instrument_mapping
+            sql = f"""
+                SELECT source_ticker FROM instrument_mapping
                 WHERE instrument_id = ? AND source = ?
-                  AND effective_to IS NULL""",
-                [instrument_id, source],
+                  AND effective_to IS NULL
+                  {visibility}
+                ORDER BY effective_from DESC
+                LIMIT 1
+            """  # noqa: S608 - visibility 为固定字面量片段，值全部参数化
+            row = self._client.fetchone(
+                sql, [instrument_id, source, *([cutoff] if cutoff else [])]
             )
 
         return cast(str, row["source_ticker"]) if row else None

@@ -289,6 +289,7 @@ class ETFAllocationReviewResponse(BaseModel):
     account_kind: Literal["paper", "manual"]
     account_id: str
     as_of: str
+    knowledge_cutoff: str
     valuation_snapshot_id: str
     source_snapshot_ids: tuple[str, ...]
     ledger_hash: str

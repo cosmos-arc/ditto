@@ -6,6 +6,7 @@ type SaveBody = components["schemas"]["ETFAllocationBody"];
 type ReviewDTO = components["schemas"]["ETFAllocationReviewResponse"];
 
 export type ETFAllocationReviewView = {
+	readonly knowledgeCutoff: string;
 	readonly valuationSnapshotId: string;
 	readonly ledgerHash: string;
 	readonly targetCashWeight: string;
@@ -110,11 +111,15 @@ export async function fetchETFAllocationReview(
 		result.account_kind !== query.account_kind ||
 		result.account_id !== query.account_id ||
 		result.as_of !== query.as_of ||
+		// The cutoff bounds both ledger visibility and eligible prices; a
+		// response minted for another cutoff must not pass as this evidence.
+		Date.parse(result.knowledge_cutoff) !== Date.parse(query.knowledge_cutoff) ||
 		result.source_snapshot_ids.join("\0") !== query.source_snapshot_ids.join("\0") ||
 		result.target.valuation_snapshot_id !== result.actual.valuation_snapshot_id
 	)
 		throw new Error("ETF 复盘响应证据身份不匹配");
 	return {
+		knowledgeCutoff: result.knowledge_cutoff,
 		valuationSnapshotId: result.valuation_snapshot_id,
 		ledgerHash: result.ledger_hash,
 		targetCashWeight: result.target.cash_weight,
