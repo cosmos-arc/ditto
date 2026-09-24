@@ -153,7 +153,8 @@ def test_query_fails_closed_for_unknown_account_and_invalid_as_of() -> None:
 
 
 @pytest.mark.pit
-def test_query_hides_backfilled_events_recorded_after_the_cutoff() -> None:
+def test_query_fails_closed_when_a_cutoff_hidden_correction_exists() -> None:
+    """A cutoff-bound basis must not silently exclude later-recorded events."""
     account, (cash, buy) = _fixture()
     backfill = create_account_event(
         account=account,
@@ -173,29 +174,26 @@ def test_query_hides_backfilled_events_recorded_after_the_cutoff() -> None:
     )
     query = AccountLedgerQuery(journal=_Journal(account, (cash, buy, backfill)))
 
-    before_backfill = query.get(
-        account_id=account.account_id,
-        as_of="2026-09-01",
-        valuation_prices={InstrumentId(600519): Decimal("120")},
-        recorded_through=NOW,
-    )
+    with pytest.raises(AppQueryError) as hidden:
+        query.get(
+            account_id=account.account_id,
+            as_of="2026-09-01",
+            recorded_through=NOW,
+        )
+    assert hidden.value.details["code"] == "ACCOUNT_LEDGER_CUTOFF_HIDDEN"
+
     after_backfill = query.get(
         account_id=account.account_id,
         as_of="2026-09-01",
         valuation_prices={InstrumentId(600519): Decimal("120")},
         recorded_through=NOW + timedelta(days=3),
     )
-
-    assert tuple(event.event_id for event in before_backfill.events) == (
-        "cash",
-        "buy",
-    )
     assert tuple(event.event_id for event in after_backfill.events) == (
         "cash",
         "buy",
         "backfilled-sell",
     )
-    assert before_backfill.ledger_revision.event_count == 3
+    assert after_backfill.ledger_revision.event_count == 3
     assert after_backfill.ledger_revision.ledger_hash == ledger_hash(
         (cash, buy, backfill)
     )

@@ -302,6 +302,60 @@ def test_etf_paper_rejects_package_without_pinned_valuation_cutoff(
         assert journal.list_events("paper-a") == ()
 
 
+def test_etf_rejected_attempt_reevaluates_with_corrected_evidence(
+    tmp_path: Path,
+) -> None:
+    """A deferred/rejected record has no ledger effect and must not lock the intent."""
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        facts = MagicMock()
+
+        def resolve(
+            request: ETFPaperExecutionRequest, *, instrument_id: int, **_: object
+        ) -> ETFPaperOrderFacts:
+            base = _facts(
+                execution_ledger_hash=ledger_hash(journal.list_events("paper-a"))
+            )
+            if request.market_snapshot_id == "market-rejected":
+                return replace(
+                    base,
+                    execution_market=replace(
+                        base.execution_market,
+                        source_snapshot_id="market-rejected",
+                        open=10.8,
+                        high=11.0,
+                        low=10.7,
+                        close=11.0,
+                        limit_up=11.0,
+                    ),
+                )
+            return replace(
+                base,
+                execution_market=replace(
+                    base.execution_market, source_snapshot_id="market-fixed"
+                ),
+            )
+
+        facts.resolve.side_effect = resolve
+        process = _process(sessions, journal, facts)
+        rejected = process.execute(
+            replace(_request(), market_snapshot_id="market-rejected")
+        )
+        assert rejected[0].status == "deferred"
+        assert rejected[0].reason == "limit_up_no_buy"
+        assert journal.list_events("paper-a") == ()
+
+        filled = process.execute(replace(_request(), market_snapshot_id="market-fixed"))
+        assert filled[0].status == "filled"
+        assert filled[0].ledger_event_id is not None
+        assert len(journal.list_events("paper-a")) == 1
+        assert len(sessions.list_executions("session-a")) == 1
+
+
 def test_etf_paper_rejects_preclose_execution(tmp_path: Path) -> None:
     path = tmp_path / "paper.db"
     _seed(path)

@@ -98,6 +98,20 @@ class AccountLedgerQuery:
                 account_id=account_id,
             )
         full_stream = tuple(self._journal.list_events(account_id))
+        if recorded_through is not None and any(
+            event.recorded_at > recorded_through and event.trade_date <= as_of
+            for event in full_stream
+        ):
+            # A cutoff-bound reader must not size money against a basis that
+            # already has later-recorded same-day corrections: the guarded
+            # append compares the unfiltered stream, so hiding them would
+            # split the balance basis from the revision basis.
+            raise AppQueryError(
+                "account ledger hides events recorded after the cutoff",
+                code="ACCOUNT_LEDGER_CUTOFF_HIDDEN",
+                account_id=account_id,
+                as_of=as_of,
+            )
         events = tuple(
             event
             for event in full_stream

@@ -156,6 +156,11 @@ class OperatePaperSession:
         existing = self._store.get_execution(session_id, idempotency_key)
         if existing is None:
             return None
+        if existing.result.fill is None and existing.ledger_event_id is None:
+            # A deferred or rejected attempt has no durable ledger effect;
+            # retract it so corrected evidence can re-evaluate the intent.
+            self._discard_stale_execution(existing)
+            return None
         if existing.request_hash != request_hash:
             raise AppConflictError("ETF intent execution payload conflict")
         return OperatePaperReceipt(
@@ -259,7 +264,7 @@ class OperatePaperSession:
 
     def _discard_stale_execution(self, record: PaperExecutionRecord) -> None:
         """
-        Retract one unledgered execution whose balance basis went stale.
+        Retract one unledgered execution (stale basis or unfillable attempt).
 
         Best effort: a concurrent retry may have discarded it already, which is
         the goal state, so only the ledger guard conflict propagates.
