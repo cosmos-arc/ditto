@@ -20,6 +20,7 @@ from ditto_execution.paper.contracts import (
 from ditto_execution.paper.reality import ASharePaperReality
 from ditto_execution.paper.session import (
     PaperExecutionRecord,
+    PaperSession,
     PaperSessionConflictError,
     PaperSessionStatus,
     PaperSessionStorePort,
@@ -86,6 +87,8 @@ class OperatePaperOrderCommand:
     settlement_date: str
     position_quantity: int
     available_quantity: int
+    cash_available: float | None = None
+    request_identity_hash: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -122,18 +125,41 @@ class OperatePaperSession:
 
     def execute(self, command: OperatePaperOrderCommand) -> OperatePaperReceipt:
         """Execute once or recover the exact persisted execution."""
-        resolved = _resolve_inputs(command)
-        session = self._store.get_session(command.session_id)
-        if session is None:
-            raise AppNotFoundError(f"paper session not found: {command.session_id}")
-        if session.status is not PaperSessionStatus.RUNNING:
-            raise AppConflictError("paper session must be running to execute orders")
-        _reject_ungoverned_etf_session(session.strategy_id)
-        if resolved.order.trade_date != session.trade_date:
-            raise AppProcessError(
-                "paper order trade_date does not match session",
-                code="PAPER_TRADE_DATE_MISMATCH",
+        if command.request_identity_hash is not None:
+            raise AppConflictError(
+                "governed Paper request cannot use the generic order path"
             )
+        return self._execute(command, governed_etf=False)
+
+    def execute_etf(self, command: OperatePaperOrderCommand) -> OperatePaperReceipt:
+        """Execute a validated ETF intent through the shared ledger path."""
+        if not command.request_identity_hash:
+            raise AppConflictError("ETF order requires a governed request identity")
+        return self._execute(command, governed_etf=True)
+
+    def replay_etf(
+        self, session_id: str, idempotency_key: str, request_hash: str
+    ) -> OperatePaperReceipt | None:
+        """Recover an exact ETF intent before mutable account facts are read again."""
+        session = self._store.get_session(session_id)
+        if session is None:
+            raise AppNotFoundError(f"paper session not found: {session_id}")
+        if not session.strategy_id.startswith("etf-allocation:"):
+            raise AppConflictError("session is not an ETF allocation session")
+        existing = self._store.get_execution(session_id, idempotency_key)
+        if existing is None:
+            return None
+        if existing.request_hash != request_hash:
+            raise AppConflictError("ETF intent execution payload conflict")
+        return OperatePaperReceipt(
+            status="replayed",
+            execution=to_paper_execution_info(self._ensure_ledger(existing)),
+        )
+
+    def _execute(
+        self, command: OperatePaperOrderCommand, *, governed_etf: bool
+    ) -> OperatePaperReceipt:
+        session = self._validated_session(command, governed_etf=governed_etf)
         request_hash = _request_hash(command)
         existing = self._store.get_execution(
             command.session_id,
@@ -147,6 +173,7 @@ class OperatePaperSession:
                 execution=to_paper_execution_info(self._ensure_ledger(existing)),
             )
 
+        resolved = _resolve_inputs(command)
         account = self._account_journal.get_account(session.account_id)
         if account is None:
             raise AppNotFoundError(f"paper account not found: {session.account_id}")
@@ -168,6 +195,7 @@ class OperatePaperSession:
                 settlement_date=command.settlement_date,
                 position_quantity=command.position_quantity,
                 available_quantity=command.available_quantity,
+                cash_available=command.cash_available,
             ),
         )
         execution = PaperExecutionRecord(
@@ -191,6 +219,25 @@ class OperatePaperSession:
             status="created",
             execution=to_paper_execution_info(self._ensure_ledger(persisted)),
         )
+
+    def _validated_session(
+        self, command: OperatePaperOrderCommand, *, governed_etf: bool
+    ) -> PaperSession:
+        session = self._store.get_session(command.session_id)
+        if session is None:
+            raise AppNotFoundError(f"paper session not found: {command.session_id}")
+        if session.status is not PaperSessionStatus.RUNNING:
+            raise AppConflictError("paper session must be running to execute orders")
+        if governed_etf and not session.strategy_id.startswith("etf-allocation:"):
+            raise AppConflictError("session is not an ETF allocation session")
+        if session.strategy_id.startswith("etf-allocation:") and not governed_etf:
+            _reject_ungoverned_etf_session(session.strategy_id)
+        if command.trade_date != session.trade_date:
+            raise AppProcessError(
+                "paper order trade_date does not match session",
+                code="PAPER_TRADE_DATE_MISMATCH",
+            )
+        return session
 
     def recover(self, session_id: str) -> tuple[PaperExecutionInfo, ...]:
         """Repair every persisted fill missing its corresponding ledger event."""
@@ -270,6 +317,8 @@ def _paper_order(
 
 
 def _request_hash(command: OperatePaperOrderCommand) -> str:
+    if command.request_identity_hash is not None:
+        return command.request_identity_hash
     resolved = _resolve_inputs(command)
     payload = {
         "session_id": command.session_id,
@@ -283,6 +332,7 @@ def _request_hash(command: OperatePaperOrderCommand) -> str:
         "settlement_date": command.settlement_date,
         "position_quantity": command.position_quantity,
         "available_quantity": command.available_quantity,
+        "cash_available": command.cash_available,
     }
     encoded = orjson.dumps(
         payload,

@@ -1057,6 +1057,30 @@
         "title": "APIResponse[ETFPaperAuthorizeResponse]",
         "type": "object"
       },
+      "APIResponse_ETFPaperExecutionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ETFPaperExecutionResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ETFPaperExecutionResponse]",
+        "type": "object"
+      },
       "APIResponse_EtfNavResponse_": {
         "properties": {
           "data": {
@@ -14541,6 +14565,141 @@
           "authorization_id"
         ],
         "title": "ETFPaperAuthorizeResponse",
+        "type": "object"
+      },
+      "ETFPaperExecutionBody": {
+        "additionalProperties": false,
+        "description": "Exact after-close evidence identities for one approved Paper session.",
+        "properties": {
+          "account_id": {
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "authorization_id": {
+            "minLength": 1,
+            "title": "Authorization Id",
+            "type": "string"
+          },
+          "execution_cutoff": {
+            "format": "date-time",
+            "title": "Execution Cutoff",
+            "type": "string"
+          },
+          "intended_trade_date": {
+            "format": "date",
+            "title": "Intended Trade Date",
+            "type": "string"
+          },
+          "market_snapshot_id": {
+            "minLength": 1,
+            "title": "Market Snapshot Id",
+            "type": "string"
+          },
+          "reference_snapshot_id": {
+            "minLength": 1,
+            "title": "Reference Snapshot Id",
+            "type": "string"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "signal_date": {
+            "format": "date",
+            "title": "Signal Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorization_id",
+          "account_id",
+          "session_id",
+          "signal_date",
+          "intended_trade_date",
+          "execution_cutoff",
+          "reference_snapshot_id",
+          "market_snapshot_id"
+        ],
+        "title": "ETFPaperExecutionBody",
+        "type": "object"
+      },
+      "ETFPaperExecutionOutcomeResponse": {
+        "description": "One package intent's Paper execution or no-rebalance result.",
+        "properties": {
+          "execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Id"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "intent_id": {
+            "title": "Intent Id",
+            "type": "string"
+          },
+          "ledger_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Event Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent_id",
+          "instrument_id",
+          "status",
+          "reason",
+          "execution_id",
+          "ledger_event_id"
+        ],
+        "title": "ETFPaperExecutionOutcomeResponse",
+        "type": "object"
+      },
+      "ETFPaperExecutionResponse": {
+        "description": "Recoverable results for every finalized ETF Signal Package intent.",
+        "properties": {
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/ETFPaperExecutionOutcomeResponse"
+            },
+            "title": "Outcomes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outcomes"
+        ],
+        "title": "ETFPaperExecutionResponse",
         "type": "object"
       },
       "ETFPaperHandoffBody": {
@@ -46078,6 +46237,150 @@
           }
         },
         "summary": "Authorize Etf Paper",
+        "tags": [
+          "portfolio"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-executions": {
+      "post": {
+        "description": "Evaluate a fixed target after its execution-day evidence is visible.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "portfolio_execute_etf_paper",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ETFPaperExecutionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ETFPaperExecutionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Execute Etf Paper",
         "tags": [
           "portfolio"
         ],

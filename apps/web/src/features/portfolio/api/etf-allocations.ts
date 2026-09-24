@@ -138,3 +138,22 @@ export async function handoffETFPaper(
 	}
 	return { accountId: result.session.account_id, sessionId: result.session.session_id };
 }
+
+export async function executeETFPaper(
+	allocationId: string,
+	versionId: string,
+	key: string,
+	body: components["schemas"]["ETFPaperExecutionBody"],
+): Promise<components["schemas"]["ETFPaperExecutionOutcomeResponse"][]> {
+	const result = await apiClient.post(
+		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-executions",
+		{
+			params: { path: { allocation_id: allocationId, version_id: versionId }, header: { "Idempotency-Key": key } },
+			body,
+		},
+	);
+	if (result.outcomes.some((outcome) => !outcome.intent_id || !outcome.status)) {
+		throw new Error("ETF Paper 执行响应缺少意图或状态");
+	}
+	return result.outcomes;
+}

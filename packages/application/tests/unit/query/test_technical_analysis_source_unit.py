@@ -26,27 +26,80 @@ class _SnapshotReader:
         return self._value if snapshot_id == self._value.snapshot_id else None
 
 
+@pytest.mark.pit
+def test_etf_paper_market_excludes_future_publication_and_wrong_instrument(
+    tmp_path: Path,
+) -> None:
+    cutoff = datetime(2026, 9, 2, 8, tzinfo=UTC)
+    visible = datetime(2026, 9, 2, 7, tzinfo=UTC)
+    frame = pl.DataFrame(
+        {
+            "instrument_id": [1, 1, 2],
+            "source_ticker": ["510300.SH", "510300.SH", "159919.SZ"],
+            "event_time": [visible] * 3,
+            "published_at": [visible, cutoff + timedelta(seconds=1), visible],
+            "available_at": [visible] * 3,
+            "open": [10.0, 999_999.0, 20.0],
+            "high": [10.2, 1_000_000.0, 20.2],
+            "low": [9.9, 999_998.0, 19.9],
+            "close": [10.1, 999_999.0, 20.1],
+            "pre_close": [10.0, 999_999.0, 20.0],
+            "volume": [1000.0, 1000.0, 1000.0],
+            "amount": [10_000.0, 1000.0, 20_000.0],
+            "up_limit": [11.0, 1_000_000.0, 22.0],
+            "down_limit": [9.0, 999_998.0, 18.0],
+        }
+    )
+    store = FilesystemProviderPayloadStore(tmp_path)
+    snapshot = _snapshot(frame, store, created_at=visible, dataset_id="etf_daily")
+    context = PITQueryContext(
+        as_of=cutoff,
+        knowledge_cutoff=cutoff,
+        publication_cutoff=cutoff,
+        source_snapshots=(
+            DatasetSnapshot(
+                dataset_id="etf_daily",
+                dataset_version=snapshot.schema_version,
+                source_snapshot_ids=(snapshot.snapshot_id,),
+                created_at=snapshot.created_at,
+            ),
+        ),
+    )
+    source = ProviderPayloadTechnicalAnalysisSource(
+        snapshot_reader=_SnapshotReader(snapshot), payload_reader=store
+    )
+    market = source.load_paper_market(
+        context,
+        instrument_id=InstrumentId(1),
+        instrument_code="510300.SH",
+        trade_date="2026-09-02",
+    )
+    assert market.close == 10.1
+    assert market.source_snapshot_id == snapshot.snapshot_id
+
+
 def _snapshot(
     frame: pl.DataFrame,
     store: FilesystemProviderPayloadStore,
     *,
     created_at: datetime,
+    dataset_id: str = "stock_daily",
 ) -> ProviderSnapshot:
     artifact = store.retain_payload(
-        dataset_id="stock_daily",
+        dataset_id=dataset_id,
         source="tushare",
         payload=frame,
     )
     return ProviderSnapshot.create(
         ProviderSnapshotDraft(
-            dataset_id="stock_daily",
+            dataset_id=dataset_id,
             source="tushare",
             request_start="2026-08-01",
             request_end="2026-08-31",
-            schema_version="market.stock_daily.v1",
+            schema_version=f"market.{dataset_id}.v1",
             checksum=artifact.checksum,
             canonical_asset=DataAssetRef(
-                dataset_id="stock_daily",
+                dataset_id=dataset_id,
                 namespace="market",
             ),
             request_parameters_hash="sha256:technical-source-test",

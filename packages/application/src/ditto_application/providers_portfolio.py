@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_execution.contracts import (
     AccountDataPort,
@@ -20,7 +21,11 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 )
 
 from ditto_application.commands.paper_session import PaperSessionCommandHandler
+from ditto_application.etf_paper_execution import ETFPaperExecution
 from ditto_application.etf_paper_handoff import ETFPaperHandoff
+from ditto_application.processes.execution.operate_paper_session import (
+    OperatePaperSession,
+)
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
 from ditto_application.queries.account import AccountBaselineQuery
@@ -33,6 +38,9 @@ from ditto_application.queries.daily_decision_v3 import (
 )
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
+from ditto_application.queries.etf_paper_execution_facts import (
+    LiveETFPaperExecutionFacts,
+)
 from ditto_application.queries.etf_paper_handoff_facts import LiveETFPaperHandoffFacts
 from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.history_comparison import GetHistoryComparisonQuery
@@ -57,6 +65,9 @@ from ditto_application.queries.portfolio_scenario import PreviewPortfolioScenari
 from ditto_application.queries.signal import SignalQueryFacade
 from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_application.queries.technical_analysis import TechnicalAnalysisSourcePort
+from ditto_application.queries.technical_analysis_source import (
+    ProviderPayloadTechnicalAnalysisSource,
+)
 from ditto_application.queries.trade import TradeQueryFacade
 
 __all__ = ["AppPortfolioQueryProvider"]
@@ -104,6 +115,45 @@ class AppPortfolioQueryProvider(Provider):
             facts=facts,
             packages=packages,
             sessions=sessions,
+        )
+
+    @provide
+    def etf_paper_execution_facts(
+        self,
+        metadata: MetadataQueryFacade,
+        admission: FieldAdmissionQuery,
+        snapshots: ProviderSnapshotReader,
+        payloads: ProviderPayloadReader,
+        ledger: AccountLedgerQuery,
+    ) -> LiveETFPaperExecutionFacts:
+        """Provide the retained and admitted ETF Paper fact reader."""
+        return LiveETFPaperExecutionFacts(
+            metadata=metadata,
+            admission=admission,
+            snapshots=snapshots,
+            bars=ProviderPayloadTechnicalAnalysisSource(
+                snapshot_reader=snapshots,
+                payload_reader=payloads,
+            ),
+            ledger=ledger,
+        )
+
+    @provide
+    def etf_paper_execution(
+        self,
+        allocations: ETFAllocationCommand,
+        packages: SignalPackagePublisher,
+        sessions: PaperSessionStorePort,
+        facts: LiveETFPaperExecutionFacts,
+        operator: OperatePaperSession,
+    ) -> ETFPaperExecution:
+        """Provide the governed ETF Paper executor."""
+        return ETFPaperExecution(
+            allocations=allocations,
+            packages=packages,
+            sessions=sessions,
+            facts=facts,
+            operator=operator,
         )
 
     @provide

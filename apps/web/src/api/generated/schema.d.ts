@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 96b7f5f2435e1d5c7c2e2d1766cab5a44234b595b2621e2d7f6449ebd84033b1
+ * Schema SHA-256: 6b1974edaebe5e3f38528a32954a96ad7fa0cbad5d0f08b0b8de92046552add5
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2923,6 +2923,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Etf Paper
+         * @description Evaluate a fixed target after its execution-day evidence is visible.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["portfolio_execute_etf_paper"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-handoffs": {
         parameters: {
             query?: never;
@@ -4587,6 +4609,13 @@ export interface components {
         APIResponse_ETFPaperAuthorizeResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["ETFPaperAuthorizeResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ETFPaperExecutionResponse] */
+        APIResponse_ETFPaperExecutionResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ETFPaperExecutionResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -10776,6 +10805,63 @@ export interface components {
             authorization_id: string;
             /** Version Id */
             version_id: string;
+        };
+        /**
+         * ETFPaperExecutionBody
+         * @description Exact after-close evidence identities for one approved Paper session.
+         */
+        ETFPaperExecutionBody: {
+            /** Account Id */
+            account_id: string;
+            /** Authorization Id */
+            authorization_id: string;
+            /**
+             * Execution Cutoff
+             * Format: date-time
+             */
+            execution_cutoff: string;
+            /**
+             * Intended Trade Date
+             * Format: date
+             */
+            intended_trade_date: string;
+            /** Market Snapshot Id */
+            market_snapshot_id: string;
+            /** Reference Snapshot Id */
+            reference_snapshot_id: string;
+            /** Session Id */
+            session_id: string;
+            /**
+             * Signal Date
+             * Format: date
+             */
+            signal_date: string;
+        };
+        /**
+         * ETFPaperExecutionOutcomeResponse
+         * @description One package intent's Paper execution or no-rebalance result.
+         */
+        ETFPaperExecutionOutcomeResponse: {
+            /** Execution Id */
+            execution_id: string | null;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Intent Id */
+            intent_id: string;
+            /** Ledger Event Id */
+            ledger_event_id: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ETFPaperExecutionResponse
+         * @description Recoverable results for every finalized ETF Signal Package intent.
+         */
+        ETFPaperExecutionResponse: {
+            /** Outcomes */
+            outcomes: components["schemas"]["ETFPaperExecutionOutcomeResponse"][];
         };
         /**
          * ETFPaperHandoffBody
@@ -29311,6 +29397,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_ETFPaperAuthorizeResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portfolio_execute_etf_paper: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                allocation_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ETFPaperExecutionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ETFPaperExecutionResponse_"];
                 };
             };
             /** @description Bad request */

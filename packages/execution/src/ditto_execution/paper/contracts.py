@@ -330,6 +330,7 @@ class PaperRealityContext:
     settlement_date: str
     position_quantity: int
     available_quantity: int
+    cash_available: float | None = None
 
     def __post_init__(self) -> None:
         """Reject ambiguous or causally reversed execution timing."""
@@ -337,6 +338,10 @@ class PaperRealityContext:
         _require_aware(self.execution_at, "execution_at")
         if self.execution_at < self.decision_at:
             raise ValueError("execution_at cannot precede decision_at")
+        if self.cash_available is not None and (
+            not isfinite(self.cash_available) or self.cash_available < 0
+        ):
+            raise ValueError("cash_available must be finite and non-negative")
 
 
 @dataclass(frozen=True, kw_only=True)

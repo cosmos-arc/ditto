@@ -9,6 +9,10 @@ from unittest.mock import MagicMock
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
 from ditto_application.commands.paper_session import PaperSessionCommandReceipt
+from ditto_application.etf_paper_execution import (
+    ETFPaperExecution,
+    ETFPaperExecutionOutcome,
+)
 from ditto_application.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.paper_contracts import PaperSessionInfo
 from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
@@ -73,6 +77,17 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
             pause_reason=None,
         ),
     )
+    execution = MagicMock(spec=ETFPaperExecution)
+    execution.execute.return_value = (
+        ETFPaperExecutionOutcome(
+            intent_id="intent-1",
+            instrument_id=1,
+            status="filled",
+            reason=None,
+            execution_id="execution-1",
+            ledger_event_id="event-1",
+        ),
+    )
 
     class TestProvider(Provider):
         scope = Scope.APP
@@ -84,6 +99,10 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
         @provide
         def etf_handoff(self) -> ETFPaperHandoff:
             return handoff
+
+        @provide
+        def etf_execution(self) -> ETFPaperExecution:
+            return execution
 
     app = FastAPI()
     configure_exception_handlers(app)
@@ -235,6 +254,24 @@ def _check_paper_authorization(web: TestClient, endpoint: str, version_id: str) 
     )
     assert handoff.status_code == 201, handoff.text
     assert handoff.json()["data"]["session"]["strategy_id"] == "etf-allocation:demo"
+    execution_response = web.post(
+        f"{endpoint}/{version_id}/paper-executions",
+        json={
+            "authorization_id": authorized.json()["data"]["authorization_id"],
+            "account_id": "paper-a",
+            "session_id": "paper-session-a",
+            "signal_date": "2026-09-02",
+            "intended_trade_date": "2026-09-03",
+            "execution_cutoff": "2026-09-03T08:00:00Z",
+            "reference_snapshot_id": "snapshot:recorded:reference",
+            "market_snapshot_id": "snapshot:recorded:bar",
+        },
+        headers={"Idempotency-Key": "paper-execution"},
+    )
+    assert execution_response.status_code == 201, execution_response.text
+    assert (
+        execution_response.json()["data"]["outcomes"][0]["ledger_event_id"] == "event-1"
+    )
     assert (
         web.post(
             authorization,

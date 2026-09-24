@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ETFCandidate } from "@/features/instruments";
 import {
 	authorizeETFPaper,
+	executeETFPaper,
 	fetchPaperAccounts,
 	handoffETFPaper,
 	listETFAllocationVersions,
@@ -34,6 +35,7 @@ type PendingPaper = {
 	authorizationId?: string;
 	handoffKey?: string;
 };
+type ReadyPaper = { authorizationId: string; accountId: string; sessionId: string; tradeDate: string };
 
 function savedIdentity(): { allocationId: string; versionId: string } {
 	const query = new URLSearchParams(window.location.search);
@@ -82,10 +84,24 @@ function pendingPaper(): PendingPaper | null {
 		: null;
 }
 
+function readyPaper(): ReadyPaper | null {
+	const state: unknown = window.history.state;
+	const value = state && typeof state === "object" ? (state as Record<string, unknown>)["etfPaperReady"] : null;
+	if (!value || typeof value !== "object") return null;
+	const ready = value as Partial<ReadyPaper>;
+	return typeof ready.authorizationId === "string" &&
+		typeof ready.accountId === "string" &&
+		typeof ready.sessionId === "string" &&
+		typeof ready.tradeDate === "string"
+		? (ready as ReadyPaper)
+		: null;
+}
+
 export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot }: Props) {
 	const initial = savedIdentity();
 	const pending = useRef(pendingSave()).current;
 	const pendingPaperState = useRef(pendingPaper()).current;
+	const initialReadyPaper = useRef(readyPaper()).current;
 	const [allocationId, setAllocationId] = useState(pending?.id ?? initial.allocationId);
 	const [versionId, setVersionId] = useState(pending?.body.parent_version_id ?? initial.versionId);
 	const [selected, setSelected] = useState<number[]>(pending?.body.instrument_ids ?? []);
@@ -102,7 +118,9 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 	const [reviewReason, setReviewReason] = useState("");
 	const [confirmingReject, setConfirmingReject] = useState(false);
 	const [paperAccountId, setPaperAccountId] = useState(pendingPaperState?.accountId ?? "");
-	const [paperTradeDate, setPaperTradeDate] = useState(pendingPaperState?.tradeDate ?? "");
+	const [paperTradeDate, setPaperTradeDate] = useState(
+		pendingPaperState?.tradeDate ?? initialReadyPaper?.tradeDate ?? "",
+	);
 	const [paperActor, setPaperActor] = useState(pendingPaperState?.actor ?? "");
 	const [paperReason, setPaperReason] = useState(pendingPaperState?.reason ?? "");
 	const [paperSession, setPaperSession] = useState<{ accountId: string; sessionId: string } | null>(() => {
@@ -112,6 +130,11 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 		return accountId && sessionId ? { accountId, sessionId } : null;
 	});
 	const paperRetry = useRef<PendingPaper | null>(pendingPaperState);
+	const [paperReady, setPaperReady] = useState<ReadyPaper | null>(initialReadyPaper);
+	const [executionCutoff, setExecutionCutoff] = useState("");
+	const [executionReference, setExecutionReference] = useState("");
+	const [executionMarket, setExecutionMarket] = useState("");
+	const executionKey = useRef(crypto.randomUUID());
 	const reviewRetry = useRef<PendingReview | null>(pendingReview());
 	const retry = useRef<{ body: string; key: string } | null>(
 		pending ? { body: pending.fingerprint, key: pending.key } : null,
@@ -283,14 +306,39 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 		},
 		onSuccess: (session) => {
 			setPaperSession(session);
+			const ready = {
+				authorizationId: paperRetry.current?.authorizationId ?? "",
+				accountId: session.accountId,
+				sessionId: session.sessionId,
+				tradeDate: paperTradeDate,
+			};
+			setPaperReady(ready);
 			const url = new URL(window.location.href);
 			url.searchParams.set("paperAccount", session.accountId);
 			url.searchParams.set("paperSession", session.sessionId);
 			const state: Record<string, unknown> =
 				window.history.state && typeof window.history.state === "object" ? { ...window.history.state } : {};
 			delete state["etfPaperPending"];
+			state["etfPaperReady"] = ready;
 			window.history.replaceState(state, "", url);
 			paperRetry.current = null;
+		},
+	});
+	const executePaper = useMutation({
+		mutationFn: async () => {
+			if (!saved || !paperReady || saved.reviewStatus !== "review_approved") {
+				throw new Error("请先完成此版本的 Paper 授权与交接");
+			}
+			return executeETFPaper(allocationId, saved.versionId, executionKey.current, {
+				authorization_id: paperReady.authorizationId,
+				account_id: paperReady.accountId,
+				session_id: paperReady.sessionId,
+				signal_date: saved.asof,
+				intended_trade_date: paperReady.tradeDate,
+				execution_cutoff: new Date(`${executionCutoff}+08:00`).toISOString(),
+				reference_snapshot_id: executionReference.trim(),
+				market_snapshot_id: executionMarket.trim(),
+			});
 		},
 	});
 	const unchanged =
@@ -512,10 +560,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 					{saved.reviewStatus === "review_approved" && (
 						<div className="space-y-2">
 							<h4>Paper 交接</h4>
-							<p>
-								请使用现有 Paper 账户。交接前会复查所选工具在当前快照的交易资格；缺少证据时需重新选择工具。当前 ETF
-								会话暂不支持下单，执行日行情与规则校验完成后才能模拟成交。
-							</p>
+							<p>请使用现有 Paper 账户。交接前会复查所选工具在当前快照的交易资格；缺少证据时需重新选择工具。</p>
 							<label className="block">
 								Paper 账户{" "}
 								<select
@@ -602,6 +647,53 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 									</a>
 								</p>
 							)}
+						</div>
+					)}
+					{paperReady && paperReady.sessionId === paperSession?.sessionId && (
+						<div className="space-y-2">
+							<h4>Paper 执行日复核</h4>
+							<p>仅在下一交易日收盘数据已留存并准入后模拟成交；缺少行情、规则或账户事实时会停止。</p>
+							<label className="block">
+								执行日证据截止时间（北京时间）
+								<input
+									aria-label="执行日证据截止时间"
+									type="datetime-local"
+									value={executionCutoff}
+									onChange={(event) => setExecutionCutoff(event.target.value)}
+								/>
+							</label>
+							<label className="block">
+								执行日 ETF 参考快照 ID
+								<input
+									aria-label="执行日 ETF 参考快照 ID"
+									value={executionReference}
+									onChange={(event) => setExecutionReference(event.target.value)}
+								/>
+							</label>
+							<label className="block">
+								执行日 ETF 行情快照 ID
+								<input
+									aria-label="执行日 ETF 行情快照 ID"
+									value={executionMarket}
+									onChange={(event) => setExecutionMarket(event.target.value)}
+								/>
+							</label>
+							<button
+								type="button"
+								disabled={
+									!executionCutoff || !executionReference.trim() || !executionMarket.trim() || executePaper.isPending
+								}
+								onClick={() => executePaper.mutate()}
+							>
+								{executePaper.isPending ? "执行中…" : "按已批准意图模拟成交"}
+							</button>
+							{executePaper.isError && <p role="alert">Paper 执行失败：{String(executePaper.error)}</p>}
+							{executePaper.data?.map((outcome) => (
+								<p key={outcome.intent_id}>
+									工具 {outcome.instrument_id}：{outcome.status}
+									{outcome.reason ? `（${outcome.reason}）` : ""}，账本事件 {outcome.ledger_event_id ?? "无"}
+								</p>
+							))}
 						</div>
 					)}
 				</div>

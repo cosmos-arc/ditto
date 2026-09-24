@@ -397,6 +397,7 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
             source_snapshot_id=request.source_snapshot_id,
             current_positions={},
             investable_instrument_ids=frozenset({1}),
+            signal_ledger_hash="ledger-before",
         )
         with pytest.raises(AppConflictError, match="choose alternatives"):
             handoff.handoff(request)
@@ -448,11 +449,12 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
     )
     ledger = MagicMock()
     ledger.get_paper.return_value = SimpleNamespace(
+        events=(),
         snapshot=SimpleNamespace(
             valuation_complete=True,
             total_value=Decimal("1000"),
             positions=(),
-        )
+        ),
     )
     facts = LiveETFPaperHandoffFacts(
         metadata=metadata,

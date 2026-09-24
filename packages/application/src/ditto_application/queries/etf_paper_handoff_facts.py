@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.account_ledger import ledger_hash
 
 from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFacts,
@@ -61,9 +62,7 @@ class LiveETFPaperHandoffFacts:
             if price is None:
                 continue
             if (
-                not self._field_allowed(
-                    candidate, "price_close", price, request, snapshot.dataset_id
-                )
+                not self._field_allowed(candidate, "price_close", price, request)
                 or price.observed_on != request.signal_date
             ):
                 continue
@@ -92,7 +91,6 @@ class LiveETFPaperHandoffFacts:
                         field,
                         candidate.fields[field],
                         request,
-                        snapshot.dataset_id,
                     )
                     for field in (
                         "trading_restriction",
@@ -121,6 +119,7 @@ class LiveETFPaperHandoffFacts:
             source_snapshot_id=request.source_snapshot_id,
             current_positions=weights,
             investable_instrument_ids=frozenset(investable),
+            signal_ledger_hash=ledger_hash(account.events),
         )
 
     def _field_allowed(
@@ -129,53 +128,72 @@ class LiveETFPaperHandoffFacts:
         field_name: str,
         field: ETFField,
         request: ETFPaperHandoffRequest,
-        dataset_id: str,
     ) -> bool:
-        if (
-            field.value is None
-            or field.observed_on is None
-            or field.source_snapshot_id != request.source_snapshot_id
-        ):
-            return False
-        try:
-            observed = date.fromisoformat(field.observed_on)
-            published = datetime.fromisoformat(
-                (field.published_at or "").replace("Z", "+00:00")
-            )
-            asof = date.fromisoformat(request.signal_date)
-            effective_from = (
-                date.fromisoformat(field.effective_from)
-                if field.effective_from
-                else None
-            )
-            effective_to = (
-                date.fromisoformat(field.effective_to) if field.effective_to else None
-            )
-        except ValueError:
-            return False
-        if (
-            published.tzinfo is None
-            or published > request.knowledge_cutoff
-            or observed > asof
-            or (effective_from is not None and effective_from > asof)
-            or (effective_to is not None and effective_to <= asof)
-        ):
-            return False
-        report = self._admission.assess(
-            FieldAdmissionRequest(
-                fields=(
-                    FieldRequirement(
-                        dataset_id=dataset_id,
-                        field=field_name,
-                        snapshot_id=request.source_snapshot_id,
-                    ),
-                ),
-                instrument_ids=(candidate.instrument_id,),
-                required_from=observed,
-                required_to=observed,
-                knowledge_cutoff=request.knowledge_cutoff,
-                publication_cutoff=request.knowledge_cutoff,
-                purpose="promotion_paper",
-            )
+        return admitted_etf_field(
+            candidate,
+            field_name,
+            field,
+            asof=request.signal_date,
+            cutoff=request.knowledge_cutoff,
+            snapshot_id=request.source_snapshot_id,
+            admission=self._admission,
         )
-        return report.allowed
+
+
+def admitted_etf_field(
+    candidate: ETFCandidate,
+    field_name: str,
+    field: ETFField,
+    *,
+    asof: str,
+    cutoff: datetime,
+    snapshot_id: str,
+    admission: FieldAdmissionQuery,
+) -> bool:
+    """Apply the same temporal and promotion admission rule at either Paper date."""
+    if (
+        field.value is None
+        or field.observed_on is None
+        or field.source_snapshot_id != snapshot_id
+    ):
+        return False
+    try:
+        observed = date.fromisoformat(field.observed_on)
+        published = datetime.fromisoformat(
+            (field.published_at or "").replace("Z", "+00:00")
+        )
+        asof_day = date.fromisoformat(asof)
+        effective_from = (
+            date.fromisoformat(field.effective_from) if field.effective_from else None
+        )
+        effective_to = (
+            date.fromisoformat(field.effective_to) if field.effective_to else None
+        )
+    except ValueError:
+        return False
+    if (
+        published.tzinfo is None
+        or published > cutoff
+        or observed > asof_day
+        or (effective_from is not None and effective_from > asof_day)
+        or (effective_to is not None and effective_to <= asof_day)
+    ):
+        return False
+    report = admission.assess(
+        FieldAdmissionRequest(
+            fields=(
+                FieldRequirement(
+                    dataset_id="etf_reference",
+                    field=field_name,
+                    snapshot_id=snapshot_id,
+                ),
+            ),
+            instrument_ids=(candidate.instrument_id,),
+            required_from=observed,
+            required_to=observed,
+            knowledge_cutoff=cutoff,
+            publication_cutoff=cutoff,
+            purpose="promotion_paper",
+        )
+    )
+    return report.allowed

@@ -100,6 +100,7 @@ class ETFPaperHandoff:
             or facts.knowledge_cutoff != request.knowledge_cutoff
             or facts.source_snapshot_id != request.source_snapshot_id
             or not facts.source_snapshot_id
+            or not facts.signal_ledger_hash
         ):
             raise AppConflictError("ETF Paper market evidence identity changed")
         selected = set(version.weights)
@@ -145,6 +146,7 @@ class ETFPaperHandoff:
                 dataset_snapshot_ids={
                     "etf_reference": facts.source_snapshot_id,
                     "etf_research_reference": version.source_snapshot_id,
+                    "paper_signal_ledger": facts.signal_ledger_hash,
                 },
                 execution_scope="paper",
                 current_positions=facts.current_positions,

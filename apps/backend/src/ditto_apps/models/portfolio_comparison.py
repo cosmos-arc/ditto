@@ -20,6 +20,8 @@ __all__ = [
     "ETFAllocationVersionResponse",
     "ETFPaperAuthorizeBody",
     "ETFPaperAuthorizeResponse",
+    "ETFPaperExecutionBody",
+    "ETFPaperExecutionResponse",
     "ETFPaperHandoffBody",
     "HistoryComparisonBenchmarkPointResponse",
     "HistoryComparisonBenchmarkResponse",
@@ -126,6 +128,42 @@ class ETFPaperHandoffBody(BaseModel):
     intended_trade_date: date
     knowledge_cutoff: datetime
     source_snapshot_id: str = Field(min_length=1)
+
+
+class ETFPaperExecutionBody(BaseModel):
+    """Exact after-close evidence identities for one approved Paper session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    authorization_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    signal_date: date
+    intended_trade_date: date
+    execution_cutoff: datetime
+    reference_snapshot_id: str = Field(min_length=1)
+    market_snapshot_id: str = Field(min_length=1)
+
+
+class ETFPaperExecutionOutcomeResponse(BaseModel):
+    """One package intent's Paper execution or no-rebalance result."""
+
+    model_config = _RESPONSE_CONFIG
+
+    intent_id: str
+    instrument_id: int
+    status: str
+    reason: str | None
+    execution_id: str | None
+    ledger_event_id: str | None
+
+
+class ETFPaperExecutionResponse(BaseModel):
+    """Recoverable results for every finalized ETF Signal Package intent."""
+
+    model_config = _RESPONSE_CONFIG
+
+    outcomes: tuple[ETFPaperExecutionOutcomeResponse, ...]
 
 
 class NormalizedPortfolioPositionResponse(BaseModel):
