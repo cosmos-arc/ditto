@@ -21,6 +21,10 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 )
 
 from ditto_application.exceptions import AppCommandError, AppConflictError
+from ditto_application.mutation_idempotency import (
+    MutationIdempotency,
+    build_mutation_idempotency,
+)
 from ditto_application.queries.etf_candidates import ETFCandidate
 from ditto_application.queries.metadata import MetadataQueryFacade
 
@@ -48,6 +52,18 @@ class ETFAllocationRequest:
 
 
 @dataclass(frozen=True)
+class ETFAllocationReviewRequest:
+    """Explicit human decision for one immutable target version."""
+
+    allocation_id: str
+    version_id: str
+    action: Literal["submit", "approve", "reject"]
+    actor: str
+    reason: str
+    idempotency_key: str
+
+
+@dataclass(frozen=True)
 class ETFAllocationVersion:
     """Saved research target that has no Paper execution authority."""
 
@@ -65,6 +81,7 @@ class ETFAllocationVersion:
     reason: str
     rule_version: str
     paper_status: str
+    review_status: str
     created_at: str
 
 
@@ -148,6 +165,148 @@ class ETFAllocationCommand:
             return _version(self._artifacts.save_artifact(record))
         except ValueError as exc:
             raise AppConflictError("allocation version conflict") from exc
+
+    def review(self, request: ETFAllocationReviewRequest) -> ETFAllocationVersion:
+        """Record and apply a separate, exact-version review decision."""
+        identity = _review_identity(request)
+        strategy_id = _strategy_id(request.allocation_id)
+        transitions = {
+            "submit": ("draft", "review"),
+            "approve": ("review", "approved"),
+            "reject": ("review", "rejected"),
+        }
+        version = _validate_review_target(
+            request, self._artifacts.get_artifact(request.version_id), strategy_id
+        )
+        current, target = transitions[request.action]
+        completed_statuses = (
+            {"review", "approved", "rejected"}
+            if request.action == "submit"
+            else {target}
+        )
+        # One durable fence per (version, idempotency key): the three review
+        # actions share this mutation resource, so reusing a key for a different
+        # action must conflict here instead of authorizing a second transition.
+        receipt_id = _review_receipt_id(request.version_id, identity.key_hash)
+        receipt = _review_receipt(request, version, strategy_id, receipt_id, identity)
+        prior = self._artifacts.get_artifact(receipt_id)
+        if prior is not None and not _same_review_receipt(prior, receipt):
+            raise AppConflictError("ETF allocation review decision conflict")
+        if version.status in completed_statuses and prior is not None:
+            return _version(version)
+        if version.status != current:
+            raise AppConflictError("ETF allocation review state conflict")
+        if request.action == "approve" and not self._has_review_submission(
+            strategy_id, request.version_id
+        ):
+            raise AppConflictError("ETF allocation review submission is missing")
+        if not self._artifacts.transition_with_receipt(
+            request.version_id, target, current, receipt
+        ):
+            updated = self._artifacts.get_artifact(request.version_id)
+            committed = self._artifacts.get_artifact(receipt_id)
+            if (
+                updated is not None
+                and updated.status in completed_statuses
+                and committed is not None
+                and _same_review_receipt(committed, receipt)
+            ):
+                return _version(updated)
+            raise AppConflictError("ETF allocation review state conflict")
+        updated = self._artifacts.get_artifact(request.version_id)
+        if updated is None:
+            raise AppConflictError("ETF allocation review result disappeared")
+        return _version(updated)
+
+    def _has_review_submission(self, strategy_id: str, version_id: str) -> bool:
+        """Find the durable submit receipt a review-state version implies."""
+        return any(
+            record.artifact_type
+            in {ArtifactKind.DIAGNOSTICS, ArtifactKind.ETF_ALLOCATION_REVIEW}
+            and record.metadata.get("action") == "submit"
+            and record.metadata.get("version_id") == version_id
+            for record in self._artifacts.list_by_strategy(strategy_id)
+        )
+
+
+def _review_receipt_id(version_id: str, key_hash: str) -> str:
+    return f"{version_id}:review:{key_hash[:32]}"
+
+
+def _review_identity(request: ETFAllocationReviewRequest) -> MutationIdempotency:
+    """Validate the transport key at the shared boundary and drop its raw form."""
+    return build_mutation_idempotency(
+        operation_id="etf_allocation_review",
+        resource_id=request.version_id,
+        raw_key=request.idempotency_key,
+        request_payload={
+            "allocation_id": request.allocation_id,
+            "version_id": request.version_id,
+            "action": request.action,
+            "actor": request.actor.strip(),
+            "reason": request.reason.strip(),
+        },
+    )
+
+
+def _review_receipt(
+    request: ETFAllocationReviewRequest,
+    version: StrategyArtifactRecord,
+    strategy_id: str,
+    receipt_id: str,
+    identity: MutationIdempotency,
+) -> StrategyArtifactRecord:
+    return StrategyArtifactRecord(
+        artifact_id=receipt_id,
+        strategy_id=strategy_id,
+        run_id=request.version_id,
+        artifact_type=ArtifactKind.DIAGNOSTICS,
+        file_path="",
+        metadata={
+            "version_id": request.version_id,
+            "target_request_hash": version.metadata["request_hash"],
+            "action": request.action,
+            "actor": request.actor.strip(),
+            "reason": request.reason.strip(),
+            "key_hash": identity.key_hash,
+        },
+        status="active",
+        created_at=datetime.now(UTC).isoformat(),
+    )
+
+
+def _same_review_receipt(
+    existing: StrategyArtifactRecord, expected: StrategyArtifactRecord
+) -> bool:
+    return (
+        existing.status == "active"
+        and existing.artifact_id == expected.artifact_id
+        and existing.file_path == expected.file_path
+        and existing.strategy_id == expected.strategy_id
+        and existing.run_id == expected.run_id
+        and existing.artifact_type
+        in {ArtifactKind.DIAGNOSTICS, ArtifactKind.ETF_ALLOCATION_REVIEW}
+        and existing.metadata == expected.metadata
+    )
+
+
+def _validate_review_target(
+    request: ETFAllocationReviewRequest,
+    version: StrategyArtifactRecord | None,
+    strategy_id: str,
+) -> StrategyArtifactRecord:
+    if not request.actor.strip() or not request.reason.strip():
+        raise AppCommandError("review actor and reason are required")
+    if request.action not in {"submit", "approve", "reject"}:
+        raise AppCommandError("unsupported ETF allocation review action")
+    if (
+        version is None
+        or version.strategy_id != strategy_id
+        or version.artifact_type is not ArtifactKind.TARGET_PORTFOLIO
+        or version.metadata.get("kind") != "etf_allocation"
+    ):
+        raise AppConflictError("ETF allocation version was not found")
+    return version
 
 
 def _check_request(request: ETFAllocationRequest) -> None:
@@ -310,6 +469,15 @@ def _version(record: StrategyArtifactRecord) -> ETFAllocationVersion:
         tracking_exposure={str(i): str(w) for i, w in exposure_values.items()},
         reason=str(payload["reason"]),
         rule_version=str(payload["rule_version"]),
-        paper_status=str(payload["paper_status"]),
+        # paper_status keeps the released v1 domain ("research_only" means no
+        # Paper authority); review state is exposed additively so v1 clients
+        # keep reading this record after a review decision lands.
+        paper_status="research_only",
+        review_status={
+            "draft": "research_only",
+            "review": "review_pending",
+            "approved": "review_approved",
+            "rejected": "rejected",
+        }.get(record.status, "research_only"),
         created_at=record.created_at,
     )

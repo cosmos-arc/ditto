@@ -50,6 +50,16 @@ class StrategyArtifactWriterProtocol(Protocol):
         """更新产物状态，成功返回 True."""
         ...
 
+    def transition_with_receipt(
+        self,
+        artifact_id: str,
+        status: str,
+        expected_current: str,
+        receipt: StrategyArtifactRecord,
+    ) -> bool:
+        """Atomically transition an artifact and append its decision receipt."""
+        ...
+
     def claim_replacement(
         self,
         candidate_artifact_id: str,
@@ -120,6 +130,18 @@ class StrategyArtifactService:
             artifact_id,
             status,
             expected_current=expected_current,
+        )
+
+    def transition_with_receipt(
+        self,
+        artifact_id: str,
+        status: str,
+        expected_current: str,
+        receipt: StrategyArtifactRecord,
+    ) -> bool:
+        """Commit a lifecycle decision and its evidence together."""
+        return self._writer.transition_with_receipt(
+            artifact_id, status, expected_current, receipt
         )
 
     def claim_replacement(

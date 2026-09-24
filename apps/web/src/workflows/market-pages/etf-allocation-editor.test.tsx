@@ -29,6 +29,7 @@ afterEach(() => window.history.replaceState(null, "", "/"));
 it("retries one save with the same identity and restores the saved version", async () => {
 	const user = userEvent.setup();
 	const attempts: Array<{ id: string; key: string }> = [];
+	const reviewAttempts: Array<{ action: string; key: string }> = [];
 	let stored: Record<string, unknown> | null = null;
 	server.use(
 		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
@@ -53,9 +54,17 @@ it("retries one save with the same identity and restores the saved version", asy
 				reason: "broad exposure",
 				rule_version: "etf-allocation-v1",
 				paper_status: "research_only",
+				review_status: "research_only",
 				created_at: "2026-09-01T09:00:00Z",
 			};
 			return HttpResponse.json({ data: stored }, { status: 201 });
+		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/review", async ({ request }) => {
+			const body = (await request.json()) as { action: string };
+			reviewAttempts.push({ action: body.action, key: request.headers.get("Idempotency-Key") ?? "" });
+			if (reviewAttempts.length === 1) return HttpResponse.json({ error: { code: "TEMPORARY" } }, { status: 503 });
+			stored = { ...stored, review_status: body.action === "submit" ? "review_pending" : "review_approved" };
+			return HttpResponse.json({ data: stored });
 		}),
 	);
 	const editor = (
@@ -75,7 +84,7 @@ it("retries one save with the same identity and restores the saved version", asy
 	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
 	await screen.findByRole("alert");
 	view.unmount();
-	render(editor, { wrapper: wrapper() });
+	const restored = render(editor, { wrapper: wrapper() });
 	expect(screen.getByRole("checkbox", { name: /沪深300 ETF/ })).toBeChecked();
 	expect(screen.getByLabelText("配置理由")).toHaveValue("broad exposure");
 	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
@@ -83,5 +92,91 @@ it("retries one save with the same identity and restores the saved version", asy
 	expect(attempts).toHaveLength(2);
 	expect(attempts[0]).toEqual(attempts[1]);
 	expect(new URLSearchParams(window.location.search).get("etfVersion")).toBe("version-one");
-	expect(screen.getByText(/Paper 需要合格数据/)).toBeInTheDocument();
+	expect(screen.getByText(/审查批准只确认精确版本/)).toBeInTheDocument();
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByText(/审查失败/);
+	restored.unmount();
+	render(editor, { wrapper: wrapper() });
+	await screen.findByRole("button", { name: "提交审查" });
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByRole("button", { name: "研究审查通过" });
+	expect(reviewAttempts[0]).toEqual(reviewAttempts[1]);
+	await user.click(screen.getByRole("button", { name: "研究审查通过" }));
+	await screen.findByText(/· review_approved ·/);
+	expect(reviewAttempts[2]?.action).toBe("approve");
+});
+
+it("asks for confirmation before the terminal reject transition", async () => {
+	const user = userEvent.setup();
+	const actions: string[] = [];
+	let stored: Record<string, unknown> | null = null;
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
+			HttpResponse.json({ data: stored ? [stored] : [] }),
+		),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions", async ({ params }) => {
+			stored = {
+				version_id: "version-one",
+				allocation_id: String(params["id"]),
+				parent_version_id: null,
+				asof: "2026-09-01",
+				knowledge_cutoff: "2026-09-01T09:00:00Z",
+				source_snapshot_id: "snapshot:recorded:etf",
+				mode: "equal",
+				weights: { "1": "0.80000000" },
+				cash_weight: "0.2",
+				max_position_weight: "1",
+				tracking_exposure: { "000300.SH": "0.80000000" },
+				reason: "broad exposure",
+				rule_version: "etf-allocation-v1",
+				paper_status: "research_only",
+				review_status: "research_only",
+				created_at: "2026-09-01T09:00:00Z",
+			};
+			return HttpResponse.json({ data: stored }, { status: 201 });
+		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/review", async ({ request }) => {
+			const body = (await request.json()) as { action: string };
+			actions.push(body.action);
+			stored = {
+				...stored,
+				review_status: body.action === "submit" ? "review_pending" : "rejected",
+			};
+			return HttpResponse.json({ data: stored });
+		}),
+	);
+	render(
+		<ETFAllocationEditor
+			items={[candidate]}
+			asof="2026-09-01"
+			cutoff="2026-09-01T09:00:00Z"
+			cutoffInput="2026-09-01T17:00:00"
+			snapshot="snapshot:recorded:etf"
+		/>,
+		{ wrapper: wrapper() },
+	);
+	await user.click(screen.getByRole("checkbox", { name: /沪深300 ETF/ }));
+	await user.clear(screen.getByLabelText("单仓上限"));
+	await user.type(screen.getByLabelText("单仓上限"), "1");
+	await user.type(screen.getByLabelText("配置理由"), "broad exposure");
+	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
+	await screen.findByText(/已保存 version-one/);
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByRole("button", { name: "研究审查通过" });
+	expect(actions).toEqual(["submit"]);
+	await user.click(screen.getByRole("button", { name: "拒绝此版本" }));
+	expect(screen.getByRole("button", { name: "确认拒绝" })).toBeInTheDocument();
+	await user.click(screen.getByRole("button", { name: "取消" }));
+	expect(screen.getByRole("button", { name: "拒绝此版本" })).toBeInTheDocument();
+	expect(actions).toEqual(["submit"]);
+	await user.click(screen.getByRole("button", { name: "拒绝此版本" }));
+	await user.click(screen.getByRole("button", { name: "确认拒绝" }));
+	await screen.findByText(/· rejected ·/);
+	expect(actions).toEqual(["submit", "reject"]);
 });

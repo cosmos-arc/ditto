@@ -16,6 +16,7 @@ from ditto_application.exceptions import (
 from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationCommand,
     ETFAllocationRequest,
+    ETFAllocationReviewRequest,
 )
 from ditto_application.queries.history_comparison import (
     GetHistoryComparisonQuery,
@@ -40,6 +41,7 @@ from ditto_apps.api.mutation_idempotency import IdempotencyKeyHeader
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.portfolio_comparison import (
     ETFAllocationBody,
+    ETFAllocationReviewBody,
     ETFAllocationVersionResponse,
     HistoryComparisonQueryParams,
     HistoryComparisonResponse,
@@ -119,6 +121,43 @@ async def save_etf_allocation_version(
     except (AppCommandError, AppQueryError, ValueError) as exc:
         raise UnprocessableEntityError(
             str(exc), error_code="ETF_ALLOCATION_INVALID"
+        ) from exc
+    return APIResponse(data=ETFAllocationVersionResponse.model_validate(version))
+
+
+@router.post(
+    "/etf-allocations/{allocation_id}/versions/{version_id}/review",
+    response_model=APIResponse[ETFAllocationVersionResponse],
+    operation_id="portfolio_review_etf_allocation_version",
+)
+@inject
+async def review_etf_allocation_version(
+    allocation_id: str,
+    version_id: str,
+    body: ETFAllocationReviewBody,
+    idempotency_key: IdempotencyKeyHeader,
+    command: Annotated[ETFAllocationCommand, FromComponent()],
+) -> APIResponse[ETFAllocationVersionResponse]:
+    """Submit, approve or reject one immutable ETF target version."""
+    try:
+        version = await asyncio.to_thread(
+            command.review,
+            ETFAllocationReviewRequest(
+                allocation_id=allocation_id,
+                version_id=version_id,
+                action=body.action,
+                actor=body.actor,
+                reason=body.reason,
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except AppConflictError as exc:
+        raise ConflictError(str(exc), error_code="ETF_ALLOCATION_CONFLICT") from exc
+    except AppCommandError as exc:
+        code = exc.details.get("code")
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=code if isinstance(code, str) else "ETF_ALLOCATION_INVALID",
         ) from exc
     return APIResponse(data=ETFAllocationVersionResponse.model_validate(version))
 

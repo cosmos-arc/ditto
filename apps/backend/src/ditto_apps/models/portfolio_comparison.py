@@ -16,6 +16,7 @@ from ditto_apps.models.account_ledger import (
 
 __all__ = [
     "ETFAllocationBody",
+    "ETFAllocationReviewBody",
     "ETFAllocationVersionResponse",
     "HistoryComparisonBenchmarkPointResponse",
     "HistoryComparisonBenchmarkResponse",
@@ -76,7 +77,16 @@ class ETFAllocationVersionResponse(BaseModel):
     reason: str
     rule_version: str
     paper_status: str
+    review_status: str
     created_at: str
+
+
+class ETFAllocationReviewBody(BaseModel):
+    """Human decision bound to a saved ETF target and retry key."""
+
+    action: Literal["submit", "approve", "reject"]
+    actor: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
 
 
 class NormalizedPortfolioPositionResponse(BaseModel):

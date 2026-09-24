@@ -93,6 +93,7 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             first_data = first.json()["data"]
             assert first_data["weights"] == {"1": "0.40000000", "2": "0.40000000"}
             assert first_data["knowledge_cutoff"] == "2026-09-01T09:00:00Z"
+            assert first_data["review_status"] == "research_only"
             assert first_data["paper_status"] == "research_only"
             replay = web.post(
                 endpoint, json=_body(), headers={"Idempotency-Key": "one"}
@@ -125,6 +126,42 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
                 revised.json()["data"]["parent_version_id"] == first_data["version_id"]
             )
             assert len(web.get(endpoint).json()["data"]) == 2
+            review = f"{endpoint}/{first_data['version_id']}/review"
+            approval = {"action": "approve", "actor": "operator", "reason": "checked"}
+            assert (
+                web.post(
+                    review, json=approval, headers={"Idempotency-Key": "a"}
+                ).status_code
+                == 409
+            )
+            submission = {**approval, "action": "submit"}
+            assert (
+                web.post(
+                    review, json=submission, headers={"Idempotency-Key": "s"}
+                ).json()["data"]["review_status"]
+                == "review_pending"
+            )
+            approved = web.post(review, json=approval, headers={"Idempotency-Key": "a"})
+            assert approved.status_code == 200, approved.text
+            assert approved.json()["data"]["review_status"] == "review_approved"
+            assert approved.json()["data"]["paper_status"] == "research_only"
+            assert (
+                web.post(review, json=approval, headers={"Idempotency-Key": "a"}).json()
+                == approved.json()
+            )
+            assert (
+                web.post(
+                    review,
+                    json={**approval, "reason": "changed"},
+                    headers={"Idempotency-Key": "a"},
+                ).status_code
+                == 409
+            )
+            invalid_key = web.post(
+                review, json=approval, headers={"Idempotency-Key": "bad key"}
+            )
+            assert invalid_key.status_code == 422
+            assert invalid_key.json()["error_code"] == "IDEMPOTENCY_KEY_INVALID"
     finally:
         pool.close_all()
     reopened, pool = _app(path)
@@ -133,5 +170,9 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             versions = web.get(endpoint)
             assert versions.status_code == 200
             assert len(versions.json()["data"]) == 2
+            assert any(
+                item["review_status"] == "review_approved"
+                for item in versions.json()["data"]
+            )
     finally:
         pool.close_all()

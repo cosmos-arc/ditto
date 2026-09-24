@@ -18,13 +18,18 @@ export type ETFAllocationVersion = {
 	readonly trackingExposure: Readonly<Record<string, string>>;
 	readonly reason: string;
 	readonly ruleVersion: string;
-	readonly paperStatus: string;
+	readonly reviewStatus: string;
 	readonly createdAt: string;
 };
 
 function toVersion(value: VersionDTO): ETFAllocationVersion {
-	if (!value.version_id || !value.allocation_id || value.paper_status !== "research_only") {
-		throw new Error("ETF 配置版本身份或审批状态无效");
+	if (
+		!value.version_id ||
+		!value.allocation_id ||
+		value.paper_status !== "research_only" ||
+		!["research_only", "review_pending", "review_approved", "rejected"].includes(value.review_status)
+	) {
+		throw new Error("ETF 配置版本身份或审查状态无效");
 	}
 	return {
 		versionId: value.version_id,
@@ -40,7 +45,7 @@ function toVersion(value: VersionDTO): ETFAllocationVersion {
 		trackingExposure: value.tracking_exposure,
 		reason: value.reason,
 		ruleVersion: value.rule_version,
-		paperStatus: value.paper_status,
+		reviewStatus: value.review_status,
 		createdAt: value.created_at,
 	};
 }
@@ -49,7 +54,11 @@ export async function listETFAllocationVersions(allocationId: string): Promise<E
 	const result = await apiClient.get("/api/v1/portfolio/etf-allocations/{allocation_id}/versions", {
 		params: { path: { allocation_id: allocationId } },
 	});
-	return result.map(toVersion);
+	const versions = result.map(toVersion);
+	if (versions.some((version) => version.allocationId !== allocationId)) {
+		throw new Error("ETF 配置版本响应不属于该配置");
+	}
+	return versions;
 }
 
 export async function saveETFAllocationVersion(
@@ -61,5 +70,27 @@ export async function saveETFAllocationVersion(
 		params: { path: { allocation_id: allocationId }, header: { "Idempotency-Key": key } },
 		body,
 	});
-	return toVersion(result);
+	const version = toVersion(result);
+	if (version.allocationId !== allocationId) throw new Error("ETF 配置响应身份不匹配");
+	return version;
+}
+
+export async function reviewETFAllocationVersion(
+	allocationId: string,
+	versionId: string,
+	key: string,
+	body: components["schemas"]["ETFAllocationReviewBody"],
+): Promise<ETFAllocationVersion> {
+	const result = await apiClient.post(
+		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review",
+		{
+			params: { path: { allocation_id: allocationId, version_id: versionId }, header: { "Idempotency-Key": key } },
+			body,
+		},
+	);
+	const version = toVersion(result);
+	if (version.allocationId !== allocationId || version.versionId !== versionId) {
+		throw new Error("ETF 审批响应版本不匹配");
+	}
+	return version;
 }

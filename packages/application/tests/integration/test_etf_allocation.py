@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
-from unittest.mock import MagicMock
+from threading import Barrier
+from unittest.mock import MagicMock, patch
 
 import pytest
 from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationCommand,
     ETFAllocationRequest,
+    ETFAllocationReviewRequest,
 )
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_platform.foundation import SQLitePool
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -44,6 +49,10 @@ def _candidate(instrument_id: int) -> ETFCandidate:
         is_active=True,
         fields={"tracking_index": tracking},
     )
+
+
+def _receipt_id(version_id: str, idempotency_key: str) -> str:
+    return f"{version_id}:review:" + sha256(idempotency_key.encode()).hexdigest()[:32]
 
 
 def _request() -> ETFAllocationRequest:
@@ -76,7 +85,7 @@ def test_save_revise_restore_and_reject_invalid_weights(tmp_path: Path) -> None:
         first = service.save(_request())
         assert first.weights == {1: "0.40000000", 2: "0.40000000"}
         assert first.tracking_exposure == {"CSI300": "0.80000000"}
-        assert first.paper_status == "research_only"
+        assert first.review_status == "research_only"
         assert service.save(_request()) == first
         metadata.list_etf_candidates.side_effect = RuntimeError("snapshot unavailable")
         assert service.save(_request()) == first
@@ -115,5 +124,189 @@ def test_save_revise_restore_and_reject_invalid_weights(tmp_path: Path) -> None:
                 )
             )
         assert len(service.list_versions("demo")) == 2
+    finally:
+        pool.close_all()
+
+
+def test_exact_version_review_is_explicit_durable_and_idempotent(
+    tmp_path: Path,
+) -> None:
+    pool = SQLitePool(str(tmp_path / "review.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    artifacts = StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    command = ETFAllocationCommand(metadata, artifacts)
+    try:
+        version = command.save(_request())
+        approve = ETFAllocationReviewRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            action="approve",
+            actor="operator",
+            reason="checked target",
+            idempotency_key="approve-one",
+        )
+        with pytest.raises(AppConflictError):
+            command.review(approve)
+        submit = replace(approve, action="submit", idempotency_key="submit-one")
+        assert command.review(submit).review_status == "review_pending"
+        assert command.review(submit).review_status == "review_pending"
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, idempotency_key="submit-one"))
+        assert command.review(approve).review_status == "review_approved"
+        assert command.review(approve).review_status == "review_approved"
+        assert command.review(submit).review_status == "review_approved"
+        assert command.review(approve).paper_status == "research_only"
+        approved_receipt = artifacts.get_artifact(
+            _receipt_id(version.version_id, "approve-one")
+        )
+        assert approved_receipt is not None
+        assert approved_receipt.artifact_type is ArtifactKind.DIAGNOSTICS
+        assert "key_hash" in approved_receipt.metadata
+        assert "idempotency_key" not in approved_receipt.metadata
+        assert command.list_versions("demo")[0].review_status == "review_approved"
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, reason="different"))
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, version_id="other"))
+        with pytest.raises(AppConflictError):
+            command.review(
+                replace(approve, action="reject", idempotency_key="approve-one")
+            )
+        revision = command.save(
+            replace(
+                _request(),
+                idempotency_key="revision",
+                parent_version_id=version.version_id,
+            )
+        )
+        assert revision.review_status == "research_only"
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, version_id=revision.version_id))
+        assert (
+            command.review(
+                replace(
+                    submit, version_id=revision.version_id, idempotency_key="submit-two"
+                )
+            ).review_status
+            == "review_pending"
+        )
+        existing_receipt = artifacts.get_artifact(
+            _receipt_id(version.version_id, "approve-one")
+        )
+        assert existing_receipt is not None
+        assert not artifacts.transition_with_receipt(
+            revision.version_id, "approved", "review", existing_receipt
+        )
+        assert (
+            next(
+                item.review_status
+                for item in command.list_versions("demo")
+                if item.version_id == revision.version_id
+            )
+            == "review_pending"
+        )
+        rejected = command.review(
+            replace(
+                approve,
+                version_id=revision.version_id,
+                action="reject",
+                idempotency_key="reject-two",
+            )
+        )
+        assert rejected.review_status == "rejected"
+        with pytest.raises(AppConflictError):
+            command.review(
+                replace(
+                    approve,
+                    version_id=revision.version_id,
+                    idempotency_key="approve-two",
+                )
+            )
+        assert (
+            artifacts.get_artifact(_receipt_id(revision.version_id, "approve-two"))
+            is None
+        )
+    finally:
+        pool.close_all()
+
+
+def test_review_validates_the_idempotency_key_at_the_shared_boundary(
+    tmp_path: Path,
+) -> None:
+    pool = SQLitePool(str(tmp_path / "review-key.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    command = ETFAllocationCommand(
+        metadata, StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    )
+    try:
+        version = command.save(_request())
+        review = ETFAllocationReviewRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            action="submit",
+            actor="operator",
+            reason="checked target",
+            idempotency_key="bad key 空格",
+        )
+        with pytest.raises(AppCommandError, match="Idempotency-Key is invalid"):
+            command.review(review)
+    finally:
+        pool.close_all()
+
+
+def test_concurrent_identical_review_retries_return_the_committed_result(
+    tmp_path: Path,
+) -> None:
+    pool = SQLitePool(str(tmp_path / "concurrent-review.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    artifacts = StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    command = ETFAllocationCommand(metadata, artifacts)
+    try:
+        version = command.save(_request())
+        review = ETFAllocationReviewRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            action="submit",
+            actor="operator",
+            reason="checked target",
+            idempotency_key="submit-once",
+        )
+        barrier = Barrier(2)
+        transition = artifacts.transition_with_receipt
+
+        def race(
+            artifact_id: str,
+            status: str,
+            expected_current: str,
+            receipt: StrategyArtifactRecord,
+        ) -> bool:
+            barrier.wait(timeout=10)
+            return transition(artifact_id, status, expected_current, receipt)
+
+        with patch.object(artifacts, "transition_with_receipt", side_effect=race):
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [executor.submit(command.review, review) for _ in range(2)]
+                assert [
+                    future.result(timeout=15).review_status for future in futures
+                ] == [
+                    "review_pending",
+                    "review_pending",
+                ]
+        assert (
+            sum(
+                record.artifact_id == _receipt_id(version.version_id, "submit-once")
+                for record in artifacts.list_by_strategy("etf-allocation:demo")
+            )
+            == 1
+        )
     finally:
         pool.close_all()

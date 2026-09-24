@@ -221,6 +221,46 @@ class SQLiteStrategyArtifactWriter:
         )
         return updated > 0
 
+    def transition_with_receipt(
+        self,
+        artifact_id: str,
+        status: str,
+        expected_current: str,
+        receipt: StrategyArtifactRecord,
+    ) -> bool:
+        """Apply one status transition and its immutable receipt in one transaction."""
+        conn = self._pool.get_connection()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            updated = conn.execute(
+                _UPDATE_STATUS_SQL + " AND status = ?",
+                (status, artifact_id, expected_current),
+            )
+            if updated.rowcount != 1:
+                return _rollback_false(conn)
+            inserted = conn.execute(
+                _INSERT_IF_ABSENT_SQL,
+                (
+                    receipt.artifact_id,
+                    receipt.strategy_id,
+                    receipt.run_id,
+                    receipt.artifact_type.value,
+                    receipt.file_path,
+                    orjson.dumps(
+                        receipt.metadata, option=orjson.OPT_NON_STR_KEYS
+                    ).decode(),
+                    receipt.status,
+                    receipt.created_at,
+                ),
+            )
+            if inserted.rowcount != 1:
+                return _rollback_false(conn)
+            conn.commit()
+            return True
+        except Exception:
+            conn.rollback()
+            raise
+
     @traced("store.artifact_writer.claim_replacement")
     def claim_replacement(
         self,
