@@ -251,6 +251,27 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
         assert len(journal.list_events("paper-a")) == 1
 
 
+def test_etf_paper_execution_cutoff_may_follow_next_day_bar_availability(
+    tmp_path: Path,
+) -> None:
+    """Daily bars are stamped knowledge_date = trade_date + 1 by the producer."""
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        process = _process(sessions, journal, _live_facts(journal))
+        outcomes = process.execute(
+            replace(
+                _request(),
+                execution_cutoff=datetime(2026, 9, 3, 8, tzinfo=UTC),
+            )
+        )
+        assert outcomes[0].status == "filled"
+        assert len(journal.list_events("paper-a")) == 1
+
+
 def test_etf_paper_rejects_preclose_execution(tmp_path: Path) -> None:
     path = tmp_path / "paper.db"
     _seed(path)

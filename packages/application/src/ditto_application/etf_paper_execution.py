@@ -108,7 +108,9 @@ class ETFPaperExecution:
             version.knowledge_cutoff.replace("Z", "+00:00")
         )
         _after_close(signal_cutoff, request.signal_date, "signal")
-        _after_close(request.execution_cutoff, request.intended_trade_date, "execution")
+        _follows_close(
+            request.execution_cutoff, request.intended_trade_date, "execution"
+        )
         if request.execution_cutoff <= signal_cutoff:
             raise AppCommandError("Paper execution must follow the signal cutoff")
         session = self._sessions.get_session(request.session_id)
@@ -246,6 +248,23 @@ def _after_close(value: datetime, trade_date: str, label: str) -> None:
         value.tzinfo is None
         or value.astimezone(_SHANGHAI).date().isoformat() != trade_date
         or value.astimezone(_SHANGHAI).time() < time(15)
+    ):
+        raise AppCommandError(f"ETF {label} cutoff must follow its market close")
+
+
+def _follows_close(value: datetime, trade_date: str, label: str) -> None:
+    """
+    Allow a cutoff on or after the trade date's close.
+
+    The canonical daily-bar producer stamps ``knowledge_date = trade_date + 1``,
+    so the intended-trade-date bar only becomes visible the next calendar day;
+    the fill still books the intended trade date.
+    """
+    if value.tzinfo is None:
+        raise AppCommandError(f"ETF {label} cutoff needs a timezone")
+    local = value.astimezone(_SHANGHAI)
+    if local.date().isoformat() < trade_date or (
+        local.date().isoformat() == trade_date and local.time() < time(15)
     ):
         raise AppCommandError(f"ETF {label} cutoff must follow its market close")
 

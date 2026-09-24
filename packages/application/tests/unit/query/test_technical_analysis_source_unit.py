@@ -126,6 +126,57 @@ def test_etf_paper_market_accepts_ticker_only_retained_payload(tmp_path: Path) -
     assert market.limit_down is None
 
 
+@pytest.mark.pit
+def test_etf_paper_bar_visible_under_producer_next_day_knowledge_stamp(
+    tmp_path: Path,
+) -> None:
+    """DAILY_OHLCV_MAPPING stamps knowledge_date = trade_date + 1."""
+    trade_day = date(2026, 9, 2)
+    cutoff = datetime(2026, 9, 3, 8, tzinfo=UTC)
+    frame = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"],
+            "trade_date": [trade_day],
+            "knowledge_date": [trade_day + timedelta(days=1)],
+            "open": [10.0],
+            "high": [10.2],
+            "low": [9.9],
+            "close": [10.1],
+            "pre_close": [10.0],
+            "volume": [1000.0],
+            "amount": [10_000.0],
+        }
+    )
+    store = FilesystemProviderPayloadStore(tmp_path)
+    snapshot = _snapshot(
+        frame, store, created_at=cutoff - timedelta(hours=1), dataset_id="etf_daily"
+    )
+    context = PITQueryContext(
+        as_of=cutoff,
+        knowledge_cutoff=cutoff,
+        publication_cutoff=cutoff,
+        source_snapshots=(
+            DatasetSnapshot(
+                dataset_id="etf_daily",
+                dataset_version=snapshot.schema_version,
+                source_snapshot_ids=(snapshot.snapshot_id,),
+                created_at=snapshot.created_at,
+            ),
+        ),
+    )
+    market = ProviderPayloadTechnicalAnalysisSource(
+        snapshot_reader=_SnapshotReader(snapshot), payload_reader=store
+    ).load_paper_market(
+        context,
+        instrument_id=InstrumentId(1),
+        instrument_code="510300.SH",
+        trade_date="2026-09-02",
+    )
+    assert market.close == 10.1
+    assert market.observed_at == datetime(2026, 9, 2, 7, tzinfo=UTC)
+    assert market.publication_cutoff == datetime(2026, 9, 3, 7, tzinfo=UTC)
+
+
 def _snapshot(
     frame: pl.DataFrame,
     store: FilesystemProviderPayloadStore,
