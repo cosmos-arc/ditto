@@ -178,7 +178,10 @@ class ETFAllocationCommand:
             if request.action == "submit"
             else {target}
         )
-        receipt_id = f"{request.version_id}:review:{request.action}"
+        # One durable fence per (version, idempotency key): the three review
+        # actions share this mutation resource, so reusing a key for a different
+        # action must conflict here instead of authorizing a second transition.
+        receipt_id = _review_receipt_id(request.version_id, request.idempotency_key)
         receipt = _review_receipt(request, version, strategy_id, receipt_id)
         prior = self._artifacts.get_artifact(receipt_id)
         if prior is not None and not _same_review_receipt(prior, receipt):
@@ -187,10 +190,8 @@ class ETFAllocationCommand:
             return _version(version)
         if version.status != current:
             raise AppConflictError("ETF allocation review state conflict")
-        if (
-            request.action == "approve"
-            and self._artifacts.get_artifact(f"{request.version_id}:review:submit")
-            is None
+        if request.action == "approve" and not self._has_review_submission(
+            strategy_id, request.version_id
         ):
             raise AppConflictError("ETF allocation review submission is missing")
         if not self._artifacts.transition_with_receipt(
@@ -210,6 +211,20 @@ class ETFAllocationCommand:
         if updated is None:
             raise AppConflictError("ETF allocation review result disappeared")
         return _version(updated)
+
+    def _has_review_submission(self, strategy_id: str, version_id: str) -> bool:
+        """Find the durable submit receipt a review-state version implies."""
+        return any(
+            record.artifact_type
+            in {ArtifactKind.DIAGNOSTICS, ArtifactKind.ETF_ALLOCATION_REVIEW}
+            and record.metadata.get("action") == "submit"
+            and record.metadata.get("version_id") == version_id
+            for record in self._artifacts.list_by_strategy(strategy_id)
+        )
+
+
+def _review_receipt_id(version_id: str, idempotency_key: str) -> str:
+    return f"{version_id}:review:" + sha256(idempotency_key.encode()).hexdigest()[:32]
 
 
 def _review_receipt(

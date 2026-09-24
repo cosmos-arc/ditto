@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 from threading import Barrier
 from unittest.mock import MagicMock, patch
@@ -48,6 +49,10 @@ def _candidate(instrument_id: int) -> ETFCandidate:
         is_active=True,
         fields={"tracking_index": tracking},
     )
+
+
+def _receipt_id(version_id: str, idempotency_key: str) -> str:
+    return f"{version_id}:review:" + sha256(idempotency_key.encode()).hexdigest()[:32]
 
 
 def _request() -> ETFAllocationRequest:
@@ -148,11 +153,13 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
         submit = replace(approve, action="submit", idempotency_key="submit-one")
         assert command.review(submit).paper_status == "review_pending"
         assert command.review(submit).paper_status == "review_pending"
+        with pytest.raises(AppConflictError):
+            command.review(replace(approve, idempotency_key="submit-one"))
         assert command.review(approve).paper_status == "review_approved"
         assert command.review(approve).paper_status == "review_approved"
         assert command.review(submit).paper_status == "review_approved"
         approved_receipt = artifacts.get_artifact(
-            f"{version.version_id}:review:approve"
+            _receipt_id(version.version_id, "approve-one")
         )
         assert approved_receipt is not None
         assert approved_receipt.artifact_type is ArtifactKind.DIAGNOSTICS
@@ -161,6 +168,10 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
             command.review(replace(approve, reason="different"))
         with pytest.raises(AppConflictError):
             command.review(replace(approve, version_id="other"))
+        with pytest.raises(AppConflictError):
+            command.review(
+                replace(approve, action="reject", idempotency_key="approve-one")
+            )
         revision = command.save(
             replace(
                 _request(),
@@ -180,7 +191,7 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
             == "review_pending"
         )
         existing_receipt = artifacts.get_artifact(
-            f"{version.version_id}:review:approve"
+            _receipt_id(version.version_id, "approve-one")
         )
         assert existing_receipt is not None
         assert not artifacts.transition_with_receipt(
@@ -211,7 +222,10 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
                     idempotency_key="approve-two",
                 )
             )
-        assert artifacts.get_artifact(f"{revision.version_id}:review:approve") is None
+        assert (
+            artifacts.get_artifact(_receipt_id(revision.version_id, "approve-two"))
+            is None
+        )
     finally:
         pool.close_all()
 
@@ -259,7 +273,7 @@ def test_concurrent_identical_review_retries_return_the_committed_result(
                 ]
         assert (
             sum(
-                record.artifact_id == f"{version.version_id}:review:submit"
+                record.artifact_id == _receipt_id(version.version_id, "submit-once")
                 for record in artifacts.list_by_strategy("etf-allocation:demo")
             )
             == 1
