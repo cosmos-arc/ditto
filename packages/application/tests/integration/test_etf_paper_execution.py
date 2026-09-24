@@ -31,11 +31,13 @@ from ditto_application.processes.execution.operate_paper_session import (
     OperatePaperSession,
 )
 from ditto_application.processes.execution.signal_package_models import SignalPackage
+from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_apps.api.routes.portfolio_comparison import router
 from ditto_apps.middleware import configure_exception_handlers
 from ditto_execution.paper.session import PaperSession, PaperSessionStatus
 from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
+from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.account_ledger import (
     AccountDefinition,
     AccountEventDraft,
@@ -361,6 +363,116 @@ def test_etf_rejected_attempt_reevaluates_with_corrected_evidence(
         assert filled[0].ledger_event_id is not None
         assert len(journal.list_events("paper-a")) == 1
         assert len(sessions.list_executions("session-a")) == 1
+
+
+def test_etf_rotation_funds_the_buy_with_execution_day_proceeds(
+    tmp_path: Path,
+) -> None:
+    """A fully invested A→B rotation needs the sell proceeds to fund its buy."""
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        account = journal.get_account("paper-a")
+        assert account is not None
+        journal.append_many(
+            (
+                create_account_event(
+                    account=account,
+                    draft=AccountEventDraft(
+                        event_type=AccountEventType.OPENING_CASH,
+                        event_id="opening-cash",
+                        trade_date="2026-09-01",
+                        settlement_date="2026-09-01",
+                        recorded_at=SIGNAL,
+                        idempotency_key="opening-cash",
+                        actor="user:chevy",
+                        source=AccountEventSource.PAPER_ENGINE,
+                        gross_amount=Decimal("1000"),
+                    ),
+                ),
+                create_account_event(
+                    account=account,
+                    draft=AccountEventDraft(
+                        event_type=AccountEventType.OPENING_POSITION,
+                        event_id="opening-position",
+                        trade_date="2026-09-01",
+                        settlement_date="2026-09-01",
+                        recorded_at=SIGNAL,
+                        idempotency_key="opening-position",
+                        actor="user:chevy",
+                        source=AccountEventSource.PAPER_ENGINE,
+                        instrument_id=InstrumentId(2),
+                        quantity=Decimal("1000"),
+                        price=Decimal("10"),
+                    ),
+                ),
+            )
+        )
+        query = AccountLedgerQuery(journal=journal)
+        facts = MagicMock()
+
+        def resolve(
+            request: ETFPaperExecutionRequest, *, instrument_id: int, **_: object
+        ) -> ETFPaperOrderFacts:
+            base = _facts(
+                execution_ledger_hash=ledger_hash(journal.list_events("paper-a"))
+            )
+            execution = query.get_paper(
+                account_id="paper-a",
+                as_of=request.intended_trade_date,
+                recorded_through=request.execution_cutoff,
+            )
+            position = next(
+                (
+                    item
+                    for item in execution.snapshot.positions
+                    if int(item.instrument_id) == instrument_id
+                ),
+                None,
+            )
+            held = instrument_id == 2
+            return replace(
+                base,
+                signal_nav=11000,
+                signal_cash_available=1000,
+                signal_current_quantity=1000 if held else 0,
+                signal_available_quantity=1000 if held else 0,
+                execution_cash_available=float(execution.snapshot.cash.available),
+                execution_position_quantity=(
+                    int(position.quantity) if position is not None else 0
+                ),
+                execution_available_quantity=(
+                    int(position.available_quantity) if position is not None else 0
+                ),
+            )
+
+        facts.resolve.side_effect = resolve
+        process = _process(sessions, journal, facts)
+        package = _package()
+        sell = replace(
+            package.intents[0],
+            intent_id="intent-sell",
+            instrument_id=2,
+            direction="sell",
+            target_weight=0.0,
+            current_weight=1.0,
+            delta_weight=-1.0,
+        )
+        process._packages.find_active_paper.return_value = replace(
+            package, intents=(sell, package.intents[0])
+        )
+        outcomes = process.execute(_request())
+        assert [item.status for item in outcomes] == ["filled", "filled"]
+        assert len(journal.list_events("paper-a")) == 4
+        proceeds = query.get_paper(
+            account_id="paper-a", as_of="2026-09-02"
+        ).snapshot.cash.available
+        # The buy consumed most of the rotation: cash stayed far above the
+        # signal-day 1000 that previously blocked the intent.
+        assert proceeds > 1000
 
 
 def test_etf_paper_rejects_preclose_execution(tmp_path: Path) -> None:

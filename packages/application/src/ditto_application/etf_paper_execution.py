@@ -199,8 +199,11 @@ class ETFPaperExecution:
                 target_weight=intent.target_weight,
                 nav=facts.signal_nav,
                 current_quantity=facts.signal_current_quantity,
-                available_quantity=facts.signal_available_quantity,
-                cash_available=facts.signal_cash_available,
+                # Target quantity and NAV keep the frozen D basis; funding and
+                # sellability use the execution-day balances so a rotation's
+                # sell proceeds can fund its buy.
+                available_quantity=facts.execution_available_quantity,
+                cash_available=facts.execution_cash_available,
                 reference_price=facts.signal_reference_price,
                 instrument_id=intent.instrument_id,
                 trade_date=request.signal_date,
