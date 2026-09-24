@@ -116,7 +116,12 @@ def _envelope_matches_payload(
     ):
         return False
     expected_batch = f"eod-{signal_date}-{strategy_id}-{strategy_version}"
-    return metadata.get("batch_key") == expected_batch
+    account_id = payload.get("account_id")
+    allowed_batches = {expected_batch}
+    if isinstance(account_id, str) and account_id:
+        allowed_batches.add(f"{expected_batch}-{account_id}")
+    batch_key = metadata.get("batch_key")
+    return isinstance(batch_key, str) and batch_key in allowed_batches
 
 
 def _stable_intent_ids_match(

@@ -99,6 +99,24 @@ def test_contract_rejects_noncanonical_batch_envelope() -> None:
     assert verify_signal_package_metadata(metadata) is False
 
 
+def test_contract_accepts_only_matching_account_scoped_batch_envelope() -> None:
+    metadata = _metadata()
+    batch_key = f"{metadata['batch_key']}-paper-a"
+    metadata["batch_key"] = batch_key
+    intents = metadata["intents"]
+    assert isinstance(intents, list)
+    assert isinstance(intents[0], dict)
+    intents[0]["intent_id"] = intents[0]["intent_id"].replace(
+        "eod-2026-01-30-stock-selection-7", batch_key
+    )
+    assert verify_signal_package_metadata(metadata) is True
+
+    metadata["batch_key"] = f"{metadata['batch_key']}-other"
+    assert verify_signal_package_metadata(metadata) is False
+    metadata["batch_key"] = [batch_key]
+    assert verify_signal_package_metadata(metadata) is False
+
+
 def test_contract_rejects_unstable_persisted_intent_id() -> None:
     metadata = _metadata()
     intents = metadata["intents"]
