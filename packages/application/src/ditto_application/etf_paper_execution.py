@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, time
 from hashlib import sha256
+from math import ceil
 from typing import Literal, cast
 from zoneinfo import ZoneInfo
 
@@ -15,13 +16,19 @@ from ditto_kernel.trading import DEFAULT_SLIPPAGE_BPS
 from ditto_application.etf_paper_contracts import (
     ETFPaperExecutionFactsPort,
     ETFPaperExecutionRequest,
+    ETFPaperOrderFacts,
     etf_paper_run_id,
 )
 from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.execution_dto import TradeIntent
-from ditto_application.paper_contracts import PaperFillAssumptionInput
+from ditto_application.paper_contracts import (
+    PaperFillAssumptionInput,
+    PaperInstrumentRulesInput,
+    PaperMarketSnapshotInput,
+)
 from ditto_application.processes.execution.manual_sizing import (
     ManualSizingRequest,
+    ManualSizingResult,
     ManualSizingService,
 )
 from ditto_application.processes.execution.operate_paper_session import (
@@ -95,6 +102,25 @@ class ETFPaperExecution:
                 )
             )
         return tuple(outcomes)
+
+    def _governed_quantity(
+        self,
+        direction: str,
+        sizing: ManualSizingResult,
+        facts: ETFPaperOrderFacts,
+        market: PaperMarketSnapshotInput,
+    ) -> int:
+        """Cap a buy to lots affordable at the execution price with full fees."""
+        if direction != "buy":
+            return sizing.rounded_quantity
+        capped = _affordable_buy_quantity(
+            sizing.rounded_quantity,
+            cash_available=facts.execution_cash_available,
+            market=market,
+            rules=facts.execution_rules,
+            slippage_bps=DEFAULT_SLIPPAGE_BPS,
+        )
+        return capped if capped > 0 else sizing.rounded_quantity
 
     def _validated_context(
         self, request: ETFPaperExecutionRequest
@@ -251,7 +277,9 @@ class ETFPaperExecution:
                 instrument_id=intent.instrument_id,
                 side=intent.direction,
                 order_type="market",
-                quantity=sizing.rounded_quantity,
+                quantity=self._governed_quantity(
+                    intent.direction, sizing, facts, market
+                ),
                 price=None,
                 trade_date=request.intended_trade_date,
                 market=market,
@@ -275,6 +303,40 @@ class ETFPaperExecution:
             )
         )
         return _outcome(intent.intent_id, intent.instrument_id, receipt)
+
+
+def _affordable_buy_quantity(
+    quantity: int,
+    *,
+    cash_available: float,
+    market: PaperMarketSnapshotInput,
+    rules: PaperInstrumentRulesInput,
+    slippage_bps: float,
+) -> int:
+    """
+    Cap a buy to lots affordable at the execution price with full fees.
+
+    Reality charges the execution-day close plus slippage and the full fee
+    schedule; capping with the frozen signal price would let an risen
+    instrument fail the cash check in full. The price is rounded up to the
+    tick so the cap is never optimistic.
+    """
+    raw = market.close * (1 + slippage_bps / 10_000.0)
+    price = ceil(raw / rules.tick_size) * rules.tick_size
+    lot = rules.lot_size
+    while quantity >= lot:
+        amount = price * quantity
+        fees = (
+            max(
+                rules.min_commission,
+                amount * rules.commission_rate,
+            )
+            + amount * rules.transfer_fee_rate
+        )
+        if amount + fees <= cash_available:
+            return quantity
+        quantity -= lot
+    return quantity
 
 
 def _after_close(value: datetime, trade_date: str, label: str) -> None:

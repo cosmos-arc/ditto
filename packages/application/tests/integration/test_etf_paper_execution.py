@@ -528,6 +528,40 @@ def test_etf_sizing_rounds_to_the_execution_day_lot(tmp_path: Path) -> None:
         assert events[0].quantity == Decimal("4800")
 
 
+def test_etf_buy_caps_to_the_largest_affordable_execution_lot(tmp_path: Path) -> None:
+    """A risen instrument buys the largest affordable lot, not a full reject."""
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        facts = MagicMock()
+        base = _facts(execution_ledger_hash=ledger_hash(()))
+        facts.resolve.return_value = replace(
+            base,
+            execution_cash_available=100_000,
+            execution_market=replace(
+                base.execution_market,
+                open=24.0,
+                high=25.5,
+                low=23.9,
+                close=25.0,
+                prev_close=24.0,
+                limit_up=26.4,
+                limit_down=21.6,
+            ),
+        )
+        process = _process(sessions, journal, facts)
+        outcomes = process.execute(_request())
+        assert outcomes[0].status == "filled"
+        events = journal.list_events("paper-a")
+        assert len(events) == 1
+        # Signal basis 0.5 × 100000 at 10 sizes 5000 shares, but the
+        # execution close 25 (+1bp slippage) caps the buy to 39 lots.
+        assert events[0].quantity == Decimal("3900")
+
+
 def test_etf_paper_rejects_preclose_execution(tmp_path: Path) -> None:
     path = tmp_path / "paper.db"
     _seed(path)
