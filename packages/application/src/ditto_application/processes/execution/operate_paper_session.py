@@ -42,6 +42,7 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    AccountLedgerChronologyConflict,
     AccountLedgerError,
     AccountLedgerRevisionConflict,
     create_account_event,
@@ -300,24 +301,7 @@ class OperatePaperSession:
                 raise AppConflictError("paper ledger idempotency payload conflict")
             event = existing
         else:
-            try:
-                if record.expected_ledger_hash is None:
-                    event = self._account_journal.append(event)
-                else:
-                    event = self._account_journal.append_if_revision(
-                        event,
-                        expected_ledger_hash=record.expected_ledger_hash,
-                    )
-            except AccountLedgerRevisionConflict as exc:
-                self._discard_stale_execution(record)
-                raise AppConflictError(
-                    "paper account ledger changed during execution"
-                ) from exc
-            except (AccountLedgerError, PaperSessionConflictError) as exc:
-                raise AppProcessError(
-                    "paper ledger append failed",
-                    code="PAPER_LEDGER_APPEND_FAILED",
-                ) from exc
+            event = self._append_fill_event(record, event)
         try:
             return self._store.mark_execution_ledgered(
                 record.execution_id,
@@ -325,6 +309,35 @@ class OperatePaperSession:
             )
         except PaperSessionConflictError as exc:
             raise AppConflictError(str(exc)) from exc
+
+    def _append_fill_event(
+        self,
+        record: PaperExecutionRecord,
+        event: AccountEvent,
+    ) -> AccountEvent:
+        """Append one validated fill, discarding executions whose basis went stale."""
+        try:
+            if record.expected_ledger_hash is None:
+                return self._account_journal.append(event)
+            return self._account_journal.append_if_revision(
+                event,
+                expected_ledger_hash=record.expected_ledger_hash,
+            )
+        except AccountLedgerRevisionConflict as exc:
+            self._discard_stale_execution(record)
+            raise AppConflictError(
+                "paper account ledger changed during execution"
+            ) from exc
+        except AccountLedgerChronologyConflict as exc:
+            self._discard_stale_execution(record)
+            raise AppConflictError(
+                "paper account ledger already has later trade dates"
+            ) from exc
+        except (AccountLedgerError, PaperSessionConflictError) as exc:
+            raise AppProcessError(
+                "paper ledger append failed",
+                code="PAPER_LEDGER_APPEND_FAILED",
+            ) from exc
 
 
 def _reject_ungoverned_etf_session(strategy_id: str) -> None:

@@ -26,6 +26,7 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    AccountLedgerChronologyConflict,
     AccountLedgerRevisionConflict,
     FlowPosition,
     create_account_event,
@@ -205,6 +206,8 @@ class SqliteAccountEventJournal(AbstractContextManager["SqliteAccountEventJourna
 
         The check and the insert share one ``BEGIN IMMEDIATE`` transaction, so
         any concurrent append invalidates this one instead of racing past it.
+        The guarded append also refuses to trail events dated after it, because
+        the ledger projection replays in append order.
         """
         connection = self._db
         try:
@@ -220,9 +223,13 @@ class SqliteAccountEventJournal(AbstractContextManager["SqliteAccountEventJourna
                 raise AccountLedgerRevisionConflict(
                     f"account ledger revision conflict: {event.account_id}"
                 )
+            if self._has_later_trade_date_uncommitted(event.account_id, event):
+                raise AccountLedgerChronologyConflict(
+                    f"account ledger trails later trade dates: {event.account_id}"
+                )
             self._append_uncommitted(event)
             connection.commit()
-        except AccountLedgerRevisionConflict:
+        except (AccountLedgerRevisionConflict, AccountLedgerChronologyConflict):
             connection.rollback()
             raise
         except AccountJournalConflictError:
@@ -235,6 +242,20 @@ class SqliteAccountEventJournal(AbstractContextManager["SqliteAccountEventJourna
             connection.rollback()
             raise
         return event
+
+    def _has_later_trade_date_uncommitted(
+        self,
+        account_id: str,
+        event: AccountEvent,
+    ) -> bool:
+        # ponytail: full-stream payload scan per append; fine at workstation
+        # scale, index trade_date in the journal if streams grow large.
+        for row in self._db.execute(_LIST_EVENTS, (account_id,)):
+            payload = orjson.loads(row[0])
+            trade_date = payload.get("trade_date")
+            if isinstance(trade_date, str) and trade_date > event.trade_date:
+                return True
+        return False
 
     def append_many(
         self,

@@ -279,6 +279,18 @@ class ETFAllocationCommand:
             for item in self._artifacts.list_by_strategy(strategy_id)
         ):
             raise AppConflictError("ETF target needs a durable approved review")
+        if any(
+            item.metadata.get("action") == "authorize_paper"
+            and item.status == "active"
+            and item.metadata.get("version_id") == request.version_id
+            and item.metadata.get("account_id") == request.account_id
+            and item.metadata.get("intended_trade_date") == request.intended_trade_date
+            and item.metadata.get("session_id") != request.session_id
+            for item in self._artifacts.list_by_strategy(strategy_id)
+        ):
+            raise AppConflictError(
+                "ETF Paper authorization is bound to another session"
+            )
         identity = build_mutation_idempotency(
             operation_id="etf_allocation_authorize_paper",
             resource_id=request.version_id,

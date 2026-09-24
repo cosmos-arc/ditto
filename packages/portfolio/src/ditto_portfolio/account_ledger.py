@@ -34,6 +34,7 @@ __all__ = [
     "AccountEventSource",
     "AccountEventType",
     "AccountKind",
+    "AccountLedgerChronologyConflict",
     "AccountLedgerError",
     "AccountLedgerRevisionConflict",
     "FlowPosition",
@@ -59,6 +60,10 @@ class AccountLedgerError(PortfolioError):
 
 class AccountLedgerRevisionConflict(AccountLedgerError):
     """The account stream moved past the revision one append was validated against."""
+
+
+class AccountLedgerChronologyConflict(AccountLedgerError):
+    """An append would trail events dated after it in the account stream."""
 
 
 class AccountKind(StrEnum):

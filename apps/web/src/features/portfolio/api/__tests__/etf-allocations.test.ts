@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest, requestPath } from "@/test/request";
-import { listETFAllocationVersions } from "../etf-allocations";
+import { executeETFPaper, listETFAllocationVersions } from "../etf-allocations";
 
 const version = (allocationId: string, overrides: Record<string, unknown> = {}) => ({
 	version_id: "version-one",
@@ -22,10 +22,10 @@ const version = (allocationId: string, overrides: Record<string, unknown> = {}) 
 	...overrides,
 });
 
-function fetchMock(body: unknown) {
+function fetchMock(body: unknown, status = 200) {
 	return vi.fn<typeof fetch>(
 		async () =>
-			new Response(JSON.stringify({ data: body }), { status: 200, headers: { "Content-Type": "application/json" } }),
+			new Response(JSON.stringify({ data: body }), { status, headers: { "Content-Type": "application/json" } }),
 	);
 }
 
@@ -55,5 +55,73 @@ describe("listETFAllocationVersions", () => {
 		);
 
 		await expect(listETFAllocationVersions("demo")).rejects.toThrow("ETF 配置版本身份或审查状态无效");
+	});
+});
+
+describe("executeETFPaper", () => {
+	const body = {
+		authorization_id: "authorization",
+		account_id: "paper",
+		session_id: "session",
+		signal_date: "2026-09-01",
+		intended_trade_date: "2026-09-02",
+		execution_cutoff: "2026-09-02T08:00:00Z",
+		reference_snapshot_id: "reference",
+		market_snapshot_id: "bar",
+	};
+
+	const outcome = (overrides: Record<string, unknown> = {}) => ({
+		intent_id: "intent-a",
+		instrument_id: 1,
+		status: "filled",
+		reason: null,
+		execution_id: "execution-a",
+		ledger_event_id: "event-a",
+		...overrides,
+	});
+
+	it("maps a filled outcome with its ledger identity", async () => {
+		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome()] }, 201));
+
+		await expect(executeETFPaper("demo", "version-one", "key", body)).resolves.toEqual([
+			{
+				intentId: "intent-a",
+				instrumentId: 1,
+				status: "filled",
+				reason: null,
+				executionId: "execution-a",
+				ledgerEventId: "event-a",
+			},
+		]);
+	});
+
+	it("rejects an unknown execution status", async () => {
+		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome({ status: "completed" })] }, 201));
+
+		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow(
+			"ETF Paper 执行响应缺少意图或状态无效",
+		);
+	});
+
+	it("rejects a filled outcome without execution or ledger identity", async () => {
+		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome({ execution_id: null, ledger_event_id: null })] }, 201));
+
+		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow(
+			"ETF Paper 成交结果缺少执行或账本身份",
+		);
+	});
+
+	it("rejects a ledger event without its execution identity", async () => {
+		vi.stubGlobal(
+			"fetch",
+			fetchMock(
+				{
+					outcomes: [outcome({ status: "rejected", execution_id: null, ledger_event_id: "event-a" })],
+				},
+				201,
+			),
+		);
+
+		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow("ETF Paper 账本事件缺少执行身份");
 	});
 });

@@ -432,6 +432,55 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
         pool.close_all()
 
 
+def test_paper_authorization_binds_one_session_per_account_version_date(
+    tmp_path: Path,
+) -> None:
+    pool = SQLitePool(str(tmp_path / "authorization-binding.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    artifacts = StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    allocations = ETFAllocationCommand(metadata, artifacts)
+    try:
+        version = allocations.save(_request())
+        review = ETFAllocationReviewRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            action="submit",
+            actor="reviewer",
+            reason="reviewed",
+            idempotency_key="submit",
+        )
+        allocations.review(review)
+        allocations.review(replace(review, action="approve", idempotency_key="approve"))
+        approval = ETFPaperAuthorizationRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            account_id="paper",
+            session_id="session-one",
+            intended_trade_date="2026-09-02",
+            actor="operator",
+            reason="send to Paper",
+            idempotency_key="authorize-one",
+        )
+        allocations.authorize_paper(approval)
+        second_key = allocations.authorize_paper(
+            replace(approval, idempotency_key="authorize-retry")
+        )
+        assert second_key.artifact_id != "authorize-one"
+        with pytest.raises(AppConflictError, match="bound to another session"):
+            allocations.authorize_paper(
+                replace(
+                    approval,
+                    session_id="session-two",
+                    idempotency_key="authorize-two",
+                )
+            )
+    finally:
+        pool.close_all()
+
+
 @pytest.mark.pit
 def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
     cutoff = datetime.fromisoformat("2026-09-02T08:00:00+00:00")

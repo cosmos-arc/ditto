@@ -148,6 +148,8 @@ export async function handoffETFPaper(
 	return { accountId: result.session.account_id, sessionId: result.session.session_id };
 }
 
+const EXECUTION_OUTCOME_STATUSES = ["filled", "deferred", "rejected", "no_rebalance"] as const;
+
 export async function executeETFPaper(
 	allocationId: string,
 	versionId: string,
@@ -161,8 +163,19 @@ export async function executeETFPaper(
 			body,
 		},
 	);
-	if (result.outcomes.some((outcome) => !outcome.intent_id || !outcome.status)) {
-		throw new Error("ETF Paper 执行响应缺少意图或状态");
+	for (const outcome of result.outcomes) {
+		if (
+			!outcome.intent_id ||
+			!EXECUTION_OUTCOME_STATUSES.includes(outcome.status as (typeof EXECUTION_OUTCOME_STATUSES)[number])
+		) {
+			throw new Error("ETF Paper 执行响应缺少意图或状态无效");
+		}
+		if (outcome.status === "filled" && (!outcome.execution_id || !outcome.ledger_event_id)) {
+			throw new Error("ETF Paper 成交结果缺少执行或账本身份");
+		}
+		if (outcome.ledger_event_id !== null && outcome.execution_id === null) {
+			throw new Error("ETF Paper 账本事件缺少执行身份");
+		}
 	}
 	return result.outcomes.map((outcome) => ({
 		intentId: outcome.intent_id,
