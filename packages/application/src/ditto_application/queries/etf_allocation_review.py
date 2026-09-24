@@ -84,6 +84,24 @@ def _saved_version(
     return version
 
 
+def _saved_cutoff(saved_target: dict[str, object]) -> datetime:
+    """Parse the saved evidence cutoff or fail closed; it bounds visibility."""
+    try:
+        cutoff = datetime.fromisoformat(
+            str(saved_target.get("knowledge_cutoff")).replace("Z", "+00:00")
+        )
+    except (TypeError, ValueError) as exc:
+        raise AppQueryError(
+            "saved ETF knowledge cutoff is invalid", code="ETF_REVIEW_TARGET_INVALID"
+        ) from exc
+    if cutoff.tzinfo is None:
+        raise AppQueryError(
+            "saved ETF knowledge cutoff needs a timezone",
+            code="ETF_REVIEW_TARGET_INVALID",
+        )
+    return cutoff
+
+
 def _actual_indexes(
     metadata: MetadataQueryFacade,
     saved_target: dict[str, object],
@@ -138,10 +156,14 @@ class GetETFAllocationReviewQuery:
         version = _saved_version(self._artifacts, request)
         saved_target = version.metadata
         target_asof = str(saved_target["asof"])
+        # The saved weights were selected under the saved knowledge cutoff, so
+        # a review cutoff must cover both the version creation and that cutoff;
+        # otherwise the review would admit evidence the cutoff has not seen.
         if (
             request.as_of < target_asof
             or request.knowledge_cutoff
             < datetime.fromisoformat(version.created_at.replace("Z", "+00:00"))
+            or request.knowledge_cutoff < _saved_cutoff(saved_target)
         ):
             raise AppQueryError(
                 "ETF target was not yet known", code="ETF_REVIEW_FUTURE_TARGET"

@@ -11,7 +11,9 @@ function selection() {
 		versionId: query.get("etfVersion") ?? "",
 		account: query.get("etfReviewAccount") ?? "",
 		asOf: query.get("etfReviewAsOf") ?? localCutoff(new Date().toISOString()).slice(0, 10),
-		cutoff: query.get("etfReviewCutoff") ?? localCutoff(new Date().toISOString()),
+		// Offset-bearing instant: the cutoff is PIT identity, so the URL must
+		// survive reopening in a browser with a different timezone.
+		cutoff: query.get("etfReviewCutoff") ?? new Date().toISOString(),
 		priceSnapshots: query.get("etfReviewPriceSnapshots") ?? "",
 	};
 }
@@ -72,13 +74,18 @@ export function ETFAllocationReview({
 	const accountKnown =
 		(kind === "paper" && paperAccounts.data?.some((item) => item.account_id === accountId)) ||
 		(kind === "manual" && manualAccounts.data?.some((item) => item.account_id === accountId));
+	const cutoffTime = new Date(selected.cutoff).getTime();
+	const cutoffInstant = Number.isNaN(cutoffTime) ? null : new Date(cutoffTime).toISOString();
 	const ledger = useQuery({
-		queryKey: ["etf-review-ledger", kind, accountId, selected.asOf],
+		// The fallback ledger read is bound to the same knowledge cutoff as the
+		// valuation; without recorded_through it would show later-recorded
+		// corrections as the account's actual state and contradict the review.
+		queryKey: ["etf-review-ledger", kind, accountId, selected.asOf, cutoffInstant],
 		queryFn: async () =>
 			kind === "paper"
-				? await fetchPaperAccountLedger(accountId, selected.asOf)
-				: await fetchManualAccountLedger(accountId, selected.asOf),
-		enabled: Boolean(version && accountKnown && /^\d{4}-\d{2}-\d{2}$/u.test(selected.asOf)),
+				? await fetchPaperAccountLedger(accountId, selected.asOf, cutoffInstant ?? undefined)
+				: await fetchManualAccountLedger(accountId, selected.asOf, cutoffInstant ?? undefined),
+		enabled: Boolean(version && accountKnown && /^\d{4}-\d{2}-\d{2}$/u.test(selected.asOf) && cutoffInstant),
 		retry: false,
 	});
 	const snapshot = ledger.data?.snapshot;
@@ -94,7 +101,7 @@ export function ETFAllocationReview({
 			kind,
 			accountId,
 			selected.asOf,
-			selected.cutoff,
+			cutoffInstant,
 			snapshotIds,
 		],
 		queryFn: () =>
@@ -102,16 +109,10 @@ export function ETFAllocationReview({
 				account_kind: kind as "paper" | "manual",
 				account_id: accountId,
 				as_of: selected.asOf,
-				knowledge_cutoff: new Date(selected.cutoff).toISOString(),
+				knowledge_cutoff: cutoffInstant ?? "",
 				source_snapshot_ids: snapshotIds,
 			}),
-		enabled: Boolean(
-			version &&
-				accountKnown &&
-				snapshotIds.length &&
-				selected.cutoff &&
-				!Number.isNaN(new Date(selected.cutoff).getTime()),
-		),
+		enabled: Boolean(version && accountKnown && snapshotIds.length && cutoffInstant),
 		retry: false,
 	});
 	return (
@@ -207,8 +208,13 @@ export function ETFAllocationReview({
 					aria-label="复盘知识截止"
 					type="datetime-local"
 					step={0.001}
-					value={selected.cutoff}
-					onChange={(event) => choose("cutoff", event.target.value)}
+					value={localCutoff(selected.cutoff)}
+					onChange={(event) => {
+						// datetime-local yields an offset-less local string; store the
+						// resolved instant so the URL keeps the exact PIT cutoff.
+						const instant = new Date(event.target.value);
+						if (!Number.isNaN(instant.getTime())) choose("cutoff", instant.toISOString());
+					}}
 				/>
 			</label>
 			<label className="block">
@@ -290,7 +296,7 @@ export function ETFAllocationReview({
 							? "目标与实际来自不同来源；账户持仓由账本重建。"
 							: "缺少同日价格证据，无法计算实际权重或目标差异；不以目标权重代替实际持仓。"}
 					</p>
-					<p>上方账本按交易日以当前已记录事件重建；仅估值结果使用所选知识截止与价格快照。</p>
+					<p>上方账本按交易日与所选知识截止重建，与估值共用同一 PIT 截止；缺价格快照时市值与实际权重仍不可得。</p>
 				</div>
 			)}
 			<p>历史曲线需要 Model 目标工件、Paper/Manual 账本、共同有效估值点和独立价格快照；当前配置目标不会回填历史。</p>

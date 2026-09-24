@@ -68,9 +68,16 @@ export async function fetchPaperSessions(accountId: string): Promise<readonly Pa
 	return parsePaperSessionCatalog(payload, accountId);
 }
 
-export async function fetchPaperAccountLedger(accountId: string, asOf: string): Promise<PaperAccountLedger> {
+export async function fetchPaperAccountLedger(
+	accountId: string,
+	asOf: string,
+	recordedThrough?: string,
+): Promise<PaperAccountLedger> {
 	const payload = await apiClient.get("/api/v1/paper/accounts/{account_id}/ledger", {
-		params: { path: { account_id: accountId }, query: { as_of: asOf } },
+		params: {
+			path: { account_id: accountId },
+			query: { as_of: asOf, ...(recordedThrough ? { recorded_through: recordedThrough } : {}) },
+		},
 	});
 	return parsePaperAccountLedger(payload, accountId, asOf);
 }

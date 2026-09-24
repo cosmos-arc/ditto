@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Never
 
 from dishka import FromComponent
@@ -229,6 +229,7 @@ async def get_manual_account_ledger(
     query: Annotated[AccountLedgerQuery, FromComponent()],
     account_id: Annotated[str, Path(min_length=1)],
     as_of: Annotated[date, Query()],
+    recorded_through: Annotated[datetime | None, Query()] = None,
 ) -> APIResponse[AccountLedgerResponse]:
     """Rebuild one exact MANUAL account view at an explicit as-of date."""
     try:
@@ -236,6 +237,7 @@ async def get_manual_account_ledger(
             query.get_manual,
             account_id=account_id,
             as_of=as_of.isoformat(),
+            recorded_through=recorded_through,
         )
     except AppQueryError as exc:
         _raise_query_error(exc)

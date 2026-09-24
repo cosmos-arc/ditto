@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Never
 
 from dishka import FromComponent
@@ -131,6 +131,7 @@ async def get_paper_account_ledger(
     account_id: Annotated[str, Path(min_length=1)],
     as_of: Annotated[date, Query()],
     query: Annotated[AccountLedgerQuery, FromComponent()],
+    recorded_through: Annotated[datetime | None, Query()] = None,
 ) -> APIResponse[PaperAccountLedgerResponse]:
     """Rebuild one exact PAPER account ledger at the requested date."""
     try:
@@ -138,6 +139,7 @@ async def get_paper_account_ledger(
             query.get_paper,
             account_id=account_id,
             as_of=as_of.isoformat(),
+            recorded_through=recorded_through,
         )
     except AppQueryError as exc:
         _raise_error(exc)

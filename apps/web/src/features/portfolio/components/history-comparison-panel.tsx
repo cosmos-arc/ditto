@@ -49,6 +49,17 @@ const STATUS_LABELS: Readonly<Record<HistoryComparison["status"], string>> = {
 
 type PinnedLedgerRevision = { readonly event_count: number; readonly ledger_hash: string };
 
+// A restored identity may pin either leg's ledger revision; lift the pins
+// into local state so a later replay of one leg keeps the other intact.
+function restoredPin(
+	eventCount: number | null | undefined,
+	ledgerHash: string | null | undefined,
+): PinnedLedgerRevision | null {
+	return eventCount !== null && eventCount !== undefined && ledgerHash !== null && ledgerHash !== undefined
+		? { event_count: eventCount, ledger_hash: ledgerHash }
+		: null;
+}
+
 function restoredIdentity(): HistoryComparisonIdentity | null {
 	const params = new URLSearchParams(window.location.search);
 	const encoded = params.has("etfAllocation") ? params.get("historyComparison") : null;
@@ -416,8 +427,12 @@ export function HistoryComparisonPanel({ etfAllocationId }: { readonly etfAlloca
 	const [artifactsText, setArtifactsText] = useState(restored?.model_artifact_ids?.join(",") ?? "");
 	const [benchmarkText, setBenchmarkText] = useState(restored?.benchmark_symbol ?? "");
 	const [identity, setIdentity] = useState<HistoryComparisonIdentity | null>(restored);
-	const [pinnedPaper, setPinnedPaper] = useState<PinnedLedgerRevision | null>(null);
-	const [pinnedManual, setPinnedManual] = useState<PinnedLedgerRevision | null>(null);
+	const [pinnedPaper, setPinnedPaper] = useState<PinnedLedgerRevision | null>(
+		restoredPin(restored?.paper_ledger_event_count, restored?.paper_ledger_hash),
+	);
+	const [pinnedManual, setPinnedManual] = useState<PinnedLedgerRevision | null>(
+		restoredPin(restored?.manual_ledger_event_count, restored?.manual_ledger_hash),
+	);
 	const [selectedRunIndex, setSelectedRunIndex] = useState(0);
 	const [exportError, setExportError] = useState<string | null>(null);
 	const chartRef = useRef<SVGSVGElement | null>(null);

@@ -13,6 +13,7 @@ it("restores an exact version and account while keeping unpriced actual weights 
 		"",
 		"/portfolio?etfVersion=v1&etfReviewAccount=paper:paper-a&etfReviewAsOf=2026-09-02",
 	);
+	const ledgerUrls: string[] = [];
 	server.use(
 		http.get("/api/v1/portfolio/etf-allocations/demo/versions", () =>
 			HttpResponse.json({
@@ -54,8 +55,9 @@ it("restores an exact version and account while keeping unpriced actual weights 
 			}),
 		),
 		http.get("/api/v1/manual/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
-		http.get("/api/v1/paper/accounts/paper-a/ledger", () =>
-			HttpResponse.json({
+		http.get("/api/v1/paper/accounts/paper-a/ledger", ({ request }) => {
+			ledgerUrls.push(request.url);
+			return HttpResponse.json({
 				data: {
 					account: {
 						account_id: "paper-a",
@@ -93,8 +95,8 @@ it("restores an exact version and account while keeping unpriced actual weights 
 						valuation_complete: false,
 					},
 				},
-			}),
-		),
+			});
+		}),
 	);
 	render(
 		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -103,10 +105,19 @@ it("restores an exact version and account while keeping unpriced actual weights 
 	);
 	expect(await screen.findByText(/已知同指数目标暴露：000300.SH 0.80000000/)).toBeVisible();
 	expect(await screen.findByText(/Paper 模拟成交账本/)).toBeVisible();
+	// The fallback ledger read is cutoff-bound, not a latest-recorded view.
+	const ledgerUrl = new URL(ledgerUrls[0] ?? "");
+	expect(ledgerUrl.searchParams.get("recorded_through")).toMatch(/(Z|[+-]\d{2}:\d{2})$/u);
 	expect(screen.getByText(/缺少同日价格证据，无法计算实际权重/)).toBeVisible();
 	expect(screen.getByText(/当前配置目标不会回填历史/)).toBeVisible();
 	fireEvent.change(screen.getByLabelText("复盘账本日期"), { target: { value: "2026-09-03" } });
 	expect(new URLSearchParams(window.location.search).get("etfReviewAsOf")).toBe("2026-09-03");
+	// The URL stores the resolved offset-bearing instant, not the local
+	// datetime-local string, so another timezone resolves the same cutoff.
+	fireEvent.change(screen.getByLabelText("复盘知识截止"), { target: { value: "2026-09-02T10:30" } });
+	expect(new URLSearchParams(window.location.search).get("etfReviewCutoff")).toBe(
+		new Date("2026-09-02T10:30").toISOString(),
+	);
 });
 
 it("clears a saved history request when the ETF version or account changes", async () => {

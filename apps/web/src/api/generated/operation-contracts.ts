@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 5e7df97b15473bed5b443e6a03dbcc6fe17d63ec3fc89e820167d7931c467b31
+ * Schema SHA-256: 5aca7fabb5d411dcc394889fede0b47b36981da76dcb571e0f1bbec4a7240547
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -2418,7 +2418,7 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["account_id"],
-      "query": ["as_of"],
+      "query": ["as_of", "recorded_through"],
     },
   },
   "get /api/v1/manual/comparison": {
@@ -2552,7 +2552,7 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["account_id"],
-      "query": ["as_of"],
+      "query": ["as_of", "recorded_through"],
     },
   },
   "get /api/v1/paper/accounts/{account_id}/sessions": {

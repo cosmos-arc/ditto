@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Coroutine
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -269,6 +269,52 @@ def test_paper_routes_complete_local_workflow(tmp_path: Path) -> None:
     assert paused.data.session.status == "paused"
     assert recovered.data.recovered_execution_count == 1
     store.close()
+    journal.close()
+
+
+def test_paper_ledger_route_binds_reads_to_the_recorded_cutoff(tmp_path: Path) -> None:
+    database = str(tmp_path / "paper-ledger-cutoff.sqlite")
+    journal = SqliteAccountEventJournal(database)
+    account_handler = CreatePaperAccountHandler(journal=journal, clock=lambda: NOW)
+
+    with patch(
+        "ditto_apps.api.routes.paper.asyncio.to_thread",
+        side_effect=_inline,
+    ):
+        asyncio.run(
+            _original(create_paper_account)(
+                body=CreatePaperAccountBody(
+                    account_id="paper-account-1",
+                    name="Main Paper",
+                    opened_at=NOW,
+                    trade_date=date(2026, 8, 31),
+                    initial_cash=Decimal("100000"),
+                    idempotency_key="paper-account-create-1",
+                ),
+                handler=account_handler,
+            )
+        )
+        bound = asyncio.run(
+            _original(get_paper_account_ledger)(
+                account_id="paper-account-1",
+                as_of=date(2026, 8, 31),
+                query=AccountLedgerQuery(journal=journal),
+                recorded_through=NOW,
+            )
+        )
+        with pytest.raises(
+            UnprocessableEntityError, match="hides events recorded after the cutoff"
+        ):
+            asyncio.run(
+                _original(get_paper_account_ledger)(
+                    account_id="paper-account-1",
+                    as_of=date(2026, 8, 31),
+                    query=AccountLedgerQuery(journal=journal),
+                    recorded_through=NOW - timedelta(minutes=1),
+                )
+            )
+
+    assert bound.data.snapshot.cash.total == Decimal("100000")
     journal.close()
 
 

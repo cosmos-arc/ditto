@@ -40308,6 +40308,23 @@
             }
           },
           {
+            "in": "query",
+            "name": "recorded_through",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recorded Through"
+            }
+          },
+          {
             "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
             "in": "header",
             "name": "X-Ditto-API-Contract-Version",
@@ -44787,6 +44804,23 @@
               "format": "date",
               "title": "As Of",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recorded_through",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recorded Through"
             }
           },
           {

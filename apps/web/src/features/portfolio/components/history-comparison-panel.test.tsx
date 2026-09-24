@@ -415,6 +415,52 @@ describe("HistoryComparisonPanel", () => {
 		});
 	});
 
+	it("restores both ledger pins and keeps the other pin when one leg replays", async () => {
+		const user = userEvent.setup();
+		const identity = {
+			strategy_id: "etf-allocation:demo",
+			paper_account_id: "paper-1",
+			paper_session_id: "paper-session-1",
+			manual_account_id: "manual-1",
+			start_date: "2026-03-02",
+			end_date: "2026-03-04",
+			model_initial_capital: 100000,
+			knowledge_cutoff: "2026-03-04T08:00:00Z",
+			publication_cutoff: "2026-03-04T08:00:00Z",
+			source_snapshot_ids: ["snapshot:stock_daily:1"],
+			origin_version_id: "v1",
+			paper_ledger_event_count: 3,
+			paper_ledger_hash: "account-ledger:sha256:abc",
+			manual_ledger_event_count: 2,
+			manual_ledger_hash: "account-ledger:sha256:def",
+		};
+		window.history.replaceState(
+			null,
+			"",
+			`/portfolio?etfAllocation=demo&etfVersion=v1&etfReviewAccount=paper:paper-1&historyComparisonVersion=v1&historyComparisonAccount=paper:paper-1&historyComparison=${encodeURIComponent(JSON.stringify(identity))}`,
+		);
+		const { fetchMock, requests } = stubApi({ ...COMPARISON_PAYLOAD, strategy_id: "etf-allocation:demo" });
+		vi.stubGlobal("fetch", fetchMock);
+		renderPanel("demo");
+
+		// Both restored pins are visible immediately, not just replayable.
+		const chips = await screen.findByTestId("history-comparison-pin-chips");
+		expect(chips).toHaveTextContent("Paper 钉住 3@account-ledger:sha256:abc");
+		expect(chips).toHaveTextContent("Manual 钉住 2@account-ledger:sha256:def");
+		await screen.findByTestId("history-comparison-result");
+		expect(screen.getByTestId("history-comparison-pin-paper")).toHaveTextContent("解除钉住（解析当前）");
+
+		await user.click(screen.getByTestId("history-comparison-pin-paper"));
+
+		await waitFor(() => {
+			const replayUrl = new URL(requests.filter((href) => href.includes("/portfolio/history-comparison")).at(-1) ?? "");
+			expect(replayUrl.searchParams.has("paper_ledger_event_count")).toBe(false);
+			// Replaying one leg must not drop the other restored pin.
+			expect(replayUrl.searchParams.get("manual_ledger_event_count")).toBe("2");
+			expect(replayUrl.searchParams.get("manual_ledger_hash")).toBe("account-ledger:sha256:def");
+		});
+	});
+
 	it("pins a displayed leg revision, replays it, and can unpin back to server resolution", async () => {
 		const user = userEvent.setup();
 		const { fetchMock, requests } = stubApi();

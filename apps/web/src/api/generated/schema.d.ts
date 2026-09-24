@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 5e7df97b15473bed5b443e6a03dbcc6fe17d63ec3fc89e820167d7931c467b31
+ * Schema SHA-256: 5aca7fabb5d411dcc394889fede0b47b36981da76dcb571e0f1bbec4a7240547
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -25561,6 +25561,7 @@ export interface operations {
         parameters: {
             query: {
                 as_of: string;
+                recorded_through?: string | null;
             };
             header?: {
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
@@ -28423,6 +28424,7 @@ export interface operations {
         parameters: {
             query: {
                 as_of: string;
+                recorded_through?: string | null;
             };
             header?: {
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
