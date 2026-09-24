@@ -175,10 +175,10 @@ function stubApi(
 	return { fetchMock, requests };
 }
 
-function renderPanel() {
+function renderPanel(etfAllocationId?: string) {
 	return render(
 		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-			<HistoryComparisonPanel />
+			<HistoryComparisonPanel etfAllocationId={etfAllocationId} />
 		</QueryClientProvider>,
 	);
 }
@@ -202,9 +202,27 @@ async function fillFormAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
+	window.history.replaceState(null, "", "/");
 });
 
 describe("HistoryComparisonPanel", () => {
+	it("restores an ETF linked common-window request without deriving history from its target", async () => {
+		window.history.replaceState(null, "", "/portfolio?etfAllocation=demo&etfVersion=v1&etfReviewAccount=paper:paper-1");
+		const user = userEvent.setup();
+		const { fetchMock, requests } = stubApi({ ...COMPARISON_PAYLOAD, strategy_id: "etf-allocation:demo" });
+		vi.stubGlobal("fetch", fetchMock);
+		const first = renderPanel("demo");
+		expect(screen.getByLabelText("Model 策略")).toHaveValue("etf-allocation:demo");
+		await fillFormAndSubmit(user);
+		await screen.findByTestId("history-comparison-result");
+		const saved = new URLSearchParams(window.location.search).get("historyComparison");
+		expect(saved).toContain('"source_snapshot_ids":["snapshot:stock_daily:1"]');
+		expect(saved).not.toContain("etfVersion");
+		first.unmount();
+		renderPanel("demo");
+		await screen.findByTestId("history-comparison-result");
+		expect(requests.filter((href) => href.includes("/portfolio/history-comparison"))).toHaveLength(2);
+	});
 	it("compares the picked entities and renders the common window with exports", async () => {
 		const user = userEvent.setup();
 		const { fetchMock, requests } = stubApi();

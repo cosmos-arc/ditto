@@ -99,6 +99,23 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await expect(workspace.getByLabel("配置理由")).toHaveValue(
 		"recorded acceptance target",
 	);
+	await workspace.getByLabel("复盘账户").selectOption(`paper:${fixture.account_id}`);
+	await workspace.getByRole("link", { name: "查看配置与账户复盘" }).click();
+	const review = page.getByRole("region", { name: "ETF 配置复盘" });
+	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
+	await review.getByLabel("复盘账本日期").fill("2026-09-02");
+	await expect(review.getByText(/Paper 模拟成交账本/)).toBeVisible();
+	await expect(review.getByText(/#2000101：实际/)).toBeVisible();
+	await expect(review.getByText(/缺少同日价格证据，无法计算实际权重/)).toBeVisible();
+	await expect(page.getByTestId("history-comparison-submit")).toBeDisabled();
+	await page.reload();
+	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
+	await expect(review.getByLabel("复盘账户")).toHaveValue(`paper:${fixture.account_id}`);
+	await expect(review.getByLabel("复盘账本日期")).toHaveValue("2026-09-02");
+	await page.goBack();
+	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
+	await page.goBack();
+	await expect(workspace.getByLabel("已保存版本")).toHaveValue(versionId ?? "");
 	await workspace.getByRole("link", { name: "查看 Paper 账户" }).click();
 	await expect(page.getByText("PAPER 模拟账户")).toBeVisible();
 	expect(page.url()).toContain(`session_id=${sessionId}`);

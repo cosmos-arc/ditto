@@ -9,6 +9,7 @@ export {
 	saveETFAllocationVersion,
 } from "./api/etf-allocations";
 export { resolveTradingExecutionScope } from "./api/execution-scope";
+export { fetchManualAccounts } from "./api/manual-accounts";
 export { fetchPaperAccounts } from "./api/paper-accounts";
 export { tradingKeys } from "./api/query-keys";
 export { AccountIdentityStrip } from "./components/account-identity-strip";
