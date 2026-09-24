@@ -851,6 +851,22 @@ def test_publisher_rejects_noncanonical_batch_and_sleeve_identity() -> None:
         _publish_package(publisher, sleeve_id="manual-wrong")
 
 
+def test_publisher_accepts_account_scoped_paper_batch_key() -> None:
+    publisher = _make_publisher()
+
+    package = _publish_package(
+        publisher,
+        target=replace(_target(), run_id="eod-2026-01-30-stock-selection-7-paper-a"),
+    )
+    assert package.run_id == "eod-2026-01-30-stock-selection-7-paper-a"
+
+    with pytest.raises(AppProcessError, match="batch key"):
+        _publish_package(
+            publisher,
+            target=replace(_target(), run_id="eod-2026-01-30-stock-selection-7-other"),
+        )
+
+
 def test_zero_intent_revision_does_not_supersede_other_version_intents() -> None:
     intents = _IntentPort(saved=[])
     artifacts = _ArtifactStore(rows=[])

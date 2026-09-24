@@ -187,8 +187,8 @@ def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
         (call.kwargs["asof"], call.kwargs["cutoff"])
         for call in metadata.list_etf_candidates.call_args_list
     ] == [
-        ("2026-09-01", valuation.isoformat()),
-        ("2026-09-02", EXECUTION.isoformat()),
+        ("2026-09-01", "2026-09-01T08:10:00Z"),
+        ("2026-09-02", "2026-09-02T08:00:00Z"),
     ]
     assert [
         call.kwargs["recorded_through"] for call in ledger.get_paper.call_args_list

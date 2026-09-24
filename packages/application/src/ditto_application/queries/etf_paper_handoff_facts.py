@@ -13,6 +13,7 @@ from ditto_portfolio.account_ledger import ledger_hash
 from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFacts,
     ETFPaperHandoffRequest,
+    canonical_cutoff,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.account_ledger import AccountLedgerQuery
@@ -79,7 +80,7 @@ class LiveETFPaperHandoffFacts:
             raise AppProcessError("Paper source snapshot is absent or future")
         candidates = self._metadata.list_etf_candidates(
             asof=request.signal_date,
-            cutoff=request.knowledge_cutoff.isoformat(),
+            cutoff=canonical_cutoff(request.knowledge_cutoff),
             source_snapshot_id=request.source_snapshot_id,
         )
         prices: dict[InstrumentId, Decimal] = {}

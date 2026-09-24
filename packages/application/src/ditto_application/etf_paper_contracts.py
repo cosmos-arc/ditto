@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Protocol
 
 from ditto_application.paper_contracts import (
@@ -115,3 +115,8 @@ def etf_paper_run_id(
     replacing each other.
     """
     return f"eod-{signal_date}-{strategy_id}-{version_id}-{account_id}"
+
+
+def canonical_cutoff(value: datetime) -> str:
+    """Serialize a cutoff in the canonical UTC Z form queries require."""
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

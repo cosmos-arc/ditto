@@ -18,6 +18,7 @@ from ditto_portfolio.account_projection import PortfolioPositionSnapshot
 from ditto_application.etf_paper_contracts import (
     ETFPaperExecutionRequest,
     ETFPaperOrderFacts,
+    canonical_cutoff,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.paper_contracts import (
@@ -275,7 +276,9 @@ class LiveETFPaperExecutionFacts:
         return {
             item.instrument_id: item
             for item in self._metadata.list_etf_candidates(
-                asof=asof, cutoff=cutoff.isoformat(), source_snapshot_id=snapshot_id
+                asof=asof,
+                cutoff=canonical_cutoff(cutoff),
+                source_snapshot_id=snapshot_id,
             )
         }
 

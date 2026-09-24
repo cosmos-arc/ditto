@@ -126,7 +126,9 @@ class SignalPackagePublisher:
         ):
             raise AppProcessError("Paper package needs target and account state")
         expected_batch_key = f"eod-{signal_date}-{strategy_id}-{strategy_version}"
-        if run_id != expected_batch_key:
+        # Paper packages may carry the account-scoped batch identity so
+        # sibling accounts of one approved version keep separate packages.
+        if run_id not in {expected_batch_key, f"{expected_batch_key}-{account_id}"}:
             raise AppProcessError(
                 f"batch key must be {expected_batch_key} for R1 EOD package identity"
             )
