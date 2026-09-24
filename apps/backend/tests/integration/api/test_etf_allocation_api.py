@@ -155,6 +155,11 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
                 ).status_code
                 == 409
             )
+            invalid_key = web.post(
+                review, json=approval, headers={"Idempotency-Key": "bad key"}
+            )
+            assert invalid_key.status_code == 422
+            assert invalid_key.json()["error_code"] == "IDEMPOTENCY_KEY_INVALID"
     finally:
         pool.close_all()
     reopened, pool = _app(path)

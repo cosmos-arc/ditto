@@ -154,8 +154,10 @@ async def review_etf_allocation_version(
     except AppConflictError as exc:
         raise ConflictError(str(exc), error_code="ETF_ALLOCATION_CONFLICT") from exc
     except AppCommandError as exc:
+        code = exc.details.get("code")
         raise UnprocessableEntityError(
-            str(exc), error_code="ETF_ALLOCATION_INVALID"
+            str(exc),
+            error_code=code if isinstance(code, str) else "ETF_ALLOCATION_INVALID",
         ) from exc
     return APIResponse(data=ETFAllocationVersionResponse.model_validate(version))
 

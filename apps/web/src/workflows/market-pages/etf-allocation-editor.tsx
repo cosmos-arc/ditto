@@ -147,7 +147,10 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			window.history.replaceState({ ...state, etfAllocationReviewPending: reviewRetry.current }, "");
 			return reviewETFAllocationVersion(allocationId, saved.versionId, reviewRetry.current.key, body);
 		},
-		onSuccess: (result) => {
+		onSuccess: async (result) => {
+			// Cancel any in-flight version read started before the decision so its
+			// stale response cannot overwrite the terminal review result.
+			await queryClient.cancelQueries({ queryKey: ["etf-allocation-versions", result.allocationId] });
 			queryClient.setQueryData<Awaited<ReturnType<typeof listETFAllocationVersions>>>(
 				["etf-allocation-versions", result.allocationId],
 				(current) => current?.map((item) => (item.versionId === result.versionId ? result : item)),
