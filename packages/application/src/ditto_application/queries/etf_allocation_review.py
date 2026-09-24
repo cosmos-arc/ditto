@@ -84,6 +84,26 @@ def _saved_version(
     return version
 
 
+def _actual_indexes(
+    metadata: MetadataQueryFacade,
+    saved_target: dict[str, object],
+    as_of: str,
+) -> dict[int, str]:
+    if as_of != saved_target["asof"]:
+        return {}
+    candidates = metadata.list_etf_candidates(
+        asof=as_of,
+        cutoff=str(saved_target["knowledge_cutoff"]),
+        source_snapshot_id=str(saved_target["source_snapshot_id"]),
+    )
+    return {
+        item.instrument_id: tracking.value
+        for item in candidates
+        if (tracking := item.fields.get("tracking_index")) is not None
+        and isinstance(tracking.value, str)
+    }
+
+
 class GetETFAllocationReviewQuery:
     """Reuse portfolio comparison valuation and normalization for an ETF version."""
 
@@ -228,23 +248,9 @@ class GetETFAllocationReviewQuery:
             raise AppQueryError(
                 str(exc), code="ETF_REVIEW_NORMALIZATION_INVALID"
             ) from exc
-        # The saved reference snapshot proves index identity on its research date only.
-        # Later account dates require a new dated reference; keep exposure unknown here.
-        candidates = (
-            self._metadata.list_etf_candidates(
-                asof=request.as_of,
-                cutoff=request.knowledge_cutoff.isoformat(),
-                source_snapshot_id=str(saved_target["source_snapshot_id"]),
-            )
-            if request.as_of == target_asof
-            else []
-        )
-        index_by_id = {
-            item.instrument_id: tracking.value
-            for item in candidates
-            if (tracking := item.fields.get("tracking_index")) is not None
-            and isinstance(tracking.value, str)
-        }
+        # The saved reference proves index identity on its research date only.
+        # Later account dates need another dated reference; keep exposure unknown.
+        index_by_id = _actual_indexes(self._metadata, saved_target, request.as_of)
         exposure: dict[str, Decimal] = {}
         unknown: list[int] = []
         for position in actual.positions:
