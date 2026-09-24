@@ -108,4 +108,24 @@ describe("tradingKeys", () => {
 			"valuation-42",
 		]);
 	});
+
+	it("keeps the ETF origin version in the history comparison cache identity", () => {
+		// Only the ETF version handoff differs; the cache must not reuse the
+		// other version's still-fresh history result.
+		const historyIdentity = {
+			strategy_id: "etf-allocation:demo",
+			paper_account_id: "paper-1",
+			paper_session_id: "session-1",
+			manual_account_id: "manual-1",
+			start_date: "2026-09-01",
+			end_date: "2026-09-04",
+			model_initial_capital: 100000,
+			knowledge_cutoff: "2026-09-04T08:00:00Z",
+			publication_cutoff: "2026-09-04T08:00:00Z",
+			source_snapshot_ids: ["snapshot-1"],
+		} as const;
+		expect(tradingKeys.historyComparison({ ...historyIdentity, origin_version_id: "v1" })).not.toEqual(
+			tradingKeys.historyComparison({ ...historyIdentity, origin_version_id: "v2" }),
+		);
+	});
 });
