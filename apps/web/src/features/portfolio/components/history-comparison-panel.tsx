@@ -53,6 +53,8 @@ function restoredIdentity(): HistoryComparisonIdentity | null {
 	const params = new URLSearchParams(window.location.search);
 	const encoded = params.has("etfAllocation") ? params.get("historyComparison") : null;
 	if (!encoded) return null;
+	if (params.get("historyComparisonVersion") !== params.get("etfVersion")) return null;
+	if (params.get("historyComparisonAccount") !== params.get("etfReviewAccount")) return null;
 	try {
 		const value: unknown = JSON.parse(encoded);
 		if (!value || typeof value !== "object") return null;
@@ -90,6 +92,8 @@ function rememberIdentity(identity: HistoryComparisonIdentity) {
 	const url = new URL(window.location.href);
 	if (!url.searchParams.has("etfAllocation")) return;
 	url.searchParams.set("historyComparison", JSON.stringify(identity));
+	url.searchParams.set("historyComparisonVersion", url.searchParams.get("etfVersion") ?? "");
+	url.searchParams.set("historyComparisonAccount", url.searchParams.get("etfReviewAccount") ?? "");
 	window.history.replaceState(window.history.state, "", url);
 }
 

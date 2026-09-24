@@ -75,6 +75,14 @@ class MetadataQueryFacade:
         """
         return self._service.instrument.get_instrument(instrument_id)
 
+    def get_source_ticker(
+        self, instrument_id: int, *, source: str, asof: str
+    ) -> str | None:
+        """Resolve the PIT-visible provider identity of one instrument."""
+        return self._service.instrument.get_source_ticker(
+            instrument_id, source=source, asof=asof
+        )
+
     def find_securities(
         self,
         *,

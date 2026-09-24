@@ -219,8 +219,13 @@ describe("HistoryComparisonPanel", () => {
 		expect(saved).toContain('"source_snapshot_ids":["snapshot:stock_daily:1"]');
 		expect(saved).not.toContain("etfVersion");
 		first.unmount();
-		renderPanel("demo");
+		const restored = renderPanel("demo");
 		await screen.findByTestId("history-comparison-result");
+		expect(requests.filter((href) => href.includes("/portfolio/history-comparison"))).toHaveLength(2);
+		window.history.replaceState(null, "", window.location.href.replace("etfVersion=v1", "etfVersion=v2"));
+		restored.unmount();
+		renderPanel("demo");
+		expect(screen.queryByTestId("history-comparison-result")).not.toBeInTheDocument();
 		expect(requests.filter((href) => href.includes("/portfolio/history-comparison"))).toHaveLength(2);
 	});
 	it("compares the picked entities and renders the common window with exports", async () => {

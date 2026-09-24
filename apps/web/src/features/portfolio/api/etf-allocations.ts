@@ -3,6 +3,7 @@ import { apiClient } from "@/api/transport";
 
 type VersionDTO = components["schemas"]["ETFAllocationVersionResponse"];
 type SaveBody = components["schemas"]["ETFAllocationBody"];
+type ReviewDTO = components["schemas"]["ETFAllocationReviewResponse"];
 
 export type ETFAllocationVersion = {
 	readonly versionId: string;
@@ -68,6 +69,33 @@ export async function listETFAllocationVersions(allocationId: string): Promise<E
 		throw new Error("ETF 配置版本响应不属于该配置");
 	}
 	return versions;
+}
+
+export async function fetchETFAllocationReview(
+	allocationId: string,
+	versionId: string,
+	query: {
+		account_kind: "paper" | "manual";
+		account_id: string;
+		as_of: string;
+		knowledge_cutoff: string;
+		source_snapshot_ids: string[];
+	},
+): Promise<ReviewDTO> {
+	const result = await apiClient.get("/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review", {
+		params: { path: { allocation_id: allocationId, version_id: versionId }, query },
+	});
+	if (
+		result.allocation_id !== allocationId ||
+		result.version_id !== versionId ||
+		result.account_kind !== query.account_kind ||
+		result.account_id !== query.account_id ||
+		result.as_of !== query.as_of ||
+		result.source_snapshot_ids.join("\0") !== query.source_snapshot_ids.join("\0") ||
+		result.target.valuation_snapshot_id !== result.actual.valuation_snapshot_id
+	)
+		throw new Error("ETF 复盘响应证据身份不匹配");
+	return result;
 }
 
 export async function saveETFAllocationVersion(

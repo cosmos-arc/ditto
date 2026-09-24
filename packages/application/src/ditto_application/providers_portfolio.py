@@ -38,6 +38,7 @@ from ditto_application.queries.daily_decision_v3 import (
 )
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
+from ditto_application.queries.etf_allocation_review import GetETFAllocationReviewQuery
 from ditto_application.queries.etf_paper_execution_facts import (
     LiveETFPaperExecutionFacts,
 )
@@ -84,6 +85,24 @@ class AppPortfolioQueryProvider(Provider):
     ) -> ETFAllocationCommand:
         """Validate and save ETF research allocation revisions."""
         return ETFAllocationCommand(metadata, artifacts)
+
+    @provide
+    def etf_allocation_review_query(
+        self,
+        allocations: ETFAllocationCommand,
+        accounts: AccountLedgerQuery,
+        metadata: MetadataQueryFacade,
+        snapshots: ProviderSnapshotReader,
+        valuation: TechnicalAnalysisSourcePort,
+    ) -> GetETFAllocationReviewQuery:
+        """Value one immutable ETF target against one exact account ledger."""
+        return GetETFAllocationReviewQuery(
+            allocations=allocations,
+            accounts=accounts,
+            metadata=metadata,
+            snapshots=snapshots,
+            valuation=valuation,
+        )
 
     @provide
     def etf_paper_handoff_facts(

@@ -17,6 +17,8 @@ from ditto_apps.models.account_ledger import (
 __all__ = [
     "ETFAllocationBody",
     "ETFAllocationReviewBody",
+    "ETFAllocationReviewQueryParams",
+    "ETFAllocationReviewResponse",
     "ETFAllocationVersionResponse",
     "ETFPaperAuthorizeBody",
     "ETFPaperAuthorizeResponse",
@@ -263,6 +265,39 @@ class PortfolioComparisonResponse(BaseModel):
     model_vs_paper: PortfolioDriftResponse
     model_vs_manual: PortfolioDriftResponse
     paper_vs_manual: PortfolioDriftResponse
+
+
+class ETFAllocationReviewQueryParams(BaseModel):
+    """Exact ledger and valuation evidence for a saved ETF target."""
+
+    model_config = _QUERY_CONFIG
+
+    account_kind: Literal["paper", "manual"]
+    account_id: str = Field(min_length=1)
+    as_of: date
+    knowledge_cutoff: datetime
+    source_snapshot_ids: tuple[str, ...] = Field(min_length=1)
+
+
+class ETFAllocationReviewResponse(BaseModel):
+    """One PIT-bound target versus actual account observation."""
+
+    model_config = _RESPONSE_CONFIG
+
+    allocation_id: str
+    version_id: str
+    account_kind: Literal["paper", "manual"]
+    account_id: str
+    as_of: str
+    valuation_snapshot_id: str
+    source_snapshot_ids: tuple[str, ...]
+    ledger_hash: str
+    target: NormalizedPortfolioResponse
+    actual: NormalizedPortfolioResponse
+    drift: PortfolioDriftResponse
+    target_exposure: dict[str, str]
+    actual_exposure: dict[str, str]
+    unknown_exposure_instrument_ids: tuple[int, ...]
 
 
 class PortfolioComparisonQueryParams(BaseModel):

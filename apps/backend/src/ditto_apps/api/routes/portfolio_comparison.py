@@ -26,6 +26,12 @@ from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationReviewRequest,
     ETFPaperAuthorizationRequest,
 )
+from ditto_application.queries.etf_allocation_review import (
+    ETFAllocationReviewRequest as ETFAllocationValuationRequest,
+)
+from ditto_application.queries.etf_allocation_review import (
+    GetETFAllocationReviewQuery,
+)
 from ditto_application.queries.history_comparison import (
     GetHistoryComparisonQuery,
     HistoryComparisonRequest,
@@ -51,6 +57,8 @@ from ditto_apps.models.paper import PaperSessionCommandResponse
 from ditto_apps.models.portfolio_comparison import (
     ETFAllocationBody,
     ETFAllocationReviewBody,
+    ETFAllocationReviewQueryParams,
+    ETFAllocationReviewResponse,
     ETFAllocationVersionResponse,
     ETFPaperAuthorizeBody,
     ETFPaperAuthorizeResponse,
@@ -68,6 +76,42 @@ from ditto_apps.models.portfolio_comparison import (
 )
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
+
+
+@router.get(
+    "/etf-allocations/{allocation_id}/versions/{version_id}/review",
+    response_model=APIResponse[ETFAllocationReviewResponse],
+    operation_id="portfolio_get_etf_allocation_review",
+)
+@inject
+async def get_etf_allocation_review(
+    allocation_id: str,
+    version_id: str,
+    params: Annotated[ETFAllocationReviewQueryParams, Query()],
+    query: Annotated[GetETFAllocationReviewQuery, FromComponent()],
+) -> APIResponse[ETFAllocationReviewResponse]:
+    """Compare one saved target with a valued account at one evidence cutoff."""
+    try:
+        result = await asyncio.to_thread(
+            query.get,
+            ETFAllocationValuationRequest(
+                allocation_id=allocation_id,
+                version_id=version_id,
+                account_kind=params.account_kind,
+                account_id=params.account_id,
+                as_of=params.as_of.isoformat(),
+                knowledge_cutoff=params.knowledge_cutoff,
+                source_snapshot_ids=tuple(params.source_snapshot_ids),
+            ),
+        )
+    except (AppQueryError, ValueError) as exc:
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("code", "ETF_REVIEW_INVALID"))
+            if isinstance(exc, AppQueryError)
+            else "ETF_REVIEW_INVALID",
+        ) from exc
+    return APIResponse(data=ETFAllocationReviewResponse.model_validate(result))
 
 
 @router.get(

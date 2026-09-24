@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { listETFAllocationVersions } from "../api/etf-allocations";
+import { fetchETFAllocationReview, listETFAllocationVersions } from "../api/etf-allocations";
 import { fetchManualAccountLedger, fetchManualAccounts } from "../api/manual-accounts";
 import { fetchPaperAccountLedger, fetchPaperAccounts } from "../api/paper-accounts";
 import { tradingKeys } from "../api/query-keys";
@@ -11,22 +11,34 @@ function selection() {
 		versionId: query.get("etfVersion") ?? "",
 		account: query.get("etfReviewAccount") ?? "",
 		asOf: query.get("etfReviewAsOf") ?? localCutoff(new Date().toISOString()).slice(0, 10),
+		cutoff: query.get("etfReviewCutoff") ?? localCutoff(new Date().toISOString()),
+		priceSnapshots: query.get("etfReviewPriceSnapshots") ?? "",
 	};
 }
 
 function localCutoff(instant: string): string {
 	const date = new Date(instant);
 	if (Number.isNaN(date.getTime())) return "";
-	return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+	return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 23);
 }
 
-export function ETFAllocationReview({ allocationId }: { readonly allocationId: string }) {
+export function ETFAllocationReview({
+	allocationId,
+	onContextChange,
+}: {
+	readonly allocationId: string;
+	readonly onContextChange?: (context: { versionId: string; account: string }) => void;
+}) {
 	const [selected, setSelected] = useState(selection);
 	useEffect(() => {
-		const restore = () => setSelected(selection());
+		const restore = () => {
+			const next = selection();
+			setSelected(next);
+			onContextChange?.({ versionId: next.versionId, account: next.account });
+		};
 		window.addEventListener("popstate", restore);
 		return () => window.removeEventListener("popstate", restore);
-	}, []);
+	}, [onContextChange]);
 	const choose = (field: keyof ReturnType<typeof selection>, value: string) => {
 		const next = { ...selected, [field]: value };
 		const url = new URL(window.location.href);
@@ -34,8 +46,18 @@ export function ETFAllocationReview({ allocationId }: { readonly allocationId: s
 		if (next.account) url.searchParams.set("etfReviewAccount", next.account);
 		else url.searchParams.delete("etfReviewAccount");
 		url.searchParams.set("etfReviewAsOf", next.asOf);
+		url.searchParams.set("etfReviewCutoff", next.cutoff);
+		if (next.priceSnapshots) url.searchParams.set("etfReviewPriceSnapshots", next.priceSnapshots);
+		else url.searchParams.delete("etfReviewPriceSnapshots");
+		if (field === "versionId" || field === "account") {
+			url.searchParams.delete("historyComparison");
+			url.searchParams.delete("historyComparisonVersion");
+			url.searchParams.delete("historyComparisonAccount");
+		}
 		window.history.pushState(window.history.state, "", url);
 		setSelected(next);
+		if (field === "versionId" || field === "account")
+			onContextChange?.({ versionId: next.versionId, account: next.account });
 	};
 	const versions = useQuery({
 		queryKey: ["etf-allocation-versions", allocationId],
@@ -60,6 +82,38 @@ export function ETFAllocationReview({ allocationId }: { readonly allocationId: s
 		retry: false,
 	});
 	const snapshot = ledger.data?.snapshot;
+	const snapshotIds = selected.priceSnapshots
+		.split(",")
+		.map((item) => item.trim())
+		.filter(Boolean);
+	const valuation = useQuery({
+		queryKey: [
+			"etf-review-valuation",
+			allocationId,
+			selected.versionId,
+			kind,
+			accountId,
+			selected.asOf,
+			selected.cutoff,
+			snapshotIds,
+		],
+		queryFn: () =>
+			fetchETFAllocationReview(allocationId, selected.versionId, {
+				account_kind: kind as "paper" | "manual",
+				account_id: accountId,
+				as_of: selected.asOf,
+				knowledge_cutoff: new Date(selected.cutoff).toISOString(),
+				source_snapshot_ids: snapshotIds,
+			}),
+		enabled: Boolean(
+			version &&
+				accountKnown &&
+				snapshotIds.length &&
+				selected.cutoff &&
+				!Number.isNaN(new Date(selected.cutoff).getTime()),
+		),
+		retry: false,
+	});
 	return (
 		<section aria-label="ETF 配置复盘" className="space-y-3 rounded border border-(--color-border-subtle) p-4">
 			<h2 className="font-semibold">ETF 配置复盘</h2>
@@ -147,6 +201,64 @@ export function ETFAllocationReview({ allocationId }: { readonly allocationId: s
 					onChange={(event) => choose("asOf", event.target.value)}
 				/>
 			</label>
+			<label className="block">
+				估值知识截止{" "}
+				<input
+					aria-label="复盘知识截止"
+					type="datetime-local"
+					step={0.001}
+					value={selected.cutoff}
+					onChange={(event) => choose("cutoff", event.target.value)}
+				/>
+			</label>
+			<label className="block">
+				价格快照 ID（多个用逗号分隔）{" "}
+				<input
+					aria-label="复盘价格快照"
+					value={selected.priceSnapshots}
+					onChange={(event) => choose("priceSnapshots", event.target.value)}
+				/>
+			</label>
+			{!snapshotIds.length && <p>未选择价格快照，以下仅显示账本单时点，无法计算实际权重和差异。</p>}
+			{valuation.isLoading && <p>正在核对估值证据…</p>}
+			{valuation.isError && (
+				<p role="alert">
+					估值失败：{String(valuation.error)}；
+					<button type="button" onClick={() => void valuation.refetch()}>
+						重试
+					</button>
+					。账本单时点仍可查看。
+				</p>
+			)}
+			{valuation.data && (
+				<section aria-label="ETF 目标与实际估值">
+					<p>
+						估值快照 {valuation.data.valuation_snapshot_id} · 账本 {valuation.data.ledger_hash}
+					</p>
+					<p>
+						目标现金 {valuation.data.target.cash_weight}；实际现金 {valuation.data.actual.cash_weight}；现金差异{" "}
+						{valuation.data.drift.cash_drift_bps} bps
+					</p>
+					<ul>
+						{valuation.data.drift.items.map((item) => (
+							<li key={item.instrument_id}>
+								ETF #{item.instrument_id}：目标 {item.baseline_weight}；实际 {item.observed_weight}；差异{" "}
+								{item.drift_bps} bps
+							</li>
+						))}
+					</ul>
+					<p>
+						已知同指数实际暴露：
+						{Object.entries(valuation.data.actual_exposure)
+							.map(([index, weight]) => `${index} ${weight}`)
+							.join("；") || "未知"}
+					</p>
+					<p>
+						指数归属未知的实际持仓：{valuation.data.unknown_exposure_instrument_ids.join("、") || "无"}
+						；其他穿透重叠仍未知。
+					</p>
+				</section>
+			)}
 			{selected.account && !accountKnown && !paperAccounts.isLoading && !manualAccounts.isLoading && (
 				<p role="alert">所选账户不存在或暂不可读取。</p>
 			)}
@@ -179,7 +291,7 @@ export function ETFAllocationReview({ allocationId }: { readonly allocationId: s
 							? "目标与实际来自不同来源；账户持仓由账本重建。"
 							: "缺少同日价格证据，无法计算实际权重或目标差异；不以目标权重代替实际持仓。"}
 					</p>
-					<p>此账本按交易日以当前已记录事件重建，不代表当时知识截止下的历史版本。</p>
+					<p>上方账本按交易日以当前已记录事件重建；仅估值结果使用所选知识截止与价格快照。</p>
 				</div>
 			)}
 			<p>历史曲线需要 Model 目标工件、Paper/Manual 账本、共同有效估值点和独立价格快照；当前配置目标不会回填历史。</p>

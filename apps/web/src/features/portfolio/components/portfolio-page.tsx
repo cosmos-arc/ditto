@@ -97,6 +97,10 @@ function AttributionPanel({ comparisonRunId }: PortfolioPageProps) {
 export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}) {
 	const liveMode = !shouldUsePrototypeMocks();
 	const search = new URLSearchParams(window.location.search);
+	const [etfReviewContext, setEtfReviewContext] = useState(() => ({
+		versionId: search.get("etfVersion") ?? "",
+		account: search.get("etfReviewAccount") ?? "",
+	}));
 	const requestedMode = mode ?? search.get("mode");
 	const accountMode =
 		requestedMode === "comparison"
@@ -130,8 +134,11 @@ export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}
 		const etfAllocation = search.get("etfAllocation");
 		return (
 			<div className="flex flex-col gap-6">
-				{etfAllocation && <ETFAllocationReview allocationId={etfAllocation} />}
-				<HistoryComparisonPanel etfAllocationId={etfAllocation ?? undefined} />
+				{etfAllocation && <ETFAllocationReview allocationId={etfAllocation} onContextChange={setEtfReviewContext} />}
+				<HistoryComparisonPanel
+					key={`${etfReviewContext.versionId}:${etfReviewContext.account}`}
+					etfAllocationId={etfAllocation ?? undefined}
+				/>
 				<PortfolioComparisonWorkspace identity={comparisonIdentity} />
 			</div>
 		);

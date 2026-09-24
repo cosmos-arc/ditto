@@ -108,3 +108,63 @@ it("restores an exact version and account while keeping unpriced actual weights 
 	fireEvent.change(screen.getByLabelText("复盘账本日期"), { target: { value: "2026-09-03" } });
 	expect(new URLSearchParams(window.location.search).get("etfReviewAsOf")).toBe("2026-09-03");
 });
+
+it("clears a saved history request when the ETF version or account changes", async () => {
+	window.history.replaceState(
+		null,
+		"",
+		"/portfolio?etfVersion=v1&etfReviewAccount=paper:paper-a&historyComparison=old&historyComparisonVersion=v1&historyComparisonAccount=paper:paper-a",
+	);
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations/demo/versions", () =>
+			HttpResponse.json({
+				data: ["v1", "v2"].map((id) => ({
+					version_id: id,
+					allocation_id: "demo",
+					parent_version_id: null,
+					asof: "2026-09-01",
+					knowledge_cutoff: "2026-09-01T09:00:00Z",
+					source_snapshot_id: "snapshot:recorded:etf",
+					mode: "equal",
+					weights: { "2000001": "0.5" },
+					cash_weight: "0.5",
+					max_position_weight: "0.5",
+					tracking_exposure: { "000300.SH": "0.5" },
+					reason: "test",
+					rule_version: "etf-allocation-v1",
+					paper_status: "research_only",
+					review_status: "research_only",
+					created_at: "2026-09-01T09:00:00Z",
+				})),
+			}),
+		),
+		http.get("/api/v1/paper/accounts", () =>
+			HttpResponse.json({
+				data: {
+					accounts: [
+						{
+							account_id: "paper-a",
+							account_name: "Paper A",
+							account_kind: "paper",
+							currency: "CNY",
+							opened_at: "2026-09-01T00:00:00Z",
+						},
+					],
+				},
+			}),
+		),
+		http.get("/api/v1/manual/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
+	);
+	render(
+		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+			<ETFAllocationReview allocationId="demo" />
+		</QueryClientProvider>,
+	);
+	await screen.findByRole("option", { name: /v2/ });
+	fireEvent.change(screen.getByLabelText("复盘配置版本"), { target: { value: "v2" } });
+	const url = new URLSearchParams(window.location.search);
+	expect(url.get("etfVersion")).toBe("v2");
+	expect(url.has("historyComparison")).toBe(false);
+	expect(url.has("historyComparisonVersion")).toBe(false);
+	expect(url.has("historyComparisonAccount")).toBe(false);
+});
