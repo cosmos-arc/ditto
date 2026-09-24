@@ -168,6 +168,20 @@ def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
 
 
 @pytest.mark.pit
+def test_etf_paper_facts_derive_limits_absent_from_etf_daily_payload() -> None:
+    facts, _metadata, bars, _ledger = _facts()
+    base = bars.load_paper_market.return_value
+    bars.load_paper_market.return_value = replace(base, limit_up=None, limit_down=None)
+    resolved = facts.resolve(
+        _request(), instrument_id=1, signal_snapshot_id="signal", signal_cutoff=SIGNAL
+    )
+    # Exchange rule: pre_close 10.0 shifted by 10% rounded half-up to the
+    # 0.001 tick — the canonical ETF daily producer carries no limit columns.
+    assert resolved.execution_market.limit_up == 11.0
+    assert resolved.execution_market.limit_down == 9.0
+
+
+@pytest.mark.pit
 def test_etf_paper_facts_reject_future_execution_fee() -> None:
     facts, metadata, bars, _ledger = _facts()
     original = metadata.list_etf_candidates.side_effect

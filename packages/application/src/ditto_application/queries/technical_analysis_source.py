@@ -418,24 +418,23 @@ class ProviderPayloadTechnicalAnalysisSource:
                 "ETF_PAPER_SNAPSHOT_UNAVAILABLE", "bar snapshot is absent or future"
             )
         frame = self._query.query(dataset_id="etf_daily", context=context)
-        if "instrument_id" not in frame.columns:
-            raise _source_error(
-                "ETF_PAPER_IDENTITY_MISSING", "bar instrument ID is absent"
-            )
-        selected = frame.filter(
-            pl.col("instrument_id").cast(pl.Int64, strict=False) == int(instrument_id)
-        )
-        code_columns = [
-            name for name in ("source_ticker", "ts_code") if name in selected.columns
+        # Retained artifacts predate FK enrichment, so the provider ticker is
+        # the primary identity; the internal ID is only a cross-check when the
+        # optional enriched column exists.
+        ticker_columns = [
+            name for name in ("source_ticker", "ts_code") if name in frame.columns
         ]
-        if code_columns:
+        if not ticker_columns and "instrument_id" not in frame.columns:
+            raise _source_error(
+                "ETF_PAPER_IDENTITY_MISSING", "bar instrument identity is absent"
+            )
+        selected = frame
+        for name in ticker_columns:
+            selected = selected.filter(pl.col(name).cast(pl.String) == instrument_code)
+        if "instrument_id" in selected.columns:
             selected = selected.filter(
-                pl.all_horizontal(
-                    *(
-                        pl.col(name).cast(pl.String) == instrument_code
-                        for name in code_columns
-                    )
-                )
+                pl.col("instrument_id").cast(pl.Int64, strict=False)
+                == int(instrument_id)
             )
         selected = selected.filter(
             pl.col("event_time").dt.convert_time_zone("Asia/Shanghai").dt.date()
@@ -464,6 +463,11 @@ def _paper_market_from_row(
             raise _source_error("ETF_PAPER_BAR_INVALID", f"{name} is invalid")
         return value
 
+    def optional_number(name: str) -> float | None:
+        if row.get(name) is None:
+            return None
+        return number(name)
+
     open_price = number("open")
     high = number("high")
     low = number("low")
@@ -471,11 +475,13 @@ def _paper_market_from_row(
     prev_close = number("pre_close")
     volume = number("volume", positive=False)
     amount = number("amount", positive=False)
-    limit_up = number("up_limit")
-    limit_down = number("down_limit")
+    # The canonical ETF daily producer has no limit columns; callers derive
+    # the limits from pre_close and the instrument's price_limit_pct instead.
+    limit_up = optional_number("up_limit")
+    limit_down = optional_number("down_limit")
     if not low <= min(open_price, close) <= max(open_price, close) <= high:
         raise _source_error("ETF_PAPER_BAR_INVALID", "bar OHLC is inconsistent")
-    if limit_down >= limit_up:
+    if limit_up is not None and limit_down is not None and limit_down >= limit_up:
         raise _source_error(
             "ETF_PAPER_BAR_INVALID", "bar price limits are inconsistent"
         )

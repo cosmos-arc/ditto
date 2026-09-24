@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from math import isfinite
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
@@ -18,7 +19,10 @@ from ditto_application.etf_paper_contracts import (
     ETFPaperOrderFacts,
 )
 from ditto_application.exceptions import AppProcessError
-from ditto_application.paper_contracts import PaperInstrumentRulesInput
+from ditto_application.paper_contracts import (
+    PaperInstrumentRulesInput,
+    PaperMarketSnapshotInput,
+)
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.etf_candidates import ETFCandidate
 from ditto_application.queries.etf_paper_handoff_facts import admitted_etf_field
@@ -50,8 +54,6 @@ _BAR_FIELDS = (
     "pre_close",
     "volume",
     "amount",
-    "up_limit",
-    "down_limit",
 )
 
 
@@ -206,6 +208,7 @@ class LiveETFPaperExecutionFacts:
         )
         if market.is_suspended:
             raise AppProcessError("ETF execution instrument is suspended")
+        market = _derived_price_limits(market, execution_rules)
         execution_account = self._ledger.get_paper(
             account_id=request.account_id,
             as_of=request.intended_trade_date,
@@ -377,6 +380,35 @@ class LiveETFPaperExecutionFacts:
         if not days or days[0] != trade_date or len(days) <= cycle:
             raise AppProcessError("ETF Paper settlement calendar is incomplete")
         return days[cycle]
+
+
+def _derived_price_limits(
+    market: PaperMarketSnapshotInput, rules: PaperInstrumentRulesInput
+) -> PaperMarketSnapshotInput:
+    """
+    Fill absent exchange limits from pre_close and the admitted rule set.
+
+    The canonical ETF daily producer carries no limit columns, so the limits
+    follow the exchange rule: pre_close shifted by price_limit_pct and rounded
+    half-up to the tick. Payload-provided limits win when both are present.
+    """
+    if market.limit_up is not None and market.limit_down is not None:
+        return market
+    base = Decimal(str(market.prev_close))
+    tick = Decimal(str(rules.tick_size))
+    ratio = Decimal(str(rules.price_limit_pct))
+
+    def shifted(direction: Decimal) -> float:
+        multiple = (base * (Decimal(1) + direction * ratio) / tick).quantize(
+            Decimal(1), rounding=ROUND_HALF_UP
+        )
+        return float(multiple * tick)
+
+    return replace(
+        market,
+        limit_up=shifted(Decimal(1)),
+        limit_down=shifted(Decimal(-1)),
+    )
 
 
 def _position(
