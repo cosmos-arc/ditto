@@ -320,7 +320,7 @@ def _request_hash(command: OperatePaperOrderCommand) -> str:
     if command.request_identity_hash is not None:
         return command.request_identity_hash
     resolved = _resolve_inputs(command)
-    payload = {
+    payload: dict[str, object] = {
         "session_id": command.session_id,
         "idempotency_key": command.idempotency_key,
         "order": resolved.order,
@@ -332,8 +332,9 @@ def _request_hash(command: OperatePaperOrderCommand) -> str:
         "settlement_date": command.settlement_date,
         "position_quantity": command.position_quantity,
         "available_quantity": command.available_quantity,
-        "cash_available": command.cash_available,
     }
+    if command.cash_available is not None:
+        payload["cash_available"] = command.cash_available
     encoded = orjson.dumps(
         payload,
         option=orjson.OPT_SERIALIZE_DATACLASS | orjson.OPT_SORT_KEYS,

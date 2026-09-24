@@ -264,9 +264,6 @@ def _request_hash(
         "session_id": request.session_id,
         "signal_date": request.signal_date,
         "intended_trade_date": request.intended_trade_date,
-        "execution_cutoff": request.execution_cutoff.isoformat(),
-        "reference_snapshot_id": request.reference_snapshot_id,
-        "market_snapshot_id": request.market_snapshot_id,
         "package_checksum": package_checksum,
         "intent_id": intent_id,
     }

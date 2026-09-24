@@ -653,6 +653,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 						<div className="space-y-2">
 							<h4>Paper 执行日复核</h4>
 							<p>仅在下一交易日收盘数据已留存并准入后模拟成交；缺少行情、规则或账户事实时会停止。</p>
+							<p>重试时已成交意图返回原账本事件，新快照只用于尚未执行的意图。</p>
 							<label className="block">
 								执行日证据截止时间（北京时间）
 								<input
@@ -689,9 +690,9 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 							</button>
 							{executePaper.isError && <p role="alert">Paper 执行失败：{String(executePaper.error)}</p>}
 							{executePaper.data?.map((outcome) => (
-								<p key={outcome.intent_id}>
-									工具 {outcome.instrument_id}：{outcome.status}
-									{outcome.reason ? `（${outcome.reason}）` : ""}，账本事件 {outcome.ledger_event_id ?? "无"}
+								<p key={outcome.intentId}>
+									工具 {outcome.instrumentId}：{outcome.status}
+									{outcome.reason ? `（${outcome.reason}）` : ""}，账本事件 {outcome.ledgerEventId ?? "无"}
 								</p>
 							))}
 						</div>

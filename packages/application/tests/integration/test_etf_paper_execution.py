@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from dishka import Provider, Scope, make_async_container, provide
+from dishka.integrations.fastapi import setup_dishka
 from ditto_application.etf_paper_contracts import (
     ETFPaperExecutionRequest,
     ETFPaperOrderFacts,
 )
 from ditto_application.etf_paper_execution import ETFPaperExecution
-from ditto_application.exceptions import AppCommandError, AppConflictError
+from ditto_application.exceptions import (
+    AppCommandError,
+    AppConflictError,
+    AppProcessError,
+)
 from ditto_application.execution_dto import TradeIntent
 from ditto_application.paper_contracts import (
     PaperInstrumentRulesInput,
@@ -23,10 +30,14 @@ from ditto_application.processes.execution.operate_paper_session import (
     OperatePaperSession,
 )
 from ditto_application.processes.execution.signal_package_models import SignalPackage
+from ditto_apps.api.routes.portfolio_comparison import router
+from ditto_apps.middleware import configure_exception_handlers
 from ditto_execution.paper.session import PaperSession, PaperSessionStatus
 from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
 from ditto_portfolio.account_ledger import AccountDefinition, AccountKind
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 SIGNAL = datetime(2026, 9, 1, 7, 10, tzinfo=UTC)
 EXECUTION = datetime(2026, 9, 2, 8, 0, tzinfo=UTC)
@@ -204,15 +215,15 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
             lambda _: paused.pause(updated_at=EXECUTION, reason="review"),
         )
         assert process.execute(_request()) == first
-        with pytest.raises(AppConflictError, match="payload conflict"):
+        assert (
             process.execute(
                 ETFPaperExecutionRequest(
-                    **{
-                        **_request().__dict__,
-                        "market_snapshot_id": "different-market",
-                    }
+                    **{**_request().__dict__, "market_snapshot_id": "new-evidence"}
                 )
             )
+            == first
+        )
+        assert len(journal.list_events("paper-a")) == 1
 
 
 def test_etf_paper_rejects_preclose_execution(tmp_path: Path) -> None:
@@ -252,3 +263,113 @@ def test_etf_paper_rejects_changed_signal_ledger_before_sizing(tmp_path: Path) -
             process.execute(_request())
         assert sessions.list_executions("session-a") == ()
         assert journal.list_events("paper-a") == ()
+
+
+def test_etf_partial_fill_recovers_with_new_evidence_for_pending_intent(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "paper.db"
+    _seed(path)
+    facts = MagicMock()
+
+    def resolve(
+        request: ETFPaperExecutionRequest, *, instrument_id: int, **_: object
+    ) -> ETFPaperOrderFacts:
+        if instrument_id == 2 and request.market_snapshot_id == "market-exec":
+            raise AppProcessError("second bar is missing")
+        base = _facts()
+        if request.market_snapshot_id == "market-corrected":
+            return replace(
+                base,
+                execution_market=replace(
+                    base.execution_market, source_snapshot_id="market-corrected"
+                ),
+            )
+        return base
+
+    facts.resolve.side_effect = resolve
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        process = _process(sessions, journal, facts)
+        package = _package()
+        process._packages.find_active_paper.return_value = replace(
+            package,
+            intents=(
+                *package.intents,
+                replace(
+                    package.intents[0],
+                    intent_id="intent-b",
+                    instrument_id=2,
+                    target_weight=0.3,
+                ),
+            ),
+        )
+        with pytest.raises(AppProcessError, match="second bar"):
+            process.execute(_request())
+        first = sessions.list_executions("session-a")
+        assert len(first) == 1
+        assert len(journal.list_events("paper-a")) == 1
+        completed = process.execute(
+            replace(_request(), market_snapshot_id="market-corrected")
+        )
+        assert [item.status for item in completed] == ["filled", "filled"]
+        assert completed[0].execution_id == first[0].execution_id
+        assert len(sessions.list_executions("session-a")) == 2
+        assert len(journal.list_events("paper-a")) == 2
+
+
+def test_etf_paper_http_reaches_real_execution_and_sqlite_ledger(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "paper.db"
+    _seed(path)
+    facts = MagicMock()
+    facts.resolve.return_value = _facts()
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        process = _process(sessions, journal, facts)
+
+        class TestProvider(Provider):
+            scope = Scope.APP
+
+            @provide
+            def executor(self) -> ETFPaperExecution:
+                return process
+
+        app = FastAPI()
+        configure_exception_handlers(app)
+        setup_dishka(container=make_async_container(TestProvider()), app=app)
+        app.include_router(router, prefix="/api/v1")
+        endpoint = (
+            "/api/v1/portfolio/etf-allocations/demo/versions/version-a/paper-executions"
+        )
+        body = {
+            "authorization_id": "authorization-a",
+            "account_id": "paper-a",
+            "session_id": "session-a",
+            "signal_date": "2026-09-01",
+            "intended_trade_date": "2026-09-02",
+            "execution_cutoff": EXECUTION.isoformat(),
+            "reference_snapshot_id": "reference-exec",
+            "market_snapshot_id": "market-exec",
+        }
+        with TestClient(app) as web:
+            first = web.post(
+                endpoint, json=body, headers={"Idempotency-Key": "execute-once"}
+            )
+            assert first.status_code == 201, first.text
+            event_id = first.json()["data"]["outcomes"][0]["ledger_event_id"]
+            assert event_id is not None
+            retry = web.post(
+                endpoint, json=body, headers={"Idempotency-Key": "execute-once"}
+            )
+            assert retry.status_code == 201, retry.text
+            assert retry.json() == first.json()
+        assert len(sessions.list_executions("session-a")) == 1
+        assert [event.event_id for event in journal.list_events("paper-a")] == [
+            event_id
+        ]

@@ -22,6 +22,15 @@ export type ETFAllocationVersion = {
 	readonly createdAt: string;
 };
 
+export type ETFPaperExecutionOutcome = {
+	readonly intentId: string;
+	readonly instrumentId: number;
+	readonly status: string;
+	readonly reason: string | null;
+	readonly executionId: string | null;
+	readonly ledgerEventId: string | null;
+};
+
 function toVersion(value: VersionDTO): ETFAllocationVersion {
 	if (
 		!value.version_id ||
@@ -144,7 +153,7 @@ export async function executeETFPaper(
 	versionId: string,
 	key: string,
 	body: components["schemas"]["ETFPaperExecutionBody"],
-): Promise<components["schemas"]["ETFPaperExecutionOutcomeResponse"][]> {
+): Promise<ETFPaperExecutionOutcome[]> {
 	const result = await apiClient.post(
 		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-executions",
 		{
@@ -155,5 +164,12 @@ export async function executeETFPaper(
 	if (result.outcomes.some((outcome) => !outcome.intent_id || !outcome.status)) {
 		throw new Error("ETF Paper 执行响应缺少意图或状态");
 	}
-	return result.outcomes;
+	return result.outcomes.map((outcome) => ({
+		intentId: outcome.intent_id,
+		instrumentId: outcome.instrument_id,
+		status: outcome.status,
+		reason: outcome.reason,
+		executionId: outcome.execution_id,
+		ledgerEventId: outcome.ledger_event_id,
+	}));
 }

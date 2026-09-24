@@ -347,10 +347,10 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
         account_id="paper-one",
         session_id="session-one",
         idempotency_key="handoff-one",
-        signal_date="2026-09-02",
-        decision_date="2026-09-02",
-        intended_trade_date="2026-09-03",
-        knowledge_cutoff=datetime.fromisoformat("2026-09-02T08:00:00+00:00"),
+        signal_date="2026-09-01",
+        decision_date="2026-09-01",
+        intended_trade_date="2026-09-02",
+        knowledge_cutoff=datetime.fromisoformat("2026-09-01T09:00:00+00:00"),
         source_snapshot_id="snapshot:recorded:market",
     )
     handoff = ETFPaperHandoff(
@@ -389,6 +389,17 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
         with pytest.raises(AppConflictError):
             allocations.authorize_paper(replace(approval, reason="different"))
         request = replace(request, authorization_id=receipt.artifact_id)
+        with pytest.raises(AppCommandError, match="research decision"):
+            handoff.handoff(replace(request, signal_date="2026-09-02"))
+        with pytest.raises(AppCommandError, match="saved target cutoff"):
+            handoff.handoff(
+                replace(
+                    request,
+                    knowledge_cutoff=datetime.fromisoformat(
+                        "2026-09-01T08:00:00+00:00"
+                    ),
+                )
+            )
         with pytest.raises(AppConflictError, match="target authorization"):
             handoff.handoff(replace(request, account_id="other"))
         facts.resolve.return_value = ETFPaperHandoffFacts(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from hashlib import sha256
 from math import isfinite
 from zoneinfo import ZoneInfo
@@ -81,12 +82,17 @@ class ETFPaperHandoff:
             f"{identity.key_hash}:{identity.request_hash}".encode("ascii")
         ).hexdigest()
         if (
-            request.signal_date < version.asof
+            request.signal_date != version.asof
             or request.intended_trade_date <= request.signal_date
         ):
             raise AppCommandError("Paper execution must follow the research decision")
         if request.knowledge_cutoff.tzinfo is None:
             raise AppCommandError("ETF Paper knowledge cutoff needs a timezone")
+        version_cutoff = datetime.fromisoformat(
+            version.knowledge_cutoff.replace("Z", "+00:00")
+        )
+        if request.knowledge_cutoff < version_cutoff:
+            raise AppCommandError("Paper evidence precedes the saved target cutoff")
         if (
             request.knowledge_cutoff.astimezone(ZoneInfo("Asia/Shanghai"))
             .date()
