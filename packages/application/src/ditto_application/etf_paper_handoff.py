@@ -20,6 +20,7 @@ from ditto_application.commands.paper_session import (
 from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFactsPort,
     ETFPaperHandoffRequest,
+    etf_paper_run_id,
 )
 from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.mutation_idempotency import build_mutation_idempotency
@@ -125,7 +126,12 @@ class ETFPaperHandoff:
         target = TargetPortfolio(
             trade_date=request.signal_date,
             strategy_id=strategy_id,
-            run_id=f"eod-{request.signal_date}-{strategy_id}-{request.version_id}",
+            run_id=etf_paper_run_id(
+                signal_date=request.signal_date,
+                strategy_id=strategy_id,
+                version_id=request.version_id,
+                account_id=request.account_id,
+            ),
             positions={
                 InstrumentId(i): float(weight) for i, weight in version.weights.items()
             },

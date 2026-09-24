@@ -102,3 +102,16 @@ class ETFPaperExecutionFactsPort(Protocol):
     ) -> ETFPaperOrderFacts:
         """Return exact signal and execution facts or fail closed."""
         ...
+
+
+def etf_paper_run_id(
+    *, signal_date: str, strategy_id: str, version_id: str, account_id: str
+) -> str:
+    """
+    One package batch identity per account, target and signal day.
+
+    The account is part of the batch identity so sibling Paper accounts
+    sharing one approved version keep separate packages instead of
+    replacing each other.
+    """
+    return f"eod-{signal_date}-{strategy_id}-{version_id}-{account_id}"

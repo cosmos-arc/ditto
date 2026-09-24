@@ -15,6 +15,7 @@ from ditto_kernel.trading import DEFAULT_SLIPPAGE_BPS
 from ditto_application.etf_paper_contracts import (
     ETFPaperExecutionFactsPort,
     ETFPaperExecutionRequest,
+    etf_paper_run_id,
 )
 from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.execution_dto import TradeIntent
@@ -130,7 +131,12 @@ class ETFPaperExecution:
             or session.trade_date != request.intended_trade_date
         ):
             raise AppConflictError("approved ETF Paper session identity changed")
-        run_id = f"eod-{request.signal_date}-{strategy_id}-{request.version_id}"
+        run_id = etf_paper_run_id(
+            signal_date=request.signal_date,
+            strategy_id=strategy_id,
+            version_id=request.version_id,
+            account_id=request.account_id,
+        )
         package = self._packages.find_active_paper(
             strategy_id=strategy_id,
             run_id=run_id,

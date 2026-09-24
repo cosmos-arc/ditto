@@ -136,7 +136,7 @@ def _live_facts(journal: SqliteAccountEventJournal) -> MagicMock:
 
 def _package() -> SignalPackage:
     return SignalPackage(
-        run_id="eod-2026-09-01-etf-allocation:demo-version-a",
+        run_id="eod-2026-09-01-etf-allocation:demo-version-a-paper-a",
         strategy_id="etf-allocation:demo",
         signal_date="2026-09-01",
         intents=(
@@ -232,6 +232,10 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
         assert resolve["signal_snapshot_id"] == "reference-signal"
         assert resolve["signal_cutoff"] == SIGNAL
         assert resolve["valuation_cutoff"] == SIGNAL
+        assert (
+            process._packages.find_active_paper.call_args.kwargs["run_id"]
+            == "eod-2026-09-01-etf-allocation:demo-version-a-paper-a"
+        )
         assert len(journal.list_events("paper-a")) == 1
         second = process.execute(_request())
         assert second == first

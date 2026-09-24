@@ -333,11 +333,17 @@ class OperatePaperSession:
                 expected_ledger_hash=record.expected_ledger_hash,
             )
         except AccountLedgerRevisionConflict as exc:
+            settled = self._recovered_fill_event(record, event)
+            if settled is not None:
+                return settled
             self._discard_stale_execution(record)
             raise AppConflictError(
                 "paper account ledger changed during execution"
             ) from exc
         except AccountLedgerChronologyConflict as exc:
+            settled = self._recovered_fill_event(record, event)
+            if settled is not None:
+                return settled
             self._discard_stale_execution(record)
             raise AppConflictError(
                 "paper account ledger already has later trade dates"
@@ -347,6 +353,28 @@ class OperatePaperSession:
                 "paper ledger append failed",
                 code="PAPER_LEDGER_APPEND_FAILED",
             ) from exc
+
+    def _recovered_fill_event(
+        self,
+        record: PaperExecutionRecord,
+        event: AccountEvent,
+    ) -> AccountEvent | None:
+        """
+        Return this fill's journal event when a concurrent retry landed it.
+
+        Without the recheck, the losing side of two concurrent recoveries
+        would discard the shared execution record before the winner marks
+        it ledgered, orphaning the fill.
+        """
+        settled = self._account_journal.find_by_idempotency_key(
+            record.account_id,
+            f"paper-ledger:{record.execution_id}",
+        )
+        if settled is None:
+            return None
+        if settled.event_hash != event.event_hash:
+            raise AppConflictError("paper ledger idempotency payload conflict")
+        return settled
 
 
 def _reject_ungoverned_etf_session(strategy_id: str) -> None:
