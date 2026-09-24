@@ -558,6 +558,22 @@ def main() -> int:
                 ),
             )
 
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.etf_paper_app:app", api_port
+                    ),
+                    prefix="ditto-system-etf-paper-",
+                    spec="etf-paper-journey.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # A real engine backtest run (persisted through the production
             # artifact/audit path) drives the NAV vs benchmark cockpit.
             _run_fixture_acceptance(
