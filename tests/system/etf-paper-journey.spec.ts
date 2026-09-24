@@ -103,3 +103,47 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await expect(page.getByText("PAPER 模拟账户")).toBeVisible();
 	expect(page.url()).toContain(`session_id=${sessionId}`);
 });
+
+test("restricted ETF cannot enter Paper and returns to tool selection", async ({
+	page,
+	request,
+}) => {
+	const fixtureResponse = await request.get(
+		`${apiOrigin}/system-fixture/etf-paper`,
+	);
+	expect(fixtureResponse.ok()).toBe(true);
+	const fixture = (await fixtureResponse.json()) as {
+		signal_reference: string;
+		account_id: string;
+	};
+	await page.goto("/markets");
+	const workspace = page.locator('[data-info-unit="etf-candidates"]');
+	await workspace.getByLabel("研究日期").fill("2026-09-01");
+	await workspace.getByLabel("知识截止").fill("2026-09-01T17:00");
+	await workspace.getByLabel("来源快照").selectOption(fixture.signal_reference);
+	await workspace.getByLabel("指数暴露").fill("000300.SH");
+	await workspace.getByRole("checkbox", { name: /受限ETF-Paper验收/ }).check();
+	await workspace.getByLabel("现金比例").fill("0.5");
+	await workspace.getByLabel("配置理由").fill("restricted tool refusal");
+	await workspace.getByRole("button", { name: "保存候选版本" }).click();
+	await expect(workspace.getByText(/已保存 etf-allocation-/)).toBeVisible();
+	await workspace.getByLabel("审查人").fill("browser reviewer");
+	await workspace.getByLabel("审查理由").fill("research approval only");
+	await workspace.getByRole("button", { name: "提交审查" }).click();
+	await workspace.getByRole("button", { name: "研究审查通过" }).click();
+	await workspace.getByLabel("Paper 账户").selectOption(fixture.account_id);
+	await workspace.getByLabel("下一交易日").fill("2026-09-02");
+	await workspace.getByLabel("Paper 授权人").fill("browser operator");
+	await workspace
+		.getByLabel("Paper 授权理由")
+		.fill("check restriction at handoff");
+	await workspace.getByRole("button", { name: "授权此版本进入 Paper" }).click();
+	await workspace.getByRole("button", { name: "创建 Paper 会话" }).click();
+	await expect(workspace.getByRole("alert")).toContainText(
+		"not investable; choose alternatives",
+	);
+	await expect(
+		workspace.getByRole("link", { name: "返回工具选择" }),
+	).toHaveAttribute("href", "#etf-tool-selection");
+	expect(new URL(page.url()).searchParams.has("paperSession")).toBe(false);
+});
