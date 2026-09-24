@@ -108,3 +108,73 @@ it("retries one save with the same identity and restores the saved version", asy
 	await screen.findByText(/· review_approved ·/);
 	expect(reviewAttempts[2]?.action).toBe("approve");
 });
+
+it("asks for confirmation before the terminal reject transition", async () => {
+	const user = userEvent.setup();
+	const actions: string[] = [];
+	let stored: Record<string, unknown> | null = null;
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
+			HttpResponse.json({ data: stored ? [stored] : [] }),
+		),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions", async ({ params }) => {
+			stored = {
+				version_id: "version-one",
+				allocation_id: String(params["id"]),
+				parent_version_id: null,
+				asof: "2026-09-01",
+				knowledge_cutoff: "2026-09-01T09:00:00Z",
+				source_snapshot_id: "snapshot:recorded:etf",
+				mode: "equal",
+				weights: { "1": "0.80000000" },
+				cash_weight: "0.2",
+				max_position_weight: "1",
+				tracking_exposure: { "000300.SH": "0.80000000" },
+				reason: "broad exposure",
+				rule_version: "etf-allocation-v1",
+				paper_status: "research_only",
+				created_at: "2026-09-01T09:00:00Z",
+			};
+			return HttpResponse.json({ data: stored }, { status: 201 });
+		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/review", async ({ request }) => {
+			const body = (await request.json()) as { action: string };
+			actions.push(body.action);
+			stored = {
+				...stored,
+				paper_status: body.action === "submit" ? "review_pending" : "rejected",
+			};
+			return HttpResponse.json({ data: stored });
+		}),
+	);
+	render(
+		<ETFAllocationEditor
+			items={[candidate]}
+			asof="2026-09-01"
+			cutoff="2026-09-01T09:00:00Z"
+			cutoffInput="2026-09-01T17:00:00"
+			snapshot="snapshot:recorded:etf"
+		/>,
+		{ wrapper: wrapper() },
+	);
+	await user.click(screen.getByRole("checkbox", { name: /沪深300 ETF/ }));
+	await user.clear(screen.getByLabelText("单仓上限"));
+	await user.type(screen.getByLabelText("单仓上限"), "1");
+	await user.type(screen.getByLabelText("配置理由"), "broad exposure");
+	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
+	await screen.findByText(/已保存 version-one/);
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByRole("button", { name: "研究审查通过" });
+	expect(actions).toEqual(["submit"]);
+	await user.click(screen.getByRole("button", { name: "拒绝此版本" }));
+	expect(screen.getByRole("button", { name: "确认拒绝" })).toBeInTheDocument();
+	await user.click(screen.getByRole("button", { name: "取消" }));
+	expect(screen.getByRole("button", { name: "拒绝此版本" })).toBeInTheDocument();
+	expect(actions).toEqual(["submit"]);
+	await user.click(screen.getByRole("button", { name: "拒绝此版本" }));
+	await user.click(screen.getByRole("button", { name: "确认拒绝" }));
+	await screen.findByText(/· rejected ·/);
+	expect(actions).toEqual(["submit", "reject"]);
+});

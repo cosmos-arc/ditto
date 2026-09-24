@@ -21,6 +21,10 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 )
 
 from ditto_application.exceptions import AppCommandError, AppConflictError
+from ditto_application.mutation_idempotency import (
+    MutationIdempotency,
+    build_mutation_idempotency,
+)
 from ditto_application.queries.etf_candidates import ETFCandidate
 from ditto_application.queries.metadata import MetadataQueryFacade
 
@@ -163,6 +167,7 @@ class ETFAllocationCommand:
 
     def review(self, request: ETFAllocationReviewRequest) -> ETFAllocationVersion:
         """Record and apply a separate, exact-version review decision."""
+        identity = _review_identity(request)
         strategy_id = _strategy_id(request.allocation_id)
         transitions = {
             "submit": ("draft", "review"),
@@ -181,8 +186,8 @@ class ETFAllocationCommand:
         # One durable fence per (version, idempotency key): the three review
         # actions share this mutation resource, so reusing a key for a different
         # action must conflict here instead of authorizing a second transition.
-        receipt_id = _review_receipt_id(request.version_id, request.idempotency_key)
-        receipt = _review_receipt(request, version, strategy_id, receipt_id)
+        receipt_id = _review_receipt_id(request.version_id, identity.key_hash)
+        receipt = _review_receipt(request, version, strategy_id, receipt_id, identity)
         prior = self._artifacts.get_artifact(receipt_id)
         if prior is not None and not _same_review_receipt(prior, receipt):
             raise AppConflictError("ETF allocation review decision conflict")
@@ -223,8 +228,24 @@ class ETFAllocationCommand:
         )
 
 
-def _review_receipt_id(version_id: str, idempotency_key: str) -> str:
-    return f"{version_id}:review:" + sha256(idempotency_key.encode()).hexdigest()[:32]
+def _review_receipt_id(version_id: str, key_hash: str) -> str:
+    return f"{version_id}:review:{key_hash[:32]}"
+
+
+def _review_identity(request: ETFAllocationReviewRequest) -> MutationIdempotency:
+    """Validate the transport key at the shared boundary and drop its raw form."""
+    return build_mutation_idempotency(
+        operation_id="etf_allocation_review",
+        resource_id=request.version_id,
+        raw_key=request.idempotency_key,
+        request_payload={
+            "allocation_id": request.allocation_id,
+            "version_id": request.version_id,
+            "action": request.action,
+            "actor": request.actor.strip(),
+            "reason": request.reason.strip(),
+        },
+    )
 
 
 def _review_receipt(
@@ -232,6 +253,7 @@ def _review_receipt(
     version: StrategyArtifactRecord,
     strategy_id: str,
     receipt_id: str,
+    identity: MutationIdempotency,
 ) -> StrategyArtifactRecord:
     return StrategyArtifactRecord(
         artifact_id=receipt_id,
@@ -245,7 +267,7 @@ def _review_receipt(
             "action": request.action,
             "actor": request.actor.strip(),
             "reason": request.reason.strip(),
-            "idempotency_key": request.idempotency_key,
+            "key_hash": identity.key_hash,
         },
         status="active",
         created_at=datetime.now(UTC).isoformat(),
@@ -272,13 +294,8 @@ def _validate_review_target(
     version: StrategyArtifactRecord | None,
     strategy_id: str,
 ) -> StrategyArtifactRecord:
-    if (
-        not request.actor.strip()
-        or not request.reason.strip()
-        or not request.idempotency_key
-        or len(request.idempotency_key) > _MAX_KEY_LENGTH
-    ):
-        raise AppCommandError("review actor, reason and idempotency_key are required")
+    if not request.actor.strip() or not request.reason.strip():
+        raise AppCommandError("review actor and reason are required")
     if request.action not in {"submit", "approve", "reject"}:
         raise AppCommandError("unsupported ETF allocation review action")
     if (

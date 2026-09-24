@@ -62,6 +62,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 	const [reason, setReason] = useState(pending?.body.reason ?? "");
 	const [reviewActor, setReviewActor] = useState("");
 	const [reviewReason, setReviewReason] = useState("");
+	const [confirmingReject, setConfirmingReject] = useState(false);
 	const reviewRetry = useRef<PendingReview | null>(pendingReview());
 	const retry = useRef<{ body: string; key: string } | null>(
 		pending ? { body: pending.fingerprint, key: pending.key } : null,
@@ -156,6 +157,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			delete state["etfAllocationReviewPending"];
 			window.history.replaceState(state, "");
 			reviewRetry.current = null;
+			setConfirmingReject(false);
 		},
 	});
 	const unchanged =
@@ -200,7 +202,14 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			{versions.data && (
 				<label>
 					已保存版本{" "}
-					<select aria-label="已保存版本" value={versionId} onChange={(event) => setVersionId(event.target.value)}>
+					<select
+						aria-label="已保存版本"
+						value={versionId}
+						onChange={(event) => {
+							setVersionId(event.target.value);
+							setConfirmingReject(false);
+						}}
+					>
 						<option value="">新配置</option>
 						{versions.data.map((item) => (
 							<option key={item.versionId} value={item.versionId}>
@@ -339,13 +348,29 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 									>
 										研究审查通过
 									</button>
-									<button
-										type="button"
-										disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}
-										onClick={() => review.mutate("reject")}
-									>
-										拒绝此版本
-									</button>
+									{confirmingReject ? (
+										<>
+											<span>拒绝后该版本不可再审查。</span>
+											<button
+												type="button"
+												disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}
+												onClick={() => review.mutate("reject")}
+											>
+												确认拒绝
+											</button>
+											<button type="button" onClick={() => setConfirmingReject(false)}>
+												取消
+											</button>
+										</>
+									) : (
+										<button
+											type="button"
+											disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}
+											onClick={() => setConfirmingReject(true)}
+										>
+											拒绝此版本
+										</button>
+									)}
 								</>
 							)}
 						</div>

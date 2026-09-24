@@ -163,6 +163,8 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
         )
         assert approved_receipt is not None
         assert approved_receipt.artifact_type is ArtifactKind.DIAGNOSTICS
+        assert "key_hash" in approved_receipt.metadata
+        assert "idempotency_key" not in approved_receipt.metadata
         assert command.list_versions("demo")[0].paper_status == "review_approved"
         with pytest.raises(AppConflictError):
             command.review(replace(approve, reason="different"))
@@ -226,6 +228,33 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
             artifacts.get_artifact(_receipt_id(revision.version_id, "approve-two"))
             is None
         )
+    finally:
+        pool.close_all()
+
+
+def test_review_validates_the_idempotency_key_at_the_shared_boundary(
+    tmp_path: Path,
+) -> None:
+    pool = SQLitePool(str(tmp_path / "review-key.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    command = ETFAllocationCommand(
+        metadata, StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    )
+    try:
+        version = command.save(_request())
+        review = ETFAllocationReviewRequest(
+            allocation_id="demo",
+            version_id=version.version_id,
+            action="submit",
+            actor="operator",
+            reason="checked target",
+            idempotency_key="bad key 空格",
+        )
+        with pytest.raises(AppCommandError, match="Idempotency-Key is invalid"):
+            command.review(review)
     finally:
         pool.close_all()
 
