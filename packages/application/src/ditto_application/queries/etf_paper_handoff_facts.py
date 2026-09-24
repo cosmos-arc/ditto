@@ -8,11 +8,11 @@ from decimal import Decimal
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_kernel.identity import InstrumentId
 
-from ditto_application.exceptions import AppProcessError
-from ditto_application.processes.portfolio.etf_paper_handoff import (
+from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFacts,
     ETFPaperHandoffRequest,
 )
+from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
 from ditto_application.queries.field_admission import (

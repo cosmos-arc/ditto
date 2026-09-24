@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
 from ditto_application.commands.paper_session import PaperSessionCommandReceipt
+from ditto_application.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.paper_contracts import PaperSessionInfo
 from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
-from ditto_application.processes.portfolio.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_apps.api.routes.portfolio_comparison import router

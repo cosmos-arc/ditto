@@ -2,24 +2,22 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
+from hashlib import sha256
 from math import isfinite
-from typing import Protocol
 from zoneinfo import ZoneInfo
 
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.models import TargetPortfolio
-from ditto_strategy.models import ArtifactKind
-from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
-    StrategyArtifactService,
-)
 
 from ditto_application.commands.paper_session import (
     CreatePaperSessionCommand,
     PaperSessionCommandHandler,
     PaperSessionCommandReceipt,
     StartPaperSessionCommand,
+)
+from ditto_application.etf_paper_contracts import (
+    ETFPaperHandoffFactsPort,
+    ETFPaperHandoffRequest,
 )
 from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.mutation_idempotency import build_mutation_idempotency
@@ -30,42 +28,6 @@ from ditto_application.processes.execution.signal_package import (
 from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
 
 
-@dataclass(frozen=True)
-class ETFPaperHandoffRequest:
-    """Exact target, account, PIT and retry identity for one handoff."""
-
-    allocation_id: str
-    version_id: str
-    authorization_id: str
-    account_id: str
-    session_id: str
-    idempotency_key: str
-    signal_date: str
-    decision_date: str
-    intended_trade_date: str
-    knowledge_cutoff: datetime
-    source_snapshot_id: str
-
-
-@dataclass(frozen=True)
-class ETFPaperHandoffFacts:
-    """Execution-day facts supplied by a trusted, PIT-bound provider."""
-
-    signal_date: str
-    knowledge_cutoff: datetime
-    source_snapshot_id: str
-    current_positions: dict[int, float]
-    investable_instrument_ids: frozenset[int]
-
-
-class ETFPaperHandoffFactsPort(Protocol):
-    """Provide current account and tradability evidence without caller claims."""
-
-    def resolve(self, request: ETFPaperHandoffRequest) -> ETFPaperHandoffFacts:
-        """Resolve exact execution-day facts or fail closed."""
-        ...
-
-
 class ETFPaperHandoff:
     """Publish a reviewed fixed target before starting its Paper session."""
 
@@ -73,56 +35,33 @@ class ETFPaperHandoff:
         self,
         *,
         allocations: ETFAllocationCommand,
-        artifacts: StrategyArtifactService,
         facts: ETFPaperHandoffFactsPort,
         packages: SignalPackagePublisher,
         sessions: PaperSessionCommandHandler,
     ) -> None:
         self._allocations = allocations
-        self._artifacts = artifacts
         self._facts = facts
         self._packages = packages
         self._sessions = sessions
 
     def handoff(self, request: ETFPaperHandoffRequest) -> PaperSessionCommandReceipt:
         """Publish the exact reviewed target and start an idempotent Paper session."""
-        version = next(
-            (
-                item
-                for item in self._allocations.list_versions(request.allocation_id)
-                if item.version_id == request.version_id
-            ),
-            None,
+        version = self._allocations.authorized_paper_version(
+            allocation_id=request.allocation_id,
+            version_id=request.version_id,
+            authorization_id=request.authorization_id,
+            account_id=request.account_id,
+            session_id=request.session_id,
+            intended_trade_date=request.intended_trade_date,
         )
-        record = self._artifacts.get_artifact(request.version_id)
-        authorization = self._artifacts.get_artifact(request.authorization_id)
         strategy_id = f"etf-allocation:{request.allocation_id}"
-        if (
-            version is None
-            or record is None
-            or record.strategy_id != strategy_id
-            or record.status != "approved"
-            or authorization is None
-            or authorization.strategy_id != strategy_id
-            or authorization.artifact_type is not ArtifactKind.DIAGNOSTICS
-            or authorization.status != "active"
-            or authorization.metadata.get("action") != "authorize_paper"
-            or authorization.metadata.get("version_id") != request.version_id
-            or authorization.metadata.get("account_id") != request.account_id
-            or authorization.metadata.get("session_id") != request.session_id
-            or authorization.metadata.get("intended_trade_date")
-            != request.intended_trade_date
-            or authorization.metadata.get("target_request_hash")
-            != record.metadata.get("request_hash")
-        ):
-            raise AppConflictError("ETF Paper target authorization is missing")
         if (
             not request.idempotency_key
             or not request.account_id
             or not request.session_id
         ):
             raise AppCommandError("Paper account, session and retry key are required")
-        build_mutation_idempotency(
+        identity = build_mutation_idempotency(
             operation_id="etf_paper_handoff",
             resource_id=request.session_id,
             raw_key=request.idempotency_key,
@@ -132,10 +71,15 @@ class ETFPaperHandoff:
                 "authorization_id": request.authorization_id,
                 "account_id": request.account_id,
                 "signal_date": request.signal_date,
+                "decision_date": request.decision_date,
                 "intended_trade_date": request.intended_trade_date,
+                "knowledge_cutoff": request.knowledge_cutoff.isoformat(),
                 "source_snapshot_id": request.source_snapshot_id,
             },
         )
+        session_key = sha256(
+            f"{identity.key_hash}:{identity.request_hash}".encode("ascii")
+        ).hexdigest()
         if (
             request.signal_date < version.asof
             or request.intended_trade_date <= request.signal_date
@@ -184,7 +128,7 @@ class ETFPaperHandoff:
                 account_id=request.account_id,
                 strategy_id=strategy_id,
                 trade_date=request.intended_trade_date,
-                idempotency_key=request.idempotency_key,
+                idempotency_key=session_key,
             )
         )
         package = self._packages.publish(
@@ -213,6 +157,6 @@ class ETFPaperHandoff:
         return self._sessions.start(
             StartPaperSessionCommand(
                 session_id=request.session_id,
-                idempotency_key=f"{request.idempotency_key}:start",
+                idempotency_key=f"{session_key}:start",
             )
         )

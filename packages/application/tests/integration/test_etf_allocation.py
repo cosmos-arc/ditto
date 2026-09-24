@@ -13,6 +13,11 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from ditto_application.etf_paper_contracts import (
+    ETFPaperHandoffFacts,
+    ETFPaperHandoffRequest,
+)
+from ditto_application.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.exceptions import (
     AppCommandError,
     AppConflictError,
@@ -24,15 +29,8 @@ from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationReviewRequest,
     ETFPaperAuthorizationRequest,
 )
-from ditto_application.processes.portfolio.etf_paper_facts import (
-    LiveETFPaperHandoffFacts,
-)
-from ditto_application.processes.portfolio.etf_paper_handoff import (
-    ETFPaperHandoff,
-    ETFPaperHandoffFacts,
-    ETFPaperHandoffRequest,
-)
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
+from ditto_application.queries.etf_paper_handoff_facts import LiveETFPaperHandoffFacts
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_platform.foundation import SQLitePool
 from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
@@ -357,7 +355,6 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
     )
     handoff = ETFPaperHandoff(
         allocations=allocations,
-        artifacts=artifacts,
         facts=facts,
         packages=packages,
         sessions=sessions,
@@ -476,6 +473,15 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
         knowledge_cutoff=cutoff,
         source_snapshot_id="snapshot:recorded:market",
     )
+    assert facts.resolve(request).investable_instrument_ids == frozenset({1})
+    at_cutoff = replace(
+        candidate,
+        fields={
+            **candidate.fields,
+            "trading_restriction": replace(field, published_at="2026-09-02T08:00:00Z"),
+        },
+    )
+    metadata.list_etf_candidates.return_value = [at_cutoff]
     assert facts.resolve(request).investable_instrument_ids == frozenset({1})
     future = replace(
         candidate,

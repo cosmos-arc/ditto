@@ -20,12 +20,9 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 )
 
 from ditto_application.commands.paper_session import PaperSessionCommandHandler
+from ditto_application.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
-from ditto_application.processes.portfolio.etf_paper_facts import (
-    LiveETFPaperHandoffFacts,
-)
-from ditto_application.processes.portfolio.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.daily_decision import DailyDecisionQueryFacade
@@ -36,6 +33,7 @@ from ditto_application.queries.daily_decision_v3 import (
 )
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
+from ditto_application.queries.etf_paper_handoff_facts import LiveETFPaperHandoffFacts
 from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.history_comparison import GetHistoryComparisonQuery
 from ditto_application.queries.metadata import MetadataQueryFacade
@@ -96,7 +94,6 @@ class AppPortfolioQueryProvider(Provider):
     def etf_paper_handoff(
         self,
         allocations: ETFAllocationCommand,
-        artifacts: StrategyArtifactService,
         facts: LiveETFPaperHandoffFacts,
         packages: SignalPackagePublisher,
         sessions: PaperSessionCommandHandler,
@@ -104,7 +101,6 @@ class AppPortfolioQueryProvider(Provider):
         """Bind fixed target approval, package publication and PAPER session."""
         return ETFPaperHandoff(
             allocations=allocations,
-            artifacts=artifacts,
             facts=facts,
             packages=packages,
             sessions=sessions,

@@ -32,6 +32,21 @@ it("retries one save with the same identity and restores the saved version", asy
 	const reviewAttempts: Array<{ action: string; key: string }> = [];
 	let stored: Record<string, unknown> | null = null;
 	server.use(
+		http.get("/api/v1/paper/accounts", () =>
+			HttpResponse.json({
+				data: {
+					accounts: [
+						{
+							account_id: "paper-a",
+							account_kind: "paper",
+							account_name: "模拟账户",
+							currency: "CNY",
+							opened_at: "2026-09-01T00:00:00Z",
+						},
+					],
+				},
+			}),
+		),
 		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
 			HttpResponse.json({ data: stored ? [stored] : [] }),
 		),
@@ -145,7 +160,7 @@ it("retries one save with the same identity and restores the saved version", asy
 			);
 		}),
 	);
-	await user.type(screen.getByLabelText("Paper 账户 ID"), "paper-a");
+	await user.selectOptions(await screen.findByLabelText("Paper 账户"), "paper-a");
 	fireEvent.change(screen.getByLabelText("下一交易日"), { target: { value: "2026-09-02" } });
 	await user.type(screen.getByLabelText("Paper 授权人"), "operator");
 	await user.type(screen.getByLabelText("Paper 授权理由"), "approved for Paper");

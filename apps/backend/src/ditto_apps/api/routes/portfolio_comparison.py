@@ -8,6 +8,8 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.etf_paper_contracts import ETFPaperHandoffRequest
+from ditto_application.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.exceptions import (
     AppCommandError,
     AppConflictError,
@@ -19,10 +21,6 @@ from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationRequest,
     ETFAllocationReviewRequest,
     ETFPaperAuthorizationRequest,
-)
-from ditto_application.processes.portfolio.etf_paper_handoff import (
-    ETFPaperHandoff,
-    ETFPaperHandoffRequest,
 )
 from ditto_application.queries.history_comparison import (
     GetHistoryComparisonQuery,

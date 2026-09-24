@@ -318,6 +318,40 @@ class ETFAllocationCommand:
         except ValueError as exc:
             raise AppConflictError("ETF Paper authorization key conflict") from exc
 
+    def authorized_paper_version(
+        self,
+        *,
+        allocation_id: str,
+        version_id: str,
+        authorization_id: str,
+        account_id: str,
+        session_id: str,
+        intended_trade_date: str,
+    ) -> ETFAllocationVersion:
+        """Resolve the exact approved target and its scoped Paper consent."""
+        strategy_id = _strategy_id(allocation_id)
+        version = self._artifacts.get_artifact(version_id)
+        authorization = self._artifacts.get_artifact(authorization_id)
+        if (
+            version is None
+            or version.strategy_id != strategy_id
+            or version.artifact_type is not ArtifactKind.TARGET_PORTFOLIO
+            or version.status != "approved"
+            or authorization is None
+            or authorization.strategy_id != strategy_id
+            or authorization.artifact_type is not ArtifactKind.DIAGNOSTICS
+            or authorization.status != "active"
+            or authorization.metadata.get("action") != "authorize_paper"
+            or authorization.metadata.get("version_id") != version_id
+            or authorization.metadata.get("account_id") != account_id
+            or authorization.metadata.get("session_id") != session_id
+            or authorization.metadata.get("intended_trade_date") != intended_trade_date
+            or authorization.metadata.get("target_request_hash")
+            != version.metadata.get("request_hash")
+        ):
+            raise AppConflictError("ETF Paper target authorization is missing")
+        return _version(version)
+
 
 def _review_receipt_id(version_id: str, key_hash: str) -> str:
     return f"{version_id}:review:{key_hash[:32]}"

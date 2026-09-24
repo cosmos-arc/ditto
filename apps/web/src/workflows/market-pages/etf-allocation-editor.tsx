@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import type { ETFCandidate } from "@/features/instruments";
 import {
 	authorizeETFPaper,
+	fetchPaperAccounts,
 	handoffETFPaper,
 	listETFAllocationVersions,
 	reviewETFAllocationVersion,
 	saveETFAllocationVersion,
+	tradingKeys,
 } from "@/features/portfolio";
 
 type Props = {
@@ -123,6 +125,11 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 		enabled: Boolean(allocationId),
 	});
 	const saved = versions.data?.find((item) => item.versionId === versionId);
+	const paperAccounts = useQuery({
+		queryKey: tradingKeys.paperAccounts(),
+		queryFn: fetchPaperAccounts,
+		enabled: saved?.reviewStatus === "review_approved",
+	});
 	useEffect(() => {
 		if (!saved || restoredVersion.current === saved.versionId) return;
 		restoredVersion.current = saved.versionId;
@@ -505,15 +512,30 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 					{saved.reviewStatus === "review_approved" && (
 						<div className="space-y-2">
 							<h4>Paper 交接</h4>
-							<p>请使用现有 Paper 账户。交接前会复查所选工具在当前快照的交易资格；缺少证据时需重新选择工具。当前 ETF 会话暂不支持下单，执行日行情与规则校验完成后才能模拟成交。</p>
+							<p>
+								请使用现有 Paper 账户。交接前会复查所选工具在当前快照的交易资格；缺少证据时需重新选择工具。当前 ETF
+								会话暂不支持下单，执行日行情与规则校验完成后才能模拟成交。
+							</p>
 							<label className="block">
-								Paper 账户 ID{" "}
-								<input
-									aria-label="Paper 账户 ID"
+								Paper 账户{" "}
+								<select
+									aria-label="Paper 账户"
 									value={paperAccountId}
 									onChange={(event) => setPaperAccountId(event.target.value)}
-								/>
+								>
+									<option value="">选择 Paper 账户</option>
+									{paperAccounts.data?.map((account) => (
+										<option key={account.account_id} value={account.account_id}>
+											{account.account_name}
+										</option>
+									))}
+								</select>
 							</label>
+							{paperAccounts.isError && (
+								<button type="button" onClick={() => void paperAccounts.refetch()}>
+									Paper 账户读取失败，重试
+								</button>
+							)}
 							<label className="block">
 								下一交易日{" "}
 								<input
@@ -542,7 +564,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 							<button
 								type="button"
 								disabled={
-									!paperAccountId.trim() ||
+									!paperAccounts.data?.some((account) => account.account_id === paperAccountId) ||
 									!paperTradeDate ||
 									!paperActor.trim() ||
 									!paperReason.trim() ||
