@@ -91,6 +91,7 @@ class AppPortfolioQueryProvider(Provider):
         metadata: MetadataQueryFacade,
         admission: FieldAdmissionQuery,
         snapshots: ProviderSnapshotReader,
+        payloads: ProviderPayloadReader,
         ledger: AccountLedgerQuery,
     ) -> LiveETFPaperHandoffFacts:
         """Resolve current, promotion-admitted ETF and PAPER account facts."""
@@ -98,6 +99,7 @@ class AppPortfolioQueryProvider(Provider):
             metadata=metadata,
             admission=admission,
             snapshots=snapshots,
+            payloads=payloads,
             ledger=ledger,
         )
 

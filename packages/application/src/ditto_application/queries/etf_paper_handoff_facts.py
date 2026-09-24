@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.account_ledger import ledger_hash
@@ -22,6 +23,30 @@ from ditto_application.queries.field_admission import (
     FieldRequirement,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.retained_calendar import (
+    RetainedCalendarAbsent,
+    retained_trading_days,
+)
+
+
+def _next_trading_day(
+    *,
+    snapshots: ProviderSnapshotReader,
+    payloads: ProviderPayloadReader,
+    cutoff: datetime,
+    signal_date: str,
+) -> str:
+    """Return the first open session after the signal day, cutoff-bound."""
+    try:
+        sessions = retained_trading_days(
+            snapshots=snapshots, payloads=payloads, cutoff=cutoff
+        )
+    except RetainedCalendarAbsent as exc:
+        raise AppProcessError("ETF Paper trading calendar is absent or future") from exc
+    later = [day for day in sessions if day > signal_date]
+    if not later:
+        raise AppProcessError("ETF Paper trading calendar is incomplete")
+    return later[0]
 
 
 class LiveETFPaperHandoffFacts:
@@ -33,11 +58,13 @@ class LiveETFPaperHandoffFacts:
         metadata: MetadataQueryFacade,
         admission: FieldAdmissionQuery,
         snapshots: ProviderSnapshotReader,
+        payloads: ProviderPayloadReader,
         ledger: AccountLedgerQuery,
     ) -> None:
         self._metadata = metadata
         self._admission = admission
         self._snapshots = snapshots
+        self._payloads = payloads
         self._ledger = ledger
 
     def resolve(self, request: ETFPaperHandoffRequest) -> ETFPaperHandoffFacts:
@@ -121,6 +148,12 @@ class LiveETFPaperHandoffFacts:
             current_positions=weights,
             investable_instrument_ids=frozenset(investable),
             signal_ledger_hash=ledger_hash(account.events),
+            next_trading_day=_next_trading_day(
+                snapshots=self._snapshots,
+                payloads=self._payloads,
+                cutoff=request.knowledge_cutoff,
+                signal_date=request.signal_date,
+            ),
         )
 
     def _field_allowed(

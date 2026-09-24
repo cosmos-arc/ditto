@@ -253,6 +253,8 @@ class ETFPaperExecution:
                 cash_available=facts.execution_cash_available,
                 request_identity_hash=request_hash,
                 expected_ledger_hash=facts.execution_ledger_hash,
+                rule_snapshot_id=request.reference_snapshot_id,
+                rule_cutoff=request.execution_cutoff.isoformat(),
             )
         )
         return _outcome(intent.intent_id, intent.instrument_id, receipt)

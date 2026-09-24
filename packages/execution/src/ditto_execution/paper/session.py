@@ -128,6 +128,8 @@ class PaperExecutionRecord:
     created_at: datetime
     ledger_event_id: str | None = None
     expected_ledger_hash: str | None = None
+    rule_snapshot_id: str | None = None
+    rule_cutoff: str | None = None
 
     def with_ledger_event(self, event_id: str) -> PaperExecutionRecord:
         """Attach one exact account-ledger event identity."""

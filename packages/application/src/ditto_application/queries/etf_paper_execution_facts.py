@@ -8,10 +8,7 @@ from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from math import isfinite
 
-from ditto_data.catalog.provider_payload import (
-    ProviderPayloadArtifact,
-    ProviderPayloadReader,
-)
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 from ditto_data.query.contracts import DatasetSnapshot, PITQueryContext
 from ditto_kernel.identity import InstrumentId
@@ -36,6 +33,10 @@ from ditto_application.queries.field_admission import (
     FieldRequirement,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.retained_calendar import (
+    RetainedCalendarAbsent,
+    retained_trading_days,
+)
 from ditto_application.queries.technical_analysis_source import (
     ProviderPayloadTechnicalAnalysisSource,
 )
@@ -389,43 +390,20 @@ class LiveETFPaperExecutionFacts:
         )
 
     def _settlement_date(self, trade_date: str, cycle: int, cutoff: datetime) -> str:
-        """
-        Derive the settlement date from calendar evidence visible at the cutoff.
-
-        The trading-calendar read model is unversioned, so the retained
-        calendar snapshot newest at the cutoff is the only basis that cannot
-        consume later calendar refreshes.
-        """
-        candidates = [
-            snapshot
-            for snapshot in self._snapshots.list_snapshots(dataset_id="calendar")
-            if snapshot.payload_retained and snapshot.created_at <= cutoff
-        ]
-        if not candidates:
-            raise AppProcessError("ETF Paper settlement calendar is absent or future")
-        snapshot = max(candidates, key=lambda item: (item.created_at, item.snapshot_id))
-        if snapshot.payload_uri is None:
-            raise AppProcessError("ETF Paper settlement calendar is absent or future")
-        frame = self._payloads.read_payload(
-            ProviderPayloadArtifact(
-                dataset_id=snapshot.dataset_id,
-                source=snapshot.source,
-                checksum=snapshot.checksum,
-                row_count=snapshot.row_count,
-                uri=snapshot.payload_uri,
-            )
-        )
-        if "trade_date" not in frame.columns or "is_open" not in frame.columns:
-            raise AppProcessError("ETF Paper settlement calendar is malformed")
+        """Derive the settlement date from calendar evidence visible at the cutoff."""
         start = date.fromisoformat(trade_date)
         horizon = (start + timedelta(days=30)).isoformat()
-        days = sorted(
-            str(value)
-            for value, is_open in zip(
-                frame["trade_date"], frame["is_open"], strict=True
+        try:
+            sessions = retained_trading_days(
+                snapshots=self._snapshots,
+                payloads=self._payloads,
+                cutoff=cutoff,
             )
-            if is_open is True and trade_date <= str(value) <= horizon
-        )
+        except RetainedCalendarAbsent as exc:
+            raise AppProcessError(
+                "ETF Paper settlement calendar is absent or future"
+            ) from exc
+        days = [day for day in sessions if trade_date <= day <= horizon]
         if not days or days[0] != trade_date or len(days) <= cycle:
             raise AppProcessError("ETF Paper settlement calendar is incomplete")
         return days[cycle]

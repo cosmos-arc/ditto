@@ -40,6 +40,7 @@ class ETFPaperHandoffFacts:
     current_positions: dict[int, float]
     investable_instrument_ids: frozenset[int]
     signal_ledger_hash: str
+    next_trading_day: str
 
 
 class ETFPaperHandoffFactsPort(Protocol):

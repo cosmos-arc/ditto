@@ -92,6 +92,8 @@ class OperatePaperOrderCommand:
     cash_available: float | None = None
     request_identity_hash: str | None = None
     expected_ledger_hash: str | None = None
+    rule_snapshot_id: str | None = None
+    rule_cutoff: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -221,6 +223,8 @@ class OperatePaperSession:
             lineage=resolved.lineage,
             created_at=command.decision_at,
             expected_ledger_hash=command.expected_ledger_hash,
+            rule_snapshot_id=command.rule_snapshot_id,
+            rule_cutoff=command.rule_cutoff,
         )
         try:
             persisted = self._store.append_execution(execution)

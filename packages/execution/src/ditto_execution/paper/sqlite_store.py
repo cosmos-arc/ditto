@@ -492,6 +492,8 @@ def _execution(payload: dict[str, object]) -> PaperExecutionRecord:
         created_at=datetime.fromisoformat(_text(payload, "created_at")),
         ledger_event_id=_optional_text(payload, "ledger_event_id"),
         expected_ledger_hash=_optional_text(payload, "expected_ledger_hash"),
+        rule_snapshot_id=_optional_text(payload, "rule_snapshot_id"),
+        rule_cutoff=_optional_text(payload, "rule_cutoff"),
     )
 
 

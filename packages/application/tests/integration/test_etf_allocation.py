@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
@@ -12,6 +12,7 @@ from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import polars as pl
 import pytest
 from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFacts,
@@ -409,6 +410,7 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
             current_positions={},
             investable_instrument_ids=frozenset({1}),
             signal_ledger_hash="ledger-before",
+            next_trading_day=request.intended_trade_date,
         )
         with pytest.raises(AppConflictError, match="choose alternatives"):
             handoff.handoff(request)
@@ -481,6 +483,50 @@ def test_paper_authorization_binds_one_session_per_account_version_date(
         pool.close_all()
 
 
+def test_paper_handoff_requires_the_calendar_next_session() -> None:
+    """The frozen D target must book the calendar-derived next session."""
+    allocations = MagicMock()
+    allocations.authorized_paper_version.return_value = SimpleNamespace(
+        asof="2026-09-01",
+        knowledge_cutoff="2026-09-01T09:00:00+00:00",
+        source_snapshot_id="snapshot:recorded:etf",
+        weights={1: 0.5},
+        cash_weight=0.5,
+    )
+    knowledge_cutoff = datetime.fromisoformat("2026-09-01T09:00:00+00:00")
+    facts = MagicMock()
+    facts.resolve.return_value = ETFPaperHandoffFacts(
+        signal_date="2026-09-01",
+        knowledge_cutoff=knowledge_cutoff,
+        source_snapshot_id="snapshot:recorded:market",
+        current_positions={},
+        investable_instrument_ids=frozenset({1}),
+        signal_ledger_hash="ledger-before",
+        next_trading_day="2026-09-03",
+    )
+    handoff = ETFPaperHandoff(
+        allocations=allocations,
+        facts=facts,
+        packages=MagicMock(),
+        sessions=MagicMock(),
+    )
+    request = ETFPaperHandoffRequest(
+        allocation_id="demo",
+        version_id="one",
+        authorization_id="receipt",
+        account_id="paper",
+        session_id="session",
+        idempotency_key="one",
+        signal_date="2026-09-01",
+        decision_date="2026-09-01",
+        intended_trade_date="2026-09-02",
+        knowledge_cutoff=knowledge_cutoff,
+        source_snapshot_id="snapshot:recorded:market",
+    )
+    with pytest.raises(AppConflictError, match="evidence identity changed"):
+        handoff.handoff(request)
+
+
 @pytest.mark.pit
 def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
     cutoff = datetime.fromisoformat("2026-09-02T08:00:00+00:00")
@@ -513,6 +559,25 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
         dataset_id="etf_reference",
         created_at=datetime.fromisoformat("2026-09-02T06:00:00+00:00"),
     )
+    snapshots.list_snapshots.return_value = (
+        SimpleNamespace(
+            snapshot_id="calendar-snapshot",
+            dataset_id="calendar",
+            created_at=datetime.fromisoformat("2026-09-02T06:00:00+00:00"),
+            payload_retained=True,
+            payload_uri=f"provider_payloads/tushare/calendar/{'a' * 32}.parquet",
+            checksum="a" * 32,
+            row_count=3,
+            source="tushare",
+        ),
+    )
+    payloads = MagicMock()
+    payloads.read_payload.return_value = pl.DataFrame(
+        {
+            "trade_date": [date(2026, 9, 2), date(2026, 9, 3)],
+            "is_open": [True, True],
+        }
+    )
     ledger = MagicMock()
     ledger.get_paper.return_value = SimpleNamespace(
         events=(),
@@ -526,6 +591,7 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
         metadata=metadata,
         admission=admission,
         snapshots=snapshots,
+        payloads=payloads,
         ledger=ledger,
     )
     request = ETFPaperHandoffRequest(
@@ -542,6 +608,7 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
         source_snapshot_id="snapshot:recorded:market",
     )
     assert facts.resolve(request).investable_instrument_ids == frozenset({1})
+    assert facts.resolve(request).next_trading_day == "2026-09-03"
     at_cutoff = replace(
         candidate,
         fields={

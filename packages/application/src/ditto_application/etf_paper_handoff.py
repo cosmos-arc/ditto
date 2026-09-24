@@ -108,6 +108,7 @@ class ETFPaperHandoff:
             or facts.source_snapshot_id != request.source_snapshot_id
             or not facts.source_snapshot_id
             or not facts.signal_ledger_hash
+            or facts.next_trading_day != request.intended_trade_date
         ):
             raise AppConflictError("ETF Paper market evidence identity changed")
         selected = set(version.weights)

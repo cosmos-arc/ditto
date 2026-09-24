@@ -254,6 +254,9 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
             == first
         )
         assert len(journal.list_events("paper-a")) == 1
+        record = sessions.list_executions("session-a")[0]
+        assert record.rule_snapshot_id == "reference-exec"
+        assert record.rule_cutoff == EXECUTION.isoformat()
 
 
 def test_etf_paper_execution_cutoff_may_follow_next_day_bar_availability(
