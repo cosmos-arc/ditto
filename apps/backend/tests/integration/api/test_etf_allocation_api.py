@@ -93,6 +93,7 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             first_data = first.json()["data"]
             assert first_data["weights"] == {"1": "0.40000000", "2": "0.40000000"}
             assert first_data["knowledge_cutoff"] == "2026-09-01T09:00:00Z"
+            assert first_data["review_status"] == "research_only"
             assert first_data["paper_status"] == "research_only"
             replay = web.post(
                 endpoint, json=_body(), headers={"Idempotency-Key": "one"}
@@ -137,12 +138,13 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             assert (
                 web.post(
                     review, json=submission, headers={"Idempotency-Key": "s"}
-                ).json()["data"]["paper_status"]
+                ).json()["data"]["review_status"]
                 == "review_pending"
             )
             approved = web.post(review, json=approval, headers={"Idempotency-Key": "a"})
             assert approved.status_code == 200, approved.text
-            assert approved.json()["data"]["paper_status"] == "review_approved"
+            assert approved.json()["data"]["review_status"] == "review_approved"
+            assert approved.json()["data"]["paper_status"] == "research_only"
             assert (
                 web.post(review, json=approval, headers={"Idempotency-Key": "a"}).json()
                 == approved.json()
@@ -169,7 +171,7 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             assert versions.status_code == 200
             assert len(versions.json()["data"]) == 2
             assert any(
-                item["paper_status"] == "review_approved"
+                item["review_status"] == "review_approved"
                 for item in versions.json()["data"]
             )
     finally:

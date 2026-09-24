@@ -18,7 +18,7 @@ export type ETFAllocationVersion = {
 	readonly trackingExposure: Readonly<Record<string, string>>;
 	readonly reason: string;
 	readonly ruleVersion: string;
-	readonly paperStatus: string;
+	readonly reviewStatus: string;
 	readonly createdAt: string;
 };
 
@@ -26,9 +26,9 @@ function toVersion(value: VersionDTO): ETFAllocationVersion {
 	if (
 		!value.version_id ||
 		!value.allocation_id ||
-		!["research_only", "review_pending", "review_approved", "rejected"].includes(value.paper_status)
+		!["research_only", "review_pending", "review_approved", "rejected"].includes(value.review_status)
 	) {
-		throw new Error("ETF 配置版本身份或审批状态无效");
+		throw new Error("ETF 配置版本身份或审查状态无效");
 	}
 	return {
 		versionId: value.version_id,
@@ -44,7 +44,7 @@ function toVersion(value: VersionDTO): ETFAllocationVersion {
 		trackingExposure: value.tracking_exposure,
 		reason: value.reason,
 		ruleVersion: value.rule_version,
-		paperStatus: value.paper_status,
+		reviewStatus: value.review_status,
 		createdAt: value.created_at,
 	};
 }

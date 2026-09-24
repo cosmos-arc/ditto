@@ -14217,6 +14217,10 @@
             "title": "Reason",
             "type": "string"
           },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
           "rule_version": {
             "title": "Rule Version",
             "type": "string"
@@ -14259,6 +14263,7 @@
           "reason",
           "rule_version",
           "paper_status",
+          "review_status",
           "created_at"
         ],
         "title": "ETFAllocationVersionResponse",

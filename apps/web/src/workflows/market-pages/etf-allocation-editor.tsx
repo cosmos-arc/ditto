@@ -301,7 +301,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			{saved && (
 				<div>
 					<p>
-						已保存 {saved.versionId} · {saved.paperStatus} · 规则 {saved.ruleVersion}
+						已保存 {saved.versionId} · {saved.reviewStatus} · 规则 {saved.ruleVersion}
 					</p>
 					<p>研究审查结果不授权 Paper 执行。</p>
 					<p>
@@ -316,7 +316,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 							.map(([key, weight]) => `${key}: ${weight}`)
 							.join("，")}
 					</p>
-					{["research_only", "review_pending"].includes(saved.paperStatus) && (
+					{["research_only", "review_pending"].includes(saved.reviewStatus) && (
 						<div className="space-y-2">
 							<label className="block">
 								审查人{" "}
@@ -334,7 +334,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 									onChange={(event) => setReviewReason(event.target.value)}
 								/>
 							</label>
-							{saved.paperStatus === "research_only" ? (
+							{saved.reviewStatus === "research_only" ? (
 								<button
 									type="button"
 									disabled={!reviewActor.trim() || !reviewReason.trim() || review.isPending}

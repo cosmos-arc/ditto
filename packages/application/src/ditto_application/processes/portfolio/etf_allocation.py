@@ -81,6 +81,7 @@ class ETFAllocationVersion:
     reason: str
     rule_version: str
     paper_status: str
+    review_status: str
     created_at: str
 
 
@@ -468,7 +469,11 @@ def _version(record: StrategyArtifactRecord) -> ETFAllocationVersion:
         tracking_exposure={str(i): str(w) for i, w in exposure_values.items()},
         reason=str(payload["reason"]),
         rule_version=str(payload["rule_version"]),
-        paper_status={
+        # paper_status keeps the released v1 domain ("research_only" means no
+        # Paper authority); review state is exposed additively so v1 clients
+        # keep reading this record after a review decision lands.
+        paper_status="research_only",
+        review_status={
             "draft": "research_only",
             "review": "review_pending",
             "approved": "review_approved",

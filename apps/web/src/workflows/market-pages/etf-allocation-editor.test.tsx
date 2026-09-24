@@ -54,6 +54,7 @@ it("retries one save with the same identity and restores the saved version", asy
 				reason: "broad exposure",
 				rule_version: "etf-allocation-v1",
 				paper_status: "research_only",
+				review_status: "research_only",
 				created_at: "2026-09-01T09:00:00Z",
 			};
 			return HttpResponse.json({ data: stored }, { status: 201 });
@@ -62,7 +63,7 @@ it("retries one save with the same identity and restores the saved version", asy
 			const body = (await request.json()) as { action: string };
 			reviewAttempts.push({ action: body.action, key: request.headers.get("Idempotency-Key") ?? "" });
 			if (reviewAttempts.length === 1) return HttpResponse.json({ error: { code: "TEMPORARY" } }, { status: 503 });
-			stored = { ...stored, paper_status: body.action === "submit" ? "review_pending" : "review_approved" };
+			stored = { ...stored, review_status: body.action === "submit" ? "review_pending" : "review_approved" };
 			return HttpResponse.json({ data: stored });
 		}),
 	);
@@ -133,6 +134,7 @@ it("asks for confirmation before the terminal reject transition", async () => {
 				reason: "broad exposure",
 				rule_version: "etf-allocation-v1",
 				paper_status: "research_only",
+				review_status: "research_only",
 				created_at: "2026-09-01T09:00:00Z",
 			};
 			return HttpResponse.json({ data: stored }, { status: 201 });
@@ -142,7 +144,7 @@ it("asks for confirmation before the terminal reject transition", async () => {
 			actions.push(body.action);
 			stored = {
 				...stored,
-				paper_status: body.action === "submit" ? "review_pending" : "rejected",
+				review_status: body.action === "submit" ? "review_pending" : "rejected",
 			};
 			return HttpResponse.json({ data: stored });
 		}),

@@ -77,6 +77,7 @@ class ETFAllocationVersionResponse(BaseModel):
     reason: str
     rule_version: str
     paper_status: str
+    review_status: str
     created_at: str
 
 

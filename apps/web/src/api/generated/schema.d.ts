@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: ce968c742d53b80450366d1c2770c604d4b6cc4aafa1519c5dae886f0e6cf5fd
+ * Schema SHA-256: 7e3e1a82ec5817e25104ed2f70f9e471e26452f5db8c6decbc1063124b05ccb5
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -10627,6 +10627,8 @@ export interface components {
             parent_version_id: string | null;
             /** Reason */
             reason: string;
+            /** Review Status */
+            review_status: string;
             /** Rule Version */
             rule_version: string;
             /** Source Snapshot Id */

@@ -85,7 +85,7 @@ def test_save_revise_restore_and_reject_invalid_weights(tmp_path: Path) -> None:
         first = service.save(_request())
         assert first.weights == {1: "0.40000000", 2: "0.40000000"}
         assert first.tracking_exposure == {"CSI300": "0.80000000"}
-        assert first.paper_status == "research_only"
+        assert first.review_status == "research_only"
         assert service.save(_request()) == first
         metadata.list_etf_candidates.side_effect = RuntimeError("snapshot unavailable")
         assert service.save(_request()) == first
@@ -151,13 +151,14 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
         with pytest.raises(AppConflictError):
             command.review(approve)
         submit = replace(approve, action="submit", idempotency_key="submit-one")
-        assert command.review(submit).paper_status == "review_pending"
-        assert command.review(submit).paper_status == "review_pending"
+        assert command.review(submit).review_status == "review_pending"
+        assert command.review(submit).review_status == "review_pending"
         with pytest.raises(AppConflictError):
             command.review(replace(approve, idempotency_key="submit-one"))
-        assert command.review(approve).paper_status == "review_approved"
-        assert command.review(approve).paper_status == "review_approved"
-        assert command.review(submit).paper_status == "review_approved"
+        assert command.review(approve).review_status == "review_approved"
+        assert command.review(approve).review_status == "review_approved"
+        assert command.review(submit).review_status == "review_approved"
+        assert command.review(approve).paper_status == "research_only"
         approved_receipt = artifacts.get_artifact(
             _receipt_id(version.version_id, "approve-one")
         )
@@ -165,7 +166,7 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
         assert approved_receipt.artifact_type is ArtifactKind.DIAGNOSTICS
         assert "key_hash" in approved_receipt.metadata
         assert "idempotency_key" not in approved_receipt.metadata
-        assert command.list_versions("demo")[0].paper_status == "review_approved"
+        assert command.list_versions("demo")[0].review_status == "review_approved"
         with pytest.raises(AppConflictError):
             command.review(replace(approve, reason="different"))
         with pytest.raises(AppConflictError):
@@ -181,7 +182,7 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
                 parent_version_id=version.version_id,
             )
         )
-        assert revision.paper_status == "research_only"
+        assert revision.review_status == "research_only"
         with pytest.raises(AppConflictError):
             command.review(replace(approve, version_id=revision.version_id))
         assert (
@@ -189,7 +190,7 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
                 replace(
                     submit, version_id=revision.version_id, idempotency_key="submit-two"
                 )
-            ).paper_status
+            ).review_status
             == "review_pending"
         )
         existing_receipt = artifacts.get_artifact(
@@ -201,7 +202,7 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
         )
         assert (
             next(
-                item.paper_status
+                item.review_status
                 for item in command.list_versions("demo")
                 if item.version_id == revision.version_id
             )
@@ -215,7 +216,7 @@ def test_exact_version_review_is_explicit_durable_and_idempotent(
                 idempotency_key="reject-two",
             )
         )
-        assert rejected.paper_status == "rejected"
+        assert rejected.review_status == "rejected"
         with pytest.raises(AppConflictError):
             command.review(
                 replace(
@@ -295,7 +296,7 @@ def test_concurrent_identical_review_retries_return_the_committed_result(
             with ThreadPoolExecutor(max_workers=2) as executor:
                 futures = [executor.submit(command.review, review) for _ in range(2)]
                 assert [
-                    future.result(timeout=15).paper_status for future in futures
+                    future.result(timeout=15).review_status for future in futures
                 ] == [
                     "review_pending",
                     "review_pending",

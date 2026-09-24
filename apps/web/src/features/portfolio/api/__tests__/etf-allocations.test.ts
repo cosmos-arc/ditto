@@ -17,6 +17,7 @@ const version = (allocationId: string) => ({
 	reason: "broad exposure",
 	rule_version: "etf-allocation-v1",
 	paper_status: "research_only",
+	review_status: "research_only",
 	created_at: "2026-09-01T09:00:00Z",
 });
 
