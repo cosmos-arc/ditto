@@ -417,6 +417,12 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
             facts.resolve.return_value, investable_instrument_ids=frozenset({1, 2})
         )
         handoff.handoff(request)
+        assert packages.publish.call_args.args[0].dataset_snapshot_ids == {
+            "etf_reference": request.source_snapshot_id,
+            "etf_research_reference": "snapshot:recorded:etf",
+            "paper_signal_ledger": "ledger-before",
+            "paper_signal_reference_cutoff": (request.knowledge_cutoff.isoformat()),
+        }
         published = packages.publish.call_args.args[0]
         assert published.origin_version_id == version.version_id
         assert published.execution_scope == "paper"

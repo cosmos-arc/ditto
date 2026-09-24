@@ -155,6 +155,7 @@ def _package() -> SignalPackage:
             "etf_reference": "reference-signal",
             "etf_research_reference": "reference-signal",
             "paper_signal_ledger": "ledger-before",
+            "paper_signal_reference_cutoff": SIGNAL.isoformat(),
         },
         factor_ids=(),
         risk_flags=(),
@@ -227,6 +228,9 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
         assert len(first) == 1
         assert first[0].status == "filled"
         assert first[0].ledger_event_id is not None
+        resolve = process._facts.resolve.call_args.kwargs
+        assert resolve["signal_snapshot_id"] == "reference-signal"
+        assert resolve["signal_cutoff"] == SIGNAL
         assert len(journal.list_events("paper-a")) == 1
         second = process.execute(_request())
         assert second == first
@@ -270,6 +274,31 @@ def test_etf_paper_execution_cutoff_may_follow_next_day_bar_availability(
         )
         assert outcomes[0].status == "filled"
         assert len(journal.list_events("paper-a")) == 1
+
+
+def test_etf_paper_rejects_package_without_pinned_valuation_cutoff(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        process = _process(sessions, journal, _live_facts(journal))
+        package = _package()
+        process._packages.find_active_paper.return_value = replace(
+            package,
+            dataset_snapshot_ids={
+                key: value
+                for key, value in package.dataset_snapshot_ids.items()
+                if key != "paper_signal_reference_cutoff"
+            },
+        )
+        with pytest.raises(AppConflictError, match="valuation cutoff"):
+            process.execute(_request())
+        assert sessions.list_executions("session-a") == ()
+        assert journal.list_events("paper-a") == ()
 
 
 def test_etf_paper_rejects_preclose_execution(tmp_path: Path) -> None:

@@ -73,7 +73,9 @@ class ETFPaperExecution:
         self, request: ETFPaperExecutionRequest
     ) -> tuple[ETFPaperExecutionOutcome, ...]:
         """Evaluate a frozen D target with D+1 evidence available after close."""
-        version, signal_cutoff, package = self._validated_context(request)
+        version, signal_cutoff, reference_cutoff, package = self._validated_context(
+            request
+        )
         strategy_id = f"etf-allocation:{request.allocation_id}"
         outcomes: list[ETFPaperExecutionOutcome] = []
         for intent in sorted(
@@ -82,14 +84,20 @@ class ETFPaperExecution:
         ):
             outcomes.append(
                 self._execute_intent(
-                    request, version, signal_cutoff, package, strategy_id, intent
+                    request,
+                    version,
+                    signal_cutoff,
+                    reference_cutoff,
+                    package,
+                    strategy_id,
+                    intent,
                 )
             )
         return tuple(outcomes)
 
     def _validated_context(
         self, request: ETFPaperExecutionRequest
-    ) -> tuple[ETFAllocationVersion, datetime, SignalPackage]:
+    ) -> tuple[ETFAllocationVersion, datetime, datetime, SignalPackage]:
         if not request.idempotency_key:
             raise AppCommandError("ETF Paper execution retry key is required")
         version = self._allocations.authorized_paper_version(
@@ -136,13 +144,19 @@ class ETFPaperExecution:
             != version.source_snapshot_id
         ):
             raise AppConflictError("ETF Paper package target source changed")
-        return version, signal_cutoff, package
+        if not package.dataset_snapshot_ids.get("etf_reference"):
+            raise AppConflictError("ETF Paper package valuation source is missing")
+        reference_cutoff = _package_reference_cutoff(package)
+        if not signal_cutoff <= reference_cutoff <= request.execution_cutoff:
+            raise AppConflictError("ETF Paper package valuation cutoff is invalid")
+        return version, signal_cutoff, reference_cutoff, package
 
     def _execute_intent(
         self,
         request: ETFPaperExecutionRequest,
         version: ETFAllocationVersion,
         signal_cutoff: datetime,
+        reference_cutoff: datetime,
         package: SignalPackage,
         strategy_id: str,
         intent: TradeIntent,
@@ -165,8 +179,8 @@ class ETFPaperExecution:
         facts = self._facts.resolve(
             request,
             instrument_id=intent.instrument_id,
-            signal_snapshot_id=version.source_snapshot_id,
-            signal_cutoff=signal_cutoff,
+            signal_snapshot_id=package.dataset_snapshot_ids["etf_reference"],
+            signal_cutoff=reference_cutoff,
         )
         if facts.signal_ledger_hash != package.dataset_snapshot_ids.get(
             "paper_signal_ledger"
@@ -267,6 +281,18 @@ def _follows_close(value: datetime, trade_date: str, label: str) -> None:
         local.date().isoformat() == trade_date and local.time() < time(15)
     ):
         raise AppCommandError(f"ETF {label} cutoff must follow its market close")
+
+
+def _package_reference_cutoff(package: SignalPackage) -> datetime:
+    """Recover the handoff's declared reference-data cutoff from the package."""
+    raw = package.dataset_snapshot_ids.get("paper_signal_reference_cutoff", "")
+    try:
+        cutoff = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise AppConflictError("ETF Paper package valuation cutoff is missing") from exc
+    if cutoff.tzinfo is None:
+        raise AppConflictError("ETF Paper package valuation cutoff is missing")
+    return cutoff
 
 
 def _intent_key(package_id: str, intent_id: str) -> str:

@@ -154,6 +154,9 @@ class ETFPaperHandoff:
                     "etf_reference": facts.source_snapshot_id,
                     "etf_research_reference": version.source_snapshot_id,
                     "paper_signal_ledger": facts.signal_ledger_hash,
+                    "paper_signal_reference_cutoff": (
+                        request.knowledge_cutoff.isoformat()
+                    ),
                 },
                 execution_scope="paper",
                 current_positions=facts.current_positions,
