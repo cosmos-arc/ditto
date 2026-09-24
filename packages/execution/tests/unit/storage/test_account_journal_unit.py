@@ -24,7 +24,10 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    AccountLedgerRevisionConflict,
     create_account_event,
+    ledger_hash,
+    ledger_hash_from_event_hashes,
 )
 
 NOW = datetime(2026, 8, 31, 9, 30, tzinfo=UTC)
@@ -136,6 +139,31 @@ def test_append_many_rolls_back_every_event_on_conflict() -> None:
         journal.append_many((first, duplicate_key))
 
     assert journal.list_events(account.account_id) == ()
+    journal.close()
+
+
+def test_append_if_revision_commits_on_exact_hash_and_fails_closed_after_moves() -> (
+    None
+):
+    journal = SqliteAccountEventJournal(":memory:")
+    account = journal.create_account(_account())
+    first = journal.append(_buy(account, event_id="first", idempotency_key="first-key"))
+    second = _buy(account, event_id="second", idempotency_key="second-key")
+    stale_hash = ledger_hash_from_event_hashes(())
+
+    committed = journal.append_if_revision(
+        second,
+        expected_ledger_hash=ledger_hash((first,)),
+    )
+    assert committed == second
+    assert journal.list_events(account.account_id) == (first, second)
+
+    with pytest.raises(AccountLedgerRevisionConflict):
+        journal.append_if_revision(
+            _buy(account, event_id="third", idempotency_key="third-key"),
+            expected_ledger_hash=stale_hash,
+        )
+    assert len(journal.list_events(account.account_id)) == 2
     journal.close()
 
 

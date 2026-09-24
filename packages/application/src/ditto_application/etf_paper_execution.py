@@ -235,6 +235,7 @@ class ETFPaperExecution:
                 available_quantity=facts.execution_available_quantity,
                 cash_available=facts.execution_cash_available,
                 request_identity_hash=request_hash,
+                expected_ledger_hash=facts.execution_ledger_hash,
             )
         )
         return _outcome(intent.intent_id, intent.instrument_id, receipt)

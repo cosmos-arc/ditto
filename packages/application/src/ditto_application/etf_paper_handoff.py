@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 from hashlib import sha256
 from math import isfinite
@@ -100,7 +101,7 @@ class ETFPaperHandoff:
             > request.decision_date
         ):
             raise AppCommandError("Paper evidence is after the decision date")
-        facts = self._facts.resolve(request)
+        facts = self._facts.resolve(replace(request, ledger_cutoff=version_cutoff))
         if (
             facts.signal_date != request.signal_date
             or facts.knowledge_cutoff != request.knowledge_cutoff

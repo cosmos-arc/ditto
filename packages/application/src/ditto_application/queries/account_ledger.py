@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from ditto_kernel.identity import InstrumentId
@@ -65,8 +65,15 @@ class AccountLedgerQuery:
         account_id: str,
         as_of: str,
         valuation_prices: Mapping[InstrumentId, Decimal] | None = None,
+        recorded_through: datetime | None = None,
     ) -> AccountLedgerReadModel:
-        """Return the exact as-of ledger; never fall back to wall-clock latest."""
+        """
+        Return the exact as-of ledger; never fall back to wall-clock latest.
+
+        ``recorded_through`` additionally hides events whose ``recorded_at`` is
+        after that instant, so backfills recorded after a PIT cutoff cannot
+        leak into a cutoff-bound read.
+        """
         try:
             date.fromisoformat(as_of)
         except ValueError as exc:
@@ -76,6 +83,13 @@ class AccountLedgerQuery:
                 account_id=account_id,
                 as_of=as_of,
             ) from exc
+        if recorded_through is not None and recorded_through.tzinfo is None:
+            raise AppQueryError(
+                "account recorded_through needs a timezone",
+                code="ACCOUNT_RECORDED_THROUGH_INVALID",
+                account_id=account_id,
+                as_of=as_of,
+            )
         account = self._journal.get_account(account_id)
         if account is None:
             raise AppQueryError(
@@ -84,7 +98,12 @@ class AccountLedgerQuery:
                 account_id=account_id,
             )
         full_stream = tuple(self._journal.list_events(account_id))
-        events = tuple(event for event in full_stream if event.trade_date <= as_of)
+        events = tuple(
+            event
+            for event in full_stream
+            if event.trade_date <= as_of
+            and (recorded_through is None or event.recorded_at <= recorded_through)
+        )
         try:
             snapshot = self._rebuilder.rebuild(
                 account=account,
@@ -116,12 +135,14 @@ class AccountLedgerQuery:
         account_id: str,
         as_of: str,
         valuation_prices: Mapping[InstrumentId, Decimal] | None = None,
+        recorded_through: datetime | None = None,
     ) -> AccountLedgerReadModel:
         """Read an exact MANUAL ledger without exposing portfolio types to hosts."""
         result = self.get(
             account_id=account_id,
             as_of=as_of,
             valuation_prices=valuation_prices,
+            recorded_through=recorded_through,
         )
         if result.account.kind.value != "manual":
             raise AppQueryError(
@@ -137,12 +158,14 @@ class AccountLedgerQuery:
         account_id: str,
         as_of: str,
         valuation_prices: Mapping[InstrumentId, Decimal] | None = None,
+        recorded_through: datetime | None = None,
     ) -> AccountLedgerReadModel:
         """Read an exact PAPER ledger without exposing portfolio types to hosts."""
         result = self.get(
             account_id=account_id,
             as_of=as_of,
             valuation_prices=valuation_prices,
+            recorded_through=recorded_through,
         )
         if result.account.kind.value != "paper":
             raise AppQueryError(

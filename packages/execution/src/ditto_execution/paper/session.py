@@ -127,6 +127,7 @@ class PaperExecutionRecord:
     lineage: MarketSnapshotLineage
     created_at: datetime
     ledger_event_id: str | None = None
+    expected_ledger_hash: str | None = None
 
     def with_ledger_event(self, event_id: str) -> PaperExecutionRecord:
         """Attach one exact account-ledger event identity."""
@@ -210,6 +211,15 @@ class PaperSessionStorePort(Protocol):
         event_id: str,
     ) -> PaperExecutionRecord:
         """Mark one persisted execution as represented in the account ledger."""
+        ...
+
+    def discard_execution(
+        self,
+        execution_id: str,
+        *,
+        request_hash: str,
+    ) -> None:
+        """Retract one not-yet-ledgered execution whose balance basis went stale."""
         ...
 
     def append_reconciliation(
@@ -346,6 +356,23 @@ class InMemoryPaperSessionStore:
         updated = existing.with_ledger_event(event_id)
         self._executions[execution_id] = updated
         return updated
+
+    def discard_execution(
+        self,
+        execution_id: str,
+        *,
+        request_hash: str,
+    ) -> None:
+        """Retract one not-yet-ledgered in-memory execution."""
+        existing = self._executions.get(execution_id)
+        if (
+            existing is None
+            or existing.request_hash != request_hash
+            or existing.ledger_event_id is not None
+        ):
+            raise PaperSessionConflictError("paper execution cannot be discarded")
+        del self._executions[execution_id]
+        self._execution_keys.pop((existing.session_id, existing.idempotency_key), None)
 
     def append_reconciliation(
         self,

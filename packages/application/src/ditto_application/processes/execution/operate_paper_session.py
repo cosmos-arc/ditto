@@ -43,6 +43,7 @@ from ditto_portfolio.account_ledger import (
     AccountEventType,
     AccountKind,
     AccountLedgerError,
+    AccountLedgerRevisionConflict,
     create_account_event,
 )
 
@@ -89,6 +90,7 @@ class OperatePaperOrderCommand:
     available_quantity: int
     cash_available: float | None = None
     request_identity_hash: str | None = None
+    expected_ledger_hash: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -128,6 +130,10 @@ class OperatePaperSession:
         if command.request_identity_hash is not None:
             raise AppConflictError(
                 "governed Paper request cannot use the generic order path"
+            )
+        if command.expected_ledger_hash is not None:
+            raise AppConflictError(
+                "governed Paper revision guard cannot use the generic order path"
             )
         return self._execute(command, governed_etf=False)
 
@@ -208,6 +214,7 @@ class OperatePaperSession:
             assumption=resolved.assumption,
             lineage=resolved.lineage,
             created_at=command.decision_at,
+            expected_ledger_hash=command.expected_ledger_hash,
         )
         try:
             persisted = self._store.append_execution(execution)
@@ -249,6 +256,21 @@ class OperatePaperSession:
             for record in self._store.list_executions(session_id)
         )
 
+    def _discard_stale_execution(self, record: PaperExecutionRecord) -> None:
+        """
+        Retract one unledgered execution whose balance basis went stale.
+
+        Best effort: a concurrent retry may have discarded it already, which is
+        the goal state, so only the ledger guard conflict propagates.
+        """
+        try:
+            self._store.discard_execution(
+                record.execution_id,
+                request_hash=record.request_hash,
+            )
+        except PaperSessionConflictError:
+            pass
+
     def _ensure_ledger(self, record: PaperExecutionRecord) -> PaperExecutionRecord:
         fill = record.result.fill
         if fill is None:
@@ -279,7 +301,18 @@ class OperatePaperSession:
             event = existing
         else:
             try:
-                event = self._account_journal.append(event)
+                if record.expected_ledger_hash is None:
+                    event = self._account_journal.append(event)
+                else:
+                    event = self._account_journal.append_if_revision(
+                        event,
+                        expected_ledger_hash=record.expected_ledger_hash,
+                    )
+            except AccountLedgerRevisionConflict as exc:
+                self._discard_stale_execution(record)
+                raise AppConflictError(
+                    "paper account ledger changed during execution"
+                ) from exc
             except (AccountLedgerError, PaperSessionConflictError) as exc:
                 raise AppProcessError(
                     "paper ledger append failed",

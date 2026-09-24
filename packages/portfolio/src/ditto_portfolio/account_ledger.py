@@ -14,7 +14,7 @@ validation, hashing, and the journal port; projections live in account_projectio
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -35,12 +35,15 @@ __all__ = [
     "AccountEventType",
     "AccountKind",
     "AccountLedgerError",
+    "AccountLedgerRevisionConflict",
     "FlowPosition",
     "ManualAccountEvent",
     "ManualCorrectionEvent",
     "ManualLedgerEvent",
     "ManualReversalEvent",
     "create_account_event",
+    "ledger_hash",
+    "ledger_hash_from_event_hashes",
 ]
 
 
@@ -52,6 +55,10 @@ _ZERO = Decimal("0")
 
 class AccountLedgerError(PortfolioError):
     """The immutable account-ledger contract was violated."""
+
+
+class AccountLedgerRevisionConflict(AccountLedgerError):
+    """The account stream moved past the revision one append was validated against."""
 
 
 class AccountKind(StrEnum):
@@ -293,6 +300,20 @@ class AccountEventJournalPort(Protocol):
 
     def append(self, event: AccountEvent) -> AccountEvent:
         """Append one event atomically; existing rows may never be overwritten."""
+        ...
+
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        """
+        Append only when the account stream still hashes to ``expected_ledger_hash``.
+
+        The revision check and the insert must commit in one transaction so a
+        concurrent append invalidates this one instead of racing past it.
+        """
         ...
 
     def get_event(self, account_id: str, event_id: str) -> AccountEvent | None:
@@ -606,13 +627,18 @@ def _event_hash(values: Mapping[str, object]) -> str:
     return f"account-event:sha256:{digest}"
 
 
-def _ledger_hash(events: tuple[AccountEvent, ...]) -> str:
+def ledger_hash_from_event_hashes(event_hashes: Iterable[str]) -> str:
+    """Chain event hashes in append order into one stream identity."""
     digest = sha256()
     digest.update(b"account-ledger:v1")
-    for event in events:
+    for event_hash in event_hashes:
         digest.update(b"\x00")
-        digest.update(event.event_hash.encode())
+        digest.update(event_hash.encode())
     return f"account-ledger:sha256:{digest.hexdigest()}"
+
+
+def _ledger_hash(events: tuple[AccountEvent, ...]) -> str:
+    return ledger_hash_from_event_hashes(event.event_hash for event in events)
 
 
 def _canonical_value(value: object) -> object:

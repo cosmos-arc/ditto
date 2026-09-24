@@ -97,7 +97,9 @@ class LiveETFPaperExecutionFacts:
             snapshot_id=signal_snapshot_id,
         )
         initial_account = self._ledger.get_paper(
-            account_id=request.account_id, as_of=request.signal_date
+            account_id=request.account_id,
+            as_of=request.signal_date,
+            recorded_through=signal_cutoff,
         )
         needed = {instrument_id} | {
             int(position.instrument_id)
@@ -119,6 +121,7 @@ class LiveETFPaperExecutionFacts:
             account_id=request.account_id,
             as_of=request.signal_date,
             valuation_prices=signal_prices,
+            recorded_through=signal_cutoff,
         )
         if (
             not signal_account.snapshot.valuation_complete
@@ -206,6 +209,7 @@ class LiveETFPaperExecutionFacts:
         execution_account = self._ledger.get_paper(
             account_id=request.account_id,
             as_of=request.intended_trade_date,
+            recorded_through=request.execution_cutoff,
         )
         signal_position = _position(signal_account.snapshot.positions, instrument_id)
         execution_position = _position(
@@ -227,6 +231,7 @@ class LiveETFPaperExecutionFacts:
             settlement_date=self._settlement_date(
                 request.intended_trade_date, execution_rules.settlement_cycle
             ),
+            execution_ledger_hash=execution_account.ledger_revision.ledger_hash,
         )
 
     def _snapshot(

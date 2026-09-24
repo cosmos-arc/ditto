@@ -27,6 +27,7 @@ class ETFPaperHandoffRequest:
     intended_trade_date: str
     knowledge_cutoff: datetime
     source_snapshot_id: str
+    ledger_cutoff: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,7 @@ class ETFPaperOrderFacts:
     execution_rules: PaperInstrumentRulesInput
     execution_market: PaperMarketSnapshotInput
     settlement_date: str
+    execution_ledger_hash: str
 
 
 class ETFPaperExecutionFactsPort(Protocol):

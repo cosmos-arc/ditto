@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -35,7 +36,15 @@ from ditto_apps.middleware import configure_exception_handlers
 from ditto_execution.paper.session import PaperSession, PaperSessionStatus
 from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
-from ditto_portfolio.account_ledger import AccountDefinition, AccountKind
+from ditto_portfolio.account_ledger import (
+    AccountDefinition,
+    AccountEventDraft,
+    AccountEventSource,
+    AccountEventType,
+    AccountKind,
+    create_account_event,
+    ledger_hash,
+)
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -74,7 +83,9 @@ def _rules() -> PaperInstrumentRulesInput:
     )
 
 
-def _facts() -> ETFPaperOrderFacts:
+def _facts(
+    execution_ledger_hash: str = "ledger-stale",
+) -> ETFPaperOrderFacts:
     return ETFPaperOrderFacts(
         signal_nav=100_000,
         signal_cash_available=100_000,
@@ -104,7 +115,23 @@ def _facts() -> ETFPaperOrderFacts:
             limit_down=9.0,
         ),
         settlement_date="2026-09-03",
+        execution_ledger_hash=execution_ledger_hash,
     )
+
+
+def _live_facts(journal: SqliteAccountEventJournal) -> MagicMock:
+    """Fake facts whose execution ledger hash tracks the real journal stream."""
+    facts = MagicMock()
+
+    def resolve(
+        request: ETFPaperExecutionRequest, *, instrument_id: int, **_: object
+    ) -> ETFPaperOrderFacts:
+        return _facts(
+            execution_ledger_hash=ledger_hash(journal.list_events(request.account_id))
+        )
+
+    facts.resolve.side_effect = resolve
+    return facts
 
 
 def _package() -> SignalPackage:
@@ -191,13 +218,11 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
 ) -> None:
     path = tmp_path / "paper.db"
     _seed(path)
-    facts = MagicMock()
-    facts.resolve.return_value = _facts()
     with (
         SqlitePaperSessionStore(str(path)) as sessions,
         SqliteAccountEventJournal(str(path)) as journal,
     ):
-        process = _process(sessions, journal, facts)
+        process = _process(sessions, journal, _live_facts(journal))
         first = process.execute(_request())
         assert len(first) == 1
         assert first[0].status == "filled"
@@ -270,28 +295,30 @@ def test_etf_partial_fill_recovers_with_new_evidence_for_pending_intent(
 ) -> None:
     path = tmp_path / "paper.db"
     _seed(path)
-    facts = MagicMock()
-
-    def resolve(
-        request: ETFPaperExecutionRequest, *, instrument_id: int, **_: object
-    ) -> ETFPaperOrderFacts:
-        if instrument_id == 2 and request.market_snapshot_id == "market-exec":
-            raise AppProcessError("second bar is missing")
-        base = _facts()
-        if request.market_snapshot_id == "market-corrected":
-            return replace(
-                base,
-                execution_market=replace(
-                    base.execution_market, source_snapshot_id="market-corrected"
-                ),
-            )
-        return base
-
-    facts.resolve.side_effect = resolve
     with (
         SqlitePaperSessionStore(str(path)) as sessions,
         SqliteAccountEventJournal(str(path)) as journal,
     ):
+        facts = MagicMock()
+
+        def resolve(
+            request: ETFPaperExecutionRequest, *, instrument_id: int, **_: object
+        ) -> ETFPaperOrderFacts:
+            if instrument_id == 2 and request.market_snapshot_id == "market-exec":
+                raise AppProcessError("second bar is missing")
+            base = _facts(
+                execution_ledger_hash=ledger_hash(journal.list_events("paper-a"))
+            )
+            if request.market_snapshot_id == "market-corrected":
+                return replace(
+                    base,
+                    execution_market=replace(
+                        base.execution_market, source_snapshot_id="market-corrected"
+                    ),
+                )
+            return base
+
+        facts.resolve.side_effect = resolve
         process = _process(sessions, journal, facts)
         package = _package()
         process._packages.find_active_paper.return_value = replace(
@@ -325,13 +352,11 @@ def test_etf_paper_http_reaches_real_execution_and_sqlite_ledger(
 ) -> None:
     path = tmp_path / "paper.db"
     _seed(path)
-    facts = MagicMock()
-    facts.resolve.return_value = _facts()
     with (
         SqlitePaperSessionStore(str(path)) as sessions,
         SqliteAccountEventJournal(str(path)) as journal,
     ):
-        process = _process(sessions, journal, facts)
+        process = _process(sessions, journal, _live_facts(journal))
 
         class TestProvider(Provider):
             scope = Scope.APP
@@ -373,3 +398,46 @@ def test_etf_paper_http_reaches_real_execution_and_sqlite_ledger(
         assert [event.event_id for event in journal.list_events("paper-a")] == [
             event_id
         ]
+
+
+def test_etf_paper_execution_conflicts_when_ledger_moves_after_facts(
+    tmp_path: Path,
+) -> None:
+    """A concurrent append between facts read and fill CAS must fail closed."""
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        account = journal.get_account("paper-a")
+        assert account is not None
+        stale_hash = ledger_hash(journal.list_events("paper-a"))
+        facts = MagicMock()
+        facts.resolve.return_value = _facts(execution_ledger_hash=stale_hash)
+        process = _process(sessions, journal, facts)
+        journal.append(
+            create_account_event(
+                account=account,
+                draft=AccountEventDraft(
+                    event_type=AccountEventType.DEPOSIT,
+                    event_id="concurrent-fill",
+                    trade_date="2026-09-02",
+                    settlement_date="2026-09-02",
+                    recorded_at=EXECUTION,
+                    idempotency_key="concurrent-fill",
+                    actor="paper-session:other",
+                    source=AccountEventSource.PAPER_ENGINE,
+                    gross_amount=Decimal("1"),
+                ),
+            )
+        )
+        with pytest.raises(AppConflictError, match="ledger changed during execution"):
+            process.execute(_request())
+        assert sessions.list_executions("session-a") == ()
+        assert len(journal.list_events("paper-a")) == 1
+
+        process._facts = _live_facts(journal)
+        outcome = process.execute(_request())
+        assert outcome[0].status == "filled"
+        assert len(journal.list_events("paper-a")) == 2

@@ -304,6 +304,25 @@ class SqlitePaperSessionStore(AbstractContextManager["SqlitePaperSessionStore"])
         self._db.commit()
         return updated
 
+    def discard_execution(
+        self,
+        execution_id: str,
+        *,
+        request_hash: str,
+    ) -> None:
+        """Retract one persisted execution that never reached the account ledger."""
+        cursor = self._db.execute(
+            """
+            DELETE FROM paper_executions
+            WHERE execution_id = ? AND request_hash = ? AND ledger_event_id IS NULL
+            """,
+            (execution_id, request_hash),
+        )
+        if cursor.rowcount != 1:
+            self._db.rollback()
+            raise PaperSessionConflictError("paper execution cannot be discarded")
+        self._db.commit()
+
     def append_reconciliation(
         self,
         reconciliation: PaperReconciliation,
@@ -472,6 +491,7 @@ def _execution(payload: dict[str, object]) -> PaperExecutionRecord:
         lineage=_lineage(_object(payload, "lineage")),
         created_at=datetime.fromisoformat(_text(payload, "created_at")),
         ledger_event_id=_optional_text(payload, "ledger_event_id"),
+        expected_ledger_hash=_optional_text(payload, "expected_ledger_hash"),
     )
 
 

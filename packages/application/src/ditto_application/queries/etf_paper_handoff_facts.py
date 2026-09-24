@@ -104,6 +104,7 @@ class LiveETFPaperHandoffFacts:
             account_id=request.account_id,
             as_of=request.signal_date,
             valuation_prices=prices,
+            recorded_through=request.ledger_cutoff or request.knowledge_cutoff,
         )
         if not account.snapshot.valuation_complete or account.snapshot.total_value <= 0:
             raise AppProcessError("Paper account valuation is incomplete")

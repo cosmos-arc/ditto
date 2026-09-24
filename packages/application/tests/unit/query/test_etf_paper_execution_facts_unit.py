@@ -89,6 +89,7 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
             cash=SimpleNamespace(available=Decimal("100000")),
             positions=(),
         ),
+        ledger_revision=SimpleNamespace(event_count=0, ledger_hash=ledger_hash(())),
     )
     ledger = MagicMock()
     ledger.get_paper.return_value = account
@@ -119,6 +120,7 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
         ),
         metadata,
         bars,
+        ledger,
     )
 
 
@@ -140,11 +142,12 @@ def _request() -> ETFPaperExecutionRequest:
 
 @pytest.mark.pit
 def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
-    facts, metadata, bars = _facts()
+    facts, metadata, bars, ledger = _facts()
     resolved = facts.resolve(
         _request(), instrument_id=1, signal_snapshot_id="signal", signal_cutoff=SIGNAL
     )
     assert resolved.signal_ledger_hash == ledger_hash(())
+    assert resolved.execution_ledger_hash == ledger_hash(())
     assert resolved.signal_nav == 100000
     assert resolved.signal_rules.lot_size == 100
     assert resolved.execution_rules.commission_rate == 0.0003
@@ -155,6 +158,9 @@ def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
         "2026-09-01",
         "2026-09-02",
     ]
+    assert [
+        call.kwargs["recorded_through"] for call in ledger.get_paper.call_args_list
+    ] == [SIGNAL, SIGNAL, EXECUTION]
     assert bars.load_paper_market.call_args.args[0].snapshot_for(
         "etf_daily"
     ).source_snapshot_ids == ("bar",)
@@ -163,7 +169,7 @@ def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
 
 @pytest.mark.pit
 def test_etf_paper_facts_reject_future_execution_fee() -> None:
-    facts, metadata, bars = _facts()
+    facts, metadata, bars, _ledger = _facts()
     original = metadata.list_etf_candidates.side_effect
 
     def future_fee(**kwargs: object) -> list[ETFCandidate]:

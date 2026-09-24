@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -17,6 +17,7 @@ from ditto_portfolio.account_ledger import (
     AccountEventType,
     AccountKind,
     create_account_event,
+    ledger_hash,
 )
 
 NOW = datetime(2026, 8, 31, 9, 30, tzinfo=UTC)
@@ -141,3 +142,60 @@ def test_query_fails_closed_for_unknown_account_and_invalid_as_of() -> None:
         "account_id": account.account_id,
         "as_of": "latest",
     }
+
+    with pytest.raises(AppQueryError) as naive:
+        query.get(
+            account_id=account.account_id,
+            as_of="2026-08-31",
+            recorded_through=datetime(2026, 8, 31, 9, 30),
+        )
+    assert naive.value.details["code"] == "ACCOUNT_RECORDED_THROUGH_INVALID"
+
+
+@pytest.mark.pit
+def test_query_hides_backfilled_events_recorded_after_the_cutoff() -> None:
+    account, (cash, buy) = _fixture()
+    backfill = create_account_event(
+        account=account,
+        draft=AccountEventDraft(
+            event_type=AccountEventType.SELL,
+            event_id="backfilled-sell",
+            trade_date="2026-09-01",
+            settlement_date="2026-09-01",
+            recorded_at=NOW + timedelta(days=2),
+            idempotency_key="backfilled-sell",
+            actor="user:chevy",
+            source=AccountEventSource.MANUAL_ENTRY,
+            instrument_id=InstrumentId(600519),
+            quantity=Decimal("100"),
+            price=Decimal("110"),
+        ),
+    )
+    query = AccountLedgerQuery(journal=_Journal(account, (cash, buy, backfill)))
+
+    before_backfill = query.get(
+        account_id=account.account_id,
+        as_of="2026-09-01",
+        valuation_prices={InstrumentId(600519): Decimal("120")},
+        recorded_through=NOW,
+    )
+    after_backfill = query.get(
+        account_id=account.account_id,
+        as_of="2026-09-01",
+        valuation_prices={InstrumentId(600519): Decimal("120")},
+        recorded_through=NOW + timedelta(days=3),
+    )
+
+    assert tuple(event.event_id for event in before_backfill.events) == (
+        "cash",
+        "buy",
+    )
+    assert tuple(event.event_id for event in after_backfill.events) == (
+        "cash",
+        "buy",
+        "backfilled-sell",
+    )
+    assert before_backfill.ledger_revision.event_count == 3
+    assert after_backfill.ledger_revision.ledger_hash == ledger_hash(
+        (cash, buy, backfill)
+    )
