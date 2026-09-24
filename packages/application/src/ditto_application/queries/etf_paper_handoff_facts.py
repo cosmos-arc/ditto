@@ -5,12 +5,15 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.account_ledger import ledger_hash
 
 from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFacts,
     ETFPaperHandoffRequest,
+    canonical_cutoff,
 )
 from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.account_ledger import AccountLedgerQuery
@@ -21,6 +24,30 @@ from ditto_application.queries.field_admission import (
     FieldRequirement,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.retained_calendar import (
+    RetainedCalendarAbsent,
+    retained_trading_days,
+)
+
+
+def _next_trading_day(
+    *,
+    snapshots: ProviderSnapshotReader,
+    payloads: ProviderPayloadReader,
+    cutoff: datetime,
+    signal_date: str,
+) -> str:
+    """Return the first open session after the signal day, cutoff-bound."""
+    try:
+        sessions = retained_trading_days(
+            snapshots=snapshots, payloads=payloads, cutoff=cutoff
+        )
+    except RetainedCalendarAbsent as exc:
+        raise AppProcessError("ETF Paper trading calendar is absent or future") from exc
+    later = [day for day in sessions if day > signal_date]
+    if not later:
+        raise AppProcessError("ETF Paper trading calendar is incomplete")
+    return later[0]
 
 
 class LiveETFPaperHandoffFacts:
@@ -32,11 +59,13 @@ class LiveETFPaperHandoffFacts:
         metadata: MetadataQueryFacade,
         admission: FieldAdmissionQuery,
         snapshots: ProviderSnapshotReader,
+        payloads: ProviderPayloadReader,
         ledger: AccountLedgerQuery,
     ) -> None:
         self._metadata = metadata
         self._admission = admission
         self._snapshots = snapshots
+        self._payloads = payloads
         self._ledger = ledger
 
     def resolve(self, request: ETFPaperHandoffRequest) -> ETFPaperHandoffFacts:
@@ -51,7 +80,7 @@ class LiveETFPaperHandoffFacts:
             raise AppProcessError("Paper source snapshot is absent or future")
         candidates = self._metadata.list_etf_candidates(
             asof=request.signal_date,
-            cutoff=request.knowledge_cutoff.isoformat(),
+            cutoff=canonical_cutoff(request.knowledge_cutoff),
             source_snapshot_id=request.source_snapshot_id,
         )
         prices: dict[InstrumentId, Decimal] = {}
@@ -61,9 +90,7 @@ class LiveETFPaperHandoffFacts:
             if price is None:
                 continue
             if (
-                not self._field_allowed(
-                    candidate, "price_close", price, request, snapshot.dataset_id
-                )
+                not self._field_allowed(candidate, "price_close", price, request)
                 or price.observed_on != request.signal_date
             ):
                 continue
@@ -92,7 +119,6 @@ class LiveETFPaperHandoffFacts:
                         field,
                         candidate.fields[field],
                         request,
-                        snapshot.dataset_id,
                     )
                     for field in (
                         "trading_restriction",
@@ -106,6 +132,7 @@ class LiveETFPaperHandoffFacts:
             account_id=request.account_id,
             as_of=request.signal_date,
             valuation_prices=prices,
+            recorded_through=request.ledger_cutoff or request.knowledge_cutoff,
         )
         if not account.snapshot.valuation_complete or account.snapshot.total_value <= 0:
             raise AppProcessError("Paper account valuation is incomplete")
@@ -121,6 +148,13 @@ class LiveETFPaperHandoffFacts:
             source_snapshot_id=request.source_snapshot_id,
             current_positions=weights,
             investable_instrument_ids=frozenset(investable),
+            signal_ledger_hash=ledger_hash(account.events),
+            next_trading_day=_next_trading_day(
+                snapshots=self._snapshots,
+                payloads=self._payloads,
+                cutoff=request.knowledge_cutoff,
+                signal_date=request.signal_date,
+            ),
         )
 
     def _field_allowed(
@@ -129,53 +163,72 @@ class LiveETFPaperHandoffFacts:
         field_name: str,
         field: ETFField,
         request: ETFPaperHandoffRequest,
-        dataset_id: str,
     ) -> bool:
-        if (
-            field.value is None
-            or field.observed_on is None
-            or field.source_snapshot_id != request.source_snapshot_id
-        ):
-            return False
-        try:
-            observed = date.fromisoformat(field.observed_on)
-            published = datetime.fromisoformat(
-                (field.published_at or "").replace("Z", "+00:00")
-            )
-            asof = date.fromisoformat(request.signal_date)
-            effective_from = (
-                date.fromisoformat(field.effective_from)
-                if field.effective_from
-                else None
-            )
-            effective_to = (
-                date.fromisoformat(field.effective_to) if field.effective_to else None
-            )
-        except ValueError:
-            return False
-        if (
-            published.tzinfo is None
-            or published > request.knowledge_cutoff
-            or observed > asof
-            or (effective_from is not None and effective_from > asof)
-            or (effective_to is not None and effective_to <= asof)
-        ):
-            return False
-        report = self._admission.assess(
-            FieldAdmissionRequest(
-                fields=(
-                    FieldRequirement(
-                        dataset_id=dataset_id,
-                        field=field_name,
-                        snapshot_id=request.source_snapshot_id,
-                    ),
-                ),
-                instrument_ids=(candidate.instrument_id,),
-                required_from=observed,
-                required_to=observed,
-                knowledge_cutoff=request.knowledge_cutoff,
-                publication_cutoff=request.knowledge_cutoff,
-                purpose="promotion_paper",
-            )
+        return admitted_etf_field(
+            candidate,
+            field_name,
+            field,
+            asof=request.signal_date,
+            cutoff=request.knowledge_cutoff,
+            snapshot_id=request.source_snapshot_id,
+            admission=self._admission,
         )
-        return report.allowed
+
+
+def admitted_etf_field(
+    candidate: ETFCandidate,
+    field_name: str,
+    field: ETFField,
+    *,
+    asof: str,
+    cutoff: datetime,
+    snapshot_id: str,
+    admission: FieldAdmissionQuery,
+) -> bool:
+    """Apply the same temporal and promotion admission rule at either Paper date."""
+    if (
+        field.value is None
+        or field.observed_on is None
+        or field.source_snapshot_id != snapshot_id
+    ):
+        return False
+    try:
+        observed = date.fromisoformat(field.observed_on)
+        published = datetime.fromisoformat(
+            (field.published_at or "").replace("Z", "+00:00")
+        )
+        asof_day = date.fromisoformat(asof)
+        effective_from = (
+            date.fromisoformat(field.effective_from) if field.effective_from else None
+        )
+        effective_to = (
+            date.fromisoformat(field.effective_to) if field.effective_to else None
+        )
+    except ValueError:
+        return False
+    if (
+        published.tzinfo is None
+        or published > cutoff
+        or observed > asof_day
+        or (effective_from is not None and effective_from > asof_day)
+        or (effective_to is not None and effective_to <= asof_day)
+    ):
+        return False
+    report = admission.assess(
+        FieldAdmissionRequest(
+            fields=(
+                FieldRequirement(
+                    dataset_id="etf_reference",
+                    field=field_name,
+                    snapshot_id=snapshot_id,
+                ),
+            ),
+            instrument_ids=(candidate.instrument_id,),
+            required_from=observed,
+            required_to=observed,
+            knowledge_cutoff=cutoff,
+            publication_cutoff=cutoff,
+            purpose="promotion_paper",
+        )
+    )
+    return report.allowed

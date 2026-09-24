@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Protocol
+
+from ditto_application.paper_contracts import (
+    PaperInstrumentRulesInput,
+    PaperMarketSnapshotInput,
+)
 
 
 @dataclass(frozen=True)
@@ -22,6 +27,7 @@ class ETFPaperHandoffRequest:
     intended_trade_date: str
     knowledge_cutoff: datetime
     source_snapshot_id: str
+    ledger_cutoff: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -33,6 +39,8 @@ class ETFPaperHandoffFacts:
     source_snapshot_id: str
     current_positions: dict[int, float]
     investable_instrument_ids: frozenset[int]
+    signal_ledger_hash: str
+    next_trading_day: str
 
 
 class ETFPaperHandoffFactsPort(Protocol):
@@ -41,3 +49,74 @@ class ETFPaperHandoffFactsPort(Protocol):
     def resolve(self, request: ETFPaperHandoffRequest) -> ETFPaperHandoffFacts:
         """Return exact handoff facts or fail closed."""
         ...
+
+
+@dataclass(frozen=True)
+class ETFPaperExecutionRequest:
+    """One exact, after-market evaluation of a pre-approved ETF Paper target."""
+
+    allocation_id: str
+    version_id: str
+    authorization_id: str
+    account_id: str
+    session_id: str
+    signal_date: str
+    intended_trade_date: str
+    execution_cutoff: datetime
+    reference_snapshot_id: str
+    market_snapshot_id: str
+    idempotency_key: str
+
+
+@dataclass(frozen=True)
+class ETFPaperOrderFacts:
+    """PIT signal-day sizing facts and independently checked execution-day facts."""
+
+    signal_nav: float
+    signal_cash_available: float
+    signal_current_quantity: int
+    signal_available_quantity: int
+    signal_reference_price: float
+    signal_rules: PaperInstrumentRulesInput
+    signal_ledger_hash: str
+    execution_cash_available: float
+    execution_position_quantity: int
+    execution_available_quantity: int
+    execution_rules: PaperInstrumentRulesInput
+    execution_market: PaperMarketSnapshotInput
+    settlement_date: str
+    execution_ledger_hash: str
+
+
+class ETFPaperExecutionFactsPort(Protocol):
+    """Read only exact retained, admitted market and account evidence."""
+
+    def resolve(
+        self,
+        request: ETFPaperExecutionRequest,
+        *,
+        instrument_id: int,
+        signal_snapshot_id: str,
+        signal_cutoff: datetime,
+        valuation_cutoff: datetime,
+    ) -> ETFPaperOrderFacts:
+        """Return exact signal and execution facts or fail closed."""
+        ...
+
+
+def etf_paper_run_id(
+    *, signal_date: str, strategy_id: str, version_id: str, account_id: str
+) -> str:
+    """
+    One package batch identity per account, target and signal day.
+
+    The account is part of the batch identity so sibling Paper accounts
+    sharing one approved version keep separate packages instead of
+    replacing each other.
+    """
+    return f"eod-{signal_date}-{strategy_id}-{version_id}-{account_id}"
+
+
+def canonical_cutoff(value: datetime) -> str:
+    """Serialize a cutoff in the canonical UTC Z form queries require."""
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

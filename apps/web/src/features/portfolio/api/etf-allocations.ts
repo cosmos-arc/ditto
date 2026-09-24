@@ -22,6 +22,15 @@ export type ETFAllocationVersion = {
 	readonly createdAt: string;
 };
 
+export type ETFPaperExecutionOutcome = {
+	readonly intentId: string;
+	readonly instrumentId: number;
+	readonly status: string;
+	readonly reason: string | null;
+	readonly executionId: string | null;
+	readonly ledgerEventId: string | null;
+};
+
 function toVersion(value: VersionDTO): ETFAllocationVersion {
 	if (
 		!value.version_id ||
@@ -137,4 +146,52 @@ export async function handoffETFPaper(
 		throw new Error("ETF Paper 会话响应身份不匹配");
 	}
 	return { accountId: result.session.account_id, sessionId: result.session.session_id };
+}
+
+const EXECUTION_OUTCOME_STATUSES = ["filled", "deferred", "rejected", "no_rebalance"] as const;
+
+function assertOutcomeIdentity(outcome: components["schemas"]["ETFPaperExecutionOutcomeResponse"]) {
+	const hasExecution = outcome.execution_id !== null;
+	const hasLedger = outcome.ledger_event_id !== null;
+	const identityValid =
+		outcome.status === "filled"
+			? hasExecution && hasLedger
+			: outcome.status === "deferred" || outcome.status === "rejected"
+				? hasExecution && !hasLedger
+				: !hasExecution && !hasLedger;
+	if (!identityValid) {
+		throw new Error("ETF Paper 执行状态与执行/账本身份不匹配");
+	}
+}
+
+export async function executeETFPaper(
+	allocationId: string,
+	versionId: string,
+	key: string,
+	body: components["schemas"]["ETFPaperExecutionBody"],
+): Promise<ETFPaperExecutionOutcome[]> {
+	const result = await apiClient.post(
+		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-executions",
+		{
+			params: { path: { allocation_id: allocationId, version_id: versionId }, header: { "Idempotency-Key": key } },
+			body,
+		},
+	);
+	for (const outcome of result.outcomes) {
+		if (
+			!outcome.intent_id ||
+			!EXECUTION_OUTCOME_STATUSES.includes(outcome.status as (typeof EXECUTION_OUTCOME_STATUSES)[number])
+		) {
+			throw new Error("ETF Paper 执行响应缺少意图或状态无效");
+		}
+		assertOutcomeIdentity(outcome);
+	}
+	return result.outcomes.map((outcome) => ({
+		intentId: outcome.intent_id,
+		instrumentId: outcome.instrument_id,
+		status: outcome.status,
+		reason: outcome.reason,
+		executionId: outcome.execution_id,
+		ledgerEventId: outcome.ledger_event_id,
+	}));
 }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time
+from math import isfinite
 from typing import cast
 from zoneinfo import ZoneInfo
 
@@ -21,6 +22,7 @@ from ditto_features.technical_analysis.contracts import TechnicalBar
 from ditto_kernel.identity import InstrumentId
 
 from ditto_application.exceptions import AppQueryError
+from ditto_application.paper_contracts import PaperMarketSnapshotInput
 
 __all__ = ["ProviderPayloadTechnicalAnalysisSource"]
 
@@ -364,6 +366,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         snapshot_reader: ProviderSnapshotReader,
         payload_reader: ProviderPayloadReader,
     ) -> None:
+        self._snapshot_reader = snapshot_reader
         self._query = PITQueryService(
             _PayloadDatasetReader(
                 snapshot_reader=snapshot_reader,
@@ -390,3 +393,119 @@ class ProviderPayloadTechnicalAnalysisSource:
             instrument_code=instrument_code,
         ).sort("event_time")
         return _bars(selected)
+
+    def load_paper_market(
+        self,
+        context: PITQueryContext,
+        *,
+        instrument_id: InstrumentId,
+        instrument_code: str,
+        trade_date: str,
+    ) -> PaperMarketSnapshotInput:
+        """Load one complete ETF bar whose exact payload is visible after close."""
+        dataset = context.snapshot_for("etf_daily")
+        if len(dataset.source_snapshot_ids) != 1:
+            raise _source_error(
+                "ETF_PAPER_SNAPSHOT_AMBIGUOUS", "one exact bar snapshot required"
+            )
+        snapshot = self._snapshot_reader.get_snapshot(dataset.source_snapshot_ids[0])
+        if (
+            snapshot is None
+            or snapshot.dataset_id != "etf_daily"
+            or snapshot.created_at > context.knowledge_cutoff
+        ):
+            raise _source_error(
+                "ETF_PAPER_SNAPSHOT_UNAVAILABLE", "bar snapshot is absent or future"
+            )
+        frame = self._query.query(dataset_id="etf_daily", context=context)
+        # Retained artifacts predate FK enrichment, so the provider ticker is
+        # the primary identity; the internal ID is only a cross-check when the
+        # optional enriched column exists.
+        ticker_columns = [
+            name for name in ("source_ticker", "ts_code") if name in frame.columns
+        ]
+        if not ticker_columns and "instrument_id" not in frame.columns:
+            raise _source_error(
+                "ETF_PAPER_IDENTITY_MISSING", "bar instrument identity is absent"
+            )
+        selected = frame
+        for name in ticker_columns:
+            selected = selected.filter(pl.col(name).cast(pl.String) == instrument_code)
+        if "instrument_id" in selected.columns:
+            selected = selected.filter(
+                pl.col("instrument_id").cast(pl.Int64, strict=False)
+                == int(instrument_id)
+            )
+        selected = selected.filter(
+            pl.col("event_time").dt.convert_time_zone("Asia/Shanghai").dt.date()
+            == date.fromisoformat(trade_date)
+        )
+        if len(selected) != 1:
+            raise _source_error(
+                "ETF_PAPER_BAR_AMBIGUOUS", "one exact execution-day bar required"
+            )
+        return _paper_market_from_row(selected.row(0, named=True), snapshot)
+
+
+def _paper_market_from_row(
+    row: dict[str, object], snapshot: ProviderSnapshot
+) -> PaperMarketSnapshotInput:
+
+    def number(name: str, *, positive: bool = True) -> float:
+        raw = row.get(name)
+        if raw is None:
+            raise _source_error("ETF_PAPER_BAR_INVALID", f"{name} is missing")
+        try:
+            value = float(str(raw))
+        except (TypeError, ValueError) as exc:
+            raise _source_error("ETF_PAPER_BAR_INVALID", f"{name} is missing") from exc
+        if not isfinite(value) or (value <= 0 if positive else value < 0):
+            raise _source_error("ETF_PAPER_BAR_INVALID", f"{name} is invalid")
+        return value
+
+    def optional_number(name: str) -> float | None:
+        if row.get(name) is None:
+            return None
+        return number(name)
+
+    open_price = number("open")
+    high = number("high")
+    low = number("low")
+    close = number("close")
+    prev_close = number("pre_close")
+    volume = number("volume", positive=False)
+    amount = number("amount", positive=False)
+    # The canonical ETF daily producer has no limit columns; callers derive
+    # the limits from pre_close and the instrument's price_limit_pct instead.
+    limit_up = optional_number("up_limit")
+    limit_down = optional_number("down_limit")
+    if not low <= min(open_price, close) <= max(open_price, close) <= high:
+        raise _source_error("ETF_PAPER_BAR_INVALID", "bar OHLC is inconsistent")
+    if limit_up is not None and limit_down is not None and limit_down >= limit_up:
+        raise _source_error(
+            "ETF_PAPER_BAR_INVALID", "bar price limits are inconsistent"
+        )
+    raw_suspended = row.get("is_suspended")
+    if volume <= 0 or amount <= 0:
+        raise _source_error("ETF_PAPER_TRADABILITY_UNKNOWN", "suspension is unverified")
+    suspended = raw_suspended is True
+    observed_at = cast(datetime, row["event_time"])
+    published_at = cast(datetime, row["published_at"])
+    available_at = cast(datetime, row["available_at"])
+    return PaperMarketSnapshotInput(
+        dataset_id="etf_daily",
+        source=snapshot.source,
+        source_snapshot_id=snapshot.snapshot_id,
+        observed_at=observed_at,
+        publication_cutoff=max(published_at, available_at, snapshot.created_at),
+        open=open_price,
+        high=high,
+        low=low,
+        close=close,
+        prev_close=prev_close,
+        volume=volume,
+        amount=amount,
+        is_suspended=suspended,
+        limit_up=limit_up,
+        limit_down=limit_down,
+    )

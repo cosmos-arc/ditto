@@ -126,7 +126,9 @@ class SignalPackagePublisher:
         ):
             raise AppProcessError("Paper package needs target and account state")
         expected_batch_key = f"eod-{signal_date}-{strategy_id}-{strategy_version}"
-        if run_id != expected_batch_key:
+        # Paper packages may carry the account-scoped batch identity so
+        # sibling accounts of one approved version keep separate packages.
+        if run_id not in {expected_batch_key, f"{expected_batch_key}-{account_id}"}:
             raise AppProcessError(
                 f"batch key must be {expected_batch_key} for R1 EOD package identity"
             )
@@ -299,6 +301,35 @@ class SignalPackagePublisher:
         if len(active) > 1:
             raise AppProcessError("multiple active signal packages require review")
         return _package_from_artifact(active[0]) if active else None
+
+    def find_active_paper(
+        self,
+        *,
+        strategy_id: str,
+        run_id: str,
+        signal_date: str,
+        version_id: str,
+        account_id: str,
+        intended_trade_date: str,
+    ) -> SignalPackage:
+        """Resolve the one finalized Paper package for an exact target and account."""
+        package = self.find_staged(
+            strategy_id=strategy_id, run_id=run_id, signal_date=signal_date
+        )
+        if package is None or package.artifact_status != "active":
+            raise AppProcessError("active ETF Paper Signal Package is absent")
+        artifact = self._artifact_service.get_artifact(package.artifact_id)
+        if artifact is None or not verify_signal_package_metadata(artifact.metadata):
+            raise AppProcessError("ETF Paper Signal Package integrity is invalid")
+        payload = _artifact_business_payload(artifact)
+        if (
+            payload.get("sleeve_id") != f"paper-{account_id}-{strategy_id}"
+            or payload.get("origin_version_id") != version_id
+            or payload.get("account_id") != account_id
+            or payload.get("intended_trade_date") != intended_trade_date
+        ):
+            raise AppProcessError("ETF Paper Signal Package identity changed")
+        return package
 
     def _publish_candidate(
         self,

@@ -20,6 +20,7 @@ from ditto_execution.paper.contracts import (
 from ditto_execution.paper.reality import ASharePaperReality
 from ditto_execution.paper.session import (
     PaperExecutionRecord,
+    PaperSession,
     PaperSessionConflictError,
     PaperSessionStatus,
     PaperSessionStorePort,
@@ -41,7 +42,9 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    AccountLedgerChronologyConflict,
     AccountLedgerError,
+    AccountLedgerRevisionConflict,
     create_account_event,
 )
 
@@ -86,6 +89,11 @@ class OperatePaperOrderCommand:
     settlement_date: str
     position_quantity: int
     available_quantity: int
+    cash_available: float | None = None
+    request_identity_hash: str | None = None
+    expected_ledger_hash: str | None = None
+    rule_snapshot_id: str | None = None
+    rule_cutoff: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -122,18 +130,50 @@ class OperatePaperSession:
 
     def execute(self, command: OperatePaperOrderCommand) -> OperatePaperReceipt:
         """Execute once or recover the exact persisted execution."""
-        resolved = _resolve_inputs(command)
-        session = self._store.get_session(command.session_id)
-        if session is None:
-            raise AppNotFoundError(f"paper session not found: {command.session_id}")
-        if session.status is not PaperSessionStatus.RUNNING:
-            raise AppConflictError("paper session must be running to execute orders")
-        _reject_ungoverned_etf_session(session.strategy_id)
-        if resolved.order.trade_date != session.trade_date:
-            raise AppProcessError(
-                "paper order trade_date does not match session",
-                code="PAPER_TRADE_DATE_MISMATCH",
+        if command.request_identity_hash is not None:
+            raise AppConflictError(
+                "governed Paper request cannot use the generic order path"
             )
+        if command.expected_ledger_hash is not None:
+            raise AppConflictError(
+                "governed Paper revision guard cannot use the generic order path"
+            )
+        return self._execute(command, governed_etf=False)
+
+    def execute_etf(self, command: OperatePaperOrderCommand) -> OperatePaperReceipt:
+        """Execute a validated ETF intent through the shared ledger path."""
+        if not command.request_identity_hash:
+            raise AppConflictError("ETF order requires a governed request identity")
+        return self._execute(command, governed_etf=True)
+
+    def replay_etf(
+        self, session_id: str, idempotency_key: str, request_hash: str
+    ) -> OperatePaperReceipt | None:
+        """Recover an exact ETF intent before mutable account facts are read again."""
+        session = self._store.get_session(session_id)
+        if session is None:
+            raise AppNotFoundError(f"paper session not found: {session_id}")
+        if not session.strategy_id.startswith("etf-allocation:"):
+            raise AppConflictError("session is not an ETF allocation session")
+        existing = self._store.get_execution(session_id, idempotency_key)
+        if existing is None:
+            return None
+        if existing.result.fill is None and existing.ledger_event_id is None:
+            # A deferred or rejected attempt has no durable ledger effect;
+            # retract it so corrected evidence can re-evaluate the intent.
+            self._discard_stale_execution(existing)
+            return None
+        if existing.request_hash != request_hash:
+            raise AppConflictError("ETF intent execution payload conflict")
+        return OperatePaperReceipt(
+            status="replayed",
+            execution=to_paper_execution_info(self._ensure_ledger(existing)),
+        )
+
+    def _execute(
+        self, command: OperatePaperOrderCommand, *, governed_etf: bool
+    ) -> OperatePaperReceipt:
+        session = self._validated_session(command, governed_etf=governed_etf)
         request_hash = _request_hash(command)
         existing = self._store.get_execution(
             command.session_id,
@@ -147,6 +187,7 @@ class OperatePaperSession:
                 execution=to_paper_execution_info(self._ensure_ledger(existing)),
             )
 
+        resolved = _resolve_inputs(command)
         account = self._account_journal.get_account(session.account_id)
         if account is None:
             raise AppNotFoundError(f"paper account not found: {session.account_id}")
@@ -168,6 +209,7 @@ class OperatePaperSession:
                 settlement_date=command.settlement_date,
                 position_quantity=command.position_quantity,
                 available_quantity=command.available_quantity,
+                cash_available=command.cash_available,
             ),
         )
         execution = PaperExecutionRecord(
@@ -180,6 +222,9 @@ class OperatePaperSession:
             assumption=resolved.assumption,
             lineage=resolved.lineage,
             created_at=command.decision_at,
+            expected_ledger_hash=command.expected_ledger_hash,
+            rule_snapshot_id=command.rule_snapshot_id,
+            rule_cutoff=command.rule_cutoff,
         )
         try:
             persisted = self._store.append_execution(execution)
@@ -192,6 +237,25 @@ class OperatePaperSession:
             execution=to_paper_execution_info(self._ensure_ledger(persisted)),
         )
 
+    def _validated_session(
+        self, command: OperatePaperOrderCommand, *, governed_etf: bool
+    ) -> PaperSession:
+        session = self._store.get_session(command.session_id)
+        if session is None:
+            raise AppNotFoundError(f"paper session not found: {command.session_id}")
+        if session.status is not PaperSessionStatus.RUNNING:
+            raise AppConflictError("paper session must be running to execute orders")
+        if governed_etf and not session.strategy_id.startswith("etf-allocation:"):
+            raise AppConflictError("session is not an ETF allocation session")
+        if session.strategy_id.startswith("etf-allocation:") and not governed_etf:
+            _reject_ungoverned_etf_session(session.strategy_id)
+        if command.trade_date != session.trade_date:
+            raise AppProcessError(
+                "paper order trade_date does not match session",
+                code="PAPER_TRADE_DATE_MISMATCH",
+            )
+        return session
+
     def recover(self, session_id: str) -> tuple[PaperExecutionInfo, ...]:
         """Repair every persisted fill missing its corresponding ledger event."""
         session = self._store.get_session(session_id)
@@ -201,6 +265,21 @@ class OperatePaperSession:
             to_paper_execution_info(self._ensure_ledger(record))
             for record in self._store.list_executions(session_id)
         )
+
+    def _discard_stale_execution(self, record: PaperExecutionRecord) -> None:
+        """
+        Retract one unledgered execution (stale basis or unfillable attempt).
+
+        Best effort: a concurrent retry may have discarded it already, which is
+        the goal state, so only the ledger guard conflict propagates.
+        """
+        try:
+            self._store.discard_execution(
+                record.execution_id,
+                request_hash=record.request_hash,
+            )
+        except PaperSessionConflictError:
+            pass
 
     def _ensure_ledger(self, record: PaperExecutionRecord) -> PaperExecutionRecord:
         fill = record.result.fill
@@ -231,13 +310,7 @@ class OperatePaperSession:
                 raise AppConflictError("paper ledger idempotency payload conflict")
             event = existing
         else:
-            try:
-                event = self._account_journal.append(event)
-            except (AccountLedgerError, PaperSessionConflictError) as exc:
-                raise AppProcessError(
-                    "paper ledger append failed",
-                    code="PAPER_LEDGER_APPEND_FAILED",
-                ) from exc
+            event = self._append_fill_event(record, event)
         try:
             return self._store.mark_execution_ledgered(
                 record.execution_id,
@@ -245,6 +318,63 @@ class OperatePaperSession:
             )
         except PaperSessionConflictError as exc:
             raise AppConflictError(str(exc)) from exc
+
+    def _append_fill_event(
+        self,
+        record: PaperExecutionRecord,
+        event: AccountEvent,
+    ) -> AccountEvent:
+        """Append one validated fill, discarding executions whose basis went stale."""
+        try:
+            if record.expected_ledger_hash is None:
+                return self._account_journal.append(event)
+            return self._account_journal.append_if_revision(
+                event,
+                expected_ledger_hash=record.expected_ledger_hash,
+            )
+        except AccountLedgerRevisionConflict as exc:
+            settled = self._recovered_fill_event(record, event)
+            if settled is not None:
+                return settled
+            self._discard_stale_execution(record)
+            raise AppConflictError(
+                "paper account ledger changed during execution"
+            ) from exc
+        except AccountLedgerChronologyConflict as exc:
+            settled = self._recovered_fill_event(record, event)
+            if settled is not None:
+                return settled
+            self._discard_stale_execution(record)
+            raise AppConflictError(
+                "paper account ledger already has later trade dates"
+            ) from exc
+        except (AccountLedgerError, PaperSessionConflictError) as exc:
+            raise AppProcessError(
+                "paper ledger append failed",
+                code="PAPER_LEDGER_APPEND_FAILED",
+            ) from exc
+
+    def _recovered_fill_event(
+        self,
+        record: PaperExecutionRecord,
+        event: AccountEvent,
+    ) -> AccountEvent | None:
+        """
+        Return this fill's journal event when a concurrent retry landed it.
+
+        Without the recheck, the losing side of two concurrent recoveries
+        would discard the shared execution record before the winner marks
+        it ledgered, orphaning the fill.
+        """
+        settled = self._account_journal.find_by_idempotency_key(
+            record.account_id,
+            f"paper-ledger:{record.execution_id}",
+        )
+        if settled is None:
+            return None
+        if settled.event_hash != event.event_hash:
+            raise AppConflictError("paper ledger idempotency payload conflict")
+        return settled
 
 
 def _reject_ungoverned_etf_session(strategy_id: str) -> None:
@@ -270,8 +400,10 @@ def _paper_order(
 
 
 def _request_hash(command: OperatePaperOrderCommand) -> str:
+    if command.request_identity_hash is not None:
+        return command.request_identity_hash
     resolved = _resolve_inputs(command)
-    payload = {
+    payload: dict[str, object] = {
         "session_id": command.session_id,
         "idempotency_key": command.idempotency_key,
         "order": resolved.order,
@@ -284,6 +416,8 @@ def _request_hash(command: OperatePaperOrderCommand) -> str:
         "position_quantity": command.position_quantity,
         "available_quantity": command.available_quantity,
     }
+    if command.cash_available is not None:
+        payload["cash_available"] = command.cash_available
     encoded = orjson.dumps(
         payload,
         option=orjson.OPT_SERIALIZE_DATACLASS | orjson.OPT_SORT_KEYS,

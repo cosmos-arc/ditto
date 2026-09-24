@@ -124,6 +124,7 @@ it("retries one save with the same identity and restores the saved version", asy
 	await screen.findByText(/· review_approved ·/);
 	expect(reviewAttempts[2]?.action).toBe("approve");
 	const handoffAttempts: string[] = [];
+	const executionAttempts: string[] = [];
 	server.use(
 		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/paper-authorizations", async ({ request }) => {
 			const body = (await request.json()) as { account_id: string; session_id: string; intended_trade_date: string };
@@ -159,6 +160,30 @@ it("retries one save with the same identity and restores the saved version", asy
 				{ status: 201 },
 			);
 		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/paper-executions", async ({ request }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			expect(body["authorization_id"]).toBe("version-one:paper:receipt");
+			expect(body["market_snapshot_id"]).toBe("bar-snapshot");
+			executionAttempts.push(request.headers.get("Idempotency-Key") ?? "");
+			if (executionAttempts.length === 1) return HttpResponse.json({ error: { code: "TEMPORARY" } }, { status: 503 });
+			return HttpResponse.json(
+				{
+					data: {
+						outcomes: [
+							{
+								intent_id: "intent-1",
+								instrument_id: 1,
+								status: "filled",
+								reason: null,
+								execution_id: "execution-1",
+								ledger_event_id: "event-1",
+							},
+						],
+					},
+				},
+				{ status: 201 },
+			);
+		}),
 	);
 	await user.selectOptions(await screen.findByLabelText("Paper 账户"), "paper-a");
 	fireEvent.change(screen.getByLabelText("下一交易日"), { target: { value: "2026-09-02" } });
@@ -176,6 +201,15 @@ it("retries one save with the same identity and restores the saved version", asy
 	expect(paperLink).toHaveAttribute("href", expect.stringContaining("/portfolio/paper?account_id=paper-a"));
 	expect(handoffAttempts).toHaveLength(2);
 	expect(handoffAttempts[0]).toBe(handoffAttempts[1]);
+	fireEvent.change(screen.getByLabelText("执行日证据截止时间"), { target: { value: "2026-09-02T17:00" } });
+	await user.type(screen.getByLabelText("执行日 ETF 参考快照 ID"), "reference-snapshot");
+	await user.type(screen.getByLabelText("执行日 ETF 行情快照 ID"), "bar-snapshot");
+	await user.click(screen.getByRole("button", { name: "按已批准意图模拟成交" }));
+	await screen.findByText(/Paper 执行失败/);
+	await user.click(screen.getByRole("button", { name: "按已批准意图模拟成交" }));
+	await screen.findByText(/账本事件 event-1/);
+	expect(executionAttempts).toHaveLength(2);
+	expect(executionAttempts[0]).toBe(executionAttempts[1]);
 });
 
 it("asks for confirmation before the terminal reject transition", async () => {

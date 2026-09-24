@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+from datetime import datetime
 from hashlib import sha256
 from math import isfinite
 from zoneinfo import ZoneInfo
@@ -18,6 +20,7 @@ from ditto_application.commands.paper_session import (
 from ditto_application.etf_paper_contracts import (
     ETFPaperHandoffFactsPort,
     ETFPaperHandoffRequest,
+    etf_paper_run_id,
 )
 from ditto_application.exceptions import AppCommandError, AppConflictError
 from ditto_application.mutation_idempotency import build_mutation_idempotency
@@ -81,12 +84,17 @@ class ETFPaperHandoff:
             f"{identity.key_hash}:{identity.request_hash}".encode("ascii")
         ).hexdigest()
         if (
-            request.signal_date < version.asof
+            request.signal_date != version.asof
             or request.intended_trade_date <= request.signal_date
         ):
             raise AppCommandError("Paper execution must follow the research decision")
         if request.knowledge_cutoff.tzinfo is None:
             raise AppCommandError("ETF Paper knowledge cutoff needs a timezone")
+        version_cutoff = datetime.fromisoformat(
+            version.knowledge_cutoff.replace("Z", "+00:00")
+        )
+        if request.knowledge_cutoff < version_cutoff:
+            raise AppCommandError("Paper evidence precedes the saved target cutoff")
         if (
             request.knowledge_cutoff.astimezone(ZoneInfo("Asia/Shanghai"))
             .date()
@@ -94,12 +102,14 @@ class ETFPaperHandoff:
             > request.decision_date
         ):
             raise AppCommandError("Paper evidence is after the decision date")
-        facts = self._facts.resolve(request)
+        facts = self._facts.resolve(replace(request, ledger_cutoff=version_cutoff))
         if (
             facts.signal_date != request.signal_date
             or facts.knowledge_cutoff != request.knowledge_cutoff
             or facts.source_snapshot_id != request.source_snapshot_id
             or not facts.source_snapshot_id
+            or not facts.signal_ledger_hash
+            or facts.next_trading_day != request.intended_trade_date
         ):
             raise AppConflictError("ETF Paper market evidence identity changed")
         selected = set(version.weights)
@@ -116,7 +126,12 @@ class ETFPaperHandoff:
         target = TargetPortfolio(
             trade_date=request.signal_date,
             strategy_id=strategy_id,
-            run_id=f"eod-{request.signal_date}-{strategy_id}-{request.version_id}",
+            run_id=etf_paper_run_id(
+                signal_date=request.signal_date,
+                strategy_id=strategy_id,
+                version_id=request.version_id,
+                account_id=request.account_id,
+            ),
             positions={
                 InstrumentId(i): float(weight) for i, weight in version.weights.items()
             },
@@ -145,6 +160,10 @@ class ETFPaperHandoff:
                 dataset_snapshot_ids={
                     "etf_reference": facts.source_snapshot_id,
                     "etf_research_reference": version.source_snapshot_id,
+                    "paper_signal_ledger": facts.signal_ledger_hash,
+                    "paper_signal_reference_cutoff": (
+                        request.knowledge_cutoff.isoformat()
+                    ),
                 },
                 execution_scope="paper",
                 current_positions=facts.current_positions,

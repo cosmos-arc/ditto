@@ -19,7 +19,11 @@ from ditto_application.processes.execution.operate_paper_session import (
 from ditto_execution.paper.session import PaperSession, PaperSessionStatus
 from ditto_execution.paper.sqlite_store import SqlitePaperSessionStore
 from ditto_execution.storage.sqlite.account_journal import SqliteAccountEventJournal
-from ditto_portfolio.account_ledger import AccountDefinition, AccountKind
+from ditto_portfolio.account_ledger import (
+    AccountDefinition,
+    AccountKind,
+    AccountLedgerRevisionConflict,
+)
 
 NOW = datetime(2026, 8, 31, 7, 0, tzinfo=UTC)
 
@@ -148,6 +152,46 @@ def test_restart_recovers_ledger_without_duplicate_fill(tmp_path: Path) -> None:
         assert replayed.status == "replayed"
         assert len(recovered_store.list_executions("paper-session-1")) == 1
         assert len(recovered_journal.list_events("paper-account-1")) == 1
+
+
+def test_concurrent_fill_append_preserves_the_execution_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The CAS loser must not discard a record the winner already ledgered."""
+    database = tmp_path / "paper-race.db"
+    _seed(database)
+    command = _command()
+
+    def crash_after_execution_persisted() -> None:
+        raise RuntimeError("simulated process crash")
+
+    with (
+        SqlitePaperSessionStore(str(database)) as store,
+        SqliteAccountEventJournal(str(database)) as journal,
+    ):
+        process = OperatePaperSession(
+            store=store,
+            account_journal=journal,
+            after_execution_persisted=crash_after_execution_persisted,
+        )
+        with pytest.raises(RuntimeError, match="simulated process crash"):
+            process.execute(command)
+        assert len(store.list_executions("paper-session-1")) == 1
+
+        real_append = journal.append_if_revision
+
+        def losing_view(event: object, *, expected_ledger_hash: str) -> object:
+            real_append(event, expected_ledger_hash=expected_ledger_hash)
+            raise AccountLedgerRevisionConflict("loser snapshot")
+
+        monkeypatch.setattr(journal, "append_if_revision", losing_view)
+        recovered = OperatePaperSession(store=store, account_journal=journal).execute(
+            command
+        )
+        assert recovered.status == "replayed"
+        assert recovered.execution.ledger_event_id is not None
+        assert len(journal.list_events("paper-account-1")) == 1
+        assert len(store.list_executions("paper-session-1")) == 1
 
 
 def test_same_idempotency_key_with_changed_order_conflicts(tmp_path: Path) -> None:

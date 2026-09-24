@@ -150,6 +150,7 @@ def _context(
     position_quantity: int = 0,
     available_quantity: int = 0,
     settlement_date: str = "2026-09-01",
+    cash_available: float | None = None,
 ) -> PaperRealityContext:
     return PaperRealityContext(
         decision_at=decision_at,
@@ -157,6 +158,7 @@ def _context(
         settlement_date=settlement_date,
         position_quantity=position_quantity,
         available_quantity=available_quantity,
+        cash_available=cash_available,
     )
 
 
@@ -180,6 +182,18 @@ class TestPaperOrderStateMachine:
 
 
 class TestASharePaperReality:
+    def test_buy_rejects_fill_that_exceeds_available_cash(self) -> None:
+        result = ASharePaperReality().execute(
+            paper_order=_paper_order(_order(side=OrderSide.BUY, quantity=100)),
+            lineage=_lineage(),
+            rules=_rules(),
+            assumption=_assumption(),
+            context=_context(cash_available=1_000),
+        )
+        assert result.status is PaperRealityStatus.REJECTED
+        assert result.reason == "insufficient_cash"
+        assert result.fill is None
+
     def test_buy_must_use_board_lots(self) -> None:
         result = ASharePaperReality().execute(
             paper_order=_paper_order(_order(side=OrderSide.BUY, quantity=101)),

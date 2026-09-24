@@ -26,8 +26,11 @@ from ditto_portfolio.account_ledger import (
     AccountEventSource,
     AccountEventType,
     AccountKind,
+    AccountLedgerChronologyConflict,
+    AccountLedgerRevisionConflict,
     FlowPosition,
     create_account_event,
+    ledger_hash_from_event_hashes,
 )
 
 from ditto_execution.errors import ExecutionError
@@ -114,6 +117,13 @@ WHERE account_id = ?
 ORDER BY event_seq ASC
 """
 
+_LIST_EVENT_HASHES = """
+SELECT event_hash
+FROM account_journal_events
+WHERE account_id = ?
+ORDER BY event_seq ASC
+"""
+
 
 class SqliteAccountEventJournal(AbstractContextManager["SqliteAccountEventJournal"]):
     """Fresh SQLite append-only journal for PAPER and MANUAL accounts."""
@@ -184,6 +194,68 @@ class SqliteAccountEventJournal(AbstractContextManager["SqliteAccountEventJourna
     def append(self, event: AccountEvent) -> AccountEvent:
         """Append exactly one immutable event."""
         return self.append_many((event,))[0]
+
+    def append_if_revision(
+        self,
+        event: AccountEvent,
+        *,
+        expected_ledger_hash: str,
+    ) -> AccountEvent:
+        """
+        Append only when the account stream still matches the expected revision.
+
+        The check and the insert share one ``BEGIN IMMEDIATE`` transaction, so
+        any concurrent append invalidates this one instead of racing past it.
+        The guarded append also refuses to trail events dated after it, because
+        the ledger projection replays in append order.
+        """
+        connection = self._db
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            current = ledger_hash_from_event_hashes(
+                row[0]
+                for row in connection.execute(
+                    _LIST_EVENT_HASHES,
+                    (event.account_id,),
+                ).fetchall()
+            )
+            if current != expected_ledger_hash:
+                raise AccountLedgerRevisionConflict(
+                    f"account ledger revision conflict: {event.account_id}"
+                )
+            if self._has_later_trade_date_uncommitted(event.account_id, event):
+                raise AccountLedgerChronologyConflict(
+                    f"account ledger trails later trade dates: {event.account_id}"
+                )
+            self._append_uncommitted(event)
+            connection.commit()
+        except (AccountLedgerRevisionConflict, AccountLedgerChronologyConflict):
+            connection.rollback()
+            raise
+        except AccountJournalConflictError:
+            connection.rollback()
+            raise
+        except sqlite3.IntegrityError as exc:
+            connection.rollback()
+            raise AccountJournalConflictError("account event append conflict") from exc
+        except Exception:
+            connection.rollback()
+            raise
+        return event
+
+    def _has_later_trade_date_uncommitted(
+        self,
+        account_id: str,
+        event: AccountEvent,
+    ) -> bool:
+        # ponytail: full-stream payload scan per append; fine at workstation
+        # scale, index trade_date in the journal if streams grow large.
+        for row in self._db.execute(_LIST_EVENTS, (account_id,)):
+            payload = orjson.loads(row[0])
+            trade_date = payload.get("trade_date")
+            if isinstance(trade_date, str) and trade_date > event.trade_date:
+                return True
+        return False
 
     def append_many(
         self,

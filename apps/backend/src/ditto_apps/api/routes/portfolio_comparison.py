@@ -8,7 +8,11 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.etf_paper_contracts import ETFPaperHandoffRequest
+from ditto_application.etf_paper_contracts import (
+    ETFPaperExecutionRequest,
+    ETFPaperHandoffRequest,
+)
+from ditto_application.etf_paper_execution import ETFPaperExecution
 from ditto_application.etf_paper_handoff import ETFPaperHandoff
 from ditto_application.exceptions import (
     AppCommandError,
@@ -50,6 +54,8 @@ from ditto_apps.models.portfolio_comparison import (
     ETFAllocationVersionResponse,
     ETFPaperAuthorizeBody,
     ETFPaperAuthorizeResponse,
+    ETFPaperExecutionBody,
+    ETFPaperExecutionResponse,
     ETFPaperHandoffBody,
     HistoryComparisonQueryParams,
     HistoryComparisonResponse,
@@ -253,6 +259,49 @@ async def handoff_etf_paper(
             str(exc), error_code="ETF_PAPER_INVALID"
         ) from exc
     return APIResponse(data=PaperSessionCommandResponse.model_validate(result))
+
+
+@router.post(
+    "/etf-allocations/{allocation_id}/versions/{version_id}/paper-executions",
+    response_model=APIResponse[ETFPaperExecutionResponse],
+    status_code=status.HTTP_201_CREATED,
+    operation_id="portfolio_execute_etf_paper",
+)
+@inject
+async def execute_etf_paper(
+    allocation_id: str,
+    version_id: str,
+    body: ETFPaperExecutionBody,
+    idempotency_key: IdempotencyKeyHeader,
+    process: Annotated[ETFPaperExecution, FromComponent()],
+) -> APIResponse[ETFPaperExecutionResponse]:
+    """Evaluate a fixed target after its execution-day evidence is visible."""
+    try:
+        outcomes = await asyncio.to_thread(
+            process.execute,
+            ETFPaperExecutionRequest(
+                allocation_id=allocation_id,
+                version_id=version_id,
+                authorization_id=body.authorization_id,
+                account_id=body.account_id,
+                session_id=body.session_id,
+                signal_date=body.signal_date.isoformat(),
+                intended_trade_date=body.intended_trade_date.isoformat(),
+                execution_cutoff=body.execution_cutoff,
+                reference_snapshot_id=body.reference_snapshot_id,
+                market_snapshot_id=body.market_snapshot_id,
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except AppConflictError as exc:
+        raise ConflictError(str(exc), error_code="ETF_PAPER_CONFLICT") from exc
+    except (AppCommandError, AppProcessError, AppQueryError, ValueError) as exc:
+        raise UnprocessableEntityError(
+            str(exc), error_code="ETF_PAPER_INVALID"
+        ) from exc
+    return APIResponse(
+        data=ETFPaperExecutionResponse.model_validate({"outcomes": outcomes})
+    )
 
 
 def _request(

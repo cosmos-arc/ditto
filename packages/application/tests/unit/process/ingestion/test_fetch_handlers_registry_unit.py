@@ -55,7 +55,9 @@ def test_daily_handlers_are_built_from_registry(
     assert result.to_dict(as_series=False) == {"dataset": ["calendar"]}
     fetchers.metadata.fetch_calendar.assert_called_once_with(
         "2024-01-01",
-        "2024-12-31",
+        # One forward month past the year boundary keeps a year-end Paper
+        # handoff's next-session lookup cutoff-visible.
+        "2025-01-31",
     )
 
 

@@ -211,6 +211,29 @@ def test_execution_store_replays_exact_request_and_rejects_identity_conflicts() 
     )
 
 
+def test_execution_store_discards_only_matching_unledgered_execution() -> None:
+    store = InMemoryPaperSessionStore()
+    record = _execution()
+    store.append_execution(record)
+
+    with pytest.raises(PaperSessionConflictError, match="cannot be discarded"):
+        store.discard_execution("missing", request_hash=record.request_hash)
+    with pytest.raises(PaperSessionConflictError, match="cannot be discarded"):
+        store.discard_execution(record.execution_id, request_hash="different")
+
+    store.discard_execution(record.execution_id, request_hash=record.request_hash)
+    assert store.get_execution(record.session_id, record.idempotency_key) is None
+    assert store.list_executions(record.session_id) == ()
+    assert store.append_execution(record) == record
+
+    ledgered = store.mark_execution_ledgered(record.execution_id, "event-1")
+    with pytest.raises(PaperSessionConflictError, match="cannot be discarded"):
+        store.discard_execution(
+            ledgered.execution_id, request_hash=ledgered.request_hash
+        )
+    assert store.get_execution(record.session_id, record.idempotency_key) == ledgered
+
+
 def test_reconciliation_store_is_append_only_and_queryable() -> None:
     store = InMemoryPaperSessionStore()
     first = _reconciliation()

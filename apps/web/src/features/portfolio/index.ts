@@ -2,6 +2,7 @@ export { fetchDailyDecisionV3 } from "./api/daily-decision";
 export {
 	authorizeETFPaper,
 	type ETFAllocationVersion,
+	executeETFPaper,
 	handoffETFPaper,
 	listETFAllocationVersions,
 	reviewETFAllocationVersion,

@@ -279,6 +279,35 @@ class ETFAllocationCommand:
             for item in self._artifacts.list_by_strategy(strategy_id)
         ):
             raise AppConflictError("ETF target needs a durable approved review")
+        # Deterministic scope claim: the store's primary key makes the
+        # (version, account, trade date) binding atomic against concurrent
+        # authorizations; identical replays are accepted, sibling sessions
+        # conflict on payload.
+        claim = StrategyArtifactRecord(
+            artifact_id=(
+                f"{request.version_id}:paper-claim:"
+                f"{request.account_id}:{request.intended_trade_date}"
+            ),
+            strategy_id=strategy_id,
+            run_id=request.version_id,
+            artifact_type=ArtifactKind.DIAGNOSTICS,
+            file_path="",
+            metadata={
+                "action": "authorize_paper_claim",
+                "version_id": request.version_id,
+                "account_id": request.account_id,
+                "session_id": request.session_id,
+                "intended_trade_date": request.intended_trade_date,
+            },
+            status="active",
+            created_at=datetime.now(UTC).isoformat(),
+        )
+        try:
+            self._artifacts.save_artifact(claim)
+        except ValueError as exc:
+            raise AppConflictError(
+                "ETF Paper authorization is bound to another session"
+            ) from exc
         identity = build_mutation_idempotency(
             operation_id="etf_allocation_authorize_paper",
             resource_id=request.version_id,
