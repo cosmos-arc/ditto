@@ -108,17 +108,20 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await expect(review.getByText(/#2000101：实际/)).toBeVisible();
 	await expect(review.getByText(/缺少同日价格证据，无法计算实际权重/)).toBeVisible();
 	const now = new Date();
-	const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-	await review.getByLabel("复盘账本日期").fill(today);
+	const reviewDay = new Date(now.getTime() + 86_400_000).toISOString().slice(0, 10);
+	await review.getByLabel("复盘账本日期").fill(reviewDay);
 	await review.getByLabel("复盘价格快照").fill(fixture.market);
 	await review.getByLabel("复盘知识截止").fill("2026-09-03T14:00");
 	await expect(review.getByRole("alert")).toBeVisible();
 	await review.getByLabel("复盘知识截止").fill(
-		new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 23),
+		await page.evaluate(() => {
+			const instant = new Date();
+			return new Date(instant.getTime() - instant.getTimezoneOffset() * 60_000).toISOString().slice(0, 23);
+		}),
 	);
 	const valuationResponse = await request.get(
 		`${apiOrigin}/api/v1/portfolio/etf-allocations/${allocationId}/versions/${versionId}/review`,
-		{ params: { account_kind: "paper", account_id: fixture.account_id, as_of: today, knowledge_cutoff: now.toISOString(), source_snapshot_ids: fixture.market } },
+		{ params: { account_kind: "paper", account_id: fixture.account_id, as_of: reviewDay, knowledge_cutoff: now.toISOString(), source_snapshot_ids: fixture.market } },
 	);
 	expect(valuationResponse.status(), await valuationResponse.text()).toBe(200);
 	const valuationData = (await valuationResponse.json()) as {
@@ -142,7 +145,7 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await page.reload();
 	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
 	await expect(review.getByLabel("复盘账户")).toHaveValue(`paper:${fixture.account_id}`);
-	await expect(review.getByLabel("复盘账本日期")).toHaveValue(today);
+	await expect(review.getByLabel("复盘账本日期")).toHaveValue(reviewDay);
 	await expect(valued.getByText(/ETF #2000101：目标/)).toBeVisible();
 	await page.goBack();
 	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
