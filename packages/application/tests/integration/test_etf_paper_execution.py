@@ -475,6 +475,59 @@ def test_etf_rotation_funds_the_buy_with_execution_day_proceeds(
         assert proceeds > 1000
 
 
+def test_etf_execution_fails_closed_when_holdings_diverged_from_signal_basis(
+    tmp_path: Path,
+) -> None:
+    """An external fill between the cutoffs must not be resized silently."""
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        facts = MagicMock()
+        facts.resolve.return_value = replace(
+            _facts(execution_ledger_hash=ledger_hash(())),
+            execution_position_quantity=500,
+        )
+        process = _process(sessions, journal, facts)
+        with pytest.raises(AppConflictError, match="diverged from the signal basis"):
+            process.execute(_request())
+        assert sessions.list_executions("session-a") == ()
+        assert journal.list_events("paper-a") == ()
+
+
+def test_etf_sizing_rounds_to_the_execution_day_lot(tmp_path: Path) -> None:
+    """Sizing constraints use the cutoff-bound execution rules, not D's."""
+    path = tmp_path / "paper.db"
+    _seed(path)
+    with (
+        SqlitePaperSessionStore(str(path)) as sessions,
+        SqliteAccountEventJournal(str(path)) as journal,
+    ):
+        facts = MagicMock()
+        base = _facts(execution_ledger_hash=ledger_hash(()))
+        facts.resolve.return_value = replace(
+            base,
+            signal_rules=replace(base.signal_rules, lot_size=100),
+            execution_rules=replace(base.execution_rules, lot_size=200),
+        )
+        process = _process(sessions, journal, facts)
+        package = _package()
+        process._packages.find_active_paper.return_value = replace(
+            package,
+            intents=(
+                replace(package.intents[0], target_weight=0.49, delta_weight=0.49),
+            ),
+        )
+        outcomes = process.execute(_request())
+        assert outcomes[0].status == "filled"
+        events = journal.list_events("paper-a")
+        assert len(events) == 1
+        # 0.49 × 100000 NAV at 10 = 4900 shares, floored to the 200-lot.
+        assert events[0].quantity == Decimal("4800")
+
+
 def test_etf_paper_rejects_preclose_execution(tmp_path: Path) -> None:
     path = tmp_path / "paper.db"
     _seed(path)

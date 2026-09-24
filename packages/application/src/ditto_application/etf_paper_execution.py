@@ -193,24 +193,32 @@ class ETFPaperExecution:
             "paper_signal_ledger"
         ):
             raise AppConflictError("ETF signal-day Paper ledger changed")
+        if facts.execution_position_quantity != facts.signal_current_quantity:
+            # Another event moved this holding between the frozen signal
+            # basis and the execution day; the package delta is no longer
+            # the operator's decision, so fail closed instead of resizing.
+            raise AppConflictError(
+                "ETF execution holdings diverged from the signal basis"
+            )
         sizing = self._sizing.size(
             ManualSizingRequest(
                 direction=cast("Literal['buy', 'sell']", intent.direction),
                 target_weight=intent.target_weight,
                 nav=facts.signal_nav,
                 current_quantity=facts.signal_current_quantity,
-                # Target quantity and NAV keep the frozen D basis; funding and
-                # sellability use the execution-day balances so a rotation's
-                # sell proceeds can fund its buy.
+                # Target quantity and NAV keep the frozen D basis; funding,
+                # sellability and the rounding/fee constraints use the
+                # execution-day balances and rules so a rotation's sell
+                # proceeds can fund its buy on the current lot schedule.
                 available_quantity=facts.execution_available_quantity,
                 cash_available=facts.execution_cash_available,
                 reference_price=facts.signal_reference_price,
                 instrument_id=intent.instrument_id,
                 trade_date=request.signal_date,
-                lot_size=facts.signal_rules.lot_size,
-                commission_rate=facts.signal_rules.commission_rate,
-                min_commission=facts.signal_rules.min_commission,
-                settlement_cycle=facts.signal_rules.settlement_cycle,
+                lot_size=facts.execution_rules.lot_size,
+                commission_rate=facts.execution_rules.commission_rate,
+                min_commission=facts.execution_rules.min_commission,
+                settlement_cycle=facts.execution_rules.settlement_cycle,
             )
         )
         if sizing.readiness != "ready" or sizing.direction != intent.direction:
