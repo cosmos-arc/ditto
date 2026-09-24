@@ -231,6 +231,7 @@ def test_etf_paper_fill_replays_without_a_second_ledger_event(
         resolve = process._facts.resolve.call_args.kwargs
         assert resolve["signal_snapshot_id"] == "reference-signal"
         assert resolve["signal_cutoff"] == SIGNAL
+        assert resolve["valuation_cutoff"] == SIGNAL
         assert len(journal.list_events("paper-a")) == 1
         second = process.execute(_request())
         assert second == first

@@ -143,8 +143,13 @@ def _request() -> ETFPaperExecutionRequest:
 @pytest.mark.pit
 def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
     facts, metadata, bars, ledger = _facts()
+    valuation = SIGNAL + timedelta(hours=1)
     resolved = facts.resolve(
-        _request(), instrument_id=1, signal_snapshot_id="signal", signal_cutoff=SIGNAL
+        _request(),
+        instrument_id=1,
+        signal_snapshot_id="signal",
+        signal_cutoff=SIGNAL,
+        valuation_cutoff=valuation,
     )
     assert resolved.signal_ledger_hash == ledger_hash(())
     assert resolved.execution_ledger_hash == ledger_hash(())
@@ -153,10 +158,11 @@ def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
     assert resolved.execution_rules.commission_rate == 0.0003
     assert resolved.settlement_date == "2026-09-03"
     assert [
-        call.kwargs["asof"] for call in metadata.list_etf_candidates.call_args_list
+        (call.kwargs["asof"], call.kwargs["cutoff"])
+        for call in metadata.list_etf_candidates.call_args_list
     ] == [
-        "2026-09-01",
-        "2026-09-02",
+        ("2026-09-01", valuation.isoformat()),
+        ("2026-09-02", EXECUTION.isoformat()),
     ]
     assert [
         call.kwargs["recorded_through"] for call in ledger.get_paper.call_args_list
@@ -173,7 +179,11 @@ def test_etf_paper_facts_derive_limits_absent_from_etf_daily_payload() -> None:
     base = bars.load_paper_market.return_value
     bars.load_paper_market.return_value = replace(base, limit_up=None, limit_down=None)
     resolved = facts.resolve(
-        _request(), instrument_id=1, signal_snapshot_id="signal", signal_cutoff=SIGNAL
+        _request(),
+        instrument_id=1,
+        signal_snapshot_id="signal",
+        signal_cutoff=SIGNAL,
+        valuation_cutoff=SIGNAL,
     )
     # Exchange rule: pre_close 10.0 shifted by 10% rounded half-up to the
     # 0.001 tick — the canonical ETF daily producer carries no limit columns.
@@ -212,5 +222,6 @@ def test_etf_paper_facts_reject_future_execution_fee() -> None:
             instrument_id=1,
             signal_snapshot_id="signal",
             signal_cutoff=SIGNAL,
+            valuation_cutoff=SIGNAL,
         )
     bars.load_paper_market.assert_not_called()

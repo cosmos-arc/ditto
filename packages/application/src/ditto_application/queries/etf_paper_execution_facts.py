@@ -82,11 +82,19 @@ class LiveETFPaperExecutionFacts:
         instrument_id: int,
         signal_snapshot_id: str,
         signal_cutoff: datetime,
+        valuation_cutoff: datetime,
     ) -> ETFPaperOrderFacts:
-        """Read exact D and D+1 inputs; no caller-supplied market or rule values."""
+        """
+        Read exact D and D+1 inputs; no caller-supplied market or rule values.
+
+        ``signal_cutoff`` (the saved version cutoff) bounds the ledger reads,
+        matching the handoff's frozen ``paper_signal_ledger`` basis;
+        ``valuation_cutoff`` (the handoff's declared cutoff) bounds the
+        reference-data reads that reproduce the package's valuation basis.
+        """
         signal = self._candidates(
             asof=request.signal_date,
-            cutoff=signal_cutoff,
+            cutoff=valuation_cutoff,
             snapshot_id=signal_snapshot_id,
         )
         candidate = signal.get(instrument_id)
@@ -95,7 +103,7 @@ class LiveETFPaperExecutionFacts:
         signal_rules = self._rules(
             candidate,
             asof=request.signal_date,
-            cutoff=signal_cutoff,
+            cutoff=valuation_cutoff,
             snapshot_id=signal_snapshot_id,
         )
         initial_account = self._ledger.get_paper(
@@ -111,7 +119,7 @@ class LiveETFPaperExecutionFacts:
             InstrumentId(item_id): self._price(
                 signal[item_id],
                 asof=request.signal_date,
-                cutoff=signal_cutoff,
+                cutoff=valuation_cutoff,
                 snapshot_id=signal_snapshot_id,
             )
             for item_id in needed

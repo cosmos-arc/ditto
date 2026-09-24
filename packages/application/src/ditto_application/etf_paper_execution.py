@@ -180,7 +180,8 @@ class ETFPaperExecution:
             request,
             instrument_id=intent.instrument_id,
             signal_snapshot_id=package.dataset_snapshot_ids["etf_reference"],
-            signal_cutoff=reference_cutoff,
+            signal_cutoff=signal_cutoff,
+            valuation_cutoff=reference_cutoff,
         )
         if facts.signal_ledger_hash != package.dataset_snapshot_ids.get(
             "paper_signal_ledger"
@@ -244,7 +245,7 @@ class ETFPaperExecution:
                     reference_price_field="close",
                     slippage_bps=DEFAULT_SLIPPAGE_BPS,
                 ),
-                decision_at=signal_cutoff,
+                decision_at=reference_cutoff,
                 execution_at=request.execution_cutoff,
                 settlement_date=facts.settlement_date,
                 position_quantity=facts.execution_position_quantity,

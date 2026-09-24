@@ -97,6 +97,7 @@ class ETFPaperExecutionFactsPort(Protocol):
         instrument_id: int,
         signal_snapshot_id: str,
         signal_cutoff: datetime,
+        valuation_cutoff: datetime,
     ) -> ETFPaperOrderFacts:
         """Return exact signal and execution facts or fail closed."""
         ...
