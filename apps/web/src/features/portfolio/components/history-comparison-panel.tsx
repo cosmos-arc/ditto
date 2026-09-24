@@ -59,6 +59,7 @@ function restoredIdentity(): HistoryComparisonIdentity | null {
 		const value: unknown = JSON.parse(encoded);
 		if (!value || typeof value !== "object") return null;
 		const record = value as Record<string, unknown>;
+		if (record["origin_version_id"] !== params.get("etfVersion")) return null;
 		const required = [
 			"strategy_id",
 			"paper_account_id",
@@ -457,6 +458,7 @@ export function HistoryComparisonPanel({ etfAllocationId }: { readonly etfAlloca
 
 	const canSubmit =
 		strategyId !== "" &&
+		(!etfAllocationId || Boolean(new URLSearchParams(window.location.search).get("etfVersion"))) &&
 		paperAccountId !== "" &&
 		paperSessionId !== "" &&
 		manualAccountId !== "" &&
@@ -697,6 +699,9 @@ export function HistoryComparisonPanel({ etfAllocationId }: { readonly etfAlloca
 								publication_cutoff: cutoff,
 								source_snapshot_ids: [...snapshots],
 								...(artifactIds.length > 0 ? { model_artifact_ids: [...artifactIds] } : {}),
+								...(etfAllocationId
+									? { origin_version_id: new URLSearchParams(window.location.search).get("etfVersion") ?? "" }
+									: {}),
 								...pinnedRevisionParams(pinnedPaper, pinnedManual),
 								...(benchmarkText.trim() !== ""
 									? { benchmark_symbol: benchmarkText.trim(), benchmark_type: "price" }

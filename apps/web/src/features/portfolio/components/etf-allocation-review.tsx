@@ -233,28 +233,27 @@ export function ETFAllocationReview({
 			{valuation.data && (
 				<section aria-label="ETF 目标与实际估值">
 					<p>
-						估值快照 {valuation.data.valuation_snapshot_id} · 账本 {valuation.data.ledger_hash}
+						估值快照 {valuation.data.valuationSnapshotId} · 账本 {valuation.data.ledgerHash}
 					</p>
 					<p>
-						目标现金 {valuation.data.target.cash_weight}；实际现金 {valuation.data.actual.cash_weight}；现金差异{" "}
-						{valuation.data.drift.cash_drift_bps} bps
+						目标现金 {valuation.data.targetCashWeight}；实际现金 {valuation.data.actualCashWeight}；现金差异{" "}
+						{valuation.data.cashDriftBps} bps
 					</p>
 					<ul>
-						{valuation.data.drift.items.map((item) => (
-							<li key={item.instrument_id}>
-								ETF #{item.instrument_id}：目标 {item.baseline_weight}；实际 {item.observed_weight}；差异{" "}
-								{item.drift_bps} bps
+						{valuation.data.positions.map((item) => (
+							<li key={item.instrumentId}>
+								ETF #{item.instrumentId}：目标 {item.targetWeight}；实际 {item.actualWeight}；差异 {item.driftBps} bps
 							</li>
 						))}
 					</ul>
 					<p>
 						已知同指数实际暴露：
-						{Object.entries(valuation.data.actual_exposure)
+						{Object.entries(valuation.data.actualExposure)
 							.map(([index, weight]) => `${index} ${weight}`)
 							.join("；") || "未知"}
 					</p>
 					<p>
-						指数归属未知的实际持仓：{valuation.data.unknown_exposure_instrument_ids.join("、") || "无"}
+						指数归属未知的实际持仓：{valuation.data.unknownExposureInstrumentIds.join("、") || "无"}
 						；其他穿透重叠仍未知。
 					</p>
 				</section>

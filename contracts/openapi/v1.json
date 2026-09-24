@@ -47101,6 +47101,23 @@
           },
           {
             "in": "query",
+            "name": "origin_version_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origin Version Id"
+            }
+          },
+          {
+            "in": "query",
             "name": "paper_ledger_event_count",
             "required": false,
             "schema": {

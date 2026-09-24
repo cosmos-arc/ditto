@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6e30f3390b2b24903095abbcbdc92c60c6a17a5d84b445b358e51c5eda2b3c14
+ * Schema SHA-256: 5e7df97b15473bed5b443e6a03dbcc6fe17d63ec3fc89e820167d7931c467b31
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -29906,6 +29906,7 @@ export interface operations {
                 publication_cutoff: string;
                 source_snapshot_ids: string[];
                 model_artifact_ids?: string[];
+                origin_version_id?: string | null;
                 paper_ledger_event_count?: number | null;
                 paper_ledger_hash?: string | null;
                 manual_ledger_event_count?: number | null;

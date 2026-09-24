@@ -126,16 +126,17 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 			target: { positions: { weight: string }[]; cash_weight: string };
 			actual: { positions: { weight: string }[]; cash_weight: string };
 			actual_exposure: Record<string, string>;
+			unknown_exposure_instrument_ids: number[];
 		};
 	};
 	expect(Number(valuationData.data.target.positions[0]?.weight)).toBeCloseTo(0.5, 6);
 	expect(Number(valuationData.data.actual.positions[0]?.weight)).toBeGreaterThan(0.5);
-	expect(valuationData.data.actual_exposure["000300.SH"]).toBe(
-		valuationData.data.actual.positions[0]?.weight,
-	);
+	expect(valuationData.data.actual_exposure).toEqual({});
+	expect(valuationData.data.unknown_exposure_instrument_ids).toContain(2000101);
 	const valued = review.getByRole("region", { name: "ETF 目标与实际估值" });
 	await expect(valued.getByText(/ETF #2000101：目标/)).toBeVisible();
-	await expect(valued.getByText(/已知同指数实际暴露：000300.SH/)).toBeVisible();
+	await expect(valued.getByText(/已知同指数实际暴露：未知/)).toBeVisible();
+	await expect(valued.getByText(/指数归属未知的实际持仓：2000101/)).toBeVisible();
 	await expect(valued.getByText(/目标现金 .*实际现金 .*现金差异/)).toBeVisible();
 	await expect(page.getByTestId("history-comparison-submit")).toBeDisabled();
 	await page.reload();

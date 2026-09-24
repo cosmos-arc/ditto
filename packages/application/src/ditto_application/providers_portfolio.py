@@ -89,7 +89,7 @@ class AppPortfolioQueryProvider(Provider):
     @provide
     def etf_allocation_review_query(
         self,
-        allocations: ETFAllocationCommand,
+        artifacts: StrategyArtifactService,
         accounts: AccountLedgerQuery,
         metadata: MetadataQueryFacade,
         snapshots: ProviderSnapshotReader,
@@ -97,7 +97,7 @@ class AppPortfolioQueryProvider(Provider):
     ) -> GetETFAllocationReviewQuery:
         """Value one immutable ETF target against one exact account ledger."""
         return GetETFAllocationReviewQuery(
-            allocations=allocations,
+            artifacts=artifacts,
             accounts=accounts,
             metadata=metadata,
             snapshots=snapshots,

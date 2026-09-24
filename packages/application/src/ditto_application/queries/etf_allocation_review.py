@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal, Protocol
+from typing import Literal, cast
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_kernel.identity import InstrumentId
@@ -16,6 +15,10 @@ from ditto_portfolio.portfolio_comparison import (
     PortfolioDriftView,
     compare_portfolio_pair,
     normalize_portfolio,
+)
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
 )
 
 from ditto_application.exceptions import AppQueryError
@@ -30,39 +33,6 @@ from ditto_application.queries.portfolio_comparison_source import (
     valuation_snapshot_id,
 )
 from ditto_application.queries.technical_analysis import TechnicalAnalysisSourcePort
-
-
-class _ETFAllocationVersionRead(Protocol):
-    """Saved target fields needed by a read-only account comparison."""
-
-    @property
-    def version_id(self) -> str: ...
-
-    @property
-    def asof(self) -> str: ...
-
-    @property
-    def created_at(self) -> str: ...
-
-    @property
-    def weights(self) -> dict[int, str]: ...
-
-    @property
-    def knowledge_cutoff(self) -> str: ...
-
-    @property
-    def source_snapshot_id(self) -> str: ...
-
-    @property
-    def tracking_exposure(self) -> dict[str, str]: ...
-
-
-class _ETFAllocationVersionReader(Protocol):
-    """Read immutable allocation versions without depending on a command module."""
-
-    def list_versions(
-        self, allocation_id: str
-    ) -> Sequence[_ETFAllocationVersionRead]: ...
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -98,19 +68,35 @@ class ETFAllocationReviewView:
     unknown_exposure_instrument_ids: tuple[int, ...]
 
 
+def _saved_version(
+    artifacts: StrategyArtifactService, request: ETFAllocationReviewRequest
+) -> StrategyArtifactRecord:
+    version = artifacts.get_artifact(request.version_id)
+    if (
+        version is None
+        or version.strategy_id != f"etf-allocation:{request.allocation_id}"
+        or version.artifact_type is not ArtifactKind.TARGET_PORTFOLIO
+        or version.metadata.get("kind") != "etf_allocation"
+    ):
+        raise AppQueryError(
+            "ETF version was not found", code="ETF_REVIEW_VERSION_NOT_FOUND"
+        )
+    return version
+
+
 class GetETFAllocationReviewQuery:
     """Reuse portfolio comparison valuation and normalization for an ETF version."""
 
     def __init__(
         self,
         *,
-        allocations: _ETFAllocationVersionReader,
+        artifacts: StrategyArtifactService,
         accounts: AccountLedgerQuery,
         metadata: MetadataQueryFacade,
         snapshots: ProviderSnapshotReader,
         valuation: TechnicalAnalysisSourcePort,
     ) -> None:
-        self._allocations = allocations
+        self._artifacts = artifacts
         self._accounts = accounts
         self._metadata = metadata
         self._snapshots = snapshots
@@ -129,20 +115,11 @@ class GetETFAllocationReviewQuery:
             raise AppQueryError(
                 "knowledge cutoff needs a timezone", code="ETF_REVIEW_CUTOFF_INVALID"
             )
-        version = next(
-            (
-                item
-                for item in self._allocations.list_versions(request.allocation_id)
-                if item.version_id == request.version_id
-            ),
-            None,
-        )
-        if version is None:
-            raise AppQueryError(
-                "ETF version was not found", code="ETF_REVIEW_VERSION_NOT_FOUND"
-            )
+        version = _saved_version(self._artifacts, request)
+        saved_target = version.metadata
+        target_asof = str(saved_target["asof"])
         if (
-            request.as_of < version.asof
+            request.as_of < target_asof
             or request.knowledge_cutoff
             < datetime.fromisoformat(version.created_at.replace("Z", "+00:00"))
         ):
@@ -151,7 +128,7 @@ class GetETFAllocationReviewQuery:
             )
         comparison = PortfolioComparisonRequest(
             strategy_id=f"etf-allocation:{request.allocation_id}",
-            model_portfolio_id=version.version_id,
+            model_portfolio_id=version.artifact_id,
             paper_account_id=request.account_id
             if request.account_kind == "paper"
             else "not-selected",
@@ -174,9 +151,15 @@ class GetETFAllocationReviewQuery:
             as_of=request.as_of,
             recorded_through=request.knowledge_cutoff,
         )
+        saved_weights = saved_target["weights"]
+        if not isinstance(saved_weights, dict):
+            raise AppQueryError(
+                "saved ETF weights are invalid", code="ETF_REVIEW_TARGET_INVALID"
+            )
+        weight_values = cast("dict[str, object]", saved_weights)
         weights = {
-            int(instrument_id): Decimal(weight)
-            for instrument_id, weight in version.weights.items()
+            int(instrument_id): Decimal(str(weight))
+            for instrument_id, weight in weight_values.items()
         }
         instrument_ids = tuple(
             sorted(
@@ -245,10 +228,16 @@ class GetETFAllocationReviewQuery:
             raise AppQueryError(
                 str(exc), code="ETF_REVIEW_NORMALIZATION_INVALID"
             ) from exc
-        candidates = self._metadata.list_etf_candidates(
-            asof=version.asof,
-            cutoff=version.knowledge_cutoff,
-            source_snapshot_id=version.source_snapshot_id,
+        # The saved reference snapshot proves index identity on its research date only.
+        # Later account dates require a new dated reference; keep exposure unknown here.
+        candidates = (
+            self._metadata.list_etf_candidates(
+                asof=request.as_of,
+                cutoff=request.knowledge_cutoff.isoformat(),
+                source_snapshot_id=str(saved_target["source_snapshot_id"]),
+            )
+            if request.as_of == target_asof
+            else []
         )
         index_by_id = {
             item.instrument_id: tracking.value
@@ -266,7 +255,7 @@ class GetETFAllocationReviewQuery:
             exposure[index] = exposure.get(index, Decimal("0")) + position.weight
         return ETFAllocationReviewView(
             allocation_id=request.allocation_id,
-            version_id=version.version_id,
+            version_id=version.artifact_id,
             account_kind=request.account_kind,
             account_id=request.account_id,
             as_of=request.as_of,
@@ -276,7 +265,12 @@ class GetETFAllocationReviewQuery:
             target=target,
             actual=actual,
             drift=drift,
-            target_exposure=version.tracking_exposure,
+            target_exposure={
+                str(key): str(value)
+                for key, value in cast(
+                    "dict[str, object]", saved_target["tracking_exposure"]
+                ).items()
+            },
             actual_exposure={
                 key: str(value.quantize(Decimal("0.00000001")))
                 for key, value in sorted(exposure.items())

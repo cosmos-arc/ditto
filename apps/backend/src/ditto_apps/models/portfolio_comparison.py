@@ -449,6 +449,7 @@ class HistoryComparisonQueryParams(BaseModel):
     publication_cutoff: datetime = Field(strict=False)
     source_snapshot_ids: tuple[str, ...] = Field(strict=False, min_length=1)
     model_artifact_ids: tuple[str, ...] = Field(default=(), strict=False)
+    origin_version_id: str | None = Field(default=None, min_length=1)
     paper_ledger_event_count: int | None = Field(default=None, ge=1, strict=False)
     paper_ledger_hash: str | None = Field(default=None, min_length=1)
     manual_ledger_event_count: int | None = Field(default=None, ge=1, strict=False)

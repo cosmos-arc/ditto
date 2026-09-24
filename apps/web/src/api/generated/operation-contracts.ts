@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6e30f3390b2b24903095abbcbdc92c60c6a17a5d84b445b358e51c5eda2b3c14
+ * Schema SHA-256: 5e7df97b15473bed5b443e6a03dbcc6fe17d63ec3fc89e820167d7931c467b31
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -2589,7 +2589,7 @@ export const operationRequestContracts = {
   "get /api/v1/portfolio/history-comparison": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["benchmark_symbol", "benchmark_type", "end_date", "knowledge_cutoff", "manual_account_id", "manual_ledger_event_count", "manual_ledger_hash", "model_artifact_ids", "model_initial_capital", "paper_account_id", "paper_ledger_event_count", "paper_ledger_hash", "paper_session_id", "publication_cutoff", "source_snapshot_ids", "start_date", "strategy_id"],
+      "query": ["benchmark_symbol", "benchmark_type", "end_date", "knowledge_cutoff", "manual_account_id", "manual_ledger_event_count", "manual_ledger_hash", "model_artifact_ids", "model_initial_capital", "origin_version_id", "paper_account_id", "paper_ledger_event_count", "paper_ledger_hash", "paper_session_id", "publication_cutoff", "source_snapshot_ids", "start_date", "strategy_id"],
     },
   },
   "get /api/v1/portfolio/model-history": {

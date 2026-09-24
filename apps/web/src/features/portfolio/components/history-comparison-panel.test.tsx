@@ -217,7 +217,9 @@ describe("HistoryComparisonPanel", () => {
 		await screen.findByTestId("history-comparison-result");
 		const saved = new URLSearchParams(window.location.search).get("historyComparison");
 		expect(saved).toContain('"source_snapshot_ids":["snapshot:stock_daily:1"]');
+		expect(saved).toContain('"origin_version_id":"v1"');
 		expect(saved).not.toContain("etfVersion");
+		expect(requests.some((href) => href.includes("origin_version_id=v1"))).toBe(true);
 		first.unmount();
 		const restored = renderPanel("demo");
 		await screen.findByTestId("history-comparison-result");

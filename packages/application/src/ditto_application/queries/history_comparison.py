@@ -123,6 +123,7 @@ class HistoryComparisonRequest:
     publication_cutoff: datetime
     source_snapshot_ids: tuple[str, ...]
     model_artifact_ids: tuple[str, ...] = ()
+    origin_version_id: str | None = None
     paper_ledger_event_count: int | None = None
     paper_ledger_hash: str | None = None
     manual_ledger_event_count: int | None = None
@@ -144,6 +145,7 @@ class HistoryComparisonRequest:
             "publication_cutoff": self.publication_cutoff.isoformat(),
             "source_snapshot_ids": list(self.source_snapshot_ids),
             "model_artifact_ids": list(self.model_artifact_ids),
+            "origin_version_id": self.origin_version_id,
         }
 
 
@@ -398,6 +400,7 @@ class GetHistoryComparisonQuery:
                 knowledge_cutoff=request.knowledge_cutoff,
                 publication_cutoff=request.publication_cutoff,
                 artifact_ids=request.model_artifact_ids,
+                origin_version_id=request.origin_version_id,
             )
         )
         currency = self._shared_currency(manual, paper, model)

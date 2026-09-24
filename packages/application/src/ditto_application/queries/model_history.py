@@ -104,6 +104,7 @@ class ModelHistoryRequest:
     knowledge_cutoff: datetime
     publication_cutoff: datetime
     artifact_ids: tuple[str, ...] = ()
+    origin_version_id: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -328,6 +329,10 @@ def _resolve_packages(
         record
         for record in reader.list_by_strategy(request.strategy_id)
         if record.artifact_type is ArtifactKind.SIGNAL_PACKAGE
+        and (
+            request.origin_version_id is None
+            or record.metadata.get("origin_version_id") == request.origin_version_id
+        )
     )
     if request.artifact_ids:
         return _pin_packages(records, request.artifact_ids, start=start, end=end)
