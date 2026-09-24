@@ -53,7 +53,11 @@ export async function listETFAllocationVersions(allocationId: string): Promise<E
 	const result = await apiClient.get("/api/v1/portfolio/etf-allocations/{allocation_id}/versions", {
 		params: { path: { allocation_id: allocationId } },
 	});
-	return result.map(toVersion);
+	const versions = result.map(toVersion);
+	if (versions.some((version) => version.allocationId !== allocationId)) {
+		throw new Error("ETF 配置版本响应不属于该配置");
+	}
+	return versions;
 }
 
 export async function saveETFAllocationVersion(

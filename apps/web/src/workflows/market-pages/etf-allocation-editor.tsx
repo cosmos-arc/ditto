@@ -139,13 +139,13 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 		mutationFn: (action: ReviewAction) => {
 			if (!saved) throw new Error("请先选择已保存版本");
 			const body = { action, actor: reviewActor.trim(), reason: reviewReason.trim() };
-			const fingerprint = JSON.stringify([saved.allocationId, saved.versionId, body]);
+			const fingerprint = JSON.stringify([allocationId, saved.versionId, body]);
 			if (reviewRetry.current?.fingerprint !== fingerprint) {
 				reviewRetry.current = { fingerprint, key: crypto.randomUUID() };
 			}
 			const state = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
 			window.history.replaceState({ ...state, etfAllocationReviewPending: reviewRetry.current }, "");
-			return reviewETFAllocationVersion(saved.allocationId, saved.versionId, reviewRetry.current.key, body);
+			return reviewETFAllocationVersion(allocationId, saved.versionId, reviewRetry.current.key, body);
 		},
 		onSuccess: (result) => {
 			queryClient.setQueryData<Awaited<ReturnType<typeof listETFAllocationVersions>>>(
