@@ -150,6 +150,20 @@ export async function handoffETFPaper(
 
 const EXECUTION_OUTCOME_STATUSES = ["filled", "deferred", "rejected", "no_rebalance"] as const;
 
+function assertOutcomeIdentity(outcome: components["schemas"]["ETFPaperExecutionOutcomeResponse"]) {
+	const hasExecution = outcome.execution_id !== null;
+	const hasLedger = outcome.ledger_event_id !== null;
+	const identityValid =
+		outcome.status === "filled"
+			? hasExecution && hasLedger
+			: outcome.status === "deferred" || outcome.status === "rejected"
+				? hasExecution && !hasLedger
+				: !hasExecution && !hasLedger;
+	if (!identityValid) {
+		throw new Error("ETF Paper 执行状态与执行/账本身份不匹配");
+	}
+}
+
 export async function executeETFPaper(
 	allocationId: string,
 	versionId: string,
@@ -170,12 +184,7 @@ export async function executeETFPaper(
 		) {
 			throw new Error("ETF Paper 执行响应缺少意图或状态无效");
 		}
-		if (outcome.status === "filled" && (!outcome.execution_id || !outcome.ledger_event_id)) {
-			throw new Error("ETF Paper 成交结果缺少执行或账本身份");
-		}
-		if (outcome.ledger_event_id !== null && outcome.execution_id === null) {
-			throw new Error("ETF Paper 账本事件缺少执行身份");
-		}
+		assertOutcomeIdentity(outcome);
 	}
 	return result.outcomes.map((outcome) => ({
 		intentId: outcome.intent_id,

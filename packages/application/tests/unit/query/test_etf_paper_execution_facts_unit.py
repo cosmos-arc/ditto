@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import polars as pl
 import pytest
 from ditto_application.etf_paper_contracts import ETFPaperExecutionRequest
 from ditto_application.exceptions import AppProcessError
@@ -81,6 +82,29 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
         schema_version="market.etf_daily.v1",
         source="recorded",
     )
+    calendar_snapshot = SimpleNamespace(
+        snapshot_id="calendar-snapshot",
+        dataset_id="calendar",
+        created_at=SIGNAL,
+        payload_retained=True,
+        payload_uri=f"provider_payloads/tushare/calendar/{'a' * 32}.parquet",
+        checksum="a" * 32,
+        row_count=4,
+        source="tushare",
+    )
+    snapshots.list_snapshots.return_value = (calendar_snapshot,)
+    payloads = MagicMock()
+    payloads.read_payload.return_value = pl.DataFrame(
+        {
+            "trade_date": [
+                date(2026, 9, 1),
+                date(2026, 9, 2),
+                date(2026, 9, 3),
+                date(2026, 9, 4),
+            ],
+            "is_open": [True, True, True, False],
+        }
+    )
     account = SimpleNamespace(
         events=(),
         snapshot=SimpleNamespace(
@@ -115,12 +139,14 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
             metadata=metadata,
             admission=admission,
             snapshots=snapshots,
+            payloads=payloads,
             bars=bars,
             ledger=ledger,
         ),
         metadata,
         bars,
         ledger,
+        snapshots,
     )
 
 
@@ -142,7 +168,7 @@ def _request() -> ETFPaperExecutionRequest:
 
 @pytest.mark.pit
 def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
-    facts, metadata, bars, ledger = _facts()
+    facts, metadata, bars, ledger, _calendar = _facts()
     valuation = SIGNAL + timedelta(hours=1)
     resolved = facts.resolve(
         _request(),
@@ -175,7 +201,7 @@ def test_etf_paper_facts_resolve_both_dates_and_signal_ledger() -> None:
 
 @pytest.mark.pit
 def test_etf_paper_facts_derive_limits_absent_from_etf_daily_payload() -> None:
-    facts, _metadata, bars, _ledger = _facts()
+    facts, _metadata, bars, _ledger, _calendar = _facts()
     base = bars.load_paper_market.return_value
     bars.load_paper_market.return_value = replace(base, limit_up=None, limit_down=None)
     resolved = facts.resolve(
@@ -193,7 +219,7 @@ def test_etf_paper_facts_derive_limits_absent_from_etf_daily_payload() -> None:
 
 @pytest.mark.pit
 def test_etf_paper_facts_reject_future_execution_fee() -> None:
-    facts, metadata, bars, _ledger = _facts()
+    facts, metadata, bars, _ledger, _calendar = _facts()
     original = metadata.list_etf_candidates.side_effect
 
     def future_fee(**kwargs: object) -> list[ETFCandidate]:
@@ -225,3 +251,40 @@ def test_etf_paper_facts_reject_future_execution_fee() -> None:
             valuation_cutoff=SIGNAL,
         )
     bars.load_paper_market.assert_not_called()
+
+
+@pytest.mark.pit
+def test_etf_paper_settlement_uses_calendar_evidence_visible_at_cutoff() -> None:
+    facts, _metadata, _bars, _ledger, snapshots = _facts()
+    visible = snapshots.list_snapshots.return_value[0]
+    later = SimpleNamespace(
+        snapshot_id="calendar-refreshed",
+        dataset_id="calendar",
+        created_at=EXECUTION + timedelta(days=1),
+        payload_retained=True,
+        payload_uri=f"provider_payloads/tushare/calendar/{'b' * 32}.parquet",
+        checksum="b" * 32,
+        row_count=4,
+        source="tushare",
+    )
+    snapshots.list_snapshots.return_value = (visible, later)
+    resolved = facts.resolve(
+        _request(),
+        instrument_id=1,
+        signal_snapshot_id="signal",
+        signal_cutoff=SIGNAL,
+        valuation_cutoff=SIGNAL,
+    )
+    # The refreshed calendar created after the cutoff is invisible; the
+    # cutoff-bound snapshot still yields T+1 = 2026-09-03.
+    assert resolved.settlement_date == "2026-09-03"
+
+    snapshots.list_snapshots.return_value = (later,)
+    with pytest.raises(AppProcessError, match="settlement calendar is absent"):
+        facts.resolve(
+            _request(),
+            instrument_id=1,
+            signal_snapshot_id="signal",
+            signal_cutoff=SIGNAL,
+            valuation_cutoff=SIGNAL,
+        )

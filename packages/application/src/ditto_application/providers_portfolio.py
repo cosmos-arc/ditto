@@ -131,6 +131,7 @@ class AppPortfolioQueryProvider(Provider):
             metadata=metadata,
             admission=admission,
             snapshots=snapshots,
+            payloads=payloads,
             bars=ProviderPayloadTechnicalAnalysisSource(
                 snapshot_reader=snapshots,
                 payload_reader=payloads,

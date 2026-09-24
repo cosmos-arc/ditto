@@ -107,21 +107,42 @@ describe("executeETFPaper", () => {
 		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome({ execution_id: null, ledger_event_id: null })] }, 201));
 
 		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow(
-			"ETF Paper 成交结果缺少执行或账本身份",
+			"ETF Paper 执行状态与执行/账本身份不匹配",
 		);
 	});
 
-	it("rejects a ledger event without its execution identity", async () => {
+	it("maps a deferred outcome with execution identity only", async () => {
+		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome({ status: "deferred", ledger_event_id: null })] }, 201));
+
+		await expect(executeETFPaper("demo", "version-one", "key", body)).resolves.toMatchObject([
+			{ status: "deferred", executionId: "execution-a", ledgerEventId: null },
+		]);
+	});
+
+	it("rejects a rejected outcome that claims a ledger event", async () => {
+		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome({ status: "rejected" })] }, 201));
+
+		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow(
+			"ETF Paper 执行状态与执行/账本身份不匹配",
+		);
+	});
+
+	it("rejects a deferred outcome without an execution identity", async () => {
 		vi.stubGlobal(
 			"fetch",
-			fetchMock(
-				{
-					outcomes: [outcome({ status: "rejected", execution_id: null, ledger_event_id: "event-a" })],
-				},
-				201,
-			),
+			fetchMock({ outcomes: [outcome({ status: "deferred", execution_id: null, ledger_event_id: null })] }, 201),
 		);
 
-		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow("ETF Paper 账本事件缺少执行身份");
+		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow(
+			"ETF Paper 执行状态与执行/账本身份不匹配",
+		);
+	});
+
+	it("rejects a no-rebalance outcome that claims identities", async () => {
+		vi.stubGlobal("fetch", fetchMock({ outcomes: [outcome({ status: "no_rebalance" })] }, 201));
+
+		await expect(executeETFPaper("demo", "version-one", "key", body)).rejects.toThrow(
+			"ETF Paper 执行状态与执行/账本身份不匹配",
+		);
 	});
 });
