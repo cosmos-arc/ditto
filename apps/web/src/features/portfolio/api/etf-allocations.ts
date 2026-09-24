@@ -26,6 +26,7 @@ function toVersion(value: VersionDTO): ETFAllocationVersion {
 	if (
 		!value.version_id ||
 		!value.allocation_id ||
+		value.paper_status !== "research_only" ||
 		!["research_only", "review_pending", "review_approved", "rejected"].includes(value.review_status)
 	) {
 		throw new Error("ETF 配置版本身份或审查状态无效");

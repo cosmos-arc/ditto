@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest, requestPath } from "@/test/request";
 import { listETFAllocationVersions } from "../etf-allocations";
 
-const version = (allocationId: string) => ({
+const version = (allocationId: string, overrides: Record<string, unknown> = {}) => ({
 	version_id: "version-one",
 	allocation_id: allocationId,
 	parent_version_id: null,
@@ -19,6 +19,7 @@ const version = (allocationId: string) => ({
 	paper_status: "research_only",
 	review_status: "research_only",
 	created_at: "2026-09-01T09:00:00Z",
+	...overrides,
 });
 
 function fetchMock(body: unknown) {
@@ -45,5 +46,14 @@ describe("listETFAllocationVersions", () => {
 		vi.stubGlobal("fetch", fetchMock([version("other")]));
 
 		await expect(listETFAllocationVersions("demo")).rejects.toThrow("ETF 配置版本响应不属于该配置");
+	});
+
+	it("rejects a version that claims Paper authority", async () => {
+		vi.stubGlobal(
+			"fetch",
+			fetchMock([version("demo", { review_status: "review_approved", paper_status: "paper_authorized" })]),
+		);
+
+		await expect(listETFAllocationVersions("demo")).rejects.toThrow("ETF 配置版本身份或审查状态无效");
 	});
 });
