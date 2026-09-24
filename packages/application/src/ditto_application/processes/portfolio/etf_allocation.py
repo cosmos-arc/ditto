@@ -64,6 +64,20 @@ class ETFAllocationReviewRequest:
 
 
 @dataclass(frozen=True)
+class ETFPaperAuthorizationRequest:
+    """Separate operator consent to send one reviewed version to Paper."""
+
+    allocation_id: str
+    version_id: str
+    account_id: str
+    session_id: str
+    intended_trade_date: str
+    actor: str
+    reason: str
+    idempotency_key: str
+
+
+@dataclass(frozen=True)
 class ETFAllocationVersion:
     """Saved research target that has no Paper execution authority."""
 
@@ -227,6 +241,82 @@ class ETFAllocationCommand:
             and record.metadata.get("version_id") == version_id
             for record in self._artifacts.list_by_strategy(strategy_id)
         )
+
+    def authorize_paper(
+        self, request: ETFPaperAuthorizationRequest
+    ) -> StrategyArtifactRecord:
+        """Record a separate operator decision for one approved fixed target."""
+        if (
+            not request.actor.strip()
+            or not request.reason.strip()
+            or not request.account_id
+            or not request.session_id
+        ):
+            raise AppCommandError("Paper authorizer and reason are required")
+        try:
+            date.fromisoformat(request.intended_trade_date)
+        except ValueError as exc:
+            raise AppCommandError("Paper trade date is invalid") from exc
+        strategy_id = _strategy_id(request.allocation_id)
+        version = _validate_review_target(
+            ETFAllocationReviewRequest(
+                allocation_id=request.allocation_id,
+                version_id=request.version_id,
+                action="approve",
+                actor=request.actor,
+                reason=request.reason,
+                idempotency_key=request.idempotency_key,
+            ),
+            self._artifacts.get_artifact(request.version_id),
+            strategy_id,
+        )
+        if version.status != "approved" or not any(
+            item.metadata.get("version_id") == request.version_id
+            and item.metadata.get("target_request_hash")
+            == version.metadata.get("request_hash")
+            and item.metadata.get("action") == "approve"
+            and item.status == "active"
+            for item in self._artifacts.list_by_strategy(strategy_id)
+        ):
+            raise AppConflictError("ETF target needs a durable approved review")
+        identity = build_mutation_idempotency(
+            operation_id="etf_allocation_authorize_paper",
+            resource_id=request.version_id,
+            raw_key=request.idempotency_key,
+            request_payload={
+                "allocation_id": request.allocation_id,
+                "version_id": request.version_id,
+                "account_id": request.account_id,
+                "session_id": request.session_id,
+                "intended_trade_date": request.intended_trade_date,
+                "actor": request.actor.strip(),
+                "reason": request.reason.strip(),
+            },
+        )
+        receipt = StrategyArtifactRecord(
+            artifact_id=f"{request.version_id}:paper:{identity.key_hash[:32]}",
+            strategy_id=strategy_id,
+            run_id=request.version_id,
+            artifact_type=ArtifactKind.DIAGNOSTICS,
+            file_path="",
+            metadata={
+                "action": "authorize_paper",
+                "version_id": request.version_id,
+                "account_id": request.account_id,
+                "session_id": request.session_id,
+                "intended_trade_date": request.intended_trade_date,
+                "target_request_hash": version.metadata["request_hash"],
+                "actor": request.actor.strip(),
+                "reason": request.reason.strip(),
+                "key_hash": identity.key_hash,
+            },
+            status="active",
+            created_at=datetime.now(UTC).isoformat(),
+        )
+        try:
+            return self._artifacts.save_artifact(receipt)
+        except ValueError as exc:
+            raise AppConflictError("ETF Paper authorization key conflict") from exc
 
 
 def _review_receipt_id(version_id: str, key_hash: str) -> str:

@@ -11,12 +11,18 @@ from dishka.integrations.fastapi import inject
 from ditto_application.exceptions import (
     AppCommandError,
     AppConflictError,
+    AppProcessError,
     AppQueryError,
 )
 from ditto_application.processes.portfolio.etf_allocation import (
     ETFAllocationCommand,
     ETFAllocationRequest,
     ETFAllocationReviewRequest,
+    ETFPaperAuthorizationRequest,
+)
+from ditto_application.processes.portfolio.etf_paper_handoff import (
+    ETFPaperHandoff,
+    ETFPaperHandoffRequest,
 )
 from ditto_application.queries.history_comparison import (
     GetHistoryComparisonQuery,
@@ -39,10 +45,14 @@ from fastapi import APIRouter, Query, status
 from ditto_apps.api.errors import ConflictError, UnprocessableEntityError
 from ditto_apps.api.mutation_idempotency import IdempotencyKeyHeader
 from ditto_apps.models.common import APIResponse
+from ditto_apps.models.paper import PaperSessionCommandResponse
 from ditto_apps.models.portfolio_comparison import (
     ETFAllocationBody,
     ETFAllocationReviewBody,
     ETFAllocationVersionResponse,
+    ETFPaperAuthorizeBody,
+    ETFPaperAuthorizeResponse,
+    ETFPaperHandoffBody,
     HistoryComparisonQueryParams,
     HistoryComparisonResponse,
     ModelHistoryQueryParams,
@@ -160,6 +170,91 @@ async def review_etf_allocation_version(
             error_code=code if isinstance(code, str) else "ETF_ALLOCATION_INVALID",
         ) from exc
     return APIResponse(data=ETFAllocationVersionResponse.model_validate(version))
+
+
+@router.post(
+    "/etf-allocations/{allocation_id}/versions/{version_id}/paper-authorizations",
+    response_model=APIResponse[ETFPaperAuthorizeResponse],
+    status_code=status.HTTP_201_CREATED,
+    operation_id="portfolio_authorize_etf_paper",
+)
+@inject
+async def authorize_etf_paper(
+    allocation_id: str,
+    version_id: str,
+    body: ETFPaperAuthorizeBody,
+    idempotency_key: IdempotencyKeyHeader,
+    command: Annotated[ETFAllocationCommand, FromComponent()],
+) -> APIResponse[ETFPaperAuthorizeResponse]:
+    """Authorize a reviewed ETF target for one explicit Paper handoff."""
+    try:
+        receipt = await asyncio.to_thread(
+            command.authorize_paper,
+            ETFPaperAuthorizationRequest(
+                allocation_id=allocation_id,
+                version_id=version_id,
+                account_id=body.account_id,
+                session_id=body.session_id,
+                intended_trade_date=body.intended_trade_date.isoformat(),
+                actor=body.actor,
+                reason=body.reason,
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except AppConflictError as exc:
+        raise ConflictError(str(exc), error_code="ETF_PAPER_CONFLICT") from exc
+    except AppCommandError as exc:
+        code = exc.details.get("code")
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=code if isinstance(code, str) else "ETF_PAPER_INVALID",
+        ) from exc
+    return APIResponse(
+        data=ETFPaperAuthorizeResponse(
+            version_id=version_id, authorization_id=receipt.artifact_id
+        )
+    )
+
+
+@router.post(
+    "/etf-allocations/{allocation_id}/versions/{version_id}/paper-handoffs",
+    response_model=APIResponse[PaperSessionCommandResponse],
+    status_code=status.HTTP_201_CREATED,
+    operation_id="portfolio_handoff_etf_paper",
+)
+@inject
+async def handoff_etf_paper(
+    allocation_id: str,
+    version_id: str,
+    body: ETFPaperHandoffBody,
+    idempotency_key: IdempotencyKeyHeader,
+    process: Annotated[ETFPaperHandoff, FromComponent()],
+) -> APIResponse[PaperSessionCommandResponse]:
+    """Create or replay a Paper session from current eligible fixed target."""
+    try:
+        result = await asyncio.to_thread(
+            process.handoff,
+            ETFPaperHandoffRequest(
+                allocation_id=allocation_id,
+                version_id=version_id,
+                authorization_id=body.authorization_id,
+                account_id=body.account_id,
+                session_id=body.session_id,
+                idempotency_key=idempotency_key,
+                signal_date=body.signal_date.isoformat(),
+                decision_date=body.decision_date.isoformat(),
+                intended_trade_date=body.intended_trade_date.isoformat(),
+                knowledge_cutoff=body.knowledge_cutoff,
+                source_snapshot_id=body.source_snapshot_id,
+            ),
+        )
+    except AppConflictError as exc:
+        raise ConflictError(str(exc), error_code="ETF_PAPER_CONFLICT") from exc
+    except (AppCommandError, AppProcessError, AppQueryError, ValueError) as exc:
+        raise UnprocessableEntityError(
+            str(exc), error_code="ETF_PAPER_INVALID"
+        ) from exc
+    return APIResponse(data=PaperSessionCommandResponse.model_validate(result))
 
 
 def _request(

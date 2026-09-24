@@ -18,6 +18,7 @@ from ditto_application.processes.execution.signal_package import (
     SignalPackagePublishRequest,
 )
 from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
+from ditto_application.signal_package_contract import verify_signal_package_metadata
 from ditto_execution.models import FillAdjustmentRecord, FillRecord, SignalRecord
 from ditto_kernel.identity import InstrumentId
 from ditto_platform.foundation import SQLitePool
@@ -261,3 +262,60 @@ def test_stock_selection_target_publishes_readable_manual_trade_signals(
                 5: "healthcare",
             }[instrument_id]
         )
+
+
+@pytest.mark.integration
+def test_exact_fixed_etf_target_publishes_a_paper_scoped_package(
+    artifact_service: StrategyArtifactService,
+) -> None:
+    strategy_id = "etf-allocation:demo"
+    version_id = "etf-allocation-version-one"
+    run_id = f"eod-{SIGNAL_DATE}-{strategy_id}-{version_id}"
+    target = TargetPortfolio(
+        trade_date=SIGNAL_DATE,
+        strategy_id=strategy_id,
+        run_id=run_id,
+        positions={InstrumentId(3): 0.8},
+        cash_target=0.2,
+    )
+    port = _IntentPort(rows=[])
+    publisher = SignalPackagePublisher(
+        snapshot_process=SignalSnapshotProcess(position_reader=_FlatPositionReader()),
+        intent_port=port,
+        fill_port=_FillPort(),
+        date_resolver=AShareTradeDateResolver(trading_days=(SIGNAL_DATE, "2026-03-02")),
+        artifact_service=artifact_service,
+    )
+    request = SignalPackagePublishRequest(
+        target=target,
+        strategy_version=version_id,
+        account_id="paper-a",
+        sleeve_id=f"paper-paper-a-{strategy_id}",
+        sizing_contexts={},
+        decision_date=SIGNAL_DATE,
+        intended_trade_date="2026-03-02",
+        required_datasets=("etf_reference",),
+        required_dataset_states=(),
+        dataset_snapshot_ids={
+            "etf_reference": "snapshot:market",
+            "etf_research_reference": "snapshot:research",
+        },
+        execution_scope="paper",
+        current_positions={},
+        origin_version_id=version_id,
+    )
+    package = publisher.finalize(publisher.publish(request))
+    assert package.outcome == "completed"
+    assert len(package.intents) == 1
+    assert package.intents[0].target_weight == 0.8
+    saved = artifact_service.get_artifact(package.artifact_id)
+    assert saved is not None
+    assert saved.status == "active"
+    payload = saved.metadata["business_payload"]
+    assert isinstance(payload, dict)
+    assert payload["origin_version_id"] == version_id
+    assert verify_signal_package_metadata(saved.metadata)
+    assert (
+        publisher.finalize(publisher.publish(request)).artifact_id
+        == package.artifact_id
+    )

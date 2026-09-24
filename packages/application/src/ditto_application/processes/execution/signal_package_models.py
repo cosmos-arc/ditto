@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import Literal
 
 from ditto_execution.targets import TargetPortfolioLike
 
@@ -36,6 +37,9 @@ class SignalPackagePublishRequest:
     )
     industry_by_instrument: Mapping[int, str] = field(default_factory=dict[int, str])
     threshold: float = 0.01
+    execution_scope: Literal["manual", "paper"] = "manual"
+    current_positions: Mapping[int, float] | None = None
+    origin_version_id: str | None = None
 
 
 @dataclass(frozen=True)

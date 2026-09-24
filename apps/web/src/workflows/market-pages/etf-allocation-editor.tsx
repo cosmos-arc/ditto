@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ETFCandidate } from "@/features/instruments";
-import { listETFAllocationVersions, reviewETFAllocationVersion, saveETFAllocationVersion } from "@/features/portfolio";
+import {
+	authorizeETFPaper,
+	handoffETFPaper,
+	listETFAllocationVersions,
+	reviewETFAllocationVersion,
+	saveETFAllocationVersion,
+} from "@/features/portfolio";
 
 type Props = {
 	readonly items: readonly ETFCandidate[];
@@ -15,6 +21,17 @@ type SaveBody = Parameters<typeof saveETFAllocationVersion>[2];
 type PendingSave = { id: string; key: string; fingerprint: string; body: SaveBody };
 type ReviewAction = "submit" | "approve" | "reject";
 type PendingReview = { fingerprint: string; key: string };
+type PendingPaper = {
+	scope: string;
+	accountId: string;
+	tradeDate: string;
+	actor: string;
+	reason: string;
+	sessionId: string;
+	key: string;
+	authorizationId?: string;
+	handoffKey?: string;
+};
 
 function savedIdentity(): { allocationId: string; versionId: string } {
 	const query = new URLSearchParams(window.location.search);
@@ -45,9 +62,28 @@ function pendingReview(): PendingReview | null {
 	return typeof value.fingerprint === "string" && typeof value.key === "string" ? (value as PendingReview) : null;
 }
 
+function pendingPaper(): PendingPaper | null {
+	const state: unknown = window.history.state;
+	const value = state && typeof state === "object" ? (state as Record<string, unknown>)["etfPaperPending"] : null;
+	if (!value || typeof value !== "object") return null;
+	const pending = value as Partial<PendingPaper>;
+	return typeof pending.scope === "string" &&
+		typeof pending.accountId === "string" &&
+		typeof pending.tradeDate === "string" &&
+		typeof pending.actor === "string" &&
+		typeof pending.reason === "string" &&
+		typeof pending.sessionId === "string" &&
+		typeof pending.key === "string" &&
+		(pending.authorizationId === undefined || typeof pending.authorizationId === "string") &&
+		(pending.handoffKey === undefined || typeof pending.handoffKey === "string")
+		? (pending as PendingPaper)
+		: null;
+}
+
 export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot }: Props) {
 	const initial = savedIdentity();
 	const pending = useRef(pendingSave()).current;
+	const pendingPaperState = useRef(pendingPaper()).current;
 	const [allocationId, setAllocationId] = useState(pending?.id ?? initial.allocationId);
 	const [versionId, setVersionId] = useState(pending?.body.parent_version_id ?? initial.versionId);
 	const [selected, setSelected] = useState<number[]>(pending?.body.instrument_ids ?? []);
@@ -63,6 +99,17 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 	const [reviewActor, setReviewActor] = useState("");
 	const [reviewReason, setReviewReason] = useState("");
 	const [confirmingReject, setConfirmingReject] = useState(false);
+	const [paperAccountId, setPaperAccountId] = useState(pendingPaperState?.accountId ?? "");
+	const [paperTradeDate, setPaperTradeDate] = useState(pendingPaperState?.tradeDate ?? "");
+	const [paperActor, setPaperActor] = useState(pendingPaperState?.actor ?? "");
+	const [paperReason, setPaperReason] = useState(pendingPaperState?.reason ?? "");
+	const [paperSession, setPaperSession] = useState<{ accountId: string; sessionId: string } | null>(() => {
+		const query = new URLSearchParams(window.location.search);
+		const accountId = query.get("paperAccount");
+		const sessionId = query.get("paperSession");
+		return accountId && sessionId ? { accountId, sessionId } : null;
+	});
+	const paperRetry = useRef<PendingPaper | null>(pendingPaperState);
 	const reviewRetry = useRef<PendingReview | null>(pendingReview());
 	const retry = useRef<{ body: string; key: string } | null>(
 		pending ? { body: pending.fingerprint, key: pending.key } : null,
@@ -163,6 +210,82 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			setConfirmingReject(false);
 		},
 	});
+	const paperScope = saved
+		? JSON.stringify([
+				allocationId,
+				saved.versionId,
+				paperAccountId.trim(),
+				paperTradeDate,
+				paperActor.trim(),
+				paperReason.trim(),
+				asof,
+				cutoff,
+				snapshot,
+			])
+		: "";
+	const authorizationId = paperRetry.current?.scope === paperScope ? paperRetry.current.authorizationId : undefined;
+	const authorizePaper = useMutation({
+		mutationFn: async () => {
+			if (saved?.reviewStatus !== "review_approved") throw new Error("请选择审查通过的版本");
+			if (paperRetry.current?.scope !== paperScope) {
+				paperRetry.current = {
+					scope: paperScope,
+					accountId: paperAccountId.trim(),
+					tradeDate: paperTradeDate,
+					actor: paperActor.trim(),
+					reason: paperReason.trim(),
+					sessionId: `etf-session-${crypto.randomUUID()}`,
+					key: crypto.randomUUID(),
+				};
+			}
+			const state = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+			window.history.replaceState({ ...state, etfPaperPending: paperRetry.current }, "");
+			return authorizeETFPaper(allocationId, saved.versionId, paperRetry.current.key, {
+				actor: paperActor.trim(),
+				reason: paperReason.trim(),
+				account_id: paperAccountId.trim(),
+				session_id: paperRetry.current.sessionId,
+				intended_trade_date: paperTradeDate,
+			});
+		},
+		onSuccess: (id) => {
+			if (!paperRetry.current) return;
+			paperRetry.current = { ...paperRetry.current, authorizationId: id };
+			const state = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+			window.history.replaceState({ ...state, etfPaperPending: paperRetry.current }, "");
+		},
+	});
+	const handoffPaper = useMutation({
+		mutationFn: async () => {
+			if (!saved || !paperRetry.current?.authorizationId || paperRetry.current.scope !== paperScope) {
+				throw new Error("请先授权当前版本和 Paper 会话");
+			}
+			paperRetry.current.handoffKey ??= crypto.randomUUID();
+			const state = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+			window.history.replaceState({ ...state, etfPaperPending: paperRetry.current }, "");
+			return handoffETFPaper(allocationId, saved.versionId, paperRetry.current.handoffKey, {
+				authorization_id: paperRetry.current.authorizationId,
+				account_id: paperAccountId.trim(),
+				session_id: paperRetry.current.sessionId,
+				signal_date: asof,
+				decision_date: asof,
+				intended_trade_date: paperTradeDate,
+				knowledge_cutoff: cutoff,
+				source_snapshot_id: snapshot,
+			});
+		},
+		onSuccess: (session) => {
+			setPaperSession(session);
+			const url = new URL(window.location.href);
+			url.searchParams.set("paperAccount", session.accountId);
+			url.searchParams.set("paperSession", session.sessionId);
+			const state: Record<string, unknown> =
+				window.history.state && typeof window.history.state === "object" ? { ...window.history.state } : {};
+			delete state["etfPaperPending"];
+			window.history.replaceState(state, "", url);
+			paperRetry.current = null;
+		},
+	});
 	const unchanged =
 		saved &&
 		saved.asof === asof &&
@@ -222,7 +345,7 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 					</select>
 				</label>
 			)}
-			<fieldset>
+			<fieldset id="etf-tool-selection">
 				<legend>选择 ETF 工具</legend>
 				{items.map((item) => (
 					<label key={item.instrumentId} className="block">
@@ -379,6 +502,86 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 						</div>
 					)}
 					{review.isError && <p role="alert">审查失败：{String(review.error)}</p>}
+					{saved.reviewStatus === "review_approved" && (
+						<div className="space-y-2">
+							<h4>Paper 交接</h4>
+							<p>请使用现有 Paper 账户。交接前会复查所选工具在当前快照的交易资格；缺少证据时需重新选择工具。当前 ETF 会话暂不支持下单，执行日行情与规则校验完成后才能模拟成交。</p>
+							<label className="block">
+								Paper 账户 ID{" "}
+								<input
+									aria-label="Paper 账户 ID"
+									value={paperAccountId}
+									onChange={(event) => setPaperAccountId(event.target.value)}
+								/>
+							</label>
+							<label className="block">
+								下一交易日{" "}
+								<input
+									aria-label="下一交易日"
+									type="date"
+									value={paperTradeDate}
+									onChange={(event) => setPaperTradeDate(event.target.value)}
+								/>
+							</label>
+							<label className="block">
+								Paper 授权人{" "}
+								<input
+									aria-label="Paper 授权人"
+									value={paperActor}
+									onChange={(event) => setPaperActor(event.target.value)}
+								/>
+							</label>
+							<label className="block">
+								Paper 授权理由{" "}
+								<input
+									aria-label="Paper 授权理由"
+									value={paperReason}
+									onChange={(event) => setPaperReason(event.target.value)}
+								/>
+							</label>
+							<button
+								type="button"
+								disabled={
+									!paperAccountId.trim() ||
+									!paperTradeDate ||
+									!paperActor.trim() ||
+									!paperReason.trim() ||
+									authorizePaper.isPending
+								}
+								onClick={() => authorizePaper.mutate()}
+							>
+								{authorizePaper.isPending ? "授权中…" : "授权此版本进入 Paper"}
+							</button>
+							{authorizationId && (
+								<button type="button" disabled={handoffPaper.isPending} onClick={() => handoffPaper.mutate()}>
+									{handoffPaper.isPending ? "交接中…" : "创建 Paper 会话"}
+								</button>
+							)}
+							{paperRetry.current?.handoffKey && (
+								<a
+									href={`/portfolio/paper?account_id=${encodeURIComponent(paperRetry.current.accountId)}&session_id=${encodeURIComponent(paperRetry.current.sessionId)}`}
+								>
+									检查待恢复的 Paper 会话
+								</a>
+							)}
+							{authorizePaper.isError && <p role="alert">授权失败：{String(authorizePaper.error)}</p>}
+							{handoffPaper.isError && (
+								<p role="alert">
+									交接失败：{String(handoffPaper.error)}。<a href="#etf-tool-selection">返回工具选择</a>
+								</p>
+							)}
+							{paperSession && (
+								<p>
+									Paper 会话 {paperSession.sessionId} 已创建。
+									<a
+										href={`/portfolio/paper?account_id=${encodeURIComponent(paperSession.accountId)}&session_id=${encodeURIComponent(paperSession.sessionId)}`}
+									>
+										查看 Paper 账户
+									</a>
+								</p>
+							)}
+						</div>
+					)}
 				</div>
 			)}
 		</section>

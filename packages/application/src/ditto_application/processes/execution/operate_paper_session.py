@@ -128,6 +128,7 @@ class OperatePaperSession:
             raise AppNotFoundError(f"paper session not found: {command.session_id}")
         if session.status is not PaperSessionStatus.RUNNING:
             raise AppConflictError("paper session must be running to execute orders")
+        _reject_ungoverned_etf_session(session.strategy_id)
         if resolved.order.trade_date != session.trade_date:
             raise AppProcessError(
                 "paper order trade_date does not match session",
@@ -244,6 +245,13 @@ class OperatePaperSession:
             )
         except PaperSessionConflictError as exc:
             raise AppConflictError(str(exc)) from exc
+
+
+def _reject_ungoverned_etf_session(strategy_id: str) -> None:
+    if strategy_id.startswith("etf-allocation:"):
+        raise AppConflictError(
+            "ETF allocation orders require execution-time target and market checks"
+        )
 
 
 def _paper_order(

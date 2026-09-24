@@ -118,11 +118,13 @@ class SignalPackagePublisher:
             raise AppProcessError("account_id is required for signal package identity")
         if not sleeve_id:
             raise AppProcessError("sleeve_id is required for signal package identity")
-        expected_sleeve_id = f"manual-{account_id}-{strategy_id}"
+        expected_sleeve_id = f"{request.execution_scope}-{account_id}-{strategy_id}"
         if sleeve_id != expected_sleeve_id:
-            raise AppProcessError(
-                f"sleeve_id must be {expected_sleeve_id} for R1 manual execution"
-            )
+            raise AppProcessError(f"sleeve_id must be {expected_sleeve_id}")
+        if request.execution_scope == "paper" and (
+            not request.origin_version_id or request.current_positions is None
+        ):
+            raise AppProcessError("Paper package needs target and account state")
         expected_batch_key = f"eod-{signal_date}-{strategy_id}-{strategy_version}"
         if run_id != expected_batch_key:
             raise AppProcessError(
@@ -142,6 +144,7 @@ class SignalPackagePublisher:
             target=target,
             threshold=threshold,
             sizing_contexts=request.sizing_contexts,
+            current_positions=request.current_positions,
         )
         _validate_intent_numbers(raw_intents)
         snapshots = dict(sorted(request.dataset_snapshot_ids.items()))
@@ -186,6 +189,8 @@ class SignalPackagePublisher:
             "strategy_id": strategy_id,
             "strategy_version": strategy_version,
         }
+        if request.origin_version_id is not None:
+            business_payload["origin_version_id"] = request.origin_version_id
         checksum = compute_signal_package_checksum(business_payload)
         checksum_revision = checksum.removeprefix("sha256:")[:12]
         intents = tuple(
