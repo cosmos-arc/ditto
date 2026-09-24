@@ -218,6 +218,23 @@ def test_etf_paper_facts_derive_limits_absent_from_etf_daily_payload() -> None:
 
 
 @pytest.mark.pit
+def test_etf_paper_facts_reject_source_ticker_drifting_from_reference_identity() -> (
+    None
+):
+    """A retroactively corrected mapping must fail closed, not reselect bars."""
+    facts, metadata, _bars, _ledger, _calendar = _facts()
+    metadata.resolve_source_ticker.return_value = "159919.SZ"
+    with pytest.raises(AppProcessError, match="source ticker conflicts"):
+        facts.resolve(
+            _request(),
+            instrument_id=1,
+            signal_snapshot_id="signal",
+            signal_cutoff=SIGNAL,
+            valuation_cutoff=SIGNAL,
+        )
+
+
+@pytest.mark.pit
 def test_etf_paper_facts_reject_future_execution_fee() -> None:
     facts, metadata, bars, _ledger, _calendar = _facts()
     original = metadata.list_etf_candidates.side_effect

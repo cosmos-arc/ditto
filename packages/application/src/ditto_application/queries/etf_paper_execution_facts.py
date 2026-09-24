@@ -196,14 +196,12 @@ class LiveETFPaperExecutionFacts:
         )
         if not report.allowed:
             raise AppProcessError("ETF execution bar fields are not admitted for Paper")
-        source_ticker = self._metadata.resolve_source_ticker(
+        source_ticker = self._source_ticker(
+            request=request,
             instrument_id=instrument_id,
-            asset_class="etf",
-            source=market_snapshot.source,
-            asof=request.intended_trade_date,
+            market_snapshot=market_snapshot,
+            execution_candidate=execution_candidate,
         )
-        if not source_ticker:
-            raise AppProcessError("ETF execution source ticker is unavailable")
         market = self._bars.load_paper_market(
             PITQueryContext(
                 as_of=request.execution_cutoff,
@@ -254,6 +252,36 @@ class LiveETFPaperExecutionFacts:
             ),
             execution_ledger_hash=execution_account.ledger_revision.ledger_hash,
         )
+
+    def _source_ticker(
+        self,
+        *,
+        request: ETFPaperExecutionRequest,
+        instrument_id: int,
+        market_snapshot: ProviderSnapshot,
+        execution_candidate: ETFCandidate,
+    ) -> str:
+        """
+        Resolve the bar alias, cross-checked against the reference identity.
+
+        The live instrument mapping has no knowledge cutoff, so its answer
+        must agree with the cutoff-bound candidate ticker; a retroactively
+        corrected mapping fails closed instead of selecting another
+        instrument's bars.
+        """
+        source_ticker = self._metadata.resolve_source_ticker(
+            instrument_id=instrument_id,
+            asset_class="etf",
+            source=market_snapshot.source,
+            asof=request.intended_trade_date,
+        )
+        if not source_ticker:
+            raise AppProcessError("ETF execution source ticker is unavailable")
+        if source_ticker.split(".", 1)[0] != execution_candidate.ticker:
+            raise AppProcessError(
+                "ETF execution source ticker conflicts with the reference identity"
+            )
+        return source_ticker
 
     def _snapshot(
         self, snapshot_id: str, dataset_id: str, cutoff: datetime
