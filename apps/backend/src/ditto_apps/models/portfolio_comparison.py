@@ -18,6 +18,9 @@ __all__ = [
     "ETFAllocationBody",
     "ETFAllocationReviewBody",
     "ETFAllocationVersionResponse",
+    "ETFPaperAuthorizeBody",
+    "ETFPaperAuthorizeResponse",
+    "ETFPaperHandoffBody",
     "HistoryComparisonBenchmarkPointResponse",
     "HistoryComparisonBenchmarkResponse",
     "HistoryComparisonBenchmarkRunResponse",
@@ -87,6 +90,42 @@ class ETFAllocationReviewBody(BaseModel):
     action: Literal["submit", "approve", "reject"]
     actor: str = Field(min_length=1)
     reason: str = Field(min_length=1)
+
+
+class ETFPaperAuthorizeBody(BaseModel):
+    """Separate explicit operator authorization for a reviewed target."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    actor: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    intended_trade_date: date
+
+
+class ETFPaperAuthorizeResponse(BaseModel):
+    """Durable authorization receipt identity for retry and handoff."""
+
+    model_config = _RESPONSE_CONFIG
+
+    version_id: str
+    authorization_id: str
+
+
+class ETFPaperHandoffBody(BaseModel):
+    """Explicit PAPER account, session and current evidence identity."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    authorization_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    signal_date: date
+    decision_date: date
+    intended_trade_date: date
+    knowledge_cutoff: datetime
+    source_snapshot_id: str = Field(min_length=1)
 
 
 class NormalizedPortfolioPositionResponse(BaseModel):

@@ -94,3 +94,47 @@ export async function reviewETFAllocationVersion(
 	}
 	return version;
 }
+
+export async function authorizeETFPaper(
+	allocationId: string,
+	versionId: string,
+	key: string,
+	body: components["schemas"]["ETFPaperAuthorizeBody"],
+): Promise<string> {
+	const result = await apiClient.post(
+		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-authorizations",
+		{
+			params: { path: { allocation_id: allocationId, version_id: versionId }, header: { "Idempotency-Key": key } },
+			body,
+		},
+	);
+	if (result.version_id !== versionId || !result.authorization_id.startsWith(`${versionId}:paper:`)) {
+		throw new Error("ETF Paper 授权响应身份不匹配");
+	}
+	return result.authorization_id;
+}
+
+export async function handoffETFPaper(
+	allocationId: string,
+	versionId: string,
+	key: string,
+	body: components["schemas"]["ETFPaperHandoffBody"],
+): Promise<{ accountId: string; sessionId: string }> {
+	const result = await apiClient.post(
+		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/paper-handoffs",
+		{
+			params: { path: { allocation_id: allocationId, version_id: versionId }, header: { "Idempotency-Key": key } },
+			body,
+		},
+	);
+	if (
+		result.session.account_id !== body.account_id ||
+		result.session.session_id !== body.session_id ||
+		result.session.strategy_id !== `etf-allocation:${allocationId}` ||
+		result.session.trade_date !== body.intended_trade_date ||
+		result.session.status !== "running"
+	) {
+		throw new Error("ETF Paper 会话响应身份不匹配");
+	}
+	return { accountId: result.session.account_id, sessionId: result.session.session_id };
+}

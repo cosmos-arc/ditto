@@ -19,6 +19,9 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
 
+from ditto_application.commands.paper_session import PaperSessionCommandHandler
+from ditto_application.etf_paper_handoff import ETFPaperHandoff
+from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
 from ditto_application.queries.account import AccountBaselineQuery
 from ditto_application.queries.account_ledger import AccountLedgerQuery
@@ -30,6 +33,8 @@ from ditto_application.queries.daily_decision_v3 import (
 )
 from ditto_application.queries.decision_evidence import DecisionEvidenceQueryFacade
 from ditto_application.queries.deviation import SignalDeviationQueryFacade
+from ditto_application.queries.etf_paper_handoff_facts import LiveETFPaperHandoffFacts
+from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.history_comparison import GetHistoryComparisonQuery
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.model_history import GetModelHistoryQuery
@@ -68,6 +73,38 @@ class AppPortfolioQueryProvider(Provider):
     ) -> ETFAllocationCommand:
         """Validate and save ETF research allocation revisions."""
         return ETFAllocationCommand(metadata, artifacts)
+
+    @provide
+    def etf_paper_handoff_facts(
+        self,
+        metadata: MetadataQueryFacade,
+        admission: FieldAdmissionQuery,
+        snapshots: ProviderSnapshotReader,
+        ledger: AccountLedgerQuery,
+    ) -> LiveETFPaperHandoffFacts:
+        """Resolve current, promotion-admitted ETF and PAPER account facts."""
+        return LiveETFPaperHandoffFacts(
+            metadata=metadata,
+            admission=admission,
+            snapshots=snapshots,
+            ledger=ledger,
+        )
+
+    @provide
+    def etf_paper_handoff(
+        self,
+        allocations: ETFAllocationCommand,
+        facts: LiveETFPaperHandoffFacts,
+        packages: SignalPackagePublisher,
+        sessions: PaperSessionCommandHandler,
+    ) -> ETFPaperHandoff:
+        """Bind fixed target approval, package publication and PAPER session."""
+        return ETFPaperHandoff(
+            allocations=allocations,
+            facts=facts,
+            packages=packages,
+            sessions=sessions,
+        )
 
     @provide
     def portfolio_comparison_source(

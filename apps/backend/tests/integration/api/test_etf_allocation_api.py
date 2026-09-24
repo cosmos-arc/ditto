@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
+from ditto_application.commands.paper_session import PaperSessionCommandReceipt
+from ditto_application.etf_paper_handoff import ETFPaperHandoff
+from ditto_application.paper_contracts import PaperSessionInfo
 from ditto_application.processes.portfolio.etf_allocation import ETFAllocationCommand
 from ditto_application.queries.etf_candidates import ETFCandidate, ETFField
 from ditto_application.queries.metadata import MetadataQueryFacade
@@ -53,6 +57,22 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
     service = ETFAllocationCommand(
         metadata, StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
     )
+    handoff = MagicMock(spec=ETFPaperHandoff)
+    handoff.handoff.side_effect = lambda request: PaperSessionCommandReceipt(
+        status="created",
+        action="start",
+        session=PaperSessionInfo(
+            session_id=request.session_id,
+            account_id=request.account_id,
+            strategy_id=f"etf-allocation:{request.allocation_id}",
+            trade_date=request.intended_trade_date,
+            status="running",
+            revision=1,
+            created_at=datetime(2026, 9, 2, tzinfo=UTC),
+            updated_at=datetime(2026, 9, 2, tzinfo=UTC),
+            pause_reason=None,
+        ),
+    )
 
     class TestProvider(Provider):
         scope = Scope.APP
@@ -60,6 +80,10 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
         @provide
         def allocation(self) -> ETFAllocationCommand:
             return service
+
+        @provide
+        def etf_handoff(self) -> ETFPaperHandoff:
+            return handoff
 
     app = FastAPI()
     configure_exception_handlers(app)
@@ -145,6 +169,7 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             assert approved.status_code == 200, approved.text
             assert approved.json()["data"]["review_status"] == "review_approved"
             assert approved.json()["data"]["paper_status"] == "research_only"
+            _check_paper_authorization(web, endpoint, first_data["version_id"])
             assert (
                 web.post(review, json=approval, headers={"Idempotency-Key": "a"}).json()
                 == approved.json()
@@ -176,3 +201,53 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
             )
     finally:
         pool.close_all()
+
+
+def _check_paper_authorization(web: TestClient, endpoint: str, version_id: str) -> None:
+    authorization = f"{endpoint}/{version_id}/paper-authorizations"
+    authorization_body = {
+        "actor": "operator",
+        "reason": "send this version to Paper",
+        "account_id": "paper-a",
+        "session_id": "paper-session-a",
+        "intended_trade_date": "2026-09-03",
+    }
+    authorized = web.post(
+        authorization,
+        json=authorization_body,
+        headers={"Idempotency-Key": "paper-consent"},
+    )
+    assert authorized.status_code == 201, authorized.text
+    assert authorized.json()["data"]["version_id"] == version_id
+    handoff = web.post(
+        f"{endpoint}/{version_id}/paper-handoffs",
+        json={
+            "authorization_id": authorized.json()["data"]["authorization_id"],
+            "account_id": "paper-a",
+            "session_id": "paper-session-a",
+            "signal_date": "2026-09-02",
+            "decision_date": "2026-09-02",
+            "intended_trade_date": "2026-09-03",
+            "knowledge_cutoff": "2026-09-02T08:00:00Z",
+            "source_snapshot_id": "snapshot:recorded:market",
+        },
+        headers={"Idempotency-Key": "paper-handoff"},
+    )
+    assert handoff.status_code == 201, handoff.text
+    assert handoff.json()["data"]["session"]["strategy_id"] == "etf-allocation:demo"
+    assert (
+        web.post(
+            authorization,
+            json=authorization_body,
+            headers={"Idempotency-Key": "paper-consent"},
+        ).json()
+        == authorized.json()
+    )
+    assert (
+        web.post(
+            authorization,
+            json={**authorization_body, "account_id": "paper-b"},
+            headers={"Idempotency-Key": "paper-consent"},
+        ).status_code
+        == 409
+    )

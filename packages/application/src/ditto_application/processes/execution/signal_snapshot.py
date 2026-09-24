@@ -55,6 +55,7 @@ class SignalSnapshotProcess:
         target: TargetPortfolioLike,
         threshold: float = 0.01,
         sizing_contexts: Mapping[int, ManualSizingContext] | None = None,
+        current_positions: Mapping[int, float] | None = None,
     ) -> list[TradeIntent]:
         """
         对比目标组合与当前持仓，生成交易意图列表.
@@ -65,6 +66,7 @@ class SignalSnapshotProcess:
             target: Pipeline 输出的目标组合.
             threshold: delta_weight 阈值，低于此值不生成 intent.
             sizing_contexts: 可选的逐标的账户、行情和交易规则上下文.
+            current_positions: 可信 PAPER 账户权重；提供时不读取 MANUAL 持仓。
 
         Returns:
             需要调整的交易意图列表.
@@ -79,7 +81,10 @@ class SignalSnapshotProcess:
                 sizing_contexts=sizing_contexts,
             )
         else:
-            current_positions = self._position_reader.get_current_positions(strategy_id)
+            if current_positions is None:
+                current_positions = self._position_reader.get_current_positions(
+                    strategy_id
+                )
             intents = _generate_weight_intents(
                 strategy_id=strategy_id,
                 signal_date=signal_date,

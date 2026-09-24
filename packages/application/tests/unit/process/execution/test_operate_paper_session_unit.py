@@ -163,3 +163,23 @@ def test_same_idempotency_key_with_changed_order_conflicts(tmp_path: Path) -> No
         changed = replace(original, quantity=200)
         with pytest.raises(Exception, match="idempotency"):
             process.execute(changed)
+
+
+def test_generic_paper_order_cannot_bypass_etf_target_checks(tmp_path: Path) -> None:
+    database = tmp_path / "etf-bypass.db"
+    _seed(database)
+    with (
+        SqlitePaperSessionStore(str(database)) as store,
+        SqliteAccountEventJournal(str(database)) as journal,
+    ):
+        session = store.get_session("paper-session-1")
+        assert session is not None
+        store.create_session(
+            replace(
+                session, session_id="etf-session", strategy_id="etf-allocation:demo"
+            )
+        )
+        process = OperatePaperSession(store=store, account_journal=journal)
+        with pytest.raises(Exception, match="execution-time target"):
+            process.execute(replace(_command(), session_id="etf-session"))
+        assert store.list_executions("etf-session") == ()

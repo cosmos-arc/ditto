@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -32,6 +32,21 @@ it("retries one save with the same identity and restores the saved version", asy
 	const reviewAttempts: Array<{ action: string; key: string }> = [];
 	let stored: Record<string, unknown> | null = null;
 	server.use(
+		http.get("/api/v1/paper/accounts", () =>
+			HttpResponse.json({
+				data: {
+					accounts: [
+						{
+							account_id: "paper-a",
+							account_kind: "paper",
+							account_name: "模拟账户",
+							currency: "CNY",
+							opened_at: "2026-09-01T00:00:00Z",
+						},
+					],
+				},
+			}),
+		),
 		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
 			HttpResponse.json({ data: stored ? [stored] : [] }),
 		),
@@ -108,6 +123,59 @@ it("retries one save with the same identity and restores the saved version", asy
 	await user.click(screen.getByRole("button", { name: "研究审查通过" }));
 	await screen.findByText(/· review_approved ·/);
 	expect(reviewAttempts[2]?.action).toBe("approve");
+	const handoffAttempts: string[] = [];
+	server.use(
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/paper-authorizations", async ({ request }) => {
+			const body = (await request.json()) as { account_id: string; session_id: string; intended_trade_date: string };
+			expect(body.account_id).toBe("paper-a");
+			expect(body.intended_trade_date).toBe("2026-09-02");
+			return HttpResponse.json(
+				{ data: { version_id: "version-one", authorization_id: "version-one:paper:receipt" } },
+				{ status: 201 },
+			);
+		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/paper-handoffs", async ({ request }) => {
+			const body = (await request.json()) as { account_id: string; session_id: string; intended_trade_date: string };
+			handoffAttempts.push(request.headers.get("Idempotency-Key") ?? "");
+			if (handoffAttempts.length === 1) return HttpResponse.json({ error: { code: "TEMPORARY" } }, { status: 503 });
+			return HttpResponse.json(
+				{
+					data: {
+						action: "start",
+						status: "created",
+						session: {
+							account_id: body.account_id,
+							session_id: body.session_id,
+							strategy_id: `etf-allocation:${new URLSearchParams(window.location.search).get("etfAllocation")}`,
+							trade_date: body.intended_trade_date,
+							status: "running",
+							revision: 1,
+							created_at: "2026-09-01T09:00:00Z",
+							updated_at: "2026-09-01T09:00:00Z",
+							pause_reason: null,
+						},
+					},
+				},
+				{ status: 201 },
+			);
+		}),
+	);
+	await user.selectOptions(await screen.findByLabelText("Paper 账户"), "paper-a");
+	fireEvent.change(screen.getByLabelText("下一交易日"), { target: { value: "2026-09-02" } });
+	await user.type(screen.getByLabelText("Paper 授权人"), "operator");
+	await user.type(screen.getByLabelText("Paper 授权理由"), "approved for Paper");
+	await user.click(screen.getByRole("button", { name: "授权此版本进入 Paper" }));
+	await screen.findByRole("button", { name: "创建 Paper 会话" });
+	await user.click(screen.getByRole("button", { name: "创建 Paper 会话" }));
+	await screen.findByText(/交接失败/);
+	// A refresh retains the exact session and retry key after an uncertain response.
+	restored.unmount();
+	render(editor, { wrapper: wrapper() });
+	await user.click(await screen.findByRole("button", { name: "创建 Paper 会话" }));
+	const paperLink = await screen.findByRole("link", { name: "查看 Paper 账户" });
+	expect(paperLink).toHaveAttribute("href", expect.stringContaining("/portfolio/paper?account_id=paper-a"));
+	expect(handoffAttempts).toHaveLength(2);
+	expect(handoffAttempts[0]).toBe(handoffAttempts[1]);
 });
 
 it("asks for confirmation before the terminal reject transition", async () => {
