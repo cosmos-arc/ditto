@@ -188,21 +188,12 @@ class ETFCandidateQuery:
             "tracking_error",
         }:
             raise AppQueryError("unsupported ETF sort field")
-        calendar = self._retained_calendar(parsed_cutoff, decision_day)
-        if not calendar.days or decision_day - date.fromisoformat(
-            calendar.days[-1]
-        ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
-            raise AppQueryError("ETF evaluation calendar does not cover the as-of date")
-        tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
-        _ensure_complete_authority(
-            calendar.authority, tracking_days[0] if tracking_days else asof, asof
+        calendar, tracking_reason, calendar_shards = self._evaluation_calendar(
+            parsed_cutoff, decision_day
         )
-        # 血缘覆盖选出最终窗口所消费的每一个权威决定（含把日期改为闭市的
-        # 决定——它们同样改变了哪 253 个交易日被选中）。
-        calendar_shards = _selected_shard_intervals(
-            calendar.authority, tracking_days[0] if tracking_days else asof
+        tracking_days = (
+            calendar.days[-(_TRACKING_RETURNS + 1) :] if calendar is not None else []
         )
-        _ensure_single_calendar_source(calendar_shards, calendar.shard_sources)
         identities, observations = self._metadata.instrument.find_etf_reference(
             asof=asof,
             cutoff=cutoff,
@@ -210,9 +201,11 @@ class ETFCandidateQuery:
             observed_since=tracking_days[0] if tracking_days else asof,
         )
         liquidity_start = (decision_day - timedelta(days=60)).isoformat()
-        sessions = [day for day in calendar.days if day >= liquidity_start][
-            -_LIQUIDITY_DAYS:
-        ]
+        sessions = [
+            day
+            for day in (calendar.days if calendar is not None else [])
+            if day >= liquidity_start
+        ][-_LIQUIDITY_DAYS:]
         by_instrument: dict[int, dict[str, list[dict[str, Any]]]] = {}
         for row in observations:
             field = str(row["field"])
@@ -272,6 +265,7 @@ class ETFCandidateQuery:
                             source_snapshot_id=source_snapshot_id,
                             calendar_shards=calendar_shards,
                         ),
+                        unavailable_reason=tracking_reason,
                     ),
                 )
             )
@@ -296,6 +290,39 @@ class ETFCandidateQuery:
                 "ETF evaluation calendar is absent at the cutoff"
             ) from exc
 
+    def _evaluation_calendar(
+        self, cutoff: datetime, decision_day: date
+    ) -> tuple[
+        RetainedCalendarWindow | None, str | None, tuple[tuple[str, str, str], ...]
+    ]:
+        """
+        Resolve the calendar window, degrading tracking on evidence gaps.
+
+        Calendar evidence only gates the tracking metric; unrelated candidate
+        data (allocation saves, reference fields) must still be returned, so
+        every calendar-level failure becomes an explicit tracking reason.
+        """
+        try:
+            calendar = self._retained_calendar(cutoff, decision_day)
+            if not calendar.days or decision_day - date.fromisoformat(
+                calendar.days[-1]
+            ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
+                raise AppQueryError(
+                    "ETF evaluation calendar does not cover the as-of date"
+                )
+            tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
+            first_day = tracking_days[0] if tracking_days else decision_day.isoformat()
+            _ensure_complete_authority(
+                calendar.authority, first_day, decision_day.isoformat()
+            )
+            # 血缘覆盖选出最终窗口所消费的每一个权威决定（含把日期改为闭市
+            # 的决定——它们同样改变了哪 253 个交易日被选中）。
+            calendar_shards = _selected_shard_intervals(calendar.authority, first_day)
+            _ensure_single_calendar_source(calendar_shards, calendar.shard_sources)
+        except AppQueryError as exc:
+            return None, _calendar_failure_reason(exc), ()
+        return calendar, None, calendar_shards
+
     def _tracking(
         self,
         rows: dict[str, list[dict[str, Any]]],
@@ -305,19 +332,29 @@ class ETFCandidateQuery:
         instrument_id: int,
         cutoff: str,
         lineage: TrackingLineage,
+        unavailable_reason: str | None = None,
     ) -> ETFTracking:
+        if unavailable_reason is not None:
+            return ETFTracking(
+                "unavailable",
+                unavailable_reason,
+                calendar_snapshot_ids=lineage.calendar_snapshot_ids,
+            )
         evidence: dict[str, Any] = {
             "source_snapshot_id": lineage.source_snapshot_id,
             "calendar_snapshot_ids": lineage.calendar_snapshot_ids,
         }
         if not isinstance(relation.value, str):
             return ETFTracking("unavailable", "tracking_index_unavailable", **evidence)
-        if len(sessions) != _TRACKING_RETURNS + 1:
-            return ETFTracking(
-                "unavailable", "insufficient_trading_sessions", **evidence
-            )
-        if relation.effective_from is None or relation.effective_from > sessions[0]:
-            return ETFTracking("unavailable", "tracking_relation_changed", **evidence)
+        early_reason = (
+            "insufficient_trading_sessions"
+            if len(sessions) != _TRACKING_RETURNS + 1
+            else "tracking_relation_changed"
+            if relation.effective_from is None or relation.effective_from > sessions[0]
+            else None
+        )
+        if early_reason is not None:
+            return ETFTracking("unavailable", early_reason, **evidence)
         fund = {
             str(row["observed_on"]): row for row in rows.get("nav_total_return", [])
         }
@@ -611,6 +648,18 @@ def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:
             str(row["effective_to"]) if row["effective_to"] is not None else None
         ),
     )
+
+
+def _calendar_failure_reason(exc: AppQueryError) -> str:
+    """Map a calendar gate failure to an explicit tracking reason."""
+    message = str(exc)
+    if "absent at the cutoff" in message:
+        return "evaluation_calendar_absent"
+    if "does not cover" in message:
+        return "evaluation_calendar_stale"
+    if "coverage gap" in message:
+        return "evaluation_calendar_gap"
+    return "evaluation_calendar_mixed_sources"
 
 
 def _ensure_complete_authority(

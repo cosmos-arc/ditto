@@ -415,8 +415,11 @@ def test_etf_candidates_fail_closed_without_retained_calendar(
                 "source_snapshot_id": snapshot,
             },
         )
-        assert response.status_code == 400, response.text
-        assert "ETF evaluation calendar is absent" in response.text
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["status"] == "unavailable"
+        assert tracking["reason"] == "evaluation_calendar_absent"
+        assert tracking["calendar_snapshot_ids"] == []
         stale = web.get(
             "/api/v1/metadata/etf-candidates",
             params={
@@ -425,8 +428,9 @@ def test_etf_candidates_fail_closed_without_retained_calendar(
                 "source_snapshot_id": snapshot,
             },
         )
-        assert stale.status_code == 400, stale.text
-        assert "ETF evaluation calendar does not cover the as-of date" in stale.text
+        assert stale.status_code == 200, stale.text
+        tracking = stale.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "evaluation_calendar_stale"
     pool.close()
 
 
@@ -451,8 +455,9 @@ def test_etf_candidates_reject_calendar_stale_gap_before_asof(tmp_path: Path) ->
                 "source_snapshot_id": snapshot,
             },
         )
-        assert response.status_code == 400, response.text
-        assert "ETF evaluation calendar does not cover the as-of date" in response.text
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "evaluation_calendar_stale"
     pool.close()
 
 
@@ -588,8 +593,9 @@ def test_etf_candidates_fail_closed_on_mixed_calendar_sources(
                 "source_snapshot_id": snapshot,
             },
         )
-        assert response.status_code == 400, response.text
-        assert "ETF evaluation calendar mixes provider sources" in response.text
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "evaluation_calendar_mixed_sources"
     pool.close()
 
 
@@ -1201,8 +1207,9 @@ def test_partial_calendar_payload_with_hole_fails_closed(tmp_path: Path) -> None
                 "source_snapshot_id": snapshot,
             },
         )
-        assert response.status_code == 400, response.text
-        assert "ETF evaluation calendar has a coverage gap" in response.text
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "evaluation_calendar_gap"
     pool.close()
 
 
