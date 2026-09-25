@@ -22,9 +22,9 @@ from ditto_application.queries.field_admission import (
     FieldRequirement,
 )
 from ditto_application.queries.retained_calendar import (
-    RetainedCalendar,
     RetainedCalendarAbsent,
-    retained_trading_days,
+    RetainedCalendarWindow,
+    retained_calendar_window,
 )
 
 _FIELDS = (
@@ -121,7 +121,7 @@ class ETFTracking:
     currency: str | None = None
     benchmark_id: str | None = None
     source_snapshot_id: str | None = None
-    calendar_snapshot_id: str | None = None
+    calendar_snapshot_ids: tuple[str, ...] = ()
     method: str = (
         "dividend-reinvested NAV total return vs same-currency index total return; "
         "formal results require the same UTC valuation time; "
@@ -176,21 +176,22 @@ class ETFCandidateQuery:
             "tracking_error",
         }:
             raise AppQueryError("unsupported ETF sort field")
-        calendar = self._retained_calendar(parsed_cutoff)
+        calendar = self._retained_calendar(parsed_cutoff, decision_day)
         if not calendar.days or decision_day - date.fromisoformat(
             calendar.days[-1]
         ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
             raise AppQueryError("ETF evaluation calendar does not cover the as-of date")
-        tracking_days = _calendar_window(calendar.days, decision_day, 550)[
-            -(_TRACKING_RETURNS + 1) :
-        ]
+        tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
         identities, observations = self._metadata.instrument.find_etf_reference(
             asof=asof,
             cutoff=cutoff,
             source_snapshot_id=source_snapshot_id,
             observed_since=tracking_days[0] if tracking_days else asof,
         )
-        sessions = _calendar_window(calendar.days, decision_day, 60)[-_LIQUIDITY_DAYS:]
+        liquidity_start = (decision_day - timedelta(days=60)).isoformat()
+        sessions = [day for day in calendar.days if day >= liquidity_start][
+            -_LIQUIDITY_DAYS:
+        ]
         by_instrument: dict[int, dict[str, list[dict[str, Any]]]] = {}
         for row in observations:
             field = str(row["field"])
@@ -247,19 +248,25 @@ class ETFCandidateQuery:
                         instrument_id=instrument_id,
                         cutoff=cutoff,
                         source_snapshot_id=source_snapshot_id,
-                        calendar_snapshot_id=calendar.snapshot_id,
+                        calendar_snapshot_ids=calendar.snapshot_ids,
                     ),
                 )
             )
         return _sort_candidates(candidates, sort_field)
 
-    def _retained_calendar(self, cutoff: datetime) -> RetainedCalendar:
-        """Read open sessions only from calendar evidence visible at the cutoff."""
+    def _retained_calendar(
+        self, cutoff: datetime, decision_day: date
+    ) -> RetainedCalendarWindow:
+        """Read open sessions only from calendar shards visible at the cutoff."""
         if self._snapshots is None or self._payloads is None:
             raise AppQueryError("ETF evaluation calendar is absent at the cutoff")
         try:
-            return retained_trading_days(
-                snapshots=self._snapshots, payloads=self._payloads, cutoff=cutoff
+            return retained_calendar_window(
+                snapshots=self._snapshots,
+                payloads=self._payloads,
+                cutoff=cutoff,
+                first_day=(decision_day - timedelta(days=550)).isoformat(),
+                last_day=decision_day.isoformat(),
             )
         except RetainedCalendarAbsent as exc:
             raise AppQueryError(
@@ -275,9 +282,9 @@ class ETFCandidateQuery:
         instrument_id: int,
         cutoff: str,
         source_snapshot_id: str,
-        calendar_snapshot_id: str,
+        calendar_snapshot_ids: tuple[str, ...],
     ) -> ETFTracking:
-        lineage: dict[str, Any] = {"calendar_snapshot_id": calendar_snapshot_id}
+        lineage: dict[str, Any] = {"calendar_snapshot_ids": calendar_snapshot_ids}
         if not isinstance(relation.value, str):
             return ETFTracking("unavailable", "tracking_index_unavailable", **lineage)
         if len(sessions) != _TRACKING_RETURNS + 1:
@@ -560,12 +567,6 @@ def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:
             str(row["effective_to"]) if row["effective_to"] is not None else None
         ),
     )
-
-
-def _calendar_window(days: list[str], asof: date, lookback_days: int) -> list[str]:
-    """Cut retained open sessions to the lookback window ending at as-of."""
-    start = (asof - timedelta(days=lookback_days)).isoformat()
-    return [day for day in days if start <= day <= asof.isoformat()]
 
 
 def _validate_cutoff(value: str) -> datetime:

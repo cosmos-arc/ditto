@@ -62,7 +62,7 @@ it("selects a real ETF entity and exposes asynchronous NAV and missing evidence"
 										currency: null,
 										benchmark_id: "NDX",
 										source_snapshot_id: "snapshot:recorded:etf:one",
-										calendar_snapshot_id: "snapshot:recorded:calendar:one",
+										calendar_snapshot_ids: ["snapshot:recorded:calendar:one"],
 										method: "252 aligned daily returns",
 									},
 								},

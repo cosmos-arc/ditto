@@ -16,7 +16,7 @@ export type ETFTracking = {
 	readonly currency: string | null;
 	readonly benchmarkId: string | null;
 	readonly sourceSnapshotId: string | null;
-	readonly calendarSnapshotId: string | null;
+	readonly calendarSnapshotIds: readonly string[];
 	readonly method: string;
 };
 
@@ -58,7 +58,7 @@ function toTracking(value: TrackingDTO | null | undefined): ETFTracking | null {
 		currency: value.currency ?? null,
 		benchmarkId: value.benchmark_id ?? null,
 		sourceSnapshotId: value.source_snapshot_id ?? null,
-		calendarSnapshotId: value.calendar_snapshot_id ?? null,
+		calendarSnapshotIds: value.calendar_snapshot_ids ?? [],
 		method: value.method,
 	};
 }

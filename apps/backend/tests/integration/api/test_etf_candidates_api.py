@@ -147,30 +147,40 @@ def _setup(
     client.commit()
 
     reader = InstrumentReader(client)
-    calendar_snapshot = SimpleNamespace(
-        dataset_id="calendar",
-        source="recorded",
-        snapshot_id="snapshot:recorded:calendar:one",
-        created_at=datetime(2026, 9, 30, tzinfo=UTC),
-        payload_retained=True,
-        payload_uri=(
-            "provider_payloads/recorded/calendar/"
-            "0123456789abcdef0123456789abcdef.parquet"
-        ),
-        checksum="0123456789abcdef0123456789abcdef",
-        row_count=len(calendar_days),
-    )
+    # 生产日历按年度分片摄取：fixture 把日历天按年拆成多个 retained 分片，
+    # 每个分片携带独立身份，窗口必须由全部分片合并而成。
+    shard_days: dict[str, list[str]] = {}
+    calendar_snapshots = []
+    for index, year in enumerate(sorted({day[:4] for day in calendar_days})):
+        days = [day for day in calendar_days if day.startswith(year)]
+        checksum = f"{index:032x}"
+        shard_days[checksum] = days
+        calendar_snapshots.append(
+            SimpleNamespace(
+                dataset_id="calendar",
+                source="recorded",
+                snapshot_id=f"snapshot:recorded:calendar:{year}",
+                created_at=datetime(2026, 9, 30, tzinfo=UTC),
+                payload_retained=True,
+                payload_uri=(f"provider_payloads/recorded/calendar/{checksum}.parquet"),
+                checksum=checksum,
+                row_count=len(days),
+                request_start=days[0],
+                request_end=days[-1],
+            )
+        )
     snapshots_reader = SimpleNamespace(
         get_snapshot=(
             snapshots.get_snapshot if snapshots is not None else (lambda _id: None)
         ),
         list_snapshots=lambda dataset_id: (
-            [calendar_snapshot] if dataset_id == "calendar" else []
+            calendar_snapshots if dataset_id == "calendar" else []
         ),
     )
     payloads_reader = SimpleNamespace(
-        read_payload=lambda _artifact: _CalendarFrame(
-            trade_date=list(calendar_days), is_open=[True] * len(calendar_days)
+        read_payload=lambda artifact: _CalendarFrame(
+            trade_date=list(shard_days[artifact.checksum]),
+            is_open=[True] * len(shard_days[artifact.checksum]),
         )
     )
     service = cast(MetadataService, SimpleNamespace(instrument=reader))
@@ -348,6 +358,32 @@ def test_etf_candidates_fail_closed_without_retained_calendar(
 
 @pytest.mark.integration
 @pytest.mark.pit
+def test_etf_candidates_reject_calendar_stale_gap_before_asof(tmp_path: Path) -> None:
+    """Future scheduled sessions cannot mask a stale gap before the as-of date."""
+    gapped: list[str] = []
+    for month in (1, 12):
+        day = date(2026, month, 1)
+        while day.month == month:
+            if day.weekday() < 5:
+                gapped.append(day.isoformat())
+            day += timedelta(days=1)
+    app, pool, snapshot = _setup(tmp_path, tracking_sessions=gapped)
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-06-15",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert response.status_code == 400, response.text
+        assert "ETF evaluation calendar does not cover the as-of date" in response.text
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
 def test_tracking_comparison_requires_complete_visible_total_return_series(
     tmp_path: Path,
 ) -> None:
@@ -400,10 +436,10 @@ def test_tracking_comparison_requires_complete_visible_total_return_series(
         first, second = response.json()["data"]
         assert first["tracking"]["status"] == "reference_only"
         assert first["tracking"]["sample_count"] == 252
-        assert (
-            first["tracking"]["calendar_snapshot_id"]
-            == "snapshot:recorded:calendar:one"
-        )
+        assert first["tracking"]["calendar_snapshot_ids"] == [
+            "snapshot:recorded:calendar:2025",
+            "snapshot:recorded:calendar:2026",
+        ]
         assert first["tracking"]["tracking_deviation_pct"] == pytest.approx(0)
         assert first["tracking"]["tracking_error_pct"] == pytest.approx(0)
         assert second["tracking"]["status"] == "unavailable"
@@ -670,7 +706,10 @@ def _assert_rejection_evidence(
     assert tracking["currency"] is None
     assert tracking["benchmark_id"] == "000300.SH"
     assert tracking["source_snapshot_id"] == snapshot
-    assert tracking["calendar_snapshot_id"] == "snapshot:recorded:calendar:one"
+    assert tracking["calendar_snapshot_ids"] == [
+        "snapshot:recorded:calendar:2025",
+        "snapshot:recorded:calendar:2026",
+    ]
 
 
 @pytest.mark.integration
