@@ -1140,6 +1140,33 @@ def test_foreign_calendar_shard_before_window_does_not_block(
 
 
 @pytest.mark.integration
+@pytest.mark.pit
+def test_partial_calendar_payload_with_hole_fails_closed(tmp_path: Path) -> None:
+    """A payload missing a mid-range chunk must not read as extra closures."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 293:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    holed = days[:100] + days[140:]
+    app, pool, snapshot = _setup(tmp_path, tracking_sessions=holed)
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert response.status_code == 400, response.text
+        assert "ETF evaluation calendar has a coverage gap" in response.text
+    pool.close()
+
+
+@pytest.mark.integration
 def test_unregistered_provider_snapshot_hides_reference_values(tmp_path: Path) -> None:
     """Only isolated recorded fixtures can be inspected without catalog evidence."""
     app, pool, snapshot = _setup(tmp_path, source="provider")

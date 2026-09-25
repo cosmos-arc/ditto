@@ -194,6 +194,9 @@ class ETFCandidateQuery:
         ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
             raise AppQueryError("ETF evaluation calendar does not cover the as-of date")
         tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
+        _ensure_contiguous_coverage(
+            calendar.days, tracking_days[0] if tracking_days else asof, asof
+        )
         # 血缘覆盖选出最终窗口所消费的每一个权威决定（含把日期改为闭市的
         # 决定——它们同样改变了哪 253 个交易日被选中）。
         calendar_shards = _selected_shard_intervals(
@@ -608,6 +611,23 @@ def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:
             str(row["effective_to"]) if row["effective_to"] is not None else None
         ),
     )
+
+
+def _ensure_contiguous_coverage(days: list[str], first_day: str, asof: str) -> None:
+    """
+    Reject gross coverage holes inside the consumed evaluation span.
+
+    A partially fetched payload silently reads as extra closed days, which
+    shifts the whole 253-session window; gaps wider than the holiday bridge
+    bound mean decisions are missing, not scheduled closures. Single-date
+    holes without an external date grid remain indistinguishable.
+    """
+    span = [day for day in days if day >= first_day]
+    for previous, following in pairwise([*span, asof]):
+        if date.fromisoformat(following) - date.fromisoformat(previous) > timedelta(
+            days=_CALENDAR_STALENESS_DAYS
+        ):
+            raise AppQueryError("ETF evaluation calendar has a coverage gap")
 
 
 def _ensure_single_calendar_source(
