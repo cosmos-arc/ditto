@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from importlib.resources import files
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,12 +17,20 @@ from ditto_application.queries.field_admission import (
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_apps.api.routes.metadata import router
+from ditto_apps.middleware import configure_exception_handlers
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.storage.metadata.instrument.instrument_reader import InstrumentReader
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+
+class _CalendarFrame(dict):
+    """Minimal frame double exposing the trade_date/is_open columns."""
+
+    columns = ("trade_date", "is_open")
 
 
 def _setup(
@@ -116,7 +124,11 @@ def _setup(
         if day.weekday() < 5:
             sessions.append(day.isoformat())
         day += timedelta(days=1)
-    for index, session in enumerate(sessions):
+    # The evaluation windows derive from the retained cutoff calendar, so the
+    # fixture calendar defines both the 20-session liquidity days and the
+    # tracking sessions.
+    calendar_days = tracking_sessions if tracking_sessions is not None else sessions
+    for index, session in enumerate(calendar_days[-20:]):
         add(
             2000001,
             "daily_amount",
@@ -135,17 +147,33 @@ def _setup(
     client.commit()
 
     reader = InstrumentReader(client)
-    service = cast(
-        MetadataService,
-        SimpleNamespace(
-            instrument=reader,
-            list_trading_days=lambda start, _end: (
-                tracking_sessions
-                if start < "2026-07-01" and tracking_sessions is not None
-                else sessions
-            ),
+    calendar_snapshot = SimpleNamespace(
+        dataset_id="calendar",
+        source="recorded",
+        snapshot_id="snapshot:recorded:calendar:one",
+        created_at=datetime(2026, 9, 30, tzinfo=UTC),
+        payload_retained=True,
+        payload_uri=(
+            "provider_payloads/recorded/calendar/"
+            "0123456789abcdef0123456789abcdef.parquet"
+        ),
+        checksum="0123456789abcdef0123456789abcdef",
+        row_count=len(calendar_days),
+    )
+    snapshots_reader = SimpleNamespace(
+        get_snapshot=(
+            snapshots.get_snapshot if snapshots is not None else (lambda _id: None)
+        ),
+        list_snapshots=lambda dataset_id: (
+            [calendar_snapshot] if dataset_id == "calendar" else []
         ),
     )
+    payloads_reader = SimpleNamespace(
+        read_payload=lambda _artifact: _CalendarFrame(
+            trade_date=list(calendar_days), is_open=[True] * len(calendar_days)
+        )
+    )
+    service = cast(MetadataService, SimpleNamespace(instrument=reader))
 
     class TestProvider(Provider):
         scope = Scope.APP
@@ -153,10 +181,14 @@ def _setup(
         @provide
         def metadata(self) -> MetadataQueryFacade:
             return MetadataQueryFacade(
-                metadata_service=service, admission=admission, snapshots=snapshots
+                metadata_service=service,
+                admission=admission,
+                snapshots=cast(ProviderSnapshotReader, snapshots_reader),
+                payloads=cast(ProviderPayloadReader, payloads_reader),
             )
 
     app = FastAPI()
+    configure_exception_handlers(app)
     setup_dishka(container=make_async_container(TestProvider()), app=app)
     app.include_router(router, prefix="/api/v1")
     return app, pool, snapshot
@@ -280,6 +312,27 @@ def test_etf_candidate_snapshot_and_20_session_comparison(tmp_path: Path) -> Non
         )
         assert by_asset.status_code == 200, by_asset.text
         assert [item["instrument_id"] for item in by_asset.json()["data"]] == [2000003]
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_etf_candidates_fail_closed_without_retained_calendar(
+    tmp_path: Path,
+) -> None:
+    """Comparisons reject instead of reading an unversioned current calendar."""
+    app, pool, snapshot = _setup(tmp_path)
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-28",
+                "cutoff": "2026-09-29T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert response.status_code == 400, response.text
+        assert "ETF evaluation calendar is absent" in response.text
     pool.close()
 
 
@@ -562,7 +615,7 @@ def test_find_etf_reference_bounds_time_series_to_evaluation_window(
     observed = {(str(row["field"]), str(row["observed_on"])) for row in observations}
     assert ("nav_total_return", "2024-01-01") not in observed
     assert ("benchmark_total_return", "2024-01-01") not in observed
-    assert ("daily_amount", "2026-09-01") in observed
+    assert ("daily_amount", days[-1]) in observed
     assert ("tracking_index", "2020-01-01") in observed
     pool.close()
 

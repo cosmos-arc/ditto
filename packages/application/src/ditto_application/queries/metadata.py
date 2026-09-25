@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import polars as pl
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
 
@@ -27,15 +28,17 @@ class MetadataQueryFacade:
         metadata_service: MetadataService,
         admission: FieldAdmissionQuery | None = None,
         snapshots: ProviderSnapshotReader | None = None,
+        payloads: ProviderPayloadReader | None = None,
     ) -> None:
         self._service = metadata_service
         self._admission = admission
         self._snapshots = snapshots
+        self._payloads = payloads
 
     def list_etf_reference_snapshots(self, *, cutoff: str) -> list[str]:
         """List ETF reference source snapshots visible at the cutoff."""
         return ETFCandidateQuery(
-            self._service, self._admission, self._snapshots
+            self._service, self._admission, self._snapshots, self._payloads
         ).snapshots(cutoff=cutoff)
 
     def list_etf_candidates(
@@ -51,7 +54,7 @@ class MetadataQueryFacade:
     ) -> list[ETFCandidate]:
         """Compare ETF candidates at one exact reference snapshot."""
         return ETFCandidateQuery(
-            self._service, self._admission, self._snapshots
+            self._service, self._admission, self._snapshots, self._payloads
         ).list_candidates(
             asof=asof,
             cutoff=cutoff,

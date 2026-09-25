@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import importlib
 import os
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import polars as pl
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
+from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
+from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
+from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
 from ditto_platform.foundation import (
@@ -246,6 +252,55 @@ def _seed(root: Path) -> None:
         OnDuplicate.ERROR.value,
         year=2026,
     )
+    # ETF 候选比较的评价窗口只认 cutoff 可见的保留日历快照，这里把同一批
+    # 跟踪交易日注册成 calendar 数据集的 retained payload。
+    calendar_license = DatasetLicenseRecord.create(
+        DatasetLicenseDraft(
+            dataset_id="calendar",
+            source="recorded",
+            terms_version="isolated-test-v1",
+            effective_from=date(2026, 1, 1),
+            effective_to=None,
+            local_cache="allowed",
+            derivative_compute="allowed",
+            display="allowed",
+            redistribution="prohibited",
+            notes="isolated recorded acceptance data",
+            reviewed_by="fixture",
+            reviewed_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
+        )
+    )
+    SQLiteDatasetLicenseStore(client).append_license(calendar_license)
+    calendar_days = [day.isoformat() for day in tracking_days]
+    artifact = FilesystemProviderPayloadStore(root / "state").retain_payload(
+        dataset_id="calendar",
+        source="recorded",
+        payload=pl.DataFrame(
+            {"trade_date": calendar_days, "is_open": [True] * len(calendar_days)}
+        ),
+    )
+    SQLiteProviderSnapshotStore(client).append_snapshot(
+        ProviderSnapshot.create(
+            ProviderSnapshotDraft(
+                dataset_id="calendar",
+                source="recorded",
+                request_start=calendar_days[0],
+                request_end=calendar_days[-1],
+                schema_version="fixture.calendar.v1",
+                checksum=artifact.checksum,
+                canonical_asset=DataAssetRef(dataset_id="calendar", namespace="market"),
+                request_parameters_hash="fixture:calendar:tracking-window",
+                response_metadata=(("fixture", "instrument-chart"),),
+                license_record_id=calendar_license.record_id,
+                row_count=artifact.row_count,
+                payload_uri=artifact.uri,
+                payload_retained=True,
+                created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
+            )
+        )
+    )
+    client.commit()
+    pool.close_all()
 
 
 _seed(_root)

@@ -11,6 +11,7 @@ from statistics import median
 from typing import Any
 
 from ditto_backtest.statistics_alpha import compute_total_return_tracking
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
 
@@ -19,6 +20,10 @@ from ditto_application.queries.field_admission import (
     FieldAdmissionQuery,
     FieldAdmissionRequest,
     FieldRequirement,
+)
+from ditto_application.queries.retained_calendar import (
+    RetainedCalendarAbsent,
+    retained_trading_days,
 )
 
 _FIELDS = (
@@ -127,10 +132,12 @@ class ETFCandidateQuery:
         metadata: MetadataService,
         admission: FieldAdmissionQuery | None = None,
         snapshots: ProviderSnapshotReader | None = None,
+        payloads: ProviderPayloadReader | None = None,
     ) -> None:
         self._metadata = metadata
         self._admission = admission
         self._snapshots = snapshots
+        self._payloads = payloads
 
     def snapshots(self, *, cutoff: str) -> list[str]:
         """List reference snapshot identities visible by the cutoff."""
@@ -150,7 +157,8 @@ class ETFCandidateQuery:
     ) -> list[ETFCandidate]:
         """Project candidates using exact evidence and a fixed research time."""
         decision_day = date.fromisoformat(asof)
-        if _validate_cutoff(cutoff).date() < decision_day:
+        parsed_cutoff = _validate_cutoff(cutoff)
+        if parsed_cutoff.date() < decision_day:
             raise AppQueryError("knowledge cutoff must not precede as-of date")
         if not source_snapshot_id:
             raise AppQueryError("source snapshot is required")
@@ -163,18 +171,17 @@ class ETFCandidateQuery:
             "tracking_error",
         }:
             raise AppQueryError("unsupported ETF sort field")
-        tracking_days = self._metadata.list_trading_days(
-            (decision_day - timedelta(days=550)).isoformat(), asof
-        )[-(_TRACKING_RETURNS + 1) :]
+        calendar = self._retained_calendar(parsed_cutoff)
+        tracking_days = _calendar_window(calendar, decision_day, 550)[
+            -(_TRACKING_RETURNS + 1) :
+        ]
         identities, observations = self._metadata.instrument.find_etf_reference(
             asof=asof,
             cutoff=cutoff,
             source_snapshot_id=source_snapshot_id,
             observed_since=tracking_days[0] if tracking_days else asof,
         )
-        sessions = self._metadata.list_trading_days(
-            (decision_day - timedelta(days=60)).isoformat(), asof
-        )[-_LIQUIDITY_DAYS:]
+        sessions = _calendar_window(calendar, decision_day, 60)[-_LIQUIDITY_DAYS:]
         by_instrument: dict[int, dict[str, list[dict[str, Any]]]] = {}
         for row in observations:
             field = str(row["field"])
@@ -235,6 +242,19 @@ class ETFCandidateQuery:
                 )
             )
         return _sort_candidates(candidates, sort_field)
+
+    def _retained_calendar(self, cutoff: datetime) -> list[str]:
+        """Read open sessions only from calendar evidence visible at the cutoff."""
+        if self._snapshots is None or self._payloads is None:
+            raise AppQueryError("ETF evaluation calendar is absent at the cutoff")
+        try:
+            return retained_trading_days(
+                snapshots=self._snapshots, payloads=self._payloads, cutoff=cutoff
+            )
+        except RetainedCalendarAbsent as exc:
+            raise AppQueryError(
+                "ETF evaluation calendar is absent at the cutoff"
+            ) from exc
 
     def _tracking(
         self,
@@ -526,6 +546,12 @@ def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:
             str(row["effective_to"]) if row["effective_to"] is not None else None
         ),
     )
+
+
+def _calendar_window(days: list[str], asof: date, lookback_days: int) -> list[str]:
+    """Cut retained open sessions to the lookback window ending at as-of."""
+    start = (asof - timedelta(days=lookback_days)).isoformat()
+    return [day for day in days if start <= day <= asof.isoformat()]
 
 
 def _validate_cutoff(value: str) -> datetime:

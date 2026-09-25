@@ -296,12 +296,14 @@ class AppMarketQueryProvider(Provider):
         metadata_service: MetadataService,
         admission: FieldAdmissionQuery,
         snapshots: ProviderSnapshotReader,
+        payload_reader: ProviderPayloadReader,
     ) -> MetadataQueryFacade:
         """元数据查询 facade — 隐藏 SecurityQuery 和内部类型."""
         return MetadataQueryFacade(
             metadata_service=metadata_service,
             admission=admission,
             snapshots=snapshots,
+            payloads=payload_reader,
         )
 
     @provide
