@@ -84,8 +84,8 @@ class ProviderSnapshot:
     payload_retained: bool
     created_at: datetime
     schema_fingerprint: str | None = None
-    # 最后一次本地重观察时间；created_at 保持首次可见时间不可变。
-    last_observed_at: datetime | None = None
+    # 首次可见时间由 created_at 表示；后续相同内容的重观察只追加事件。
+    observations: tuple[datetime, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate source evidence without persisting provider secrets."""
@@ -119,7 +119,7 @@ class ProviderSnapshot:
             raise ValueError("provider snapshot row_count must be non-negative")
         if self.created_at.tzinfo is None:
             raise ValueError("provider snapshot created_at must be timezone-aware")
-        _validate_last_observed_at(self.last_observed_at, self.created_at)
+        _validate_observations(self.observations, self.created_at)
         if len({key for key, _value in self.response_metadata}) != len(
             self.response_metadata
         ):
@@ -179,16 +179,15 @@ class ProviderSnapshot:
         )
 
 
-def _validate_last_observed_at(
-    last_observed_at: datetime | None, created_at: datetime
+def _validate_observations(
+    observations: tuple[datetime, ...], created_at: datetime
 ) -> None:
-    """Re-observation bookkeeping never predates first visibility."""
-    if last_observed_at is None:
-        return
-    if last_observed_at.tzinfo is None:
-        raise ValueError("provider snapshot last_observed_at must be timezone-aware")
-    if last_observed_at < created_at:
-        raise ValueError("provider snapshot last_observed_at precedes created_at")
+    """Observation events are timezone-aware and never predate visibility."""
+    for observed in observations:
+        if observed.tzinfo is None:
+            raise ValueError("provider snapshot observations must be timezone-aware")
+        if observed < created_at:
+            raise ValueError("provider snapshot observation precedes created_at")
 
 
 def snapshot_identity(

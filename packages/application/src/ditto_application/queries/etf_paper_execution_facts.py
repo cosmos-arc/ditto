@@ -429,6 +429,7 @@ class LiveETFPaperExecutionFacts:
                 snapshots=self._snapshots,
                 payloads=self._payloads,
                 cutoff=cutoff,
+                first_day=trade_date,
             )
         except RetainedCalendarAbsent as exc:
             raise AppProcessError(

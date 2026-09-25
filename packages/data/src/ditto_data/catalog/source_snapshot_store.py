@@ -20,6 +20,17 @@ from ditto_data.storage.base.sqlite_helpers import (
 __all__ = ["SQLiteProviderSnapshotStore"]
 
 
+_INSERT_OBSERVATION_EVENT = (
+    "INSERT OR IGNORE INTO provider_snapshot_observation_events VALUES (?, ?)"
+)
+_SELECT_OBSERVATION_EVENTS = " ".join(
+    (
+        "SELECT observed_at FROM provider_snapshot_observation_events",
+        "WHERE snapshot_id = ?",
+    )
+)
+
+
 def _metadata_json(metadata: tuple[tuple[str, str], ...]) -> str:
     return orjson.dumps(dict(metadata)).decode()
 
@@ -82,11 +93,23 @@ class SQLiteProviderSnapshotStore:
             self._client.execute(
                 "ALTER TABLE provider_snapshots ADD COLUMN schema_fingerprint TEXT"
             )
-        if self._column_missing("provider_snapshots", "last_observed_at"):
-            # Upgraded stores predate ordered re-observation evidence; legacy
-            # rows keep using created_at as their effective observation time.
+        self._client.execute(
+            """
+            CREATE TABLE IF NOT EXISTS provider_snapshot_observation_events (
+                snapshot_id TEXT NOT NULL
+                    REFERENCES provider_snapshots(snapshot_id),
+                observed_at TEXT NOT NULL,
+                PRIMARY KEY (snapshot_id, observed_at)
+            )
+            """
+        )
+        if not self._column_missing("provider_snapshots", "last_observed_at"):
             self._client.execute(
-                "ALTER TABLE provider_snapshots ADD COLUMN last_observed_at TEXT"
+                """
+                INSERT OR IGNORE INTO provider_snapshot_observation_events
+                SELECT snapshot_id, last_observed_at FROM provider_snapshots
+                WHERE last_observed_at IS NOT NULL
+                """
             )
         self._client.execute(
             """
@@ -123,7 +146,7 @@ class SQLiteProviderSnapshotStore:
             comparable = replace(
                 snapshot,
                 created_at=existing.created_at,
-                last_observed_at=existing.last_observed_at,
+                observations=existing.observations,
             )
             if existing.schema_fingerprint is None:
                 comparable = replace(comparable, schema_fingerprint=None)
@@ -132,17 +155,13 @@ class SQLiteProviderSnapshotStore:
                     f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
                 )
             self._backfill_observation(snapshot.snapshot_id)
-            if snapshot.created_at > (existing.last_observed_at or existing.created_at):
-                # created_at 保持首次可见时间不可变；重观察作为有序事件只
-                # 推进 last_observed_at，让 open→closed→open 这类回到旧字节
-                # 的修正对按观察时间排序的消费者可见。
-                update_last_observed = (
-                    "UPDATE provider_snapshots SET last_observed_at = ?"
-                    " WHERE snapshot_id = ?"
-                )
+            # created_at 保持首次可见时间不可变；更晚的相同内容重观察作为
+            # 有序事件追加到事件表，让 open→closed→open 这类回到旧字节的
+            # 修正对按观察时间排序的消费者可见，且中间事件不被覆盖。
+            if snapshot.created_at > existing.created_at:
                 self._client.execute(
-                    update_last_observed,
-                    [snapshot.created_at.isoformat(), snapshot.snapshot_id],
+                    _INSERT_OBSERVATION_EVENT,
+                    [snapshot.snapshot_id, snapshot.created_at.isoformat()],
                 )
                 self._client.commit()
             if existing.schema_fingerprint is None and (
@@ -171,9 +190,9 @@ class SQLiteProviderSnapshotStore:
                     canonical_dataset_id, canonical_partition_keys,
                     request_parameters_hash, response_metadata, license_record_id,
                     row_count, payload_uri, payload_retained, created_at,
-                    schema_fingerprint, last_observed_at
+                    schema_fingerprint
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     snapshot.snapshot_id,
@@ -194,7 +213,6 @@ class SQLiteProviderSnapshotStore:
                     int(snapshot.payload_retained),
                     snapshot.created_at.isoformat(),
                     snapshot.schema_fingerprint,
-                    None,
                 ],
             )
             previous = self._client.fetchone(
@@ -234,7 +252,7 @@ class SQLiteProviderSnapshotStore:
             "SELECT * FROM provider_snapshots WHERE snapshot_id = ?",
             [snapshot_id],
         )
-        return None if row is None else _snapshot_from_row(row)
+        return None if row is None else _snapshot_from_row(row, self._client)
 
     def _backfill_observation(self, snapshot_id: str) -> None:
         """
@@ -322,10 +340,10 @@ class SQLiteProviderSnapshotStore:
                 canonical_partition_keys,
             ],
         )
-        return tuple(_snapshot_from_row(row) for row in rows)
+        return tuple(_snapshot_from_row(row, self._client) for row in rows)
 
 
-def _snapshot_from_row(row: dict[str, Any]) -> ProviderSnapshot:
+def _snapshot_from_row(row: dict[str, Any], client: SQLiteClient) -> ProviderSnapshot:
     return ProviderSnapshot(
         snapshot_id=str(row["snapshot_id"]),
         dataset_id=str(row["dataset_id"]),
@@ -355,9 +373,13 @@ def _snapshot_from_row(row: dict[str, Any]) -> ProviderSnapshot:
             if row.get("schema_fingerprint") is not None
             else None
         ),
-        last_observed_at=(
-            datetime.fromisoformat(str(row["last_observed_at"]))
-            if row.get("last_observed_at") is not None
-            else None
+        observations=tuple(
+            sorted(
+                datetime.fromisoformat(str(event["observed_at"]))
+                for event in client.fetchall(
+                    _SELECT_OBSERVATION_EVENTS,
+                    [str(row["snapshot_id"])],
+                )
+            )
         ),
     )

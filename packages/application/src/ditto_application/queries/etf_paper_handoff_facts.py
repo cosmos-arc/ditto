@@ -40,7 +40,7 @@ def _next_trading_day(
     """Return the first open session after the signal day, cutoff-bound."""
     try:
         calendar = retained_trading_days(
-            snapshots=snapshots, payloads=payloads, cutoff=cutoff
+            snapshots=snapshots, payloads=payloads, cutoff=cutoff, first_day=signal_date
         )
     except RetainedCalendarAbsent as exc:
         raise AppProcessError("ETF Paper trading calendar is absent or future") from exc

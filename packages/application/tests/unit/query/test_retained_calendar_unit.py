@@ -26,7 +26,7 @@ def _shard(
     created_at: datetime,
     days: list[str],
     flags: list[bool] | None = None,
-    last_observed_at: datetime | None = None,
+    observations: tuple[datetime, ...] = (),
 ) -> Any:
     checksum = f"{abs(hash(snapshot_id)) % 10**32:032x}"
     return SimpleNamespace(
@@ -34,7 +34,7 @@ def _shard(
         source="recorded",
         snapshot_id=snapshot_id,
         created_at=created_at,
-        last_observed_at=last_observed_at,
+        observations=observations,
         payload_retained=True,
         payload_uri=f"provider_payloads/recorded/calendar/{checksum}.parquet",
         checksum=checksum,
@@ -75,7 +75,10 @@ def test_open_closed_reopen_replays_per_cutoff() -> None:
         "snapshot:recorded:calendar:open",
         created_at=datetime(2026, 6, 1, tzinfo=utc),
         days=["2026-06-01", "2026-06-02"],
-        last_observed_at=datetime(2026, 6, 3, tzinfo=utc),
+        observations=(
+            datetime(2026, 6, 1, tzinfo=utc),
+            datetime(2026, 6, 3, tzinfo=utc),
+        ),
     )
     closed = _shard(
         "snapshot:recorded:calendar:closed",
@@ -116,6 +119,63 @@ def test_open_closed_reopen_replays_per_cutoff() -> None:
         snapshots=snapshots,
         payloads=payloads,
         cutoff=datetime(2026, 6, 3, 12, tzinfo=utc),
+        first_day="2026-06-01",
     )
     assert newest.days == ["2026-06-01", "2026-06-02"]
-    assert newest.snapshot_id == original.snapshot_id
+
+
+def test_replay_between_intermediate_observations_uses_event_history() -> None:
+    """A later routine re-observation never erases intermediate order."""
+    utc = UTC
+    original = _shard(
+        "snapshot:recorded:calendar:open",
+        created_at=datetime(2026, 6, 1, tzinfo=utc),
+        days=["2026-06-01", "2026-06-02"],
+        observations=(
+            datetime(2026, 6, 1, tzinfo=utc),
+            datetime(2026, 6, 3, tzinfo=utc),
+            datetime(2026, 6, 5, tzinfo=utc),
+        ),
+    )
+    closed = _shard(
+        "snapshot:recorded:calendar:closed",
+        created_at=datetime(2026, 6, 2, tzinfo=utc),
+        days=["2026-06-01", "2026-06-02"],
+        flags=[True, False],
+    )
+    snapshots, payloads = _readers([original, closed])
+
+    at_t4 = retained_calendar_window(
+        snapshots=snapshots,
+        payloads=payloads,
+        cutoff=datetime(2026, 6, 4, 12, tzinfo=utc),
+        first_day="2026-06-01",
+        last_day="2026-06-30",
+    )
+    # t3 的 A 重观察晚于 B(t2)，t4 回放必须仍由 A 胜出。
+    assert at_t4.days == ["2026-06-01", "2026-06-02"]
+
+
+def test_paper_calendar_ignores_newer_observation_of_old_shard() -> None:
+    """A routine observation of last year's shard cannot hide current dates."""
+    old = _shard(
+        "snapshot:recorded:calendar:2025",
+        created_at=datetime(2025, 1, 1, tzinfo=UTC),
+        days=["2025-12-30", "2025-12-31"],
+        observations=(datetime(2026, 9, 3, tzinfo=UTC),),
+    )
+    current = _shard(
+        "snapshot:recorded:calendar:2026",
+        created_at=datetime(2026, 9, 2, tzinfo=UTC),
+        days=["2026-09-02", "2026-09-03", "2026-09-04"],
+    )
+    snapshots, payloads = _readers([old, current])
+
+    calendar = retained_trading_days(
+        snapshots=snapshots,
+        payloads=payloads,
+        cutoff=datetime(2026, 9, 3, 12, tzinfo=UTC),
+        first_day="2026-09-02",
+    )
+    assert calendar.days == ["2026-09-02", "2026-09-03", "2026-09-04"]
+    assert calendar.snapshot_id == current.snapshot_id

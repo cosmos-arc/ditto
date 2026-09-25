@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import NamedTuple, Protocol
+from typing import NamedTuple
 
 import polars as pl
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadReader,
 )
-from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotReader
 
 
 class RetainedCalendarAbsent(ValueError):
@@ -24,32 +24,19 @@ class RetainedCalendar(NamedTuple):
     snapshot_id: str
 
 
-def _observed_by(snapshot: ProviderSnapshotLike, cutoff: datetime) -> datetime:
+def _observed_by(snapshot: ProviderSnapshot, cutoff: datetime) -> datetime:
     """
-    Latest re-observation this snapshot had actually received by the cutoff.
+    Latest observation event this snapshot had actually received by the cutoff.
 
     A snapshot stays visible from its first ``created_at``; its revision
-    recency only advances once a re-observation predates the cutoff, so an
-    A→B→A(re) sequence replays as A, then B, then A across cutoffs.
+    recency at a cutoff is the newest observation event not after that
+    cutoff, so replaying across cutoffs reproduces the observation order
+    exactly, including intermediate re-observations.
     """
-    last = getattr(snapshot, "last_observed_at", None)
-    if last is not None and last <= cutoff:
-        return last
-    return snapshot.created_at
-
-
-class ProviderSnapshotLike(Protocol):
-    """Structural view of provider snapshots used for observation ordering."""
-
-    @property
-    def created_at(self) -> datetime:
-        """First visibility timestamp."""
-        ...
-
-    @property
-    def last_observed_at(self) -> datetime | None:
-        """Latest re-observation timestamp, if any."""
-        ...
+    return max(
+        (event for event in getattr(snapshot, "observations", ()) if event <= cutoff),
+        default=snapshot.created_at,
+    )
 
 
 class RetainedCalendarWindow(NamedTuple):
@@ -95,9 +82,7 @@ def retained_calendar_window(
         (
             snapshot
             for snapshot in snapshots.list_snapshots(dataset_id="calendar")
-            if snapshot.payload_retained
-            and snapshot.created_at <= cutoff
-            and snapshot.request_end >= first_day
+            if snapshot.payload_retained and snapshot.created_at <= cutoff
         ),
         key=lambda item: (_observed_by(item, cutoff), item.snapshot_id),
     )
@@ -139,43 +124,21 @@ def retained_trading_days(
     snapshots: ProviderSnapshotReader,
     payloads: ProviderPayloadReader,
     cutoff: datetime,
+    first_day: str,
 ) -> RetainedCalendar:
     """
-    Return open sessions from the calendar snapshot newest at the cutoff.
+    Return open sessions composed from calendar shards covering first_day.
 
-    The trading-calendar read model is unversioned, so the retained provider
-    payload newest at the cutoff is the only basis that cannot consume later
-    calendar refreshes. The selected snapshot identity travels with the days so
-    results can name the exact calendar revision behind their window.
+    The trading-calendar read model is unversioned, so only retained provider
+    payloads visible at the cutoff are used; shards that cannot cover the
+    requested date (for example a re-observed prior-year chunk) never win by
+    recency alone. The first eligible session supplies the authority identity.
     """
-    candidates = [
-        snapshot
-        for snapshot in snapshots.list_snapshots(dataset_id="calendar")
-        if snapshot.payload_retained and snapshot.created_at <= cutoff
-    ]
-    if not candidates:
-        raise RetainedCalendarAbsent("retained calendar is absent or future")
-    snapshot = max(
-        candidates, key=lambda item: (_observed_by(item, cutoff), item.snapshot_id)
+    window = retained_calendar_window(
+        snapshots=snapshots,
+        payloads=payloads,
+        cutoff=cutoff,
+        first_day=first_day,
+        last_day="9999-12-31",
     )
-    if snapshot.payload_uri is None:
-        raise RetainedCalendarAbsent("retained calendar is absent or future")
-    frame = payloads.read_payload(
-        ProviderPayloadArtifact(
-            dataset_id=snapshot.dataset_id,
-            source=snapshot.source,
-            checksum=snapshot.checksum,
-            row_count=snapshot.row_count,
-            uri=snapshot.payload_uri,
-        )
-    )
-    return RetainedCalendar(
-        days=sorted(
-            day
-            for day, is_open in _calendar_states(
-                frame, "0000-01-01", "9999-12-31"
-            ).items()
-            if is_open
-        ),
-        snapshot_id=snapshot.snapshot_id,
-    )
+    return RetainedCalendar(window.days, window.authority[window.days[0]])
