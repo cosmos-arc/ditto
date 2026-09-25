@@ -70,6 +70,9 @@ _NUMERIC = frozenset(
 )
 _LIQUIDITY_DAYS = 20
 _TRACKING_RETURNS = 252
+# 自然日桥接上限：容忍周末与 A 股春节/国庆长假，更大的间隔说明保留日历
+# 没有覆盖到研究日（stale 或部分摄取），评价必须 fail closed。
+_CALENDAR_STALENESS_DAYS = 14
 
 
 @dataclass(frozen=True)
@@ -172,6 +175,10 @@ class ETFCandidateQuery:
         }:
             raise AppQueryError("unsupported ETF sort field")
         calendar = self._retained_calendar(parsed_cutoff)
+        if not calendar or decision_day - date.fromisoformat(calendar[-1]) > timedelta(
+            days=_CALENDAR_STALENESS_DAYS
+        ):
+            raise AppQueryError("ETF evaluation calendar does not cover the as-of date")
         tracking_days = _calendar_window(calendar, decision_day, 550)[
             -(_TRACKING_RETURNS + 1) :
         ]

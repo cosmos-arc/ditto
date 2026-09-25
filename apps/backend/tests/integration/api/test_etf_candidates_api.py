@@ -333,6 +333,16 @@ def test_etf_candidates_fail_closed_without_retained_calendar(
         )
         assert response.status_code == 400, response.text
         assert "ETF evaluation calendar is absent" in response.text
+        stale = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-10-20",
+                "cutoff": "2026-10-20T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert stale.status_code == 400, stale.text
+        assert "ETF evaluation calendar does not cover the as-of date" in stale.text
     pool.close()
 
 

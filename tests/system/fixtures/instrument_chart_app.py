@@ -272,6 +272,12 @@ def _seed(root: Path) -> None:
     )
     SQLiteDatasetLicenseStore(client).append_license(calendar_license)
     calendar_days = [day.isoformat() for day in tracking_days]
+    # 页面默认研究日期是"今天"：把已排期交易日延伸到今天，日历才覆盖研究日。
+    cursor = tracking_days[-1] + timedelta(days=1)
+    while cursor <= date.today():
+        if cursor.weekday() < 5:
+            calendar_days.append(cursor.isoformat())
+        cursor += timedelta(days=1)
     artifact = FilesystemProviderPayloadStore(root / "state").retain_payload(
         dataset_id="calendar",
         source="recorded",
