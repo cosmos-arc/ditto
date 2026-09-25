@@ -29,11 +29,10 @@ class RetainedCalendar(NamedTuple):
 
 
 class RetainedCalendarWindow(NamedTuple):
-    """Open sessions, shard identities, and each shard's authoritative span."""
+    """Open sessions plus the shard with final authority over each date."""
 
     days: list[str]
-    snapshot_ids: tuple[str, ...]
-    shard_intervals: tuple[tuple[str, str, str], ...]
+    authority: dict[str, str]
 
 
 def _calendar_states(
@@ -105,17 +104,8 @@ def retained_calendar_window(
     days = sorted(day for day, state in authorship.items() if state[0])
     if not days:
         raise RetainedCalendarAbsent("retained calendar is malformed")
-    decided: dict[str, list[str]] = {}
-    for day, state in authorship.items():
-        decided.setdefault(state[1], []).append(day)
-    shard_intervals = tuple(
-        (shard_id, min(day_set), max(day_set))
-        for shard_id, day_set in sorted(decided.items())
-    )
     return RetainedCalendarWindow(
-        days,
-        tuple(shard_id for shard_id, _first, _last in shard_intervals),
-        shard_intervals,
+        days, {day: state[1] for day, state in authorship.items()}
     )
 
 

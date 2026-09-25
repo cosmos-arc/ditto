@@ -18,6 +18,7 @@ from ditto_application.processes.ingestion.post_ingest import (
     CatalogWriteContext,
     DataWriteContext,
     PostIngestContext,
+    RequestWindow,
     process_fetched_data,
     record_data_catalog_entry,
     run_list_date_inference,
@@ -894,7 +895,7 @@ def test_sparse_range_resolves_pit_snapshot_at_request_end() -> None:
         "2025-01-02",
         False,
         ctx=ctx,
-        request_end="2025-03-31",
+        request_window=RequestWindow(None, "2025-03-31"),
         chunk_id="chunk:tushare:balance_sheet:2025-Q1",
     )
 
@@ -962,7 +963,7 @@ def test_r2_empty_range_commits_no_payload_provider_observation() -> None:
         "2026-01-01",
         False,
         ctx=ctx,
-        request_end="2026-01-31",
+        request_window=RequestWindow(None, "2026-01-31"),
         chunk_id="chunk:tushare:commodity_daily:2026-01",
     )
 

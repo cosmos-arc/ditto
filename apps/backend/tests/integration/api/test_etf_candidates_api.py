@@ -950,6 +950,47 @@ def test_find_etf_reference_bounds_time_series_to_evaluation_window(
 
 
 @pytest.mark.integration
+@pytest.mark.pit
+def test_tracking_lineage_excludes_shards_outside_selected_window(
+    tmp_path: Path,
+) -> None:
+    """Shards loaded for the 550-day lookback but outside the final 253
+    sessions neither enter the lineage nor require formal admission."""
+    stale_year: list[str] = []
+    day = date(2024, 9, 2)
+    while day <= date(2024, 12, 31):
+        if day.weekday() < 5:
+            stale_year.append(day.isoformat())
+        day += timedelta(days=1)
+    days: list[str] = []
+    day = date(2026, 1, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    app, pool, snapshot = _setup(tmp_path, tracking_sessions=stale_year + days)
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-01-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+                "exposure": "000300.SH",
+            },
+        )
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "fund_and_benchmark_total_return_missing"
+        assert tracking["calendar_snapshot_ids"] == [
+            "snapshot:recorded:calendar:2025",
+            "snapshot:recorded:calendar:2026",
+        ]
+    pool.close()
+
+
+@pytest.mark.integration
 def test_unregistered_provider_snapshot_hides_reference_values(tmp_path: Path) -> None:
     """Only isolated recorded fixtures can be inspected without catalog evidence."""
     app, pool, snapshot = _setup(tmp_path, source="provider")

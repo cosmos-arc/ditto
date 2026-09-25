@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
-from typing import Literal, cast
+from typing import Literal, NamedTuple, cast
 
 import httpx
 import orjson
@@ -176,6 +176,13 @@ def run_list_date_inference(
         )
 
 
+class RequestWindow(NamedTuple):
+    """Explicit fetch interval when it differs from the single trade date."""
+
+    start: str | None
+    end: str | None
+
+
 def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     df: pl.DataFrame,
     dataset: str,
@@ -183,10 +190,12 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     force: bool,
     *,
     ctx: PostIngestContext,
-    request_end: str | None = None,
+    request_window: RequestWindow | None = None,
     chunk_id: str | None = None,
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
+    request_start = request_window.start if request_window is not None else None
+    request_end = request_window.end if request_window is not None else None
     processing_date = request_end or trade_date
     if df.is_empty():
         if ctx.evidence_committer is not None:
@@ -194,6 +203,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
                 df,
                 dataset=dataset,
                 trade_date=trade_date,
+                request_start=request_start,
                 request_end=request_end,
                 chunk_id=chunk_id,
                 ctx=ctx,
@@ -279,6 +289,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
             provider_payload,
             committer=ctx.evidence_committer,
             trade_date=trade_date,
+            request_start=request_start,
             request_end=request_end,
             chunk_id=chunk_id,
         )
@@ -309,6 +320,7 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
         source_name=ctx.source_name,
         write_result=write_result,
         df=df,
+        start_date=request_start,
         end_date=request_end,
         l1_l2_attested=ctx.quality_checker is not None,
         chunk_id=chunk_id,
@@ -414,6 +426,7 @@ def _commit_empty_provider_observation(
     *,
     dataset: str,
     trade_date: str,
+    request_start: str | None,
     request_end: str | None,
     chunk_id: str | None,
     ctx: PostIngestContext,
@@ -455,6 +468,7 @@ def _commit_empty_provider_observation(
             blocked=False,
         ),
         df=df,
+        start_date=request_start,
         end_date=request_end,
         l1_l2_attested=True,
         chunk_id=chunk_id,
@@ -801,29 +815,31 @@ def prepare_payload_write(
     *,
     committer: IngestionEvidenceCommitter,
     trade_date: str,
-    request_end: str | None,
+    request_start: str | None = None,
+    request_end: str | None = None,
     chunk_id: str | None,
     source_ticker: str | None = None,
 ) -> IngestionResult | None:
     """Refuse canonical mutation unless its retained input is durably resumable."""
+    effective_start = request_start or trade_date
     try:
         committer.prepare_payload_write(
             PartitionWriteIntent(
                 chunk_id=ingestion_partition_id(
                     source=payload.source,
                     dataset=payload.dataset_id,
-                    start=trade_date,
+                    start=effective_start,
                     end=request_end or trade_date,
                     chunk_id=chunk_id,
                     source_ticker=source_ticker,
                 ),
-                request_start=trade_date,
+                request_start=effective_start,
                 request_end=request_end or trade_date,
                 payload=payload,
                 snapshot_id=snapshot_identity(
                     payload.dataset_id,
                     payload.source,
-                    trade_date,
+                    effective_start,
                     request_end or trade_date,
                     dataset_schema_version(payload.dataset_id),
                     payload.checksum,

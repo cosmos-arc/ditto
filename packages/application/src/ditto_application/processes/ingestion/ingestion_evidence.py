@@ -50,6 +50,7 @@ class CatalogWriteContext:
     write_result: WriteResult
     df: pl.DataFrame
     source_ticker: str | None = None
+    start_date: str | None = None
     end_date: str | None = None
     l1_l2_attested: bool = False
     chunk_id: str | None = None
@@ -316,6 +317,7 @@ def build_evidence_commit_request(
     if ctx.payload_retained and ctx.provider_payload is None:
         raise AppProcessError("R2 evidence commit requires immutable provider payload")
     now = datetime.now(UTC)
+    request_start = ctx.start_date or ctx.trade_date
     request_end = ctx.end_date or ctx.trade_date
     catalog_entry = build_data_catalog_entry(ctx, now=now)
     request_hash = hashlib.sha256(
@@ -323,7 +325,7 @@ def build_evidence_commit_request(
             [
                 ctx.dataset,
                 ctx.source_name,
-                ctx.trade_date,
+                request_start,
                 request_end,
                 ctx.source_ticker,
             ]
@@ -343,7 +345,7 @@ def build_evidence_commit_request(
         ProviderSnapshotDraft(
             dataset_id=ctx.dataset,
             source=ctx.source_name,
-            request_start=ctx.trade_date,
+            request_start=request_start,
             request_end=request_end,
             schema_version=dataset_schema_version(ctx.dataset),
             checksum=payload_checksum,

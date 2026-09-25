@@ -195,6 +195,7 @@ class ETFCandidateQuery:
         ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
             raise AppQueryError("ETF evaluation calendar does not cover the as-of date")
         tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
+        calendar_shards = _selected_shard_intervals(calendar.authority, tracking_days)
         identities, observations = self._metadata.instrument.find_etf_reference(
             asof=asof,
             cutoff=cutoff,
@@ -262,7 +263,7 @@ class ETFCandidateQuery:
                         cutoff=cutoff,
                         lineage=TrackingLineage(
                             source_snapshot_id=source_snapshot_id,
-                            calendar_shards=calendar.shard_intervals,
+                            calendar_shards=calendar_shards,
                         ),
                     ),
                 )
@@ -606,6 +607,21 @@ def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:
         effective_to=(
             str(row["effective_to"]) if row["effective_to"] is not None else None
         ),
+    )
+
+
+def _selected_shard_intervals(
+    authority: dict[str, str], selected_days: list[str]
+) -> tuple[tuple[str, str, str], ...]:
+    """Shard identities and spans limited to the sessions actually selected."""
+    decided: dict[str, list[str]] = {}
+    for day in selected_days:
+        shard_id = authority.get(day)
+        if shard_id is not None:
+            decided.setdefault(shard_id, []).append(day)
+    return tuple(
+        (shard_id, min(day_set), max(day_set))
+        for shard_id, day_set in sorted(decided.items())
     )
 
 

@@ -33,6 +33,7 @@ from ditto_application.processes.ingestion.list_date_inference import (
 )
 from ditto_application.processes.ingestion.post_ingest import (
     PostIngestContext,
+    RequestWindow,
     process_fetched_data,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
@@ -440,7 +441,7 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
                 "2026-07-16",
                 force,
                 ctx=runtime.context,
-                request_end="2026-07-17",
+                request_window=RequestWindow(None, "2026-07-17"),
                 chunk_id="test-backfill",
             )
 

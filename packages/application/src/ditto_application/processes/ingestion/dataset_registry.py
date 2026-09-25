@@ -89,6 +89,9 @@ class DatasetRegistration:
     instrument_fetch_factory: InstrumentFetchFactory | None = None
     metadata_dataset: bool = False
     basic_asset_class: Literal["stock", "etf", "index"] | None = None
+    # 每日抓取的真实 request 区间（多数数据集按单日抓取，区间即交易日）；
+    # 声明后摄取证据把该区间记入快照，而不是只记摄取日。
+    request_bounds: Callable[[str], tuple[str, str]] | None = None
 
     def __post_init__(self) -> None:
         """Validate registration consistency."""
@@ -337,6 +340,12 @@ def _macro_fetch(ctx: DailyFetchContext) -> DailyFetchHandler:
 
 # fmt: off
 
+def _calendar_request_bounds(trade_date: str) -> tuple[str, str]:
+    """日历日更按自然年抓取：年初到次年一月末。"""
+    year = int(trade_date[:4])
+    return (f"{year}-01-01", f"{year + 1}-01-31")
+
+
 _METADATA_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
     DatasetRegistration(
         dataset=Dataset.CALENDAR,
@@ -344,12 +353,10 @@ _METADATA_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         metadata_dataset=True,
         daily_fetch_factory=lambda ctx: (
             lambda: ctx.fetchers.metadata.fetch_calendar(
-                ctx.trade_date[:4] + "-01-01",
-                # Carry one forward month past the year boundary so a
-                # year-end Paper handoff can see the next open session.
-                f"{int(ctx.trade_date[:4]) + 1}-01-31",
+                *_calendar_request_bounds(ctx.trade_date)
             )
         ),
+        request_bounds=_calendar_request_bounds,
     ),
     DatasetRegistration(
         dataset=Dataset.STOCK_BASIC,

@@ -244,3 +244,12 @@ class TestDateScheduleField:
         registration = default_dataset_registry().require(Dataset.CALENDAR)
 
         assert registration.date_schedule is DateScheduleType.TRADING_DAYS
+
+    def test_calendar_declares_its_real_daily_fetch_interval(self) -> None:
+        registration = default_dataset_registry().require(Dataset.CALENDAR)
+
+        assert registration.request_bounds is not None
+        assert registration.request_bounds("2026-09-25") == (
+            "2026-01-01",
+            "2027-01-31",
+        )
