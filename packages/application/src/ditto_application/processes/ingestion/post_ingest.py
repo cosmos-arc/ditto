@@ -181,6 +181,9 @@ class RequestWindow(NamedTuple):
 
     start: str | None
     end: str | None
+    # 区间/分片回补成功后游标推进到区间末；日更声明的真实抓取区间只描述
+    # provider 覆盖，游标与处理日期仍停留在摄取日。
+    advance_cursor: bool = True
 
 
 def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
@@ -196,7 +199,13 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
     request_start = request_window.start if request_window is not None else None
     request_end = request_window.end if request_window is not None else None
-    processing_date = request_end or trade_date
+    processing_date = (
+        request_end
+        if request_window is not None
+        and request_window.advance_cursor
+        and request_end is not None
+        else trade_date
+    )
     if df.is_empty():
         if ctx.evidence_committer is not None:
             return _commit_empty_provider_observation(

@@ -402,7 +402,11 @@ class IngestionCoordinator:
                 provider_payload_writer=self._provider_payload_writer,
                 license_record_id=self._license_record_id,
             ),
-            request_window=(RequestWindow(*request_bounds) if request_bounds else None),
+            request_window=(
+                RequestWindow(*request_bounds, advance_cursor=False)
+                if request_bounds
+                else None
+            ),
         )
 
     def _try_fetch_data(

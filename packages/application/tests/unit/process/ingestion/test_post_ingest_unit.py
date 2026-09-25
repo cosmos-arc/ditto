@@ -246,6 +246,34 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
     assert list_date_inference.asset_classes == []
 
 
+def test_daily_request_window_keeps_processing_on_trade_date() -> None:
+    """A wide daily fetch interval describes coverage, not cursor progress."""
+    frame = pl.DataFrame({"trade_date": ["2026-09-25"], "close": [1.0]})
+    for advance, expected_date in ((False, "2026-09-25"), (True, "2027-01-31")):
+        writer = _WriteDataRecorder(
+            WriteResult("unused", "unused", 1, 1, False),
+        )
+        ctx = PostIngestContext(
+            result_handler=IngestionResultHandler(None, "tushare"),
+            data_writer=cast(IngestionDataWriter, writer),
+            list_date_inference=cast(ListDateInferenceService, None),
+            quality_checker=_PassingQualityChecker(),
+            source_name="tushare",
+        )
+        result = process_fetched_data(
+            frame,
+            "stock_daily",
+            "2026-09-25",
+            False,
+            ctx=ctx,
+            request_window=RequestWindow(
+                "2026-01-01", "2027-01-31", advance_cursor=advance
+            ),
+        )
+        assert result.status == "success"
+        assert writer.calls[0][1] == expected_date
+
+
 def test_r2_evidence_profile_requires_quality_checker_before_payload_write() -> None:
     writer = _WriteDataRecorder(
         WriteResult(
