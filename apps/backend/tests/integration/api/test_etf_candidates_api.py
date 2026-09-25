@@ -33,6 +33,54 @@ class _CalendarFrame(dict):
     columns = ("trade_date", "is_open")
 
 
+def _calendar_shards(
+    calendar_days: list[str],
+    overrides: list[tuple[list[str], list[bool]]] | None,
+) -> tuple[list[Any], dict[str, list[str]], dict[str, list[bool]]]:
+    """Split fixture calendar days into per-year shards plus later revisions."""
+    shard_days: dict[str, list[str]] = {}
+    shard_flags: dict[str, list[bool]] = {}
+    shards = []
+    for index, year in enumerate(sorted({day[:4] for day in calendar_days})):
+        days = [day for day in calendar_days if day.startswith(year)]
+        checksum = f"{index:032x}"
+        shard_days[checksum] = days
+        shard_flags[checksum] = [True] * len(days)
+        shards.append(
+            SimpleNamespace(
+                dataset_id="calendar",
+                source="recorded",
+                snapshot_id=f"snapshot:recorded:calendar:{year}",
+                created_at=datetime(2026, 9, 30, tzinfo=UTC),
+                payload_retained=True,
+                payload_uri=(f"provider_payloads/recorded/calendar/{checksum}.parquet"),
+                checksum=checksum,
+                row_count=len(days),
+                request_start=days[0],
+                request_end=days[-1],
+            )
+        )
+    for index, (days, flags) in enumerate(overrides or [], start=90):
+        checksum = f"{index:032x}"
+        shard_days[checksum] = days
+        shard_flags[checksum] = flags
+        shards.append(
+            SimpleNamespace(
+                dataset_id="calendar",
+                source="recorded",
+                snapshot_id=f"snapshot:recorded:calendar:revision-{index}",
+                created_at=datetime(2026, 9, 30, 1, tzinfo=UTC),
+                payload_retained=True,
+                payload_uri=(f"provider_payloads/recorded/calendar/{checksum}.parquet"),
+                checksum=checksum,
+                row_count=len(days),
+                request_start=days[0],
+                request_end=days[-1],
+            )
+        )
+    return shards, shard_days, shard_flags
+
+
 def _setup(
     tmp_path: Path,
     *,
@@ -40,6 +88,7 @@ def _setup(
     snapshots: ProviderSnapshotReader | None = None,
     source: str = "recorded",
     tracking_sessions: list[str] | None = None,
+    calendar_overrides: list[tuple[list[str], list[bool]]] | None = None,
 ) -> tuple[FastAPI, SQLitePool, str]:
     """Build an isolated recorded ETF source and its HTTP reader."""
     schema = Path(str(files("ditto_data.scripts") / "schema.sql"))
@@ -148,27 +197,11 @@ def _setup(
 
     reader = InstrumentReader(client)
     # 生产日历按年度分片摄取：fixture 把日历天按年拆成多个 retained 分片，
-    # 每个分片携带独立身份，窗口必须由全部分片合并而成。
-    shard_days: dict[str, list[str]] = {}
-    calendar_snapshots = []
-    for index, year in enumerate(sorted({day[:4] for day in calendar_days})):
-        days = [day for day in calendar_days if day.startswith(year)]
-        checksum = f"{index:032x}"
-        shard_days[checksum] = days
-        calendar_snapshots.append(
-            SimpleNamespace(
-                dataset_id="calendar",
-                source="recorded",
-                snapshot_id=f"snapshot:recorded:calendar:{year}",
-                created_at=datetime(2026, 9, 30, tzinfo=UTC),
-                payload_retained=True,
-                payload_uri=(f"provider_payloads/recorded/calendar/{checksum}.parquet"),
-                checksum=checksum,
-                row_count=len(days),
-                request_start=days[0],
-                request_end=days[-1],
-            )
-        )
+    # 每个分片携带独立身份，窗口必须由全部分片合并而成；overrides 提供更晚
+    # 创建的修订分片（逐日覆盖，后写胜出）。
+    calendar_snapshots, shard_days, shard_flags = _calendar_shards(
+        calendar_days, calendar_overrides
+    )
     snapshots_reader = SimpleNamespace(
         get_snapshot=(
             snapshots.get_snapshot if snapshots is not None else (lambda _id: None)
@@ -180,7 +213,7 @@ def _setup(
     payloads_reader = SimpleNamespace(
         read_payload=lambda artifact: _CalendarFrame(
             trade_date=list(shard_days[artifact.checksum]),
-            is_open=[True] * len(shard_days[artifact.checksum]),
+            is_open=list(shard_flags[artifact.checksum]),
         )
     )
     service = cast(MetadataService, SimpleNamespace(instrument=reader))
@@ -379,6 +412,43 @@ def test_etf_candidates_reject_calendar_stale_gap_before_asof(tmp_path: Path) ->
         )
         assert response.status_code == 400, response.text
         assert "ETF evaluation calendar does not cover the as-of date" in response.text
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_newer_calendar_revision_closes_previously_open_session(
+    tmp_path: Path,
+) -> None:
+    """A cutoff-visible correction overrides the older shard date by date."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    flags = [True] * len(days)
+    flags[100] = False
+    app, pool, snapshot = _setup(
+        tmp_path, tracking_sessions=days, calendar_overrides=[(days, flags)]
+    )
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+                "exposure": "000300.SH",
+            },
+        )
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "insufficient_trading_sessions"
+        assert tracking["calendar_snapshot_ids"] == [
+            "snapshot:recorded:calendar:revision-90"
+        ]
     pool.close()
 
 

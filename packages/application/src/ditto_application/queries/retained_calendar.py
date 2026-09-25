@@ -31,14 +31,16 @@ class RetainedCalendarWindow(NamedTuple):
     snapshot_ids: tuple[str, ...]
 
 
-def _open_sessions(frame: pl.DataFrame, first_day: str, last_day: str) -> set[str]:
-    """Extract open sessions inside the bounded interval or fail closed."""
+def _calendar_states(
+    frame: pl.DataFrame, first_day: str, last_day: str
+) -> dict[str, bool]:
+    """Map every scheduled session in the interval to its open state."""
     if "trade_date" not in frame.columns or "is_open" not in frame.columns:
         raise RetainedCalendarAbsent("retained calendar is malformed")
     return {
-        str(value)
+        str(value): is_open is True
         for value, is_open in zip(frame["trade_date"], frame["is_open"], strict=True)
-        if is_open is True and first_day <= str(value) <= last_day
+        if first_day <= str(value) <= last_day
     }
 
 
@@ -51,11 +53,13 @@ def retained_calendar_window(
     last_day: str,
 ) -> RetainedCalendarWindow:
     """
-    Union every cutoff-visible retained calendar shard covering the interval.
+    Combine cutoff-visible retained calendar shards into one window.
 
     Production calendar evidence arrives as annual bootstrap chunks plus the
-    current-year daily shard, so one lookback usually spans several snapshots;
-    each shard keeps its own immutable identity for result lineage.
+    current-year daily shard, so one lookback usually spans several snapshots.
+    When revisions overlap, shards apply oldest-to-newest and the newest
+    revision wins per date, so a corrected closure can never be masked by a
+    stale open day; every contributing shard keeps its identity for lineage.
     """
     shards = sorted(
         (
@@ -66,12 +70,11 @@ def retained_calendar_window(
             and snapshot.request_end >= first_day
             and snapshot.request_start <= last_day
         ),
-        key=lambda item: (item.request_start, item.snapshot_id),
+        key=lambda item: (item.created_at, item.snapshot_id),
     )
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
-    days: set[str] = set()
-    snapshot_ids: list[str] = []
+    authorship: dict[str, tuple[bool, str]] = {}
     for snapshot in shards:
         if snapshot.payload_uri is None:
             raise RetainedCalendarAbsent("retained calendar is absent or future")
@@ -84,13 +87,15 @@ def retained_calendar_window(
                 uri=snapshot.payload_uri,
             )
         )
-        shard_days = _open_sessions(frame, first_day, last_day)
-        if shard_days:
-            days.update(shard_days)
-            snapshot_ids.append(snapshot.snapshot_id)
+        for day, is_open in _calendar_states(frame, first_day, last_day).items():
+            authorship[day] = (is_open, snapshot.snapshot_id)
+    days = sorted(day for day, state in authorship.items() if state[0])
     if not days:
         raise RetainedCalendarAbsent("retained calendar is malformed")
-    return RetainedCalendarWindow(sorted(days), tuple(snapshot_ids))
+    selected = {state[1] for state in authorship.values()}
+    return RetainedCalendarWindow(
+        days, tuple(s.snapshot_id for s in shards if s.snapshot_id in selected)
+    )
 
 
 def retained_trading_days(
@@ -127,6 +132,12 @@ def retained_trading_days(
         )
     )
     return RetainedCalendar(
-        days=sorted(_open_sessions(frame, "0000-01-01", "9999-12-31")),
+        days=sorted(
+            day
+            for day, is_open in _calendar_states(
+                frame, "0000-01-01", "9999-12-31"
+            ).items()
+            if is_open
+        ),
         snapshot_id=snapshot.snapshot_id,
     )
