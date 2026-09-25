@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from importlib.resources import files
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
@@ -451,9 +451,11 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
         )
         formal_allowed[0] = True
         unaligned = web.get("/api/v1/metadata/etf-candidates", params=params)
-        assert (
-            unaligned.json()["data"][0]["tracking"]["reason"]
-            == "valuation_time_not_aligned"
+        _assert_rejection_evidence(
+            unaligned.json()["data"][0]["tracking"],
+            "valuation_time_not_aligned",
+            days,
+            snapshot,
         )
         for field in ("nav_total_return", "benchmark_total_return"):
             client.execute(
@@ -500,10 +502,68 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
         )
         client.commit()
         mismatch = web.get("/api/v1/metadata/etf-candidates", params=params)
-        assert (
-            mismatch.json()["data"][0]["tracking"]["reason"]
-            == "currency_or_benchmark_mismatch"
+        _assert_rejection_evidence(
+            mismatch.json()["data"][0]["tracking"],
+            "currency_or_benchmark_mismatch",
+            days,
+            snapshot,
         )
+    pool.close()
+
+
+def _assert_rejection_evidence(
+    tracking: dict[str, Any], reason: str, days: list[str], snapshot: str
+) -> None:
+    """A rejected aligned series still exposes its window and snapshot identity."""
+    assert tracking["reason"] == reason
+    assert tracking["sample_count"] == 252
+    assert tracking["start"] == days[1]
+    assert tracking["end"] == days[-1]
+    assert tracking["currency"] is None
+    assert tracking["benchmark_id"] == "000300.SH"
+    assert tracking["source_snapshot_id"] == snapshot
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_find_etf_reference_bounds_time_series_to_evaluation_window(
+    tmp_path: Path,
+) -> None:
+    """History before the tracking window stays out; effective fields stay in."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    _, pool, snapshot = _setup(tmp_path, tracking_sessions=days)
+    client = SQLiteClient(pool)
+    for field, unit in (
+        ("nav_total_return", "CNY:nav_total_return"),
+        ("benchmark_total_return", "CNY:index_total_return:000300.SH"),
+    ):
+        client.execute(
+            """INSERT INTO etf_reference_observation
+               (instrument_id, field, value, unit, observed_on, published_at,
+                effective_from, source, source_snapshot_id)
+               VALUES (2000001, ?, '100', ?, '2024-01-01',
+                       '2026-09-30T18:00:00Z', '2024-01-01', 'recorded', ?)""",
+            [field, unit, snapshot],
+        )
+    client.commit()
+    reader = InstrumentReader(client)
+    _, observations = reader.find_etf_reference(
+        asof="2026-09-30",
+        cutoff="2026-09-30T19:00:00Z",
+        source_snapshot_id=snapshot,
+        observed_since=days[0],
+    )
+    observed = {(str(row["field"]), str(row["observed_on"])) for row in observations}
+    assert ("nav_total_return", "2024-01-01") not in observed
+    assert ("benchmark_total_return", "2024-01-01") not in observed
+    assert ("daily_amount", "2026-09-01") in observed
+    assert ("tracking_index", "2020-01-01") in observed
     pool.close()
 
 

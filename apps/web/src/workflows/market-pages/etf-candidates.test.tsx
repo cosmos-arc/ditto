@@ -54,14 +54,14 @@ it("selects a real ETF entity and exposes asynchronous NAV and missing evidence"
 									tracking: {
 										status: "unavailable",
 										reason: "currency_or_benchmark_mismatch",
-										sample_count: 251,
+										sample_count: 252,
 										tracking_deviation_pct: null,
 										tracking_error_pct: null,
 										start: "2025-10-01",
 										end: "2026-09-30",
 										currency: null,
-										benchmark_id: null,
-										source_snapshot_id: null,
+										benchmark_id: "NDX",
+										source_snapshot_id: "snapshot:recorded:etf:one",
 										method: "252 aligned daily returns",
 									},
 								},
@@ -79,5 +79,5 @@ it("selects a real ETF entity and exposes asynchronous NAV and missing evidence"
 	expect(screen.getByText("IOPV").parentElement).toHaveTextContent("no_qualified_observation");
 	expect(screen.getByText(/市价与 NAV 可异步/)).toBeInTheDocument();
 	expect(screen.getByText(/同口径跟踪评价不可计算：currency_or_benchmark_mismatch/)).toBeInTheDocument();
-	expect(screen.getByText(/已对齐 251\/252 日收益/)).toBeInTheDocument();
+	expect(screen.getByText(/已对齐 252\/252 日收益 · 基准 NDX/)).toBeInTheDocument();
 });

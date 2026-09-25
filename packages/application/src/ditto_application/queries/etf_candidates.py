@@ -163,15 +163,18 @@ class ETFCandidateQuery:
             "tracking_error",
         }:
             raise AppQueryError("unsupported ETF sort field")
+        tracking_days = self._metadata.list_trading_days(
+            (decision_day - timedelta(days=550)).isoformat(), asof
+        )[-(_TRACKING_RETURNS + 1) :]
         identities, observations = self._metadata.instrument.find_etf_reference(
-            asof=asof, cutoff=cutoff, source_snapshot_id=source_snapshot_id
+            asof=asof,
+            cutoff=cutoff,
+            source_snapshot_id=source_snapshot_id,
+            observed_since=tracking_days[0] if tracking_days else asof,
         )
         sessions = self._metadata.list_trading_days(
             (decision_day - timedelta(days=60)).isoformat(), asof
         )[-_LIQUIDITY_DAYS:]
-        tracking_days = self._metadata.list_trading_days(
-            (decision_day - timedelta(days=550)).isoformat(), asof
-        )[-(_TRACKING_RETURNS + 1) :]
         by_instrument: dict[int, dict[str, list[dict[str, Any]]]] = {}
         for row in observations:
             field = str(row["field"])
@@ -291,6 +294,7 @@ class ETFCandidateQuery:
             return ETFTracking(
                 status,
                 reason,
+                sample_count=_TRACKING_RETURNS,
                 start=sessions[1],
                 end=sessions[-1],
                 benchmark_id=relation.value,
@@ -368,6 +372,13 @@ class ETFCandidateQuery:
         source_snapshot_id: str,
     ) -> ETFTracking:
         """Compute two 252-return series after qualifying their source."""
+        evidence: dict[str, Any] = {
+            "sample_count": _TRACKING_RETURNS,
+            "start": sessions[1],
+            "end": sessions[-1],
+            "benchmark_id": benchmark_id,
+            "source_snapshot_id": source_snapshot_id,
+        }
         if any(
             row["effective_from"] > row["observed_on"]
             or (
@@ -376,18 +387,25 @@ class ETFCandidateQuery:
             )
             for row in (*fund_rows, *benchmark_rows)
         ):
-            return ETFTracking("unavailable", "series_effective_interval_mismatch")
+            return ETFTracking(
+                "unavailable", "series_effective_interval_mismatch", **evidence
+            )
         currency, unit_reason = _tracking_units(
             fund_rows, benchmark_rows, benchmark_id, formal=status == "comparable"
         )
         if unit_reason is not None:
-            return ETFTracking("unavailable", unit_reason)
+            return ETFTracking("unavailable", unit_reason, **evidence)
         values = [
             [_positive_number(row["value"]) for row in series]
             for series in (fund_rows, benchmark_rows)
         ]
         if any(value is None for series in values for value in series):
-            return ETFTracking("unavailable", "invalid_total_return_level")
+            return ETFTracking(
+                "unavailable",
+                "invalid_total_return_level",
+                currency=currency,
+                **evidence,
+            )
         fund_levels = [value for value in values[0] if value is not None]
         benchmark_levels = [value for value in values[1] if value is not None]
         try:
@@ -395,7 +413,12 @@ class ETFCandidateQuery:
                 fund_levels, benchmark_levels
             )
         except ValueError:
-            return ETFTracking("unavailable", "invalid_total_return_level")
+            return ETFTracking(
+                "unavailable",
+                "invalid_total_return_level",
+                currency=currency,
+                **evidence,
+            )
         return ETFTracking(
             status=status,
             reason=reason,
