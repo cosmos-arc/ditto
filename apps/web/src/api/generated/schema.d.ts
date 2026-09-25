@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 147bb99e72139f4c3bd4c962f529cac45b8d39d56d866eed4375046a16e68efe
+ * Schema SHA-256: 40a2f1ad577008afe450d282bae2b65a29a07153f9818a112e32db8d00eb61b7
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -10958,10 +10958,7 @@ export interface components {
         ETFTrackingResponse: {
             /** Benchmark Id */
             benchmark_id?: string | null;
-            /**
-             * Calendar Snapshot Ids
-             * @default []
-             */
+            /** Calendar Snapshot Ids */
             calendar_snapshot_ids: string[];
             /** Currency */
             currency?: string | null;

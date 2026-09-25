@@ -14906,7 +14906,6 @@
             "title": "Benchmark Id"
           },
           "calendar_snapshot_ids": {
-            "default": [],
             "items": {
               "type": "string"
             },
@@ -15007,6 +15006,7 @@
           "status",
           "reason",
           "sample_count",
+          "calendar_snapshot_ids",
           "method"
         ],
         "title": "ETFTrackingResponse",

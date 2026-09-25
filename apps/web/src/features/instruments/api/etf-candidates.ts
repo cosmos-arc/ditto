@@ -58,7 +58,7 @@ function toTracking(value: TrackingDTO | null | undefined): ETFTracking | null {
 		currency: value.currency ?? null,
 		benchmarkId: value.benchmark_id ?? null,
 		sourceSnapshotId: value.source_snapshot_id ?? null,
-		calendarSnapshotIds: value.calendar_snapshot_ids ?? [],
+		calendarSnapshotIds: value.calendar_snapshot_ids,
 		method: value.method,
 	};
 }
