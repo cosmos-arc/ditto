@@ -5,10 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from itertools import pairwise
-from math import isfinite, sqrt
-from statistics import median, stdev
+from math import isfinite
+from re import fullmatch
+from statistics import median
 from typing import Any
 
+from ditto_backtest.statistics_alpha import compute_total_return_tracking
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.services.metadata_service import MetadataService
 
@@ -112,6 +114,7 @@ class ETFTracking:
     source_snapshot_id: str | None = None
     method: str = (
         "dividend-reinvested NAV total return vs same-currency index total return; "
+        "formal results require the same UTC valuation time; "
         "252 aligned daily returns; sample std (ddof=1) * sqrt(252)"
     )
 
@@ -255,12 +258,23 @@ class ETFCandidateQuery:
         }
         common = [day in fund and day in benchmark for day in sessions]
         if not all(common):
+            missing_fund = any(day not in fund for day in sessions)
+            missing_benchmark = any(day not in benchmark for day in sessions)
+            reason = (
+                "fund_and_benchmark_total_return_missing"
+                if missing_fund and missing_benchmark
+                else "fund_nav_total_return_missing"
+                if missing_fund
+                else "benchmark_total_return_missing"
+            )
             return ETFTracking(
                 "unavailable",
-                "incomplete_aligned_window",
+                reason,
                 sample_count=sum(left and right for left, right in pairwise(common)),
-                start=sessions[0],
+                start=sessions[1],
                 end=sessions[-1],
+                benchmark_id=relation.value,
+                source_snapshot_id=source_snapshot_id,
             )
         fund_rows = [fund[day] for day in sessions]
         benchmark_rows = [benchmark[day] for day in sessions]
@@ -274,7 +288,14 @@ class ETFCandidateQuery:
             source_snapshot_id=source_snapshot_id,
         )
         if status == "unavailable":
-            return ETFTracking(status, reason)
+            return ETFTracking(
+                status,
+                reason,
+                start=sessions[1],
+                end=sessions[-1],
+                benchmark_id=relation.value,
+                source_snapshot_id=source_snapshot_id,
+            )
         return self._tracking_result(
             fund_rows,
             benchmark_rows,
@@ -356,19 +377,11 @@ class ETFCandidateQuery:
             for row in (*fund_rows, *benchmark_rows)
         ):
             return ETFTracking("unavailable", "series_effective_interval_mismatch")
-        currencies = {
-            str(row["unit"]).split(":", 1)[0] for row in (*fund_rows, *benchmark_rows)
-        }
-        if len(currencies) != 1 or not next(iter(currencies)):
-            return ETFTracking("unavailable", "currency_or_benchmark_mismatch")
-        currency = next(iter(currencies))
-        if any(
-            str(row["unit"]) != f"{currency}:nav_total_return" for row in fund_rows
-        ) or any(
-            str(row["unit"]) != f"{currency}:index_total_return:{benchmark_id}"
-            for row in benchmark_rows
-        ):
-            return ETFTracking("unavailable", "currency_or_benchmark_mismatch")
+        currency, unit_reason = _tracking_units(
+            fund_rows, benchmark_rows, benchmark_id, formal=status == "comparable"
+        )
+        if unit_reason is not None:
+            return ETFTracking("unavailable", unit_reason)
         values = [
             [_positive_number(row["value"]) for row in series]
             for series in (fund_rows, benchmark_rows)
@@ -377,17 +390,11 @@ class ETFCandidateQuery:
             return ETFTracking("unavailable", "invalid_total_return_level")
         fund_levels = [value for value in values[0] if value is not None]
         benchmark_levels = [value for value in values[1] if value is not None]
-        excess = [
-            fund_levels[index] / fund_levels[index - 1]
-            - benchmark_levels[index] / benchmark_levels[index - 1]
-            for index in range(1, len(sessions))
-        ]
-        deviation = 100 * (
-            fund_levels[-1] / fund_levels[0]
-            - benchmark_levels[-1] / benchmark_levels[0]
-        )
-        error = 100 * stdev(excess) * sqrt(252)
-        if not isfinite(deviation) or not isfinite(error):
+        try:
+            deviation, error = compute_total_return_tracking(
+                fund_levels, benchmark_levels
+            )
+        except ValueError:
             return ETFTracking("unavailable", "invalid_total_return_level")
         return ETFTracking(
             status=status,
@@ -582,6 +589,41 @@ def _number(value: object) -> float | None:
 def _positive_number(value: object) -> float | None:
     number = _number(value)
     return number if number is not None and number > 0 else None
+
+
+def _tracking_units(
+    fund_rows: list[dict[str, Any]],
+    benchmark_rows: list[dict[str, Any]],
+    benchmark_id: str,
+    *,
+    formal: bool,
+) -> tuple[str | None, str | None]:
+    currencies = {
+        str(row["unit"]).split(":", 1)[0] for row in (*fund_rows, *benchmark_rows)
+    }
+    if len(currencies) != 1 or not next(iter(currencies)):
+        return None, "currency_or_benchmark_mismatch"
+    currency = next(iter(currencies))
+    fund_prefix = f"{currency}:nav_total_return"
+    benchmark_prefix = f"{currency}:index_total_return:{benchmark_id}"
+    fund_units = {str(row["unit"]) for row in fund_rows}
+    benchmark_units = {str(row["unit"]) for row in benchmark_rows}
+    if any(not unit.startswith(fund_prefix) for unit in fund_units) or any(
+        not unit.startswith(benchmark_prefix) for unit in benchmark_units
+    ):
+        return None, "currency_or_benchmark_mismatch"
+    fund_valuations = {unit.removeprefix(fund_prefix) for unit in fund_units}
+    benchmark_valuations = {
+        unit.removeprefix(benchmark_prefix) for unit in benchmark_units
+    }
+    if len(fund_valuations) != 1 or fund_valuations != benchmark_valuations:
+        return None, "valuation_time_not_aligned"
+    valuation = next(iter(fund_valuations))
+    if (formal or valuation) and not fullmatch(
+        r":valuation=([01][0-9]|2[0-3]):[0-5][0-9]Z", valuation
+    ):
+        return None, "valuation_time_not_aligned"
+    return currency, None
 
 
 def _sort_candidates(

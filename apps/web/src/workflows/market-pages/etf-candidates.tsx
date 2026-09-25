@@ -38,7 +38,16 @@ function FieldValue({ field }: { readonly field: ETFField | undefined }) {
 
 function TrackingValue({ tracking }: { readonly tracking: ETFTracking | null }) {
 	if (!tracking || tracking.status === "unavailable") {
-		return <p>同口径跟踪评价不可计算：{tracking?.reason ?? "缺少合格总回报证据"}</p>;
+		return (
+			<div>
+				<p>同口径跟踪评价不可计算：{tracking?.reason ?? "缺少合格总回报证据"}</p>
+				{tracking?.start && tracking.end && (
+					<p className="text-xs text-(--color-foreground-tertiary)">
+						{tracking.start} 至 {tracking.end} · 已对齐 {tracking.sampleCount}/252 日收益 · 基准 {tracking.benchmarkId}
+					</p>
+				)}
+			</div>
+		);
 	}
 	return (
 		<div className="rounded bg-(--color-surface-1) p-2">

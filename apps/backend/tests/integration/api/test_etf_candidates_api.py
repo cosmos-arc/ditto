@@ -340,7 +340,22 @@ def test_tracking_comparison_requires_complete_visible_total_return_series(
         assert first["tracking"]["tracking_deviation_pct"] == pytest.approx(0)
         assert first["tracking"]["tracking_error_pct"] == pytest.approx(0)
         assert second["tracking"]["status"] == "unavailable"
-        assert second["tracking"]["reason"] == "incomplete_aligned_window"
+        assert second["tracking"]["reason"] == "fund_and_benchmark_total_return_missing"
+        assert second["tracking"]["sample_count"] == 250
+        assert second["tracking"]["start"] == days[1]
+        client.execute(
+            """UPDATE etf_reference_observation
+               SET published_at = '2026-09-30T18:00:00Z'
+               WHERE instrument_id = 2000002
+                 AND field = 'benchmark_total_return' AND observed_on = ?""",
+            [days[90]],
+        )
+        client.commit()
+        missing_fund = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert (
+            missing_fund.json()["data"][1]["tracking"]["reason"]
+            == "fund_nav_total_return_missing"
+        )
         later = web.get(
             "/api/v1/metadata/etf-candidates",
             params={**params, "cutoff": "2026-10-02T00:00:00Z"},
@@ -435,6 +450,19 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
             for request in requests
         )
         formal_allowed[0] = True
+        unaligned = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert (
+            unaligned.json()["data"][0]["tracking"]["reason"]
+            == "valuation_time_not_aligned"
+        )
+        for field in ("nav_total_return", "benchmark_total_return"):
+            client.execute(
+                """UPDATE etf_reference_observation
+                   SET unit = unit || ':valuation=07:00Z'
+                   WHERE instrument_id = 2000001 AND field = ?""",
+                [field],
+            )
+        client.commit()
         allowed = web.get("/api/v1/metadata/etf-candidates", params=params)
         assert allowed.status_code == 200, allowed.text
         tracking = allowed.json()["data"][0]["tracking"]
@@ -449,6 +477,19 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
         assert all(
             item["tracking"]["status"] != "comparable"
             for item in ranked.json()["data"][1:]
+        )
+        client.execute(
+            """UPDATE etf_reference_observation
+               SET unit = 'CNY:index_total_return:000300.SH:valuation=08:00Z'
+               WHERE instrument_id = 2000001
+                 AND field = 'benchmark_total_return' AND observed_on = ?""",
+            [days[50]],
+        )
+        client.commit()
+        asynchronous = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert (
+            asynchronous.json()["data"][0]["tracking"]["reason"]
+            == "valuation_time_not_aligned"
         )
         client.execute(
             """UPDATE etf_reference_observation
