@@ -14905,6 +14905,17 @@
             ],
             "title": "Benchmark Id"
           },
+          "calendar_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Snapshot Id"
+          },
           "currency": {
             "anyOf": [
               {

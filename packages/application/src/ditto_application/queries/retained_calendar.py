@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import NamedTuple
 
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
@@ -15,18 +16,26 @@ class RetainedCalendarAbsent(ValueError):
     """No retained calendar snapshot is visible at the requested cutoff."""
 
 
+class RetainedCalendar(NamedTuple):
+    """Open sessions plus the retained snapshot identity that produced them."""
+
+    days: list[str]
+    snapshot_id: str
+
+
 def retained_trading_days(
     *,
     snapshots: ProviderSnapshotReader,
     payloads: ProviderPayloadReader,
     cutoff: datetime,
-) -> list[str]:
+) -> RetainedCalendar:
     """
     Return open sessions from the calendar snapshot newest at the cutoff.
 
     The trading-calendar read model is unversioned, so the retained provider
     payload newest at the cutoff is the only basis that cannot consume later
-    calendar refreshes.
+    calendar refreshes. The selected snapshot identity travels with the days so
+    results can name the exact calendar revision behind their window.
     """
     candidates = [
         snapshot
@@ -49,8 +58,13 @@ def retained_trading_days(
     )
     if "trade_date" not in frame.columns or "is_open" not in frame.columns:
         raise RetainedCalendarAbsent("retained calendar is malformed")
-    return sorted(
-        str(value)
-        for value, is_open in zip(frame["trade_date"], frame["is_open"], strict=True)
-        if is_open is True
+    return RetainedCalendar(
+        days=sorted(
+            str(value)
+            for value, is_open in zip(
+                frame["trade_date"], frame["is_open"], strict=True
+            )
+            if is_open is True
+        ),
+        snapshot_id=snapshot.snapshot_id,
     )

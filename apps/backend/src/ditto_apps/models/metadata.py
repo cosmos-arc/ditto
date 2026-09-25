@@ -125,6 +125,7 @@ class ETFTrackingResponse(BaseModel):
     currency: str | None = None
     benchmark_id: str | None = None
     source_snapshot_id: str | None = None
+    calendar_snapshot_id: str | None = None
     method: str
 
 

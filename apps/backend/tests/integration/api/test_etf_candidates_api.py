@@ -400,6 +400,10 @@ def test_tracking_comparison_requires_complete_visible_total_return_series(
         first, second = response.json()["data"]
         assert first["tracking"]["status"] == "reference_only"
         assert first["tracking"]["sample_count"] == 252
+        assert (
+            first["tracking"]["calendar_snapshot_id"]
+            == "snapshot:recorded:calendar:one"
+        )
         assert first["tracking"]["tracking_deviation_pct"] == pytest.approx(0)
         assert first["tracking"]["tracking_error_pct"] == pytest.approx(0)
         assert second["tracking"]["status"] == "unavailable"
@@ -574,6 +578,87 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
     pool.close()
 
 
+@pytest.mark.integration
+def test_tracking_relation_source_mismatch_blocks_formal_result(
+    tmp_path: Path,
+) -> None:
+    """A cross-source tracking relation can never reach formal comparison."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    admission = cast(
+        FieldAdmissionQuery,
+        SimpleNamespace(
+            assess=lambda _request: SimpleNamespace(
+                allowed=True, fields=(SimpleNamespace(reason_codes=()),)
+            )
+        ),
+    )
+    snapshots = cast(
+        ProviderSnapshotReader,
+        SimpleNamespace(
+            get_snapshot=lambda _id: SimpleNamespace(
+                dataset_id="etf_reference", source="provider"
+            )
+        ),
+    )
+    app, pool, snapshot = _setup(
+        tmp_path,
+        admission=admission,
+        snapshots=snapshots,
+        source="provider",
+        tracking_sessions=days,
+    )
+    client = SQLiteClient(pool)
+    for index, observed_on in enumerate(days):
+        for field, unit in (
+            ("nav_total_return", "CNY:nav_total_return:valuation=07:00Z"),
+            (
+                "benchmark_total_return",
+                "CNY:index_total_return:000300.SH:valuation=07:00Z",
+            ),
+        ):
+            client.execute(
+                """INSERT INTO etf_reference_observation
+                (instrument_id, field, value, unit, observed_on, published_at,
+                 effective_from, source, source_snapshot_id)
+                VALUES (2000001, ?, ?, ?, ?,
+                        '2026-09-30T18:00:00Z', ?, 'provider', ?)""",
+                [
+                    field,
+                    str(100 * 1.01**index),
+                    unit,
+                    observed_on,
+                    observed_on,
+                    snapshot,
+                ],
+            )
+    client.execute(
+        "UPDATE etf_reference_observation SET source = 'cross-source'"
+        " WHERE instrument_id = 2000001 AND field = 'tracking_index'"
+    )
+    client.commit()
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T19:00:00Z",
+                "source_snapshot_id": snapshot,
+                "search": "510300",
+            },
+        )
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["status"] == "unavailable"
+        assert tracking["reason"] == "source_or_display_admission_denied"
+    pool.close()
+
+
 def _assert_rejection_evidence(
     tracking: dict[str, Any], reason: str, days: list[str], snapshot: str
 ) -> None:
@@ -585,6 +670,7 @@ def _assert_rejection_evidence(
     assert tracking["currency"] is None
     assert tracking["benchmark_id"] == "000300.SH"
     assert tracking["source_snapshot_id"] == snapshot
+    assert tracking["calendar_snapshot_id"] == "snapshot:recorded:calendar:one"
 
 
 @pytest.mark.integration

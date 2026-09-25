@@ -22,6 +22,7 @@ from ditto_application.queries.field_admission import (
     FieldRequirement,
 )
 from ditto_application.queries.retained_calendar import (
+    RetainedCalendar,
     RetainedCalendarAbsent,
     retained_trading_days,
 )
@@ -120,6 +121,7 @@ class ETFTracking:
     currency: str | None = None
     benchmark_id: str | None = None
     source_snapshot_id: str | None = None
+    calendar_snapshot_id: str | None = None
     method: str = (
         "dividend-reinvested NAV total return vs same-currency index total return; "
         "formal results require the same UTC valuation time; "
@@ -175,11 +177,11 @@ class ETFCandidateQuery:
         }:
             raise AppQueryError("unsupported ETF sort field")
         calendar = self._retained_calendar(parsed_cutoff)
-        if not calendar or decision_day - date.fromisoformat(calendar[-1]) > timedelta(
-            days=_CALENDAR_STALENESS_DAYS
-        ):
+        if not calendar.days or decision_day - date.fromisoformat(
+            calendar.days[-1]
+        ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
             raise AppQueryError("ETF evaluation calendar does not cover the as-of date")
-        tracking_days = _calendar_window(calendar, decision_day, 550)[
+        tracking_days = _calendar_window(calendar.days, decision_day, 550)[
             -(_TRACKING_RETURNS + 1) :
         ]
         identities, observations = self._metadata.instrument.find_etf_reference(
@@ -188,7 +190,7 @@ class ETFCandidateQuery:
             source_snapshot_id=source_snapshot_id,
             observed_since=tracking_days[0] if tracking_days else asof,
         )
-        sessions = _calendar_window(calendar, decision_day, 60)[-_LIQUIDITY_DAYS:]
+        sessions = _calendar_window(calendar.days, decision_day, 60)[-_LIQUIDITY_DAYS:]
         by_instrument: dict[int, dict[str, list[dict[str, Any]]]] = {}
         for row in observations:
             field = str(row["field"])
@@ -245,12 +247,13 @@ class ETFCandidateQuery:
                         instrument_id=instrument_id,
                         cutoff=cutoff,
                         source_snapshot_id=source_snapshot_id,
+                        calendar_snapshot_id=calendar.snapshot_id,
                     ),
                 )
             )
         return _sort_candidates(candidates, sort_field)
 
-    def _retained_calendar(self, cutoff: datetime) -> list[str]:
+    def _retained_calendar(self, cutoff: datetime) -> RetainedCalendar:
         """Read open sessions only from calendar evidence visible at the cutoff."""
         if self._snapshots is None or self._payloads is None:
             raise AppQueryError("ETF evaluation calendar is absent at the cutoff")
@@ -272,13 +275,17 @@ class ETFCandidateQuery:
         instrument_id: int,
         cutoff: str,
         source_snapshot_id: str,
+        calendar_snapshot_id: str,
     ) -> ETFTracking:
+        lineage: dict[str, Any] = {"calendar_snapshot_id": calendar_snapshot_id}
         if not isinstance(relation.value, str):
-            return ETFTracking("unavailable", "tracking_index_unavailable")
+            return ETFTracking("unavailable", "tracking_index_unavailable", **lineage)
         if len(sessions) != _TRACKING_RETURNS + 1:
-            return ETFTracking("unavailable", "insufficient_trading_sessions")
+            return ETFTracking(
+                "unavailable", "insufficient_trading_sessions", **lineage
+            )
         if relation.effective_from is None or relation.effective_from > sessions[0]:
-            return ETFTracking("unavailable", "tracking_relation_changed")
+            return ETFTracking("unavailable", "tracking_relation_changed", **lineage)
         fund = {
             str(row["observed_on"]): row for row in rows.get("nav_total_return", [])
         }
@@ -305,6 +312,7 @@ class ETFCandidateQuery:
                 end=sessions[-1],
                 benchmark_id=relation.value,
                 source_snapshot_id=source_snapshot_id,
+                **lineage,
             )
         fund_rows = [fund[day] for day in sessions]
         benchmark_rows = [benchmark[day] for day in sessions]
@@ -326,15 +334,22 @@ class ETFCandidateQuery:
                 end=sessions[-1],
                 benchmark_id=relation.value,
                 source_snapshot_id=source_snapshot_id,
+                **lineage,
             )
         return self._tracking_result(
             fund_rows,
             benchmark_rows,
             sessions,
-            benchmark_id=relation.value,
             status=status,
             reason=reason,
-            source_snapshot_id=source_snapshot_id,
+            evidence={
+                "sample_count": _TRACKING_RETURNS,
+                "start": sessions[1],
+                "end": sessions[-1],
+                "benchmark_id": relation.value,
+                "source_snapshot_id": source_snapshot_id,
+                **lineage,
+            },
         )
 
     def _tracking_qualification(
@@ -349,9 +364,12 @@ class ETFCandidateQuery:
         source_snapshot_id: str,
     ) -> tuple[str, str | None]:
         """Only certified provider fields produce formal metrics."""
-        combined = (*fund_rows, *benchmark_rows)
+        series_sources = (
+            relation.source,
+            *(row["source"] for row in (*fund_rows, *benchmark_rows)),
+        )
         if source_snapshot_id.startswith("snapshot:recorded:") and all(
-            row["source"] == "recorded" for row in combined
+            source == "recorded" for source in series_sources
         ):
             return "reference_only", "RECORDED_REFERENCE_ONLY"
         if self._admission is None or self._snapshots is None:
@@ -360,7 +378,7 @@ class ETFCandidateQuery:
         if snapshot is None:
             return "unavailable", "SNAPSHOT_NOT_REGISTERED"
         if relation.eligibility != "display_allowed" or any(
-            row["source"] != snapshot.source for row in combined
+            source != snapshot.source for source in series_sources
         ):
             return "unavailable", "source_or_display_admission_denied"
         report = self._admission.assess(
@@ -393,19 +411,12 @@ class ETFCandidateQuery:
         benchmark_rows: list[dict[str, Any]],
         sessions: list[str],
         *,
-        benchmark_id: str,
         status: str,
         reason: str | None,
-        source_snapshot_id: str,
+        evidence: dict[str, Any],
     ) -> ETFTracking:
         """Compute two 252-return series after qualifying their source."""
-        evidence: dict[str, Any] = {
-            "sample_count": _TRACKING_RETURNS,
-            "start": sessions[1],
-            "end": sessions[-1],
-            "benchmark_id": benchmark_id,
-            "source_snapshot_id": source_snapshot_id,
-        }
+        benchmark_id = str(evidence["benchmark_id"])
         if any(
             row["effective_from"] > row["observed_on"]
             or (
@@ -451,12 +462,8 @@ class ETFCandidateQuery:
             reason=reason,
             tracking_deviation_pct=deviation,
             tracking_error_pct=error,
-            sample_count=_TRACKING_RETURNS,
-            start=sessions[1],
-            end=sessions[-1],
             currency=currency,
-            benchmark_id=benchmark_id,
-            source_snapshot_id=source_snapshot_id,
+            **evidence,
         )
 
     def _admit(
