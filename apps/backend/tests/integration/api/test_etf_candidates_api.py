@@ -510,6 +510,53 @@ def test_newer_calendar_revision_closes_previously_open_session(
 
 @pytest.mark.integration
 @pytest.mark.pit
+def test_newer_calendar_revision_with_hole_degrades_tracking(tmp_path: Path) -> None:
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    revision_days, revision_flags = _full_date_payload(days)
+    missing = days[100]
+    revision_flags.pop(revision_days.index(missing))
+    revision_days.remove(missing)
+    app, pool, snapshot = _setup(
+        tmp_path,
+        tracking_sessions=days,
+        calendar_overrides=[
+            (
+                "snapshot:recorded:calendar:incomplete-revision",
+                "recorded",
+                revision_days[0],
+                revision_days[-1],
+                revision_days,
+                revision_flags,
+            )
+        ],
+    )
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "evaluation_calendar_gap"
+        assert (
+            "snapshot:recorded:calendar:incomplete-revision"
+            in tracking["calendar_snapshot_ids"]
+        )
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
 def test_daily_calendar_revision_beyond_asof_still_overlays_history(
     tmp_path: Path,
 ) -> None:

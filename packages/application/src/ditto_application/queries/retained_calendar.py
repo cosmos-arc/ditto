@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import NamedTuple
 
 import polars as pl
@@ -59,6 +59,7 @@ class RetainedCalendarWindow(NamedTuple):
     days: list[str]
     authority: dict[str, str]
     shard_sources: dict[str, str]
+    revision_gaps: frozenset[str]
 
 
 def _calendar_states(
@@ -72,6 +73,33 @@ def _calendar_states(
         for value, is_open in zip(frame["trade_date"], frame["is_open"], strict=True)
         if first_day <= str(value) <= last_day
     }
+
+
+def _revision_gaps(
+    snapshot: ProviderSnapshot,
+    states: dict[str, bool],
+    authorship: dict[str, tuple[bool, str]],
+    first_day: str,
+    last_day: str,
+) -> set[str]:
+    intervals = [(min(states), max(states))] if states else []
+    request_start = getattr(snapshot, "request_start", None)
+    request_end = getattr(snapshot, "request_end", None)
+    if request_start is not None and request_end is not None:
+        start = max(first_day, request_start)
+        end = min(last_day, request_end)
+        if start <= end:
+            intervals.append((start, end))
+    gaps: set[str] = set()
+    for start, end in intervals:
+        day = date.fromisoformat(start)
+        final = date.fromisoformat(end)
+        while day <= final:
+            iso = day.isoformat()
+            if iso not in states and iso in authorship:
+                gaps.add(iso)
+            day += timedelta(days=1)
+    return gaps
 
 
 def retained_calendar_window(
@@ -103,6 +131,7 @@ def retained_calendar_window(
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
     authorship: dict[str, tuple[bool, str]] = {}
+    revision_gaps: set[str] = set()
     shard_sources: dict[str, str] = {}
     read_payloads: dict[str, pl.DataFrame] = {}
     for snapshot in shards:
@@ -121,8 +150,13 @@ def retained_calendar_window(
                 )
             )
             read_payloads[snapshot.checksum] = frame
-        for day, is_open in _calendar_states(frame, first_day, last_day).items():
+        states = _calendar_states(frame, first_day, last_day)
+        revision_gaps.update(
+            _revision_gaps(snapshot, states, authorship, first_day, last_day)
+        )
+        for day, is_open in states.items():
             authorship[day] = (is_open, snapshot.snapshot_id)
+            revision_gaps.discard(day)
     days = sorted(day for day, state in authorship.items() if state[0])
     if not days:
         raise RetainedCalendarAbsent("retained calendar is malformed")
@@ -130,6 +164,7 @@ def retained_calendar_window(
         days,
         {day: state[1] for day, state in authorship.items()},
         shard_sources,
+        frozenset(revision_gaps),
     )
 
 

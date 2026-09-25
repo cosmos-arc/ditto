@@ -186,6 +186,28 @@ class TestObservationBackfill:
 
 
 class TestReobservationOrdering:
+    def test_new_snapshot_follows_latest_reobserved_content(
+        self, tmp_path: Path
+    ) -> None:
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteProviderSnapshotStore(client)
+        original = _snapshot("tushare", "sha256:open")
+        closed = replace(
+            _snapshot("tushare", "sha256:closed"),
+            created_at=datetime(2026, 6, 2, 10, tzinfo=UTC),
+        )
+        reopened = replace(original, created_at=datetime(2026, 6, 3, 10, tzinfo=UTC))
+        revised = replace(
+            _snapshot("tushare", "sha256:revised"),
+            created_at=datetime(2026, 6, 4, 10, tzinfo=UTC),
+        )
+        try:
+            for snapshot in (original, closed, reopened, revised):
+                store.append_snapshot(snapshot)
+            assert store.get_predecessor(revised.snapshot_id) == original.snapshot_id
+        finally:
+            pool.close()
+
     def test_reobservations_preserve_intermediate_events(self, tmp_path: Path) -> None:
         """A→B→A→A keeps both re-observations for cutoff replay."""
         client, pool = _client(tmp_path / "catalog.sqlite")

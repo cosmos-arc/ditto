@@ -334,6 +334,11 @@ class ETFCandidateQuery:
             # 血缘覆盖选出最终窗口所消费的每一个权威决定（含把日期改为闭市
             # 的决定——它们同样改变了哪 253 个交易日被选中）。
             _ensure_single_calendar_source(calendar_shards, calendar.shard_sources)
+            if any(
+                first_day <= day <= decision_day.isoformat()
+                for day in calendar.revision_gaps
+            ):
+                raise AppQueryError("ETF evaluation calendar has a coverage gap")
         except AppQueryError as exc:
             return None, _calendar_failure_reason(exc), calendar_shards
         return calendar, None, calendar_shards

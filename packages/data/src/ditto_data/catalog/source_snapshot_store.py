@@ -215,29 +215,11 @@ class SQLiteProviderSnapshotStore:
                     snapshot.schema_fingerprint,
                 ],
             )
-            previous = self._client.fetchone(
-                """
-                SELECT snapshot_id FROM provider_snapshots
-                WHERE dataset_id = ? AND source = ? AND request_start = ?
-                  AND request_end = ? AND canonical_namespace = ?
-                  AND canonical_partition_keys = ? AND snapshot_id != ?
-                ORDER BY rowid DESC LIMIT 1
-                """,
-                [
-                    snapshot.dataset_id,
-                    snapshot.source,
-                    snapshot.request_start,
-                    snapshot.request_end,
-                    snapshot.canonical_asset.namespace,
-                    partition_keys_json(snapshot.canonical_asset.partition_keys),
-                    snapshot.snapshot_id,
-                ],
-            )
             self._client.execute(
                 "INSERT INTO provider_snapshot_observations VALUES (?, ?, ?)",
                 [
                     snapshot.snapshot_id,
-                    previous["snapshot_id"] if previous else None,
+                    self._predecessor_at(snapshot),
                     self._now().isoformat(),
                 ],
             )
@@ -245,6 +227,24 @@ class SQLiteProviderSnapshotStore:
         except Exception:
             self._client.rollback()
             raise
+
+    def _predecessor_at(self, snapshot: ProviderSnapshot) -> str | None:
+        events = (
+            (observed_at, previous.snapshot_id)
+            for previous in self.list_snapshots(
+                dataset_id=snapshot.dataset_id,
+                source=snapshot.source,
+                canonical_asset=snapshot.canonical_asset,
+            )
+            if previous.snapshot_id != snapshot.snapshot_id
+            and previous.request_start == snapshot.request_start
+            and previous.request_end == snapshot.request_end
+            and previous.created_at <= snapshot.created_at
+            for observed_at in (previous.created_at, *previous.observations)
+            if observed_at <= snapshot.created_at
+        )
+        latest = max(events, default=None)
+        return latest[1] if latest else None
 
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         """Return one immutable snapshot by deterministic ID."""

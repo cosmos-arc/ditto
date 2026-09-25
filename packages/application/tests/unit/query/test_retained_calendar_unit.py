@@ -160,6 +160,30 @@ def test_replay_between_intermediate_observations_uses_event_history() -> None:
     assert at_t4.days == ["2026-06-01", "2026-06-02"]
 
 
+@pytest.mark.pit
+def test_newer_calendar_revision_cannot_inherit_a_missing_date() -> None:
+    original = _shard(
+        "snapshot:recorded:calendar:original",
+        created_at=datetime(2026, 6, 1, tzinfo=UTC),
+        days=["2026-06-01", "2026-06-02", "2026-06-03"],
+    )
+    incomplete = _shard(
+        "snapshot:recorded:calendar:revision",
+        created_at=datetime(2026, 6, 2, tzinfo=UTC),
+        days=["2026-06-01", "2026-06-03"],
+    )
+    snapshots, payloads = _readers([original, incomplete])
+
+    window = retained_calendar_window(
+        snapshots=snapshots,
+        payloads=payloads,
+        cutoff=datetime(2026, 6, 3, tzinfo=UTC),
+        first_day="2026-06-01",
+        last_day="2026-06-03",
+    )
+    assert window.revision_gaps == frozenset({"2026-06-02"})
+
+
 def test_paper_calendar_ignores_newer_observation_of_old_shard() -> None:
     """A routine observation of last year's shard cannot hide current dates."""
     old = _shard(
