@@ -6,6 +6,9 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any, cast
 
+import pytest
+from ditto_application.exceptions import AppProcessError
+from ditto_application.queries.etf_paper_handoff_facts import _next_trading_day
 from ditto_application.queries.retained_calendar import (
     retained_calendar_window,
     retained_trading_days,
@@ -27,16 +30,17 @@ def _shard(
     days: list[str],
     flags: list[bool] | None = None,
     observations: tuple[datetime, ...] = (),
+    source: str = "recorded",
 ) -> Any:
     checksum = f"{abs(hash(snapshot_id)) % 10**32:032x}"
     return SimpleNamespace(
         dataset_id="calendar",
-        source="recorded",
+        source=source,
         snapshot_id=snapshot_id,
         created_at=created_at,
         observations=observations,
         payload_retained=True,
-        payload_uri=f"provider_payloads/recorded/calendar/{checksum}.parquet",
+        payload_uri=f"provider_payloads/{source}/calendar/{checksum}.parquet",
         checksum=checksum,
         row_count=len(days),
         request_start=days[0],
@@ -179,3 +183,27 @@ def test_paper_calendar_ignores_newer_observation_of_old_shard() -> None:
     )
     assert calendar.days == ["2026-09-02", "2026-09-03", "2026-09-04"]
     assert calendar.snapshot_id == current.snapshot_id
+
+
+@pytest.mark.pit
+def test_paper_handoff_rejects_mixed_source_next_session() -> None:
+    primary = _shard(
+        "snapshot:primary:calendar",
+        created_at=datetime(2026, 9, 2, tzinfo=UTC),
+        days=["2026-09-02", "2026-09-03"],
+    )
+    secondary = _shard(
+        "snapshot:secondary:calendar",
+        created_at=datetime(2026, 9, 2, 1, tzinfo=UTC),
+        days=["2026-09-03"],
+        source="secondary",
+    )
+    snapshots, payloads = _readers([primary, secondary])
+
+    with pytest.raises(AppProcessError, match="mixes provider sources"):
+        _next_trading_day(
+            snapshots=snapshots,
+            payloads=payloads,
+            cutoff=datetime(2026, 9, 2, 2, tzinfo=UTC),
+            signal_date="2026-09-02",
+        )

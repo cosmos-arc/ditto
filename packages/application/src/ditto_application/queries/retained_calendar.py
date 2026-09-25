@@ -22,6 +22,20 @@ class RetainedCalendar(NamedTuple):
 
     days: list[str]
     snapshot_id: str
+    authority: dict[str, str]
+    shard_sources: dict[str, str]
+
+
+def calendar_has_single_source(
+    calendar: RetainedCalendar, first_day: str, last_day: str
+) -> bool:
+    """Check the source of every consumed open or closed date."""
+    sources = {
+        calendar.shard_sources.get(snapshot_id)
+        for day, snapshot_id in calendar.authority.items()
+        if first_day <= day <= last_day
+    }
+    return len(sources) == 1 and None not in sources
 
 
 def _observed_by(snapshot: ProviderSnapshot, cutoff: datetime) -> datetime:
@@ -141,4 +155,9 @@ def retained_trading_days(
         first_day=first_day,
         last_day="9999-12-31",
     )
-    return RetainedCalendar(window.days, window.authority[window.days[0]])
+    return RetainedCalendar(
+        window.days,
+        window.authority[window.days[0]],
+        window.authority,
+        window.shard_sources,
+    )
