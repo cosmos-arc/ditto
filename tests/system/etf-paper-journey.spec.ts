@@ -112,7 +112,9 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await review.getByLabel("复盘账本日期").fill(reviewDay);
 	await review.getByLabel("复盘价格快照").fill(fixture.market);
 	await review.getByLabel("复盘知识截止").fill("2026-09-03T14:00");
-	await expect(review.getByRole("alert")).toBeVisible();
+	// The pre-evidence cutoff hides target details and fails the valuation.
+	await expect(review.getByText(/所选知识截止早于该版本/)).toBeVisible();
+	await expect(review.getByText(/估值失败：/)).toBeVisible();
 	await review.getByLabel("复盘知识截止").fill(
 		await page.evaluate(() => {
 			const instant = new Date();
