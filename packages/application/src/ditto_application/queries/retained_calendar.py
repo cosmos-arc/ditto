@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import NamedTuple
+from typing import NamedTuple, Protocol
 
 import polars as pl
 from ditto_data.catalog.provider_payload import (
@@ -22,6 +22,34 @@ class RetainedCalendar(NamedTuple):
 
     days: list[str]
     snapshot_id: str
+
+
+def _observed_by(snapshot: ProviderSnapshotLike, cutoff: datetime) -> datetime:
+    """
+    Latest re-observation this snapshot had actually received by the cutoff.
+
+    A snapshot stays visible from its first ``created_at``; its revision
+    recency only advances once a re-observation predates the cutoff, so an
+    A→B→A(re) sequence replays as A, then B, then A across cutoffs.
+    """
+    last = getattr(snapshot, "last_observed_at", None)
+    if last is not None and last <= cutoff:
+        return last
+    return snapshot.created_at
+
+
+class ProviderSnapshotLike(Protocol):
+    """Structural view of provider snapshots used for observation ordering."""
+
+    @property
+    def created_at(self) -> datetime:
+        """First visibility timestamp."""
+        ...
+
+    @property
+    def last_observed_at(self) -> datetime | None:
+        """Latest re-observation timestamp, if any."""
+        ...
 
 
 class RetainedCalendarWindow(NamedTuple):
@@ -68,10 +96,10 @@ def retained_calendar_window(
             snapshot
             for snapshot in snapshots.list_snapshots(dataset_id="calendar")
             if snapshot.payload_retained
-            and (snapshot.last_observed_at or snapshot.created_at) <= cutoff
+            and snapshot.created_at <= cutoff
             and snapshot.request_end >= first_day
         ),
-        key=lambda item: (item.last_observed_at or item.created_at, item.snapshot_id),
+        key=lambda item: (_observed_by(item, cutoff), item.snapshot_id),
     )
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
@@ -127,7 +155,9 @@ def retained_trading_days(
     ]
     if not candidates:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
-    snapshot = max(candidates, key=lambda item: (item.created_at, item.snapshot_id))
+    snapshot = max(
+        candidates, key=lambda item: (_observed_by(item, cutoff), item.snapshot_id)
+    )
     if snapshot.payload_uri is None:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
     frame = payloads.read_payload(
