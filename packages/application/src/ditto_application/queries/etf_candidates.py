@@ -25,6 +25,7 @@ from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
     RetainedCalendarWindow,
     calendar_has_complete_authority,
+    calendar_has_single_source,
     retained_calendar_window,
 )
 
@@ -209,18 +210,14 @@ class ETFCandidateQuery:
         tracking_days = (
             calendar.days[-(_TRACKING_RETURNS + 1) :] if calendar is not None else []
         )
+        liquidity_start = (decision_day - timedelta(days=60)).isoformat()
         identities, observations = self._metadata.instrument.find_etf_reference(
             asof=asof,
             cutoff=cutoff,
             source_snapshot_id=source_snapshot_id,
-            observed_since=tracking_days[0] if tracking_days else asof,
+            observed_since=tracking_days[0] if tracking_days else liquidity_start,
         )
-        liquidity_start = (decision_day - timedelta(days=60)).isoformat()
-        sessions = [
-            day
-            for day in (calendar.days if calendar is not None else [])
-            if day >= liquidity_start
-        ][-_LIQUIDITY_DAYS:]
+        sessions = _liquidity_sessions(calendar, decision_day)
         by_instrument: dict[int, dict[str, list[dict[str, Any]]]] = {}
         for row in observations:
             field = str(row["field"])
@@ -318,6 +315,7 @@ class ETFCandidateQuery:
         every calendar-level failure becomes an explicit tracking reason.
         """
         calendar_shards: tuple[tuple[str, str, str], ...] = ()
+        calendar: RetainedCalendarWindow | None = None
         try:
             calendar = self._retained_calendar(cutoff, decision_day)
             tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
@@ -337,7 +335,7 @@ class ETFCandidateQuery:
             ):
                 raise AppQueryError("ETF evaluation calendar has a coverage gap")
         except AppQueryError as exc:
-            return None, _calendar_failure_reason(exc), calendar_shards
+            return calendar, _calendar_failure_reason(exc), calendar_shards
         return calendar, None, calendar_shards
 
     def _tracking(
@@ -728,6 +726,23 @@ def _validate_cutoff(value: str) -> datetime:
             "knowledge cutoff must be canonical UTC (YYYY-MM-DDTHH:MM:SSZ)"
         )
     return parsed
+
+
+def _liquidity_sessions(
+    calendar: RetainedCalendarWindow | None, asof: date
+) -> list[str]:
+    if calendar is None:
+        return []
+    start = (asof - timedelta(days=60)).isoformat()
+    sessions = [day for day in calendar.days if day >= start][-_LIQUIDITY_DAYS:]
+    if len(sessions) == _LIQUIDITY_DAYS and (
+        asof - date.fromisoformat(sessions[-1])
+        > timedelta(days=_CALENDAR_STALENESS_DAYS)
+        or not calendar_has_complete_authority(calendar, sessions[0], asof.isoformat())
+        or not calendar_has_single_source(calendar, sessions[0], asof.isoformat())
+    ):
+        return []
+    return sessions
 
 
 def _liquidity(rows: list[dict[str, Any]], sessions: list[str]) -> ETFField:

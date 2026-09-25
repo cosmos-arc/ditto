@@ -28,7 +28,9 @@ class RetainedCalendar(NamedTuple):
 
 
 def calendar_has_single_source(
-    calendar: RetainedCalendar, first_day: str, last_day: str
+    calendar: RetainedCalendar | RetainedCalendarWindow,
+    first_day: str,
+    last_day: str,
 ) -> bool:
     """Check the source of every consumed open or closed date."""
     sources = {

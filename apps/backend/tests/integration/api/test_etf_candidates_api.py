@@ -1304,7 +1304,32 @@ def test_partial_calendar_payload_with_hole_fails_closed(tmp_path: Path) -> None
         assert response.status_code == 200, response.text
         tracking = response.json()["data"][0]["tracking"]
         assert tracking["reason"] == "evaluation_calendar_gap"
+        assert response.json()["data"][0]["fields"]["daily_amount"]["value"] == 109.5
         assert "snapshot:recorded:calendar:2026" in tracking["calendar_snapshot_ids"]
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_recent_calendar_hole_still_blocks_liquidity(tmp_path: Path) -> None:
+    app, pool, snapshot = _setup(tmp_path, calendar_omit=frozenset({"2026-09-26"}))
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert response.status_code == 200, response.text
+        candidate = response.json()["data"][0]
+        assert candidate["tracking"]["reason"] == "evaluation_calendar_gap"
+        assert candidate["fields"]["daily_amount"]["value"] is None
+        assert (
+            candidate["fields"]["daily_amount"]["missing_reason"]
+            == "incomplete_20_session_window"
+        )
     pool.close()
 
 
