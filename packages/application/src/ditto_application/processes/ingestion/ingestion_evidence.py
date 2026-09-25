@@ -156,10 +156,11 @@ def _ingestion_run_id(
 def _source_snapshot_id(
     ctx: CatalogWriteContext,
 ) -> str:
+    start = ctx.start_date or ctx.trade_date
     if ctx.source_ticker is not None or ctx.end_date is not None:
         snapshot_id = (
             f"snapshot:{ctx.source_name}:{ctx.dataset}:{ctx.source_ticker or 'all'}:"
-            f"{ctx.trade_date}:{ctx.end_date or ctx.trade_date}:"
+            f"{start}:{ctx.end_date or ctx.trade_date}:"
             f"{ctx.write_result.checksum}"
         )
         return f"{snapshot_id}:quality=l1-l2" if ctx.l1_l2_attested else snapshot_id
@@ -288,7 +289,7 @@ def build_data_catalog_entry(
     return DataCatalogEntry(
         asset=_output_asset(
             ctx.dataset,
-            ctx.trade_date,
+            ctx.start_date or ctx.trade_date,
             source_ticker=ctx.source_ticker,
             end_date=ctx.end_date,
         ),
@@ -393,7 +394,7 @@ def build_evidence_commit_request(
         catalog_entry=catalog_entry,
         lineage_event=_lineage_event(
             ctx.dataset,
-            ctx.trade_date,
+            request_start,
             source_name=ctx.source_name,
             write_result=ctx.write_result,
             source_ticker=ctx.source_ticker,
