@@ -316,25 +316,26 @@ class ETFCandidateQuery:
         data (allocation saves, reference fields) must still be returned, so
         every calendar-level failure becomes an explicit tracking reason.
         """
+        calendar_shards: tuple[tuple[str, str, str], ...] = ()
         try:
             calendar = self._retained_calendar(cutoff, decision_day)
+            tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
+            first_day = tracking_days[0] if tracking_days else decision_day.isoformat()
+            calendar_shards = _selected_shard_intervals(calendar.authority, first_day)
             if not calendar.days or decision_day - date.fromisoformat(
                 calendar.days[-1]
             ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
                 raise AppQueryError(
                     "ETF evaluation calendar does not cover the as-of date"
                 )
-            tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
-            first_day = tracking_days[0] if tracking_days else decision_day.isoformat()
             _ensure_complete_authority(
                 calendar.authority, first_day, decision_day.isoformat()
             )
             # 血缘覆盖选出最终窗口所消费的每一个权威决定（含把日期改为闭市
             # 的决定——它们同样改变了哪 253 个交易日被选中）。
-            calendar_shards = _selected_shard_intervals(calendar.authority, first_day)
             _ensure_single_calendar_source(calendar_shards, calendar.shard_sources)
         except AppQueryError as exc:
-            return None, _calendar_failure_reason(exc), ()
+            return None, _calendar_failure_reason(exc), calendar_shards
         return calendar, None, calendar_shards
 
     def _tracking(
@@ -352,6 +353,7 @@ class ETFCandidateQuery:
             return ETFTracking(
                 "unavailable",
                 unavailable_reason,
+                source_snapshot_id=lineage.source_snapshot_id,
                 calendar_snapshot_ids=lineage.calendar_snapshot_ids,
             )
         evidence: dict[str, Any] = {

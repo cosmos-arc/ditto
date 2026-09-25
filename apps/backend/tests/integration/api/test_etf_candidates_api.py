@@ -429,6 +429,8 @@ def test_etf_candidates_fail_closed_without_retained_calendar(
         assert stale.status_code == 200, stale.text
         tracking = stale.json()["data"][0]["tracking"]
         assert tracking["reason"] == "evaluation_calendar_stale"
+        assert tracking["source_snapshot_id"] == snapshot
+        assert tracking["calendar_snapshot_ids"] == ["snapshot:recorded:calendar:2026"]
     pool.close()
 
 
@@ -594,6 +596,8 @@ def test_etf_candidates_fail_closed_on_mixed_calendar_sources(
         assert response.status_code == 200, response.text
         tracking = response.json()["data"][0]["tracking"]
         assert tracking["reason"] == "evaluation_calendar_mixed_sources"
+        assert "snapshot:recorded:calendar:2025" in tracking["calendar_snapshot_ids"]
+        assert "snapshot:secondary:calendar:one" in tracking["calendar_snapshot_ids"]
     pool.close()
 
 
@@ -1253,6 +1257,7 @@ def test_partial_calendar_payload_with_hole_fails_closed(tmp_path: Path) -> None
         assert response.status_code == 200, response.text
         tracking = response.json()["data"][0]["tracking"]
         assert tracking["reason"] == "evaluation_calendar_gap"
+        assert "snapshot:recorded:calendar:2026" in tracking["calendar_snapshot_ids"]
     pool.close()
 
 
