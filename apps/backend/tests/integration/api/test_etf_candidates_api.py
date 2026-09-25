@@ -35,7 +35,7 @@ class _CalendarFrame(dict):
 
 def _calendar_shards(
     calendar_days: list[str],
-    overrides: list[tuple[list[str], list[bool]]] | None,
+    overrides: list[tuple[str, str, str, str, list[str], list[bool]]] | None,
 ) -> tuple[list[Any], dict[str, list[str]], dict[str, list[bool]]]:
     """Split fixture calendar days into per-year shards plus later revisions."""
     shard_days: dict[str, list[str]] = {}
@@ -60,22 +60,26 @@ def _calendar_shards(
                 request_end=days[-1],
             )
         )
-    for index, (days, flags) in enumerate(overrides or [], start=90):
+    # (snapshot_id, source, request_start, request_end, days, flags)：request
+    # 边界显式给出，模拟生产日摄取把 request 边界记成摄取日的形态。
+    for index, (identifier, source, start, end, days, flags) in enumerate(
+        overrides or [], start=90
+    ):
         checksum = f"{index:032x}"
         shard_days[checksum] = days
         shard_flags[checksum] = flags
         shards.append(
             SimpleNamespace(
                 dataset_id="calendar",
-                source="recorded",
-                snapshot_id=f"snapshot:recorded:calendar:revision-{index}",
+                source=source,
+                snapshot_id=identifier,
                 created_at=datetime(2026, 9, 30, 1, tzinfo=UTC),
                 payload_retained=True,
-                payload_uri=(f"provider_payloads/recorded/calendar/{checksum}.parquet"),
+                payload_uri=(f"provider_payloads/{source}/calendar/{checksum}.parquet"),
                 checksum=checksum,
                 row_count=len(days),
-                request_start=days[0],
-                request_end=days[-1],
+                request_start=start,
+                request_end=end,
             )
         )
     return shards, shard_days, shard_flags
@@ -88,7 +92,8 @@ def _setup(
     snapshots: ProviderSnapshotReader | None = None,
     source: str = "recorded",
     tracking_sessions: list[str] | None = None,
-    calendar_overrides: list[tuple[list[str], list[bool]]] | None = None,
+    calendar_overrides: list[tuple[str, str, str, str, list[str], list[bool]]]
+    | None = None,
 ) -> tuple[FastAPI, SQLitePool, str]:
     """Build an isolated recorded ETF source and its HTTP reader."""
     schema = Path(str(files("ditto_data.scripts") / "schema.sql"))
@@ -431,7 +436,18 @@ def test_newer_calendar_revision_closes_previously_open_session(
     flags = [True] * len(days)
     flags[100] = False
     app, pool, snapshot = _setup(
-        tmp_path, tracking_sessions=days, calendar_overrides=[(days, flags)]
+        tmp_path,
+        tracking_sessions=days,
+        calendar_overrides=[
+            (
+                "snapshot:recorded:calendar:revision",
+                "recorded",
+                days[0],
+                days[-1],
+                days,
+                flags,
+            )
+        ],
     )
     with TestClient(app) as web:
         response = web.get(
@@ -447,8 +463,97 @@ def test_newer_calendar_revision_closes_previously_open_session(
         tracking = response.json()["data"][0]["tracking"]
         assert tracking["reason"] == "insufficient_trading_sessions"
         assert tracking["calendar_snapshot_ids"] == [
-            "snapshot:recorded:calendar:revision-90"
+            "snapshot:recorded:calendar:revision"
         ]
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_daily_calendar_revision_beyond_asof_still_overlays_history(
+    tmp_path: Path,
+) -> None:
+    """Daily shards record only their ingestion day but cover a full year."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    flags = [True] * len(days)
+    flags[100] = False
+    app, pool, snapshot = _setup(
+        tmp_path,
+        tracking_sessions=days,
+        calendar_overrides=[
+            (
+                "snapshot:recorded:calendar:daily-revision",
+                "recorded",
+                "2026-10-01",
+                "2026-10-01",
+                days,
+                flags,
+            )
+        ],
+    )
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-10-02T00:00:00Z",
+                "source_snapshot_id": snapshot,
+                "exposure": "000300.SH",
+            },
+        )
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
+        assert tracking["reason"] == "insufficient_trading_sessions"
+        assert tracking["calendar_snapshot_ids"] == [
+            "snapshot:recorded:calendar:daily-revision"
+        ]
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_etf_candidates_fail_closed_on_mixed_calendar_sources(
+    tmp_path: Path,
+) -> None:
+    """A secondary-provider calendar cannot silently replace sessions."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    app, pool, snapshot = _setup(
+        tmp_path,
+        tracking_sessions=days,
+        calendar_overrides=[
+            (
+                "snapshot:secondary:calendar:one",
+                "secondary",
+                days[0],
+                days[-1],
+                days,
+                [True] * len(days),
+            )
+        ],
+    )
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+            },
+        )
+        assert response.status_code == 400, response.text
+        assert "ETF evaluation calendar mixes provider sources" in response.text
     pool.close()
 
 
@@ -621,6 +726,15 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
             request.purpose == "formal_research"
             and request.required_from == date.fromisoformat(days[0])
             for request in requests
+        )
+        assert all(
+            any(
+                requirement.dataset_id == "calendar"
+                and requirement.snapshot_id.startswith("snapshot:recorded:calendar:")
+                for requirement in request.fields
+            )
+            for request in requests
+            if request.purpose == "formal_research"
         )
         formal_allowed[0] = True
         unaligned = web.get("/api/v1/metadata/etf-candidates", params=params)

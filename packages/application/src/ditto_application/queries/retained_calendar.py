@@ -17,6 +17,10 @@ class RetainedCalendarAbsent(ValueError):
     """No retained calendar snapshot is visible at the requested cutoff."""
 
 
+class RetainedCalendarAmbiguous(ValueError):
+    """Cutoff-visible calendar shards span more than one provider source."""
+
+
 class RetainedCalendar(NamedTuple):
     """Open sessions plus the retained snapshot identity that produced them."""
 
@@ -55,11 +59,13 @@ def retained_calendar_window(
     """
     Combine cutoff-visible retained calendar shards into one window.
 
-    Production calendar evidence arrives as annual bootstrap chunks plus the
-    current-year daily shard, so one lookback usually spans several snapshots.
-    When revisions overlap, shards apply oldest-to-newest and the newest
-    revision wins per date, so a corrected closure can never be masked by a
-    stale open day; every contributing shard keeps its identity for lineage.
+    Production calendar evidence arrives as annual bootstrap chunks plus
+    current-year daily shards whose recorded request bounds are only the
+    ingestion day, so shards are selected by payload coverage, not request
+    bounds. All shards must come from one provider source; revisions then
+    apply oldest-to-newest and the newest revision wins per date, so a
+    corrected closure can never be masked by a stale open day. Every shard
+    with final authority over an in-window date keeps its identity.
     """
     shards = sorted(
         (
@@ -68,25 +74,31 @@ def retained_calendar_window(
             if snapshot.payload_retained
             and snapshot.created_at <= cutoff
             and snapshot.request_end >= first_day
-            and snapshot.request_start <= last_day
         ),
         key=lambda item: (item.created_at, item.snapshot_id),
     )
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
+    sources = {snapshot.source for snapshot in shards}
+    if len(sources) > 1:
+        raise RetainedCalendarAmbiguous(sorted(sources))
     authorship: dict[str, tuple[bool, str]] = {}
+    read_payloads: dict[str, pl.DataFrame] = {}
     for snapshot in shards:
         if snapshot.payload_uri is None:
             raise RetainedCalendarAbsent("retained calendar is absent or future")
-        frame = payloads.read_payload(
-            ProviderPayloadArtifact(
-                dataset_id=snapshot.dataset_id,
-                source=snapshot.source,
-                checksum=snapshot.checksum,
-                row_count=snapshot.row_count,
-                uri=snapshot.payload_uri,
+        frame = read_payloads.get(snapshot.checksum)
+        if frame is None:
+            frame = payloads.read_payload(
+                ProviderPayloadArtifact(
+                    dataset_id=snapshot.dataset_id,
+                    source=snapshot.source,
+                    checksum=snapshot.checksum,
+                    row_count=snapshot.row_count,
+                    uri=snapshot.payload_uri,
+                )
             )
-        )
+            read_payloads[snapshot.checksum] = frame
         for day, is_open in _calendar_states(frame, first_day, last_day).items():
             authorship[day] = (is_open, snapshot.snapshot_id)
     days = sorted(day for day, state in authorship.items() if state[0])

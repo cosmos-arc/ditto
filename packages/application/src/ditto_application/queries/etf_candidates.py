@@ -8,7 +8,7 @@ from itertools import pairwise
 from math import isfinite
 from re import fullmatch
 from statistics import median
-from typing import Any
+from typing import Any, NamedTuple
 
 from ditto_backtest.statistics_alpha import compute_total_return_tracking
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
@@ -23,6 +23,7 @@ from ditto_application.queries.field_admission import (
 )
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
+    RetainedCalendarAmbiguous,
     RetainedCalendarWindow,
     retained_calendar_window,
 )
@@ -105,6 +106,13 @@ class ETFCandidate:
     is_active: bool
     fields: dict[str, ETFField]
     tracking: ETFTracking | None = None
+
+
+class TrackingLineage(NamedTuple):
+    """Snapshot identities behind one tracking evaluation."""
+
+    source_snapshot_id: str
+    calendar_snapshot_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -247,8 +255,10 @@ class ETFCandidateQuery:
                         fields["tracking_index"],
                         instrument_id=instrument_id,
                         cutoff=cutoff,
-                        source_snapshot_id=source_snapshot_id,
-                        calendar_snapshot_ids=calendar.snapshot_ids,
+                        lineage=TrackingLineage(
+                            source_snapshot_id=source_snapshot_id,
+                            calendar_snapshot_ids=calendar.snapshot_ids,
+                        ),
                     ),
                 )
             )
@@ -272,6 +282,10 @@ class ETFCandidateQuery:
             raise AppQueryError(
                 "ETF evaluation calendar is absent at the cutoff"
             ) from exc
+        except RetainedCalendarAmbiguous as exc:
+            raise AppQueryError(
+                "ETF evaluation calendar mixes provider sources"
+            ) from exc
 
     def _tracking(
         self,
@@ -281,18 +295,20 @@ class ETFCandidateQuery:
         *,
         instrument_id: int,
         cutoff: str,
-        source_snapshot_id: str,
-        calendar_snapshot_ids: tuple[str, ...],
+        lineage: TrackingLineage,
     ) -> ETFTracking:
-        lineage: dict[str, Any] = {"calendar_snapshot_ids": calendar_snapshot_ids}
+        evidence: dict[str, Any] = {
+            "source_snapshot_id": lineage.source_snapshot_id,
+            "calendar_snapshot_ids": lineage.calendar_snapshot_ids,
+        }
         if not isinstance(relation.value, str):
-            return ETFTracking("unavailable", "tracking_index_unavailable", **lineage)
+            return ETFTracking("unavailable", "tracking_index_unavailable", **evidence)
         if len(sessions) != _TRACKING_RETURNS + 1:
             return ETFTracking(
-                "unavailable", "insufficient_trading_sessions", **lineage
+                "unavailable", "insufficient_trading_sessions", **evidence
             )
         if relation.effective_from is None or relation.effective_from > sessions[0]:
-            return ETFTracking("unavailable", "tracking_relation_changed", **lineage)
+            return ETFTracking("unavailable", "tracking_relation_changed", **evidence)
         fund = {
             str(row["observed_on"]): row for row in rows.get("nav_total_return", [])
         }
@@ -318,8 +334,7 @@ class ETFCandidateQuery:
                 start=sessions[1],
                 end=sessions[-1],
                 benchmark_id=relation.value,
-                source_snapshot_id=source_snapshot_id,
-                **lineage,
+                **evidence,
             )
         fund_rows = [fund[day] for day in sessions]
         benchmark_rows = [benchmark[day] for day in sessions]
@@ -330,7 +345,7 @@ class ETFCandidateQuery:
             instrument_id=instrument_id,
             sessions=sessions,
             cutoff=cutoff,
-            source_snapshot_id=source_snapshot_id,
+            lineage=lineage,
         )
         if status == "unavailable":
             return ETFTracking(
@@ -340,8 +355,7 @@ class ETFCandidateQuery:
                 start=sessions[1],
                 end=sessions[-1],
                 benchmark_id=relation.value,
-                source_snapshot_id=source_snapshot_id,
-                **lineage,
+                **evidence,
             )
         return self._tracking_result(
             fund_rows,
@@ -350,12 +364,11 @@ class ETFCandidateQuery:
             status=status,
             reason=reason,
             evidence={
+                **evidence,
                 "sample_count": _TRACKING_RETURNS,
                 "start": sessions[1],
                 "end": sessions[-1],
                 "benchmark_id": relation.value,
-                "source_snapshot_id": source_snapshot_id,
-                **lineage,
             },
         )
 
@@ -368,9 +381,10 @@ class ETFCandidateQuery:
         instrument_id: int,
         sessions: list[str],
         cutoff: str,
-        source_snapshot_id: str,
+        lineage: TrackingLineage,
     ) -> tuple[str, str | None]:
         """Only certified provider fields produce formal metrics."""
+        source_snapshot_id = lineage.source_snapshot_id
         series_sources = (
             relation.source,
             *(row["source"] for row in (*fund_rows, *benchmark_rows)),
@@ -390,13 +404,21 @@ class ETFCandidateQuery:
             return "unavailable", "source_or_display_admission_denied"
         report = self._admission.assess(
             FieldAdmissionRequest(
-                fields=tuple(
-                    FieldRequirement(snapshot.dataset_id, field, source_snapshot_id)
-                    for field in (
-                        "tracking_index",
-                        "nav_total_return",
-                        "benchmark_total_return",
-                    )
+                fields=(
+                    *(
+                        FieldRequirement(snapshot.dataset_id, field, source_snapshot_id)
+                        for field in (
+                            "tracking_index",
+                            "nav_total_return",
+                            "benchmark_total_return",
+                        )
+                    ),
+                    # The formal window is only as admitted as the calendar
+                    # shards that defined it.
+                    *(
+                        FieldRequirement("calendar", "is_open", shard_id)
+                        for shard_id in lineage.calendar_snapshot_ids
+                    ),
                 ),
                 instrument_ids=(instrument_id,),
                 required_from=date.fromisoformat(sessions[0]),
