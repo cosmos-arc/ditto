@@ -185,6 +185,34 @@ class TestObservationBackfill:
             pool.close()
 
 
+class TestReobservationOrdering:
+    def test_reobserved_content_refreshes_created_at(self, tmp_path: Path) -> None:
+        """An open→closed→open correction keeps the last observation newest."""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteProviderSnapshotStore(client)
+        original = _snapshot("tushare", "sha256:open")
+        closed = replace(
+            _snapshot("tushare", "sha256:closed"),
+            created_at=datetime(2026, 6, 2, 10, 0, tzinfo=UTC),
+        )
+        reopened = replace(
+            _snapshot("tushare", "sha256:open"),
+            created_at=datetime(2026, 6, 3, 10, 0, tzinfo=UTC),
+        )
+
+        try:
+            store.append_snapshot(original)
+            store.append_snapshot(closed)
+            store.append_snapshot(reopened)
+
+            stored = store.get_snapshot(original.snapshot_id)
+            assert stored is not None
+            assert stored.created_at == reopened.created_at
+            assert store.get_observed_at(original.snapshot_id) is not None
+        finally:
+            pool.close()
+
+
 class TestSchemaFingerprintBackfill:
     def test_reingesting_legacy_snapshot_backfills_fingerprint(
         self, tmp_path: Path

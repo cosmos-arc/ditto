@@ -122,6 +122,18 @@ class SQLiteProviderSnapshotStore:
                     f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
                 )
             self._backfill_observation(snapshot.snapshot_id)
+            if snapshot.created_at > existing.created_at:
+                # 内容身份不变，但重观察必须对按 created_at 排序的消费者
+                # 可见（例如 open→closed→open 修正回到旧字节时，最后这次
+                # 观察才是最新日历状态），因此把行刷新为本次观察时间。
+                update_created_at = (
+                    "UPDATE provider_snapshots SET created_at = ? WHERE snapshot_id = ?"
+                )
+                self._client.execute(
+                    update_created_at,
+                    [snapshot.created_at.isoformat(), snapshot.snapshot_id],
+                )
+                self._client.commit()
             if existing.schema_fingerprint is None and (
                 snapshot.schema_fingerprint is not None
             ):

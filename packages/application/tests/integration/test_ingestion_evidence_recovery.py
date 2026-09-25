@@ -464,7 +464,10 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
         # Recovering A after an uncertain B intent is also a durable recovery.
         assert len(lifecycle.list_complete()) == 3
         assert lifecycle.list_incomplete() == ()
-        assert snapshots.get_snapshot(first.snapshot_id) == first
+        reobserved = snapshots.get_snapshot(first.snapshot_id)
+        assert reobserved is not None
+        # 重观察保留内容与身份，但 created_at 反映最后一次观察。
+        assert replace(reobserved, created_at=first.created_at) == first
         assert first.payload_uri is not None
         old = FilesystemProviderPayloadStore(tmp_path).read_payload(
             ProviderPayloadArtifact(
