@@ -115,7 +115,9 @@ export async function fetchETFAllocationReview(
 		// response minted for another cutoff must not pass as this evidence.
 		Date.parse(result.knowledge_cutoff) !== Date.parse(query.knowledge_cutoff) ||
 		result.source_snapshot_ids.join("\0") !== query.source_snapshot_ids.join("\0") ||
-		result.target.valuation_snapshot_id !== result.actual.valuation_snapshot_id
+		// Both legs must carry the endpoint's own top-level valuation identity.
+		result.target.valuation_snapshot_id !== result.valuation_snapshot_id ||
+		result.actual.valuation_snapshot_id !== result.valuation_snapshot_id
 	)
 		throw new Error("ETF 复盘响应证据身份不匹配");
 	return {

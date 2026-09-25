@@ -109,6 +109,7 @@ describe("fetchETFAllocationReview", () => {
 		["as_of", "2026-09-03"],
 		["knowledge_cutoff", "2026-09-02T10:00:00Z"],
 		["source_snapshot_ids", ["other"]],
+		["valuation_snapshot_id", "other"],
 		["actual", { valuation_snapshot_id: "other", cash_weight: "0.1" }],
 	])("rejects a review with mismatched %s", async (field, value) => {
 		vi.stubGlobal("fetch", fetchMock({ ...response, [field]: value }));
