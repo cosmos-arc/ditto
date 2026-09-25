@@ -120,6 +120,48 @@ it("restores an exact version and account while keeping unpriced actual weights 
 	);
 });
 
+it("hides target details while the selected cutoff precedes the version evidence", async () => {
+	window.history.replaceState(null, "", "/portfolio?etfVersion=v1&etfReviewCutoff=2026-08-31T00:00:00Z");
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations/demo/versions", () =>
+			HttpResponse.json({
+				data: [
+					{
+						version_id: "v1",
+						allocation_id: "demo",
+						parent_version_id: null,
+						asof: "2026-09-01",
+						knowledge_cutoff: "2026-09-01T09:00:00Z",
+						source_snapshot_id: "snapshot:recorded:etf",
+						mode: "equal",
+						weights: { "2000001": "0.5" },
+						cash_weight: "0.5",
+						max_position_weight: "0.5",
+						tracking_exposure: { "000300.SH": "0.5" },
+						reason: "test",
+						rule_version: "etf-allocation-v1",
+						paper_status: "research_only",
+						review_status: "research_only",
+						created_at: "2026-09-01T09:00:00Z",
+					},
+				],
+			}),
+		),
+		http.get("/api/v1/paper/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
+		http.get("/api/v1/manual/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
+	);
+	render(
+		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+			<ETFAllocationReview allocationId="demo" />
+		</QueryClientProvider>,
+	);
+	// The unbounded versions endpoint is not evidence: weights, cash, and
+	// exposure stay hidden until the cutoff admits the version.
+	expect(await screen.findByRole("alert")).toHaveTextContent("目标权重与暴露不可见");
+	expect(screen.queryByText(/目标现金比例/)).not.toBeInTheDocument();
+	expect(screen.queryByText(/已知同指数目标暴露/)).not.toBeInTheDocument();
+});
+
 it("clears a saved history request when the ETF version or account changes", async () => {
 	window.history.replaceState(
 		null,

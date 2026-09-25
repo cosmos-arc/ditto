@@ -76,6 +76,13 @@ export function ETFAllocationReview({
 		(kind === "manual" && manualAccounts.data?.some((item) => item.account_id === accountId));
 	const cutoffTime = new Date(selected.cutoff).getTime();
 	const cutoffInstant = Number.isNaN(cutoffTime) ? null : new Date(cutoffTime).toISOString();
+	// The versions endpoint is not cutoff-bound, so target details stay hidden
+	// until the selected cutoff admits the version's creation and evidence.
+	const cutoffAdmitsVersion =
+		version !== undefined &&
+		cutoffInstant !== null &&
+		Date.parse(version.createdAt) <= Date.parse(cutoffInstant) &&
+		Date.parse(version.knowledgeCutoff) <= Date.parse(cutoffInstant);
 	const ledger = useQuery({
 		// The fallback ledger read is bound to the same knowledge cutoff as the
 		// valuation; without recorded_through it would show later-recorded
@@ -141,7 +148,7 @@ export function ETFAllocationReview({
 				</select>
 			</label>
 			{versions.data && !version && selected.versionId && <p role="alert">所选配置版本不存在。</p>}
-			{version && (
+			{version && cutoffAdmitsVersion && (
 				<div>
 					<p>
 						研究配置 · {version.asof} · 快照 {version.sourceSnapshotId} · 审查 {version.reviewStatus}
@@ -162,6 +169,9 @@ export function ETFAllocationReview({
 					</p>
 					<p>其他工具的穿透重叠：未知；不按名称推断。</p>
 				</div>
+			)}
+			{version && !cutoffAdmitsVersion && (
+				<p role="alert">所选知识截止早于该版本的创建或证据截止，目标权重与暴露不可见；请将知识截止后移。</p>
 			)}
 			<label className="block">
 				账户{" "}

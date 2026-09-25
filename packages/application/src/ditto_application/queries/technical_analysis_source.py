@@ -220,23 +220,35 @@ def _instrument_rows(
     instrument_id: InstrumentId,
     instrument_code: str,
 ) -> pl.DataFrame:
-    filters: list[pl.Expr] = []
-    if "instrument_id" in frame.columns:
-        filters.append(
-            pl.col("instrument_id").cast(pl.Int64, strict=False) == int(instrument_id)
-        )
-    for column in ("source_ticker", "instrument_code", "ts_code", "ticker"):
-        if column in frame.columns:
-            filters.append(pl.col(column).cast(pl.String) == instrument_code)
-    if not filters:
+    """
+    Select rows for exactly one instrument.
+
+    Retained artifacts predate FK enrichment, so the provider ticker is the
+    primary identity; the internal ID is a cross-check when the optional
+    enriched column exists. Requiring agreement keeps a corrected mapping
+    from mixing rows of two different instruments into one price series.
+    """
+    selected = frame
+    ticker_filters = [
+        pl.col(column).cast(pl.String) == instrument_code
+        for column in ("source_ticker", "instrument_code", "ts_code", "ticker")
+        if column in frame.columns
+    ]
+    id_filter = (
+        pl.col("instrument_id").cast(pl.Int64, strict=False) == int(instrument_id)
+        if "instrument_id" in frame.columns
+        else None
+    )
+    if not ticker_filters and id_filter is None:
         raise _source_error(
             "TECHNICAL_SOURCE_IDENTITY_REQUIRED",
             "instrument_identity_column_missing",
         )
-    expression = filters[0]
-    for item in filters[1:]:
-        expression |= item
-    return frame.filter(expression)
+    for item in ticker_filters:
+        selected = selected.filter(item)
+    if id_filter is not None:
+        selected = selected.filter(id_filter)
+    return selected
 
 
 def _values(

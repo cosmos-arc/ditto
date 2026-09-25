@@ -204,9 +204,12 @@ class GetETFAllocationReviewQuery:
             int(instrument_id): Decimal(str(weight))
             for instrument_id, weight in weight_values.items()
         }
+        # Only positive target weights need prices of their own: a zero-weight
+        # ETF that the account does not hold contributes nothing to either
+        # valuation and must not fail the whole review on a missing price.
         instrument_ids = tuple(
             sorted(
-                set(weights)
+                {id_ for id_, weight in weights.items() if weight > 0}
                 | {
                     int(position.instrument_id)
                     for position in unvalued.snapshot.positions
@@ -266,7 +269,13 @@ class GetETFAllocationReviewQuery:
             target = normalize_portfolio(
                 model_valuation(
                     request=comparison,
-                    weights=weights,
+                    # Zero-weight entries enter the target only when their
+                    # price was fetched anyway (i.e. the account holds them).
+                    weights={
+                        id_: weight
+                        for id_, weight in weights.items()
+                        if weight > 0 or id_ in {int(key) for key in prices}
+                    },
                     prices={int(key): value for key, value in prices.items()},
                     reference_total=valued.snapshot.total_value,
                     valuation_snapshot_id=computed_snapshot_id,

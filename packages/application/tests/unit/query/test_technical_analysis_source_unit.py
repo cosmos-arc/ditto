@@ -265,6 +265,63 @@ def test_source_reads_only_exact_instrument_and_visible_rows(tmp_path: Path) -> 
 
 
 @pytest.mark.pit
+def test_source_requires_id_and_ticker_to_agree_instead_of_mixing_rows(
+    tmp_path: Path,
+) -> None:
+    """A corrected mapping must not value instrument A with B's rows."""
+    cutoff = datetime(2026, 8, 31, 7, tzinfo=UTC)
+    frame = pl.DataFrame(
+        {
+            # Instrument 1 stored under its own ticker, and instrument 600519
+            # stored under the ticker a later correction now returns for 1.
+            "instrument_id": [1, 600519],
+            "source_ticker": ["000001.SZ", "600519.SH"],
+            "event_time": [cutoff - timedelta(days=1)] * 2,
+            "published_at": [cutoff - timedelta(days=1)] * 2,
+            "available_at": [cutoff - timedelta(days=1)] * 2,
+            "open": [10.0, 99.0],
+            "high": [11.0, 100.0],
+            "low": [9.0, 98.0],
+            "close": [10.5, 99.5],
+            "vol": [100.0, 100.0],
+            "amount": [1_000.0, 10_000.0],
+        }
+    )
+    store = FilesystemProviderPayloadStore(tmp_path)
+    snapshot = _snapshot(frame, store, created_at=cutoff - timedelta(hours=1))
+    context = PITQueryContext(
+        as_of=cutoff,
+        knowledge_cutoff=cutoff,
+        publication_cutoff=cutoff,
+        source_snapshots=(
+            DatasetSnapshot(
+                dataset_id=snapshot.dataset_id,
+                dataset_version=snapshot.schema_version,
+                source_snapshot_ids=(snapshot.snapshot_id,),
+                created_at=snapshot.created_at,
+            ),
+        ),
+    )
+    source = ProviderPayloadTechnicalAnalysisSource(
+        snapshot_reader=_SnapshotReader(snapshot), payload_reader=store
+    )
+
+    # The stale-ID row and the other instrument's ticker row must not merge:
+    # the disagreement resolves to zero rows instead of a mixed price series.
+    assert (
+        source.load(context, instrument_id=InstrumentId(1), instrument_code="600519.SH")
+        == ()
+    )
+    # Agreeing identifiers still resolve normally in both directions.
+    assert (
+        source.load(
+            context, instrument_id=InstrumentId(600519), instrument_code="600519.SH"
+        )[0].close
+        == 99.5
+    )
+
+
+@pytest.mark.pit
 def test_source_normalizes_provider_dates_to_utc_before_pit_filter(
     tmp_path: Path,
 ) -> None:
