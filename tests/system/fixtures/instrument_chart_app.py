@@ -145,9 +145,9 @@ def _seed(root: Path) -> None:
     )
     reference = "snapshot:recorded:etf-system"
     rows = [
-        (ETF_ID, "tracking_index", "000300.SH", "index", "2026-01-01"),
-        (ETF_NO_NAV_ID, "tracking_index", "000300.SH", "index", "2026-01-01"),
-        (ETF_CROSS_BORDER_ID, "tracking_index", "NDX", "index", "2026-01-01"),
+        (ETF_ID, "tracking_index", "000300.SH", "index", "2025-01-01"),
+        (ETF_NO_NAV_ID, "tracking_index", "000300.SH", "index", "2025-01-01"),
+        (ETF_CROSS_BORDER_ID, "tracking_index", "NDX", "index", "2025-01-01"),
         (ETF_ID, "asset_class", "A股宽基", "text", "2026-01-01"),
         (ETF_NO_NAV_ID, "asset_class", "A股宽基", "text", "2026-01-01"),
         (ETF_CROSS_BORDER_ID, "asset_class", "跨境股票", "text", "2026-01-01"),
@@ -166,6 +166,39 @@ def _seed(root: Path) -> None:
         [
             [instrument_id, field, value, unit, observed_on, observed_on, reference]
             for instrument_id, field, value, unit, observed_on in rows
+        ],
+    )
+    tracking_days: list[date] = []
+    day = date(2026, 5, 20)
+    while len(tracking_days) < 253:
+        if day.weekday() < 5:
+            tracking_days.append(day)
+        day -= timedelta(days=1)
+    tracking_days.reverse()
+    client.executemany(
+        "INSERT OR IGNORE INTO trading_calendar (trade_date, is_open) VALUES (?, 1)",
+        [[day.isoformat()] for day in tracking_days],
+    )
+    client.executemany(
+        """INSERT INTO etf_reference_observation
+           (instrument_id, field, value, unit, observed_on, published_at,
+            effective_from, source, source_snapshot_id)
+           VALUES (?, ?, ?, ?, ?, '2026-05-21T09:00:00Z', ?, 'recorded', ?)""",
+        [
+            [
+                ETF_ID,
+                field,
+                str(100 * 1.01**index),
+                unit,
+                day.isoformat(),
+                day.isoformat(),
+                reference,
+            ]
+            for index, day in enumerate(tracking_days)
+            for field, unit in (
+                ("nav_total_return", "CNY:nav_total_return"),
+                ("benchmark_total_return", "CNY:index_total_return:000300.SH"),
+            )
         ],
     )
     client.commit()

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
-from math import isfinite
-from statistics import median
+from itertools import pairwise
+from math import isfinite, sqrt
+from statistics import median, stdev
 from typing import Any
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
@@ -61,6 +62,7 @@ _NUMERIC = frozenset(
     }
 )
 _LIQUIDITY_DAYS = 20
+_TRACKING_RETURNS = 252
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,27 @@ class ETFCandidate:
     exchange: str
     is_active: bool
     fields: dict[str, ETFField]
+    tracking: ETFTracking | None = None
+
+
+@dataclass(frozen=True)
+class ETFTracking:
+    """Aligned total-return comparison with explicit qualification status."""
+
+    status: str
+    reason: str | None
+    tracking_deviation_pct: float | None = None
+    tracking_error_pct: float | None = None
+    sample_count: int = 0
+    start: str | None = None
+    end: str | None = None
+    currency: str | None = None
+    benchmark_id: str | None = None
+    source_snapshot_id: str | None = None
+    method: str = (
+        "dividend-reinvested NAV total return vs same-currency index total return; "
+        "252 aligned daily returns; sample std (ddof=1) * sqrt(252)"
+    )
 
 
 class ETFCandidateQuery:
@@ -134,6 +157,7 @@ class ETFCandidateQuery:
             "management_fee",
             "custody_fee",
             "daily_amount",
+            "tracking_error",
         }:
             raise AppQueryError("unsupported ETF sort field")
         identities, observations = self._metadata.instrument.find_etf_reference(
@@ -142,10 +166,16 @@ class ETFCandidateQuery:
         sessions = self._metadata.list_trading_days(
             (decision_day - timedelta(days=60)).isoformat(), asof
         )[-_LIQUIDITY_DAYS:]
+        tracking_days = self._metadata.list_trading_days(
+            (decision_day - timedelta(days=550)).isoformat(), asof
+        )[-(_TRACKING_RETURNS + 1) :]
         by_instrument: dict[int, dict[str, list[dict[str, Any]]]] = {}
         for row in observations:
             field = str(row["field"])
-            if field in _FIELDS:
+            if field in _FIELDS or field in {
+                "nav_total_return",
+                "benchmark_total_return",
+            }:
                 by_instrument.setdefault(int(row["instrument_id"]), {}).setdefault(
                     field, []
                 ).append(row)
@@ -188,21 +218,188 @@ class ETFCandidateQuery:
                     exchange=str(identity["exchange"]),
                     is_active=bool(identity["is_active"]),
                     fields=fields,
+                    tracking=self._tracking(
+                        rows,
+                        tracking_days,
+                        fields["tracking_index"],
+                        instrument_id=instrument_id,
+                        cutoff=cutoff,
+                        source_snapshot_id=source_snapshot_id,
+                    ),
                 )
             )
-        if sort_field == "ticker":
-            return sorted(
-                candidates, key=lambda item: (item.ticker, item.instrument_id)
+        return _sort_candidates(candidates, sort_field)
+
+    def _tracking(
+        self,
+        rows: dict[str, list[dict[str, Any]]],
+        sessions: list[str],
+        relation: ETFField,
+        *,
+        instrument_id: int,
+        cutoff: str,
+        source_snapshot_id: str,
+    ) -> ETFTracking:
+        if not isinstance(relation.value, str):
+            return ETFTracking("unavailable", "tracking_index_unavailable")
+        if len(sessions) != _TRACKING_RETURNS + 1:
+            return ETFTracking("unavailable", "insufficient_trading_sessions")
+        if relation.effective_from is None or relation.effective_from > sessions[0]:
+            return ETFTracking("unavailable", "tracking_relation_changed")
+        fund = {
+            str(row["observed_on"]): row for row in rows.get("nav_total_return", [])
+        }
+        benchmark = {
+            str(row["observed_on"]): row
+            for row in rows.get("benchmark_total_return", [])
+        }
+        common = [day in fund and day in benchmark for day in sessions]
+        if not all(common):
+            return ETFTracking(
+                "unavailable",
+                "incomplete_aligned_window",
+                sample_count=sum(left and right for left, right in pairwise(common)),
+                start=sessions[0],
+                end=sessions[-1],
             )
-        return sorted(
-            candidates,
-            key=lambda item: (
-                item.fields[sort_field].value is None,
-                item.fields[sort_field].value
-                if item.fields[sort_field].value is not None
-                else float("inf"),
-                item.instrument_id,
-            ),
+        fund_rows = [fund[day] for day in sessions]
+        benchmark_rows = [benchmark[day] for day in sessions]
+        status, reason = self._tracking_qualification(
+            fund_rows,
+            benchmark_rows,
+            relation,
+            instrument_id=instrument_id,
+            sessions=sessions,
+            cutoff=cutoff,
+            source_snapshot_id=source_snapshot_id,
+        )
+        if status == "unavailable":
+            return ETFTracking(status, reason)
+        return self._tracking_result(
+            fund_rows,
+            benchmark_rows,
+            sessions,
+            benchmark_id=relation.value,
+            status=status,
+            reason=reason,
+            source_snapshot_id=source_snapshot_id,
+        )
+
+    def _tracking_qualification(
+        self,
+        fund_rows: list[dict[str, Any]],
+        benchmark_rows: list[dict[str, Any]],
+        relation: ETFField,
+        *,
+        instrument_id: int,
+        sessions: list[str],
+        cutoff: str,
+        source_snapshot_id: str,
+    ) -> tuple[str, str | None]:
+        """Only certified provider fields produce formal metrics."""
+        combined = (*fund_rows, *benchmark_rows)
+        if source_snapshot_id.startswith("snapshot:recorded:") and all(
+            row["source"] == "recorded" for row in combined
+        ):
+            return "reference_only", "RECORDED_REFERENCE_ONLY"
+        if self._admission is None or self._snapshots is None:
+            return "unavailable", "ADMISSION_UNAVAILABLE"
+        snapshot = self._snapshots.get_snapshot(source_snapshot_id)
+        if snapshot is None:
+            return "unavailable", "SNAPSHOT_NOT_REGISTERED"
+        if relation.eligibility != "display_allowed" or any(
+            row["source"] != snapshot.source for row in combined
+        ):
+            return "unavailable", "source_or_display_admission_denied"
+        report = self._admission.assess(
+            FieldAdmissionRequest(
+                fields=tuple(
+                    FieldRequirement(snapshot.dataset_id, field, source_snapshot_id)
+                    for field in (
+                        "tracking_index",
+                        "nav_total_return",
+                        "benchmark_total_return",
+                    )
+                ),
+                instrument_ids=(instrument_id,),
+                required_from=date.fromisoformat(sessions[0]),
+                required_to=date.fromisoformat(sessions[-1]),
+                knowledge_cutoff=_validate_cutoff(cutoff),
+                publication_cutoff=_validate_cutoff(cutoff),
+                purpose="formal_research",
+            )
+        )
+        return (
+            ("comparable", None)
+            if report.allowed
+            else ("unavailable", "formal_admission_denied")
+        )
+
+    def _tracking_result(
+        self,
+        fund_rows: list[dict[str, Any]],
+        benchmark_rows: list[dict[str, Any]],
+        sessions: list[str],
+        *,
+        benchmark_id: str,
+        status: str,
+        reason: str | None,
+        source_snapshot_id: str,
+    ) -> ETFTracking:
+        """Compute two 252-return series after qualifying their source."""
+        if any(
+            row["effective_from"] > row["observed_on"]
+            or (
+                row["effective_to"] is not None
+                and row["effective_to"] <= row["observed_on"]
+            )
+            for row in (*fund_rows, *benchmark_rows)
+        ):
+            return ETFTracking("unavailable", "series_effective_interval_mismatch")
+        currencies = {
+            str(row["unit"]).split(":", 1)[0] for row in (*fund_rows, *benchmark_rows)
+        }
+        if len(currencies) != 1 or not next(iter(currencies)):
+            return ETFTracking("unavailable", "currency_or_benchmark_mismatch")
+        currency = next(iter(currencies))
+        if any(
+            str(row["unit"]) != f"{currency}:nav_total_return" for row in fund_rows
+        ) or any(
+            str(row["unit"]) != f"{currency}:index_total_return:{benchmark_id}"
+            for row in benchmark_rows
+        ):
+            return ETFTracking("unavailable", "currency_or_benchmark_mismatch")
+        values = [
+            [_positive_number(row["value"]) for row in series]
+            for series in (fund_rows, benchmark_rows)
+        ]
+        if any(value is None for series in values for value in series):
+            return ETFTracking("unavailable", "invalid_total_return_level")
+        fund_levels = [value for value in values[0] if value is not None]
+        benchmark_levels = [value for value in values[1] if value is not None]
+        excess = [
+            fund_levels[index] / fund_levels[index - 1]
+            - benchmark_levels[index] / benchmark_levels[index - 1]
+            for index in range(1, len(sessions))
+        ]
+        deviation = 100 * (
+            fund_levels[-1] / fund_levels[0]
+            - benchmark_levels[-1] / benchmark_levels[0]
+        )
+        error = 100 * stdev(excess) * sqrt(252)
+        if not isfinite(deviation) or not isfinite(error):
+            return ETFTracking("unavailable", "invalid_total_return_level")
+        return ETFTracking(
+            status=status,
+            reason=reason,
+            tracking_deviation_pct=deviation,
+            tracking_error_pct=error,
+            sample_count=_TRACKING_RETURNS,
+            start=sessions[1],
+            end=sessions[-1],
+            currency=currency,
+            benchmark_id=benchmark_id,
+            source_snapshot_id=source_snapshot_id,
         )
 
     def _admit(
@@ -380,3 +577,37 @@ def _number(value: object) -> float | None:
     except (TypeError, ValueError):
         return None
     return number if isfinite(number) and number >= 0 else None
+
+
+def _positive_number(value: object) -> float | None:
+    number = _number(value)
+    return number if number is not None and number > 0 else None
+
+
+def _sort_candidates(
+    candidates: list[ETFCandidate], sort_field: str
+) -> list[ETFCandidate]:
+    if sort_field == "ticker":
+        return sorted(candidates, key=lambda item: (item.ticker, item.instrument_id))
+    if sort_field == "tracking_error":
+        return sorted(
+            candidates,
+            key=lambda item: (
+                item.tracking is None or item.tracking.status != "comparable",
+                item.tracking.tracking_error_pct
+                if item.tracking is not None
+                and item.tracking.tracking_error_pct is not None
+                else float("inf"),
+                item.instrument_id,
+            ),
+        )
+    return sorted(
+        candidates,
+        key=lambda item: (
+            item.fields[sort_field].value is None,
+            item.fields[sort_field].value
+            if item.fields[sort_field].value is not None
+            else float("inf"),
+            item.instrument_id,
+        ),
+    )

@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ContextSection } from "@/components/domain/context-section";
-import { type ETFField, fetchETFCandidates, fetchETFReferenceSnapshots } from "@/features/instruments";
+import {
+	type ETFField,
+	type ETFTracking,
+	fetchETFCandidates,
+	fetchETFReferenceSnapshots,
+} from "@/features/instruments";
 import { ETFAllocationEditor } from "./etf-allocation-editor";
 
 const FIELD_LABELS = [
@@ -28,6 +33,28 @@ function FieldValue({ field }: { readonly field: ETFField | undefined }) {
 		<span>
 			{field.value} {field.unit}
 		</span>
+	);
+}
+
+function TrackingValue({ tracking }: { readonly tracking: ETFTracking | null }) {
+	if (!tracking || tracking.status === "unavailable") {
+		return <p>同口径跟踪评价不可计算：{tracking?.reason ?? "缺少合格总回报证据"}</p>;
+	}
+	return (
+		<div className="rounded bg-(--color-surface-1) p-2">
+			<p>{tracking.status === "comparable" ? "合格同口径评价" : "仅供记录式参考，不参与正式排名"}</p>
+			<p>基金 NAV 含分红再投资，对比同币种指数总回报。</p>
+			<p>
+				跟踪偏离 {tracking.trackingDeviationPct?.toFixed(2)}% · 年化跟踪误差 {tracking.trackingErrorPct?.toFixed(2)}%
+			</p>
+			<p className="text-xs text-(--color-foreground-tertiary)">
+				{tracking.start} 至 {tracking.end} · {tracking.sampleCount}/252 日收益 · {tracking.currency} · 基准{" "}
+				{tracking.benchmarkId}
+			</p>
+			<p className="break-all text-xs text-(--color-foreground-tertiary)">
+				{tracking.method} · 快照 {tracking.sourceSnapshotId}
+			</p>
+		</div>
 	);
 }
 
@@ -160,6 +187,7 @@ export function ETFCandidates() {
 							<option value="custody_fee">托管费</option>
 							<option value="aum">规模</option>
 							<option value="daily_amount">20 日成交额</option>
+							<option value="tracking_error">跟踪误差（仅合格）</option>
 						</select>
 					</label>
 				</div>
@@ -213,6 +241,7 @@ export function ETFCandidates() {
 						<a href={`/instruments/${item.instrumentId}`} className="text-(--color-accent)">
 							查看标的详情
 						</a>
+						<TrackingValue tracking={item.tracking} />
 						<dl className="mt-3 grid gap-2 sm:grid-cols-2">
 							{FIELD_LABELS.map(([key, label]) => {
 								const field = item.fields[key];

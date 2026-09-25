@@ -31,6 +31,7 @@ def _setup(
     admission: FieldAdmissionQuery | None = None,
     snapshots: ProviderSnapshotReader | None = None,
     source: str = "recorded",
+    tracking_sessions: list[str] | None = None,
 ) -> tuple[FastAPI, SQLitePool, str]:
     """Build an isolated recorded ETF source and its HTTP reader."""
     schema = Path(str(files("ditto_data.scripts") / "schema.sql"))
@@ -138,7 +139,11 @@ def _setup(
         MetadataService,
         SimpleNamespace(
             instrument=reader,
-            list_trading_days=lambda _start, _end: sessions,
+            list_trading_days=lambda start, _end: (
+                tracking_sessions
+                if start < "2026-07-01" and tracking_sessions is not None
+                else sessions
+            ),
         ),
     )
 
@@ -275,6 +280,189 @@ def test_etf_candidate_snapshot_and_20_session_comparison(tmp_path: Path) -> Non
         )
         assert by_asset.status_code == 200, by_asset.text
         assert [item["instrument_id"] for item in by_asset.json()["data"]] == [2000003]
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_tracking_comparison_requires_complete_visible_total_return_series(
+    tmp_path: Path,
+) -> None:
+    """The HTTP query computes only aligned 252-return evidence at one cutoff."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    app, pool, snapshot = _setup(tmp_path, tracking_sessions=days)
+    client = SQLiteClient(pool)
+    for instrument_id, daily_excess in ((2000001, 0.0), (2000002, 0.001)):
+        for index, observed_on in enumerate(days):
+            for field, value in (
+                ("nav_total_return", 100 * (1.01 + daily_excess) ** index),
+                ("benchmark_total_return", 100 * 1.01**index),
+            ):
+                client.execute(
+                    """INSERT INTO etf_reference_observation
+                    (instrument_id, field, value, unit, observed_on, published_at,
+                     effective_from, source, source_snapshot_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'recorded', ?)""",
+                    [
+                        instrument_id,
+                        field,
+                        str(value),
+                        "CNY:nav_total_return"
+                        if field == "nav_total_return"
+                        else "CNY:index_total_return:000300.SH",
+                        observed_on,
+                        "2026-10-01T00:00:00Z"
+                        if instrument_id == 2000002 and index == 90
+                        else "2026-09-30T18:00:00Z",
+                        observed_on,
+                        snapshot,
+                    ],
+                )
+    client.commit()
+    params = {
+        "asof": "2026-09-30",
+        "cutoff": "2026-09-30T19:00:00Z",
+        "source_snapshot_id": snapshot,
+        "exposure": "000300.SH",
+    }
+    with TestClient(app) as web:
+        response = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert response.status_code == 200, response.text
+        first, second = response.json()["data"]
+        assert first["tracking"]["status"] == "reference_only"
+        assert first["tracking"]["sample_count"] == 252
+        assert first["tracking"]["tracking_deviation_pct"] == pytest.approx(0)
+        assert first["tracking"]["tracking_error_pct"] == pytest.approx(0)
+        assert second["tracking"]["status"] == "unavailable"
+        assert second["tracking"]["reason"] == "incomplete_aligned_window"
+        later = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={**params, "cutoff": "2026-10-02T00:00:00Z"},
+        )
+        assert later.status_code == 200, later.text
+        result = next(
+            item["tracking"]
+            for item in later.json()["data"]
+            if item["instrument_id"] == 2000002
+        )
+        assert result["status"] == "reference_only"
+        assert result["tracking_error_pct"] == pytest.approx(0, abs=1e-10)
+        assert result["tracking_deviation_pct"] > 0
+    pool.close()
+
+
+@pytest.mark.integration
+def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
+    tmp_path: Path,
+) -> None:
+    """Display permission alone cannot produce a formal comparison."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    formal_allowed = [False]
+    requests: list[FieldAdmissionRequest] = []
+
+    def assess(request: FieldAdmissionRequest) -> SimpleNamespace:
+        requests.append(request)
+        return SimpleNamespace(
+            allowed=request.purpose == "display" or formal_allowed[0],
+            fields=(SimpleNamespace(reason_codes=("LICENSE_RESTRICTED",)),),
+        )
+
+    admission = cast(FieldAdmissionQuery, SimpleNamespace(assess=assess))
+    snapshots = cast(
+        ProviderSnapshotReader,
+        SimpleNamespace(
+            get_snapshot=lambda _id: SimpleNamespace(
+                dataset_id="etf_reference", source="provider"
+            )
+        ),
+    )
+    app, pool, snapshot = _setup(
+        tmp_path,
+        admission=admission,
+        snapshots=snapshots,
+        source="provider",
+        tracking_sessions=days,
+    )
+    client = SQLiteClient(pool)
+    for index, observed_on in enumerate(days):
+        for field, unit in (
+            ("nav_total_return", "CNY:nav_total_return"),
+            ("benchmark_total_return", "CNY:index_total_return:000300.SH"),
+        ):
+            client.execute(
+                """INSERT INTO etf_reference_observation
+                (instrument_id, field, value, unit, observed_on, published_at,
+                 effective_from, source, source_snapshot_id)
+                VALUES (2000001, ?, ?, ?, ?,
+                        '2026-09-30T18:00:00Z', ?, 'provider', ?)""",
+                [
+                    field,
+                    str(100 * 1.01**index),
+                    unit,
+                    observed_on,
+                    observed_on,
+                    snapshot,
+                ],
+            )
+    client.commit()
+    params = {
+        "asof": "2026-09-30",
+        "cutoff": "2026-09-30T19:00:00Z",
+        "source_snapshot_id": snapshot,
+        "search": "510300",
+    }
+    with TestClient(app) as web:
+        denied = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert denied.status_code == 200, denied.text
+        tracking = denied.json()["data"][0]["tracking"]
+        assert tracking["status"] == "unavailable"
+        assert tracking["tracking_error_pct"] is None
+        assert any(
+            request.purpose == "formal_research"
+            and request.required_from == date.fromisoformat(days[0])
+            for request in requests
+        )
+        formal_allowed[0] = True
+        allowed = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert allowed.status_code == 200, allowed.text
+        tracking = allowed.json()["data"][0]["tracking"]
+        assert tracking["status"] == "comparable"
+        assert tracking["tracking_error_pct"] == pytest.approx(0)
+        ranked = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={**params, "search": "", "sort_field": "tracking_error"},
+        )
+        assert ranked.status_code == 200, ranked.text
+        assert ranked.json()["data"][0]["instrument_id"] == 2000001
+        assert all(
+            item["tracking"]["status"] != "comparable"
+            for item in ranked.json()["data"][1:]
+        )
+        client.execute(
+            """UPDATE etf_reference_observation
+               SET unit = 'USD:index_total_return:000300.SH'
+               WHERE instrument_id = 2000001
+                 AND field = 'benchmark_total_return' AND observed_on = ?""",
+            [days[50]],
+        )
+        client.commit()
+        mismatch = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert (
+            mismatch.json()["data"][0]["tracking"]["reason"]
+            == "currency_or_benchmark_mismatch"
+        )
     pool.close()
 
 

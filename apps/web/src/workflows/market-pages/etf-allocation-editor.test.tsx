@@ -22,6 +22,7 @@ const candidate: ETFCandidate = {
 	exchange: "SSE",
 	isActiveCurrent: true,
 	fields: {},
+	tracking: null,
 };
 
 afterEach(() => window.history.replaceState(null, "", "/"));

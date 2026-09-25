@@ -432,7 +432,8 @@ class InstrumentReader:
             FROM etf_reference_observation
             WHERE source_snapshot_id = ? AND observed_on <= ?
               AND published_at <= ? AND effective_from <= ?
-              AND (field = 'daily_amount' OR effective_to IS NULL
+              AND (field IN ('daily_amount', 'nav_total_return',
+                             'benchmark_total_return') OR effective_to IS NULL
                    OR effective_to > ?)
             ORDER BY instrument_id, field, observed_on DESC, published_at DESC""",
             [source_snapshot_id, asof, cutoff, asof, asof],

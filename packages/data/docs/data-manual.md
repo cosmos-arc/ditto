@@ -218,6 +218,15 @@ keyring.set_password('fred', 'api_key', 'YOUR_API_KEY')
 
 **主键**：`(instrument_id, trade_date)`
 
+ETF 跟踪评价不从上述原始收盘价或单期 NAV 推算总回报。只读取同一
+`etf_reference_observation.source_snapshot_id` 下、逐交易日有 `published_at` 的
+`nav_total_return` 与 `benchmark_total_return` 水平值。前者的 `unit` 为
+`<币种>:nav_total_return`，后者为 `<同币种>:index_total_return:<跟踪指数标识>`；
+指数标识须与该时点可见的 `tracking_index` 一致。252 个日收益需要 253 个连续
+交易日水平值；缺日、币种/基准不符、历史关系变化或正式研究字段准入不足时不产生
+正式跟踪指标。记录式快照仅用于隔离软件验收。当前没有把真实供应商总回报序列写入
+该参考表的生产摄取路径，真实数据准入和运行证据需另行取得。
+
 ---
 
 ### 3.3 指数日线行情 (index_daily)

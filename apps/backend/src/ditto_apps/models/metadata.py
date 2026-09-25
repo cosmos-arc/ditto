@@ -109,6 +109,23 @@ class ETFCandidateResponse(BaseModel):
     exchange: str
     is_active: bool
     fields: dict[str, ETFFieldResponse]
+    tracking: ETFTrackingResponse | None = None
+
+
+class ETFTrackingResponse(BaseModel):
+    """PIT-bound NAV versus benchmark total-return evaluation."""
+
+    status: str
+    reason: str | None
+    tracking_deviation_pct: float | None = None
+    tracking_error_pct: float | None = None
+    sample_count: int
+    start: str | None = None
+    end: str | None = None
+    currency: str | None = None
+    benchmark_id: str | None = None
+    source_snapshot_id: str | None = None
+    method: str
 
 
 def to_instrument(row: dict[str, Any]) -> Instrument:

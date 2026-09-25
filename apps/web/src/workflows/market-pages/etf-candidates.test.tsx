@@ -51,6 +51,19 @@ it("selects a real ETF entity and exposes asynchronous NAV and missing evidence"
 										nav: { ...price, value: 1.1, observed_on: "2026-09-27" },
 										iopv: { ...price, value: null, missing_reason: "no_qualified_observation" },
 									},
+									tracking: {
+										status: "unavailable",
+										reason: "currency_or_benchmark_mismatch",
+										sample_count: 0,
+										tracking_deviation_pct: null,
+										tracking_error_pct: null,
+										start: null,
+										end: null,
+										currency: null,
+										benchmark_id: null,
+										source_snapshot_id: null,
+										method: "252 aligned daily returns",
+									},
 								},
 							],
 			});
@@ -65,4 +78,5 @@ it("selects a real ETF entity and exposes asynchronous NAV and missing evidence"
 	expect(nav).toHaveTextContent("2026-09-27");
 	expect(screen.getByText("IOPV").parentElement).toHaveTextContent("no_qualified_observation");
 	expect(screen.getByText(/市价与 NAV 可异步/)).toBeInTheDocument();
+	expect(screen.getByText(/同口径跟踪评价不可计算：currency_or_benchmark_mismatch/)).toBeInTheDocument();
 });

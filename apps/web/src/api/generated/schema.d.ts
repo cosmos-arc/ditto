@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 1a6455967f566b814f406c72e9a3a1687bfbc73a8937890a93c68c33636d23c4
+ * Schema SHA-256: f45c8ecf2bf4e0ee62e2fe7b8e257f7a3ef9836af736d3f791515e35f3c598d7
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -10796,6 +10796,7 @@ export interface components {
             name: string;
             /** Ticker */
             ticker: string;
+            tracking?: components["schemas"]["ETFTrackingResponse"] | null;
         };
         /**
          * ETFFieldResponse
@@ -10949,6 +10950,34 @@ export interface components {
             signal_date: string;
             /** Source Snapshot Id */
             source_snapshot_id: string;
+        };
+        /**
+         * ETFTrackingResponse
+         * @description PIT-bound NAV versus benchmark total-return evaluation.
+         */
+        ETFTrackingResponse: {
+            /** Benchmark Id */
+            benchmark_id?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** End */
+            end?: string | null;
+            /** Method */
+            method: string;
+            /** Reason */
+            reason: string | null;
+            /** Sample Count */
+            sample_count: number;
+            /** Source Snapshot Id */
+            source_snapshot_id?: string | null;
+            /** Start */
+            start?: string | null;
+            /** Status */
+            status: string;
+            /** Tracking Deviation Pct */
+            tracking_deviation_pct?: number | null;
+            /** Tracking Error Pct */
+            tracking_error_pct?: number | null;
         };
         /**
          * ErrorResponse
