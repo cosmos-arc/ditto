@@ -1,0 +1,223 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
+import { afterEach, expect, it } from "vitest";
+import { server } from "@/mocks/server";
+import { ETFAllocationReview } from "./etf-allocation-review";
+
+afterEach(() => window.history.replaceState(null, "", "/"));
+
+it("restores an exact version and account while keeping unpriced actual weights unknown", async () => {
+	window.history.replaceState(
+		null,
+		"",
+		"/portfolio?etfVersion=v1&etfReviewAccount=paper:paper-a&etfReviewAsOf=2026-09-02",
+	);
+	const ledgerUrls: string[] = [];
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations/demo/versions", () =>
+			HttpResponse.json({
+				data: [
+					{
+						version_id: "v1",
+						allocation_id: "demo",
+						parent_version_id: null,
+						asof: "2026-09-01",
+						knowledge_cutoff: "2026-09-01T09:00:00Z",
+						source_snapshot_id: "snapshot:recorded:etf",
+						mode: "equal",
+						weights: { "2000001": "0.40000000", "2000002": "0.40000000" },
+						cash_weight: "0.20000000",
+						max_position_weight: "0.50000000",
+						tracking_exposure: { "000300.SH": "0.80000000" },
+						reason: "broad exposure",
+						rule_version: "etf-allocation-v1",
+						paper_status: "research_only",
+						review_status: "review_approved",
+						created_at: "2026-09-01T09:00:00Z",
+					},
+				],
+			}),
+		),
+		http.get("/api/v1/paper/accounts", () =>
+			HttpResponse.json({
+				data: {
+					accounts: [
+						{
+							account_id: "paper-a",
+							account_kind: "paper",
+							account_name: "模拟甲",
+							currency: "CNY",
+							opened_at: "2026-09-01T00:00:00Z",
+						},
+					],
+				},
+			}),
+		),
+		http.get("/api/v1/manual/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
+		http.get("/api/v1/paper/accounts/paper-a/ledger", ({ request }) => {
+			ledgerUrls.push(request.url);
+			return HttpResponse.json({
+				data: {
+					account: {
+						account_id: "paper-a",
+						account_kind: "paper",
+						name: "模拟甲",
+						currency: "CNY",
+						opened_at: "2026-09-01T00:00:00Z",
+					},
+					events: [],
+					snapshot: {
+						account_id: "paper-a",
+						account_kind: "paper",
+						as_of: "2026-09-02",
+						currency: "CNY",
+						cash: { available: "60000", frozen: "0", settled: "60000", total: "60000" },
+						event_count: 1,
+						ledger_hash: "account-ledger:sha256:paper-a",
+						positions: [
+							{
+								instrument_id: 2000001,
+								quantity: "100",
+								available_quantity: "100",
+								average_cost: "4",
+								last_price: "0",
+								market_value: "0",
+								realized_pnl: "0",
+								total_fees: "0",
+								unrealized_pnl: "0",
+							},
+						],
+						realized_pnl: "0",
+						total_fees: "0",
+						total_value: "60000",
+						unrealized_pnl: "0",
+						valuation_complete: false,
+					},
+				},
+			});
+		}),
+	);
+	render(
+		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+			<ETFAllocationReview allocationId="demo" />
+		</QueryClientProvider>,
+	);
+	expect(await screen.findByText(/已知同指数目标暴露：000300.SH 0.80000000/)).toBeVisible();
+	expect(await screen.findByText(/Paper 模拟成交账本/)).toBeVisible();
+	// The fallback ledger read is cutoff-bound, not a latest-recorded view.
+	const ledgerUrl = new URL(ledgerUrls[0] ?? "");
+	expect(ledgerUrl.searchParams.get("recorded_through")).toMatch(/(Z|[+-]\d{2}:\d{2})$/u);
+	expect(screen.getByText(/缺少同日价格证据，无法计算实际权重/)).toBeVisible();
+	expect(screen.getByText(/当前配置目标不会回填历史/)).toBeVisible();
+	fireEvent.change(screen.getByLabelText("复盘账本日期"), { target: { value: "2026-09-03" } });
+	expect(new URLSearchParams(window.location.search).get("etfReviewAsOf")).toBe("2026-09-03");
+	// The URL stores the resolved offset-bearing instant, not the local
+	// datetime-local string, so another timezone resolves the same cutoff.
+	fireEvent.change(screen.getByLabelText("复盘知识截止"), { target: { value: "2026-09-02T10:30" } });
+	expect(new URLSearchParams(window.location.search).get("etfReviewCutoff")).toBe(
+		new Date("2026-09-02T10:30").toISOString(),
+	);
+});
+
+it("hides target details while the selected cutoff precedes the version evidence", async () => {
+	window.history.replaceState(null, "", "/portfolio?etfVersion=v1&etfReviewCutoff=2026-08-31T00:00:00Z");
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations/demo/versions", () =>
+			HttpResponse.json({
+				data: [
+					{
+						version_id: "v1",
+						allocation_id: "demo",
+						parent_version_id: null,
+						asof: "2026-09-01",
+						knowledge_cutoff: "2026-09-01T09:00:00Z",
+						source_snapshot_id: "snapshot:recorded:etf",
+						mode: "equal",
+						weights: { "2000001": "0.5" },
+						cash_weight: "0.5",
+						max_position_weight: "0.5",
+						tracking_exposure: { "000300.SH": "0.5" },
+						reason: "test",
+						rule_version: "etf-allocation-v1",
+						paper_status: "research_only",
+						review_status: "research_only",
+						created_at: "2026-09-01T09:00:00Z",
+					},
+				],
+			}),
+		),
+		http.get("/api/v1/paper/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
+		http.get("/api/v1/manual/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
+	);
+	render(
+		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+			<ETFAllocationReview allocationId="demo" />
+		</QueryClientProvider>,
+	);
+	// The unbounded versions endpoint is not evidence: weights, cash, and
+	// exposure stay hidden until the cutoff admits the version.
+	expect(await screen.findByRole("alert")).toHaveTextContent("目标权重与暴露不可见");
+	expect(screen.queryByText(/目标现金比例/)).not.toBeInTheDocument();
+	expect(screen.queryByText(/已知同指数目标暴露/)).not.toBeInTheDocument();
+});
+
+it("clears a saved history request when the ETF version or account changes", async () => {
+	window.history.replaceState(
+		null,
+		"",
+		"/portfolio?etfVersion=v1&etfReviewAccount=paper:paper-a&historyComparison=old&historyComparisonVersion=v1&historyComparisonAccount=paper:paper-a",
+	);
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations/demo/versions", () =>
+			HttpResponse.json({
+				data: ["v1", "v2"].map((id) => ({
+					version_id: id,
+					allocation_id: "demo",
+					parent_version_id: null,
+					asof: "2026-09-01",
+					knowledge_cutoff: "2026-09-01T09:00:00Z",
+					source_snapshot_id: "snapshot:recorded:etf",
+					mode: "equal",
+					weights: { "2000001": "0.5" },
+					cash_weight: "0.5",
+					max_position_weight: "0.5",
+					tracking_exposure: { "000300.SH": "0.5" },
+					reason: "test",
+					rule_version: "etf-allocation-v1",
+					paper_status: "research_only",
+					review_status: "research_only",
+					created_at: "2026-09-01T09:00:00Z",
+				})),
+			}),
+		),
+		http.get("/api/v1/paper/accounts", () =>
+			HttpResponse.json({
+				data: {
+					accounts: [
+						{
+							account_id: "paper-a",
+							account_name: "Paper A",
+							account_kind: "paper",
+							currency: "CNY",
+							opened_at: "2026-09-01T00:00:00Z",
+						},
+					],
+				},
+			}),
+		),
+		http.get("/api/v1/manual/accounts", () => HttpResponse.json({ data: { accounts: [] } })),
+	);
+	render(
+		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+			<ETFAllocationReview allocationId="demo" />
+		</QueryClientProvider>,
+	);
+	await screen.findByRole("option", { name: /v2/ });
+	fireEvent.change(screen.getByLabelText("复盘配置版本"), { target: { value: "v2" } });
+	const url = new URLSearchParams(window.location.search);
+	expect(url.get("etfVersion")).toBe("v2");
+	expect(url.has("historyComparison")).toBe(false);
+	expect(url.has("historyComparisonVersion")).toBe(false);
+	expect(url.has("historyComparisonAccount")).toBe(false);
+});

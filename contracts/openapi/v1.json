@@ -1009,6 +1009,30 @@
         "title": "APIResponse[DeviationResponse]",
         "type": "object"
       },
+      "APIResponse_ETFAllocationReviewResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ETFAllocationReviewResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ETFAllocationReviewResponse]",
+        "type": "object"
+      },
       "APIResponse_ETFAllocationVersionResponse_": {
         "properties": {
           "data": {
@@ -14213,6 +14237,103 @@
           "reason"
         ],
         "title": "ETFAllocationReviewBody",
+        "type": "object"
+      },
+      "ETFAllocationReviewResponse": {
+        "description": "One PIT-bound target versus actual account observation.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_kind": {
+            "enum": [
+              "paper",
+              "manual"
+            ],
+            "title": "Account Kind",
+            "type": "string"
+          },
+          "actual": {
+            "$ref": "#/components/schemas/NormalizedPortfolioResponse"
+          },
+          "actual_exposure": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Actual Exposure",
+            "type": "object"
+          },
+          "allocation_id": {
+            "title": "Allocation Id",
+            "type": "string"
+          },
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "drift": {
+            "$ref": "#/components/schemas/PortfolioDriftResponse"
+          },
+          "knowledge_cutoff": {
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "ledger_hash": {
+            "title": "Ledger Hash",
+            "type": "string"
+          },
+          "source_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Snapshot Ids",
+            "type": "array"
+          },
+          "target": {
+            "$ref": "#/components/schemas/NormalizedPortfolioResponse"
+          },
+          "target_exposure": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Target Exposure",
+            "type": "object"
+          },
+          "unknown_exposure_instrument_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Unknown Exposure Instrument Ids",
+            "type": "array"
+          },
+          "valuation_snapshot_id": {
+            "title": "Valuation Snapshot Id",
+            "type": "string"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allocation_id",
+          "version_id",
+          "account_kind",
+          "account_id",
+          "as_of",
+          "knowledge_cutoff",
+          "valuation_snapshot_id",
+          "source_snapshot_ids",
+          "ledger_hash",
+          "target",
+          "actual",
+          "drift",
+          "target_exposure",
+          "actual_exposure",
+          "unknown_exposure_instrument_ids"
+        ],
+        "title": "ETFAllocationReviewResponse",
         "type": "object"
       },
       "ETFAllocationVersionResponse": {
@@ -40192,6 +40313,23 @@
             }
           },
           {
+            "in": "query",
+            "name": "recorded_through",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recorded Through"
+            }
+          },
+          {
             "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
             "in": "header",
             "name": "X-Ditto-API-Contract-Version",
@@ -44674,6 +44812,23 @@
             }
           },
           {
+            "in": "query",
+            "name": "recorded_through",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recorded Through"
+            }
+          },
+          {
             "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
             "in": "header",
             "name": "X-Ditto-API-Contract-Version",
@@ -46532,6 +46687,185 @@
       }
     },
     "/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review": {
+      "get": {
+        "description": "Compare one saved target with a valued account at one evidence cutoff.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "portfolio_get_etf_allocation_review",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "manual"
+              ],
+              "title": "Account Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "knowledge_cutoff",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "title": "Knowledge Cutoff",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_snapshot_ids",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "title": "Source Snapshot Ids",
+              "type": "array"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ETFAllocationReviewResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Etf Allocation Review",
+        "tags": [
+          "portfolio"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      },
       "post": {
         "description": "Submit, approve or reject one immutable ETF target version.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "portfolio_review_etf_allocation_version",
@@ -46802,6 +47136,23 @@
               },
               "title": "Model Artifact Ids",
               "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "origin_version_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origin Version Id"
             }
           },
           {

@@ -144,6 +144,7 @@ def _artifact(
     status: str = "active",
     created_at: datetime | None = None,
     tamper: bool = False,
+    origin_version_id: str | None = None,
 ) -> StrategyArtifactRecord:
     payload: dict[str, object] = {
         "dataset_snapshot_ids": {"stock_daily": _SNAPSHOT_ID},
@@ -158,6 +159,8 @@ def _artifact(
         "strategy_id": _STRATEGY_ID,
         "strategy_version": "1",
     }
+    if origin_version_id is not None:
+        payload["origin_version_id"] = origin_version_id
     checksum = compute_signal_package_checksum(payload)
     if tamper:
         checksum = "sha256:" + "0" * 64
@@ -214,6 +217,7 @@ def _request(
     initial_capital: str = "100",
     start_date: str = "2026-03-02",
     end_date: str = "2026-03-04",
+    origin_version_id: str | None = None,
 ) -> ModelHistoryRequest:
     return ModelHistoryRequest(
         strategy_id=_STRATEGY_ID,
@@ -223,7 +227,21 @@ def _request(
         knowledge_cutoff=_KNOWLEDGE,
         publication_cutoff=_KNOWLEDGE,
         artifact_ids=artifact_ids,
+        origin_version_id=origin_version_id,
     )
+
+
+def test_version_bound_history_excludes_other_saved_targets() -> None:
+    records = [
+        _artifact("version-a", "2026-03-02", _FIRST, origin_version_id="etf-v1"),
+        _artifact("version-b", "2026-03-03", _SECOND, origin_version_id="etf-v2"),
+    ]
+    view = _query(records).history(_request(origin_version_id="etf-v1"))
+    assert [target.artifact_id for target in view.targets] == ["version-a"]
+    with pytest.raises(AppQueryError):
+        _query(records).history(
+            _request(artifact_ids=("version-b",), origin_version_id="etf-v1")
+        )
 
 
 def _base_records() -> list[StrategyArtifactRecord]:

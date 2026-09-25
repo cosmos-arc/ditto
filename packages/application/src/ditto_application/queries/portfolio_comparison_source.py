@@ -64,10 +64,11 @@ def _error(code: str, reason: str, **details: object) -> AppQueryError:
     )
 
 
-def _context(
+def context(
     request: PortfolioComparisonRequest,
     snapshot_reader: ProviderSnapshotReader,
 ) -> PITQueryContext:
+    """Build a fail-closed PIT context from exact source snapshots."""
     try:
         as_of_date = date.fromisoformat(request.as_of)
     except ValueError as exc:
@@ -228,17 +229,21 @@ def _latest_price(
     )
 
 
-def _valuation_prices(
+def valuation_prices(
     source: TechnicalAnalysisSourcePort,
     context: PITQueryContext,
     instrument_ids: tuple[int, ...],
+    instrument_codes: Mapping[int, str] | None = None,
 ) -> tuple[_ValuationPrice, ...]:
+    """Read the latest visible positive price for each instrument."""
     return tuple(
         _latest_price(
             source.load(
                 context,
                 instrument_id=InstrumentId(instrument_id),
-                instrument_code=str(instrument_id),
+                instrument_code=(instrument_codes or {}).get(
+                    instrument_id, str(instrument_id)
+                ),
             ),
             instrument_id=instrument_id,
         )
@@ -246,10 +251,11 @@ def _valuation_prices(
     )
 
 
-def _valuation_snapshot_id(
+def valuation_snapshot_id(
     request: PortfolioComparisonRequest,
     prices: tuple[_ValuationPrice, ...],
 ) -> str:
+    """Hash the complete price and source identity of one valuation."""
     payload = {
         "as_of": request.as_of,
         "source_snapshot_ids": request.source_snapshot_ids,
@@ -267,7 +273,7 @@ def _valuation_snapshot_id(
     return f"portfolio-valuation:sha256:{digest}"
 
 
-def _account_valuation(
+def account_valuation(
     snapshot: PortfolioSnapshot,
     *,
     kind: str,
@@ -276,6 +282,7 @@ def _account_valuation(
     pending_event_count: int = 0,
     alert_codes: tuple[str, ...] = (),
 ) -> PortfolioValuationInput:
+    """Convert a replayed account snapshot into normalized input."""
     return PortfolioValuationInput(
         portfolio_id=snapshot.account_id,
         portfolio_kind=kind,
@@ -304,7 +311,7 @@ def _account_valuation(
     )
 
 
-def _model_valuation(
+def model_valuation(
     *,
     request: PortfolioComparisonRequest,
     weights: Mapping[int, Decimal],
@@ -312,6 +319,7 @@ def _model_valuation(
     reference_total: Decimal,
     valuation_snapshot_id: str,
 ) -> PortfolioValuationInput:
+    """Express fixed target weights at the account reference total."""
     positions: list[PortfolioHoldingInput] = []
     for instrument_id, weight in weights.items():
         market_value = (reference_total * weight).quantize(
@@ -429,10 +437,10 @@ class LivePortfolioComparisonSource:
             account_id=request.manual_account_id,
             as_of=request.as_of,
         )
-        context = _context(request, self._snapshot_reader)
-        price_rows = _valuation_prices(
+        pit_context = context(request, self._snapshot_reader)
+        price_rows = valuation_prices(
             self._valuation_source,
-            context,
+            pit_context,
             _instrument_ids(
                 weights,
                 paper_unvalued.snapshot,
@@ -440,16 +448,16 @@ class LivePortfolioComparisonSource:
             ),
         )
         prices = {InstrumentId(item.instrument_id): item.price for item in price_rows}
-        valuation_snapshot_id = _valuation_snapshot_id(request, price_rows)
+        computed_snapshot_id = valuation_snapshot_id(request, price_rows)
         if (
             request.valuation_snapshot_id is not None
-            and request.valuation_snapshot_id != valuation_snapshot_id
+            and request.valuation_snapshot_id != computed_snapshot_id
         ):
             raise _error(
                 "PORTFOLIO_VALUATION_IDENTITY_MISMATCH",
                 "computed valuation identity differs from request",
                 expected=request.valuation_snapshot_id,
-                actual=valuation_snapshot_id,
+                actual=computed_snapshot_id,
             )
         paper = self._account_query.get_paper(
             account_id=request.paper_account_id,
@@ -476,23 +484,23 @@ class LivePortfolioComparisonSource:
                 "paper account total value must be positive",
             )
         return PortfolioComparisonSource(
-            model=_model_valuation(
+            model=model_valuation(
                 request=request,
                 weights=weights,
                 prices={int(key): value for key, value in prices.items()},
                 reference_total=reference_total,
-                valuation_snapshot_id=valuation_snapshot_id,
+                valuation_snapshot_id=computed_snapshot_id,
             ),
-            paper=_account_valuation(
+            paper=account_valuation(
                 paper.snapshot,
                 kind="paper",
-                valuation_snapshot_id=valuation_snapshot_id,
+                valuation_snapshot_id=computed_snapshot_id,
                 source_snapshot_ids=request.source_snapshot_ids,
             ),
-            manual=_account_valuation(
+            manual=account_valuation(
                 manual.snapshot,
                 kind="manual",
-                valuation_snapshot_id=valuation_snapshot_id,
+                valuation_snapshot_id=computed_snapshot_id,
                 source_snapshot_ids=request.source_snapshot_ids,
             ),
             paper_attribution=_paper_attribution(

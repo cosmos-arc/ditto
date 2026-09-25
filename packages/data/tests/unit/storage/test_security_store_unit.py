@@ -275,6 +275,94 @@ class TestInstrumentReader:
             == "001872.SZ"
         )
 
+    def test_get_source_ticker_hides_mappings_recorded_after_cutoff(self) -> None:
+        """A rename recorded after the cutoff stays invisible; the closure it
+        wrote was not yet knowable either, so the old ticker still resolves."""
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '000022', 'Old Code', 'SZSE', 'stock', '1990-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker,
+             effective_from, effective_to, created_at)
+            VALUES (100000001, 'tushare', '000022.SZ', '1990-01-01', NULL,
+                    '2026-01-01 00:00:00')
+        """)
+        self.client.commit()
+        # A rename closes the old row and inserts its successor atomically
+        # (the mutation flow shown by test_resolve_instrument_id_pit).
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from, created_at)
+            VALUES (100000001, 'tushare', '001872.SZ', '2026-06-01',
+                    '2026-09-01 08:00:00')
+        """)
+        self.client.execute("""
+            UPDATE instrument_mapping
+            SET effective_to = '2026-06-01'
+            WHERE instrument_id = 100000001 AND source_ticker = '000022.SZ'
+        """)
+        self.client.commit()
+
+        # Before the rename was recorded, the old identity resolves even for
+        # an as-of date past the new effective date: the closure of the old
+        # row was recorded with the hidden successor and was not yet known.
+        assert (
+            self.reader.get_source_ticker(
+                100000001, "tushare", asof="2026-09-02", cutoff="2026-08-31T00:00:00Z"
+            )
+            == "000022.SZ"
+        )
+        # After the rename was recorded, the successor is visible and the
+        # closed predecessor no longer resolves.
+        assert (
+            self.reader.get_source_ticker(
+                100000001, "tushare", asof="2026-09-02", cutoff="2026-09-01T09:00:00Z"
+            )
+            == "001872.SZ"
+        )
+        # Without a cutoff the current mapping wins (unchanged behavior).
+        assert (
+            self.reader.get_source_ticker(100000001, "tushare", asof="2026-09-02")
+            == "001872.SZ"
+        )
+
+    def test_get_source_ticker_closure_without_successor_stays_fail_closed(
+        self,
+    ) -> None:
+        """A closure whose knowledge time cannot be inferred stays excluded."""
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '000022', 'Old Code', 'SZSE', 'stock', '1990-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker,
+             effective_from, effective_to, created_at)
+            VALUES (100000001, 'tushare', '000022.SZ', '1990-01-01', '2026-06-01',
+                    '2026-01-01 00:00:00')
+        """)
+        self.client.commit()
+
+        # No successor row pins the closure's knowledge time, so the closed
+        # mapping never resolves under a cutoff even well after it.
+        assert (
+            self.reader.get_source_ticker(
+                100000001, "tushare", asof="2026-09-02", cutoff="2026-12-31T00:00:00Z"
+            )
+            is None
+        )
+        # The plain present-tense read keeps the same fail-closed answer.
+        assert (
+            self.reader.get_source_ticker(100000001, "tushare", asof="2026-09-02")
+            is None
+        )
+
     def test_list_instrument_ids(self) -> None:
         """Test listing all instrument_ids with filters."""
         # Insert test data

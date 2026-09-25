@@ -99,9 +99,60 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await expect(workspace.getByLabel("配置理由")).toHaveValue(
 		"recorded acceptance target",
 	);
-	await workspace.getByRole("link", { name: "查看 Paper 账户" }).click();
-	await expect(page.getByText("PAPER 模拟账户")).toBeVisible();
-	expect(page.url()).toContain(`session_id=${sessionId}`);
+	await workspace.getByLabel("复盘账户").selectOption(`paper:${fixture.account_id}`);
+	await workspace.getByRole("link", { name: "查看配置与账户复盘" }).click();
+	const review = page.getByRole("region", { name: "ETF 配置复盘" });
+	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
+	await review.getByLabel("复盘账本日期").fill("2026-09-02");
+	await expect(review.getByText(/Paper 模拟成交账本/)).toBeVisible();
+	await expect(review.getByText(/#2000101：实际/)).toBeVisible();
+	await expect(review.getByText(/缺少同日价格证据，无法计算实际权重/)).toBeVisible();
+	const now = new Date();
+	const reviewDay = new Date(now.getTime() + 86_400_000).toISOString().slice(0, 10);
+	await review.getByLabel("复盘账本日期").fill(reviewDay);
+	await review.getByLabel("复盘价格快照").fill(fixture.market);
+	await review.getByLabel("复盘知识截止").fill("2026-09-03T14:00");
+	// The pre-evidence cutoff hides target details and fails the valuation.
+	await expect(review.getByText(/所选知识截止早于该版本/)).toBeVisible();
+	await expect(review.getByText(/估值失败：/)).toBeVisible();
+	await review.getByLabel("复盘知识截止").fill(
+		await page.evaluate(() => {
+			const instant = new Date();
+			return new Date(instant.getTime() - instant.getTimezoneOffset() * 60_000).toISOString().slice(0, 23);
+		}),
+	);
+	const valuationResponse = await request.get(
+		`${apiOrigin}/api/v1/portfolio/etf-allocations/${allocationId}/versions/${versionId}/review`,
+		{ params: { account_kind: "paper", account_id: fixture.account_id, as_of: reviewDay, knowledge_cutoff: now.toISOString(), source_snapshot_ids: fixture.market } },
+	);
+	expect(valuationResponse.status(), await valuationResponse.text()).toBe(200);
+	const valuationData = (await valuationResponse.json()) as {
+		data: {
+			target: { positions: { weight: string }[]; cash_weight: string };
+			actual: { positions: { weight: string }[]; cash_weight: string };
+			actual_exposure: Record<string, string>;
+			unknown_exposure_instrument_ids: number[];
+		};
+	};
+	expect(Number(valuationData.data.target.positions[0]?.weight)).toBeCloseTo(0.5, 6);
+	expect(Number(valuationData.data.actual.positions[0]?.weight)).toBeGreaterThan(0.5);
+	expect(valuationData.data.actual_exposure).toEqual({});
+	expect(valuationData.data.unknown_exposure_instrument_ids).toContain(2000101);
+	const valued = review.getByRole("region", { name: "ETF 目标与实际估值" });
+	await expect(valued.getByText(/ETF #2000101：目标/)).toBeVisible();
+	await expect(valued.getByText(/已知同指数实际暴露：未知/)).toBeVisible();
+	await expect(valued.getByText(/指数归属未知的实际持仓：2000101/)).toBeVisible();
+	await expect(valued.getByText(/目标现金 .*实际现金 .*现金差异/)).toBeVisible();
+	await expect(page.getByTestId("history-comparison-submit")).toBeDisabled();
+	await page.reload();
+	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
+	await expect(review.getByLabel("复盘账户")).toHaveValue(`paper:${fixture.account_id}`);
+	await expect(review.getByLabel("复盘账本日期")).toHaveValue(reviewDay);
+	await expect(valued.getByText(/ETF #2000101：目标/)).toBeVisible();
+	await page.goBack();
+	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
+	await review.getByRole("link", { name: "返回 ETF 配置" }).click();
+	await expect(workspace.getByLabel("已保存版本")).toHaveValue(versionId ?? "");
 });
 
 test("restricted ETF cannot enter Paper and returns to tool selection", async ({

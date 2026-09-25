@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Coroutine
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, cast
 from unittest.mock import patch
@@ -16,7 +16,7 @@ from ditto_application.commands.account_ledger import (
 )
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.portfolio_history import GetManualHistoryQuery
-from ditto_apps.api.errors import NotFoundError
+from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
 from ditto_apps.api.routes.account_ledger import (
     correct_manual_event,
     create_manual_account,
@@ -251,6 +251,56 @@ def test_manual_request_models_accept_canonical_json_scalars() -> None:
     assert event.trade_date == date(2026, 8, 31)
     assert event.gross_amount == Decimal("100000.00")
     assert event.attachment_refs == ("receipt:1",)
+
+
+def test_manual_ledger_route_binds_reads_to_the_recorded_cutoff(tmp_path) -> None:
+    journal = SqliteAccountEventJournal(str(tmp_path / "account.sqlite"))
+    create_handler = CreateAccountHandler(journal=journal)
+    manual_handler = ManualAccountCommandHandler(journal=journal, clock=lambda: NOW)
+
+    with patch(
+        "ditto_apps.api.routes.account_ledger.asyncio.to_thread",
+        side_effect=_inline,
+    ):
+        asyncio.run(
+            _original(create_manual_account)(
+                body=CreateManualAccountBody(
+                    account_id="manual-main",
+                    name="我的账户",
+                    opened_at=NOW,
+                ),
+                handler=create_handler,
+            )
+        )
+        asyncio.run(
+            _original(record_manual_event)(
+                account_id="manual-main",
+                body=_opening_body(),
+                handler=manual_handler,
+            )
+        )
+        bound = asyncio.run(
+            _original(get_manual_account_ledger)(
+                account_id="manual-main",
+                as_of=date(2026, 8, 31),
+                query=AccountLedgerQuery(journal=journal),
+                recorded_through=NOW,
+            )
+        )
+        with pytest.raises(
+            UnprocessableEntityError, match="hides events recorded after the cutoff"
+        ):
+            asyncio.run(
+                _original(get_manual_account_ledger)(
+                    account_id="manual-main",
+                    as_of=date(2026, 8, 31),
+                    query=AccountLedgerQuery(journal=journal),
+                    recorded_through=NOW - timedelta(minutes=1),
+                )
+            )
+
+    assert bound.data.snapshot.cash.total == Decimal("100000")
+    journal.close()
 
 
 def test_manual_openapi_surface_has_stable_operation_ids() -> None:

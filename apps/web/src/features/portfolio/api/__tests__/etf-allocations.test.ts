@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest, requestPath } from "@/test/request";
-import { executeETFPaper, listETFAllocationVersions } from "../etf-allocations";
+import { executeETFPaper, fetchETFAllocationReview, listETFAllocationVersions } from "../etf-allocations";
 
 const version = (allocationId: string, overrides: Record<string, unknown> = {}) => ({
 	version_id: "version-one",
@@ -55,6 +55,65 @@ describe("listETFAllocationVersions", () => {
 		);
 
 		await expect(listETFAllocationVersions("demo")).rejects.toThrow("ETF 配置版本身份或审查状态无效");
+	});
+});
+
+describe("fetchETFAllocationReview", () => {
+	const query = {
+		account_kind: "paper" as const,
+		account_id: "paper-a",
+		as_of: "2026-09-02",
+		knowledge_cutoff: "2026-09-02T09:00:00Z",
+		source_snapshot_ids: ["price-1"],
+	};
+	const response = {
+		allocation_id: "demo",
+		version_id: "version-one",
+		account_kind: "paper",
+		account_id: "paper-a",
+		as_of: "2026-09-02",
+		knowledge_cutoff: "2026-09-02T09:00:00Z",
+		source_snapshot_ids: ["price-1"],
+		valuation_snapshot_id: "valuation-1",
+		ledger_hash: "ledger-1",
+		target: { valuation_snapshot_id: "valuation-1", cash_weight: "0.2" },
+		actual: { valuation_snapshot_id: "valuation-1", cash_weight: "0.1" },
+		drift: {
+			cash_drift_bps: "-1000",
+			items: [{ instrument_id: 1, baseline_weight: "0.8", observed_weight: "0.9", drift_bps: "1000" }],
+		},
+		actual_exposure: { "000300.SH": "0.9" },
+		unknown_exposure_instrument_ids: [2],
+	};
+
+	it("maps validated server values into the review view model", async () => {
+		vi.stubGlobal("fetch", fetchMock(response));
+		await expect(fetchETFAllocationReview("demo", "version-one", query)).resolves.toEqual({
+			knowledgeCutoff: "2026-09-02T09:00:00Z",
+			valuationSnapshotId: "valuation-1",
+			ledgerHash: "ledger-1",
+			targetCashWeight: "0.2",
+			actualCashWeight: "0.1",
+			cashDriftBps: "-1000",
+			positions: [{ instrumentId: 1, targetWeight: "0.8", actualWeight: "0.9", driftBps: "1000" }],
+			actualExposure: { "000300.SH": "0.9" },
+			unknownExposureInstrumentIds: [2],
+		});
+	});
+
+	it.each([
+		["allocation_id", "other"],
+		["version_id", "other"],
+		["account_kind", "manual"],
+		["account_id", "other"],
+		["as_of", "2026-09-03"],
+		["knowledge_cutoff", "2026-09-02T10:00:00Z"],
+		["source_snapshot_ids", ["other"]],
+		["valuation_snapshot_id", "other"],
+		["actual", { valuation_snapshot_id: "other", cash_weight: "0.1" }],
+	])("rejects a review with mismatched %s", async (field, value) => {
+		vi.stubGlobal("fetch", fetchMock({ ...response, [field]: value }));
+		await expect(fetchETFAllocationReview("demo", "version-one", query)).rejects.toThrow("ETF 复盘响应证据身份不匹配");
 	});
 });
 

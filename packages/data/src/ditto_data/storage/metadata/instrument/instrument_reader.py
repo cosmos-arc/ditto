@@ -269,20 +269,48 @@ class InstrumentReader:
         instrument_id: int,
         source: str = "tushare",
         asof: str | None = None,
+        *,
+        cutoff: str | None = None,
     ) -> str | None:
         """
-        反向查询：instrument_id 到 source_ticker。
+        反向查询：instrument_id 到 source_ticker.
 
         Args:
             instrument_id: 证券 ID
             source: 数据源标识符
             asof: Point-in-Time 日期
+            cutoff: 知识截止时刻；提供时按 backward as-of join 只使用该时刻
+                已记录的映射行。区间闭合（effective_to）与后继映射行是同一次
+                变更写入的：后继行在 cutoff 之后才记录时，前驱行的闭合同样
+                不可知，仍按开放区间解析；无后继行的闭合知识时间不可推断，
+                维持生效区间过滤（fail closed）
 
         Returns:
             source_ticker 或 None（未找到时）
 
         """
-        if asof:
+        if asof and cutoff is not None:
+            row = self._client.fetchone(
+                """SELECT m.source_ticker FROM instrument_mapping m
+                WHERE m.instrument_id = ? AND m.source = ?
+                  AND m.effective_from <= ?
+                  AND datetime(m.created_at) <= datetime(?)
+                  AND (
+                      m.effective_to IS NULL
+                      OR m.effective_to > ?
+                      OR EXISTS (
+                          SELECT 1 FROM instrument_mapping s
+                          WHERE s.instrument_id = m.instrument_id
+                            AND s.source = m.source
+                            AND s.effective_from = m.effective_to
+                            AND datetime(s.created_at) > datetime(?)
+                      )
+                  )
+                ORDER BY m.effective_from DESC
+                LIMIT 1""",
+                [instrument_id, source, asof, cutoff, asof, cutoff],
+            )
+        elif asof:
             row = self._client.fetchone(
                 """SELECT source_ticker FROM instrument_mapping
                 WHERE instrument_id = ? AND source = ?
@@ -296,7 +324,9 @@ class InstrumentReader:
             row = self._client.fetchone(
                 """SELECT source_ticker FROM instrument_mapping
                 WHERE instrument_id = ? AND source = ?
-                  AND effective_to IS NULL""",
+                  AND effective_to IS NULL
+                ORDER BY effective_from DESC
+                LIMIT 1""",
                 [instrument_id, source],
             )
 

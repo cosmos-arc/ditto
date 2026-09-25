@@ -8,6 +8,7 @@ function requiredEnvironment(name: string): string {
 }
 
 const webOrigin = requiredEnvironment("DITTO_SYSTEM_WEB_ORIGIN");
+const apiOrigin = requiredEnvironment("DITTO_SYSTEM_API_ORIGIN");
 
 const ETF_ID = 2000001;
 const ETF_NO_NAV_ID = 2000002;
@@ -161,6 +162,45 @@ test.describe
 			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
 			await expect.poll(() => new URL(page.url()).searchParams.get("etfVersion")).not.toBe(version);
 			await expect(comparison.getByLabel("已保存版本").locator("option")).toHaveCount(3);
+			await comparison.getByLabel("已保存版本").selectOption(version ?? "");
+			await page.reload();
+			await expect(comparison.getByLabel("已保存版本")).toHaveValue(version ?? "");
+		});
+
+		test("reviews a cross-border ETF target against a distinct Manual ledger", async ({ page, request }) => {
+			const accountId = `etf-cross-border-${crypto.randomUUID()}`;
+			const headers = { "X-Ditto-API-Contract-Version": "v1" };
+			const created = await request.post(`${apiOrigin}/api/v1/manual/accounts`, {
+				headers,
+				data: { account_id: accountId, name: "跨境复盘账本", opened_at: "2026-05-21T00:00:00Z", currency: "CNY" },
+			});
+			expect(created.status()).toBe(201);
+			const opening = await request.post(`${apiOrigin}/api/v1/manual/accounts/${accountId}/events`, {
+				headers,
+				data: { event_type: "opening_cash", trade_date: "2026-05-21", settlement_date: "2026-05-21", idempotency_key: `opening-${accountId}`, actor: "system-e2e", gross_amount: "100000" },
+			});
+			expect(opening.status()).toBe(201);
+			await page.goto(`${webOrigin}/markets`);
+			const comparison = page.locator('[data-info-unit="etf-candidates"]');
+			await comparison.getByLabel("研究日期").fill("2026-05-21");
+			await comparison.getByLabel("知识截止").fill("2026-05-21T18:00");
+			await comparison.getByLabel("来源快照").selectOption("snapshot:recorded:etf-system");
+			await comparison.getByLabel("指数暴露").fill("NDX");
+			await comparison.getByRole("checkbox", { name: /跨境ETF-比较验收/ }).check();
+			await comparison.getByLabel("单仓上限").fill("0.8");
+			await comparison.getByLabel("配置理由").fill("cross-border recorded review");
+			await comparison.getByRole("button", { name: "保存候选版本" }).click();
+			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
+			await comparison.getByLabel("复盘账户").selectOption(`manual:${accountId}`);
+			await comparison.getByRole("link", { name: "查看配置与账户复盘" }).click();
+			const review = page.getByRole("region", { name: "ETF 配置复盘" });
+			await expect(review.getByText(/已知同指数目标暴露：NDX 0.80000000/)).toBeVisible();
+			await review.getByLabel("复盘账本日期").fill("2026-05-21");
+			await expect(review.getByText(/Manual 用户记录账本/)).toBeVisible();
+			await expect(review.getByText(/实际现金 100000/)).toBeVisible();
+			await expect(review.getByText(/其他工具的穿透重叠：未知/)).toBeVisible();
+			await page.reload();
+			await expect(review.getByLabel("复盘账户")).toHaveValue(`manual:${accountId}`);
 		});
 
 		test("stocks stay fail-closed until the explicit experimental opt-in, then adjust locally", async ({

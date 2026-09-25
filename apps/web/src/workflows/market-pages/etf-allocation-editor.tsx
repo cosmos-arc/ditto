@@ -4,6 +4,7 @@ import type { ETFCandidate } from "@/features/instruments";
 import {
 	authorizeETFPaper,
 	executeETFPaper,
+	fetchManualAccounts,
 	fetchPaperAccounts,
 	handoffETFPaper,
 	listETFAllocationVersions,
@@ -118,6 +119,10 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 	const [reviewReason, setReviewReason] = useState("");
 	const [confirmingReject, setConfirmingReject] = useState(false);
 	const [paperAccountId, setPaperAccountId] = useState(pendingPaperState?.accountId ?? "");
+	const [reviewAccount, setReviewAccount] = useState(() => {
+		const query = new URLSearchParams(window.location.search);
+		return query.get("etfReviewAccount") ?? "";
+	});
 	const [paperTradeDate, setPaperTradeDate] = useState(
 		pendingPaperState?.tradeDate ?? initialReadyPaper?.tradeDate ?? "",
 	);
@@ -151,7 +156,12 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 	const paperAccounts = useQuery({
 		queryKey: tradingKeys.paperAccounts(),
 		queryFn: fetchPaperAccounts,
-		enabled: saved?.reviewStatus === "review_approved",
+		enabled: Boolean(saved),
+	});
+	const manualAccounts = useQuery({
+		queryKey: tradingKeys.manualAccounts(),
+		queryFn: fetchManualAccounts,
+		enabled: Boolean(saved),
 	});
 	useEffect(() => {
 		if (!saved || restoredVersion.current === saved.versionId) return;
@@ -389,6 +399,10 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 						onChange={(event) => {
 							setVersionId(event.target.value);
 							setConfirmingReject(false);
+							const url = new URL(window.location.href);
+							if (event.target.value) url.searchParams.set("etfVersion", event.target.value);
+							else url.searchParams.delete("etfVersion");
+							window.history.replaceState(window.history.state, "", url);
 						}}
 					>
 						<option value="">新配置</option>
@@ -482,6 +496,33 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 						已保存 {saved.versionId} · {saved.reviewStatus} · 规则 {saved.ruleVersion}
 					</p>
 					<p>研究审查结果不授权 Paper 执行。</p>
+					<label className="block">
+						复盘账户{" "}
+						<select
+							aria-label="复盘账户"
+							value={reviewAccount}
+							onChange={(event) => setReviewAccount(event.target.value)}
+						>
+							<option value="">选择账户</option>
+							{paperAccounts.data?.map((account) => (
+								<option key={`paper:${account.account_id}`} value={`paper:${account.account_id}`}>
+									Paper · {account.account_name}
+								</option>
+							))}
+							{manualAccounts.data?.map((account) => (
+								<option key={`manual:${account.account_id}`} value={`manual:${account.account_id}`}>
+									Manual · {account.account_name}
+								</option>
+							))}
+						</select>
+					</label>
+					{reviewAccount && (
+						<a
+							href={`/portfolio?${new URLSearchParams({ etfAllocation: allocationId, etfVersion: saved.versionId, etfReviewAccount: reviewAccount }).toString()}`}
+						>
+							查看配置与账户复盘
+						</a>
+					)}
 					<p>
 						现金 {saved.cashWeight}；同指数暴露{" "}
 						{Object.entries(saved.trackingExposure)

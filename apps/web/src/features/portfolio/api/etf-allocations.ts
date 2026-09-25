@@ -3,6 +3,24 @@ import { apiClient } from "@/api/transport";
 
 type VersionDTO = components["schemas"]["ETFAllocationVersionResponse"];
 type SaveBody = components["schemas"]["ETFAllocationBody"];
+type ReviewDTO = components["schemas"]["ETFAllocationReviewResponse"];
+
+export type ETFAllocationReviewView = {
+	readonly knowledgeCutoff: string;
+	readonly valuationSnapshotId: string;
+	readonly ledgerHash: string;
+	readonly targetCashWeight: string;
+	readonly actualCashWeight: string;
+	readonly cashDriftBps: string;
+	readonly positions: readonly {
+		readonly instrumentId: number;
+		readonly targetWeight: string;
+		readonly actualWeight: string;
+		readonly driftBps: string;
+	}[];
+	readonly actualExposure: Readonly<Record<string, string>>;
+	readonly unknownExposureInstrumentIds: readonly number[];
+};
 
 export type ETFAllocationVersion = {
 	readonly versionId: string;
@@ -68,6 +86,56 @@ export async function listETFAllocationVersions(allocationId: string): Promise<E
 		throw new Error("ETF 配置版本响应不属于该配置");
 	}
 	return versions;
+}
+
+export async function fetchETFAllocationReview(
+	allocationId: string,
+	versionId: string,
+	query: {
+		account_kind: "paper" | "manual";
+		account_id: string;
+		as_of: string;
+		knowledge_cutoff: string;
+		source_snapshot_ids: string[];
+	},
+): Promise<ETFAllocationReviewView> {
+	const result: ReviewDTO = await apiClient.get(
+		"/api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review",
+		{
+			params: { path: { allocation_id: allocationId, version_id: versionId }, query },
+		},
+	);
+	if (
+		result.allocation_id !== allocationId ||
+		result.version_id !== versionId ||
+		result.account_kind !== query.account_kind ||
+		result.account_id !== query.account_id ||
+		result.as_of !== query.as_of ||
+		// The cutoff bounds both ledger visibility and eligible prices; a
+		// response minted for another cutoff must not pass as this evidence.
+		Date.parse(result.knowledge_cutoff) !== Date.parse(query.knowledge_cutoff) ||
+		result.source_snapshot_ids.join("\0") !== query.source_snapshot_ids.join("\0") ||
+		// Both legs must carry the endpoint's own top-level valuation identity.
+		result.target.valuation_snapshot_id !== result.valuation_snapshot_id ||
+		result.actual.valuation_snapshot_id !== result.valuation_snapshot_id
+	)
+		throw new Error("ETF 复盘响应证据身份不匹配");
+	return {
+		knowledgeCutoff: result.knowledge_cutoff,
+		valuationSnapshotId: result.valuation_snapshot_id,
+		ledgerHash: result.ledger_hash,
+		targetCashWeight: result.target.cash_weight,
+		actualCashWeight: result.actual.cash_weight,
+		cashDriftBps: result.drift.cash_drift_bps,
+		positions: result.drift.items.map((item) => ({
+			instrumentId: item.instrument_id,
+			targetWeight: item.baseline_weight,
+			actualWeight: item.observed_weight,
+			driftBps: item.drift_bps,
+		})),
+		actualExposure: result.actual_exposure,
+		unknownExposureInstrumentIds: result.unknown_exposure_instrument_ids,
+	};
 }
 
 export async function saveETFAllocationVersion(

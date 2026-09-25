@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6b1974edaebe5e3f38528a32954a96ad7fa0cbad5d0f08b0b8de92046552add5
+ * Schema SHA-256: 1a6455967f566b814f406c72e9a3a1687bfbc73a8937890a93c68c33636d23c4
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -898,6 +898,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2408,7 +2418,7 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["account_id"],
-      "query": ["as_of"],
+      "query": ["as_of", "recorded_through"],
     },
   },
   "get /api/v1/manual/comparison": {
@@ -2542,7 +2552,7 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["account_id"],
-      "query": ["as_of"],
+      "query": ["as_of", "recorded_through"],
     },
   },
   "get /api/v1/paper/accounts/{account_id}/sessions": {
@@ -2569,10 +2579,17 @@ export const operationRequestContracts = {
       "path": ["allocation_id"],
     },
   },
+  "get /api/v1/portfolio/etf-allocations/{allocation_id}/versions/{version_id}/review": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["allocation_id", "version_id"],
+      "query": ["account_id", "account_kind", "as_of", "knowledge_cutoff", "source_snapshot_ids"],
+    },
+  },
   "get /api/v1/portfolio/history-comparison": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["benchmark_symbol", "benchmark_type", "end_date", "knowledge_cutoff", "manual_account_id", "manual_ledger_event_count", "manual_ledger_hash", "model_artifact_ids", "model_initial_capital", "paper_account_id", "paper_ledger_event_count", "paper_ledger_hash", "paper_session_id", "publication_cutoff", "source_snapshot_ids", "start_date", "strategy_id"],
+      "query": ["benchmark_symbol", "benchmark_type", "end_date", "knowledge_cutoff", "manual_account_id", "manual_ledger_event_count", "manual_ledger_hash", "model_artifact_ids", "model_initial_capital", "origin_version_id", "paper_account_id", "paper_ledger_event_count", "paper_ledger_hash", "paper_session_id", "publication_cutoff", "source_snapshot_ids", "start_date", "strategy_id"],
     },
   },
   "get /api/v1/portfolio/model-history": {

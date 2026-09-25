@@ -44,9 +44,16 @@ export async function fetchManualAccounts(): Promise<readonly AccountCatalogEntr
 	return parseAccountCatalog(payload, "manual");
 }
 
-export async function fetchManualAccountLedger(accountId: string, asOf: string): Promise<ManualAccountLedger> {
+export async function fetchManualAccountLedger(
+	accountId: string,
+	asOf: string,
+	recordedThrough?: string,
+): Promise<ManualAccountLedger> {
 	const payload = await apiClient.get("/api/v1/manual/accounts/{account_id}/ledger", {
-		params: { path: { account_id: accountId }, query: { as_of: asOf } },
+		params: {
+			path: { account_id: accountId },
+			query: { as_of: asOf, ...(recordedThrough ? { recorded_through: recordedThrough } : {}) },
+		},
 	});
 	return parseManualAccountLedger(payload, accountId, asOf);
 }

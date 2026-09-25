@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6b1974edaebe5e3f38528a32954a96ad7fa0cbad5d0f08b0b8de92046552add5
+ * Schema SHA-256: 1a6455967f566b814f406c72e9a3a1687bfbc73a8937890a93c68c33636d23c4
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2974,7 +2974,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Etf Allocation Review
+         * @description Compare one saved target with a valued account at one evidence cutoff.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["portfolio_get_etf_allocation_review"];
         put?: never;
         /**
          * Review Etf Allocation Version
@@ -4595,6 +4601,13 @@ export interface components {
         APIResponse_DeviationResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["DeviationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[ETFAllocationReviewResponse] */
+        APIResponse_ETFAllocationReviewResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ETFAllocationReviewResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -10681,6 +10694,46 @@ export interface components {
             actor: string;
             /** Reason */
             reason: string;
+        };
+        /**
+         * ETFAllocationReviewResponse
+         * @description One PIT-bound target versus actual account observation.
+         */
+        ETFAllocationReviewResponse: {
+            /** Account Id */
+            account_id: string;
+            /**
+             * Account Kind
+             * @enum {string}
+             */
+            account_kind: "paper" | "manual";
+            actual: components["schemas"]["NormalizedPortfolioResponse"];
+            /** Actual Exposure */
+            actual_exposure: {
+                [key: string]: string;
+            };
+            /** Allocation Id */
+            allocation_id: string;
+            /** As Of */
+            as_of: string;
+            drift: components["schemas"]["PortfolioDriftResponse"];
+            /** Knowledge Cutoff */
+            knowledge_cutoff: string;
+            /** Ledger Hash */
+            ledger_hash: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            target: components["schemas"]["NormalizedPortfolioResponse"];
+            /** Target Exposure */
+            target_exposure: {
+                [key: string]: string;
+            };
+            /** Unknown Exposure Instrument Ids */
+            unknown_exposure_instrument_ids: number[];
+            /** Valuation Snapshot Id */
+            valuation_snapshot_id: string;
+            /** Version Id */
+            version_id: string;
         };
         /**
          * ETFAllocationVersionResponse
@@ -25510,6 +25563,7 @@ export interface operations {
         parameters: {
             query: {
                 as_of: string;
+                recorded_through?: string | null;
             };
             header?: {
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
@@ -28372,6 +28426,7 @@ export interface operations {
         parameters: {
             query: {
                 as_of: string;
+                recorded_through?: string | null;
             };
             header?: {
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
@@ -29652,6 +29707,101 @@ export interface operations {
             };
         };
     };
+    portfolio_get_etf_allocation_review: {
+        parameters: {
+            query: {
+                account_kind: "paper" | "manual";
+                account_id: string;
+                as_of: string;
+                knowledge_cutoff: string;
+                source_snapshot_ids: string[];
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                allocation_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ETFAllocationReviewResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     portfolio_review_etf_allocation_version: {
         parameters: {
             query?: never;
@@ -29760,6 +29910,7 @@ export interface operations {
                 publication_cutoff: string;
                 source_snapshot_ids: string[];
                 model_artifact_ids?: string[];
+                origin_version_id?: string | null;
                 paper_ledger_event_count?: number | null;
                 paper_ledger_hash?: string | null;
                 manual_ledger_event_count?: number | null;

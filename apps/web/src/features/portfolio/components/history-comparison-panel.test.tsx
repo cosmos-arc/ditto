@@ -175,10 +175,10 @@ function stubApi(
 	return { fetchMock, requests };
 }
 
-function renderPanel() {
+function renderPanel(etfAllocationId?: string) {
 	return render(
 		<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-			<HistoryComparisonPanel />
+			<HistoryComparisonPanel etfAllocationId={etfAllocationId} />
 		</QueryClientProvider>,
 	);
 }
@@ -202,9 +202,34 @@ async function fillFormAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
+	window.history.replaceState(null, "", "/");
 });
 
 describe("HistoryComparisonPanel", () => {
+	it("restores an ETF linked common-window request without deriving history from its target", async () => {
+		window.history.replaceState(null, "", "/portfolio?etfAllocation=demo&etfVersion=v1&etfReviewAccount=paper:paper-1");
+		const user = userEvent.setup();
+		const { fetchMock, requests } = stubApi({ ...COMPARISON_PAYLOAD, strategy_id: "etf-allocation:demo" });
+		vi.stubGlobal("fetch", fetchMock);
+		const first = renderPanel("demo");
+		expect(screen.getByLabelText("Model 策略")).toHaveValue("etf-allocation:demo");
+		await fillFormAndSubmit(user);
+		await screen.findByTestId("history-comparison-result");
+		const saved = new URLSearchParams(window.location.search).get("historyComparison");
+		expect(saved).toContain('"source_snapshot_ids":["snapshot:stock_daily:1"]');
+		expect(saved).toContain('"origin_version_id":"v1"');
+		expect(saved).not.toContain("etfVersion");
+		expect(requests.some((href) => href.includes("origin_version_id=v1"))).toBe(true);
+		first.unmount();
+		const restored = renderPanel("demo");
+		await screen.findByTestId("history-comparison-result");
+		expect(requests.filter((href) => href.includes("/portfolio/history-comparison"))).toHaveLength(2);
+		window.history.replaceState(null, "", window.location.href.replace("etfVersion=v1", "etfVersion=v2"));
+		restored.unmount();
+		renderPanel("demo");
+		expect(screen.queryByTestId("history-comparison-result")).not.toBeInTheDocument();
+		expect(requests.filter((href) => href.includes("/portfolio/history-comparison"))).toHaveLength(2);
+	});
 	it("compares the picked entities and renders the common window with exports", async () => {
 		const user = userEvent.setup();
 		const { fetchMock, requests } = stubApi();
@@ -387,6 +412,52 @@ describe("HistoryComparisonPanel", () => {
 
 		await waitFor(() => {
 			expect(screen.getByText(/当前环境不支持 PNG 导出/)).toBeInTheDocument();
+		});
+	});
+
+	it("restores both ledger pins and keeps the other pin when one leg replays", async () => {
+		const user = userEvent.setup();
+		const identity = {
+			strategy_id: "etf-allocation:demo",
+			paper_account_id: "paper-1",
+			paper_session_id: "paper-session-1",
+			manual_account_id: "manual-1",
+			start_date: "2026-03-02",
+			end_date: "2026-03-04",
+			model_initial_capital: 100000,
+			knowledge_cutoff: "2026-03-04T08:00:00Z",
+			publication_cutoff: "2026-03-04T08:00:00Z",
+			source_snapshot_ids: ["snapshot:stock_daily:1"],
+			origin_version_id: "v1",
+			paper_ledger_event_count: 3,
+			paper_ledger_hash: "account-ledger:sha256:abc",
+			manual_ledger_event_count: 2,
+			manual_ledger_hash: "account-ledger:sha256:def",
+		};
+		window.history.replaceState(
+			null,
+			"",
+			`/portfolio?etfAllocation=demo&etfVersion=v1&etfReviewAccount=paper:paper-1&historyComparisonVersion=v1&historyComparisonAccount=paper:paper-1&historyComparison=${encodeURIComponent(JSON.stringify(identity))}`,
+		);
+		const { fetchMock, requests } = stubApi({ ...COMPARISON_PAYLOAD, strategy_id: "etf-allocation:demo" });
+		vi.stubGlobal("fetch", fetchMock);
+		renderPanel("demo");
+
+		// Both restored pins are visible immediately, not just replayable.
+		const chips = await screen.findByTestId("history-comparison-pin-chips");
+		expect(chips).toHaveTextContent("Paper 钉住 3@account-ledger:sha256:abc");
+		expect(chips).toHaveTextContent("Manual 钉住 2@account-ledger:sha256:def");
+		await screen.findByTestId("history-comparison-result");
+		expect(screen.getByTestId("history-comparison-pin-paper")).toHaveTextContent("解除钉住（解析当前）");
+
+		await user.click(screen.getByTestId("history-comparison-pin-paper"));
+
+		await waitFor(() => {
+			const replayUrl = new URL(requests.filter((href) => href.includes("/portfolio/history-comparison")).at(-1) ?? "");
+			expect(replayUrl.searchParams.has("paper_ledger_event_count")).toBe(false);
+			// Replaying one leg must not drop the other restored pin.
+			expect(replayUrl.searchParams.get("manual_ledger_event_count")).toBe("2");
+			expect(replayUrl.searchParams.get("manual_ledger_hash")).toBe("account-ledger:sha256:def");
 		});
 	});
 

@@ -49,6 +49,66 @@ const STATUS_LABELS: Readonly<Record<HistoryComparison["status"], string>> = {
 
 type PinnedLedgerRevision = { readonly event_count: number; readonly ledger_hash: string };
 
+// A restored identity may pin either leg's ledger revision; lift the pins
+// into local state so a later replay of one leg keeps the other intact.
+function restoredPin(
+	eventCount: number | null | undefined,
+	ledgerHash: string | null | undefined,
+): PinnedLedgerRevision | null {
+	return eventCount !== null && eventCount !== undefined && ledgerHash !== null && ledgerHash !== undefined
+		? { event_count: eventCount, ledger_hash: ledgerHash }
+		: null;
+}
+
+function restoredIdentity(): HistoryComparisonIdentity | null {
+	const params = new URLSearchParams(window.location.search);
+	const encoded = params.has("etfAllocation") ? params.get("historyComparison") : null;
+	if (!encoded) return null;
+	if (params.get("historyComparisonVersion") !== params.get("etfVersion")) return null;
+	if (params.get("historyComparisonAccount") !== params.get("etfReviewAccount")) return null;
+	try {
+		const value: unknown = JSON.parse(encoded);
+		if (!value || typeof value !== "object") return null;
+		const record = value as Record<string, unknown>;
+		if (record["origin_version_id"] !== params.get("etfVersion")) return null;
+		const required = [
+			"strategy_id",
+			"paper_account_id",
+			"paper_session_id",
+			"manual_account_id",
+			"start_date",
+			"end_date",
+			"knowledge_cutoff",
+			"publication_cutoff",
+		];
+		if (required.some((field) => typeof record[field] !== "string" || !record[field])) return null;
+		if (
+			!Array.isArray(record["source_snapshot_ids"]) ||
+			record["source_snapshot_ids"].length === 0 ||
+			!record["source_snapshot_ids"].every((id) => typeof id === "string" && id)
+		)
+			return null;
+		if (
+			typeof record["model_initial_capital"] !== "number" ||
+			!Number.isFinite(record["model_initial_capital"]) ||
+			record["model_initial_capital"] <= 0
+		)
+			return null;
+		return value as HistoryComparisonIdentity;
+	} catch {
+		return null;
+	}
+}
+
+function rememberIdentity(identity: HistoryComparisonIdentity) {
+	const url = new URL(window.location.href);
+	if (!url.searchParams.has("etfAllocation")) return;
+	url.searchParams.set("historyComparison", JSON.stringify(identity));
+	url.searchParams.set("historyComparisonVersion", url.searchParams.get("etfVersion") ?? "");
+	url.searchParams.set("historyComparisonAccount", url.searchParams.get("etfReviewAccount") ?? "");
+	window.history.replaceState(window.history.state, "", url);
+}
+
 function pinnedRevisionParams(
 	paper: PinnedLedgerRevision | null,
 	manual: PinnedLedgerRevision | null,
@@ -327,7 +387,9 @@ function ComparisonRunChart({
  * hand-typed identifiers; every rendered number, and both exports, reference
  * the single backend ``result_id``.
  */
-export function HistoryComparisonPanel() {
+export function HistoryComparisonPanel({ etfAllocationId }: { readonly etfAllocationId?: string | undefined } = {}) {
+	const [restored] = useState(restoredIdentity);
+	const accountFromETF = new URLSearchParams(window.location.search).get("etfReviewAccount") ?? "";
 	const strategiesQuery = useQuery({
 		queryKey: tradingKeys.strategyOptions(),
 		queryFn: fetchStrategyOptions,
@@ -340,31 +402,46 @@ export function HistoryComparisonPanel() {
 		queryKey: tradingKeys.paperAccounts(),
 		queryFn: fetchPaperAccounts,
 	});
-	const [strategyId, setStrategyId] = useState("");
-	const [paperAccountId, setPaperAccountId] = useState("");
-	const [paperSessionId, setPaperSessionId] = useState("");
-	const [manualAccountId, setManualAccountId] = useState("");
+	const etfStrategyId = etfAllocationId ? `etf-allocation:${etfAllocationId}` : "";
+	const [strategyId, setStrategyId] = useState(restored?.strategy_id ?? etfStrategyId);
+	const [paperAccountId, setPaperAccountId] = useState(
+		restored?.paper_account_id ?? (accountFromETF.startsWith("paper:") ? accountFromETF.slice(6) : ""),
+	);
+	const [paperSessionId, setPaperSessionId] = useState(
+		restored?.paper_session_id ?? new URLSearchParams(window.location.search).get("paperSession") ?? "",
+	);
+	const [manualAccountId, setManualAccountId] = useState(
+		restored?.manual_account_id ?? (accountFromETF.startsWith("manual:") ? accountFromETF.slice(7) : ""),
+	);
 	const sessionsQuery = useQuery({
 		queryKey: tradingKeys.paperSessions(paperAccountId || "unselected"),
 		queryFn: () => fetchPaperSessions(paperAccountId),
 		enabled: paperAccountId !== "",
 	});
 
-	const [startDate, setStartDate] = useState("");
-	const [endDate, setEndDate] = useState("");
-	const [cutoff, setCutoff] = useState(new Date().toISOString());
-	const [capitalText, setCapitalText] = useState("100000");
-	const [snapshotsText, setSnapshotsText] = useState("");
-	const [artifactsText, setArtifactsText] = useState("");
-	const [benchmarkText, setBenchmarkText] = useState("");
-	const [identity, setIdentity] = useState<HistoryComparisonIdentity | null>(null);
-	const [pinnedPaper, setPinnedPaper] = useState<PinnedLedgerRevision | null>(null);
-	const [pinnedManual, setPinnedManual] = useState<PinnedLedgerRevision | null>(null);
+	const [startDate, setStartDate] = useState(restored?.start_date ?? "");
+	const [endDate, setEndDate] = useState(restored?.end_date ?? "");
+	const [cutoff, setCutoff] = useState(restored?.knowledge_cutoff ?? new Date().toISOString());
+	const [capitalText, setCapitalText] = useState(String(restored?.model_initial_capital ?? 100000));
+	const [snapshotsText, setSnapshotsText] = useState(restored?.source_snapshot_ids.join(",") ?? "");
+	const [artifactsText, setArtifactsText] = useState(restored?.model_artifact_ids?.join(",") ?? "");
+	const [benchmarkText, setBenchmarkText] = useState(restored?.benchmark_symbol ?? "");
+	const [identity, setIdentity] = useState<HistoryComparisonIdentity | null>(restored);
+	const [pinnedPaper, setPinnedPaper] = useState<PinnedLedgerRevision | null>(
+		restoredPin(restored?.paper_ledger_event_count, restored?.paper_ledger_hash),
+	);
+	const [pinnedManual, setPinnedManual] = useState<PinnedLedgerRevision | null>(
+		restoredPin(restored?.manual_ledger_event_count, restored?.manual_ledger_hash),
+	);
 	const [selectedRunIndex, setSelectedRunIndex] = useState(0);
 	const [exportError, setExportError] = useState<string | null>(null);
 	const chartRef = useRef<SVGSVGElement | null>(null);
 
 	const strategies = strategiesQuery.data ?? [];
+	const strategyOptions =
+		etfStrategyId && !strategies.some((strategy) => strategy.strategy_id === etfStrategyId)
+			? [{ strategy_id: etfStrategyId, name: "ETF 配置交接策略（需已生成 Model 历史工件）" }, ...strategies]
+			: strategies;
 	const manualAccounts = manualAccountsQuery.data ?? [];
 	const paperAccounts = paperAccountsQuery.data ?? [];
 	const sessions = sessionsQuery.data ?? [];
@@ -374,10 +451,10 @@ export function HistoryComparisonPanel() {
 
 	// Auto-select the first option once catalogs arrive; still user-changeable.
 	useEffect(() => {
-		if (strategyId === "" && strategies.length > 0) {
-			setStrategyId((strategies[0] as StrategyOption).strategy_id);
+		if (strategyId === "" && strategyOptions.length > 0) {
+			setStrategyId((strategyOptions[0] as StrategyOption).strategy_id);
 		}
-	}, [strategies, strategyId]);
+	}, [strategyOptions, strategyId]);
 	useEffect(() => {
 		if (paperAccountId === "" && paperAccounts.length > 0) {
 			setPaperAccountId(paperAccounts[0]?.account_id ?? "");
@@ -396,6 +473,7 @@ export function HistoryComparisonPanel() {
 
 	const canSubmit =
 		strategyId !== "" &&
+		(!etfAllocationId || Boolean(new URLSearchParams(window.location.search).get("etfVersion"))) &&
 		paperAccountId !== "" &&
 		paperSessionId !== "" &&
 		manualAccountId !== "" &&
@@ -448,7 +526,9 @@ export function HistoryComparisonPanel() {
 		const nextManual = kind === "manual" ? revision : pinnedManual;
 		setPinnedPaper(nextPaper);
 		setPinnedManual(nextManual);
-		setIdentity({ ...identityWithoutPins(identity), ...pinnedRevisionParams(nextPaper, nextManual) });
+		const next = { ...identityWithoutPins(identity), ...pinnedRevisionParams(nextPaper, nextManual) };
+		setIdentity(next);
+		rememberIdentity(next);
 	};
 
 	return (
@@ -477,8 +557,8 @@ export function HistoryComparisonPanel() {
 						value={strategyId}
 						onChange={(event) => setStrategyId(event.currentTarget.value)}
 					>
-						{strategies.length === 0 && <option value="">（暂无策略）</option>}
-						{strategies.map((strategy) => (
+						{strategyOptions.length === 0 && <option value="">（暂无策略）</option>}
+						{strategyOptions.map((strategy) => (
 							<option key={strategy.strategy_id} value={strategy.strategy_id}>
 								{strategy.name}
 							</option>
@@ -622,7 +702,7 @@ export function HistoryComparisonPanel() {
 							if (!canSubmit) return;
 							setExportError(null);
 							setSelectedRunIndex(0);
-							setIdentity({
+							const next: HistoryComparisonIdentity = {
 								strategy_id: strategyId,
 								paper_account_id: paperAccountId,
 								paper_session_id: paperSessionId,
@@ -634,11 +714,16 @@ export function HistoryComparisonPanel() {
 								publication_cutoff: cutoff,
 								source_snapshot_ids: [...snapshots],
 								...(artifactIds.length > 0 ? { model_artifact_ids: [...artifactIds] } : {}),
+								...(etfAllocationId
+									? { origin_version_id: new URLSearchParams(window.location.search).get("etfVersion") ?? "" }
+									: {}),
 								...pinnedRevisionParams(pinnedPaper, pinnedManual),
 								...(benchmarkText.trim() !== ""
 									? { benchmark_symbol: benchmarkText.trim(), benchmark_type: "price" }
 									: {}),
-							});
+							};
+							setIdentity(next);
+							rememberIdentity(next);
 						}}
 					>
 						比较历史

@@ -220,6 +220,8 @@ class InstrumentService:
         instrument_id: int,
         source: str = "tushare",
         asof: str | None = None,
+        *,
+        cutoff: str | None = None,
     ) -> str | None:
         """
         根据 instrument_id 获取源代码.
@@ -228,12 +230,15 @@ class InstrumentService:
             instrument_id: instrument_id.
             source: 数据源标识.
             asof: 时间点日期.
+            cutoff: 知识截止时刻；隐藏该时刻之后记录的映射行.
 
         Returns:
             源代码 或 None.
 
         """
-        return self._instrument_reader.get_source_ticker(instrument_id, source, asof)
+        return self._instrument_reader.get_source_ticker(
+            instrument_id, source, asof, cutoff=cutoff
+        )
 
     # ============ 行业查询 ============
 
