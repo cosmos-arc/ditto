@@ -68,10 +68,10 @@ def retained_calendar_window(
             snapshot
             for snapshot in snapshots.list_snapshots(dataset_id="calendar")
             if snapshot.payload_retained
-            and snapshot.created_at <= cutoff
+            and (snapshot.last_observed_at or snapshot.created_at) <= cutoff
             and snapshot.request_end >= first_day
         ),
-        key=lambda item: (item.created_at, item.snapshot_id),
+        key=lambda item: (item.last_observed_at or item.created_at, item.snapshot_id),
     )
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")

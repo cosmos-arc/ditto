@@ -82,6 +82,12 @@ class SQLiteProviderSnapshotStore:
             self._client.execute(
                 "ALTER TABLE provider_snapshots ADD COLUMN schema_fingerprint TEXT"
             )
+        if self._column_missing("provider_snapshots", "last_observed_at"):
+            # Upgraded stores predate ordered re-observation evidence; legacy
+            # rows keep using created_at as their effective observation time.
+            self._client.execute(
+                "ALTER TABLE provider_snapshots ADD COLUMN last_observed_at TEXT"
+            )
         self._client.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_provider_snapshots_canonical
@@ -114,7 +120,11 @@ class SQLiteProviderSnapshotStore:
         if existing is not None:
             # A legacy row without the fingerprint pin accepts it on
             # re-ingestion instead of conflicting; both-present stays strict.
-            comparable = replace(snapshot, created_at=existing.created_at)
+            comparable = replace(
+                snapshot,
+                created_at=existing.created_at,
+                last_observed_at=existing.last_observed_at,
+            )
             if existing.schema_fingerprint is None:
                 comparable = replace(comparable, schema_fingerprint=None)
             if comparable != existing:
@@ -122,15 +132,16 @@ class SQLiteProviderSnapshotStore:
                     f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
                 )
             self._backfill_observation(snapshot.snapshot_id)
-            if snapshot.created_at > existing.created_at:
-                # 内容身份不变，但重观察必须对按 created_at 排序的消费者
-                # 可见（例如 open→closed→open 修正回到旧字节时，最后这次
-                # 观察才是最新日历状态），因此把行刷新为本次观察时间。
-                update_created_at = (
-                    "UPDATE provider_snapshots SET created_at = ? WHERE snapshot_id = ?"
+            if snapshot.created_at > (existing.last_observed_at or existing.created_at):
+                # created_at 保持首次可见时间不可变；重观察作为有序事件只
+                # 推进 last_observed_at，让 open→closed→open 这类回到旧字节
+                # 的修正对按观察时间排序的消费者可见。
+                update_last_observed = (
+                    "UPDATE provider_snapshots SET last_observed_at = ?"
+                    " WHERE snapshot_id = ?"
                 )
                 self._client.execute(
-                    update_created_at,
+                    update_last_observed,
                     [snapshot.created_at.isoformat(), snapshot.snapshot_id],
                 )
                 self._client.commit()
@@ -160,9 +171,9 @@ class SQLiteProviderSnapshotStore:
                     canonical_dataset_id, canonical_partition_keys,
                     request_parameters_hash, response_metadata, license_record_id,
                     row_count, payload_uri, payload_retained, created_at,
-                    schema_fingerprint
+                    schema_fingerprint, last_observed_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     snapshot.snapshot_id,
@@ -183,6 +194,7 @@ class SQLiteProviderSnapshotStore:
                     int(snapshot.payload_retained),
                     snapshot.created_at.isoformat(),
                     snapshot.schema_fingerprint,
+                    None,
                 ],
             )
             previous = self._client.fetchone(
@@ -341,6 +353,11 @@ def _snapshot_from_row(row: dict[str, Any]) -> ProviderSnapshot:
         schema_fingerprint=(
             str(row["schema_fingerprint"])
             if row.get("schema_fingerprint") is not None
+            else None
+        ),
+        last_observed_at=(
+            datetime.fromisoformat(str(row["last_observed_at"]))
+            if row.get("last_observed_at") is not None
             else None
         ),
     )

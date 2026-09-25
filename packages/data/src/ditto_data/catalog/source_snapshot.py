@@ -84,6 +84,8 @@ class ProviderSnapshot:
     payload_retained: bool
     created_at: datetime
     schema_fingerprint: str | None = None
+    # 最后一次本地重观察时间；created_at 保持首次可见时间不可变。
+    last_observed_at: datetime | None = None
 
     def __post_init__(self) -> None:
         """Validate source evidence without persisting provider secrets."""
@@ -117,6 +119,7 @@ class ProviderSnapshot:
             raise ValueError("provider snapshot row_count must be non-negative")
         if self.created_at.tzinfo is None:
             raise ValueError("provider snapshot created_at must be timezone-aware")
+        _validate_last_observed_at(self.last_observed_at, self.created_at)
         if len({key for key, _value in self.response_metadata}) != len(
             self.response_metadata
         ):
@@ -174,6 +177,18 @@ class ProviderSnapshot:
             self.schema_version,
             self.checksum,
         )
+
+
+def _validate_last_observed_at(
+    last_observed_at: datetime | None, created_at: datetime
+) -> None:
+    """Re-observation bookkeeping never predates first visibility."""
+    if last_observed_at is None:
+        return
+    if last_observed_at.tzinfo is None:
+        raise ValueError("provider snapshot last_observed_at must be timezone-aware")
+    if last_observed_at < created_at:
+        raise ValueError("provider snapshot last_observed_at precedes created_at")
 
 
 def snapshot_identity(

@@ -207,7 +207,9 @@ class TestReobservationOrdering:
 
             stored = store.get_snapshot(original.snapshot_id)
             assert stored is not None
-            assert stored.created_at == reopened.created_at
+            # 首次可见时间不可变；重观察只推进 last_observed_at。
+            assert stored.created_at == original.created_at
+            assert stored.last_observed_at == reopened.created_at
             assert store.get_observed_at(original.snapshot_id) is not None
         finally:
             pool.close()
