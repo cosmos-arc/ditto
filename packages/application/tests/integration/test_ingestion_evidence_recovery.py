@@ -239,6 +239,17 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
         stored = snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
         assert stored is not None
         assert stored.observations == (observed_again,)
+        unattested = replace(
+            replay,
+            quality_attested=False,
+            provider_snapshot=replace(
+                replay.provider_snapshot, created_at=observed_again.replace(hour=11)
+            ),
+        )
+        rejected = committer.commit(unattested)
+        assert not rejected.completed
+        assert rejected.error_code == "DQ_EVIDENCE_MISSING"
+        assert snapshots.get_snapshot(request.provider_snapshot.snapshot_id) == stored
         assert catalog.get_asset(request.catalog_entry.asset) == request.catalog_entry
         assert lineage.list_events_for_run(request.lineage_event.run_id) == (
             request.lineage_event,

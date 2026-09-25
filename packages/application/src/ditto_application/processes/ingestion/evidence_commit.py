@@ -247,6 +247,11 @@ class IngestionEvidenceCommitter:
         try:
             checkpoint = self._prepare_checkpoint(request)
             if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
+                evidence_error = self._evidence_error(request)
+                if evidence_error is not None:
+                    return EvidenceCommitOutcome(
+                        request.chunk_id, completed=False, error_code=evidence_error
+                    )
                 self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
                 self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
@@ -262,18 +267,12 @@ class IngestionEvidenceCommitter:
     def _commit_catalog_evidence(
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitOutcome | None:
-        license_error = self._license_error(request)
-        if license_error is not None:
+        evidence_error = self._evidence_error(request)
+        if evidence_error is not None:
             return self._fail(
                 request,
                 status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code=license_error,
-            )
-        if not request.quality_attested:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code="DQ_EVIDENCE_MISSING",
+                error_code=evidence_error,
             )
 
         checkpoint = self._require_checkpoint(request.chunk_id)
@@ -497,6 +496,11 @@ class IngestionEvidenceCommitter:
                 ),
             )
         return current
+
+    def _evidence_error(self, request: EvidenceCommitRequest) -> str | None:
+        return self._license_error(request) or (
+            None if request.quality_attested else "DQ_EVIDENCE_MISSING"
+        )
 
     def _license_error(self, request: EvidenceCommitRequest) -> str | None:
         snapshot = request.provider_snapshot
