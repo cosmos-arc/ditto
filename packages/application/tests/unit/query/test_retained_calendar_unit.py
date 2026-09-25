@@ -192,6 +192,24 @@ def test_newer_calendar_revision_cannot_inherit_a_missing_date() -> None:
         )
 
 
+@pytest.mark.pit
+def test_paper_handoff_rejects_a_gap_in_its_first_calendar_shard() -> None:
+    incomplete = _shard(
+        "snapshot:recorded:calendar:incomplete",
+        created_at=datetime(2026, 6, 1, tzinfo=UTC),
+        days=["2026-06-01", "2026-06-03"],
+    )
+    snapshots, payloads = _readers([incomplete])
+
+    with pytest.raises(AppProcessError, match="calendar is incomplete"):
+        _next_trading_day(
+            snapshots=snapshots,
+            payloads=payloads,
+            cutoff=datetime(2026, 6, 3, tzinfo=UTC),
+            signal_date="2026-06-01",
+        )
+
+
 def test_paper_calendar_ignores_newer_observation_of_old_shard() -> None:
     """A routine observation of last year's shard cannot hide current dates."""
     old = _shard(

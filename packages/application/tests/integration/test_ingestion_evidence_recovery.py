@@ -228,6 +228,17 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
             snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
             == request.provider_snapshot
         )
+        observed_again = request.provider_snapshot.created_at.replace(hour=10)
+        replay = replace(
+            request,
+            provider_snapshot=replace(
+                request.provider_snapshot, created_at=observed_again
+            ),
+        )
+        assert committer.commit(replay).completed
+        stored = snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
+        assert stored is not None
+        assert stored.observations == (observed_again,)
         assert catalog.get_asset(request.catalog_entry.asset) == request.catalog_entry
         assert lineage.list_events_for_run(request.lineage_event.run_id) == (
             request.lineage_event,

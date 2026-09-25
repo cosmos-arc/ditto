@@ -247,6 +247,7 @@ class IngestionEvidenceCommitter:
         try:
             checkpoint = self._prepare_checkpoint(request)
             if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
+                self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
                 self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
             self._advance_payload_stages(checkpoint, request)

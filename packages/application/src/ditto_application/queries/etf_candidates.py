@@ -24,6 +24,7 @@ from ditto_application.queries.field_admission import (
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
     RetainedCalendarWindow,
+    calendar_has_complete_authority,
     retained_calendar_window,
 )
 
@@ -328,15 +329,11 @@ class ETFCandidateQuery:
                 raise AppQueryError(
                     "ETF evaluation calendar does not cover the as-of date"
                 )
-            _ensure_complete_authority(
-                calendar.authority, first_day, decision_day.isoformat()
-            )
             # 血缘覆盖选出最终窗口所消费的每一个权威决定（含把日期改为闭市
             # 的决定——它们同样改变了哪 253 个交易日被选中）。
             _ensure_single_calendar_source(calendar_shards, calendar.shard_sources)
-            if any(
-                first_day <= day <= decision_day.isoformat()
-                for day in calendar.revision_gaps
+            if not calendar_has_complete_authority(
+                calendar, first_day, decision_day.isoformat()
             ):
                 raise AppQueryError("ETF evaluation calendar has a coverage gap")
         except AppQueryError as exc:
@@ -681,24 +678,6 @@ def _calendar_failure_reason(exc: AppQueryError) -> str:
     if "coverage gap" in message:
         return "evaluation_calendar_gap"
     return "evaluation_calendar_mixed_sources"
-
-
-def _ensure_complete_authority(
-    authority: dict[str, str], first_day: str, asof: str
-) -> None:
-    """
-    Require an explicit open/closed decision for every consumed date.
-
-    Provider calendar payloads carry one row per calendar date (weekends and
-    holidays included) across their fetched range, so any date in the consumed
-    span without an authoritative decision is missing evidence, not a closure.
-    """
-    day = date.fromisoformat(first_day)
-    end = date.fromisoformat(asof)
-    while day <= end:
-        if day.isoformat() not in authority:
-            raise AppQueryError("ETF evaluation calendar has a coverage gap")
-        day += timedelta(days=1)
 
 
 def _ensure_single_calendar_source(

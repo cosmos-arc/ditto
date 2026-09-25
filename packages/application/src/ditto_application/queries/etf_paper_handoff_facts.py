@@ -26,6 +26,7 @@ from ditto_application.queries.field_admission import (
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
+    calendar_has_complete_authority,
     calendar_has_single_source,
     retained_trading_days,
 )
@@ -48,7 +49,7 @@ def _next_trading_day(
     later = [day for day in calendar.days if day > signal_date]
     if not later:
         raise AppProcessError("ETF Paper trading calendar is incomplete")
-    if any(signal_date <= day <= later[0] for day in calendar.revision_gaps):
+    if not calendar_has_complete_authority(calendar, signal_date, later[0]):
         raise AppProcessError("ETF Paper trading calendar is incomplete")
     if not calendar_has_single_source(calendar, signal_date, later[0]):
         raise AppProcessError("ETF Paper trading calendar mixes provider sources")

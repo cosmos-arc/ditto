@@ -373,3 +373,6 @@ def test_etf_paper_settlement_rejects_a_new_revision_hole() -> None:
 
     with pytest.raises(AppProcessError, match="settlement calendar is incomplete"):
         facts._settlement_date("2026-09-02", 1, EXECUTION)
+    snapshots.list_snapshots.return_value = (revision,)
+    with pytest.raises(AppProcessError, match="settlement calendar is incomplete"):
+        facts._settlement_date("2026-09-02", 1, EXECUTION)

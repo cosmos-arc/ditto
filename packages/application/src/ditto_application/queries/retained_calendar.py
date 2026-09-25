@@ -63,6 +63,22 @@ class RetainedCalendarWindow(NamedTuple):
     revision_gaps: frozenset[str]
 
 
+def calendar_has_complete_authority(
+    calendar: RetainedCalendar | RetainedCalendarWindow,
+    first_day: str,
+    last_day: str,
+) -> bool:
+    """Require an explicit decision and no revision hole for each consumed date."""
+    day = date.fromisoformat(first_day)
+    final = date.fromisoformat(last_day)
+    while day <= final:
+        iso = day.isoformat()
+        if iso not in calendar.authority or iso in calendar.revision_gaps:
+            return False
+        day += timedelta(days=1)
+    return True
+
+
 def _calendar_states(
     frame: pl.DataFrame, first_day: str, last_day: str
 ) -> dict[str, bool]:

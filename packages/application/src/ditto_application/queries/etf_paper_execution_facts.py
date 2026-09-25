@@ -36,6 +36,7 @@ from ditto_application.queries.field_admission import (
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
+    calendar_has_complete_authority,
     calendar_has_single_source,
     retained_trading_days,
 )
@@ -439,7 +440,7 @@ class LiveETFPaperExecutionFacts:
         days = [day for day in calendar.days if trade_date <= day <= horizon]
         if not days or days[0] != trade_date or len(days) <= cycle:
             raise AppProcessError("ETF Paper settlement calendar is incomplete")
-        if any(trade_date <= day <= days[cycle] for day in calendar.revision_gaps):
+        if not calendar_has_complete_authority(calendar, trade_date, days[cycle]):
             raise AppProcessError("ETF Paper settlement calendar is incomplete")
         if not calendar_has_single_source(calendar, trade_date, days[cycle]):
             raise AppProcessError(
