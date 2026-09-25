@@ -650,6 +650,24 @@ def test_tracking_comparison_requires_complete_visible_total_return_series(
     pool.close()
 
 
+def _assert_shard_scoped_admission(requests: list[FieldAdmissionRequest]) -> None:
+    """Calendar shards are admitted per their own authoritative interval."""
+    calendar_requests = {
+        request.fields[0].snapshot_id: request
+        for request in requests
+        if request.purpose == "formal_research"
+        and request.fields[0].dataset_id == "calendar"
+    }
+    assert set(calendar_requests) == {
+        "snapshot:recorded:calendar:2025",
+        "snapshot:recorded:calendar:2026",
+    }
+    assert calendar_requests["snapshot:recorded:calendar:2025"].required_to.year == 2025
+    assert (
+        calendar_requests["snapshot:recorded:calendar:2026"].required_from.year == 2026
+    )
+
+
 @pytest.mark.integration
 def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
     tmp_path: Path,
@@ -727,15 +745,7 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
             and request.required_from == date.fromisoformat(days[0])
             for request in requests
         )
-        assert all(
-            any(
-                requirement.dataset_id == "calendar"
-                and requirement.snapshot_id.startswith("snapshot:recorded:calendar:")
-                for requirement in request.fields
-            )
-            for request in requests
-            if request.purpose == "formal_research"
-        )
+        _assert_shard_scoped_admission(requests)
         formal_allowed[0] = True
         unaligned = web.get("/api/v1/metadata/etf-candidates", params=params)
         _assert_rejection_evidence(

@@ -112,7 +112,12 @@ class TrackingLineage(NamedTuple):
     """Snapshot identities behind one tracking evaluation."""
 
     source_snapshot_id: str
-    calendar_snapshot_ids: tuple[str, ...]
+    calendar_shards: tuple[tuple[str, str, str], ...]
+
+    @property
+    def calendar_snapshot_ids(self) -> tuple[str, ...]:
+        """Every calendar shard identity in authoritative order."""
+        return tuple(shard_id for shard_id, _first, _last in self.calendar_shards)
 
 
 @dataclass(frozen=True)
@@ -257,7 +262,7 @@ class ETFCandidateQuery:
                         cutoff=cutoff,
                         lineage=TrackingLineage(
                             source_snapshot_id=source_snapshot_id,
-                            calendar_snapshot_ids=calendar.snapshot_ids,
+                            calendar_shards=calendar.shard_intervals,
                         ),
                     ),
                 )
@@ -402,35 +407,48 @@ class ETFCandidateQuery:
             source != snapshot.source for source in series_sources
         ):
             return "unavailable", "source_or_display_admission_denied"
-        report = self._admission.assess(
+        parsed_cutoff = _validate_cutoff(cutoff)
+        # The reference fields span the whole window, but each calendar shard
+        # is only assessed for the dates it authoritatively decides; one
+        # window-wide request would fail every annual shard's own coverage.
+        reference_report = self._admission.assess(
             FieldAdmissionRequest(
-                fields=(
-                    *(
-                        FieldRequirement(snapshot.dataset_id, field, source_snapshot_id)
-                        for field in (
-                            "tracking_index",
-                            "nav_total_return",
-                            "benchmark_total_return",
-                        )
-                    ),
-                    # The formal window is only as admitted as the calendar
-                    # shards that defined it.
-                    *(
-                        FieldRequirement("calendar", "is_open", shard_id)
-                        for shard_id in lineage.calendar_snapshot_ids
-                    ),
+                fields=tuple(
+                    FieldRequirement(snapshot.dataset_id, field, source_snapshot_id)
+                    for field in (
+                        "tracking_index",
+                        "nav_total_return",
+                        "benchmark_total_return",
+                    )
                 ),
                 instrument_ids=(instrument_id,),
                 required_from=date.fromisoformat(sessions[0]),
                 required_to=date.fromisoformat(sessions[-1]),
-                knowledge_cutoff=_validate_cutoff(cutoff),
-                publication_cutoff=_validate_cutoff(cutoff),
+                knowledge_cutoff=parsed_cutoff,
+                publication_cutoff=parsed_cutoff,
                 purpose="formal_research",
             )
         )
+        calendar_reports = [
+            self._admission.assess(
+                FieldAdmissionRequest(
+                    fields=(FieldRequirement("calendar", "is_open", shard_id),),
+                    instrument_ids=(instrument_id,),
+                    required_from=date.fromisoformat(first_day),
+                    required_to=date.fromisoformat(last_day),
+                    knowledge_cutoff=parsed_cutoff,
+                    publication_cutoff=parsed_cutoff,
+                    purpose="formal_research",
+                )
+            )
+            for shard_id, first_day, last_day in lineage.calendar_shards
+        ]
+        admitted = reference_report.allowed and all(
+            report.allowed for report in calendar_reports
+        )
         return (
             ("comparable", None)
-            if report.allowed
+            if admitted
             else ("unavailable", "formal_admission_denied")
         )
 

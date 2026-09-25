@@ -236,9 +236,9 @@ payload 覆盖合并派生（生产日历按年度分片摄取、日摄取的 re
 交易日计，允许周末与春节/国庆长假的自然日桥接）时整个比较 fail closed，不读
 无版本的当前日历；对窗口内每个交易日具有最终决定权的全部分片身份以
 `calendar_snapshot_ids` 随跟踪结果一起返回，保证窗口来源可审计
-可回放；正式 comparable 还要求所选日历分片的 calendar.is_open 字段通过
-formal_research 准入，且 `tracking_index` 关系行与总回报序列的 `source`
-必须与快照一致才可能进入正式排名。
+可回放；正式 comparable 还要求参考快照字段（整窗区间）与每个日历分片的
+calendar.is_open 字段（只按该分片权威覆盖的区间）分别通过 formal_research 准入，
+且 `tracking_index` 关系行与总回报序列的 `source` 必须与快照一致才可能进入正式排名。
 读取时序字段（`daily_amount` 与两类总回报）以下界 `observed_since`
 约束在评价窗口内，其余字段仍按生效区间过滤、不限观察日期。缺日、币种/基准不符、
 历史关系变化或正式研究字段准入不足时不产生
