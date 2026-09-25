@@ -388,6 +388,7 @@ def build_evidence_commit_request(
         source=ctx.source_name,
         request_start=request_start,
         request_end=request_end,
+        ingestion_date=ctx.trade_date,
         provider_snapshot=snapshot,
         catalog_entry=catalog_entry,
         lineage_event=_lineage_event(

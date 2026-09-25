@@ -77,6 +77,9 @@ class EvidenceCommitRequest:
     success_log: IngestionLog
     quality_attested: bool = True
     retry_budget: int = 3
+    # 摄取/处理日，默认等于覆盖起点。success log 的 trade_date 必须等于它，
+    # 而不是等于 provider 覆盖区间的起点（日历日更的覆盖起点是年初）。
+    ingestion_date: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -387,7 +390,8 @@ class IngestionEvidenceCommitter:
         if (
             request.success_log.dataset != request.dataset_id
             or request.success_log.source != request.source
-            or request.success_log.trade_date != request.request_start
+            or request.success_log.trade_date
+            != (request.ingestion_date or request.request_start)
             or request.success_log.status is not IngestionStatus.SUCCESS
             or not isinstance(request.success_log.checksum, str)
             or not request.success_log.checksum

@@ -60,12 +60,12 @@ def retained_calendar_window(
     Combine cutoff-visible retained calendar shards into one window.
 
     Production calendar evidence arrives as annual bootstrap chunks plus
-    current-year daily shards whose recorded request bounds are only the
-    ingestion day, so shards are selected by payload coverage, not request
-    bounds. All shards must come from one provider source; revisions then
-    apply oldest-to-newest and the newest revision wins per date, so a
-    corrected closure can never be masked by a stale open day. Every shard
-    with final authority over an in-window date keeps its identity.
+    current-year daily shards, so shards are selected by payload coverage,
+    not request bounds. Revisions apply oldest-to-newest and the newest
+    revision wins per date, so a corrected closure can never be masked by a
+    stale open day. Shards from other providers that contribute no in-window
+    date are ignored; ambiguity is judged only on contributing shards. Every
+    shard with final authority over an in-window date keeps its identity.
     """
     shards = sorted(
         (
@@ -79,14 +79,13 @@ def retained_calendar_window(
     )
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
-    sources = {snapshot.source for snapshot in shards}
-    if len(sources) > 1:
-        raise RetainedCalendarAmbiguous(sorted(sources))
     authorship: dict[str, tuple[bool, str]] = {}
+    shard_sources: dict[str, str] = {}
     read_payloads: dict[str, pl.DataFrame] = {}
     for snapshot in shards:
         if snapshot.payload_uri is None:
             raise RetainedCalendarAbsent("retained calendar is absent or future")
+        shard_sources[snapshot.snapshot_id] = snapshot.source
         frame = read_payloads.get(snapshot.checksum)
         if frame is None:
             frame = payloads.read_payload(
@@ -101,6 +100,9 @@ def retained_calendar_window(
             read_payloads[snapshot.checksum] = frame
         for day, is_open in _calendar_states(frame, first_day, last_day).items():
             authorship[day] = (is_open, snapshot.snapshot_id)
+    contributing = {shard_sources[state[1]] for state in authorship.values()}
+    if len(contributing) > 1:
+        raise RetainedCalendarAmbiguous(sorted(contributing))
     days = sorted(day for day, state in authorship.items() if state[0])
     if not days:
         raise RetainedCalendarAbsent("retained calendar is malformed")

@@ -529,6 +529,8 @@ def test_etf_candidates_fail_closed_on_mixed_calendar_sources(
             days.append(day.isoformat())
         day -= timedelta(days=1)
     days.reverse()
+    # 只接手 2026 年日期：2025 年仍由 recorded 分片决定，窗口真正混合来源。
+    partial = [day for day in days if day.startswith("2026")]
     app, pool, snapshot = _setup(
         tmp_path,
         tracking_sessions=days,
@@ -536,10 +538,10 @@ def test_etf_candidates_fail_closed_on_mixed_calendar_sources(
             (
                 "snapshot:secondary:calendar:one",
                 "secondary",
-                days[0],
-                days[-1],
-                days,
-                [True] * len(days),
+                partial[0],
+                partial[-1],
+                partial,
+                [True] * len(partial),
             )
         ],
     )
@@ -983,6 +985,58 @@ def test_tracking_lineage_excludes_shards_outside_selected_window(
         assert response.status_code == 200, response.text
         tracking = response.json()["data"][0]["tracking"]
         assert tracking["reason"] == "fund_and_benchmark_total_return_missing"
+        assert tracking["calendar_snapshot_ids"] == [
+            "snapshot:recorded:calendar:2025",
+            "snapshot:recorded:calendar:2026",
+        ]
+    pool.close()
+
+
+@pytest.mark.integration
+@pytest.mark.pit
+def test_foreign_calendar_shard_outside_window_does_not_block(
+    tmp_path: Path,
+) -> None:
+    """A foreign-source shard contributing no window date is not ambiguity."""
+    days = []
+    day = date(2026, 9, 30)
+    while len(days) < 253:
+        if day.weekday() < 5:
+            days.append(day.isoformat())
+        day -= timedelta(days=1)
+    days.reverse()
+    future: list[str] = []
+    day = date(2026, 12, 1)
+    while day.month == 12:
+        if day.weekday() < 5:
+            future.append(day.isoformat())
+        day += timedelta(days=1)
+    app, pool, snapshot = _setup(
+        tmp_path,
+        tracking_sessions=days,
+        calendar_overrides=[
+            (
+                "snapshot:secondary:calendar:future",
+                "secondary",
+                future[0],
+                future[-1],
+                future,
+                [True] * len(future),
+            )
+        ],
+    )
+    with TestClient(app) as web:
+        response = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={
+                "asof": "2026-09-30",
+                "cutoff": "2026-09-30T18:00:00Z",
+                "source_snapshot_id": snapshot,
+                "exposure": "000300.SH",
+            },
+        )
+        assert response.status_code == 200, response.text
+        tracking = response.json()["data"][0]["tracking"]
         assert tracking["calendar_snapshot_ids"] == [
             "snapshot:recorded:calendar:2025",
             "snapshot:recorded:calendar:2026",
