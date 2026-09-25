@@ -416,10 +416,11 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912 - fail-closed stages
     if ctx.evidence_committer is None:
         record_ingestion_lineage(
             dataset,
-            trade_date,
+            request_start or trade_date,
             source_name=ctx.source_name,
             lineage_recorder=ctx.lineage_recorder,
             write_result=write_result,
+            end_date=request_end,
         )
         if not sparse_pit:
             record_data_catalog_entry(

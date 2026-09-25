@@ -36,16 +36,32 @@ class _CalendarFrame(dict):
 def _calendar_shards(
     calendar_days: list[str],
     overrides: list[tuple[str, str, str, str, list[str], list[bool]]] | None,
+    omit: frozenset[str],
 ) -> tuple[list[Any], dict[str, list[str]], dict[str, list[bool]]]:
-    """Split fixture calendar days into per-year shards plus later revisions."""
+    """Split fixture calendar days into per-year shards plus later revisions.
+
+    与生产 trade_cal 一致，每个分片 payload 覆盖其区间内的每个自然日
+    （周末/节假日为 is_open=false 行）；``omit`` 模拟残缺 payload 缺日。
+    """
+    open_days = frozenset(calendar_days)
     shard_days: dict[str, list[str]] = {}
     shard_flags: dict[str, list[bool]] = {}
     shards = []
     for index, year in enumerate(sorted({day[:4] for day in calendar_days})):
-        days = [day for day in calendar_days if day.startswith(year)]
+        sessions = [day for day in calendar_days if day.startswith(year)]
+        full_days: list[str] = []
+        flags: list[bool] = []
+        cursor = date.fromisoformat(sessions[0])
+        final = date.fromisoformat(sessions[-1])
+        while cursor <= final:
+            iso = cursor.isoformat()
+            if iso not in omit:
+                full_days.append(iso)
+                flags.append(iso in open_days)
+            cursor += timedelta(days=1)
         checksum = f"{index:032x}"
-        shard_days[checksum] = days
-        shard_flags[checksum] = [True] * len(days)
+        shard_days[checksum] = full_days
+        shard_flags[checksum] = flags
         shards.append(
             SimpleNamespace(
                 dataset_id="calendar",
@@ -55,9 +71,9 @@ def _calendar_shards(
                 payload_retained=True,
                 payload_uri=(f"provider_payloads/recorded/calendar/{checksum}.parquet"),
                 checksum=checksum,
-                row_count=len(days),
-                request_start=days[0],
-                request_end=days[-1],
+                row_count=len(full_days),
+                request_start=full_days[0],
+                request_end=full_days[-1],
             )
         )
     # (snapshot_id, source, request_start, request_end, days, flags)：request
@@ -85,6 +101,23 @@ def _calendar_shards(
     return shards, shard_days, shard_flags
 
 
+def _full_date_payload(
+    open_days: list[str], closed: frozenset[str] = frozenset()
+) -> tuple[list[str], list[bool]]:
+    """Expand weekday sessions into a full trade_cal-shaped payload."""
+    days: list[str] = []
+    flags: list[bool] = []
+    open_set = set(open_days)
+    cursor = date.fromisoformat(open_days[0])
+    end = date.fromisoformat(open_days[-1])
+    while cursor <= end:
+        iso = cursor.isoformat()
+        days.append(iso)
+        flags.append(iso in open_set and iso not in closed)
+        cursor += timedelta(days=1)
+    return days, flags
+
+
 def _setup(
     tmp_path: Path,
     *,
@@ -94,6 +127,7 @@ def _setup(
     tracking_sessions: list[str] | None = None,
     calendar_overrides: list[tuple[str, str, str, str, list[str], list[bool]]]
     | None = None,
+    calendar_omit: frozenset[str] = frozenset(),
 ) -> tuple[FastAPI, SQLitePool, str]:
     """Build an isolated recorded ETF source and its HTTP reader."""
     schema = Path(str(files("ditto_data.scripts") / "schema.sql"))
@@ -174,7 +208,7 @@ def _setup(
 
     sessions: list[str] = []
     day = date(2026, 9, 1)
-    while len(sessions) < 20:
+    while len(sessions) < 22:
         if day.weekday() < 5:
             sessions.append(day.isoformat())
         day += timedelta(days=1)
@@ -205,7 +239,7 @@ def _setup(
     # 每个分片携带独立身份，窗口必须由全部分片合并而成；overrides 提供更晚
     # 创建的修订分片（逐日覆盖，后写胜出）。
     calendar_snapshots, shard_days, shard_flags = _calendar_shards(
-        calendar_days, calendar_overrides
+        calendar_days, calendar_overrides, calendar_omit
     )
     snapshots_reader = SimpleNamespace(
         get_snapshot=(
@@ -433,8 +467,7 @@ def test_newer_calendar_revision_closes_previously_open_session(
             days.append(day.isoformat())
         day -= timedelta(days=1)
     days.reverse()
-    flags = [True] * len(days)
-    flags[100] = False
+    revision_days, revision_flags = _full_date_payload(days, frozenset({days[100]}))
     app, pool, snapshot = _setup(
         tmp_path,
         tracking_sessions=days,
@@ -442,10 +475,10 @@ def test_newer_calendar_revision_closes_previously_open_session(
             (
                 "snapshot:recorded:calendar:revision",
                 "recorded",
-                days[0],
-                days[-1],
-                days,
-                flags,
+                revision_days[0],
+                revision_days[-1],
+                revision_days,
+                revision_flags,
             )
         ],
     )
@@ -481,8 +514,7 @@ def test_daily_calendar_revision_beyond_asof_still_overlays_history(
             days.append(day.isoformat())
         day -= timedelta(days=1)
     days.reverse()
-    flags = [True] * len(days)
-    flags[100] = False
+    revision_days, revision_flags = _full_date_payload(days, frozenset({days[100]}))
     app, pool, snapshot = _setup(
         tmp_path,
         tracking_sessions=days,
@@ -492,8 +524,8 @@ def test_daily_calendar_revision_beyond_asof_still_overlays_history(
                 "recorded",
                 "2026-10-01",
                 "2026-10-01",
-                days,
-                flags,
+                revision_days,
+                revision_flags,
             )
         ],
     )
@@ -1150,8 +1182,14 @@ def test_partial_calendar_payload_with_hole_fails_closed(tmp_path: Path) -> None
             days.append(day.isoformat())
         day -= timedelta(days=1)
     days.reverse()
-    holed = days[:100] + days[140:]
-    app, pool, snapshot = _setup(tmp_path, tracking_sessions=holed)
+    omitted = {days[100]}
+    cursor = date.fromisoformat(days[100])
+    while cursor <= date.fromisoformat(days[139]):
+        omitted.add(cursor.isoformat())
+        cursor += timedelta(days=1)
+    app, pool, snapshot = _setup(
+        tmp_path, tracking_sessions=days, calendar_omit=frozenset(omitted)
+    )
     with TestClient(app) as web:
         response = web.get(
             "/api/v1/metadata/etf-candidates",

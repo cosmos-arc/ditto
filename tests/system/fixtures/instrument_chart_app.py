@@ -271,19 +271,25 @@ def _seed(root: Path) -> None:
         )
     )
     SQLiteDatasetLicenseStore(client).append_license(calendar_license)
-    calendar_days = [day.isoformat() for day in tracking_days]
+    open_days = {day.isoformat() for day in tracking_days}
     # 页面默认研究日期是"今天"：把已排期交易日延伸到今天，日历才覆盖研究日。
     cursor = tracking_days[-1] + timedelta(days=1)
     while cursor <= date.today():
         if cursor.weekday() < 5:
-            calendar_days.append(cursor.isoformat())
+            open_days.add(cursor.isoformat())
         cursor += timedelta(days=1)
+    # 与生产 trade_cal 一致，payload 覆盖区间内每个自然日（周末为闭市行）。
+    calendar_days: list[str] = []
+    calendar_open: list[bool] = []
+    day_cursor = tracking_days[0]
+    while day_cursor <= date.today():
+        calendar_days.append(day_cursor.isoformat())
+        calendar_open.append(day_cursor.isoformat() in open_days)
+        day_cursor += timedelta(days=1)
     artifact = FilesystemProviderPayloadStore(root / "state").retain_payload(
         dataset_id="calendar",
         source="recorded",
-        payload=pl.DataFrame(
-            {"trade_date": calendar_days, "is_open": [True] * len(calendar_days)}
-        ),
+        payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
     )
     SQLiteProviderSnapshotStore(client).append_snapshot(
         ProviderSnapshot.create(
