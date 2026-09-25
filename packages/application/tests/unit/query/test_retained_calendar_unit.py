@@ -183,6 +183,14 @@ def test_newer_calendar_revision_cannot_inherit_a_missing_date() -> None:
     )
     assert window.revision_gaps == frozenset({"2026-06-02"})
 
+    with pytest.raises(AppProcessError, match="calendar is incomplete"):
+        _next_trading_day(
+            snapshots=snapshots,
+            payloads=payloads,
+            cutoff=datetime(2026, 6, 3, tzinfo=UTC),
+            signal_date="2026-06-01",
+        )
+
 
 def test_paper_calendar_ignores_newer_observation_of_old_shard() -> None:
     """A routine observation of last year's shard cannot hide current dates."""

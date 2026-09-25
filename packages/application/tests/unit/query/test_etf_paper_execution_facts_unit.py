@@ -340,3 +340,36 @@ def test_etf_paper_settlement_rejects_only_consumed_mixed_calendar_sources() -> 
         else primary_frame
     )
     assert facts._settlement_date("2026-09-02", 1, EXECUTION) == "2026-09-03"
+
+
+@pytest.mark.pit
+def test_etf_paper_settlement_rejects_a_new_revision_hole() -> None:
+    facts, _metadata, _bars, _ledger, snapshots = _facts()
+    original = snapshots.list_snapshots.return_value[0]
+    revision = SimpleNamespace(
+        **{
+            **vars(original),
+            "snapshot_id": "calendar-incomplete-revision",
+            "checksum": "b" * 32,
+            "payload_uri": f"provider_payloads/tushare/calendar/{'b' * 32}.parquet",
+            "created_at": EXECUTION,
+            "request_start": "2026-09-02",
+            "request_end": "2026-09-04",
+        }
+    )
+    snapshots.list_snapshots.return_value = (original, revision)
+    payloads = cast(MagicMock, facts._payloads)
+    original_frame = payloads.read_payload.return_value
+    payloads.read_payload.side_effect = lambda artifact: (
+        pl.DataFrame(
+            {
+                "trade_date": [date(2026, 9, 2), date(2026, 9, 4)],
+                "is_open": [True, False],
+            }
+        )
+        if artifact.checksum == revision.checksum
+        else original_frame
+    )
+
+    with pytest.raises(AppProcessError, match="settlement calendar is incomplete"):
+        facts._settlement_date("2026-09-02", 1, EXECUTION)

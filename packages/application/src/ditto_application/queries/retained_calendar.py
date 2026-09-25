@@ -24,6 +24,7 @@ class RetainedCalendar(NamedTuple):
     snapshot_id: str
     authority: dict[str, str]
     shard_sources: dict[str, str]
+    revision_gaps: frozenset[str]
 
 
 def calendar_has_single_source(
@@ -195,4 +196,5 @@ def retained_trading_days(
         window.authority[window.days[0]],
         window.authority,
         window.shard_sources,
+        window.revision_gaps,
     )
