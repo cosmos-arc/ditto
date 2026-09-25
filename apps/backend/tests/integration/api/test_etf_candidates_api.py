@@ -735,7 +735,9 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
         ProviderSnapshotReader,
         SimpleNamespace(
             get_snapshot=lambda _id: SimpleNamespace(
-                dataset_id="etf_reference", source="provider"
+                dataset_id="etf_reference",
+                source="provider",
+                created_at=datetime(2026, 9, 30, 18, 30, tzinfo=UTC),
             )
         ),
     )
@@ -849,6 +851,47 @@ def test_tracking_formal_result_requires_field_admission_and_matching_benchmark(
 
 
 @pytest.mark.integration
+@pytest.mark.pit
+def test_reference_snapshot_created_after_cutoff_is_not_visible(tmp_path: Path) -> None:
+    """Earlier publication dates do not backdate snapshot visibility."""
+    snapshot_reader = cast(
+        ProviderSnapshotReader,
+        SimpleNamespace(
+            get_snapshot=lambda _id: SimpleNamespace(
+                dataset_id="etf_reference",
+                source="provider",
+                created_at=datetime(2026, 9, 30, 20, tzinfo=UTC),
+            )
+        ),
+    )
+    app, pool, snapshot = _setup(tmp_path, snapshots=snapshot_reader, source="provider")
+    with TestClient(app) as web:
+        old_cutoff = "2026-09-30T19:00:00Z"
+        listed = web.get(
+            "/api/v1/metadata/etf-reference-snapshots",
+            params={"cutoff": old_cutoff},
+        )
+        assert listed.status_code == 200, listed.text
+        assert snapshot not in listed.json()["data"]
+        params = {
+            "asof": "2026-09-30",
+            "cutoff": old_cutoff,
+            "source_snapshot_id": snapshot,
+        }
+        hidden = web.get("/api/v1/metadata/etf-candidates", params=params)
+        assert hidden.status_code == 400
+        assert "source snapshot is future at cutoff" in hidden.text
+
+        later = web.get(
+            "/api/v1/metadata/etf-candidates",
+            params={**params, "cutoff": "2026-09-30T21:00:00Z"},
+        )
+        assert later.status_code == 200, later.text
+        assert later.json()["data"]
+    pool.close()
+
+
+@pytest.mark.integration
 def test_tracking_relation_source_mismatch_blocks_formal_result(
     tmp_path: Path,
 ) -> None:
@@ -872,7 +915,9 @@ def test_tracking_relation_source_mismatch_blocks_formal_result(
         ProviderSnapshotReader,
         SimpleNamespace(
             get_snapshot=lambda _id: SimpleNamespace(
-                dataset_id="etf_reference", source="provider"
+                dataset_id="etf_reference",
+                source="provider",
+                created_at=datetime(2026, 9, 30, 18, 30, tzinfo=UTC),
             )
         ),
     )
@@ -1249,7 +1294,10 @@ def test_registered_snapshot_requires_field_display_admission(tmp_path: Path) ->
     snapshots = cast(
         ProviderSnapshotReader,
         SimpleNamespace(
-            get_snapshot=lambda _id: SimpleNamespace(dataset_id="etf_reference")
+            get_snapshot=lambda _id: SimpleNamespace(
+                dataset_id="etf_reference",
+                created_at=datetime(2026, 9, 30, 17, tzinfo=UTC),
+            )
         ),
     )
     app, pool, snapshot = _setup(tmp_path, admission=admission, snapshots=snapshots)

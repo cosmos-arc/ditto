@@ -158,8 +158,20 @@ class ETFCandidateQuery:
 
     def snapshots(self, *, cutoff: str) -> list[str]:
         """List reference snapshot identities visible by the cutoff."""
-        _validate_cutoff(cutoff)
-        return self._metadata.instrument.list_etf_reference_snapshots(cutoff=cutoff)
+        parsed_cutoff = _validate_cutoff(cutoff)
+        return [
+            snapshot_id
+            for snapshot_id in self._metadata.instrument.list_etf_reference_snapshots(
+                cutoff=cutoff
+            )
+            if self._reference_snapshot_visible(snapshot_id, parsed_cutoff)
+        ]
+
+    def _reference_snapshot_visible(self, snapshot_id: str, cutoff: datetime) -> bool:
+        if self._snapshots is None:
+            return True
+        snapshot = self._snapshots.get_snapshot(snapshot_id)
+        return snapshot is None or snapshot.created_at <= cutoff
 
     def list_candidates(
         self,
@@ -179,6 +191,8 @@ class ETFCandidateQuery:
             raise AppQueryError("knowledge cutoff must not precede as-of date")
         if not source_snapshot_id:
             raise AppQueryError("source snapshot is required")
+        if not self._reference_snapshot_visible(source_snapshot_id, parsed_cutoff):
+            raise AppQueryError("source snapshot is future at cutoff")
         if sort_field not in {
             "ticker",
             "aum",
