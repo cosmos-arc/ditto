@@ -23,7 +23,6 @@ from ditto_application.queries.field_admission import (
 )
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
-    RetainedCalendarAmbiguous,
     RetainedCalendarWindow,
     retained_calendar_window,
 )
@@ -195,7 +194,12 @@ class ETFCandidateQuery:
         ) > timedelta(days=_CALENDAR_STALENESS_DAYS):
             raise AppQueryError("ETF evaluation calendar does not cover the as-of date")
         tracking_days = calendar.days[-(_TRACKING_RETURNS + 1) :]
-        calendar_shards = _selected_shard_intervals(calendar.authority, tracking_days)
+        # 血缘覆盖选出最终窗口所消费的每一个权威决定（含把日期改为闭市的
+        # 决定——它们同样改变了哪 253 个交易日被选中）。
+        calendar_shards = _selected_shard_intervals(
+            calendar.authority, tracking_days[0] if tracking_days else asof
+        )
+        _ensure_single_calendar_source(calendar_shards, calendar.shard_sources)
         identities, observations = self._metadata.instrument.find_etf_reference(
             asof=asof,
             cutoff=cutoff,
@@ -287,10 +291,6 @@ class ETFCandidateQuery:
         except RetainedCalendarAbsent as exc:
             raise AppQueryError(
                 "ETF evaluation calendar is absent at the cutoff"
-            ) from exc
-        except RetainedCalendarAmbiguous as exc:
-            raise AppQueryError(
-                "ETF evaluation calendar mixes provider sources"
             ) from exc
 
     def _tracking(
@@ -610,14 +610,34 @@ def _field(rows: list[dict[str, Any]], *, numeric: bool) -> ETFField:
     )
 
 
+def _ensure_single_calendar_source(
+    shard_intervals: tuple[tuple[str, str, str], ...],
+    shard_sources: dict[str, str],
+) -> None:
+    """Reject windows whose consumed shards mix provider sources."""
+    sources = {
+        source
+        for source in (
+            shard_sources.get(shard_id) for shard_id, _first, _last in shard_intervals
+        )
+        if source is not None
+    }
+    if len(sources) > 1:
+        raise AppQueryError("ETF evaluation calendar mixes provider sources")
+
+
 def _selected_shard_intervals(
-    authority: dict[str, str], selected_days: list[str]
+    authority: dict[str, str], first_day: str
 ) -> tuple[tuple[str, str, str], ...]:
-    """Shard identities and spans limited to the sessions actually selected."""
+    """
+    Shard identities and spans over every decision the selection consumes.
+
+    ``first_day`` is the first selected session; every authoritative decision
+    at or after it—open or closed—shapes which sessions the window contains.
+    """
     decided: dict[str, list[str]] = {}
-    for day in selected_days:
-        shard_id = authority.get(day)
-        if shard_id is not None:
+    for day, shard_id in authority.items():
+        if day >= first_day:
             decided.setdefault(shard_id, []).append(day)
     return tuple(
         (shard_id, min(day_set), max(day_set))

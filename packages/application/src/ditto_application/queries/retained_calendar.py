@@ -17,10 +17,6 @@ class RetainedCalendarAbsent(ValueError):
     """No retained calendar snapshot is visible at the requested cutoff."""
 
 
-class RetainedCalendarAmbiguous(ValueError):
-    """Cutoff-visible calendar shards span more than one provider source."""
-
-
 class RetainedCalendar(NamedTuple):
     """Open sessions plus the retained snapshot identity that produced them."""
 
@@ -29,10 +25,11 @@ class RetainedCalendar(NamedTuple):
 
 
 class RetainedCalendarWindow(NamedTuple):
-    """Open sessions plus the shard with final authority over each date."""
+    """Open sessions, per-date authority, and each shard's provider source."""
 
     days: list[str]
     authority: dict[str, str]
+    shard_sources: dict[str, str]
 
 
 def _calendar_states(
@@ -63,9 +60,8 @@ def retained_calendar_window(
     current-year daily shards, so shards are selected by payload coverage,
     not request bounds. Revisions apply oldest-to-newest and the newest
     revision wins per date, so a corrected closure can never be masked by a
-    stale open day. Shards from other providers that contribute no in-window
-    date are ignored; ambiguity is judged only on contributing shards. Every
-    shard with final authority over an in-window date keeps its identity.
+    stale open day. Whether shards come from one provider source is judged
+    by the caller over the sessions a window actually consumes.
     """
     shards = sorted(
         (
@@ -100,14 +96,13 @@ def retained_calendar_window(
             read_payloads[snapshot.checksum] = frame
         for day, is_open in _calendar_states(frame, first_day, last_day).items():
             authorship[day] = (is_open, snapshot.snapshot_id)
-    contributing = {shard_sources[state[1]] for state in authorship.values()}
-    if len(contributing) > 1:
-        raise RetainedCalendarAmbiguous(sorted(contributing))
     days = sorted(day for day, state in authorship.items() if state[0])
     if not days:
         raise RetainedCalendarAbsent("retained calendar is malformed")
     return RetainedCalendarWindow(
-        days, {day: state[1] for day, state in authorship.items()}
+        days,
+        {day: state[1] for day, state in authorship.items()},
+        shard_sources,
     )
 
 
