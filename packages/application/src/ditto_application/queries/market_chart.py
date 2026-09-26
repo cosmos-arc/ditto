@@ -636,7 +636,14 @@ class MarketChartQueryFacade:
             )
         calendar, used_calendar_ids = self._load_calendar(request, cutoff)
         if not any(
-            start_date.isoformat() <= day <= end_date.isoformat()
+            max(start_date, request.listed_on or start_date).isoformat()
+            <= day
+            <= min(
+                end_date,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else end_date,
+            ).isoformat()
             for day in calendar.days
         ):
             return MarketChartView(

@@ -791,8 +791,10 @@ def test_chart_outside_lifecycle_returns_empty_without_calendar_query(
 
 
 @pytest.mark.pit
+@pytest.mark.parametrize("listed_on", [None, date(2026, 3, 14)])
 def test_chart_closed_only_window_preserves_calendar_without_ingestion_failure(
     tmp_path: Path,
+    listed_on: date | None,
 ) -> None:
     chart, snapshot, _ = _chart(tmp_path, poisoned=False)
     chart._snapshots = cast(
@@ -810,12 +812,13 @@ def test_chart_closed_only_window_preserves_calendar_without_ingestion_failure(
         MarketChartRequest(
             instrument_id=1000001,
             asset_class="stock",
-            start_date=date(2026, 3, 14),
+            start_date=date(2026, 3, 9 if listed_on else 14),
             end_date=date(2026, 3, 15),
             period="daily",
             adjustment="none",
             allow_experimental_data=False,
             now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+            listed_on=listed_on,
         )
     )
     assert result.bars == ()
