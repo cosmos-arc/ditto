@@ -158,8 +158,12 @@ def _chart_rows(
             ).isoformat()
         ):
             continue
-        if day not in days:
-            raise AppQueryError("chart bar is outside the retained trading calendar")
+        if day not in days or day in suspensions:
+            raise AppQueryError(
+                "chart price conflicts with retained full-day suspension"
+                if day in suspensions
+                else "chart bar is outside the retained trading calendar"
+            )
         previous = by_day.get(day)
         if previous is None or _snapshot_observed_at(
             snapshots, bar.source_snapshot_id, as_of

@@ -1504,3 +1504,42 @@ def test_chart_rejects_hybrid_calendar_authority(tmp_path: Path) -> None:
                 now=datetime(2026, 3, 12, 8, tzinfo=UTC),
             )
         )
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("period", ["daily", "weekly", "monthly"])
+def test_chart_rejects_prices_on_visible_full_day_suspensions(
+    tmp_path: Path, period: str
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    visible = datetime(2026, 3, 10, 8, tzinfo=UTC)
+    status = _snapshot(
+        cast(FilesystemProviderPayloadStore, chart._payloads),
+        "stock_status",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "trade_date": ["2026-03-09"],
+                "is_suspended": [True],
+                "available_at": [visible],
+                "published_at": [visible],
+            }
+        ),
+        visible,
+    )
+    chart._snapshots = cast(
+        ProviderSnapshotReader, _Snapshots((*chart._snapshots.list_snapshots(), status))
+    )
+    with pytest.raises(AppQueryError, match=r"price conflicts.*full-day suspension"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period=period,
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+            )
+        )
