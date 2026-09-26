@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
@@ -189,12 +190,24 @@ def _snapshot(
         source="tushare",
         payload=frame,
     )
+    # Request bounds must actually cover the retained rows now that the
+    # reader validates payload rows against the snapshot's own bounds.
+    if "event_time" in frame.columns:
+        day_values = [
+            value.astimezone(ZoneInfo("Asia/Shanghai")).date().isoformat()
+            for value in frame["event_time"]
+        ]
+    else:
+        day_values = [
+            value.isoformat() if isinstance(value, date) else str(value)[:10]
+            for value in frame["trade_date"]
+        ]
     return ProviderSnapshot.create(
         ProviderSnapshotDraft(
             dataset_id=dataset_id,
             source="tushare",
-            request_start="2026-08-01",
-            request_end="2026-08-31",
+            request_start=min(day_values),
+            request_end=max(day_values),
             schema_version=f"market.{dataset_id}.v1",
             checksum=artifact.checksum,
             canonical_asset=DataAssetRef(
