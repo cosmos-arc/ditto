@@ -1164,6 +1164,7 @@ def test_chart_fallback_prices_use_independent_factor_and_status_sources(
     )
     assert result.bars[0].close == pytest.approx(10.2 / 1.1)
     assert result.missing_sessions == ()
+    assert result.sources == ("fuyao", "tushare")
     assert {
         item.snapshot_id for item in reader.list_snapshots(dataset_id="adj_factor")
     } <= set(result.source_snapshot_ids)

@@ -719,7 +719,15 @@ class MarketChartQueryFacade:
             timezone="Asia/Shanghai",
             calendar_snapshot_ids=used_calendar_ids,
             source_snapshot_ids=tuple(sorted(queried_snapshot_ids)),
-            sources=tuple(sorted({item.source for item in selected})),
+            sources=tuple(
+                sorted(
+                    {
+                        item.source
+                        for item in self._snapshots.list_snapshots()
+                        if item.snapshot_id in queried_snapshot_ids
+                    }
+                )
+            ),
             latest_price_date=latest_price_date,
             stale_reason=stale_reason,
             missing_sessions=missing,
