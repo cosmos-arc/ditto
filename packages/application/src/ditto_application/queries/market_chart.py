@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
+from functools import cache
 from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
@@ -43,6 +45,7 @@ class MarketChartRequest:
     allow_experimental_data: bool
     now: datetime
     listed_on: date | None = None
+    delisted_on: date | None = None
 
 
 @dataclass(frozen=True)
@@ -115,6 +118,7 @@ def _chart_rows(
     request: MarketChartRequest,
     as_of: datetime,
     factors: dict[str, AdjustmentFactor],
+    suspensions: dict[str, str],
 ) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
     """Select visible sessions, then aggregate complete or partial periods."""
     days = set(calendar.days)
@@ -122,7 +126,14 @@ def _chart_rows(
     observed = {item.snapshot_id: item for item in selected}
     for bar in raw:
         day = bar.occurred_at.astimezone(_SHANGHAI).date().isoformat()
-        if day < request.start_date.isoformat() or day > request.end_date.isoformat():
+        if (
+            day
+            < max(
+                request.start_date, request.listed_on or request.start_date
+            ).isoformat()
+            or day
+            > min(request.end_date, request.delisted_on or request.end_date).isoformat()
+        ):
             continue
         if day not in days:
             raise AppQueryError("chart bar is outside the retained trading calendar")
@@ -142,13 +153,16 @@ def _chart_rows(
         and day.replace("-", "") >= coverage_start
         and day
         <= min(
-            request.end_date.isoformat(), as_of.astimezone(_SHANGHAI).date().isoformat()
+            request.end_date.isoformat(),
+            as_of.astimezone(_SHANGHAI).date().isoformat(),
+            (request.delisted_on or request.end_date).isoformat(),
         )
     ]
     missing = tuple(
         day
         for day in visible_days
         if day not in by_day
+        and day not in suspensions
         and datetime.combine(date.fromisoformat(day), time(15), _SHANGHAI).astimezone(
             UTC
         )
@@ -181,7 +195,8 @@ def _chart_rows(
             for day in calendar.days
             if max(period_start, request.listed_on or period_start).isoformat()
             <= day
-            <= period_end.isoformat()
+            <= min(period_end, request.delisted_on or period_end).isoformat()
+            and day not in suspensions
         ]
         complete_calendar = calendar_has_complete_authority(
             calendar, period_start.isoformat(), period_end.isoformat()
@@ -289,6 +304,50 @@ class MarketChartQueryFacade:
             and item.source == latest.source
         )
 
+    def _load_suspensions(
+        self,
+        request: MarketChartRequest,
+        source: str,
+        cutoff: datetime,
+        instrument_code: Callable[[date], str | None],
+    ) -> dict[str, str]:
+        suspensions: dict[str, str] = {}
+        if request.asset_class == "stock" and any(
+            item.payload_retained
+            and item.payload_uri
+            and item.created_at <= cutoff
+            and item.source == source
+            and _snapshot_range(item.request_start)
+            <= request.end_date.strftime("%Y%m%d")
+            and _snapshot_range(item.request_end)
+            >= request.start_date.strftime("%Y%m%d")
+            for item in self._snapshots.list_snapshots(dataset_id="stock_status")
+        ):
+            status_snapshots = self._select_snapshots(
+                "stock_status", request.start_date, request.end_date, cutoff, source
+            )
+            status_context = PITQueryContext(
+                as_of=cutoff,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+                source_snapshots=(
+                    DatasetSnapshot(
+                        dataset_id="stock_status",
+                        dataset_version=status_snapshots[0].schema_version,
+                        source_snapshot_ids=tuple(
+                            item.snapshot_id for item in status_snapshots
+                        ),
+                        created_at=max(item.created_at for item in status_snapshots),
+                    ),
+                ),
+            )
+            suspensions = self._bars.load_suspensions(
+                status_context,
+                instrument_id=InstrumentId(request.instrument_id),
+                instrument_code=instrument_code,
+            )
+        return suspensions
+
     def get_chart(self, request: MarketChartRequest) -> MarketChartView:
         """Return only bars visible in retained payloads at the chart cutoff."""
         instrument_id = request.instrument_id
@@ -325,16 +384,16 @@ class MarketChartQueryFacade:
             f"{asset_class}_daily", start_date, end_date, cutoff
         )
         latest = max(selected, key=lambda item: item.created_at)
-        instrument_code = self._metadata.get_source_ticker(
-            instrument_id,
-            source=latest.source,
-            asof=as_of.astimezone(_SHANGHAI).date().isoformat(),
-            cutoff=cutoff.isoformat(),
-        )
-        if instrument_code is None:
-            raise AppQueryError(
-                "chart instrument source identity is unavailable at cutoff"
+
+        @cache
+        def instrument_code(day: date) -> str | None:
+            return self._metadata.get_source_ticker(
+                instrument_id,
+                source=latest.source,
+                asof=day.isoformat(),
+                cutoff=cutoff.isoformat(),
             )
+
         context = PITQueryContext(
             as_of=as_of,
             knowledge_cutoff=cutoff,
@@ -381,6 +440,9 @@ class MarketChartQueryFacade:
                 instrument_id=InstrumentId(instrument_id),
                 instrument_code=instrument_code,
             )
+        suspensions = self._load_suspensions(
+            request, latest.source, cutoff, instrument_code
+        )
         first_period_start = _period_bounds(start_date, period)[0]
         last_period_end = _period_bounds(end_date, period)[1]
         try:
@@ -400,7 +462,7 @@ class MarketChartQueryFacade:
         ):
             raise AppQueryError("retained chart calendar has incomplete authority")
         result, missing, latest_price_date = _chart_rows(
-            raw, selected, calendar, request, as_of, factors
+            raw, selected, calendar, request, as_of, factors, suspensions
         )
         used_calendar_ids = tuple(
             sorted(
@@ -435,6 +497,11 @@ class MarketChartQueryFacade:
                         source_id
                         for bar in result
                         for source_id in bar.source_snapshot_ids
+                    }
+                    | {
+                        snapshot_id
+                        for day, snapshot_id in suspensions.items()
+                        if start_date.isoformat() <= day <= end_date.isoformat()
                     }
                 )
             ),

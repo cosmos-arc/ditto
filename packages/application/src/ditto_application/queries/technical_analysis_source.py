@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, date, datetime, time
 from math import isfinite
 from typing import NamedTuple, cast
@@ -225,7 +226,7 @@ def _instrument_rows(
     frame: pl.DataFrame,
     *,
     instrument_id: InstrumentId,
-    instrument_code: str,
+    instrument_code: str | Callable[[date], str | None],
 ) -> pl.DataFrame:
     """
     Select rows for exactly one instrument.
@@ -236,8 +237,20 @@ def _instrument_rows(
     from mixing rows of two different instruments into one price series.
     """
     selected = frame
+    expected = (
+        pl.Series(
+            "expected_ticker",
+            [
+                instrument_code(cast(datetime, value).astimezone(_SHANGHAI).date())
+                for value in frame["event_time"]
+            ],
+            dtype=pl.String,
+        )
+        if callable(instrument_code)
+        else instrument_code
+    )
     ticker_filters = [
-        pl.col(column).cast(pl.String) == instrument_code
+        pl.col(column).cast(pl.String) == expected
         for column in ("source_ticker", "instrument_code", "ts_code", "ticker")
         if column in frame.columns
     ]
@@ -251,8 +264,8 @@ def _instrument_rows(
             "TECHNICAL_SOURCE_IDENTITY_REQUIRED",
             "instrument_identity_column_missing",
         )
-    for item in ticker_filters:
-        selected = selected.filter(item)
+    if ticker_filters:
+        selected = selected.filter(pl.all_horizontal(ticker_filters))
     if id_filter is not None:
         selected = selected.filter(id_filter)
     return selected
@@ -398,7 +411,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         context: PITQueryContext,
         *,
         instrument_id: InstrumentId,
-        instrument_code: str,
+        instrument_code: str | Callable[[date], str | None],
     ) -> tuple[TechnicalBar, ...]:
         """Return ordered bars for exactly one requested instrument."""
         frames = tuple(
@@ -418,7 +431,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         context: PITQueryContext,
         *,
         instrument_id: InstrumentId,
-        instrument_code: str,
+        instrument_code: str | Callable[[date], str | None],
     ) -> dict[str, AdjustmentFactor]:
         """Read exact visible adjustment factors without a latest-store fallback."""
         frame = self._query.query(dataset_id="adj_factor", context=context)
@@ -467,6 +480,48 @@ class ProviderPayloadTechnicalAnalysisSource:
                     cast(datetime, row["published_at"]),
                 )
         return factors
+
+    def load_suspensions(
+        self,
+        context: PITQueryContext,
+        *,
+        instrument_id: InstrumentId,
+        instrument_code: Callable[[date], str | None],
+    ) -> dict[str, str]:
+        """Return exact visible full-day suspension evidence; unknown stays a gap."""
+        frame = self._query.query(dataset_id="stock_status", context=context)
+        selected = _instrument_rows(
+            frame, instrument_id=instrument_id, instrument_code=instrument_code
+        )
+        if "is_suspended" not in selected.columns:
+            return {}
+        rows: dict[str, dict[str, object]] = {}
+        for row in selected.to_dicts():
+            day = (
+                cast(datetime, row["event_time"])
+                .astimezone(_SHANGHAI)
+                .date()
+                .isoformat()
+            )
+            snapshot = self._snapshot_reader.get_snapshot(
+                str(row["source_snapshot_id"])
+            )
+            previous = rows.get(day)
+            prior = (
+                self._snapshot_reader.get_snapshot(str(previous["source_snapshot_id"]))
+                if previous
+                else None
+            )
+            if snapshot is not None and (
+                prior is None or snapshot.created_at > prior.created_at
+            ):
+                rows[day] = row
+        return {
+            day: str(row["source_snapshot_id"])
+            for day, row in rows.items()
+            if row["is_suspended"] is True
+            and row.get("suspend_timing") in (None, "", "09:30-15:00")
+        }
 
     def load_paper_market(
         self,

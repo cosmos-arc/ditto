@@ -85,7 +85,11 @@ def _snapshot(
 
 
 def _chart(
-    tmp_path: Path, *, poisoned: bool = True
+    tmp_path: Path,
+    *,
+    poisoned: bool = True,
+    suspended: bool = False,
+    renamed: bool = False,
 ) -> tuple[MarketChartQueryFacade, ProviderSnapshot, MetadataQueryFacade]:
     store = FilesystemProviderPayloadStore(tmp_path)
     visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
@@ -99,7 +103,10 @@ def _chart(
         )
     bars = pl.DataFrame(
         {
-            "source_ticker": ["600519.SH"] * len(rows),
+            "source_ticker": [
+                "OLD.SH" if renamed and row[0] == "2026-03-09" else "600519.SH"
+                for row in rows
+            ],
             "event_time": [
                 datetime.fromisoformat(day).replace(hour=7, tzinfo=UTC)
                 for day, *_ in rows
@@ -130,7 +137,10 @@ def _chart(
     bar_snapshot = _snapshot(store, "stock_daily", bars, visible)
     factors = pl.DataFrame(
         {
-            "source_ticker": ["600519.SH"] * 3,
+            "source_ticker": [
+                "OLD.SH" if renamed and day == "2026-03-09" else "600519.SH"
+                for day in ["2026-03-09", "2026-03-10", "2026-03-12"]
+            ],
             "trade_date": ["2026-03-09", "2026-03-10", "2026-03-12"],
             "published_at": [visible, visible, visible + timedelta(days=2)],
             "available_at": [visible, visible, visible + timedelta(days=2)],
@@ -141,14 +151,36 @@ def _chart(
     calendar_snapshot = _snapshot(
         store, "calendar", calendar, visible - timedelta(days=1)
     )
+    status_snapshots = ()
+    if suspended:
+        status_snapshots = (
+            _snapshot(
+                store,
+                "stock_status",
+                pl.DataFrame(
+                    {
+                        "source_ticker": ["600519.SH", "600519.SH"],
+                        "trade_date": ["2026-03-11", "2026-03-12"],
+                        "is_suspended": [True, True],
+                        "available_at": [visible, datetime(2099, 1, 1, tzinfo=UTC)],
+                        "published_at": [visible, visible],
+                    }
+                ),
+                visible,
+            ),
+        )
     reader = cast(
         ProviderSnapshotReader,
-        _Snapshots((bar_snapshot, calendar_snapshot, factor_snapshot)),
+        _Snapshots(
+            (bar_snapshot, calendar_snapshot, factor_snapshot, *status_snapshots)
+        ),
     )
     metadata = cast(
         MetadataQueryFacade,
         SimpleNamespace(
-            get_source_ticker=lambda *args, **kwargs: "600519.SH",
+            get_source_ticker=lambda *args, **kwargs: (
+                "OLD.SH" if renamed and kwargs["asof"] < "2026-03-10" else "600519.SH"
+            ),
             get_instrument=lambda instrument_id: (
                 {"asset_class": "stock", "list_date": "2001-08-27"}
                 if instrument_id == 1000001
@@ -337,3 +369,49 @@ def test_chart_http_journey_keeps_exact_identity_and_recovers(
             ).status_code
             == 404
         )
+
+
+@pytest.mark.pit
+def test_chart_lifecycle_and_status_bound_expected_sessions(tmp_path: Path) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    base = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 9),
+        end_date=date(2026, 3, 15),
+        period="weekly",
+        adjustment="none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 13, 8, tzinfo=UTC),
+        delisted_on=date(2026, 3, 12),
+    )
+    result = chart.get_chart(base)
+    # Known full-day suspension is not a gap; future status cannot hide a gap.
+    assert result.missing_sessions == ("2026-03-12",)
+    assert result.stale_reason == "missing_expected_session"
+    assert len(result.source_snapshot_ids) == 2
+    closed = chart.get_chart(
+        MarketChartRequest(**{**vars(base), "delisted_on": date(2026, 3, 10)})
+    )
+    assert closed.missing_sessions == ()
+    assert closed.stale_reason is None
+    assert closed.bars[0].partial is False
+
+
+@pytest.mark.pit
+def test_chart_maps_prices_and_factors_at_each_effective_date(tmp_path: Path) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, renamed=True)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="qfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-09", "2026-03-10"]
+    assert result.missing_sessions == ()

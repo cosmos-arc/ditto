@@ -82,6 +82,9 @@ async def post_chart(
                 adjustment=query.adjustment.value,
                 allow_experimental_data=query.allow_experimental_data,
                 now=datetime.now(UTC),
+                delisted_on=date.fromisoformat(str(instrument["delist_date"]))
+                if instrument.get("delist_date")
+                else None,
                 listed_on=date.fromisoformat(str(instrument["list_date"]))
                 if instrument.get("list_date")
                 else None,
