@@ -15,6 +15,7 @@ import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from types import FrameType
 from typing import Any
@@ -1127,26 +1128,34 @@ def _is_package_manifest(path: str) -> bool:
     )
 
 
-def _has_tracked_tests(workspace: Path, owner: str) -> bool:
-    """The pushed revision must retain collectable test modules.
+@lru_cache(maxsize=64)
+def _has_collectable_tests(workspace: Path, owner: str) -> bool:
+    """The scoped target must yield at least one pytest item.
 
-    Ignored leftovers (e.g. ``tests/__pycache__/``) keep the directory alive
-    after every tracked test was deleted, and a lone tracked ``conftest.py``
-    keeps ``git ls-files`` non-empty — pytest would exit 5 in both cases.
+    Filename and git heuristics miss fixture-only modules; only collection
+    itself knows what pytest can run (exit 5 = nothing collected). Probe
+    failures and timeouts fall back to the full gate; cached per process so
+    one push pays each owner's collection at most once.
     """
-    result = subprocess.run(
-        ["git", "ls-files", "--", f"{owner}/tests"],
-        cwd=workspace,
-        timeout=GIT_TIMEOUT_SECONDS,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
+    try:
+        result = subprocess.run(
+            [
+                "uv",
+                "run",
+                "--no-sync",
+                "pytest",
+                "--collect-only",
+                "-q",
+                f"{owner}/tests",
+            ],
+            cwd=workspace,
+            timeout=120,
+            capture_output=True,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
         return False
-    return any(
-        line.endswith(".py") and line.rsplit("/", 1)[-1].startswith("test_")
-        for line in result.stdout.decode().splitlines()
-    )
+    return result.returncode == 0
 
 
 def _backend_source_commands(
@@ -1170,7 +1179,7 @@ def _backend_source_commands(
         return [["task", "check"]]
     owner = next(iter(owners))
     workspace = root if root is not None else git_root(Path.cwd())
-    if not _has_tracked_tests(workspace, owner):
+    if not _has_collectable_tests(workspace, owner):
         return [["task", "check"]]
     return [
         ["task", "lint"],
