@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
 from functools import cache, partial
+from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
@@ -149,18 +150,25 @@ def _observed_at_reader(
     return observed_at
 
 
+class _SnapshotIndex(NamedTuple):
+    """Per-request snapshot lookups resolved once for all candles."""
+
+    observed_at: Callable[[str], datetime]
+    absence_sources: tuple[ProviderSnapshot, ...]
+
+
 def _chart_rows(
     raw: tuple[TechnicalBar, ...],
-    snapshots: ProviderSnapshotReader,
+    index: _SnapshotIndex,
     calendar: RetainedCalendarWindow,
     request: MarketChartRequest,
     factors: dict[str, AdjustmentFactor],
     suspensions: dict[str, SuspensionEvidence],
-    queried_snapshot_ids: set[str],
+    ticker: Callable[[date], str | None],
 ) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
     """Select visible sessions, then aggregate complete or partial periods."""
     as_of = request.now.astimezone(UTC)
-    snapshot_observed_at = _observed_at_reader(snapshots, as_of)
+    snapshot_observed_at = index.observed_at
     days = set(calendar.days)
     by_day: dict[str, TechnicalBar] = {}
     for bar in raw:
@@ -248,14 +256,7 @@ def _chart_rows(
         return factor / baseline if request.adjustment == "qfq" else factor
 
     result: list[MarketChartBar] = []
-    # queried_snapshot_ids is fixed for the whole request; resolve the
-    # absence-evidence candidates once instead of rescanning the catalog
-    # for every candle.
-    absence_sources = [
-        item
-        for item in snapshots.list_snapshots()
-        if item.snapshot_id in queried_snapshot_ids
-    ]
+    absence_sources = index.absence_sources
     for group in grouped.values():
         first_day, first = group[0]
         last_day, last = group[-1]
@@ -331,6 +332,10 @@ def _chart_rows(
                 and _snapshot_range(item.request_start)
                 <= day.replace("-", "")
                 <= _snapshot_range(item.request_end)
+                # Absence lineage must hold for the instrument's effective
+                # ticker on the missing day; an old-ticker shard across a
+                # rename cannot establish that absence.
+                and _absence_scope_matches(item, day, ticker)
                 for day in missing
             )
         }
@@ -398,6 +403,17 @@ def _date_keys(start: date, end: date) -> list[str]:
         (start + timedelta(days=offset)).isoformat()
         for offset in range((end - start).days + 1)
     ]
+
+
+def _absence_scope_matches(
+    item: ProviderSnapshot, day: str, ticker: Callable[[date], str | None]
+) -> bool:
+    tickers = {
+        key.removeprefix("source_ticker=")
+        for key in item.canonical_asset.partition_keys
+        if key.startswith("source_ticker=")
+    }
+    return not tickers or ticker(date.fromisoformat(day)) in tickers
 
 
 def _snapshot_matches_instrument(
@@ -894,12 +910,19 @@ class MarketChartQueryFacade:
         queried_snapshot_ids.update(status_ids)
         result, missing, latest_price_date = _chart_rows(
             raw,
-            self._snapshots,
+            _SnapshotIndex(
+                observed_at=_observed_at_reader(self._snapshots, as_of),
+                absence_sources=tuple(
+                    item
+                    for item in self._snapshots.list_snapshots()
+                    if item.snapshot_id in queried_snapshot_ids
+                ),
+            ),
             calendar,
             request,
             factors,
             suspensions,
-            queried_snapshot_ids,
+            instrument_code,
         )
         stale_reason = (
             "no_visible_price"

@@ -947,8 +947,27 @@ def test_chart_qfq_earlier_bar_carries_late_baseline_factor(
 ) -> None:
     chart, _, _ = _chart(tmp_path, poisoned=False)
     observed = datetime(2026, 3, 12, 8, tzinfo=UTC)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    factor_0309_only = replace(
+        _snapshot(
+            store,
+            "adj_factor",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "adj_factor": [1.0],
+                    "available_at": [datetime(2026, 3, 10, 7, tzinfo=UTC)],
+                    "published_at": [datetime(2026, 3, 10, 7, tzinfo=UTC)],
+                }
+            ),
+            datetime(2026, 3, 10, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
     baseline = _snapshot(
-        FilesystemProviderPayloadStore(tmp_path),
+        store,
         "adj_factor",
         pl.DataFrame(
             {
@@ -967,9 +986,7 @@ def test_chart_qfq_earlier_bar_carries_late_baseline_factor(
         _Snapshots(
             (
                 *(
-                    replace(item, request_start="2026-03-09", request_end="2026-03-09")
-                    if item.dataset_id == "adj_factor"
-                    else item
+                    factor_0309_only if item.dataset_id == "adj_factor" else item
                     for item in chart._snapshots.list_snapshots()
                 ),
                 baseline,
@@ -2010,6 +2027,266 @@ def test_chart_qfq_baseline_ignores_closed_day_factors(tmp_path: Path) -> None:
         )
     )
     assert [bar.close for bar in result.bars] == [10.2 / 1.1, 10.8]
+
+
+@pytest.mark.pit
+def test_chart_rejects_newer_empty_calendar_revisions(tmp_path: Path) -> None:
+    """A newer verified-empty calendar observation supersedes the retained
+    shard for its covered interval; the chart fails closed there instead of
+    serving the stale calendar. Days outside the observation stay usable."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fixture_snapshots = chart._snapshots.list_snapshots()
+    calendar_only = chart._snapshots.list_snapshots(dataset_id="calendar")[0]
+    empty_calendar = replace(
+        calendar_only,
+        snapshot_id="empty-calendar",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        observations=(),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture_snapshots, empty_calendar)),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    with pytest.raises(AppQueryError, match="calendar has incomplete authority"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+    far_empty = replace(
+        empty_calendar, request_start="2026-03-13", request_end="2026-03-13"
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture_snapshots, far_empty)),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.2, 10.8]
+
+
+@pytest.mark.pit
+def test_chart_rejects_payload_rows_outside_snapshot_bounds(tmp_path: Path) -> None:
+    """A payload row outside its own snapshot's request bounds was never
+    covered by that observation and must not surface as chart evidence."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    straddling = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-16"],
+                    "open": [1.0],
+                    "high": [1.0],
+                    "low": [1.0],
+                    "close": [1.0],
+                    "volume": [1.0],
+                    "amount": [1.0],
+                }
+            ),
+            datetime(2026, 3, 11, 8, tzinfo=UTC),
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), straddling)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="payload_row_outside_request_bounds"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_absence_lineage_respects_effective_ticker(tmp_path: Path) -> None:
+    """A missing post-rename session must not attach the old-ticker shard as
+    absence lineage: that shard cannot establish absence for the instrument
+    under the new ticker."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: (
+                "600519.SH" if kwargs["asof"] < "2026-03-10" else "NEW.SH"
+            ),
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "stock", "list_date": "2001-08-27"}
+                if instrument_id == 1000001
+                else None
+            ),
+        ),
+    )
+    bar_shard = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [10.0],
+                    "high": [11.0],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1020.0],
+                }
+            ),
+            datetime(2026, 3, 10, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
+    old_ticker_shard = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-08"],
+                    "open": [1.0],
+                    "high": [1.0],
+                    "low": [1.0],
+                    "close": [1.0],
+                    "volume": [1.0],
+                    "amount": [1.0],
+                }
+            ),
+            datetime(2026, 3, 10, 9, tzinfo=UTC),
+        ),
+        request_start="2026-03-08",
+        request_end="2026-03-15",
+        # Different request semantics: the old-ticker shard is selected for
+        # lineage but is not a same-request omission authority.
+        request_parameters_hash="sha256:old-ticker-request",
+        canonical_asset=DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("source_ticker=600519.SH",),
+        ),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                bar_shard,
+                old_ticker_shard,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.2]
+    assert result.bars[0].source_snapshot_ids == (bar_shard.snapshot_id,)
+    assert result.bars[0].available_at == datetime(2026, 3, 10, 7, tzinfo=UTC)
+
+
+@pytest.mark.pit
+def test_chart_fails_closed_on_contradictory_same_snapshot_status_rows(
+    tmp_path: Path,
+) -> None:
+    """Repeated same-day rows inside one status snapshot must agree on the
+    full-day suspension state; keep-first must not hide the suspension."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    contradictory = replace(
+        _snapshot(
+            store,
+            "stock_status",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH", "600519.SH"],
+                    "trade_date": ["2026-03-10", "2026-03-10"],
+                    "is_suspended": [False, True],
+                }
+            ),
+            datetime(2026, 3, 11, 8, tzinfo=UTC),
+        ),
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="stock_daily"),
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                contradictory,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="contradictory same-snapshot status rows"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
 
 
 @pytest.mark.pit

@@ -45,6 +45,14 @@ class SuspensionEvidence(NamedTuple):
     published_at: datetime
 
 
+def _is_full_day_suspension_row(row: dict[str, object]) -> bool:
+    return row["is_suspended"] is True and row.get("suspend_timing") in (
+        None,
+        "",
+        "09:30-15:00",
+    )
+
+
 def _source_error(code: str, reason: str, **details: object) -> AppQueryError:
     return AppQueryError(
         f"technical analysis source failed closed: {reason}",
@@ -227,18 +235,40 @@ class _PayloadDatasetReader(PITDatasetReader):
                 row_count=provider_snapshot.row_count,
                 uri=provider_snapshot.payload_uri,
             )
-            frames.append(
-                _normalize(
-                    provider_snapshot,
-                    self._payload_reader.read_payload(artifact),
-                )
+            normalized = _normalize(
+                provider_snapshot,
+                self._payload_reader.read_payload(artifact),
             )
+            _reject_rows_outside_request_bounds(provider_snapshot, normalized)
+            frames.append(normalized)
         if not frames:
             raise _source_error(
                 "TECHNICAL_SOURCE_PAYLOAD_UNAVAILABLE",
                 "retained_payload_set_empty",
             )
         return pl.concat(frames, how="diagonal_relaxed")
+
+
+def _reject_rows_outside_request_bounds(
+    snapshot: ProviderSnapshot, frame: pl.DataFrame
+) -> None:
+    """
+    Reject payload rows outside their own snapshot's request bounds.
+
+    Such a row was never covered by that observation; exposing it would
+    bypass the per-day revision and absence checks keyed on the bounds.
+    """
+    start = snapshot.request_start.replace("-", "")
+    end = snapshot.request_end.replace("-", "")
+    for value in frame["event_time"]:
+        day = cast(datetime, value).astimezone(_SHANGHAI).strftime("%Y%m%d")
+        if not start <= day <= end:
+            raise _source_error(
+                "TECHNICAL_SOURCE_LINEAGE_MISMATCH",
+                "payload_row_outside_request_bounds",
+                snapshot_id=snapshot.snapshot_id,
+                day=day,
+            )
 
 
 def _reject_superseded_revision_rows(
@@ -651,12 +681,23 @@ class ProviderPayloadTechnicalAnalysisSource:
                 if previous
                 else None
             )
-            if snapshot is not None and (
-                prior is None
-                or snapshot_observed_by(snapshot, context.as_of)
-                > snapshot_observed_by(prior, context.as_of)
-            ):
+            if snapshot is None:
+                continue
+            observed = snapshot_observed_by(snapshot, context.as_of)
+            if prior is None or observed > snapshot_observed_by(prior, context.as_of):
                 rows[day] = row
+            elif observed == snapshot_observed_by(
+                prior, context.as_of
+            ) and _is_full_day_suspension_row(row) != _is_full_day_suspension_row(
+                previous
+            ):
+                # Same authoritative snapshot with contradictory same-day
+                # rows: keep-first would silently hide the suspension.
+                raise _source_error(
+                    "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                    "contradictory same-snapshot status rows",
+                    day=day,
+                )
         return {
             day: SuspensionEvidence(
                 str(row["source_snapshot_id"]),
@@ -664,8 +705,7 @@ class ProviderPayloadTechnicalAnalysisSource:
                 cast(datetime, row["published_at"]),
             )
             for day, row in rows.items()
-            if row["is_suspended"] is True
-            and row.get("suspend_timing") in (None, "", "09:30-15:00")
+            if _is_full_day_suspension_row(row)
         }
 
     def load_paper_market(
