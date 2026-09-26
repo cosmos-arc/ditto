@@ -449,7 +449,11 @@ class MarketChartQueryFacade:
         return tuple(revisions.values())
 
     def _instrument_code(
-        self, request: MarketChartRequest, source: str, cutoff: datetime
+        self,
+        request: MarketChartRequest,
+        source: str,
+        cutoff: datetime,
+        calendar: RetainedCalendarWindow,
     ) -> Callable[[date], str | None]:
         @cache
         def ticker(day: date) -> str | None:
@@ -463,12 +467,16 @@ class MarketChartQueryFacade:
                 return _require_chart_ticker(value)
             return value
 
+        for day in calendar.days:
+            if request.start_date.isoformat() <= day <= request.end_date.isoformat():
+                ticker(date.fromisoformat(day))
         return ticker
 
     def _load_suspensions(
         self,
         request: MarketChartRequest,
         cutoff: datetime,
+        calendar: RetainedCalendarWindow,
     ) -> tuple[dict[str, SuspensionEvidence], tuple[str, ...]]:
         suspensions: dict[str, SuspensionEvidence] = {}
         snapshot_ids: tuple[str, ...] = ()
@@ -505,7 +513,7 @@ class MarketChartQueryFacade:
                     status_context,
                     instrument_id=InstrumentId(request.instrument_id),
                     instrument_code=self._instrument_code(
-                        request, status_snapshots[0].source, cutoff
+                        request, status_snapshots[0].source, cutoff, calendar
                     ),
                 )
         return suspensions, snapshot_ids
@@ -514,6 +522,7 @@ class MarketChartQueryFacade:
         self,
         request: MarketChartRequest,
         cutoff: datetime,
+        calendar: RetainedCalendarWindow,
     ) -> tuple[dict[str, AdjustmentFactor], tuple[str, ...]]:
         snapshot_ids: tuple[str, ...] = ()
         factors: dict[str, AdjustmentFactor] = {}
@@ -549,7 +558,7 @@ class MarketChartQueryFacade:
                     factor_context,
                     instrument_id=InstrumentId(request.instrument_id),
                     instrument_code=self._instrument_code(
-                        request, factor_snapshots[0].source, cutoff
+                        request, factor_snapshots[0].source, cutoff, calendar
                     ),
                 )
                 if any(item.payload_retained for item in factor_snapshots)
@@ -698,7 +707,9 @@ class MarketChartQueryFacade:
         latest = max(selected, key=lambda item: item.created_at)
         queried_snapshot_ids = {item.snapshot_id for item in selected}
 
-        instrument_code = self._instrument_code(request, latest.source, cutoff)
+        instrument_code = self._instrument_code(
+            request, latest.source, cutoff, calendar
+        )
 
         context = PITQueryContext(
             as_of=as_of,
@@ -722,9 +733,9 @@ class MarketChartQueryFacade:
             if any(item.payload_retained for item in selected)
             else ()
         )
-        factors, factor_ids = self._load_factors(request, cutoff)
+        factors, factor_ids = self._load_factors(request, cutoff, calendar)
         queried_snapshot_ids.update(factor_ids)
-        suspensions, status_ids = self._load_suspensions(request, cutoff)
+        suspensions, status_ids = self._load_suspensions(request, cutoff, calendar)
         queried_snapshot_ids.update(status_ids)
         result, missing, latest_price_date = _chart_rows(
             raw,

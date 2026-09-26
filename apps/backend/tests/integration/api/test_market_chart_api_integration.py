@@ -1221,12 +1221,17 @@ def test_chart_ignores_conflicting_shards_outside_active_lifetime(
 
 @pytest.mark.pit
 @pytest.mark.parametrize("dataset", ["stock_daily", "adj_factor", "stock_status"])
+@pytest.mark.parametrize("has_row", [True, False])
 def test_chart_missing_effective_ticker_mapping_fails_instead_of_false_gap(
-    tmp_path: Path, dataset: str
+    tmp_path: Path, dataset: str, has_row: bool
 ) -> None:
     chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True, price_source="fuyao")
     missing_source = "fuyao" if dataset == "stock_daily" else "tushare"
-    missing_day = "2026-03-11" if dataset == "stock_status" else "2026-03-09"
+    missing_day = (
+        ("2026-03-11" if has_row else "2026-03-10")
+        if dataset == "stock_status"
+        else ("2026-03-09" if has_row else "2026-03-11")
+    )
     metadata = cast(
         MetadataQueryFacade,
         SimpleNamespace(
