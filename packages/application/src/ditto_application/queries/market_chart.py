@@ -113,9 +113,18 @@ def _snapshot_range(value: str) -> str:
     return value.replace("-", "")
 
 
+def _snapshot_observed_at(
+    snapshots: ProviderSnapshotReader, snapshot_id: str, cutoff: datetime
+) -> datetime:
+    snapshot = snapshots.get_snapshot(snapshot_id)
+    if snapshot is None:
+        raise AppQueryError("contributing chart snapshot is unavailable")
+    return snapshot_observed_by(snapshot, cutoff)
+
+
 def _chart_rows(
     raw: tuple[TechnicalBar, ...],
-    selected: tuple[ProviderSnapshot, ...],
+    snapshots: ProviderSnapshotReader,
     calendar: RetainedCalendarWindow,
     request: MarketChartRequest,
     as_of: datetime,
@@ -125,7 +134,6 @@ def _chart_rows(
     """Select visible sessions, then aggregate complete or partial periods."""
     days = set(calendar.days)
     by_day: dict[str, TechnicalBar] = {}
-    observed = {item.snapshot_id: item for item in selected}
     for bar in raw:
         day = bar.occurred_at.astimezone(_SHANGHAI).date().isoformat()
         if (
@@ -145,9 +153,9 @@ def _chart_rows(
         if day not in days:
             raise AppQueryError("chart bar is outside the retained trading calendar")
         previous = by_day.get(day)
-        if previous is None or snapshot_observed_by(
-            observed[bar.source_snapshot_id], as_of
-        ) > snapshot_observed_by(observed[previous.source_snapshot_id], as_of):
+        if previous is None or _snapshot_observed_at(
+            snapshots, bar.source_snapshot_id, as_of
+        ) > _snapshot_observed_at(snapshots, previous.source_snapshot_id, as_of):
             by_day[day] = bar
     visible_days = [
         day
@@ -247,6 +255,27 @@ def _chart_rows(
                 else True
             )
         )
+        bar_snapshot_ids = (
+            {bar.source_snapshot_id for _, bar in group}
+            | {item.snapshot_id for item in contributing_suspensions}
+            | (
+                {factors[day].snapshot_id for day, _ in group}
+                if request.adjustment != "none"
+                else set()
+            )
+        )
+        calendar_ids = {
+            snapshot_id
+            for day, snapshot_id in calendar.authority.items()
+            if max(period_start, request.listed_on or period_start).isoformat()
+            <= day
+            <= min(
+                period_end,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else period_end,
+            ).isoformat()
+        }
         result.append(
             MarketChartBar(
                 trade_date=last_day,
@@ -258,19 +287,13 @@ def _chart_rows(
                 close=last.close * multiplier(last_day),
                 volume=sum(bar.volume for _, bar in group),
                 amount=sum(bar.turnover for _, bar in group),
-                source_snapshot_ids=tuple(
-                    sorted(
-                        {bar.source_snapshot_id for _, bar in group}
-                        | {item.snapshot_id for item in contributing_suspensions}
-                        | (
-                            {factors[day].snapshot_id for day, _ in group}
-                            if request.adjustment != "none"
-                            else set()
-                        )
-                    )
-                ),
+                source_snapshot_ids=tuple(sorted(bar_snapshot_ids)),
                 available_at=max(
                     [bar.knowledge_at for _, bar in group]
+                    + [
+                        _snapshot_observed_at(snapshots, item, as_of)
+                        for item in bar_snapshot_ids | calendar_ids
+                    ]
                     + [item.available_at for item in contributing_suspensions]
                     + (
                         [factors[day].available_at for day, _ in group]
@@ -667,7 +690,14 @@ class MarketChartQueryFacade:
         )
         queried_snapshot_ids.update(status_ids)
         result, missing, latest_price_date = _chart_rows(
-            raw, selected, calendar, request, as_of, factors, suspensions
+            raw,
+            selected,
+            calendar,
+            request,
+            as_of,
+            factors,
+            suspensions,
+            self._snapshots,
         )
         stale_reason = (
             "no_visible_price"

@@ -876,3 +876,43 @@ def test_chart_aggregate_carries_suspension_observation_clocks(
     assert set(bar.source_snapshot_ids) == {price.snapshot_id, status.snapshot_id}
     assert bar.available_at == status.created_at
     assert bar.published_at == datetime(2026, 3, 12, 7, tzinfo=UTC)
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize(
+    "late_dataset", ["stock_daily", "adj_factor", "stock_status", "calendar"]
+)
+def test_chart_availability_includes_late_snapshot_observation(
+    tmp_path: Path, late_dataset: str
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    observed = datetime(2026, 3, 12, 8, tzinfo=UTC)
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                replace(item, created_at=observed, observations=(observed,))
+                if item.dataset_id == late_dataset
+                else item
+                for item in chart._snapshots.list_snapshots()
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="weekly",
+            adjustment="qfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+            delisted_on=date(2026, 3, 12),
+        )
+    )
+    assert result.bars[0].available_at == observed
+    assert result.bars[0].published_at < observed
