@@ -148,14 +148,11 @@ def _chart_rows(
             observed[bar.source_snapshot_id], as_of
         ) > snapshot_observed_by(observed[previous.source_snapshot_id], as_of):
             by_day[day] = bar
-    coverage_start = min(_snapshot_range(item.request_start) for item in selected)
     visible_days = [
         day
         for day in calendar.days
         if max(request.start_date, request.listed_on or request.start_date).isoformat()
         <= day
-        and day.replace("-", "") >= coverage_start
-        and day
         <= min(
             request.end_date.isoformat(),
             as_of.astimezone(_SHANGHAI).date().isoformat(),

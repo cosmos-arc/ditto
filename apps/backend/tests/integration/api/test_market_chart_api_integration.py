@@ -554,3 +554,52 @@ def test_chart_snapshot_authority_is_bound_to_exact_request(
     else:
         assert [bar.close for bar in result.bars] == [10.2, 10.8]
         assert result.missing_sessions == ()
+
+
+@pytest.mark.pit
+def test_chart_reports_sessions_before_retained_price_coverage(tmp_path: Path) -> None:
+    chart, original, metadata = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    shard = _snapshot(
+        store,
+        "stock_daily",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "trade_date": ["2026-03-10"],
+                "open": [10.0],
+                "high": [11.0],
+                "low": [9.0],
+                "close": [10.8],
+                "volume": [10.0],
+                "amount": [100.0],
+            }
+        ),
+        datetime(2026, 3, 10, 7, tzinfo=UTC),
+    )
+    shard = replace(shard, request_start="2026-03-10")
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                shard if item.snapshot_id == original.snapshot_id else item
+                for item in chart._snapshots.list_snapshots()
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert result.missing_sessions == ("2026-03-09",)
+    assert result.latest_price_date == "2026-03-10"
+    assert result.source_snapshot_ids == (shard.snapshot_id,)
