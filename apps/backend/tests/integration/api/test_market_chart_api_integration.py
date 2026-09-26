@@ -1473,7 +1473,7 @@ def test_chart_daily_scoped_shards_batch_identity_resolution(tmp_path: Path) -> 
             date(2026, 3, 11),
             datetime(2026, 3, 12, 8, tzinfo=UTC),
             instrument_id=1000001,
-            open_days=frozenset({"2026-03-09", "2026-03-10", "2026-03-11"}),
+            consumable_days=frozenset({"2026-03-09", "2026-03-10", "2026-03-11"}),
         )
         == shards
     )
@@ -1775,6 +1775,62 @@ def test_chart_ignores_closed_day_scoped_shards_in_source_authority(
     assert result.sources == ("tushare",)
     assert result.bars == ()
     assert result.missing_sessions == ("2026-03-13",)
+
+
+@pytest.mark.pit
+def test_chart_ignores_unclosed_session_scoped_shards_in_source_authority(
+    tmp_path: Path,
+) -> None:
+    """A cutoff-visible shard scoped only to today's unclosed session has no
+    consumable evidence yet; it must not join source authority and turn valid
+    closed-session history into a mixed-source 422."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fuyao_empty = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="stock_daily",
+            source="fuyao",
+            request_start="2026-03-11",
+            request_end="2026-03-11",
+            schema_version="stock_daily.v1",
+            checksum="sha256:fuyao-intraday",
+            canonical_asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=("source_ticker=600519.SH",),
+            ),
+            request_parameters_hash="sha256:market-chart-test",
+            response_metadata=(
+                ("snapshot_layer", "verified_empty_provider_observation"),
+            ),
+            license_record_id="license:fuyao:test",
+            row_count=0,
+            payload_uri=None,
+            payload_retained=False,
+            created_at=datetime(2026, 3, 11, 5, tzinfo=UTC),
+        )
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), fuyao_empty)),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 10),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.8]
+    assert result.sources == ("tushare",)
+    assert result.missing_sessions == ()
 
 
 @pytest.mark.pit

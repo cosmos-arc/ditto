@@ -409,6 +409,26 @@ def _snapshot_matches_instrument(
     )
 
 
+def _consumable_sessions(
+    calendar: RetainedCalendarWindow, start_date: date, end_date: date, as_of: datetime
+) -> frozenset[str]:
+    """
+    Open sessions in the clipped window whose close has passed by as_of.
+
+    A session that has not closed yet has no knowable daily bar, so shards
+    scoped to it cannot contribute consumable evidence at this cutoff.
+    """
+    return frozenset(
+        day
+        for day in calendar.days
+        if start_date.isoformat() <= day <= end_date.isoformat()
+        and datetime.combine(date.fromisoformat(day), time(15), _SHANGHAI).astimezone(
+            UTC
+        )
+        <= as_of
+    )
+
+
 class MarketChartQueryFacade:
     """Read exact retained bars and calendar under one server-owned cutoff."""
 
@@ -435,7 +455,7 @@ class MarketChartQueryFacade:
         cutoff: datetime,
         *,
         instrument_id: int,
-        open_days: frozenset[str],
+        consumable_days: frozenset[str],
     ) -> tuple[ProviderSnapshot, ...]:
         tickers_for = cache(
             partial(
@@ -451,12 +471,13 @@ class MarketChartQueryFacade:
                 tickers_for(source=source_name).get(day.isoformat())
             )
 
-        # Only open sessions inside the request window can consume evidence;
-        # a shard scoped to closed days (weekend or holiday polls) must not
-        # join source/schema authority decisions for the visible sessions.
-        open_window_days = frozenset(
+        # Only sessions the chart can consume — open inside the request
+        # window and already closed by the cutoff — may require evidence;
+        # shards scoped to closed days or to today's unclosed session must
+        # not join source/schema authority decisions.
+        consumable_window_days = frozenset(
             day.replace("-", "")
-            for day in open_days
+            for day in consumable_days
             if start_date.isoformat() <= day <= end_date.isoformat()
         )
         candidates = [
@@ -469,7 +490,7 @@ class MarketChartQueryFacade:
                 _snapshot_range(item.request_start)
                 <= day
                 <= _snapshot_range(item.request_end)
-                for day in open_window_days
+                for day in consumable_window_days
             )
             and _snapshot_matches_instrument(item, start_date, end_date, ticker_at)
         ]
@@ -560,7 +581,9 @@ class MarketChartQueryFacade:
                 request.end_date,
                 cutoff,
                 instrument_id=request.instrument_id,
-                open_days=frozenset(calendar.days),
+                consumable_days=_consumable_sessions(
+                    calendar, request.start_date, request.end_date, cutoff
+                ),
             )
             if not status_snapshots:
                 return {}, ()
@@ -610,7 +633,9 @@ class MarketChartQueryFacade:
                 request.end_date,
                 cutoff,
                 instrument_id=request.instrument_id,
-                open_days=frozenset(calendar.days),
+                consumable_days=_consumable_sessions(
+                    calendar, request.start_date, request.end_date, cutoff
+                ),
             )
             instrument_code = self._instrument_code(
                 request, factor_snapshots[0].source, cutoff, calendar
@@ -776,22 +801,8 @@ class MarketChartQueryFacade:
         # No in-range session has closed yet, so no daily bar is knowable:
         # return the calendar-bound empty result before the maturity gate or
         # any retained-price requirement can reject a still-valid request.
-        if not any(
-            datetime.combine(date.fromisoformat(day), time(15), _SHANGHAI).astimezone(
-                UTC
-            )
-            <= as_of
-            for day in calendar.days
-            if max(start_date, request.listed_on or start_date).isoformat()
-            <= day
-            <= min(
-                end_date,
-                as_of.astimezone(_SHANGHAI).date(),
-                request.delisted_on - timedelta(days=1)
-                if request.delisted_on
-                else end_date,
-            ).isoformat()
-        ):
+        consumable_days = _consumable_sessions(calendar, start_date, end_date, as_of)
+        if not consumable_days:
             return MarketChartView(
                 instrument_id=instrument_id,
                 period=period,
@@ -819,7 +830,7 @@ class MarketChartQueryFacade:
             end_date,
             cutoff,
             instrument_id=instrument_id,
-            open_days=frozenset(calendar.days),
+            consumable_days=consumable_days,
         )
         latest = max(selected, key=lambda item: item.created_at)
         queried_snapshot_ids = {item.snapshot_id for item in selected}
