@@ -281,10 +281,13 @@ class InstrumentReader:
             source: 数据源标识符
             asof: Point-in-Time 日期
             cutoff: 知识截止时刻；提供时按 backward as-of join 只使用该时刻
-                已记录的映射行。区间闭合（effective_to）与后继映射行是同一次
-                变更写入的：后继行在 cutoff 之后才记录时，前驱行的闭合同样
-                不可知，仍按开放区间解析；无后继行的闭合知识时间不可推断，
-                维持生效区间过滤（fail closed）
+                已记录的映射行。created_at 与 cutoff 的亚秒部分在 SQLite
+                datetime() 比较中被丢弃，同秒内先后不可排序：与 cutoff
+                同秒记录的行按尚未可知处理，后继同秒记录视为闭合未知，
+                秒粒度 fail closed。区间闭合（effective_to）与后继映射行
+                是同一次变更写入的：后继行在 cutoff 之后才记录时，前驱行
+                的闭合同样不可知，仍按开放区间解析；无后继行的闭合知识
+                时间不可推断，维持生效区间过滤（fail closed）
 
         Returns:
             source_ticker 或 None（未找到时）
@@ -332,7 +335,7 @@ class InstrumentReader:
                 SELECT m.source_ticker FROM instrument_mapping m
                 WHERE m.instrument_id = ? AND m.source = ?
                   AND m.effective_from <= d.value
-                  AND datetime(m.created_at) <= datetime(?)
+                  AND datetime(m.created_at) < datetime(?)
                   AND (
                       m.effective_to IS NULL
                       OR m.effective_to > d.value
@@ -341,7 +344,7 @@ class InstrumentReader:
                           WHERE s.instrument_id = m.instrument_id
                             AND s.source = m.source
                             AND s.effective_from = m.effective_to
-                            AND datetime(s.created_at) > datetime(?)
+                            AND datetime(s.created_at) >= datetime(?)
                       )
                   )
                 ORDER BY m.effective_from DESC
