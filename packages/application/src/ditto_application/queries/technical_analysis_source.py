@@ -245,6 +245,7 @@ def _reject_empty_revision_overlap(
     frame: pl.DataFrame,
     context: PITQueryContext,
     snapshot_reader: ProviderSnapshotReader,
+    instrument_code: str | Callable[[date], str | None],
 ) -> None:
     retained = {
         snapshot_id: snapshot_reader.get_snapshot(snapshot_id)
@@ -252,9 +253,18 @@ def _reject_empty_revision_overlap(
         for snapshot_id in dataset.source_snapshot_ids
     }
     empty_revisions = [
-        item
+        (
+            item,
+            {
+                key.removeprefix("source_ticker=")
+                for key in item.canonical_asset.partition_keys
+                if key.startswith("source_ticker=")
+            },
+        )
         for item in retained.values()
-        if item is not None and item.row_count == 0 and item.created_at <= context.as_of
+        if item is not None
+        and item.row_count == 0
+        and item.created_at <= context.knowledge_cutoff
     ]
     if not empty_revisions:
         return
@@ -262,16 +272,21 @@ def _reject_empty_revision_overlap(
         prior = retained.get(str(row["source_snapshot_id"]))
         if prior is None:
             continue
-        day = cast(datetime, row["event_time"]).astimezone(_SHANGHAI).strftime("%Y%m%d")
+        trade_day = cast(datetime, row["event_time"]).astimezone(_SHANGHAI).date()
+        day = trade_day.strftime("%Y%m%d")
+        ticker = (
+            instrument_code(trade_day) if callable(instrument_code) else instrument_code
+        )
         if any(
-            item.dataset_id == prior.dataset_id
+            (not tickers or ticker in tickers)
+            and item.dataset_id == prior.dataset_id
             and item.source == prior.source
             and item.request_start.replace("-", "")
             <= day
             <= item.request_end.replace("-", "")
-            and snapshot_observed_by(item, context.as_of)
-            > snapshot_observed_by(prior, context.as_of)
-            for item in empty_revisions
+            and snapshot_observed_by(item, context.knowledge_cutoff)
+            > snapshot_observed_by(prior, context.knowledge_cutoff)
+            for item, tickers in empty_revisions
         ):
             raise _source_error(
                 "TECHNICAL_SOURCE_REVISION_CONFLICT",
@@ -328,7 +343,7 @@ def _instrument_rows(
         selected = selected.filter(pl.all_horizontal(ticker_filters))
     if id_filter is not None:
         selected = selected.filter(id_filter)
-    _reject_empty_revision_overlap(selected, context, snapshot_reader)
+    _reject_empty_revision_overlap(selected, context, snapshot_reader, instrument_code)
     return selected
 
 

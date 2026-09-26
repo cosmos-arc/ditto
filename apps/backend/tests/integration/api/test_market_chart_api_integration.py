@@ -19,6 +19,9 @@ from ditto_application.queries.market_chart import (
     MarketChartRequest,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.technical_analysis_source import (
+    ProviderPayloadTechnicalAnalysisSource,
+)
 from ditto_apps.api.routes.market import router
 from ditto_apps.middleware import configure_exception_handlers
 from ditto_data.catalog import DataAssetRef
@@ -28,7 +31,9 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotDraft,
     ProviderSnapshotReader,
 )
+from ditto_data.query.contracts import DatasetSnapshot, PITQueryContext
 from ditto_data.services.market_service import MarketService
+from ditto_kernel.identity import InstrumentId
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -1587,4 +1592,65 @@ def test_chart_rejects_stale_rows_covered_by_newer_empty_shard(
                 allow_experimental_data=False,
                 now=datetime(2026, 3, 12, 9, tzinfo=UTC),
             )
+        )
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("ticker", ["600519.SH", "OTHER.SH"])
+def test_shared_source_empty_revision_respects_ticker_scope(
+    tmp_path: Path, ticker: str
+) -> None:
+    chart, price, _ = _chart(tmp_path, poisoned=False)
+    empty = replace(
+        price,
+        snapshot_id="scoped-empty",
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+        canonical_asset=DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=(f"source_ticker={ticker}",),
+        ),
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        observations=(),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    cutoff = datetime(2026, 3, 12, 9, tzinfo=UTC)
+    context = PITQueryContext(
+        as_of=cutoff,
+        knowledge_cutoff=cutoff,
+        publication_cutoff=cutoff,
+        source_snapshots=(
+            DatasetSnapshot(
+                dataset_id="stock_daily",
+                dataset_version=price.schema_version,
+                source_snapshot_ids=(price.snapshot_id, empty.snapshot_id),
+                created_at=empty.created_at,
+            ),
+        ),
+    )
+    source = ProviderPayloadTechnicalAnalysisSource(
+        snapshot_reader=cast(ProviderSnapshotReader, _Snapshots((price, empty))),
+        payload_reader=chart._payloads,
+    )
+    if ticker == "600519.SH":
+        with pytest.raises(AppQueryError, match="row overlaps newer empty revision"):
+            source.load(
+                context,
+                instrument_id=InstrumentId(1000001),
+                instrument_code="600519.SH",
+            )
+    else:
+        assert (
+            len(
+                source.load(
+                    context,
+                    instrument_id=InstrumentId(1000001),
+                    instrument_code="600519.SH",
+                )
+            )
+            == 2
         )
