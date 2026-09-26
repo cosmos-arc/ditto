@@ -67,7 +67,10 @@ task check-changed
 - Harness：运行包含 `harness-check` 的根 `check`。
 - 仅测试：目标测试、Ruff format-check/lint、测试类型检查。Backend 的合同 fixtures（包括 Markdown 基线）按测试输入处理。
 - Web `design/specs`、`contracts/pages`、原型交互合同与 `prototype` 是机器消费来源；本地检查追加 `web-prototype`，普通 `docs` 阅读说明保留轻量路径。
-- 普通后端/Web 生产代码：分别运行所属包测试与静态检查/`check-web`；跨包或高风险变更运行 `check`。
+- 普通后端/Web 生产代码：分别运行所属包测试与静态检查/`check-web`；跨包变更运行 `check`。
+- 高风险单包变更同样运行包级静态检查与所属包 `--fast` 测试，另加 PIT 专项；只有跨包或
+  混入契约/未知路径时才回到 `check`。CI 的 PR job 选择（`ci.required_jobs`）对高危范围
+  仍取全量门，本地降档只消除与 CI 的重复支付，不削弱合并前验证。
 - 契约或跨栈路径：运行 `check` 与 `test-system`。
 - data/features/strategy/portfolio/risk/execution/backtest，以及 application 的
   query/process/builder、交易类 command 和对应 backend 入口：额外运行 PIT 专项；

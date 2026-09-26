@@ -361,7 +361,10 @@ class DiffClassificationTests(unittest.TestCase):
 
         assert level == "high-risk"
         assert commands == [
-            "task check",
+            "task lint",
+            "task fmt-check",
+            "task type-all",
+            "task test -- --fast packages/strategy/tests",
             "task pit",
         ]
 
@@ -371,15 +374,15 @@ class DiffClassificationTests(unittest.TestCase):
         fixtures = {
             "packages/application/src/ditto_application/commands/trade.py": (
                 "high-risk",
-                ("check", "task pit"),
+                ("--fast packages/application/tests", "task pit"),
             ),
             "packages/application/src/ditto_application/queries/factor_ic_report.py": (
                 "high-risk",
-                ("check", "task pit"),
+                ("--fast packages/application/tests", "task pit"),
             ),
             "apps/backend/src/ditto_apps/jobs/flows/backtest.py": (
                 "high-risk",
-                ("check", "task pit"),
+                ("--fast apps/backend/tests", "task pit"),
             ),
             "apps/backend/src/ditto_apps/api/routes/trade_command_routes.py": (
                 "contract-high-risk",
