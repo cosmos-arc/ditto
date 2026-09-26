@@ -9,12 +9,6 @@ from pathlib import Path
 
 import polars as pl
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
-from ditto_data.catalog.contracts import DataAssetRef
-from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
-from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
-from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
-from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
-from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
 from ditto_platform.foundation import (
@@ -23,6 +17,8 @@ from ditto_platform.foundation import (
     SQLiteClient,
     SQLitePool,
 )
+
+from tests.system.fixtures.retained_payload import retain_fixture_payload
 
 if os.environ.get("DITTO_ENVIRONMENT") != "testing":
     raise RuntimeError("instrument chart fixture requires testing mode")
@@ -100,11 +96,7 @@ def _adj_frame(instrument_id: int) -> pl.DataFrame:
     return pl.DataFrame(rows)
 
 
-def _seed_retained_charts(
-    payload_store: FilesystemProviderPayloadStore,
-    snapshot_store: SQLiteProviderSnapshotStore,
-    license_store: SQLiteDatasetLicenseStore,
-) -> None:
+def _seed_retained_charts(client: SQLiteClient, state_root: Path) -> None:
     # Chart candles and adjustment use the same retained provider evidence as
     # production, rather than the unversioned market read model above.
     for dataset, frames in (
@@ -146,47 +138,13 @@ def _seed_retained_charts(
                 ],
                 how="diagonal_relaxed",
             )
-        license_record = DatasetLicenseRecord.create(
-            DatasetLicenseDraft(
-                dataset_id=dataset,
-                source="tushare",
-                terms_version="isolated-test-v1",
-                effective_from=date(2026, 1, 1),
-                effective_to=None,
-                local_cache="allowed",
-                derivative_compute="allowed",
-                display="allowed",
-                redistribution="prohibited",
-                notes="isolated recorded acceptance data",
-                reviewed_by="fixture",
-                reviewed_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
-            )
-        )
-        license_store.append_license(license_record)
-        artifact = payload_store.retain_payload(
-            dataset_id=dataset, source="tushare", payload=frame
-        )
-        snapshot_store.append_snapshot(
-            ProviderSnapshot.create(
-                ProviderSnapshotDraft(
-                    dataset_id=dataset,
-                    source="tushare",
-                    request_start=_TRADING_DAYS[0].isoformat(),
-                    request_end=_TRADING_DAYS[-1].isoformat(),
-                    schema_version=f"fixture.{dataset}.v1",
-                    checksum=artifact.checksum,
-                    canonical_asset=DataAssetRef(
-                        dataset_id=dataset, namespace="market"
-                    ),
-                    request_parameters_hash=f"fixture:{dataset}:instrument-chart",
-                    response_metadata=(("fixture", "instrument-chart"),),
-                    license_record_id=license_record.record_id,
-                    row_count=artifact.row_count,
-                    payload_uri=artifact.uri,
-                    payload_retained=True,
-                    created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
-                )
-            )
+        retain_fixture_payload(
+            client,
+            state_root,
+            dataset_id=dataset,
+            source="tushare",
+            payload=frame,
+            created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
         )
 
 
@@ -342,29 +300,8 @@ def _seed(root: Path) -> None:
         OnDuplicate.ERROR.value,
         year=2026,
     )
-    payload_store = FilesystemProviderPayloadStore(root / "state")
-    snapshot_store = SQLiteProviderSnapshotStore(client)
-    _seed_retained_charts(
-        payload_store, snapshot_store, SQLiteDatasetLicenseStore(client)
-    )
+    _seed_retained_charts(client, root / "state")
     # ETF candidate comparison and chart use the same retained calendar.
-    calendar_license = DatasetLicenseRecord.create(
-        DatasetLicenseDraft(
-            dataset_id="calendar",
-            source="recorded",
-            terms_version="isolated-test-v1",
-            effective_from=date(2026, 1, 1),
-            effective_to=None,
-            local_cache="allowed",
-            derivative_compute="allowed",
-            display="allowed",
-            redistribution="prohibited",
-            notes="isolated recorded acceptance data",
-            reviewed_by="fixture",
-            reviewed_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
-        )
-    )
-    SQLiteDatasetLicenseStore(client).append_license(calendar_license)
     open_days = {day.isoformat() for day in tracking_days}
     # 页面默认研究日期是"今天"：把已排期交易日延伸到今天，日历才覆盖研究日。
     cursor = tracking_days[-1] + timedelta(days=1)
@@ -380,30 +317,13 @@ def _seed(root: Path) -> None:
         calendar_days.append(day_cursor.isoformat())
         calendar_open.append(day_cursor.isoformat() in open_days)
         day_cursor += timedelta(days=1)
-    artifact = payload_store.retain_payload(
+    retain_fixture_payload(
+        client,
+        root / "state",
         dataset_id="calendar",
         source="recorded",
         payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
-    )
-    snapshot_store.append_snapshot(
-        ProviderSnapshot.create(
-            ProviderSnapshotDraft(
-                dataset_id="calendar",
-                source="recorded",
-                request_start=calendar_days[0],
-                request_end=calendar_days[-1],
-                schema_version="fixture.calendar.v1",
-                checksum=artifact.checksum,
-                canonical_asset=DataAssetRef(dataset_id="calendar", namespace="market"),
-                request_parameters_hash="fixture:calendar:tracking-window",
-                response_metadata=(("fixture", "instrument-chart"),),
-                license_record_id=calendar_license.record_id,
-                row_count=artifact.row_count,
-                payload_uri=artifact.uri,
-                payload_retained=True,
-                created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
-            )
-        )
+        created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
     )
     client.commit()
     pool.close_all()
