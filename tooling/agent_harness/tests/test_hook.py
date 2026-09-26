@@ -863,6 +863,7 @@ def test_untracked_leftovers_do_not_keep_the_scoped_test_target() -> None:
         _commit_file(
             root, "packages/backtest/tests/test_unit.py", "def test_unit(): pass\n"
         )
+        _commit_file(root, "packages/backtest/tests/conftest.py", "# fixtures only\n")
         (root / "packages/backtest/tests/test_unit.py").unlink()
         subprocess.run(["git", "add", "-A"], cwd=root, check=True)
         subprocess.run(

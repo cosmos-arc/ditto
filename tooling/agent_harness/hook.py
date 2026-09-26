@@ -1128,10 +1128,11 @@ def _is_package_manifest(path: str) -> bool:
 
 
 def _has_tracked_tests(workspace: Path, owner: str) -> bool:
-    """The pushed revision must retain test files, not just the directory.
+    """The pushed revision must retain collectable test modules.
 
     Ignored leftovers (e.g. ``tests/__pycache__/``) keep the directory alive
-    after every tracked test was deleted, which would make pytest exit 5.
+    after every tracked test was deleted, and a lone tracked ``conftest.py``
+    keeps ``git ls-files`` non-empty — pytest would exit 5 in both cases.
     """
     result = subprocess.run(
         ["git", "ls-files", "--", f"{owner}/tests"],
@@ -1140,7 +1141,12 @@ def _has_tracked_tests(workspace: Path, owner: str) -> bool:
         capture_output=True,
         check=False,
     )
-    return result.returncode == 0 and bool(result.stdout.strip())
+    if result.returncode != 0:
+        return False
+    return any(
+        line.endswith(".py") and line.rsplit("/", 1)[-1].startswith("test_")
+        for line in result.stdout.decode().splitlines()
+    )
 
 
 def _backend_source_commands(
