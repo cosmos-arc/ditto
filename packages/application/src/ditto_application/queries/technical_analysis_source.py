@@ -241,9 +241,50 @@ class _PayloadDatasetReader(PITDatasetReader):
         return pl.concat(frames, how="diagonal_relaxed")
 
 
+def _reject_empty_revision_overlap(
+    frame: pl.DataFrame,
+    context: PITQueryContext,
+    snapshot_reader: ProviderSnapshotReader,
+) -> None:
+    retained = {
+        snapshot_id: snapshot_reader.get_snapshot(snapshot_id)
+        for dataset in context.source_snapshots
+        for snapshot_id in dataset.source_snapshot_ids
+    }
+    empty_revisions = [
+        item
+        for item in retained.values()
+        if item is not None and item.row_count == 0 and item.created_at <= context.as_of
+    ]
+    if not empty_revisions:
+        return
+    for row in frame.select("event_time", "source_snapshot_id").to_dicts():
+        prior = retained.get(str(row["source_snapshot_id"]))
+        if prior is None:
+            continue
+        day = cast(datetime, row["event_time"]).astimezone(_SHANGHAI).strftime("%Y%m%d")
+        if any(
+            item.dataset_id == prior.dataset_id
+            and item.source == prior.source
+            and item.request_start.replace("-", "")
+            <= day
+            <= item.request_end.replace("-", "")
+            and snapshot_observed_by(item, context.as_of)
+            > snapshot_observed_by(prior, context.as_of)
+            for item in empty_revisions
+        ):
+            raise _source_error(
+                "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                "visible row overlaps newer empty revision",
+                snapshot_id=prior.snapshot_id,
+            )
+
+
 def _instrument_rows(
     frame: pl.DataFrame,
     *,
+    context: PITQueryContext,
+    snapshot_reader: ProviderSnapshotReader,
     instrument_id: InstrumentId,
     instrument_code: str | Callable[[date], str | None],
 ) -> pl.DataFrame:
@@ -287,6 +328,7 @@ def _instrument_rows(
         selected = selected.filter(pl.all_horizontal(ticker_filters))
     if id_filter is not None:
         selected = selected.filter(id_filter)
+    _reject_empty_revision_overlap(selected, context, snapshot_reader)
     return selected
 
 
@@ -440,6 +482,8 @@ class ProviderPayloadTechnicalAnalysisSource:
         combined = pl.concat(frames, how="diagonal_relaxed")
         selected = _instrument_rows(
             combined,
+            context=context,
+            snapshot_reader=self._snapshot_reader,
             instrument_id=instrument_id,
             instrument_code=instrument_code,
         ).sort("event_time")
@@ -455,7 +499,11 @@ class ProviderPayloadTechnicalAnalysisSource:
         """Read exact visible adjustment factors without a latest-store fallback."""
         frame = self._query.query(dataset_id="adj_factor", context=context)
         selected = _instrument_rows(
-            frame, instrument_id=instrument_id, instrument_code=instrument_code
+            frame,
+            context=context,
+            snapshot_reader=self._snapshot_reader,
+            instrument_id=instrument_id,
+            instrument_code=instrument_code,
         ).sort("event_time")
         factor_column = _column(
             selected, ("adj_factor", "adjustment_factor"), field="adjustment factor"
@@ -509,7 +557,11 @@ class ProviderPayloadTechnicalAnalysisSource:
         """Return exact visible full-day suspension evidence; unknown stays a gap."""
         frame = self._query.query(dataset_id="stock_status", context=context)
         selected = _instrument_rows(
-            frame, instrument_id=instrument_id, instrument_code=instrument_code
+            frame,
+            context=context,
+            snapshot_reader=self._snapshot_reader,
+            instrument_id=instrument_id,
+            instrument_code=instrument_code,
         )
         if "is_suspended" not in selected.columns:
             return {}

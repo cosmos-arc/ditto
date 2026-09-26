@@ -1547,3 +1547,44 @@ def test_chart_rejects_prices_on_visible_full_day_suspensions(
                 now=datetime(2026, 3, 12, 8, tzinfo=UTC),
             )
         )
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["stock_daily", "adj_factor", "stock_status"])
+def test_chart_rejects_stale_rows_covered_by_newer_empty_shard(
+    tmp_path: Path, dataset: str
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    prior = chart._snapshots.list_snapshots(dataset_id=dataset)[0]
+    day = "2026-03-11" if dataset == "stock_status" else "2026-03-09"
+    empty = replace(
+        prior,
+        snapshot_id=f"new-empty-{dataset}",
+        request_start=day,
+        request_end=day,
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        observations=(),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader, _Snapshots((*chart._snapshots.list_snapshots(), empty))
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    with pytest.raises(AppQueryError, match="row overlaps newer empty revision"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="weekly",
+                adjustment="qfq" if dataset == "adj_factor" else "none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
