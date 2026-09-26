@@ -1,50 +1,23 @@
-## 变更类型
+## 问题与结果
 
-- [ ] 🚀 feat: 新功能
-- [ ] 🐛 fix: Bug 修复
-- [ ] 📝 docs: 文档变更
-- [ ] ♻️ refactor: 重构
-- [ ] ⚡ perf: 性能优化
-- [ ] ✅ test: 测试相关
-- [ ] 🔧 chore: 杂项
-- [ ] 🔨 ci: CI/CD
+<!-- 关联 Issue；说明触发场景、原行为与修改后的可观察结果。 -->
 
-## 变更描述
+## 范围与风险
 
-<!-- 简要描述这个 PR 做了什么 -->
+<!-- 手写实现/生成物/消费者；涉及的时间、资金、身份、契约或恢复边界及未测范围。 -->
 
-## 影响范围
+## 验证
 
-- [ ] `packages/engine` - 核心业务逻辑
-- [ ] `packages/data` - 数据存储层
-- [ ] `packages/infra` - 基础设施
-- [ ] `packages/app` - 应用编排层
-- [ ] `interfaces` - 应用入口（API/CLI/Jobs + DI Composition Root）
-- [ ] 其他:
+<!-- 列出实际 SHA、命令、结果与 CI 链接；未执行或仍阻断的检查明确注明。 -->
 
-## Definition of Done
+- [ ] 按[测试指南](https://github.com/cosmos-arc/ditto/blob/main/docs/engineering/testing.md)完成适用验证，已知 CI 失败已按对应入口复核
+- [ ] 最新内容的适用 CI 全部通过，验证身份一致
 
-### 工程质量
-- [ ] `task check` 全部通过
-- [ ] 测试覆盖率达标（整体 ≥80%，风控 100%）
-- [ ] 类型注解完整，basedpyright 0 错误
+## 审查与修复
 
-### 代码审美
-- [ ] 命名符合项目约定
-- [ ] 无冗余的 AI 生成代码
-- [ ] 通过所有 check 检查
+<!-- 按交付约定记录 base/HEAD、审查范围、有效发现的处理及修复证据；首审与增量复审分别说明。 -->
 
-### PIT 安全（如涉及数据）
-- [ ] 使用 `knowledge_date` 过滤
-- [ ] rolling 指定 `closed="left"`
+- [ ] 按[CR 规则](https://github.com/cosmos-arc/ditto/blob/main/docs/engineering/development-workflow.md#cr-判定与收敛)处理发现，有效阻断闭合
+- [ ] 当前内容已触发或请求的审查结束；非阻断/不成立意见附依据，剩余风险明确
 
-### 文档
-- [ ] README.md 已更新（如有接口变更）
-
-## 测试说明
-
-<!-- 描述如何测试这些变更 -->
-
-## 其他说明
-
-<!-- 任何需要注意的事项 -->
+<!-- 第三轮仍有新阻断时，在现有 Issue/PR 记录旧遗漏、未闭合修复、回归或需求变化及下一步。 -->
