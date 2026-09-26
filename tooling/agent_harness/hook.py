@@ -1108,15 +1108,15 @@ def _backend_test_commands(
     return commands
 
 
-def _backend_source_commands(
-    paths: Sequence[str], *, high_risk: bool
-) -> list[list[str]]:
+def _backend_source_commands(paths: Sequence[str]) -> list[list[str]]:
     owners = {
         "/".join(path.split("/")[:2])
         for path in paths
         if path.endswith(".py") and path.startswith(("packages/", "apps/backend/"))
     }
-    if high_risk or len(owners) != 1:
+    # CI keeps high-risk scopes on the full gate (ci.required_jobs); the local
+    # ladder only adds the PIT suite, so pushes do not double-pay the full check.
+    if len(owners) != 1:
         return [["task", "check"]]
     owner = next(iter(owners))
     return [
@@ -1159,9 +1159,7 @@ def verification_commands(
     elif "web" in active_classes:
         commands.append(["task", "check-web"])
     elif active_classes & {"backend", "high-risk"}:
-        commands.extend(
-            _backend_source_commands(paths, high_risk="high-risk" in active_classes)
-        )
+        commands.extend(_backend_source_commands(paths))
 
     if needs_system:
         commands.append(["task", "test-system"])
