@@ -132,7 +132,12 @@ def _chart_rows(
                 request.start_date, request.listed_on or request.start_date
             ).isoformat()
             or day
-            > min(request.end_date, request.delisted_on or request.end_date).isoformat()
+            > min(
+                request.end_date,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else request.end_date,
+            ).isoformat()
         ):
             continue
         if day not in days:
@@ -155,7 +160,11 @@ def _chart_rows(
         <= min(
             request.end_date.isoformat(),
             as_of.astimezone(_SHANGHAI).date().isoformat(),
-            (request.delisted_on or request.end_date).isoformat(),
+            (
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else request.end_date
+            ).isoformat(),
         )
     ]
     missing = tuple(
@@ -195,7 +204,12 @@ def _chart_rows(
             for day in calendar.days
             if max(period_start, request.listed_on or period_start).isoformat()
             <= day
-            <= min(period_end, request.delisted_on or period_end).isoformat()
+            <= min(
+                period_end,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else period_end,
+            ).isoformat()
             and day not in suspensions
         ]
         complete_calendar = calendar_has_complete_authority(

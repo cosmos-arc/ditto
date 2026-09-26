@@ -383,7 +383,7 @@ def test_chart_lifecycle_and_status_bound_expected_sessions(tmp_path: Path) -> N
         adjustment="none",
         allow_experimental_data=False,
         now=datetime(2026, 3, 13, 8, tzinfo=UTC),
-        delisted_on=date(2026, 3, 12),
+        delisted_on=date(2026, 3, 13),
     )
     result = chart.get_chart(base)
     # Known full-day suspension is not a gap; future status cannot hide a gap.
@@ -391,11 +391,18 @@ def test_chart_lifecycle_and_status_bound_expected_sessions(tmp_path: Path) -> N
     assert result.stale_reason == "missing_expected_session"
     assert len(result.source_snapshot_ids) == 2
     closed = chart.get_chart(
-        MarketChartRequest(**{**vars(base), "delisted_on": date(2026, 3, 10)})
+        MarketChartRequest(**{**vars(base), "delisted_on": date(2026, 3, 11)})
     )
     assert closed.missing_sessions == ()
     assert closed.stale_reason is None
     assert closed.bars[0].partial is False
+    # A retained bar on the exclusive delisting date must not be displayed.
+    day_before = chart.get_chart(
+        MarketChartRequest(**{**vars(base), "delisted_on": date(2026, 3, 10)})
+    )
+    assert day_before.latest_price_date == "2026-03-09"
+    assert day_before.bars[0].close == 10.2
+    assert day_before.missing_sessions == ()
 
 
 @pytest.mark.pit
