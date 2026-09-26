@@ -36,6 +36,8 @@ from ditto_application.queries.field_admission import (
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
+    calendar_has_complete_authority,
+    calendar_has_single_source,
     retained_trading_days,
 )
 from ditto_application.queries.technical_analysis_source import (
@@ -425,18 +427,25 @@ class LiveETFPaperExecutionFacts:
         start = date.fromisoformat(trade_date)
         horizon = (start + timedelta(days=30)).isoformat()
         try:
-            sessions = retained_trading_days(
+            calendar = retained_trading_days(
                 snapshots=self._snapshots,
                 payloads=self._payloads,
                 cutoff=cutoff,
+                first_day=trade_date,
             )
         except RetainedCalendarAbsent as exc:
             raise AppProcessError(
                 "ETF Paper settlement calendar is absent or future"
             ) from exc
-        days = [day for day in sessions if trade_date <= day <= horizon]
+        days = [day for day in calendar.days if trade_date <= day <= horizon]
         if not days or days[0] != trade_date or len(days) <= cycle:
             raise AppProcessError("ETF Paper settlement calendar is incomplete")
+        if not calendar_has_complete_authority(calendar, trade_date, days[cycle]):
+            raise AppProcessError("ETF Paper settlement calendar is incomplete")
+        if not calendar_has_single_source(calendar, trade_date, days[cycle]):
+            raise AppProcessError(
+                "ETF Paper settlement calendar mixes provider sources"
+            )
         return days[cycle]
 
 

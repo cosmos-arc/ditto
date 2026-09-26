@@ -20,6 +20,17 @@ from ditto_data.storage.base.sqlite_helpers import (
 __all__ = ["SQLiteProviderSnapshotStore"]
 
 
+_INSERT_OBSERVATION_EVENT = (
+    "INSERT OR IGNORE INTO provider_snapshot_observation_events VALUES (?, ?)"
+)
+_SELECT_OBSERVATION_EVENTS = " ".join(
+    (
+        "SELECT observed_at FROM provider_snapshot_observation_events",
+        "WHERE snapshot_id = ?",
+    )
+)
+
+
 def _metadata_json(metadata: tuple[tuple[str, str], ...]) -> str:
     return orjson.dumps(dict(metadata)).decode()
 
@@ -84,6 +95,24 @@ class SQLiteProviderSnapshotStore:
             )
         self._client.execute(
             """
+            CREATE TABLE IF NOT EXISTS provider_snapshot_observation_events (
+                snapshot_id TEXT NOT NULL
+                    REFERENCES provider_snapshots(snapshot_id),
+                observed_at TEXT NOT NULL,
+                PRIMARY KEY (snapshot_id, observed_at)
+            )
+            """
+        )
+        if not self._column_missing("provider_snapshots", "last_observed_at"):
+            self._client.execute(
+                """
+                INSERT OR IGNORE INTO provider_snapshot_observation_events
+                SELECT snapshot_id, last_observed_at FROM provider_snapshots
+                WHERE last_observed_at IS NOT NULL
+                """
+            )
+        self._client.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_provider_snapshots_canonical
             ON provider_snapshots(
                 canonical_namespace,
@@ -114,7 +143,11 @@ class SQLiteProviderSnapshotStore:
         if existing is not None:
             # A legacy row without the fingerprint pin accepts it on
             # re-ingestion instead of conflicting; both-present stays strict.
-            comparable = replace(snapshot, created_at=existing.created_at)
+            comparable = replace(
+                snapshot,
+                created_at=existing.created_at,
+                observations=existing.observations,
+            )
             if existing.schema_fingerprint is None:
                 comparable = replace(comparable, schema_fingerprint=None)
             if comparable != existing:
@@ -122,6 +155,15 @@ class SQLiteProviderSnapshotStore:
                     f"immutable provider snapshot conflict: {snapshot.snapshot_id}"
                 )
             self._backfill_observation(snapshot.snapshot_id)
+            # created_at 保持首次可见时间不可变；更晚的相同内容重观察作为
+            # 有序事件追加到事件表，让 open→closed→open 这类回到旧字节的
+            # 修正对按观察时间排序的消费者可见，且中间事件不被覆盖。
+            if snapshot.created_at > existing.created_at:
+                self._client.execute(
+                    _INSERT_OBSERVATION_EVENT,
+                    [snapshot.snapshot_id, snapshot.created_at.isoformat()],
+                )
+                self._client.commit()
             if existing.schema_fingerprint is None and (
                 snapshot.schema_fingerprint is not None
             ):
@@ -173,29 +215,11 @@ class SQLiteProviderSnapshotStore:
                     snapshot.schema_fingerprint,
                 ],
             )
-            previous = self._client.fetchone(
-                """
-                SELECT snapshot_id FROM provider_snapshots
-                WHERE dataset_id = ? AND source = ? AND request_start = ?
-                  AND request_end = ? AND canonical_namespace = ?
-                  AND canonical_partition_keys = ? AND snapshot_id != ?
-                ORDER BY rowid DESC LIMIT 1
-                """,
-                [
-                    snapshot.dataset_id,
-                    snapshot.source,
-                    snapshot.request_start,
-                    snapshot.request_end,
-                    snapshot.canonical_asset.namespace,
-                    partition_keys_json(snapshot.canonical_asset.partition_keys),
-                    snapshot.snapshot_id,
-                ],
-            )
             self._client.execute(
                 "INSERT INTO provider_snapshot_observations VALUES (?, ?, ?)",
                 [
                     snapshot.snapshot_id,
-                    previous["snapshot_id"] if previous else None,
+                    self._predecessor_at(snapshot),
                     self._now().isoformat(),
                 ],
             )
@@ -204,13 +228,31 @@ class SQLiteProviderSnapshotStore:
             self._client.rollback()
             raise
 
+    def _predecessor_at(self, snapshot: ProviderSnapshot) -> str | None:
+        events = (
+            (observed_at, previous.snapshot_id)
+            for previous in self.list_snapshots(
+                dataset_id=snapshot.dataset_id,
+                source=snapshot.source,
+                canonical_asset=snapshot.canonical_asset,
+            )
+            if previous.snapshot_id != snapshot.snapshot_id
+            and previous.request_start == snapshot.request_start
+            and previous.request_end == snapshot.request_end
+            and previous.created_at <= snapshot.created_at
+            for observed_at in (previous.created_at, *previous.observations)
+            if observed_at <= snapshot.created_at
+        )
+        latest = max(events, default=None)
+        return latest[1] if latest else None
+
     def get_snapshot(self, snapshot_id: str) -> ProviderSnapshot | None:
         """Return one immutable snapshot by deterministic ID."""
         row = self._client.fetchone(
             "SELECT * FROM provider_snapshots WHERE snapshot_id = ?",
             [snapshot_id],
         )
-        return None if row is None else _snapshot_from_row(row)
+        return None if row is None else _snapshot_from_row(row, self._client)
 
     def _backfill_observation(self, snapshot_id: str) -> None:
         """
@@ -298,10 +340,10 @@ class SQLiteProviderSnapshotStore:
                 canonical_partition_keys,
             ],
         )
-        return tuple(_snapshot_from_row(row) for row in rows)
+        return tuple(_snapshot_from_row(row, self._client) for row in rows)
 
 
-def _snapshot_from_row(row: dict[str, Any]) -> ProviderSnapshot:
+def _snapshot_from_row(row: dict[str, Any], client: SQLiteClient) -> ProviderSnapshot:
     return ProviderSnapshot(
         snapshot_id=str(row["snapshot_id"]),
         dataset_id=str(row["dataset_id"]),
@@ -330,5 +372,14 @@ def _snapshot_from_row(row: dict[str, Any]) -> ProviderSnapshot:
             str(row["schema_fingerprint"])
             if row.get("schema_fingerprint") is not None
             else None
+        ),
+        observations=tuple(
+            sorted(
+                datetime.fromisoformat(str(event["observed_at"]))
+                for event in client.fetchall(
+                    _SELECT_OBSERVATION_EVENTS,
+                    [str(row["snapshot_id"])],
+                )
+            )
         ),
     )

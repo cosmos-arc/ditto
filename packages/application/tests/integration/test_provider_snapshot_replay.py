@@ -12,7 +12,10 @@ from ditto_application.commands.data_product_certification_builder import (
     DataProductCertificationBuilder,
 )
 from ditto_application.exceptions import AppQueryError
-from ditto_application.processes.ingestion.post_ingest import process_fetched_data
+from ditto_application.processes.ingestion.post_ingest import (
+    RequestWindow,
+    process_fetched_data,
+)
 from ditto_application.queries.field_admission import (
     FieldAdmissionQuery,
     FieldAdmissionRequest,
@@ -119,7 +122,7 @@ def test_delayed_revision_replay_and_failed_completion_recovery(tmp_path, monkey
                     "2026-07-16",
                     force,
                     ctx=runtime.context,
-                    request_end="2026-07-17",
+                    request_window=RequestWindow(None, "2026-07-17"),
                     chunk_id="replay",
                 )
 
@@ -214,7 +217,7 @@ def test_schema_version_bump_sharing_artifact_still_replays_exact_bytes(tmp_path
                 "2026-07-16",
                 False,
                 ctx=runtime.context,
-                request_end="2026-07-17",
+                request_window=RequestWindow(None, "2026-07-17"),
                 chunk_id="aliased",
             ).status
             == "success"

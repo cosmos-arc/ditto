@@ -55,6 +55,7 @@ from ditto_application.processes.ingestion.metadata_manager import MetadataManag
 from ditto_application.processes.ingestion.post_ingest import (
     DataWriteContext,
     PostIngestContext,
+    RequestWindow,
     is_sparse_pit_dataset,
     resolve_sparse_asof_snapshot,
 )
@@ -375,6 +376,12 @@ class IngestionCoordinator:
         if isinstance(df_or_result, IngestionResult):
             return df_or_result
 
+        registration = self._registry.require(_validate_dataset(dataset))
+        request_bounds = (
+            registration.request_bounds(trade_date)
+            if registration.request_bounds is not None
+            else None
+        )
         return _process_fetched_data(
             df_or_result,
             dataset,
@@ -394,6 +401,11 @@ class IngestionCoordinator:
                 evidence_committer=self._evidence_committer,
                 provider_payload_writer=self._provider_payload_writer,
                 license_record_id=self._license_record_id,
+            ),
+            request_window=(
+                RequestWindow(*request_bounds, advance_cursor=False)
+                if request_bounds
+                else None
             ),
         )
 
@@ -540,7 +552,7 @@ class IngestionCoordinator:
                 provider_payload_writer=self._provider_payload_writer,
                 license_record_id=self._license_record_id,
             ),
-            request_end=request_end,
+            request_window=RequestWindow(None, request_end),
             chunk_id=chunk_id,
         )
 

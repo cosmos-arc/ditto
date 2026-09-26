@@ -118,7 +118,7 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await review.getByLabel("复盘知识截止").fill(
 		await page.evaluate(() => {
 			const instant = new Date();
-			return new Date(instant.getTime() - instant.getTimezoneOffset() * 60_000).toISOString().slice(0, 23);
+			return new Date(instant.getTime() + 60_000 - instant.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 		}),
 	);
 	const valuationResponse = await request.get(

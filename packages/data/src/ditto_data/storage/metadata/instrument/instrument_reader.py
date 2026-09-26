@@ -415,9 +415,9 @@ class InstrumentReader:
         return [str(row["source_snapshot_id"]) for row in rows]
 
     def find_etf_reference(
-        self, *, asof: str, cutoff: str, source_snapshot_id: str
+        self, *, asof: str, cutoff: str, source_snapshot_id: str, observed_since: str
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        """Read exact-snapshot ETF identity and published, effective observations."""
+        """Read time-series-bounded exact-snapshot ETF reference observations."""
         instruments = self._client.fetchall(
             """SELECT s.instrument_id, s.ticker, s.name, s.exchange, s.is_active
             FROM instrument s
@@ -432,10 +432,14 @@ class InstrumentReader:
             FROM etf_reference_observation
             WHERE source_snapshot_id = ? AND observed_on <= ?
               AND published_at <= ? AND effective_from <= ?
-              AND (field = 'daily_amount' OR effective_to IS NULL
-                   OR effective_to > ?)
+              AND (field NOT IN ('daily_amount', 'nav_total_return',
+                                 'benchmark_total_return')
+                   OR observed_on >= ?)
+              AND (field IN ('daily_amount', 'nav_total_return',
+                             'benchmark_total_return')
+                   OR effective_to IS NULL OR effective_to > ?)
             ORDER BY instrument_id, field, observed_on DESC, published_at DESC""",
-            [source_snapshot_id, asof, cutoff, asof, asof],
+            [source_snapshot_id, asof, cutoff, asof, observed_since, asof],
         )
         return instruments, observations
 

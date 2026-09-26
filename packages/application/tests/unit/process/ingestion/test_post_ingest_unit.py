@@ -18,6 +18,7 @@ from ditto_application.processes.ingestion.post_ingest import (
     CatalogWriteContext,
     DataWriteContext,
     PostIngestContext,
+    RequestWindow,
     process_fetched_data,
     record_data_catalog_entry,
     run_list_date_inference,
@@ -243,6 +244,34 @@ def test_process_fetched_data_accepts_post_ingest_context() -> None:
     assert result.quality_evidence.checksum == "checksum123"
     assert writer.calls == [("stock_daily", "2024-12-27", OnDuplicate.VERIFY_IDENTICAL)]
     assert list_date_inference.asset_classes == []
+
+
+def test_daily_request_window_keeps_processing_on_trade_date() -> None:
+    """A wide daily fetch interval describes coverage, not cursor progress."""
+    frame = pl.DataFrame({"trade_date": ["2026-09-25"], "close": [1.0]})
+    for advance, expected_date in ((False, "2026-09-25"), (True, "2027-01-31")):
+        writer = _WriteDataRecorder(
+            WriteResult("unused", "unused", 1, 1, False),
+        )
+        ctx = PostIngestContext(
+            result_handler=IngestionResultHandler(None, "tushare"),
+            data_writer=cast(IngestionDataWriter, writer),
+            list_date_inference=cast(ListDateInferenceService, None),
+            quality_checker=_PassingQualityChecker(),
+            source_name="tushare",
+        )
+        result = process_fetched_data(
+            frame,
+            "stock_daily",
+            "2026-09-25",
+            False,
+            ctx=ctx,
+            request_window=RequestWindow(
+                "2026-01-01", "2027-01-31", advance_cursor=advance
+            ),
+        )
+        assert result.status == "success"
+        assert writer.calls[0][1] == expected_date
 
 
 def test_r2_evidence_profile_requires_quality_checker_before_payload_write() -> None:
@@ -894,7 +923,7 @@ def test_sparse_range_resolves_pit_snapshot_at_request_end() -> None:
         "2025-01-02",
         False,
         ctx=ctx,
-        request_end="2025-03-31",
+        request_window=RequestWindow(None, "2025-03-31"),
         chunk_id="chunk:tushare:balance_sheet:2025-Q1",
     )
 
@@ -962,7 +991,7 @@ def test_r2_empty_range_commits_no_payload_provider_observation() -> None:
         "2026-01-01",
         False,
         ctx=ctx,
-        request_end="2026-01-31",
+        request_window=RequestWindow(None, "2026-01-31"),
         chunk_id="chunk:tushare:commodity_daily:2026-01",
     )
 

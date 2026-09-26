@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from itertools import pairwise
 
 from ditto_kernel import traced
 
@@ -153,6 +154,29 @@ def compute_tracking_error(
     mean_excess = sum(excess) / min_len
     te_var = sum((e - mean_excess) ** 2 for e in excess) / (min_len - 1)
     return math.sqrt(te_var) * math.sqrt(TRADING_DAYS_PER_YEAR) * 100
+
+
+def compute_total_return_tracking(
+    fund_levels: list[float], benchmark_levels: list[float]
+) -> tuple[float, float]:
+    """Cumulative return difference and annualized sample tracking error, in percent."""
+    minimum_levels = 3
+    if len(fund_levels) != len(benchmark_levels) or len(fund_levels) < minimum_levels:
+        raise ValueError("aligned total-return levels require at least three dates")
+    if any(
+        not math.isfinite(value) or value <= 0
+        for value in (*fund_levels, *benchmark_levels)
+    ):
+        raise ValueError("total-return levels must be positive and finite")
+    fund_returns = [right / left - 1 for left, right in pairwise(fund_levels)]
+    benchmark_returns = [right / left - 1 for left, right in pairwise(benchmark_levels)]
+    deviation = 100 * (
+        fund_levels[-1] / fund_levels[0] - benchmark_levels[-1] / benchmark_levels[0]
+    )
+    error = compute_tracking_error(fund_returns, benchmark_returns, len(fund_returns))
+    if error is None or not math.isfinite(deviation) or not math.isfinite(error):
+        raise ValueError("total-return result must be finite")
+    return deviation, error
 
 
 def compute_beta_and_bench_ann(

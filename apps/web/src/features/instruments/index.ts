@@ -1,4 +1,10 @@
-export { type ETFCandidate, type ETFField, fetchETFCandidates, fetchETFReferenceSnapshots } from "./api/etf-candidates";
+export {
+	type ETFCandidate,
+	type ETFField,
+	type ETFTracking,
+	fetchETFCandidates,
+	fetchETFReferenceSnapshots,
+} from "./api/etf-candidates";
 export {
 	type CatalogInstrument,
 	fetchInstrumentCatalog,

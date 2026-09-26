@@ -3,6 +3,22 @@ import { apiClient } from "@/api/transport";
 
 type CandidateDTO = components["schemas"]["ETFCandidateResponse"];
 type FieldDTO = components["schemas"]["ETFFieldResponse"];
+type TrackingDTO = components["schemas"]["ETFTrackingResponse"];
+
+export type ETFTracking = {
+	readonly status: TrackingDTO["status"];
+	readonly reason: string | null;
+	readonly trackingDeviationPct: number | null;
+	readonly trackingErrorPct: number | null;
+	readonly sampleCount: number;
+	readonly start: string | null;
+	readonly end: string | null;
+	readonly currency: string | null;
+	readonly benchmarkId: string | null;
+	readonly sourceSnapshotId: string | null;
+	readonly calendarSnapshotIds: readonly string[];
+	readonly method: string;
+};
 
 export type ETFField = {
 	readonly value: FieldDTO["value"];
@@ -26,7 +42,26 @@ export type ETFCandidate = {
 	readonly exchange: string;
 	readonly isActiveCurrent: boolean;
 	readonly fields: Record<string, ETFField>;
+	readonly tracking: ETFTracking | null;
 };
+
+function toTracking(value: TrackingDTO | null | undefined): ETFTracking | null {
+	if (!value) return null;
+	return {
+		status: value.status,
+		reason: value.reason,
+		trackingDeviationPct: value.tracking_deviation_pct ?? null,
+		trackingErrorPct: value.tracking_error_pct ?? null,
+		sampleCount: value.sample_count,
+		start: value.start ?? null,
+		end: value.end ?? null,
+		currency: value.currency ?? null,
+		benchmarkId: value.benchmark_id ?? null,
+		sourceSnapshotId: value.source_snapshot_id ?? null,
+		calendarSnapshotIds: value.calendar_snapshot_ids,
+		method: value.method,
+	};
+}
 
 function toField(field: FieldDTO): ETFField {
 	return {
@@ -53,6 +88,7 @@ function toCandidate(candidate: CandidateDTO): ETFCandidate {
 		exchange: candidate.exchange,
 		isActiveCurrent: candidate.is_active,
 		fields: Object.fromEntries(Object.entries(candidate.fields).map(([key, value]) => [key, toField(value)])),
+		tracking: toTracking(candidate.tracking),
 	};
 }
 

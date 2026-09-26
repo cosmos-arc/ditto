@@ -33,6 +33,7 @@ from ditto_application.processes.ingestion.list_date_inference import (
 )
 from ditto_application.processes.ingestion.post_ingest import (
     PostIngestContext,
+    RequestWindow,
     process_fetched_data,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
@@ -227,6 +228,28 @@ def test_evidence_chain_persists_and_completed_replay_is_idempotent(
             snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
             == request.provider_snapshot
         )
+        observed_again = request.provider_snapshot.created_at.replace(hour=10)
+        replay = replace(
+            request,
+            provider_snapshot=replace(
+                request.provider_snapshot, created_at=observed_again
+            ),
+        )
+        assert committer.commit(replay).completed
+        stored = snapshots.get_snapshot(request.provider_snapshot.snapshot_id)
+        assert stored is not None
+        assert stored.observations == (observed_again,)
+        unattested = replace(
+            replay,
+            quality_attested=False,
+            provider_snapshot=replace(
+                replay.provider_snapshot, created_at=observed_again.replace(hour=11)
+            ),
+        )
+        rejected = committer.commit(unattested)
+        assert not rejected.completed
+        assert rejected.error_code == "DQ_EVIDENCE_MISSING"
+        assert snapshots.get_snapshot(request.provider_snapshot.snapshot_id) == stored
         assert catalog.get_asset(request.catalog_entry.asset) == request.catalog_entry
         assert lineage.list_events_for_run(request.lineage_event.run_id) == (
             request.lineage_event,
@@ -440,7 +463,7 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
                 "2026-07-16",
                 force,
                 ctx=runtime.context,
-                request_end="2026-07-17",
+                request_window=RequestWindow(None, "2026-07-17"),
                 chunk_id="test-backfill",
             )
 
@@ -463,7 +486,10 @@ def test_partial_backfill_recovery_and_revision_preserve_old_payload(
         # Recovering A after an uncertain B intent is also a durable recovery.
         assert len(lifecycle.list_complete()) == 3
         assert lifecycle.list_incomplete() == ()
-        assert snapshots.get_snapshot(first.snapshot_id) == first
+        reobserved = snapshots.get_snapshot(first.snapshot_id)
+        assert reobserved is not None
+        # 重观察保留内容与首次可见时间，只推进最后观察时间。
+        assert replace(reobserved, observations=first.observations) == first
         assert first.payload_uri is not None
         old = FilesystemProviderPayloadStore(tmp_path).read_payload(
             ProviderPayloadArtifact(

@@ -185,6 +185,87 @@ class TestObservationBackfill:
             pool.close()
 
 
+class TestReobservationOrdering:
+    def test_new_snapshot_follows_latest_reobserved_content(
+        self, tmp_path: Path
+    ) -> None:
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteProviderSnapshotStore(client)
+        original = _snapshot("tushare", "sha256:open")
+        closed = replace(
+            _snapshot("tushare", "sha256:closed"),
+            created_at=datetime(2026, 6, 2, 10, tzinfo=UTC),
+        )
+        reopened = replace(original, created_at=datetime(2026, 6, 3, 10, tzinfo=UTC))
+        revised = replace(
+            _snapshot("tushare", "sha256:revised"),
+            created_at=datetime(2026, 6, 4, 10, tzinfo=UTC),
+        )
+        try:
+            for snapshot in (original, closed, reopened, revised):
+                store.append_snapshot(snapshot)
+            assert store.get_predecessor(revised.snapshot_id) == original.snapshot_id
+        finally:
+            pool.close()
+
+    def test_reobservations_preserve_intermediate_events(self, tmp_path: Path) -> None:
+        """A→B→A→A keeps both re-observations for cutoff replay."""
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        store = SQLiteProviderSnapshotStore(client)
+        original = _snapshot("tushare", "sha256:open")
+        closed = replace(
+            _snapshot("tushare", "sha256:closed"),
+            created_at=datetime(2026, 6, 2, 10, 0, tzinfo=UTC),
+        )
+        reopened = replace(
+            _snapshot("tushare", "sha256:open"),
+            created_at=datetime(2026, 6, 3, 10, 0, tzinfo=UTC),
+        )
+        observed_again = replace(
+            reopened, created_at=datetime(2026, 6, 5, 10, 0, tzinfo=UTC)
+        )
+
+        try:
+            store.append_snapshot(original)
+            store.append_snapshot(closed)
+            store.append_snapshot(reopened)
+            store.append_snapshot(observed_again)
+
+            stored = store.get_snapshot(original.snapshot_id)
+            assert stored is not None
+            # 首次可见时间不可变；重观察作为事件追加，历史完整保留。
+            assert stored.created_at == original.created_at
+            assert stored.observations == (
+                reopened.created_at,
+                observed_again.created_at,
+            )
+        finally:
+            pool.close()
+
+    def test_upgrade_keeps_last_recorded_reobservation(self, tmp_path: Path) -> None:
+        client, pool = _client(tmp_path / "catalog.sqlite")
+        snapshot = _snapshot("tushare", "sha256:open")
+        observed_at = datetime(2026, 6, 3, 10, tzinfo=UTC)
+        try:
+            SQLiteProviderSnapshotStore(client).append_snapshot(snapshot)
+            client.execute(
+                "ALTER TABLE provider_snapshots ADD COLUMN last_observed_at TEXT"
+            )
+            client.execute(
+                "UPDATE provider_snapshots SET last_observed_at = ? "
+                "WHERE snapshot_id = ?",
+                [observed_at.isoformat(), snapshot.snapshot_id],
+            )
+            client.commit()
+
+            upgraded = SQLiteProviderSnapshotStore(client)
+            assert upgraded.get_snapshot(snapshot.snapshot_id) == replace(
+                snapshot, observations=(observed_at,)
+            )
+        finally:
+            pool.close()
+
+
 class TestSchemaFingerprintBackfill:
     def test_reingesting_legacy_snapshot_backfills_fingerprint(
         self, tmp_path: Path

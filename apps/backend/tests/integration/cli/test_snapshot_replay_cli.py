@@ -6,7 +6,10 @@ from types import SimpleNamespace
 
 import orjson
 import pytest
-from ditto_application.processes.ingestion.post_ingest import process_fetched_data
+from ditto_application.processes.ingestion.post_ingest import (
+    RequestWindow,
+    process_fetched_data,
+)
 from ditto_application.queries.field_admission import FieldAdmissionQuery
 from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
 from ditto_apps.cli.main import app
@@ -49,7 +52,7 @@ def test_cli_replay_checks_cutoff_and_revocation_without_losing_audit(
             "2026-07-16",
             False,
             ctx=runtime.context,
-            request_end="2026-07-17",
+            request_window=RequestWindow(None, "2026-07-17"),
             chunk_id="cli-replay",
         )
         assert result.status == "success"

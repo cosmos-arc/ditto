@@ -77,6 +77,9 @@ class EvidenceCommitRequest:
     success_log: IngestionLog
     quality_attested: bool = True
     retry_budget: int = 3
+    # 摄取/处理日，默认等于覆盖起点。success log 的 trade_date 必须等于它，
+    # 而不是等于 provider 覆盖区间的起点（日历日更的覆盖起点是年初）。
+    ingestion_date: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,6 +247,12 @@ class IngestionEvidenceCommitter:
         try:
             checkpoint = self._prepare_checkpoint(request)
             if checkpoint.status is PartitionLifecycleStatus.COMPLETE:
+                evidence_error = self._evidence_error(request)
+                if evidence_error is not None:
+                    return EvidenceCommitOutcome(
+                        request.chunk_id, completed=False, error_code=evidence_error
+                    )
+                self._ports.snapshot_writer.append_snapshot(request.provider_snapshot)
                 self._persist_success_log(request.success_log)
                 return EvidenceCommitOutcome(request.chunk_id, completed=True)
             self._advance_payload_stages(checkpoint, request)
@@ -258,18 +267,12 @@ class IngestionEvidenceCommitter:
     def _commit_catalog_evidence(
         self, request: EvidenceCommitRequest
     ) -> EvidenceCommitOutcome | None:
-        license_error = self._license_error(request)
-        if license_error is not None:
+        evidence_error = self._evidence_error(request)
+        if evidence_error is not None:
             return self._fail(
                 request,
                 status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code=license_error,
-            )
-        if not request.quality_attested:
-            return self._fail(
-                request,
-                status=PartitionLifecycleStatus.ORPHAN_PAYLOAD,
-                error_code="DQ_EVIDENCE_MISSING",
+                error_code=evidence_error,
             )
 
         checkpoint = self._require_checkpoint(request.chunk_id)
@@ -387,7 +390,8 @@ class IngestionEvidenceCommitter:
         if (
             request.success_log.dataset != request.dataset_id
             or request.success_log.source != request.source
-            or request.success_log.trade_date != request.request_start
+            or request.success_log.trade_date
+            != (request.ingestion_date or request.request_start)
             or request.success_log.status is not IngestionStatus.SUCCESS
             or not isinstance(request.success_log.checksum, str)
             or not request.success_log.checksum
@@ -492,6 +496,11 @@ class IngestionEvidenceCommitter:
                 ),
             )
         return current
+
+    def _evidence_error(self, request: EvidenceCommitRequest) -> str | None:
+        return self._license_error(request) or (
+            None if request.quality_attested else "DQ_EVIDENCE_MISSING"
+        )
 
     def _license_error(self, request: EvidenceCommitRequest) -> str | None:
         snapshot = request.provider_snapshot

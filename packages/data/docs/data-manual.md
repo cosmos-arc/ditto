@@ -218,6 +218,38 @@ keyring.set_password('fred', 'api_key', 'YOUR_API_KEY')
 
 **主键**：`(instrument_id, trade_date)`
 
+ETF 跟踪评价不从上述原始收盘价或单期 NAV 推算总回报。只读取同一
+`etf_reference_observation.source_snapshot_id` 下、逐交易日有 `published_at` 的
+`nav_total_return` 与 `benchmark_total_return` 水平值。正式研究要求两者的
+`observed_on` 是 UTC 估值日期，且 `unit` 分别为
+`<币种>:nav_total_return:valuation=<HH:MM>Z` 和
+`<同币种>:index_total_return:<跟踪指数标识>:valuation=<HH:MM>Z`；每个交易日的
+UTC 估值时刻必须一致，不能用披露时间代替估值时间。记录式参考序列可省略估值时刻，
+但不会进入正式排名；
+指数标识须与该时点可见的 `tracking_index` 一致。252 个日收益需要 253 个连续
+交易日水平值；评价窗口（跟踪与流动性）由 cutoff 可见的全部保留日历分片按
+payload 覆盖合并派生（生产日历按年度分片摄取，日摄取快照的 request 边界由
+摄取链按数据集声明的真实抓取区间记录——日历为当年 1 月 1 日至次年 1 月 31 日），
+全部入选分片必须来自同一 provider 来源（以真正决定最终窗口的分片计——含把日期
+改为闭市的修订分片），否则整个比较 fail closed
+（次级来源不得静默顶替生产日历；正式排名还要求日历分片通过字段准入认证）。重叠修订按创建时间
+从旧到新逐日覆盖、最新修订胜出（修正闭市不会被旧分片的开市日保留），只取窗口内、
+不晚于研究日的交易日，日历证据缺失、未覆盖研究日（以研究日前最后一个已排期
+交易日计，允许周末与春节/国庆长假的自然日桥接）或消费区间内任一自然日缺少
+明确的权威开/闭决定（生产日历 payload 覆盖区间内每个自然日；残缺 payload 的
+缺日不得被读成额外闭市日）时跟踪指标降级为 unavailable（理由
+\`evaluation_calendar_absent/stale/gap/mixed_sources\`），比较本身仍返回
+参考字段等无关数据、不读无版本的当前日历；血缘与准入只覆盖真正决定最终 253 个选中交易日的分片，其身份以
+`calendar_snapshot_ids` 随跟踪结果一起返回，保证窗口来源可审计
+可回放；正式 comparable 还要求参考快照字段（整窗区间）与每个日历分片的
+calendar.is_open 字段（只按该分片权威覆盖的区间）分别通过 formal_research 准入，
+且 `tracking_index` 关系行与总回报序列的 `source` 必须与快照一致才可能进入正式排名。
+读取时序字段（`daily_amount` 与两类总回报）以下界 `observed_since`
+约束在评价窗口内，其余字段仍按生效区间过滤、不限观察日期。缺日、币种/基准不符、
+历史关系变化或正式研究字段准入不足时不产生
+正式跟踪指标。记录式快照仅用于隔离软件验收。当前没有把真实供应商总回报序列写入
+该参考表的生产摄取路径，真实数据准入和运行证据需另行取得。
+
 ---
 
 ### 3.3 指数日线行情 (index_daily)

@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -305,3 +306,73 @@ def test_etf_paper_settlement_uses_calendar_evidence_visible_at_cutoff() -> None
             signal_cutoff=SIGNAL,
             valuation_cutoff=SIGNAL,
         )
+
+
+@pytest.mark.pit
+def test_etf_paper_settlement_rejects_only_consumed_mixed_calendar_sources() -> None:
+    facts, _metadata, _bars, _ledger, snapshots = _facts()
+    primary = snapshots.list_snapshots.return_value[0]
+    secondary = SimpleNamespace(
+        **{
+            **vars(primary),
+            "snapshot_id": "calendar-secondary",
+            "checksum": "b" * 32,
+            "source": "secondary",
+            "payload_uri": f"provider_payloads/secondary/calendar/{'b' * 32}.parquet",
+            "created_at": EXECUTION,
+        }
+    )
+    snapshots.list_snapshots.return_value = (primary, secondary)
+    payloads = cast(MagicMock, facts._payloads)
+    primary_frame = payloads.read_payload.return_value
+    payloads.read_payload.side_effect = lambda artifact: (
+        pl.DataFrame({"trade_date": [date(2026, 9, 3)], "is_open": [True]})
+        if artifact.checksum == secondary.checksum
+        else primary_frame
+    )
+
+    with pytest.raises(AppProcessError, match="mixes provider sources"):
+        facts._settlement_date("2026-09-02", 1, EXECUTION)
+
+    payloads.read_payload.side_effect = lambda artifact: (
+        pl.DataFrame({"trade_date": [date(2026, 9, 4)], "is_open": [True]})
+        if artifact.checksum == secondary.checksum
+        else primary_frame
+    )
+    assert facts._settlement_date("2026-09-02", 1, EXECUTION) == "2026-09-03"
+
+
+@pytest.mark.pit
+def test_etf_paper_settlement_rejects_a_new_revision_hole() -> None:
+    facts, _metadata, _bars, _ledger, snapshots = _facts()
+    original = snapshots.list_snapshots.return_value[0]
+    revision = SimpleNamespace(
+        **{
+            **vars(original),
+            "snapshot_id": "calendar-incomplete-revision",
+            "checksum": "b" * 32,
+            "payload_uri": f"provider_payloads/tushare/calendar/{'b' * 32}.parquet",
+            "created_at": EXECUTION,
+            "request_start": "2026-09-02",
+            "request_end": "2026-09-04",
+        }
+    )
+    snapshots.list_snapshots.return_value = (original, revision)
+    payloads = cast(MagicMock, facts._payloads)
+    original_frame = payloads.read_payload.return_value
+    payloads.read_payload.side_effect = lambda artifact: (
+        pl.DataFrame(
+            {
+                "trade_date": [date(2026, 9, 2), date(2026, 9, 4)],
+                "is_open": [True, False],
+            }
+        )
+        if artifact.checksum == revision.checksum
+        else original_frame
+    )
+
+    with pytest.raises(AppProcessError, match="settlement calendar is incomplete"):
+        facts._settlement_date("2026-09-02", 1, EXECUTION)
+    snapshots.list_snapshots.return_value = (revision,)
+    with pytest.raises(AppProcessError, match="settlement calendar is incomplete"):
+        facts._settlement_date("2026-09-02", 1, EXECUTION)

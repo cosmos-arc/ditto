@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import importlib
 import os
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import polars as pl
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
+from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
+from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
+from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
+from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
 from ditto_platform.foundation import (
@@ -145,9 +151,9 @@ def _seed(root: Path) -> None:
     )
     reference = "snapshot:recorded:etf-system"
     rows = [
-        (ETF_ID, "tracking_index", "000300.SH", "index", "2026-01-01"),
-        (ETF_NO_NAV_ID, "tracking_index", "000300.SH", "index", "2026-01-01"),
-        (ETF_CROSS_BORDER_ID, "tracking_index", "NDX", "index", "2026-01-01"),
+        (ETF_ID, "tracking_index", "000300.SH", "index", "2025-01-01"),
+        (ETF_NO_NAV_ID, "tracking_index", "000300.SH", "index", "2025-01-01"),
+        (ETF_CROSS_BORDER_ID, "tracking_index", "NDX", "index", "2025-01-01"),
         (ETF_ID, "asset_class", "A股宽基", "text", "2026-01-01"),
         (ETF_NO_NAV_ID, "asset_class", "A股宽基", "text", "2026-01-01"),
         (ETF_CROSS_BORDER_ID, "asset_class", "跨境股票", "text", "2026-01-01"),
@@ -166,6 +172,39 @@ def _seed(root: Path) -> None:
         [
             [instrument_id, field, value, unit, observed_on, observed_on, reference]
             for instrument_id, field, value, unit, observed_on in rows
+        ],
+    )
+    tracking_days: list[date] = []
+    day = date(2026, 5, 20)
+    while len(tracking_days) < 253:
+        if day.weekday() < 5:
+            tracking_days.append(day)
+        day -= timedelta(days=1)
+    tracking_days.reverse()
+    client.executemany(
+        "INSERT OR IGNORE INTO trading_calendar (trade_date, is_open) VALUES (?, 1)",
+        [[day.isoformat()] for day in tracking_days],
+    )
+    client.executemany(
+        """INSERT INTO etf_reference_observation
+           (instrument_id, field, value, unit, observed_on, published_at,
+            effective_from, source, source_snapshot_id)
+           VALUES (?, ?, ?, ?, ?, '2026-05-21T09:00:00Z', ?, 'recorded', ?)""",
+        [
+            [
+                ETF_ID,
+                field,
+                str(100 * 1.01**index),
+                unit,
+                day.isoformat(),
+                day.isoformat(),
+                reference,
+            ]
+            for index, day in enumerate(tracking_days)
+            for field, unit in (
+                ("nav_total_return", "CNY:nav_total_return"),
+                ("benchmark_total_return", "CNY:index_total_return:000300.SH"),
+            )
         ],
     )
     client.commit()
@@ -213,6 +252,67 @@ def _seed(root: Path) -> None:
         OnDuplicate.ERROR.value,
         year=2026,
     )
+    # ETF 候选比较的评价窗口只认 cutoff 可见的保留日历快照，这里把同一批
+    # 跟踪交易日注册成 calendar 数据集的 retained payload。
+    calendar_license = DatasetLicenseRecord.create(
+        DatasetLicenseDraft(
+            dataset_id="calendar",
+            source="recorded",
+            terms_version="isolated-test-v1",
+            effective_from=date(2026, 1, 1),
+            effective_to=None,
+            local_cache="allowed",
+            derivative_compute="allowed",
+            display="allowed",
+            redistribution="prohibited",
+            notes="isolated recorded acceptance data",
+            reviewed_by="fixture",
+            reviewed_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
+        )
+    )
+    SQLiteDatasetLicenseStore(client).append_license(calendar_license)
+    open_days = {day.isoformat() for day in tracking_days}
+    # 页面默认研究日期是"今天"：把已排期交易日延伸到今天，日历才覆盖研究日。
+    cursor = tracking_days[-1] + timedelta(days=1)
+    while cursor <= date.today():
+        if cursor.weekday() < 5:
+            open_days.add(cursor.isoformat())
+        cursor += timedelta(days=1)
+    # 与生产 trade_cal 一致，payload 覆盖区间内每个自然日（周末为闭市行）。
+    calendar_days: list[str] = []
+    calendar_open: list[bool] = []
+    day_cursor = tracking_days[0]
+    while day_cursor <= date.today():
+        calendar_days.append(day_cursor.isoformat())
+        calendar_open.append(day_cursor.isoformat() in open_days)
+        day_cursor += timedelta(days=1)
+    artifact = FilesystemProviderPayloadStore(root / "state").retain_payload(
+        dataset_id="calendar",
+        source="recorded",
+        payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
+    )
+    SQLiteProviderSnapshotStore(client).append_snapshot(
+        ProviderSnapshot.create(
+            ProviderSnapshotDraft(
+                dataset_id="calendar",
+                source="recorded",
+                request_start=calendar_days[0],
+                request_end=calendar_days[-1],
+                schema_version="fixture.calendar.v1",
+                checksum=artifact.checksum,
+                canonical_asset=DataAssetRef(dataset_id="calendar", namespace="market"),
+                request_parameters_hash="fixture:calendar:tracking-window",
+                response_metadata=(("fixture", "instrument-chart"),),
+                license_record_id=calendar_license.record_id,
+                row_count=artifact.row_count,
+                payload_uri=artifact.uri,
+                payload_retained=True,
+                created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
+            )
+        )
+    )
+    client.commit()
+    pool.close_all()
 
 
 _seed(_root)

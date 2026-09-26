@@ -50,6 +50,7 @@ class CatalogWriteContext:
     write_result: WriteResult
     df: pl.DataFrame
     source_ticker: str | None = None
+    start_date: str | None = None
     end_date: str | None = None
     l1_l2_attested: bool = False
     chunk_id: str | None = None
@@ -155,10 +156,11 @@ def _ingestion_run_id(
 def _source_snapshot_id(
     ctx: CatalogWriteContext,
 ) -> str:
+    start = ctx.start_date or ctx.trade_date
     if ctx.source_ticker is not None or ctx.end_date is not None:
         snapshot_id = (
             f"snapshot:{ctx.source_name}:{ctx.dataset}:{ctx.source_ticker or 'all'}:"
-            f"{ctx.trade_date}:{ctx.end_date or ctx.trade_date}:"
+            f"{start}:{ctx.end_date or ctx.trade_date}:"
             f"{ctx.write_result.checksum}"
         )
         return f"{snapshot_id}:quality=l1-l2" if ctx.l1_l2_attested else snapshot_id
@@ -287,7 +289,7 @@ def build_data_catalog_entry(
     return DataCatalogEntry(
         asset=_output_asset(
             ctx.dataset,
-            ctx.trade_date,
+            ctx.start_date or ctx.trade_date,
             source_ticker=ctx.source_ticker,
             end_date=ctx.end_date,
         ),
@@ -316,6 +318,7 @@ def build_evidence_commit_request(
     if ctx.payload_retained and ctx.provider_payload is None:
         raise AppProcessError("R2 evidence commit requires immutable provider payload")
     now = datetime.now(UTC)
+    request_start = ctx.start_date or ctx.trade_date
     request_end = ctx.end_date or ctx.trade_date
     catalog_entry = build_data_catalog_entry(ctx, now=now)
     request_hash = hashlib.sha256(
@@ -323,7 +326,7 @@ def build_evidence_commit_request(
             [
                 ctx.dataset,
                 ctx.source_name,
-                ctx.trade_date,
+                request_start,
                 request_end,
                 ctx.source_ticker,
             ]
@@ -343,7 +346,7 @@ def build_evidence_commit_request(
         ProviderSnapshotDraft(
             dataset_id=ctx.dataset,
             source=ctx.source_name,
-            request_start=ctx.trade_date,
+            request_start=request_start,
             request_end=request_end,
             schema_version=dataset_schema_version(ctx.dataset),
             checksum=payload_checksum,
@@ -377,20 +380,21 @@ def build_evidence_commit_request(
         chunk_id=ingestion_partition_id(
             source=ctx.source_name,
             dataset=ctx.dataset,
-            start=ctx.trade_date,
+            start=request_start,
             end=request_end,
             source_ticker=ctx.source_ticker,
             chunk_id=ctx.chunk_id,
         ),
         dataset_id=ctx.dataset,
         source=ctx.source_name,
-        request_start=ctx.trade_date,
+        request_start=request_start,
         request_end=request_end,
+        ingestion_date=ctx.trade_date,
         provider_snapshot=snapshot,
         catalog_entry=catalog_entry,
         lineage_event=_lineage_event(
             ctx.dataset,
-            ctx.trade_date,
+            request_start,
             source_name=ctx.source_name,
             write_result=ctx.write_result,
             source_ticker=ctx.source_ticker,

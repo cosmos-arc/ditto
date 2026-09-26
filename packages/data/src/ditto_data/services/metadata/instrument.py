@@ -92,11 +92,19 @@ class InstrumentService:
         return self._instrument_reader.list_etf_reference_snapshots(cutoff=cutoff)
 
     def find_etf_reference(
-        self, *, asof: str, cutoff: str, source_snapshot_id: str
+        self,
+        *,
+        asof: str,
+        cutoff: str,
+        source_snapshot_id: str,
+        observed_since: str,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Read ETF identities and exact-snapshot reference observations."""
         return self._instrument_reader.find_etf_reference(
-            asof=asof, cutoff=cutoff, source_snapshot_id=source_snapshot_id
+            asof=asof,
+            cutoff=cutoff,
+            source_snapshot_id=source_snapshot_id,
+            observed_since=observed_since,
         )
 
     # ============ Identity 解析 ============
