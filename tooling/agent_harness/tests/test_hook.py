@@ -813,6 +813,23 @@ def test_repo_level_backend_paths_keep_the_full_check() -> None:
             ["task", "check"]
         ]
 
+    with_repo_prose = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "scripts/README.md",
+    ]
+    assert [
+        " ".join(command)
+        for command in verification_commands(
+            classify_diff(with_repo_prose), with_repo_prose
+        )
+    ] == [
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast packages/strategy/tests",
+        "task pit",
+    ]
+
 
 def test_prose_in_a_second_package_does_not_widen_the_scope() -> None:
     paths = [

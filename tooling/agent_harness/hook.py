@@ -1128,6 +1128,29 @@ def _is_package_manifest(path: str) -> bool:
     )
 
 
+def _sanitized_probe_environment() -> dict[str, str]:
+    """Strip Git's exported repository selectors, as pre-push does for commands.
+
+    During push-range selection those variables are still set; a collection
+    subprocess must not inherit a foreign GIT_DIR/GIT_INDEX_FILE.
+    """
+    environment = {**os.environ}
+    try:
+        exported = subprocess.run(
+            ["git", "rev-parse", "--local-env-vars"],
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return environment
+    if exported.returncode == 0:
+        for name in exported.stdout.splitlines():
+            environment.pop(name, None)
+    return environment
+
+
 @lru_cache(maxsize=64)
 def _has_collectable_tests(workspace: Path, owner: str) -> bool:
     """The scoped fast-test target must yield at least one pytest item.
@@ -1154,21 +1177,25 @@ def _has_collectable_tests(workspace: Path, owner: str) -> bool:
             cwd=workspace,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=_sanitized_probe_environment(),
             start_new_session=True,
         )
     except OSError:
         return False
     try:
         returncode = process.wait(timeout=120)
-    except subprocess.TimeoutExpired:
-        # start_new_session makes the child its own group leader; kill the
-        # whole tree so a hung import cannot leak collectors into the gate.
+    except BaseException:
+        # start_new_session makes the child its own group leader, immune to
+        # the terminal's Ctrl-C; reap the whole tree on timeout or interrupt
+        # (mirrors the formatter cleanup) so nothing leaks into the gate.
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
         process.wait()
-        return False
+        if isinstance(sys.exc_info()[1], subprocess.TimeoutExpired):
+            return False
+        raise
     return returncode == 0
 
 
@@ -1181,9 +1208,11 @@ def _backend_source_commands(
     owners = {owner for owner in map(_backend_owner, paths) if owner is not None}
     # Package manifests and repo-level config/scripts are backend material
     # without an own fast-test scope (toolchain-check, arch-check and uv-lock
-    # state), and ci.required_jobs escalates them the same way.
+    # state), and ci.required_jobs escalates them the same way. Ordinary
+    # prose stays excluded, mirroring _backend_owner.
     if any(
-        path.startswith(("config/", "scripts/")) or _is_package_manifest(path)
+        (path.startswith(("config/", "scripts/")) or _is_package_manifest(path))
+        and _path_categories(path) != {"docs"}
         for path in paths
     ):
         return [["task", "check"]]
