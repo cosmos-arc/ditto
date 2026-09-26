@@ -89,6 +89,15 @@ test.describe
 			await expect(page.getByTestId(`chart-period-instrument-candles-${ETF_ID}`)).toContainText(
 				"区间 2026-05-11 → 2026-05-15",
 			);
+			const originalEnd = await page.getByLabel("截至日期").inputValue();
+			await page.getByLabel("截至日期").fill("2026-05-13");
+			await expect(page.getByTestId(`chart-period-instrument-candles-${ETF_ID}`)).toContainText(
+				"区间 2026-05-11 → 2026-05-13 · 未完成",
+			);
+			await page.getByLabel("截至日期").fill(originalEnd);
+			await expect(page.getByTestId(`chart-period-instrument-candles-${ETF_ID}`)).toContainText(
+				"区间 2026-05-11 → 2026-05-15",
+			);
 			const [csvDownload] = await Promise.all([
 				page.waitForEvent("download"),
 				page.getByTestId(`chart-export-csv-instrument-candles-${ETF_ID}`).click(),
