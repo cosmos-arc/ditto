@@ -853,3 +853,29 @@ def test_removed_package_falls_back_to_the_full_check() -> None:
         )
 
     assert commands == [["task", "check"], ["task", "pit"]]
+
+
+def test_untracked_leftovers_do_not_keep_the_scoped_test_target() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        _initialize_repository(root)
+        _commit_file(root, "packages/backtest/src/ditto_backtest/pipeline.py", "x\n")
+        _commit_file(
+            root, "packages/backtest/tests/test_unit.py", "def test_unit(): pass\n"
+        )
+        (root / "packages/backtest/tests/test_unit.py").unlink()
+        subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+        subprocess.run(
+            ["git", "commit", "-qm", "remove tracked tests"], cwd=root, check=True
+        )
+        cache = root / "packages/backtest/tests/__pycache__"
+        cache.mkdir(parents=True)
+        (cache / "test_unit.cpython-313.pyc").write_bytes(b"leftover")
+
+        paths = [
+            "packages/backtest/src/ditto_backtest/pipeline.py",
+            "packages/backtest/tests/test_unit.py",
+        ]
+        commands = verification_commands("high-risk", paths, root=root)
+
+    assert commands == [["task", "check"], ["task", "pit"]]

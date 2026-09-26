@@ -1127,6 +1127,22 @@ def _is_package_manifest(path: str) -> bool:
     )
 
 
+def _has_tracked_tests(workspace: Path, owner: str) -> bool:
+    """The pushed revision must retain test files, not just the directory.
+
+    Ignored leftovers (e.g. ``tests/__pycache__/``) keep the directory alive
+    after every tracked test was deleted, which would make pytest exit 5.
+    """
+    result = subprocess.run(
+        ["git", "ls-files", "--", f"{owner}/tests"],
+        cwd=workspace,
+        timeout=GIT_TIMEOUT_SECONDS,
+        capture_output=True,
+        check=False,
+    )
+    return result.returncode == 0 and bool(result.stdout.strip())
+
+
 def _backend_source_commands(
     paths: Sequence[str], *, root: Path | None = None
 ) -> list[list[str]]:
@@ -1148,8 +1164,7 @@ def _backend_source_commands(
         return [["task", "check"]]
     owner = next(iter(owners))
     workspace = root if root is not None else git_root(Path.cwd())
-    # A fully removed package has no test scope left; keep the full gate.
-    if not (workspace / owner / "tests").is_dir():
+    if not _has_tracked_tests(workspace, owner):
         return [["task", "check"]]
     return [
         ["task", "lint"],
