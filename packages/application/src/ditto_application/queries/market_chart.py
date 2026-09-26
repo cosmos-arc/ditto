@@ -373,7 +373,6 @@ class MarketChartQueryFacade:
         start_date: date,
         end_date: date,
         cutoff: datetime,
-        source: str | None = None,
         *,
         instrument_id: int,
     ) -> tuple[ProviderSnapshot, ...]:
@@ -390,7 +389,6 @@ class MarketChartQueryFacade:
             item
             for item in self._snapshots.list_snapshots(dataset_id=dataset_id)
             if item.created_at <= cutoff
-            and (source is None or item.source == source)
             and _snapshot_range(item.request_start) <= end_date.strftime("%Y%m%d")
             and _snapshot_range(item.request_end) >= start_date.strftime("%Y%m%d")
             and _snapshot_matches_instrument(item, start_date, end_date, ticker_at)
@@ -401,17 +399,21 @@ class MarketChartQueryFacade:
             raise AppQueryError(
                 f"retained chart {dataset_id} snapshots are unavailable at cutoff"
             )
-        latest = max(candidates, key=lambda item: snapshot_observed_by(item, cutoff))
-        revisions: dict[tuple[str, str, str], ProviderSnapshot] = {}
+        revisions: dict[tuple[str, str, str, str], ProviderSnapshot] = {}
         for item in candidates:
-            if item.source != latest.source:
-                continue
-            key = (item.request_start, item.request_end, item.request_parameters_hash)
+            key = (
+                item.source,
+                item.request_start,
+                item.request_end,
+                item.request_parameters_hash,
+            )
             prior = revisions.get(key)
             if prior is None or snapshot_observed_by(
                 item, cutoff
             ) > snapshot_observed_by(prior, cutoff):
                 revisions[key] = item
+        if len({item.source for item in revisions.values()}) > 1:
+            raise AppQueryError("retained chart shards have incompatible sources")
         if len({item.schema_version for item in revisions.values()}) > 1:
             raise AppQueryError("retained chart shards have incompatible schemas")
         for item in revisions.values():
@@ -425,36 +427,35 @@ class MarketChartQueryFacade:
                 )
         return tuple(revisions.values())
 
+    def _instrument_code(
+        self, request: MarketChartRequest, source: str, cutoff: datetime
+    ) -> Callable[[date], str | None]:
+        @cache
+        def ticker(day: date) -> str | None:
+            return self._metadata.get_source_ticker(
+                request.instrument_id,
+                source=source,
+                asof=day.isoformat(),
+                cutoff=cutoff.isoformat(),
+            )
+
+        return ticker
+
     def _load_suspensions(
         self,
         request: MarketChartRequest,
-        source: str,
         cutoff: datetime,
-        instrument_code: Callable[[date], str | None],
     ) -> tuple[dict[str, SuspensionEvidence], tuple[str, ...]]:
         suspensions: dict[str, SuspensionEvidence] = {}
         snapshot_ids: tuple[str, ...] = ()
-        if (
-            request.asset_class == "stock"
-            and self._market.allows_suspension_evidence(
-                allow_experimental_data=request.allow_experimental_data
-            )
-            and any(
-                item.created_at <= cutoff
-                and item.source == source
-                and _snapshot_range(item.request_start)
-                <= request.end_date.strftime("%Y%m%d")
-                and _snapshot_range(item.request_end)
-                >= request.start_date.strftime("%Y%m%d")
-                for item in self._snapshots.list_snapshots(dataset_id="stock_status")
-            )
+        if request.asset_class == "stock" and self._market.allows_suspension_evidence(
+            allow_experimental_data=request.allow_experimental_data
         ):
             status_snapshots = self._select_snapshots(
                 "stock_status",
                 request.start_date,
                 request.end_date,
                 cutoff,
-                source,
                 instrument_id=request.instrument_id,
             )
             if not status_snapshots:
@@ -479,16 +480,16 @@ class MarketChartQueryFacade:
                 suspensions = self._bars.load_suspensions(
                     status_context,
                     instrument_id=InstrumentId(request.instrument_id),
-                    instrument_code=instrument_code,
+                    instrument_code=self._instrument_code(
+                        request, status_snapshots[0].source, cutoff
+                    ),
                 )
         return suspensions, snapshot_ids
 
     def _load_factors(
         self,
         request: MarketChartRequest,
-        source: str,
         cutoff: datetime,
-        instrument_code: Callable[[date], str | None],
     ) -> tuple[dict[str, AdjustmentFactor], tuple[str, ...]]:
         snapshot_ids: tuple[str, ...] = ()
         factors: dict[str, AdjustmentFactor] = {}
@@ -501,7 +502,6 @@ class MarketChartQueryFacade:
                 request.start_date,
                 request.end_date,
                 cutoff,
-                source,
                 instrument_id=request.instrument_id,
             )
             snapshot_ids = tuple(item.snapshot_id for item in factor_snapshots)
@@ -524,7 +524,9 @@ class MarketChartQueryFacade:
                 self._bars.load_adjustment_factors(
                     factor_context,
                     instrument_id=InstrumentId(request.instrument_id),
-                    instrument_code=instrument_code,
+                    instrument_code=self._instrument_code(
+                        request, factor_snapshots[0].source, cutoff
+                    ),
                 )
                 if any(item.payload_retained for item in factor_snapshots)
                 else {}
@@ -663,14 +665,7 @@ class MarketChartQueryFacade:
         latest = max(selected, key=lambda item: item.created_at)
         queried_snapshot_ids = {item.snapshot_id for item in selected}
 
-        @cache
-        def instrument_code(day: date) -> str | None:
-            return self._metadata.get_source_ticker(
-                instrument_id,
-                source=latest.source,
-                asof=day.isoformat(),
-                cutoff=cutoff.isoformat(),
-            )
+        instrument_code = self._instrument_code(request, latest.source, cutoff)
 
         context = PITQueryContext(
             as_of=as_of,
@@ -694,13 +689,9 @@ class MarketChartQueryFacade:
             if any(item.payload_retained for item in selected)
             else ()
         )
-        factors, factor_ids = self._load_factors(
-            request, latest.source, cutoff, instrument_code
-        )
+        factors, factor_ids = self._load_factors(request, cutoff)
         queried_snapshot_ids.update(factor_ids)
-        suspensions, status_ids = self._load_suspensions(
-            request, latest.source, cutoff, instrument_code
-        )
+        suspensions, status_ids = self._load_suspensions(request, cutoff)
         queried_snapshot_ids.update(status_ids)
         result, missing, latest_price_date = _chart_rows(
             raw,

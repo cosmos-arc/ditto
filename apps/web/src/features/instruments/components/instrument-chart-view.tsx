@@ -414,6 +414,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 								asOfIso: query.data?.as_of ?? null,
 								snapshotId: query.data?.source_snapshot_ids.join(",") ?? null,
 								calendarSnapshotIds: query.data?.calendar_snapshot_ids.join(",") ?? null,
+								missingSessions,
 								knowledgeCutoff: query.data?.knowledge_cutoff ?? null,
 								publicationCutoff: query.data?.publication_cutoff ?? null,
 								adjustment: effectiveAdjustment,

@@ -122,6 +122,7 @@ export type ChartCockpitIdentity = {
 	readonly asOfIso?: string | null;
 	readonly snapshotId?: string | null;
 	readonly calendarSnapshotIds?: string | null;
+	readonly missingSessions?: readonly string[];
 	readonly adjustment?: string | null;
 	readonly period?: string | null;
 	readonly knowledgeCutoff?: string | null;
@@ -238,6 +239,7 @@ function exportIdentity(
 		asOfIso: identity.asOfIso ?? null,
 		snapshotId: identity.snapshotId ?? null,
 		calendarSnapshotIds: identity.calendarSnapshotIds ?? null,
+		missingSessions: identity.missingSessions ?? [],
 		adjustment: identity.adjustment ?? null,
 		period: identity.period ?? null,
 		knowledgeCutoff: identity.knowledgeCutoff ?? null,

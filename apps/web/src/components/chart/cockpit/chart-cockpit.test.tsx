@@ -534,7 +534,7 @@ describe("ChartCockpit 导出", () => {
 		const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
 		const text = await blob.text();
 		expect(text.split("\n")[0]).toBe(
-			"time,close_close,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version",
+			"time,close_close,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version,missing_sessions",
 		);
 		expect(text).toContain("snap-full-id");
 		expect(URL.revokeObjectURL).toHaveBeenCalled();

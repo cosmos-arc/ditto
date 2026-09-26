@@ -64,12 +64,14 @@ def _snapshot(
     dataset: str,
     frame: pl.DataFrame,
     created: datetime,
+    *,
+    source: str = "tushare",
 ) -> ProviderSnapshot:
-    artifact = store.retain_payload(dataset_id=dataset, source="tushare", payload=frame)
+    artifact = store.retain_payload(dataset_id=dataset, source=source, payload=frame)
     return ProviderSnapshot.create(
         ProviderSnapshotDraft(
             dataset_id=dataset,
-            source="tushare",
+            source=source,
             request_start="2026-03-09",
             request_end="2026-03-15",
             schema_version=f"{dataset}.v1",
@@ -77,7 +79,7 @@ def _snapshot(
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
             request_parameters_hash="sha256:market-chart-test",
             response_metadata=(),
-            license_record_id=f"license:tushare:{dataset}:test",
+            license_record_id=f"license:{source}:{dataset}:test",
             row_count=artifact.row_count,
             payload_uri=artifact.uri,
             payload_retained=True,
@@ -92,6 +94,7 @@ def _chart(
     poisoned: bool = True,
     suspended: bool = False,
     renamed: bool = False,
+    price_source: str = "tushare",
 ) -> tuple[MarketChartQueryFacade, ProviderSnapshot, MetadataQueryFacade]:
     store = FilesystemProviderPayloadStore(tmp_path)
     visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
@@ -136,7 +139,7 @@ def _chart(
             "is_open": [day < "2026-03-14" for day in calendar_days],
         }
     )
-    bar_snapshot = _snapshot(store, "stock_daily", bars, visible)
+    bar_snapshot = _snapshot(store, "stock_daily", bars, visible, source=price_source)
     factors = pl.DataFrame(
         {
             "source_ticker": [
@@ -1097,3 +1100,73 @@ def test_chart_mixed_schema_shards_fail_explicitly_instead_of_false_gaps(
                 now=datetime(2026, 3, 11, 8, tzinfo=UTC),
             )
         )
+
+
+@pytest.mark.pit
+def test_chart_mixed_price_sources_fail_instead_of_false_gaps(tmp_path: Path) -> None:
+    chart, price, _ = _chart(tmp_path, poisoned=False)
+    older = replace(price, request_end="2026-03-09")
+    fallback = replace(
+        price,
+        snapshot_id="fuyao-fallback",
+        source="fuyao",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+        created_at=datetime(2026, 3, 10, 8, tzinfo=UTC),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(
+                    older if item.snapshot_id == price.snapshot_id else item
+                    for item in chart._snapshots.list_snapshots()
+                ),
+                fallback,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    with pytest.raises(AppQueryError, match="incompatible sources"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_fallback_prices_use_independent_factor_and_status_sources(
+    tmp_path: Path,
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True, price_source="fuyao")
+    reader = chart._snapshots
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="qfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert result.bars[0].close == pytest.approx(10.2 / 1.1)
+    assert result.missing_sessions == ()
+    assert {
+        item.snapshot_id for item in reader.list_snapshots(dataset_id="adj_factor")
+    } <= set(result.source_snapshot_ids)
+    assert {
+        item.snapshot_id for item in reader.list_snapshots(dataset_id="stock_status")
+    } <= set(result.source_snapshot_ids)

@@ -227,6 +227,7 @@ export type ChartExportIdentity = {
 	readonly asOfIso?: string | null;
 	readonly snapshotId?: string | null;
 	readonly calendarSnapshotIds?: string | null;
+	readonly missingSessions?: readonly string[];
 	readonly adjustment?: string | null;
 	readonly period?: string | null;
 	readonly knowledgeCutoff?: string | null;
@@ -244,6 +245,7 @@ const CSV_METADATA_COLUMNS = [
 	"data_source",
 	"exported_at",
 	"product_version",
+	"missing_sessions",
 ] as const;
 
 function csvCell(value: string | number | null | undefined): string {
@@ -261,7 +263,7 @@ export function buildPngFooterLines(identity: ChartExportIdentity): [string, str
 	const orDash = (value: string | null | undefined) => value || "—";
 	return [
 		`as_of ${identity.asOfIso ?? (identity.asOf != null ? formatExportTime(identity.asOf) : "—")} · snapshot ${orDash(identity.snapshotId)}`,
-		`cutoff k=${orDash(identity.knowledgeCutoff)} p=${orDash(identity.publicationCutoff)} · source ${identity.dataSourceName} · calendar ${orDash(identity.calendarSnapshotIds)} · adjustment ${orDash(identity.adjustment)} · period ${orDash(identity.period)} · exported ${new Date(identity.exportedAtMs).toISOString()} · v${identity.productVersion}`,
+		`cutoff k=${orDash(identity.knowledgeCutoff)} p=${orDash(identity.publicationCutoff)} · source ${identity.dataSourceName} · calendar ${orDash(identity.calendarSnapshotIds)} · adjustment ${orDash(identity.adjustment)} · period ${orDash(identity.period)} · missing sessions ${identity.missingSessions?.join(",") || "none"} · exported ${new Date(identity.exportedAtMs).toISOString()} · v${identity.productVersion}`,
 	];
 }
 
@@ -311,6 +313,7 @@ export function toCsvExport(
 		identity.dataSourceName,
 		new Date(identity.exportedAtMs).toISOString(),
 		identity.productVersion,
+		identity.missingSessions?.join("|") ?? "",
 	];
 	const header = [
 		"time",

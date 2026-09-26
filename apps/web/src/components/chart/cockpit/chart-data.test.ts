@@ -191,6 +191,7 @@ describe("toCsvExport", () => {
 				asOf: Date.parse("2026-03-10T08:00:00Z") / 1000,
 				snapshotId: "price-full,factor-full",
 				calendarSnapshotIds: "calendar-full",
+				missingSessions: ["2026-03-11", "2026-03-12"],
 				adjustment: "qfq",
 				period: "weekly",
 				knowledgeCutoff: "2026-03-10T08:00:00Z",
@@ -207,10 +208,13 @@ describe("toCsvExport", () => {
 			"2026-03-09,2026-03-10,2026-03-10T08:00:00Z,2026-03-10T07:00:00Z,true,price-full|factor-full,calendar-full,qfq,weekly",
 		);
 		expect(csv).toContain("price-full,factor-full");
+		expect(csv).toContain("missing_sessions");
+		expect(csv).toContain("2026-03-11|2026-03-12");
 		const footer = buildPngFooterLines({
 			asOf: 0,
 			snapshotId: "price-full,factor-full",
 			calendarSnapshotIds: "calendar-full",
+			missingSessions: ["2026-03-11", "2026-03-12"],
 			adjustment: "qfq",
 			period: "weekly",
 			knowledgeCutoff: "k",
@@ -220,6 +224,7 @@ describe("toCsvExport", () => {
 			exportedAtMs: 0,
 		});
 		expect(footer.join(" ")).toContain("calendar calendar-full · adjustment qfq · period weekly");
+		expect(footer.join(" ")).toContain("missing sessions 2026-03-11,2026-03-12");
 	});
 
 	it("emits gap rows as empty cells and carries full PIT identity columns", () => {
@@ -245,12 +250,12 @@ describe("toCsvExport", () => {
 		);
 		const lines = csv.split("\n");
 		expect(lines[0]).toBe(
-			"time,close_price,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version",
+			"time,close_price,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version,missing_sessions",
 		);
 		expect(lines[1]).toContain("1970-01-01T00:01:40Z,10.5,100,1970-01-01T00:05:00Z");
 		expect(lines[1]).toContain("snap-0123456789abcdef-フル");
 		expect(lines[2]).toContain("1970-01-01T00:03:20Z,,");
-		expect(lines.slice(1).every((line) => line.endsWith(",tushare,2026-09-18T08:00:00.000Z,0.1.0"))).toBe(true);
+		expect(lines.slice(1).every((line) => line.endsWith(",tushare,2026-09-18T08:00:00.000Z,0.1.0,"))).toBe(true);
 	});
 });
 
