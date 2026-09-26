@@ -58,7 +58,7 @@ export class AsOfWatermark implements IPanePrimitive<Time> {
 		this.x = scale?.timeToCoordinate(this.options.time) ?? null;
 		if (this.x === null && scale) {
 			const index = scale.timeToIndex(this.options.time, true);
-			this.x = index === null ? null : scale.logicalToCoordinate(index as Logical);
+			this.x = index === null ? null : scale.logicalToCoordinate(Number(index) as Logical);
 		}
 	}
 
