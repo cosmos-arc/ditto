@@ -432,12 +432,15 @@ class MarketChartQueryFacade:
     ) -> Callable[[date], str | None]:
         @cache
         def ticker(day: date) -> str | None:
-            return self._metadata.get_source_ticker(
+            value = self._metadata.get_source_ticker(
                 request.instrument_id,
                 source=source,
                 asof=day.isoformat(),
                 cutoff=cutoff.isoformat(),
             )
+            if value is None and request.start_date <= day <= request.end_date:
+                raise AppQueryError("effective chart ticker mapping is unavailable")
+            return value
 
         return ticker
 

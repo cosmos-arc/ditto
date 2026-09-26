@@ -1217,3 +1217,39 @@ def test_chart_ignores_conflicting_shards_outside_active_lifetime(
     assert [bar.trade_date for bar in result.bars] == ["2026-03-10"]
     assert outside.snapshot_id not in result.source_snapshot_ids
     assert result.missing_sessions == ()
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["stock_daily", "adj_factor", "stock_status"])
+def test_chart_missing_effective_ticker_mapping_fails_instead_of_false_gap(
+    tmp_path: Path, dataset: str
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True, price_source="fuyao")
+    missing_source = "fuyao" if dataset == "stock_daily" else "tushare"
+    missing_day = "2026-03-11" if dataset == "stock_status" else "2026-03-09"
+    metadata = cast(
+        MetadataQueryFacade,
+        SimpleNamespace(
+            get_source_ticker=lambda *args, **kwargs: (
+                None
+                if kwargs["source"] == missing_source and kwargs["asof"] == missing_day
+                else "600519.SH"
+            ),
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        chart._snapshots, chart._payloads, metadata, chart._market
+    )
+    with pytest.raises(AppQueryError, match="ticker mapping is unavailable"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="qfq" if dataset == "adj_factor" else "none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+            )
+        )
