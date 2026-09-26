@@ -1128,13 +1128,15 @@ def _is_package_manifest(path: str) -> bool:
     )
 
 
-def _sanitized_probe_environment() -> dict[str, str]:
+def _sanitized_probe_environment() -> dict[str, str] | None:
     """Strip Git's exported repository selectors, as pre-push does for commands.
 
     During push-range selection those variables are still set; a collection
-    subprocess must not inherit a foreign GIT_DIR/GIT_INDEX_FILE.
+    subprocess must not inherit a foreign GIT_DIR/GIT_INDEX_FILE. Also keeps
+    the Taskfile policy of never auto-downloading interpreters. Returns None
+    when sanitization cannot be proven so the probe can fail closed.
     """
-    environment = {**os.environ}
+    environment = {**os.environ, "UV_PYTHON_DOWNLOADS": "never"}
     try:
         exported = subprocess.run(
             ["git", "rev-parse", "--local-env-vars"],
@@ -1144,10 +1146,11 @@ def _sanitized_probe_environment() -> dict[str, str]:
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
-        return environment
-    if exported.returncode == 0:
-        for name in exported.stdout.splitlines():
-            environment.pop(name, None)
+        return None
+    if exported.returncode != 0:
+        return None
+    for name in exported.stdout.splitlines():
+        environment.pop(name, None)
     return environment
 
 
@@ -1162,6 +1165,9 @@ def _has_collectable_tests(workspace: Path, owner: str) -> bool:
     Probe failures and timeouts fall back to the full gate; cached per
     process so one push pays each owner's collection at most once.
     """
+    environment = _sanitized_probe_environment()
+    if environment is None:
+        return False
     try:
         process = subprocess.Popen(
             [
@@ -1177,7 +1183,7 @@ def _has_collectable_tests(workspace: Path, owner: str) -> bool:
             cwd=workspace,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env=_sanitized_probe_environment(),
+            env=environment,
             start_new_session=True,
         )
     except OSError:
@@ -1193,13 +1199,16 @@ def _has_collectable_tests(workspace: Path, owner: str) -> bool:
             if os.name == "posix":
                 os.killpg(process.pid, signal.SIGKILL)
             else:
-                subprocess.run(
-                    ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    timeout=0.5,
-                    check=False,
-                )
+                try:
+                    subprocess.run(
+                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=0.5,
+                        check=False,
+                    )
+                except subprocess.TimeoutExpired:
+                    pass
                 process.kill()
         except (ProcessLookupError, OSError):
             pass
