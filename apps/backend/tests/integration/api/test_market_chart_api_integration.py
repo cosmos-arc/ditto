@@ -1874,6 +1874,145 @@ def test_chart_skips_unclosed_sessions_in_ticker_validation(
 
 
 @pytest.mark.pit
+def test_chart_matches_shard_partitions_on_consumable_sessions_only(
+    tmp_path: Path,
+) -> None:
+    """A partitioned shard that overlaps yesterday but matches the instrument
+    only under today's not-yet-effective ticker is not admitted; a rename
+    visible only on the unclosed session must not 422 closed history."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: (
+                "600519.SH" if kwargs["asof"] < "2026-03-11" else "NEW.SH"
+            ),
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "stock", "list_date": "2001-08-27"}
+                if instrument_id == 1000001
+                else None
+            ),
+        ),
+    )
+    fuyao_empty = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="stock_daily",
+            source="fuyao",
+            request_start="2026-03-10",
+            request_end="2026-03-11",
+            schema_version="stock_daily.v1",
+            checksum="sha256:fuyao-rename-window",
+            canonical_asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=("source_ticker=NEW.SH",),
+            ),
+            request_parameters_hash="sha256:market-chart-test",
+            response_metadata=(
+                ("snapshot_layer", "verified_empty_provider_observation"),
+            ),
+            license_record_id="license:fuyao:test",
+            row_count=0,
+            payload_uri=None,
+            payload_retained=False,
+            created_at=datetime(2026, 3, 11, 5, tzinfo=UTC),
+        )
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), fuyao_empty)),
+    )
+    chart = MarketChartQueryFacade(reader, chart._payloads, metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 10),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.8]
+    assert result.sources == ("tushare",)
+
+
+@pytest.mark.pit
+def test_chart_partial_candle_waits_for_missing_session_close(tmp_path: Path) -> None:
+    """A candle left partial by a missing closed session could not be known
+    partial before that session's close; available_at must not stay at the
+    last bar's clock."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.8]
+    assert result.missing_sessions == ("2026-03-11",)
+    assert result.bars[0].partial is True
+    assert result.bars[0].available_at == datetime(2026, 3, 11, 7, tzinfo=UTC)
+
+
+@pytest.mark.pit
+def test_chart_qfq_baseline_ignores_closed_day_factors(tmp_path: Path) -> None:
+    """A factor dated on a retained closed day cannot anchor QFQ scaling;
+    the baseline stays on the newest retained open session."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    observed = datetime(2026, 3, 11, 8, tzinfo=UTC)
+    newer_factors = replace(
+        _snapshot(
+            store,
+            "adj_factor",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"] * 3,
+                    "trade_date": ["2026-03-09", "2026-03-10", "2026-03-14"],
+                    "adj_factor": [1.0, 1.1, 5.0],
+                }
+            ),
+            observed,
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-15",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="stock_daily"),
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                newer_factors,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 14),
+            period="daily",
+            adjustment="qfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 15, 1, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.2 / 1.1, 10.8]
+
+
+@pytest.mark.pit
 def test_chart_ignores_revision_conflicts_outside_requested_window(
     tmp_path: Path,
 ) -> None:

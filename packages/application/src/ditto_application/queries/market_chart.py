@@ -226,7 +226,10 @@ def _chart_rows(
         (
             day
             for day in factors
-            if day
+            # A factor dated on a retained closed day cannot anchor a chart
+            # price; it must not rescale the visible candles as the baseline.
+            if day in days
+            and day
             <= min(
                 request.end_date,
                 request.delisted_on - timedelta(days=1)
@@ -369,6 +372,15 @@ def _chart_rows(
                     ]
                     + [item.available_at for item in contributing_suspensions]
                     + [item.available_at for item in contributing_factors]
+                    # A missing session's effect on this candle is knowable
+                    # no earlier than its close.
+                    + [
+                        datetime.combine(
+                            date.fromisoformat(day), time(15), _SHANGHAI
+                        ).astimezone(UTC)
+                        for day in missing
+                        if period_start.isoformat() <= day <= period_end.isoformat()
+                    ]
                 ),
                 published_at=max(
                     [bar.publication_at for _, bar in group]
@@ -390,10 +402,15 @@ def _date_keys(start: date, end: date) -> list[str]:
 
 def _snapshot_matches_instrument(
     item: ProviderSnapshot,
-    start_date: date,
-    end_date: date,
+    days: frozenset[str],
     ticker_at: Callable[[str, date], str | None],
 ) -> bool:
+    """
+    Match the partition ticker on consumable sessions only.
+
+    A rename visible only on an unclosed day must not admit or require
+    mapping for the shard.
+    """
     tickers = {
         key.removeprefix("source_ticker=")
         for key in item.canonical_asset.partition_keys
@@ -401,11 +418,12 @@ def _snapshot_matches_instrument(
     }
     if not tickers:
         return True  # Market-wide requests are filtered at the row boundary.
-    first = max(start_date, date.fromisoformat(item.request_start))
-    last = min(end_date, date.fromisoformat(item.request_end))
     return any(
-        ticker_at(item.source, date.fromisoformat(day)) in tickers
-        for day in _date_keys(first, last)
+        _snapshot_range(item.request_start)
+        <= day.replace("-", "")
+        <= _snapshot_range(item.request_end)
+        and ticker_at(item.source, date.fromisoformat(day)) in tickers
+        for day in days
     )
 
 
@@ -475,10 +493,13 @@ class MarketChartQueryFacade:
         # window and already closed by the cutoff — may require evidence;
         # shards scoped to closed days or to today's unclosed session must
         # not join source/schema authority decisions.
-        consumable_window_days = frozenset(
-            day.replace("-", "")
+        consumable_window_iso = frozenset(
+            day
             for day in consumable_days
             if start_date.isoformat() <= day <= end_date.isoformat()
+        )
+        consumable_window_days = frozenset(
+            day.replace("-", "") for day in consumable_window_iso
         )
         candidates = [
             item
@@ -492,7 +513,7 @@ class MarketChartQueryFacade:
                 <= _snapshot_range(item.request_end)
                 for day in consumable_window_days
             )
-            and _snapshot_matches_instrument(item, start_date, end_date, ticker_at)
+            and _snapshot_matches_instrument(item, consumable_window_iso, ticker_at)
         ]
         if not candidates:
             if dataset_id == "stock_status":
