@@ -779,6 +779,7 @@ def test_chart_outside_lifecycle_returns_empty_without_calendar_query(
     tmp_path: Path, day: int
 ) -> None:
     chart, _, _ = _chart(tmp_path, poisoned=False)
+    chart._market = MarketQueryFacade(cast(MarketService, SimpleNamespace()))
     result = chart.get_chart(
         MarketChartRequest(
             instrument_id=1000001,
@@ -1472,3 +1473,33 @@ def test_chart_daily_scoped_shards_batch_identity_resolution(tmp_path: Path) -> 
     )
     assert len(calls) == 1
     assert calls[0][2] == ["2026-03-09", "2026-03-10", "2026-03-11"]
+
+
+@pytest.mark.pit
+def test_chart_rejects_hybrid_calendar_authority(tmp_path: Path) -> None:
+    chart, _, store = _chart(tmp_path, poisoned=False)
+    fallback = _snapshot(
+        store,
+        "calendar",
+        pl.DataFrame({"trade_date": ["2026-03-10"], "is_open": [False]}),
+        datetime(2026, 3, 11, 8, tzinfo=UTC),
+        source="fallback",
+    )
+    fallback = replace(fallback, request_start="2026-03-10", request_end="2026-03-10")
+    chart._snapshots = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), fallback)),
+    )
+    with pytest.raises(AppQueryError, match="calendar has incompatible sources"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+            )
+        )

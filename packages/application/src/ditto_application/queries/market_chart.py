@@ -21,6 +21,7 @@ from ditto_application.queries.retained_calendar import (
     RetainedCalendarAbsent,
     RetainedCalendarWindow,
     calendar_has_complete_authority,
+    calendar_has_single_source,
     retained_calendar_window,
     snapshot_observed_by,
 )
@@ -623,6 +624,10 @@ class MarketChartQueryFacade:
             min(request.end_date, last_period_end).isoformat(),
         ):
             raise AppQueryError("retained chart calendar has incomplete authority")
+        if not calendar_has_single_source(
+            calendar, first_period_start.isoformat(), last_period_end.isoformat()
+        ):
+            raise AppQueryError("retained chart calendar has incompatible sources")
         used_calendar_ids = tuple(
             sorted(
                 {
@@ -661,11 +666,6 @@ class MarketChartQueryFacade:
             raise AppQueryError("invalid chart date range")
         if now.tzinfo is None:
             raise AppQueryError("chart decision time must include UTC offset")
-        self._market.assert_bars_allowed(
-            asset_class=asset_class,
-            instrument_id=instrument_id,
-            allow_experimental_data=allow_experimental_data,
-        )
         as_of = now.astimezone(UTC)
         cutoff = as_of
         start_date = max(start_date, request.listed_on or start_date)
@@ -722,6 +722,11 @@ class MarketChartQueryFacade:
                 missing_sessions=(),
                 bars=(),
             )
+        self._market.assert_bars_allowed(
+            asset_class=asset_class,
+            instrument_id=instrument_id,
+            allow_experimental_data=allow_experimental_data,
+        )
         selected = self._select_snapshots(
             f"{asset_class}_daily",
             start_date,
