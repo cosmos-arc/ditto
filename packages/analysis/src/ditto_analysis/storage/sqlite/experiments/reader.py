@@ -169,6 +169,16 @@ def _validated_fold_spec(
     key = FoldKey(
         ExperimentId(experiment_id), CandidateId(candidate_id), FoldId(fold_id)
     )
+    # A tampered row with only one train boundary must fail closed instead of
+    # silently reading as a window-less fold (both are written together or not
+    # at all, so a half-present pair is always relational drift; the schema
+    # CHECK is the first layer, this guards corrupted files and foreign writers).
+    if (train_start is None) != (train_end is None):
+        raise _integrity(
+            "fold train window endpoints must be present or absent together",
+            "fold_train_window_endpoint_mismatch",
+            fold_id=fold_id,
+        )
     if train_start is None or train_end is None:
         train_window = None
     else:
