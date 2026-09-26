@@ -248,6 +248,19 @@ class InstrumentService:
             instrument_id, source, asof, cutoff=cutoff
         )
 
+    def get_source_tickers(
+        self,
+        instrument_id: int,
+        *,
+        source: str,
+        asofs: list[str],
+        cutoff: str,
+    ) -> dict[str, str | None]:
+        """Resolve PIT-visible provider identities for multiple dates in one query."""
+        return self._instrument_reader.get_source_tickers(
+            instrument_id, source=source, asofs=asofs, cutoff=cutoff
+        )
+
     # ============ 行业查询 ============
 
     @traced("metadata.industry.find_industries")

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from dishka import FromComponent
@@ -16,14 +16,19 @@ from ditto_application.processes.experiments.regime_diagnostics_reader import (
     RegimeObservation,
 )
 from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.market_chart import (
+    MarketChartQueryFacade,
+    MarketChartRequest,
+)
 from ditto_application.queries.market_context import (
     MarketContextFacade,
     MarketContextRequest,
     MarketContextView,
 )
+from ditto_application.queries.metadata import MetadataQueryFacade
 from fastapi import APIRouter, Query
 
-from ditto_apps.api.errors import UnprocessableEntityError
+from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.market import (
     Bar,
@@ -34,6 +39,8 @@ from ditto_apps.models.market import (
     IndicatorSeriesColumn,
     IndicatorSeriesQuery,
     IndicatorSeriesResponse,
+    MarketChartQuery,
+    MarketChartResponse,
     MarketContextDriverResponse,
     MarketContextImpactResponse,
     MarketContextMetricResponse,
@@ -46,6 +53,48 @@ from ditto_apps.models.market import (
 )
 
 router = APIRouter(prefix="/market", tags=["market"])
+
+
+@router.post(
+    "/chart",
+    response_model=APIResponse[MarketChartResponse],
+    operation_id="market_post_chart",
+)
+@inject
+async def post_chart(
+    query: MarketChartQuery,
+    chart: Annotated[MarketChartQueryFacade, FromComponent()],
+    metadata: Annotated[MetadataQueryFacade, FromComponent()],
+) -> APIResponse[MarketChartResponse]:
+    """Read exact retained price and calendar evidence for the chart."""
+    instrument = await asyncio.to_thread(metadata.get_instrument, query.instrument_id)
+    if instrument is None:
+        raise NotFoundError("Instrument not found")
+    try:
+        view = await asyncio.to_thread(
+            chart.get_chart,
+            MarketChartRequest(
+                instrument_id=query.instrument_id,
+                asset_class=str(instrument["asset_class"]),
+                start_date=query.start_date,
+                end_date=query.end_date,
+                period=query.period,
+                adjustment=query.adjustment.value,
+                allow_experimental_data=query.allow_experimental_data,
+                now=datetime.now(UTC),
+                delisted_on=date.fromisoformat(str(instrument["delist_date"]))
+                if instrument.get("delist_date")
+                else None,
+                listed_on=date.fromisoformat(str(instrument["list_date"]))
+                if instrument.get("list_date")
+                else None,
+            ),
+        )
+    except (AppQueryError, ValueError) as error:
+        raise UnprocessableEntityError(
+            str(error), error_code="MARKET_CHART_UNAVAILABLE"
+        ) from error
+    return APIResponse(data=MarketChartResponse.model_validate(view))
 
 
 def _market_context_response(view: MarketContextView) -> MarketContextResponse:

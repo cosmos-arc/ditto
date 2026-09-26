@@ -50,6 +50,7 @@ from ditto_application.queries.fx import FXQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.macro import MacroQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.market_chart import MarketChartQueryFacade
 from ditto_application.queries.market_context import (
     MarketContextFacade,
     MarketContextQueryPort,
@@ -87,6 +88,17 @@ class AppMarketQueryProvider(Provider):
     """App Query 层 DI Provider — 市场数据查询服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def market_chart_query(
+        self,
+        snapshot_reader: ProviderSnapshotReader,
+        payload_reader: ProviderPayloadReader,
+        metadata: MetadataQueryFacade,
+        market: MarketQueryFacade,
+    ) -> MarketChartQueryFacade:
+        """Wire exact retained market and calendar evidence for charts."""
+        return MarketChartQueryFacade(snapshot_reader, payload_reader, metadata, market)
 
     @provide
     def technical_analysis_source(

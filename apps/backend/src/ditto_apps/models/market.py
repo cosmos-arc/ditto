@@ -136,6 +136,60 @@ class Bar(BaseModel):
     )
 
 
+class MarketChartQuery(BaseModel):
+    """Chart read with a server-owned decision cutoff and retained sources."""
+
+    instrument_id: int = Field(gt=0)
+    start_date: date
+    end_date: date
+    period: Literal["daily", "weekly", "monthly"] = "daily"
+    adjustment: AdjustmentField = Adjustment.NONE
+    allow_experimental_data: bool = False
+
+    @model_validator(mode="after")
+    def valid_range(self) -> Self:
+        if self.start_date > self.end_date:
+            raise ValueError("start_date must not exceed end_date")
+        return self
+
+
+class MarketChartBarResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    trade_date: str
+    first_trade_date: str
+    last_trade_date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    amount: float
+    source_snapshot_ids: tuple[str, ...]
+    available_at: datetime
+    published_at: datetime
+    partial: bool
+
+
+class MarketChartResponse(BaseModel):
+    instrument_id: int
+    period: str
+    adjustment: str
+    as_of: datetime
+    knowledge_cutoff: datetime
+    publication_cutoff: datetime
+    timezone: str
+    calendar_snapshot_ids: tuple[str, ...]
+    source_snapshot_ids: tuple[str, ...]
+    sources: tuple[str, ...]
+    latest_price_date: str | None
+    stale_reason: str | None
+    missing_sessions: tuple[str, ...]
+    bars: tuple[MarketChartBarResponse, ...]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class IndicatorSeriesQuery(BaseModel):
     """
     指标叠加序列查询参数模型.

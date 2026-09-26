@@ -3,6 +3,7 @@ import type {
 	IPanePrimitive,
 	IPanePrimitivePaneView,
 	IPrimitivePaneRenderer,
+	Logical,
 	PaneAttachedParameter,
 	Time,
 } from "lightweight-charts";
@@ -53,7 +54,12 @@ export class AsOfWatermark implements IPanePrimitive<Time> {
 	}
 
 	updateAllViews(): void {
-		this.x = this.chart?.timeScale().timeToCoordinate(this.options.time) ?? null;
+		const scale = this.chart?.timeScale();
+		this.x = scale?.timeToCoordinate(this.options.time) ?? null;
+		if (this.x === null && scale) {
+			const index = scale.timeToIndex(this.options.time, true);
+			this.x = index === null ? null : scale.logicalToCoordinate(Number(index) as Logical);
+		}
 	}
 
 	paneViews(): readonly IPanePrimitivePaneView[] {

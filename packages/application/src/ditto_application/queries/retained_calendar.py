@@ -41,7 +41,7 @@ def calendar_has_single_source(
     return len(sources) == 1 and None not in sources
 
 
-def _observed_by(snapshot: ProviderSnapshot, cutoff: datetime) -> datetime:
+def snapshot_observed_by(snapshot: ProviderSnapshot, cutoff: datetime) -> datetime:
     """
     Latest observation event this snapshot had actually received by the cutoff.
 
@@ -121,6 +121,35 @@ def _revision_gaps(
     return gaps
 
 
+def _is_verified_empty_observation(snapshot: ProviderSnapshot) -> bool:
+    return (
+        not snapshot.payload_retained
+        and snapshot.row_count == 0
+        and dict(snapshot.response_metadata).get("snapshot_layer")
+        == "verified_empty_provider_observation"
+    )
+
+
+def _empty_observation_gaps(
+    snapshot: ProviderSnapshot,
+    authorship: dict[str, tuple[bool, str]],
+    first_day: str,
+    last_day: str,
+) -> set[str]:
+    """Days an empty observation supersedes: already-authored covered days."""
+    start = max(first_day, snapshot.request_start)
+    end = min(last_day, snapshot.request_end)
+    gaps: set[str] = set()
+    day = date.fromisoformat(start)
+    final = date.fromisoformat(end)
+    while day <= final:
+        iso = day.isoformat()
+        if iso in authorship:
+            gaps.add(iso)
+        day += timedelta(days=1)
+    return gaps
+
+
 def retained_calendar_window(
     *,
     snapshots: ProviderSnapshotReader,
@@ -128,6 +157,7 @@ def retained_calendar_window(
     cutoff: datetime,
     first_day: str,
     last_day: str,
+    allow_closed_window: bool = False,
 ) -> RetainedCalendarWindow:
     """
     Combine cutoff-visible retained calendar shards into one window.
@@ -138,22 +168,35 @@ def retained_calendar_window(
     revision wins per date, so a corrected closure can never be masked by a
     stale open day. Whether shards come from one provider source is judged
     by the caller over the sessions a window actually consumes.
+
+    A newer verified-empty calendar observation carries no payload but is
+    still revision evidence: every already-authored day it covers becomes a
+    revision gap, so the affected interval fails closed instead of silently
+    serving the superseded calendar. A yet-newer retained shard re-covers
+    the day and clears the gap.
     """
-    shards = sorted(
+    ordered = sorted(
         (
             snapshot
             for snapshot in snapshots.list_snapshots(dataset_id="calendar")
-            if snapshot.payload_retained and snapshot.created_at <= cutoff
+            if snapshot.created_at <= cutoff
+            and (snapshot.payload_retained or _is_verified_empty_observation(snapshot))
         ),
-        key=lambda item: (_observed_by(item, cutoff), item.snapshot_id),
+        key=lambda item: (snapshot_observed_by(item, cutoff), item.snapshot_id),
     )
+    shards = [item for item in ordered if item.payload_retained]
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
     authorship: dict[str, tuple[bool, str]] = {}
     revision_gaps: set[str] = set()
     shard_sources: dict[str, str] = {}
     read_payloads: dict[str, pl.DataFrame] = {}
-    for snapshot in shards:
+    for snapshot in ordered:
+        if not snapshot.payload_retained:
+            revision_gaps.update(
+                _empty_observation_gaps(snapshot, authorship, first_day, last_day)
+            )
+            continue
         if snapshot.payload_uri is None:
             raise RetainedCalendarAbsent("retained calendar is absent or future")
         shard_sources[snapshot.snapshot_id] = snapshot.source
@@ -177,7 +220,7 @@ def retained_calendar_window(
             authorship[day] = (is_open, snapshot.snapshot_id)
             revision_gaps.discard(day)
     days = sorted(day for day, state in authorship.items() if state[0])
-    if not days:
+    if not days and (not allow_closed_window or not authorship):
         raise RetainedCalendarAbsent("retained calendar is malformed")
     return RetainedCalendarWindow(
         days,

@@ -119,7 +119,12 @@ export type CockpitMarker = {
 
 export type ChartCockpitIdentity = {
 	readonly dataSourceName: string;
+	readonly asOfIso?: string | null;
 	readonly snapshotId?: string | null;
+	readonly calendarSnapshotIds?: string | null;
+	readonly missingSessions?: readonly string[];
+	readonly adjustment?: string | null;
+	readonly period?: string | null;
 	readonly knowledgeCutoff?: string | null;
 	readonly publicationCutoff?: string | null;
 };
@@ -231,7 +236,12 @@ function exportIdentity(
 	}
 	return {
 		asOf: asOf?.time ?? null,
+		asOfIso: identity.asOfIso ?? null,
 		snapshotId: identity.snapshotId ?? null,
+		calendarSnapshotIds: identity.calendarSnapshotIds ?? null,
+		missingSessions: identity.missingSessions ?? [],
+		adjustment: identity.adjustment ?? null,
+		period: identity.period ?? null,
 		knowledgeCutoff: identity.knowledgeCutoff ?? null,
 		publicationCutoff: identity.publicationCutoff ?? null,
 		dataSourceName: identity.dataSourceName,
@@ -294,6 +304,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	const [readoutTime, setReadoutTime] = useState<number | null>(null);
 	const [selection, setSelection] = useState<{ readonly from: number; readonly to: number } | null>(null);
 	const activeReadout = readoutTime === null ? initialReadout : readoutAtIndex(readoutIndex, readoutTime);
+	const activePriceBar = activeReadout && series[0]?.bars.find((bar) => bar.time === activeReadout.time);
 	// 新鲜度时变的「当前时刻」：注入 nowMs（测试）固定，否则随 30s 心跳推进，
 	// 使 live→expired 分档在会话中随数据老化刷新。
 	const [effectiveNowMs, setEffectiveNowMs] = useState(() => nowMs ?? Date.now());
@@ -781,6 +792,12 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					<span className="tabular-nums">
 						{formatReadoutTime(activeReadout.time)}
 						{activeReadout.volume !== null && ` · vol ${activeReadout.volume}`}
+					</span>
+				)}
+				{activePriceBar?.firstTradeDate && activePriceBar.lastTradeDate && (
+					<span className="tabular-nums" data-testid={`chart-period-${chartId}`}>
+						区间 {activePriceBar.firstTradeDate} → {activePriceBar.lastTradeDate}
+						{activePriceBar.partial && " · 未完成"}
 					</span>
 				)}
 				{asOf && (

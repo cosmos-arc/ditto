@@ -1633,6 +1633,30 @@
         "title": "APIResponse[ManualHistoryResponse]",
         "type": "object"
       },
+      "APIResponse_MarketChartResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MarketChartResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[MarketChartResponse]",
+        "type": "object"
+      },
       "APIResponse_MarketContextResponse_": {
         "properties": {
           "data": {
@@ -19910,6 +19934,240 @@
           "short_sell_volume"
         ],
         "title": "Margin",
+        "type": "object"
+      },
+      "MarketChartBarResponse": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "available_at": {
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "close": {
+            "title": "Close",
+            "type": "number"
+          },
+          "first_trade_date": {
+            "title": "First Trade Date",
+            "type": "string"
+          },
+          "high": {
+            "title": "High",
+            "type": "number"
+          },
+          "last_trade_date": {
+            "title": "Last Trade Date",
+            "type": "string"
+          },
+          "low": {
+            "title": "Low",
+            "type": "number"
+          },
+          "open": {
+            "title": "Open",
+            "type": "number"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "source_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Snapshot Ids",
+            "type": "array"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "number"
+          }
+        },
+        "required": [
+          "trade_date",
+          "first_trade_date",
+          "last_trade_date",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "amount",
+          "source_snapshot_ids",
+          "available_at",
+          "published_at",
+          "partial"
+        ],
+        "title": "MarketChartBarResponse",
+        "type": "object"
+      },
+      "MarketChartQuery": {
+        "description": "Chart read with a server-owned decision cutoff and retained sources.",
+        "properties": {
+          "adjustment": {
+            "$ref": "#/components/schemas/Adjustment",
+            "default": "none"
+          },
+          "allow_experimental_data": {
+            "default": false,
+            "title": "Allow Experimental Data",
+            "type": "boolean"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "instrument_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "period": {
+            "default": "daily",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "start_date",
+          "end_date"
+        ],
+        "title": "MarketChartQuery",
+        "type": "object"
+      },
+      "MarketChartResponse": {
+        "properties": {
+          "adjustment": {
+            "title": "Adjustment",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/MarketChartBarResponse"
+            },
+            "title": "Bars",
+            "type": "array"
+          },
+          "calendar_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Calendar Snapshot Ids",
+            "type": "array"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "knowledge_cutoff": {
+            "format": "date-time",
+            "title": "Knowledge Cutoff",
+            "type": "string"
+          },
+          "latest_price_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Price Date"
+          },
+          "missing_sessions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Sessions",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "publication_cutoff": {
+            "format": "date-time",
+            "title": "Publication Cutoff",
+            "type": "string"
+          },
+          "source_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Snapshot Ids",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Reason"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "period",
+          "adjustment",
+          "as_of",
+          "knowledge_cutoff",
+          "publication_cutoff",
+          "timezone",
+          "calendar_snapshot_ids",
+          "source_snapshot_ids",
+          "sources",
+          "latest_price_date",
+          "stale_reason",
+          "missing_sessions",
+          "bars"
+        ],
+        "title": "MarketChartResponse",
         "type": "object"
       },
       "MarketContextDriverResponse": {
@@ -43328,6 +43586,123 @@
           }
         },
         "summary": "Post Bars",
+        "tags": [
+          "market"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/market/chart": {
+      "post": {
+        "description": "Read exact retained price and calendar evidence for the chart.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "market_post_chart",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketChartQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_MarketChartResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Post Chart",
         "tags": [
           "market"
         ],

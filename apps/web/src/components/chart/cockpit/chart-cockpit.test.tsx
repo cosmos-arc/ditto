@@ -6,9 +6,11 @@ import {
 	type Logical,
 	type LogicalRange,
 	type MouseEventParams,
+	type PaneAttachedParameter,
 	type Time,
 } from "lightweight-charts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AsOfWatermark } from "./as-of-watermark";
 import { ChartCockpit, type CockpitSeriesSpec } from "./chart-cockpit";
 import { broadcastCrosshairTime, joinRangeGroup } from "./cockpit-link";
 
@@ -130,6 +132,31 @@ describe("ChartCockpit DOM 合同", () => {
 		expect(host).toHaveAttribute("data-chart-affordances", "crosshair tooltip zoom-pan linked-time-range");
 		expect(host).toHaveAttribute("data-chart-linked-time-range", "spec-range");
 		expect(host).toHaveAttribute("tabindex", "0");
+	});
+
+	it("maps an intraday cutoff to the nearest plotted coordinate", () => {
+		const timeToIndex = vi.fn(() => 1);
+		const logicalToCoordinate = vi.fn(() => 42);
+		const watermark = new AsOfWatermark({
+			time: 250 as Time,
+			label: "exact cutoff 250",
+			lineColor: "red",
+			labelColor: "white",
+		});
+		watermark.attached({
+			chart: {
+				timeScale: () => ({
+					timeToCoordinate: () => null,
+					timeToIndex,
+					logicalToCoordinate,
+				}),
+			},
+			requestUpdate: vi.fn(),
+		} as unknown as PaneAttachedParameter<Time>);
+		watermark.updateAllViews();
+		expect(timeToIndex).toHaveBeenCalledWith(250, true);
+		expect(logicalToCoordinate).toHaveBeenCalledWith(1);
+		expect(watermark.paneViews()[0]?.renderer()).not.toBeNull();
 	});
 
 	it("marks the as_of watermark on the host element", () => {
@@ -507,7 +534,7 @@ describe("ChartCockpit 导出", () => {
 		const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
 		const text = await blob.text();
 		expect(text.split("\n")[0]).toBe(
-			"time,close_close,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version",
+			"time,close_close,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version,missing_sessions",
 		);
 		expect(text).toContain("snap-full-id");
 		expect(URL.revokeObjectURL).toHaveBeenCalled();

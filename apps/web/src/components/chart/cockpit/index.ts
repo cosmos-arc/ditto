@@ -28,7 +28,6 @@ export {
 	type GapRange,
 	type LinePoint,
 	lastNonNullClose,
-	resampleBars,
 	type SeriesDirection,
 	splitByFreshness,
 	toCandleSeriesData,

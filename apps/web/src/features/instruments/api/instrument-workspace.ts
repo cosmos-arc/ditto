@@ -2,7 +2,8 @@ import type { components } from "@/api/generated/schema";
 import { apiClient } from "@/api/transport";
 
 export type InstrumentIdentity = components["schemas"]["Instrument"];
-export type InstrumentBar = components["schemas"]["Bar"];
+export type InstrumentChart = components["schemas"]["MarketChartResponse"];
+export type InstrumentBar = components["schemas"]["MarketChartBarResponse"];
 export type BarAdjustment = components["schemas"]["Adjustment"];
 
 export type InstrumentBarRange = {
@@ -10,6 +11,7 @@ export type InstrumentBarRange = {
 	readonly endDate: string;
 	readonly adjustment: BarAdjustment;
 	readonly allowExperimental: boolean;
+	readonly period: "daily" | "weekly" | "monthly";
 };
 
 export function parseInstrumentId(value: string): number {
@@ -27,21 +29,20 @@ export function fetchInstrumentIdentity(value: string): Promise<InstrumentIdenti
 	});
 }
 
-export async function fetchInstrumentBars(value: string, range: InstrumentBarRange): Promise<readonly InstrumentBar[]> {
+export async function fetchInstrumentBars(value: string, range: InstrumentBarRange): Promise<InstrumentChart> {
 	const instrumentId = parseInstrumentId(value);
 	if (!range.startDate || !range.endDate || range.startDate > range.endDate) {
 		throw new Error("行情查询日期范围无效");
 	}
 
-	const bars = await apiClient.post("/api/v1/market/bars", {
+	return apiClient.post("/api/v1/market/chart", {
 		body: {
 			adjustment: range.adjustment,
 			allow_experimental_data: range.allowExperimental,
 			end_date: range.endDate,
-			instrument_ids: [instrumentId],
-			limit: 4000,
+			instrument_id: instrumentId,
+			period: range.period,
 			start_date: range.startDate,
 		},
 	});
-	return [...bars].sort((left, right) => right.trade_date.localeCompare(left.trade_date));
 }

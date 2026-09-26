@@ -9,12 +9,6 @@ from pathlib import Path
 
 import polars as pl
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
-from ditto_data.catalog.contracts import DataAssetRef
-from ditto_data.catalog.license import DatasetLicenseDraft, DatasetLicenseRecord
-from ditto_data.catalog.license_store import SQLiteDatasetLicenseStore
-from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
-from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
-from ditto_data.catalog.source_snapshot_store import SQLiteProviderSnapshotStore
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
 from ditto_platform.foundation import (
@@ -23,6 +17,8 @@ from ditto_platform.foundation import (
     SQLiteClient,
     SQLitePool,
 )
+
+from tests.system.fixtures.retained_payload import retain_fixture_payload
 
 if os.environ.get("DITTO_ENVIRONMENT") != "testing":
     raise RuntimeError("instrument chart fixture requires testing mode")
@@ -98,6 +94,58 @@ def _adj_frame(instrument_id: int) -> pl.DataFrame:
             }
         )
     return pl.DataFrame(rows)
+
+
+def _seed_retained_charts(client: SQLiteClient, state_root: Path) -> None:
+    # Chart candles and adjustment use the same retained provider evidence as
+    # production, rather than the unversioned market read model above.
+    for dataset, frames in (
+        ("etf_daily", [_bars_frame(ETF_ID, 4.0), _bars_frame(ETF_NO_NAV_ID, 3.0)]),
+        ("stock_daily", [_bars_frame(STOCK_ID, 1500.0)]),
+        ("adj_factor", [_adj_frame(STOCK_ID)]),
+    ):
+        frame = pl.concat(frames).with_columns(
+            pl.when(pl.col("instrument_id") == ETF_ID)
+            .then(pl.lit("510300.SH"))
+            .when(pl.col("instrument_id") == ETF_NO_NAV_ID)
+            .then(pl.lit("159915.SZ"))
+            .otherwise(pl.lit("600519.SH"))
+            .alias("source_ticker"),
+            pl.col("trade_date").alias("event_time"),
+        )
+        if dataset == "etf_daily":
+            # Same trading date as a deliberate gap, but unknowable at the
+            # browser decision cutoff. PIT must hide this extreme value.
+            frame = pl.concat(
+                [
+                    frame,
+                    pl.DataFrame(
+                        {
+                            "instrument_id": [ETF_ID],
+                            "trade_date": ["2026-03-04"],
+                            "event_time": ["2026-03-04"],
+                            "source_ticker": ["510300.SH"],
+                            "open": [999_999.0],
+                            "high": [1_000_000.0],
+                            "low": [999_998.0],
+                            "close": [999_999.0],
+                            "volume": [1.0],
+                            "amount": [999_999.0],
+                            "available_at": ["2099-01-01T00:00:00Z"],
+                            "published_at": ["2099-01-01T00:00:00Z"],
+                        }
+                    ),
+                ],
+                how="diagonal_relaxed",
+            )
+        retain_fixture_payload(
+            client,
+            state_root,
+            dataset_id=dataset,
+            source="tushare",
+            payload=frame,
+            created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
+        )
 
 
 def _seed(root: Path) -> None:
@@ -252,25 +300,8 @@ def _seed(root: Path) -> None:
         OnDuplicate.ERROR.value,
         year=2026,
     )
-    # ETF 候选比较的评价窗口只认 cutoff 可见的保留日历快照，这里把同一批
-    # 跟踪交易日注册成 calendar 数据集的 retained payload。
-    calendar_license = DatasetLicenseRecord.create(
-        DatasetLicenseDraft(
-            dataset_id="calendar",
-            source="recorded",
-            terms_version="isolated-test-v1",
-            effective_from=date(2026, 1, 1),
-            effective_to=None,
-            local_cache="allowed",
-            derivative_compute="allowed",
-            display="allowed",
-            redistribution="prohibited",
-            notes="isolated recorded acceptance data",
-            reviewed_by="fixture",
-            reviewed_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
-        )
-    )
-    SQLiteDatasetLicenseStore(client).append_license(calendar_license)
+    _seed_retained_charts(client, root / "state")
+    # ETF candidate comparison and chart use the same retained calendar.
     open_days = {day.isoformat() for day in tracking_days}
     # 页面默认研究日期是"今天"：把已排期交易日延伸到今天，日历才覆盖研究日。
     cursor = tracking_days[-1] + timedelta(days=1)
@@ -286,30 +317,13 @@ def _seed(root: Path) -> None:
         calendar_days.append(day_cursor.isoformat())
         calendar_open.append(day_cursor.isoformat() in open_days)
         day_cursor += timedelta(days=1)
-    artifact = FilesystemProviderPayloadStore(root / "state").retain_payload(
+    retain_fixture_payload(
+        client,
+        root / "state",
         dataset_id="calendar",
         source="recorded",
         payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
-    )
-    SQLiteProviderSnapshotStore(client).append_snapshot(
-        ProviderSnapshot.create(
-            ProviderSnapshotDraft(
-                dataset_id="calendar",
-                source="recorded",
-                request_start=calendar_days[0],
-                request_end=calendar_days[-1],
-                schema_version="fixture.calendar.v1",
-                checksum=artifact.checksum,
-                canonical_asset=DataAssetRef(dataset_id="calendar", namespace="market"),
-                request_parameters_hash="fixture:calendar:tracking-window",
-                response_metadata=(("fixture", "instrument-chart"),),
-                license_record_id=calendar_license.record_id,
-                row_count=artifact.row_count,
-                payload_uri=artifact.uri,
-                payload_retained=True,
-                created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
-            )
-        )
+        created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
     )
     client.commit()
     pool.close_all()

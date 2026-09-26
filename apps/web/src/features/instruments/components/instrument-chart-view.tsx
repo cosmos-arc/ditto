@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChartCockpit, type CockpitMarker, type CockpitOverlay } from "@/components/chart";
-import { type BarPeriod, resampleBars } from "@/components/chart/cockpit/chart-data";
+import type { BarPeriod } from "@/components/chart/cockpit/chart-data";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain";
 import { ErrorState } from "@/lib/error-boundary";
@@ -8,15 +8,7 @@ import { StaleIndicator } from "@/lib/stale-indicator";
 import type { OverlayKind } from "../api/indicator-overlays";
 import type { BarAdjustment } from "../api/instrument-workspace";
 import { useEtfNav, useIndicatorSeries, useInstrumentChart, useInstrumentDetail } from "../hooks";
-import {
-	BAR_PERIOD_OPTIONS,
-	barsAgeDays,
-	findCalendarGaps,
-	formatTradeDate,
-	primaryAnswerFromBars,
-	toCockpitBars,
-	tradeDateToUnix,
-} from "../lib/chart-mapping";
+import { BAR_PERIOD_OPTIONS, primaryAnswerFromBars, toCockpitBars, tradeDateToUnix } from "../lib/chart-mapping";
 import {
 	type IndicatorToggles,
 	indicatorOverlays,
@@ -32,9 +24,6 @@ interface InstrumentChartViewProps {
 	readonly drill?: InstrumentDrillContext | undefined;
 }
 
-/** 数据级陈旧阈值：最近一根 bar 距今超过 7 个自然日视为 stale。 */
-const STALE_AFTER_DAYS = 7;
-
 const ADJUSTMENT_OPTIONS: ReadonlyArray<{ readonly value: BarAdjustment; readonly label: string }> = [
 	{ value: "none", label: "原始" },
 	{ value: "qfq", label: "前复权" },
@@ -42,8 +31,8 @@ const ADJUSTMENT_OPTIONS: ReadonlyArray<{ readonly value: BarAdjustment; readonl
 ];
 
 function dateDaysAgo(days: number): string {
-	const date = new Date();
-	date.setDate(date.getDate() - days);
+	const date = new Date(Date.now() + 8 * 60 * 60 * 1000);
+	date.setUTCDate(date.getUTCDate() - days);
 	return date.toISOString().slice(0, 10);
 }
 
@@ -98,7 +87,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
 	const [startDate, setStartDate] = useState(() => dateDaysAgo(365));
-	const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+	const [endDate, setEndDate] = useState(() => dateDaysAgo(0));
 	const [toggles, setToggles] = useState<IndicatorToggles>(() => readIndicatorToggles());
 	const updateToggle = (key: keyof IndicatorToggles, value: boolean) => {
 		setToggles((previous) => {
@@ -119,6 +108,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 		allowExperimental: includeExperimental,
 		endDate,
 		startDate,
+		period,
 	});
 
 	// 指标序列口径为日线（周/月指标窗口语义不同，不近似换算）。
@@ -140,14 +130,13 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	});
 	const navQuery = useEtfNav(id, { startDate, endDate });
 
-	const bars = useMemo(() => (query.data ? toCockpitBars(query.data) : []), [query.data]);
-	const displayBars = useMemo(() => resampleBars(bars, period), [bars, period]);
+	const bars = useMemo(() => (query.data ? toCockpitBars(query.data.bars) : []), [query.data]);
+	const displayBars = bars;
 	const answer = useMemo(() => primaryAnswerFromBars(bars), [bars]);
-	const ageDays = useMemo(() => barsAgeDays(bars, Date.now()), [bars]);
-	const stale = ageDays !== null && ageDays > STALE_AFTER_DAYS;
-	// API Bar 合同不携带 null OHLC：partial 以日线日历缺口表达（缺失交易日区间）。
-	const calendarGaps = useMemo(() => findCalendarGaps(bars), [bars]);
-	const firstGap = calendarGaps[0];
+	const latestBar = query.data?.bars.at(-1);
+	const stale = query.data?.stale_reason != null;
+	const missingSessions = query.data?.missing_sessions ?? [];
+	const partial = query.data?.bars.some((bar) => bar.partial) ?? false;
 
 	const indicatorOverlaysList = useMemo(
 		() => (indicatorsEnabled && indicatorQuery.data ? indicatorOverlays(indicatorQuery.data, toggles) : []),
@@ -172,6 +161,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 		};
 	}, [isEtf, navPoints, toggles.nav]);
 	const navUnavailable = isEtf && toggles.nav && !navQuery.isLoading && navPoints.length === 0;
+	const overlayShown = indicatorOverlaysList.length > 0 || indicatorSubPaneList.length > 0 || navOverlay !== null;
 
 	const experimentalBlocked =
 		query.isError && String((query.error as Error | null)?.message ?? "").includes("experimental");
@@ -251,7 +241,13 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 					<div className="max-w-lg text-right text-xs leading-5 text-(--color-foreground-tertiary)">
 						复权：{effectiveAdjustment} · experimental：{includeExperimental ? "开" : "关"}
 						<br />
-						快照标识未由接口提供，仅作研究浏览，不生成交易建议
+						{query.data
+							? `决策 ${query.data.as_of} · 可得截止 ${query.data.knowledge_cutoff} · 发布截止 ${query.data.publication_cutoff}`
+							: "读取图表来源中"}
+						<br />
+						{query.data
+							? `来源 ${query.data.sources.join(", ")} · 快照 ${query.data.source_snapshot_ids.join(", ")} · 日历 ${query.data.calendar_snapshot_ids.join(", ")}`
+							: ""}
 					</div>
 				</div>
 
@@ -267,7 +263,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						</span>
 						<span className="font-data text-(--color-foreground-tertiary)">run {drill.runId}</span>
 						<span className="font-data text-(--color-foreground-tertiary)">as_of {drill.asOf || "—"}</span>
-						<span className="text-(--color-foreground-muted)">知识时间水位线与来源 run 一致</span>
+						<span className="text-(--color-foreground-muted)">决策线为源 run as_of；K 线按当前图表来源截止</span>
 					</div>
 				)}
 
@@ -317,6 +313,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							净值数据不可得
 						</span>
 					)}
+					{overlayShown && (
+						<span className="text-xs text-(--color-foreground-muted)">叠加线来源未绑定；CSV 仅含 K 线</span>
+					)}
 				</div>
 
 				{answer && (
@@ -340,20 +339,35 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						<span data-answer-scope className="tabular-nums text-xs text-(--color-foreground-tertiary)">
 							{answer.tradeDate} 收盘 · 区间 {answer.windowLow.toFixed(2)}–{answer.windowHigh.toFixed(2)}
 						</span>
+						{latestBar && (
+							<span className="tabular-nums text-xs text-(--color-foreground-tertiary)">
+								价格可得 {latestBar.available_at} · 发布 {latestBar.published_at}
+							</span>
+						)}
+						{partial && (
+							<span data-state="bars-partial" className="text-xs">
+								部分周期不完整
+							</span>
+						)}
+					</div>
+				)}
+
+				{(stale || missingSessions.length > 0) && (
+					<div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 px-3 py-2.5 text-sm">
 						{stale && (
 							<span className="inline-flex items-center gap-1.5 text-xs text-(--color-foreground-tertiary)">
 								<StaleIndicator isStale />
-								数据延迟 {ageDays} 天
+								最新价格日 {query.data?.latest_price_date ?? "—"} ·{" "}
+								{query.data?.stale_reason === "missing_expected_session" ? "交易日价格缺失" : "当前没有可见价格"}
 							</span>
 						)}
-						{firstGap && (
+						{missingSessions.length > 0 && (
 							<span
 								className="tabular-nums text-xs text-(--color-foreground-muted)"
 								data-testid={`chart-gaps-${id}`}
 								data-state="bars-partial"
 							>
-								{calendarGaps.length > 1 ? `缺口 ${calendarGaps.length} 处 · 首处 ` : "缺口 "}
-								{formatTradeDate(firstGap.from)} → {formatTradeDate(firstGap.to)}
+								缺失交易日 {missingSessions.join("、")}
 							</span>
 						)}
 					</div>
@@ -372,12 +386,12 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						<ButtonLikeRetry onClick={() => void query.refetch()} />
 					</div>
 				)}
-				{query.data?.length === 0 && (
+				{query.data?.bars.length === 0 && (
 					<div className="p-10 text-center text-sm text-(--color-foreground-tertiary)">
 						所选日期范围没有可见行情；可放宽日期范围或在数据看台确认该标的的摄取覆盖。
 					</div>
 				)}
-				{displayBars.length > 0 && (
+				{query.data && (
 					<div className="p-3">
 						<ChartCockpit
 							chartId={`instrument-candles-${id}`}
@@ -388,13 +402,24 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							subPanes={indicatorSubPaneList}
 							markers={drillMarkers}
 							initialFocusTime={drillTime}
-							asOf={drillAsOf}
+							asOf={
+								drillAsOf ?? {
+									time: Date.parse(query.data.as_of) / 1000,
+									label: `行情决策 ${query.data.as_of}`,
+								}
+							}
 							showVolumePane
 							height={360}
 							identity={{
-								dataSourceName: "本地市场库（tushare/tdx 摄取）",
-								knowledgeCutoff: null,
-								publicationCutoff: null,
+								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}`,
+								asOfIso: query.data?.as_of ?? null,
+								snapshotId: query.data?.source_snapshot_ids.join(",") ?? null,
+								calendarSnapshotIds: query.data?.calendar_snapshot_ids.join(",") ?? null,
+								missingSessions,
+								knowledgeCutoff: query.data?.knowledge_cutoff ?? null,
+								publicationCutoff: query.data?.publication_cutoff ?? null,
+								adjustment: effectiveAdjustment,
+								period,
 							}}
 							exportName={`instrument-${id}-${period}`}
 						/>
