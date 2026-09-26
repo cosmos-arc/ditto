@@ -684,7 +684,11 @@ class ProviderPayloadTechnicalAnalysisSource:
             if snapshot is None:
                 continue
             observed = snapshot_observed_by(snapshot, context.as_of)
-            if prior is None or observed > snapshot_observed_by(prior, context.as_of):
+            if (
+                previous is None
+                or prior is None
+                or observed > snapshot_observed_by(prior, context.as_of)
+            ):
                 rows[day] = row
             elif observed == snapshot_observed_by(
                 prior, context.as_of

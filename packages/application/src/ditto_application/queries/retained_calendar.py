@@ -137,8 +137,6 @@ def _empty_observation_gaps(
     last_day: str,
 ) -> set[str]:
     """Days an empty observation supersedes: already-authored covered days."""
-    if snapshot.request_start is None or snapshot.request_end is None:
-        return set()
     start = max(first_day, snapshot.request_start)
     end = min(last_day, snapshot.request_end)
     gaps: set[str] = set()
