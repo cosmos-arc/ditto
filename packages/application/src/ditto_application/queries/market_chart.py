@@ -534,6 +534,7 @@ class MarketChartQueryFacade:
         source: str,
         cutoff: datetime,
         calendar: RetainedCalendarWindow,
+        consumable_days: frozenset[str],
     ) -> Callable[[date], str | None]:
         identities = self._metadata.get_source_tickers(
             request.instrument_id,
@@ -559,9 +560,11 @@ class MarketChartQueryFacade:
                 return _require_chart_ticker(value)
             return value
 
-        for day in calendar.days:
-            if request.start_date.isoformat() <= day <= request.end_date.isoformat():
-                ticker(date.fromisoformat(day))
+        # Eager validation covers only consumable sessions; an unclosed
+        # session has no readable bar, so a not-yet-visible same-day rename
+        # must not fail the valid closed-session history.
+        for day in consumable_days:
+            ticker(date.fromisoformat(day))
         return ticker
 
     def _load_suspensions(
@@ -575,20 +578,21 @@ class MarketChartQueryFacade:
         if request.asset_class == "stock" and self._market.allows_suspension_evidence(
             allow_experimental_data=request.allow_experimental_data
         ):
+            consumable_days = _consumable_sessions(
+                calendar, request.start_date, request.end_date, cutoff
+            )
             status_snapshots = self._select_snapshots(
                 "stock_status",
                 request.start_date,
                 request.end_date,
                 cutoff,
                 instrument_id=request.instrument_id,
-                consumable_days=_consumable_sessions(
-                    calendar, request.start_date, request.end_date, cutoff
-                ),
+                consumable_days=consumable_days,
             )
             if not status_snapshots:
                 return {}, ()
             instrument_code = self._instrument_code(
-                request, status_snapshots[0].source, cutoff, calendar
+                request, status_snapshots[0].source, cutoff, calendar, consumable_days
             )
             snapshot_ids = tuple(item.snapshot_id for item in status_snapshots)
             status_context = PITQueryContext(
@@ -627,18 +631,19 @@ class MarketChartQueryFacade:
             self._market.assert_adjustment_allowed(
                 allow_experimental_data=request.allow_experimental_data
             )
+            consumable_days = _consumable_sessions(
+                calendar, request.start_date, request.end_date, cutoff
+            )
             factor_snapshots = self._select_snapshots(
                 "adj_factor",
                 request.start_date,
                 request.end_date,
                 cutoff,
                 instrument_id=request.instrument_id,
-                consumable_days=_consumable_sessions(
-                    calendar, request.start_date, request.end_date, cutoff
-                ),
+                consumable_days=consumable_days,
             )
             instrument_code = self._instrument_code(
-                request, factor_snapshots[0].source, cutoff, calendar
+                request, factor_snapshots[0].source, cutoff, calendar, consumable_days
             )
             snapshot_ids = tuple(item.snapshot_id for item in factor_snapshots)
             factor_context = PITQueryContext(
@@ -836,7 +841,7 @@ class MarketChartQueryFacade:
         queried_snapshot_ids = {item.snapshot_id for item in selected}
 
         instrument_code = self._instrument_code(
-            request, latest.source, cutoff, calendar
+            request, latest.source, cutoff, calendar, consumable_days
         )
 
         context = PITQueryContext(

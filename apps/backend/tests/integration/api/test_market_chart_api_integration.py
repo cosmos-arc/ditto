@@ -1834,6 +1834,46 @@ def test_chart_ignores_unclosed_session_scoped_shards_in_source_authority(
 
 
 @pytest.mark.pit
+def test_chart_skips_unclosed_sessions_in_ticker_validation(
+    tmp_path: Path,
+) -> None:
+    """A not-yet-visible mapping for today's unclosed session must not fail
+    the valid closed-session history; only consumable sessions require an
+    effective ticker eagerly."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: (
+                "600519.SH" if kwargs["asof"] < "2026-03-11" else None
+            ),
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "stock", "list_date": "2001-08-27"}
+                if instrument_id == 1000001
+                else None
+            ),
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        chart._snapshots, chart._payloads, metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 10),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.8]
+    assert result.sources == ("tushare",)
+
+
+@pytest.mark.pit
 def test_chart_ignores_revision_conflicts_outside_requested_window(
     tmp_path: Path,
 ) -> None:
