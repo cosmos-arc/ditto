@@ -304,7 +304,8 @@ export function toCsvExport(
 		for (const bar of entry.bars) times.add(bar.time);
 	}
 	const withOhlc = seriesById.map((entry) => entry.bars.some((bar) => bar.open !== undefined));
-	const hasChartSources = volume.some((bar) => bar.sourceSnapshotIds !== undefined);
+	const hasChartSources =
+		identity.calendarSnapshotIds != null || volume.some((bar) => bar.sourceSnapshotIds !== undefined);
 	const metadata = [
 		identity.asOfIso ?? (identity.asOf != null ? formatExportTime(identity.asOf) : ""),
 		identity.snapshotId ?? "",
@@ -338,36 +339,35 @@ export function toCsvExport(
 			: []),
 		...CSV_METADATA_COLUMNS,
 	];
-	const rows = [...times]
-		.sort((a, b) => a - b)
-		.map((time) => [
-			formatExportTime(time),
-			...seriesById.flatMap((entry, index) => {
-				const bar = entry.bars.find((item) => item.time === time);
-				if (!withOhlc[index]) {
-					return [bar?.close ?? ""];
-				}
-				return [bar?.open ?? "", bar?.high ?? "", bar?.low ?? "", bar?.close ?? ""];
-			}),
-			volumeByTime.get(time) ?? "",
-			...(hasChartSources
-				? (() => {
-						const bar = volume.find((item) => item.time === time);
-						return [
-							bar?.firstTradeDate ?? "",
-							bar?.lastTradeDate ?? "",
-							bar?.availableAt ?? "",
-							bar?.publishedAt ?? "",
-							bar?.partial === undefined ? "" : String(bar.partial),
-							bar?.sourceSnapshotIds?.join("|") ?? "",
-							identity.calendarSnapshotIds ?? "",
-							identity.adjustment ?? "",
-							identity.period ?? "",
-						];
-					})()
-				: []),
-			...metadata,
-		]);
+	const exportTimes: Array<number | null> = times.size ? [...times].sort((a, b) => a - b) : [null];
+	const rows = exportTimes.map((time) => [
+		time === null ? "" : formatExportTime(time),
+		...seriesById.flatMap((entry, index) => {
+			const bar = entry.bars.find((item) => item.time === time);
+			if (!withOhlc[index]) {
+				return [bar?.close ?? ""];
+			}
+			return [bar?.open ?? "", bar?.high ?? "", bar?.low ?? "", bar?.close ?? ""];
+		}),
+		(time === null ? undefined : volumeByTime.get(time)) ?? "",
+		...(hasChartSources
+			? (() => {
+					const bar = volume.find((item) => item.time === time);
+					return [
+						bar?.firstTradeDate ?? "",
+						bar?.lastTradeDate ?? "",
+						bar?.availableAt ?? "",
+						bar?.publishedAt ?? "",
+						bar?.partial === undefined ? "" : String(bar.partial),
+						bar?.sourceSnapshotIds?.join("|") ?? "",
+						identity.calendarSnapshotIds ?? "",
+						identity.adjustment ?? "",
+						identity.period ?? "",
+					];
+				})()
+			: []),
+		...metadata,
+	]);
 	return [header, ...rows].map((row) => row.map((cell) => csvCell(cell)).join(",")).join("\n");
 }
 

@@ -455,13 +455,25 @@ class MarketChartQueryFacade:
         cutoff: datetime,
         calendar: RetainedCalendarWindow,
     ) -> Callable[[date], str | None]:
+        identities = self._metadata.get_source_tickers(
+            request.instrument_id,
+            source=source,
+            asofs=list(calendar.days),
+            cutoff=cutoff.isoformat(),
+        )
+
         @cache
         def ticker(day: date) -> str | None:
-            value = self._metadata.get_source_ticker(
-                request.instrument_id,
-                source=source,
-                asof=day.isoformat(),
-                cutoff=cutoff.isoformat(),
+            day_key = day.isoformat()
+            value = (
+                identities[day_key]
+                if day_key in identities
+                else self._metadata.get_source_ticker(
+                    request.instrument_id,
+                    source=source,
+                    asof=day_key,
+                    cutoff=cutoff.isoformat(),
+                )
             )
             if request.start_date <= day <= request.end_date:
                 return _require_chart_ticker(value)

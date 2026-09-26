@@ -175,6 +175,7 @@ describe("InstrumentChartView", () => {
 		);
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await screen.findByText(/所选日期范围没有可见行情/);
+		expect(screen.getByTestId("cockpit-stub")).toBeInTheDocument();
 		if (gap) {
 			expect(screen.getByText(/当前没有可见价格/)).toBeInTheDocument();
 			expect(screen.getByText("缺失交易日 2026-03-10")).toBeInTheDocument();

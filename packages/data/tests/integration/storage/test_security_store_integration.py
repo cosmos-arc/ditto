@@ -414,3 +414,43 @@ class TestInstrumentReaderWriterIntegration:
 
         assert "ticker" in enriched.columns
         assert enriched["ticker"][0] == "600000"
+
+    def test_batch_tickers_preserve_future_rename_visibility(
+        self,
+        reader: InstrumentReader,
+        client: SQLiteClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        client.execute("ALTER TABLE instrument_mapping ADD COLUMN created_at TEXT")
+        client.execute(
+            "INSERT INTO instrument (instrument_id, ticker, exchange, asset_class) "
+            "VALUES (1, 'NEW', 'SSE', 'stock')"
+        )
+        client.execute(
+            "INSERT INTO instrument_mapping "
+            "(instrument_id, source, source_ticker, effective_from, "
+            "effective_to, created_at) "
+            "VALUES (1, 'tushare', 'OLD.SH', '2020-01-01', '2026-03-10', '2020-01-01')"
+        )
+        client.execute(
+            "INSERT INTO instrument_mapping "
+            "(instrument_id, source, source_ticker, effective_from, created_at) "
+            "VALUES (1, 'tushare', 'NEW.SH', '2026-03-10', '2026-03-12')"
+        )
+        calls = []
+        fetchall = client.fetchall
+
+        def count_query(sql, params=None):
+            calls.append(sql)
+            return fetchall(sql, params)
+
+        monkeypatch.setattr(client, "fetchall", count_query)
+        days = ["2019-12-31", "2026-03-09", "2026-03-10", "2026-03-11"]
+        assert reader.get_source_tickers(
+            1, source="tushare", asofs=days, cutoff="2026-03-11T08:00:00Z"
+        ) == dict(zip(days, [None, "OLD.SH", "OLD.SH", "OLD.SH"], strict=True))
+        assert len(calls) == 1
+        assert reader.get_source_tickers(
+            1, source="tushare", asofs=days, cutoff="2026-03-13T08:00:00Z"
+        ) == dict(zip(days, [None, "OLD.SH", "NEW.SH", "NEW.SH"], strict=True))
+        assert len(calls) == 2

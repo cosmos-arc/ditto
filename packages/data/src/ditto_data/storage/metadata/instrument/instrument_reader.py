@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -290,26 +291,9 @@ class InstrumentReader:
 
         """
         if asof and cutoff is not None:
-            row = self._client.fetchone(
-                """SELECT m.source_ticker FROM instrument_mapping m
-                WHERE m.instrument_id = ? AND m.source = ?
-                  AND m.effective_from <= ?
-                  AND datetime(m.created_at) <= datetime(?)
-                  AND (
-                      m.effective_to IS NULL
-                      OR m.effective_to > ?
-                      OR EXISTS (
-                          SELECT 1 FROM instrument_mapping s
-                          WHERE s.instrument_id = m.instrument_id
-                            AND s.source = m.source
-                            AND s.effective_from = m.effective_to
-                            AND datetime(s.created_at) > datetime(?)
-                      )
-                  )
-                ORDER BY m.effective_from DESC
-                LIMIT 1""",
-                [instrument_id, source, asof, cutoff, asof, cutoff],
-            )
+            return self.get_source_tickers(
+                instrument_id, source=source, asofs=[asof], cutoff=cutoff
+            ).get(asof)
         elif asof:
             row = self._client.fetchone(
                 """SELECT source_ticker FROM instrument_mapping
@@ -331,6 +315,44 @@ class InstrumentReader:
             )
 
         return cast(str, row["source_ticker"]) if row else None
+
+    def get_source_tickers(
+        self,
+        instrument_id: int,
+        *,
+        source: str,
+        asofs: list[str],
+        cutoff: str,
+    ) -> dict[str, str | None]:
+        """Resolve daily identities in one query using the point lookup's PIT rule."""
+        if not asofs:
+            return {}
+        rows = self._client.fetchall(
+            """SELECT d.value AS day, (
+                SELECT m.source_ticker FROM instrument_mapping m
+                WHERE m.instrument_id = ? AND m.source = ?
+                  AND m.effective_from <= d.value
+                  AND datetime(m.created_at) <= datetime(?)
+                  AND (
+                      m.effective_to IS NULL
+                      OR m.effective_to > d.value
+                      OR EXISTS (
+                          SELECT 1 FROM instrument_mapping s
+                          WHERE s.instrument_id = m.instrument_id
+                            AND s.source = m.source
+                            AND s.effective_from = m.effective_to
+                            AND datetime(s.created_at) > datetime(?)
+                      )
+                  )
+                ORDER BY m.effective_from DESC
+                LIMIT 1
+            ) AS source_ticker FROM json_each(?) d""",
+            [instrument_id, source, cutoff, cutoff, json.dumps(asofs)],
+        )
+        return {
+            cast(str, row["day"]): cast(str | None, row["source_ticker"])
+            for row in rows
+        }
 
     def find_securities(self, query: SecurityQuery) -> pl.DataFrame:
         """

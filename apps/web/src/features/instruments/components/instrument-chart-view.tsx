@@ -391,7 +391,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						所选日期范围没有可见行情；可放宽日期范围或在数据看台确认该标的的摄取覆盖。
 					</div>
 				)}
-				{displayBars.length > 0 && (
+				{query.data && (
 					<div className="p-3">
 						<ChartCockpit
 							chartId={`instrument-candles-${id}`}

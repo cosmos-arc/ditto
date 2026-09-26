@@ -59,6 +59,16 @@ class _Snapshots:
         )
 
 
+class _ChartMetadata(SimpleNamespace):
+    def get_source_tickers(self, instrument_id, *, source, asofs, cutoff):
+        return {
+            day: self.get_source_ticker(
+                instrument_id, source=source, asof=day, cutoff=cutoff
+            )
+            for day in asofs
+        }
+
+
 def _snapshot(
     store: FilesystemProviderPayloadStore,
     dataset: str,
@@ -182,7 +192,7 @@ def _chart(
     )
     metadata = cast(
         MetadataQueryFacade,
-        SimpleNamespace(
+        _ChartMetadata(
             get_source_ticker=lambda *args, **kwargs: (
                 "OLD.SH" if renamed and kwargs["asof"] < "2026-03-10" else "600519.SH"
             ),
@@ -1234,7 +1244,7 @@ def test_chart_missing_effective_ticker_mapping_fails_instead_of_false_gap(
     )
     metadata = cast(
         MetadataQueryFacade,
-        SimpleNamespace(
+        _ChartMetadata(
             get_source_ticker=lambda *args, **kwargs: (
                 None
                 if kwargs["source"] == missing_source and kwargs["asof"] == missing_day
@@ -1296,7 +1306,7 @@ def test_chart_scoped_shard_missing_mapping_fails_before_snapshot_filtering(
     )
     metadata = cast(
         MetadataQueryFacade,
-        SimpleNamespace(
+        _ChartMetadata(
             get_source_ticker=lambda *args, **kwargs: (
                 None if kwargs["asof"] == "2026-03-09" else "600519.SH"
             ),
@@ -1396,7 +1406,7 @@ def test_chart_empty_auxiliary_evidence_still_requires_effective_mapping(
     )
     metadata = cast(
         MetadataQueryFacade,
-        SimpleNamespace(
+        _ChartMetadata(
             get_source_ticker=lambda *args, **kwargs: (
                 None
                 if kwargs["source"] == "tushare" and kwargs["asof"] == "2026-03-11"
