@@ -113,6 +113,12 @@ def _snapshot_range(value: str) -> str:
     return value.replace("-", "")
 
 
+def _require_chart_ticker(value: str | None) -> str:
+    if value is None:
+        raise AppQueryError("effective chart ticker mapping is unavailable")
+    return value
+
+
 def _snapshot_observed_at(
     snapshots: ProviderSnapshotReader, snapshot_id: str, cutoff: datetime
 ) -> datetime:
@@ -378,12 +384,13 @@ class MarketChartQueryFacade:
     ) -> tuple[ProviderSnapshot, ...]:
         @cache
         def ticker_at(source_name: str, day: date) -> str | None:
-            return self._metadata.get_source_ticker(
+            value = self._metadata.get_source_ticker(
                 instrument_id,
                 source=source_name,
                 asof=day.isoformat(),
                 cutoff=cutoff.isoformat(),
             )
+            return _require_chart_ticker(value)
 
         candidates = [
             item
@@ -438,8 +445,8 @@ class MarketChartQueryFacade:
                 asof=day.isoformat(),
                 cutoff=cutoff.isoformat(),
             )
-            if value is None and request.start_date <= day <= request.end_date:
-                raise AppQueryError("effective chart ticker mapping is unavailable")
+            if request.start_date <= day <= request.end_date:
+                return _require_chart_ticker(value)
             return value
 
         return ticker

@@ -1253,3 +1253,61 @@ def test_chart_missing_effective_ticker_mapping_fails_instead_of_false_gap(
                 now=datetime(2026, 3, 12, 8, tzinfo=UTC),
             )
         )
+
+
+@pytest.mark.pit
+def test_chart_scoped_shard_missing_mapping_fails_before_snapshot_filtering(
+    tmp_path: Path,
+) -> None:
+    chart, original, _ = _chart(tmp_path, poisoned=False)
+    scoped = replace(
+        original,
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+        canonical_asset=DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("source_ticker=600519.SH",),
+        ),
+    )
+    valid = replace(
+        scoped,
+        snapshot_id="valid-day-shard",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+        created_at=datetime(2026, 3, 10, 8, tzinfo=UTC),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(
+                    scoped if item.snapshot_id == original.snapshot_id else item
+                    for item in chart._snapshots.list_snapshots()
+                ),
+                valid,
+            )
+        ),
+    )
+    metadata = cast(
+        MetadataQueryFacade,
+        SimpleNamespace(
+            get_source_ticker=lambda *args, **kwargs: (
+                None if kwargs["asof"] == "2026-03-09" else "600519.SH"
+            ),
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, chart._payloads, metadata, chart._market)
+    with pytest.raises(AppQueryError, match="ticker mapping is unavailable"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            )
+        )
