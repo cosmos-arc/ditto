@@ -180,15 +180,15 @@ describe("toCsvExport", () => {
 		});
 		const [header, row] = csv.split("\n");
 		const cells = Object.fromEntries(header!.split(",").map((name, i) => [name, row!.split(",")[i]]));
-		expect(cells.time).toBe("");
-		expect(cells.close_ohlc).toBe("");
-		expect(cells.snapshot_id).toBe("empty-price");
-		expect(cells.calendar_snapshot_ids).toBe("calendar-exact");
-		expect(cells.missing_sessions).toBe("2026-03-09|2026-03-10");
-		expect(cells.knowledge_cutoff).toBe("2026-03-10T08:00:00Z");
-		expect(cells.publication_cutoff).toBe("2026-03-10T08:00:00Z");
-		expect(cells.adjustment).toBe("none");
-		expect(cells.period).toBe("daily");
+		expect(cells["time"]).toBe("");
+		expect(cells["close_ohlc"]).toBe("");
+		expect(cells["snapshot_id"]).toBe("empty-price");
+		expect(cells["calendar_snapshot_ids"]).toBe("calendar-exact");
+		expect(cells["missing_sessions"]).toBe("2026-03-09|2026-03-10");
+		expect(cells["knowledge_cutoff"]).toBe("2026-03-10T08:00:00Z");
+		expect(cells["publication_cutoff"]).toBe("2026-03-10T08:00:00Z");
+		expect(cells["adjustment"]).toBe("none");
+		expect(cells["period"]).toBe("daily");
 	});
 	it("retains each market bar's price, calendar, and cutoff evidence", () => {
 		const csv = toCsvExport(
