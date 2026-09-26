@@ -597,6 +597,7 @@ class MarketChartQueryFacade:
                 cutoff=cutoff,
                 first_day=first_period_start.isoformat(),
                 last_day=last_period_end.isoformat(),
+                allow_closed_window=True,
             )
         except RetainedCalendarAbsent as error:
             raise AppQueryError(

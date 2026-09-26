@@ -785,3 +785,27 @@ def test_chart_outside_lifecycle_returns_empty_without_calendar_query(
     assert result.stale_reason is None
     assert result.source_snapshot_ids == ()
     assert result.calendar_snapshot_ids == ()
+
+
+@pytest.mark.pit
+def test_chart_closed_only_window_preserves_calendar_without_ingestion_failure(
+    tmp_path: Path,
+) -> None:
+    chart, snapshot, _ = _chart(tmp_path, poisoned=False)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 14),
+            end_date=date(2026, 3, 15),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+        )
+    )
+    assert result.bars == ()
+    assert result.missing_sessions == ()
+    assert result.stale_reason is None
+    assert result.calendar_snapshot_ids
+    assert result.source_snapshot_ids == (snapshot.snapshot_id,)

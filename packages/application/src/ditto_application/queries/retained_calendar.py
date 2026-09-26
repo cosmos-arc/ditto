@@ -128,6 +128,7 @@ def retained_calendar_window(
     cutoff: datetime,
     first_day: str,
     last_day: str,
+    allow_closed_window: bool = False,
 ) -> RetainedCalendarWindow:
     """
     Combine cutoff-visible retained calendar shards into one window.
@@ -177,7 +178,7 @@ def retained_calendar_window(
             authorship[day] = (is_open, snapshot.snapshot_id)
             revision_gaps.discard(day)
     days = sorted(day for day, state in authorship.items() if state[0])
-    if not days:
+    if not days and (not allow_closed_window or not authorship):
         raise RetainedCalendarAbsent("retained calendar is malformed")
     return RetainedCalendarWindow(
         days,
