@@ -977,3 +977,31 @@ def test_chart_qfq_earlier_bar_carries_late_baseline_factor(
     else:
         assert baseline.snapshot_id not in earlier.source_snapshot_ids
         assert earlier.available_at < observed
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("start_date", [date(2026, 3, 9), date(2026, 4, 1)])
+def test_chart_future_range_uses_only_cutoff_calendar(
+    tmp_path: Path, start_date: date
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=start_date,
+            end_date=date(2027, 3, 15),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+        )
+    )
+    if start_date == date(2026, 3, 9):
+        assert result.bars[0].last_trade_date == "2026-03-10"
+        assert result.bars[0].partial is True
+        assert result.missing_sessions == ()
+    else:
+        assert result.bars == ()
+        assert result.calendar_snapshot_ids == ()
+        assert result.source_snapshot_ids == ()

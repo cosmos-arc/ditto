@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
 from functools import cache
 from zoneinfo import ZoneInfo
@@ -591,6 +591,8 @@ class MarketChartQueryFacade:
         )
         as_of = now.astimezone(UTC)
         cutoff = as_of
+        end_date = min(end_date, as_of.astimezone(_SHANGHAI).date())
+        request = replace(request, end_date=end_date)
         if max(start_date, request.listed_on or start_date) > min(
             end_date,
             request.delisted_on - timedelta(days=1)
