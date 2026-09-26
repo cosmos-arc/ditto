@@ -1428,3 +1428,47 @@ def test_chart_empty_auxiliary_evidence_still_requires_effective_mapping(
                 now=datetime(2026, 3, 12, 8, tzinfo=UTC),
             )
         )
+
+
+@pytest.mark.pit
+def test_chart_daily_scoped_shards_batch_identity_resolution(tmp_path: Path) -> None:
+    chart, original, _ = _chart(tmp_path, poisoned=False)
+    shards = tuple(
+        replace(
+            original,
+            snapshot_id=f"daily-{day}",
+            request_start=day,
+            request_end=day,
+            canonical_asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=("source_ticker=600519.SH",),
+            ),
+        )
+        for day in ["2026-03-09", "2026-03-10", "2026-03-11"]
+    )
+    calls = []
+
+    def batch(instrument_id, *, source, asofs, cutoff):
+        calls.append((instrument_id, source, asofs, cutoff))
+        return dict.fromkeys(asofs, "600519.SH")
+
+    metadata = cast(MetadataQueryFacade, SimpleNamespace(get_source_tickers=batch))
+    chart = MarketChartQueryFacade(
+        cast(ProviderSnapshotReader, _Snapshots(shards)),
+        chart._payloads,
+        metadata,
+        chart._market,
+    )
+    assert (
+        chart._select_snapshots(
+            "stock_daily",
+            date(2026, 3, 9),
+            date(2026, 3, 11),
+            datetime(2026, 3, 12, 8, tzinfo=UTC),
+            instrument_id=1000001,
+        )
+        == shards
+    )
+    assert len(calls) == 1
+    assert calls[0][2] == ["2026-03-09", "2026-03-10", "2026-03-11"]

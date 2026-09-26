@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
-from functools import cache
+from functools import cache, partial
 from zoneinfo import ZoneInfo
 
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
@@ -348,6 +348,13 @@ def _chart_rows(
     return tuple(result), missing, max(by_day, default=None)
 
 
+def _date_keys(start: date, end: date) -> list[str]:
+    return [
+        (start + timedelta(days=offset)).isoformat()
+        for offset in range((end - start).days + 1)
+    ]
+
+
 def _snapshot_matches_instrument(
     item: ProviderSnapshot,
     start_date: date,
@@ -364,8 +371,8 @@ def _snapshot_matches_instrument(
     first = max(start_date, date.fromisoformat(item.request_start))
     last = min(end_date, date.fromisoformat(item.request_end))
     return any(
-        ticker_at(item.source, first + timedelta(days=offset)) in tickers
-        for offset in range((last - first).days + 1)
+        ticker_at(item.source, date.fromisoformat(day)) in tickers
+        for day in _date_keys(first, last)
     )
 
 
@@ -396,15 +403,19 @@ class MarketChartQueryFacade:
         *,
         instrument_id: int,
     ) -> tuple[ProviderSnapshot, ...]:
-        @cache
-        def ticker_at(source_name: str, day: date) -> str | None:
-            value = self._metadata.get_source_ticker(
+        tickers_for = cache(
+            partial(
+                self._metadata.get_source_tickers,
                 instrument_id,
-                source=source_name,
-                asof=day.isoformat(),
+                asofs=_date_keys(start_date, end_date),
                 cutoff=cutoff.isoformat(),
             )
-            return _require_chart_ticker(value)
+        )
+
+        def ticker_at(source_name: str, day: date) -> str:
+            return _require_chart_ticker(
+                tickers_for(source=source_name).get(day.isoformat())
+            )
 
         candidates = [
             item
