@@ -246,6 +246,8 @@ def _reject_superseded_revision_rows(
     context: PITQueryContext,
     snapshot_reader: ProviderSnapshotReader,
     instrument_code: str | Callable[[date], str | None],
+    *,
+    window: tuple[date, date] | None = None,
 ) -> None:
     """
     Fail closed when the newest in-scope observation drops a visible day.
@@ -256,7 +258,8 @@ def _reject_superseded_revision_rows(
     older shard's row for that day; the row must not survive as visible
     evidence. Authority per covered day is the newest cutoff-visible
     observation, so an even-newer shard that re-supplies the row keeps it
-    visible.
+    visible. Rows outside the requested chart window are never exposed, so
+    only ``window`` (when given) bounds the check.
     """
     retained = {
         snapshot_id: snapshot_reader.get_snapshot(snapshot_id)
@@ -288,6 +291,8 @@ def _reject_superseded_revision_rows(
         if prior is None:
             continue
         trade_day = cast(datetime, row["event_time"]).astimezone(_SHANGHAI).date()
+        if window is not None and not window[0] <= trade_day <= window[1]:
+            continue
         day = trade_day.strftime("%Y%m%d")
         ticker = (
             instrument_code(trade_day) if callable(instrument_code) else instrument_code
@@ -337,6 +342,7 @@ def _instrument_rows(
     snapshot_reader: ProviderSnapshotReader,
     instrument_id: InstrumentId,
     instrument_code: str | Callable[[date], str | None],
+    window: tuple[date, date] | None = None,
 ) -> pl.DataFrame:
     """
     Select rows for exactly one instrument.
@@ -379,7 +385,7 @@ def _instrument_rows(
     if id_filter is not None:
         selected = selected.filter(id_filter)
     _reject_superseded_revision_rows(
-        selected, context, snapshot_reader, instrument_code
+        selected, context, snapshot_reader, instrument_code, window=window
     )
     return selected
 
@@ -525,8 +531,14 @@ class ProviderPayloadTechnicalAnalysisSource:
         *,
         instrument_id: InstrumentId,
         instrument_code: str | Callable[[date], str | None],
+        window: tuple[date, date] | None = None,
     ) -> tuple[TechnicalBar, ...]:
-        """Return ordered bars for exactly one requested instrument."""
+        """
+        Return ordered bars for exactly one requested instrument.
+
+        ``window`` bounds the revision-conflict check to rows the caller can
+        expose; rows outside it are still returned for the caller's own bounds.
+        """
         frames = tuple(
             self._query.query(dataset_id=item.dataset_id, context=context)
             for item in context.source_snapshots
@@ -538,6 +550,7 @@ class ProviderPayloadTechnicalAnalysisSource:
             snapshot_reader=self._snapshot_reader,
             instrument_id=instrument_id,
             instrument_code=instrument_code,
+            window=window,
         ).sort("event_time")
         return _bars(selected)
 
@@ -547,6 +560,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         *,
         instrument_id: InstrumentId,
         instrument_code: str | Callable[[date], str | None],
+        window: tuple[date, date] | None = None,
     ) -> dict[str, AdjustmentFactor]:
         """Read exact visible adjustment factors without a latest-store fallback."""
         frame = self._query.query(dataset_id="adj_factor", context=context)
@@ -556,6 +570,7 @@ class ProviderPayloadTechnicalAnalysisSource:
             snapshot_reader=self._snapshot_reader,
             instrument_id=instrument_id,
             instrument_code=instrument_code,
+            window=window,
         ).sort("event_time")
         factor_column = _column(
             selected, ("adj_factor", "adjustment_factor"), field="adjustment factor"
@@ -605,6 +620,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         *,
         instrument_id: InstrumentId,
         instrument_code: Callable[[date], str | None],
+        window: tuple[date, date] | None = None,
     ) -> dict[str, SuspensionEvidence]:
         """Return exact visible full-day suspension evidence; unknown stays a gap."""
         frame = self._query.query(dataset_id="stock_status", context=context)
@@ -614,6 +630,7 @@ class ProviderPayloadTechnicalAnalysisSource:
             snapshot_reader=self._snapshot_reader,
             instrument_id=instrument_id,
             instrument_code=instrument_code,
+            window=window,
         )
         if "is_suspended" not in selected.columns:
             return {}

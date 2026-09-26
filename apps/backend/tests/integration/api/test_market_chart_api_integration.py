@@ -1680,6 +1680,69 @@ def test_chart_rejects_stale_rows_omitted_by_newer_overlapping_shard(
 
 
 @pytest.mark.pit
+def test_chart_ignores_revision_conflicts_outside_requested_window(
+    tmp_path: Path,
+) -> None:
+    """A newer overlapping shard omitting a day outside the chart window must
+    not fail the request; only days the chart can expose are checked."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    newer = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-10"],
+                    "open": [11.0],
+                    "high": [12.0],
+                    "low": [10.5],
+                    "close": [11.5],
+                    "volume": [50.0],
+                    "amount": [575.0],
+                }
+            ),
+            datetime(2026, 3, 11, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-08",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader, _Snapshots((*chart._snapshots.list_snapshots(), newer))
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 10),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [11.5]
+    with pytest.raises(
+        AppQueryError, match="newer overlapping revision omits the instrument day"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
 @pytest.mark.parametrize("ticker", ["600519.SH", "OTHER.SH"])
 def test_shared_source_empty_revision_respects_ticker_scope(
     tmp_path: Path, ticker: str

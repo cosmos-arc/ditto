@@ -565,6 +565,7 @@ class MarketChartQueryFacade:
                     status_context,
                     instrument_id=InstrumentId(request.instrument_id),
                     instrument_code=instrument_code,
+                    window=(request.start_date, request.end_date),
                 )
         return suspensions, snapshot_ids
 
@@ -611,6 +612,7 @@ class MarketChartQueryFacade:
                     factor_context,
                     instrument_id=InstrumentId(request.instrument_id),
                     instrument_code=instrument_code,
+                    window=(request.start_date, request.end_date),
                 )
                 if any(item.payload_retained for item in factor_snapshots)
                 else {}
@@ -784,6 +786,7 @@ class MarketChartQueryFacade:
                 context,
                 instrument_id=InstrumentId(instrument_id),
                 instrument_code=instrument_code,
+                window=(start_date, end_date),
             )
             if any(item.payload_retained for item in selected)
             else ()
