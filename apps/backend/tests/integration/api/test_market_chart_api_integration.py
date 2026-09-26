@@ -792,6 +792,17 @@ def test_chart_closed_only_window_preserves_calendar_without_ingestion_failure(
     tmp_path: Path,
 ) -> None:
     chart, snapshot, _ = _chart(tmp_path, poisoned=False)
+    chart._snapshots = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                replace(item, request_end="2026-03-13")
+                if item.snapshot_id == snapshot.snapshot_id
+                else item
+                for item in chart._snapshots.list_snapshots()
+            )
+        ),
+    )
     result = chart.get_chart(
         MarketChartRequest(
             instrument_id=1000001,
@@ -808,4 +819,4 @@ def test_chart_closed_only_window_preserves_calendar_without_ingestion_failure(
     assert result.missing_sessions == ()
     assert result.stale_reason is None
     assert result.calendar_snapshot_ids
-    assert result.source_snapshot_ids == (snapshot.snapshot_id,)
+    assert result.source_snapshot_ids == ()

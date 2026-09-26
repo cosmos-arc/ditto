@@ -477,6 +477,51 @@ class MarketChartQueryFacade:
             )
         return factors, snapshot_ids
 
+    def _load_calendar(
+        self, request: MarketChartRequest, cutoff: datetime
+    ) -> tuple[RetainedCalendarWindow, tuple[str, ...]]:
+        first_period_start = max(
+            _period_bounds(request.start_date, request.period)[0],
+            request.listed_on or _period_bounds(request.start_date, request.period)[0],
+        )
+        last_period_end = min(
+            _period_bounds(request.end_date, request.period)[1],
+            request.delisted_on - timedelta(days=1)
+            if request.delisted_on
+            else _period_bounds(request.end_date, request.period)[1],
+        )
+        try:
+            calendar = retained_calendar_window(
+                snapshots=self._snapshots,
+                payloads=self._payloads,
+                cutoff=cutoff,
+                first_day=first_period_start.isoformat(),
+                last_day=last_period_end.isoformat(),
+                allow_closed_window=True,
+            )
+        except RetainedCalendarAbsent as error:
+            raise AppQueryError(
+                "retained chart calendar is unavailable at cutoff"
+            ) from error
+        if not calendar_has_complete_authority(
+            calendar,
+            first_period_start.isoformat(),
+            min(request.end_date, last_period_end).isoformat(),
+        ):
+            raise AppQueryError("retained chart calendar has incomplete authority")
+        used_calendar_ids = tuple(
+            sorted(
+                {
+                    calendar.authority[day]
+                    for day in calendar.authority
+                    if first_period_start.isoformat()
+                    <= day
+                    <= last_period_end.isoformat()
+                }
+            )
+        )
+        return calendar, used_calendar_ids
+
     def get_chart(self, request: MarketChartRequest) -> MarketChartView:
         """Return only bars visible in retained payloads at the chart cutoff."""
         instrument_id = request.instrument_id
@@ -524,6 +569,27 @@ class MarketChartQueryFacade:
                 publication_cutoff=cutoff,
                 timezone="Asia/Shanghai",
                 calendar_snapshot_ids=(),
+                source_snapshot_ids=(),
+                sources=(),
+                latest_price_date=None,
+                stale_reason=None,
+                missing_sessions=(),
+                bars=(),
+            )
+        calendar, used_calendar_ids = self._load_calendar(request, cutoff)
+        if not any(
+            start_date.isoformat() <= day <= end_date.isoformat()
+            for day in calendar.days
+        ):
+            return MarketChartView(
+                instrument_id=instrument_id,
+                period=period,
+                adjustment=adjustment,
+                as_of=as_of,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+                timezone="Asia/Shanghai",
+                calendar_snapshot_ids=used_calendar_ids,
                 source_snapshot_ids=(),
                 sources=(),
                 latest_price_date=None,
@@ -580,48 +646,8 @@ class MarketChartQueryFacade:
             request, latest.source, cutoff, instrument_code
         )
         queried_snapshot_ids.update(status_ids)
-        first_period_start = max(
-            _period_bounds(start_date, period)[0],
-            request.listed_on or _period_bounds(start_date, period)[0],
-        )
-        last_period_end = min(
-            _period_bounds(end_date, period)[1],
-            request.delisted_on - timedelta(days=1)
-            if request.delisted_on
-            else _period_bounds(end_date, period)[1],
-        )
-        try:
-            calendar = retained_calendar_window(
-                snapshots=self._snapshots,
-                payloads=self._payloads,
-                cutoff=cutoff,
-                first_day=first_period_start.isoformat(),
-                last_day=last_period_end.isoformat(),
-                allow_closed_window=True,
-            )
-        except RetainedCalendarAbsent as error:
-            raise AppQueryError(
-                "retained chart calendar is unavailable at cutoff"
-            ) from error
-        if not calendar_has_complete_authority(
-            calendar,
-            first_period_start.isoformat(),
-            min(end_date, last_period_end).isoformat(),
-        ):
-            raise AppQueryError("retained chart calendar has incomplete authority")
         result, missing, latest_price_date = _chart_rows(
             raw, selected, calendar, request, as_of, factors, suspensions
-        )
-        used_calendar_ids = tuple(
-            sorted(
-                {
-                    calendar.authority[day]
-                    for day in calendar.authority
-                    if first_period_start.isoformat()
-                    <= day
-                    <= last_period_end.isoformat()
-                }
-            )
         )
         stale_reason = (
             "no_visible_price"
