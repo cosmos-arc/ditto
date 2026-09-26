@@ -133,11 +133,12 @@ def _chart_rows(
     snapshots: ProviderSnapshotReader,
     calendar: RetainedCalendarWindow,
     request: MarketChartRequest,
-    as_of: datetime,
     factors: dict[str, AdjustmentFactor],
     suspensions: dict[str, SuspensionEvidence],
+    queried_snapshot_ids: set[str],
 ) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
     """Select visible sessions, then aggregate complete or partial periods."""
+    as_of = request.now.astimezone(UTC)
     days = set(calendar.days)
     by_day: dict[str, TechnicalBar] = {}
     for bar in raw:
@@ -285,10 +286,23 @@ def _chart_rows(
             if request.adjustment != "none"
             else []
         )
+        absence_snapshot_ids = {
+            item.snapshot_id
+            for item in snapshots.list_snapshots()
+            if item.snapshot_id in queried_snapshot_ids
+            and any(
+                period_start.isoformat() <= day <= period_end.isoformat()
+                and _snapshot_range(item.request_start)
+                <= day.replace("-", "")
+                <= _snapshot_range(item.request_end)
+                for day in missing
+            )
+        }
         bar_snapshot_ids = (
             {bar.source_snapshot_id for _, bar in group}
             | {item.snapshot_id for item in contributing_suspensions}
             | {item.snapshot_id for item in contributing_factors}
+            | absence_snapshot_ids
         )
         calendar_ids = {
             snapshot_id
@@ -717,9 +731,9 @@ class MarketChartQueryFacade:
             self._snapshots,
             calendar,
             request,
-            as_of,
             factors,
             suspensions,
+            queried_snapshot_ids,
         )
         stale_reason = (
             "no_visible_price"

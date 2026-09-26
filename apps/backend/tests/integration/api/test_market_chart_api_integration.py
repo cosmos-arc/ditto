@@ -1311,3 +1311,56 @@ def test_chart_scoped_shard_missing_mapping_fails_before_snapshot_filtering(
                 now=datetime(2026, 3, 11, 8, tzinfo=UTC),
             )
         )
+
+
+@pytest.mark.pit
+def test_chart_partial_candle_carries_late_empty_revision_evidence(
+    tmp_path: Path,
+) -> None:
+    chart, price, _ = _chart(tmp_path, poisoned=False)
+    observed = datetime(2026, 3, 12, 8, tzinfo=UTC)
+    history = replace(price, request_end="2026-03-10")
+    empty = replace(
+        price,
+        snapshot_id="late-empty-price-shard",
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=observed,
+        observations=(observed,),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(
+                    history if item.snapshot_id == price.snapshot_id else item
+                    for item in chart._snapshots.list_snapshots()
+                ),
+                empty,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            delisted_on=date(2026, 3, 12),
+        )
+    )
+    assert result.bars[0].partial is True
+    assert result.missing_sessions == ("2026-03-11",)
+    assert empty.snapshot_id in result.bars[0].source_snapshot_ids
+    assert result.bars[0].available_at == observed
