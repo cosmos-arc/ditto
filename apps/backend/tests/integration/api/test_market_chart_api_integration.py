@@ -1527,8 +1527,11 @@ def test_chart_rejects_prices_on_visible_full_day_suspensions(
         ),
         visible,
     )
-    chart._snapshots = cast(
+    reader = cast(
         ProviderSnapshotReader, _Snapshots((*chart._snapshots.list_snapshots(), status))
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
     )
     with pytest.raises(AppQueryError, match=r"price conflicts.*full-day suspension"):
         chart.get_chart(
@@ -1537,6 +1540,7 @@ def test_chart_rejects_prices_on_visible_full_day_suspensions(
                 asset_class="stock",
                 start_date=date(2026, 3, 9),
                 end_date=date(2026, 3, 11),
+                listed_on=date(2026, 3, 9),
                 period=period,
                 adjustment="none",
                 allow_experimental_data=False,
