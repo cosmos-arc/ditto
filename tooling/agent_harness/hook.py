@@ -881,6 +881,7 @@ _CONTRACT_PREFIXES = (
     "apps/web/scripts/gen-api",
 )
 _BACKEND_TEST_PREFIX = ("apps", "backend", "tests")
+_PACKAGE_ROOT_DEPTH = 2  # "packages/<name>/" before the manifest filename
 
 
 def _path_classes(paths: Sequence[str], *, root: Path | None = None) -> set[str]:
@@ -1108,24 +1109,48 @@ def _backend_test_commands(
     return commands
 
 
-def _backend_source_commands(paths: Sequence[str]) -> list[list[str]]:
-    # Ownership spans every backend-area path, not only Python: a schema.sql or
-    # fixture in another package must keep the push on the cross-package gate.
-    owners = {
-        "/".join(path.split("/")[:2])
+def _backend_owner(path: str) -> str | None:
+    """Package owner of a backend-area path; prose and repo-level paths have none."""
+    if _path_categories(path) == {"docs"}:
+        return None
+    for prefix in ("packages/", "apps/backend/"):
+        if path.startswith(prefix):
+            return "/".join(path.split("/")[:2])
+    return None
+
+
+def _is_package_manifest(path: str) -> bool:
+    return (
+        path.startswith(("packages/", "apps/backend/"))
+        and path.count("/") == _PACKAGE_ROOT_DEPTH
+        and path.rsplit("/", 1)[1] == "pyproject.toml"
+    )
+
+
+def _backend_source_commands(
+    paths: Sequence[str], *, root: Path | None = None
+) -> list[list[str]]:
+    # Ownership spans every material backend-area path, not only Python: a
+    # schema.sql or fixture in another package must keep the cross-package
+    # gate, while ordinary prose never widens the scope on its own.
+    owners = {owner for owner in map(_backend_owner, paths) if owner is not None}
+    # Package manifests and repo-level config/scripts are backend material
+    # without an own fast-test scope (toolchain-check, arch-check and uv-lock
+    # state), and ci.required_jobs escalates them the same way.
+    if any(
+        path.startswith(("config/", "scripts/")) or _is_package_manifest(path)
         for path in paths
-        if path.startswith(("packages/", "apps/backend/"))
-    }
-    # config/ and scripts/ classify as backend material but own no package test
-    # suite (arch-check exercises them), so they always keep the full gate —
-    # matching ci.required_jobs, which also escalates them to every job.
-    if any(path.startswith(("config/", "scripts/")) for path in paths):
+    ):
         return [["task", "check"]]
     # CI keeps high-risk scopes on the full gate (ci.required_jobs); the local
     # ladder only adds the PIT suite, so pushes do not double-pay the full check.
     if len(owners) != 1:
         return [["task", "check"]]
     owner = next(iter(owners))
+    workspace = root if root is not None else git_root(Path.cwd())
+    # A fully removed package has no test scope left; keep the full gate.
+    if not (workspace / owner / "tests").is_dir():
+        return [["task", "check"]]
     return [
         ["task", "lint"],
         ["task", "fmt-check"],
@@ -1166,7 +1191,7 @@ def verification_commands(
     elif "web" in active_classes:
         commands.append(["task", "check-web"])
     elif active_classes & {"backend", "high-risk"}:
-        commands.extend(_backend_source_commands(paths))
+        commands.extend(_backend_source_commands(paths, root=root))
 
     if needs_system:
         commands.append(["task", "test-system"])

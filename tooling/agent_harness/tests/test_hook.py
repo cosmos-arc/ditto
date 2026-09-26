@@ -812,3 +812,44 @@ def test_repo_level_backend_paths_keep_the_full_check() -> None:
         assert verification_commands(classify_diff([path]), [path]) == [
             ["task", "check"]
         ]
+
+
+def test_prose_in_a_second_package_does_not_widen_the_scope() -> None:
+    paths = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "packages/data/README.md",
+    ]
+    commands = [
+        " ".join(command)
+        for command in verification_commands(classify_diff(paths), paths)
+    ]
+
+    assert commands == [
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast packages/strategy/tests",
+        "task pit",
+    ]
+
+
+def test_package_manifest_changes_keep_the_full_check() -> None:
+    high_risk_manifest = ["packages/backtest/pyproject.toml"]
+    assert verification_commands(
+        classify_diff(high_risk_manifest), high_risk_manifest
+    ) == [["task", "check"], ["task", "pit"]]
+
+    backend_manifest = ["packages/platform/pyproject.toml"]
+    assert verification_commands(classify_diff(backend_manifest), backend_manifest) == [
+        ["task", "check"]
+    ]
+
+
+def test_removed_package_falls_back_to_the_full_check() -> None:
+    paths = ["packages/backtest/src/ditto_backtest/pipeline.py"]
+    with tempfile.TemporaryDirectory() as directory:
+        commands = verification_commands(
+            classify_diff(paths), paths, root=Path(directory)
+        )
+
+    assert commands == [["task", "check"], ["task", "pit"]]
