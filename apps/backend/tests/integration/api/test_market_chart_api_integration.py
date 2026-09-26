@@ -1473,6 +1473,7 @@ def test_chart_daily_scoped_shards_batch_identity_resolution(tmp_path: Path) -> 
             date(2026, 3, 11),
             datetime(2026, 3, 12, 8, tzinfo=UTC),
             instrument_id=1000001,
+            open_days=frozenset({"2026-03-09", "2026-03-10", "2026-03-11"}),
         )
         == shards
     )
@@ -1677,6 +1678,103 @@ def test_chart_rejects_stale_rows_omitted_by_newer_overlapping_shard(
                 now=datetime(2026, 3, 12, 9, tzinfo=UTC),
             )
         )
+
+
+@pytest.mark.pit
+def test_chart_returns_empty_before_first_session_close_without_snapshots(
+    tmp_path: Path,
+) -> None:
+    """A window whose only session has not closed yet has no knowable daily
+    bar; the request returns the calendar-bound empty result instead of
+    failing on absent retained price snapshots, and still fails closed once
+    the session close makes a bar knowable."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    calendar_only = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                item
+                for item in chart._snapshots.list_snapshots()
+                if item.dataset_id == "calendar"
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        calendar_only, chart._payloads, chart._metadata, chart._market
+    )
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 11),
+        end_date=date(2026, 3, 11),
+        period="daily",
+        adjustment="none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+    )
+    result = chart.get_chart(request)
+    assert result.bars == ()
+    assert result.missing_sessions == ()
+    assert result.source_snapshot_ids == ()
+    assert result.calendar_snapshot_ids != ()
+    with pytest.raises(AppQueryError, match="snapshots are unavailable at cutoff"):
+        chart.get_chart(replace(request, now=datetime(2026, 3, 11, 8, tzinfo=UTC)))
+
+
+@pytest.mark.pit
+def test_chart_ignores_closed_day_scoped_shards_in_source_authority(
+    tmp_path: Path,
+) -> None:
+    """A verified-empty shard scoped only to closed days contributes to no
+    consumed session and must not turn the request into a mixed-source
+    failure; valid open-session history stays available."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fuyao_empty = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="stock_daily",
+            source="fuyao",
+            request_start="2026-03-15",
+            request_end="2026-03-15",
+            schema_version="stock_daily.v1",
+            checksum="sha256:fuyao-empty",
+            canonical_asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=("source_ticker=600519.SH",),
+            ),
+            request_parameters_hash="sha256:market-chart-test",
+            response_metadata=(
+                ("snapshot_layer", "verified_empty_provider_observation"),
+            ),
+            license_record_id="license:fuyao:test",
+            row_count=0,
+            payload_uri=None,
+            payload_retained=False,
+            created_at=datetime(2026, 3, 13, 9, tzinfo=UTC),
+        )
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), fuyao_empty)),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 13),
+            end_date=date(2026, 3, 15),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 1, tzinfo=UTC),
+        )
+    )
+    assert result.sources == ("tushare",)
+    assert result.bars == ()
+    assert result.missing_sessions == ("2026-03-13",)
 
 
 @pytest.mark.pit

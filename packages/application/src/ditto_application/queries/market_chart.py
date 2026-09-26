@@ -435,6 +435,7 @@ class MarketChartQueryFacade:
         cutoff: datetime,
         *,
         instrument_id: int,
+        open_days: frozenset[str],
     ) -> tuple[ProviderSnapshot, ...]:
         tickers_for = cache(
             partial(
@@ -450,12 +451,26 @@ class MarketChartQueryFacade:
                 tickers_for(source=source_name).get(day.isoformat())
             )
 
+        # Only open sessions inside the request window can consume evidence;
+        # a shard scoped to closed days (weekend or holiday polls) must not
+        # join source/schema authority decisions for the visible sessions.
+        open_window_days = frozenset(
+            day.replace("-", "")
+            for day in open_days
+            if start_date.isoformat() <= day <= end_date.isoformat()
+        )
         candidates = [
             item
             for item in self._snapshots.list_snapshots(dataset_id=dataset_id)
             if item.created_at <= cutoff
             and _snapshot_range(item.request_start) <= end_date.strftime("%Y%m%d")
             and _snapshot_range(item.request_end) >= start_date.strftime("%Y%m%d")
+            and any(
+                _snapshot_range(item.request_start)
+                <= day
+                <= _snapshot_range(item.request_end)
+                for day in open_window_days
+            )
             and _snapshot_matches_instrument(item, start_date, end_date, ticker_at)
         ]
         if not candidates:
@@ -545,6 +560,7 @@ class MarketChartQueryFacade:
                 request.end_date,
                 cutoff,
                 instrument_id=request.instrument_id,
+                open_days=frozenset(calendar.days),
             )
             if not status_snapshots:
                 return {}, ()
@@ -594,6 +610,7 @@ class MarketChartQueryFacade:
                 request.end_date,
                 cutoff,
                 instrument_id=request.instrument_id,
+                open_days=frozenset(calendar.days),
             )
             instrument_code = self._instrument_code(
                 request, factor_snapshots[0].source, cutoff, calendar
@@ -756,6 +773,41 @@ class MarketChartQueryFacade:
                 missing_sessions=(),
                 bars=(),
             )
+        # No in-range session has closed yet, so no daily bar is knowable:
+        # return the calendar-bound empty result before the maturity gate or
+        # any retained-price requirement can reject a still-valid request.
+        if not any(
+            datetime.combine(date.fromisoformat(day), time(15), _SHANGHAI).astimezone(
+                UTC
+            )
+            <= as_of
+            for day in calendar.days
+            if max(start_date, request.listed_on or start_date).isoformat()
+            <= day
+            <= min(
+                end_date,
+                as_of.astimezone(_SHANGHAI).date(),
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else end_date,
+            ).isoformat()
+        ):
+            return MarketChartView(
+                instrument_id=instrument_id,
+                period=period,
+                adjustment=adjustment,
+                as_of=as_of,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+                timezone="Asia/Shanghai",
+                calendar_snapshot_ids=used_calendar_ids,
+                source_snapshot_ids=(),
+                sources=(),
+                latest_price_date=None,
+                stale_reason=None,
+                missing_sessions=(),
+                bars=(),
+            )
         self._market.assert_bars_allowed(
             asset_class=asset_class,
             instrument_id=instrument_id,
@@ -767,6 +819,7 @@ class MarketChartQueryFacade:
             end_date,
             cutoff,
             instrument_id=instrument_id,
+            open_days=frozenset(calendar.days),
         )
         latest = max(selected, key=lambda item: item.created_at)
         queried_snapshot_ids = {item.snapshot_id for item in selected}
