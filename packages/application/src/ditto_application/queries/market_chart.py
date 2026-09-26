@@ -429,6 +429,54 @@ class MarketChartQueryFacade:
                 )
         return suspensions, snapshot_ids
 
+    def _load_factors(
+        self,
+        request: MarketChartRequest,
+        source: str,
+        cutoff: datetime,
+        instrument_code: Callable[[date], str | None],
+    ) -> tuple[dict[str, AdjustmentFactor], tuple[str, ...]]:
+        snapshot_ids: tuple[str, ...] = ()
+        factors: dict[str, AdjustmentFactor] = {}
+        if request.adjustment != "none":
+            self._market.assert_adjustment_allowed(
+                allow_experimental_data=request.allow_experimental_data
+            )
+            factor_snapshots = self._select_snapshots(
+                "adj_factor",
+                request.start_date,
+                request.end_date,
+                cutoff,
+                source,
+                instrument_id=request.instrument_id,
+            )
+            snapshot_ids = tuple(item.snapshot_id for item in factor_snapshots)
+            factor_context = PITQueryContext(
+                as_of=cutoff,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+                source_snapshots=(
+                    DatasetSnapshot(
+                        dataset_id="adj_factor",
+                        dataset_version=factor_snapshots[0].schema_version,
+                        source_snapshot_ids=tuple(
+                            item.snapshot_id for item in factor_snapshots
+                        ),
+                        created_at=max(item.created_at for item in factor_snapshots),
+                    ),
+                ),
+            )
+            factors = (
+                self._bars.load_adjustment_factors(
+                    factor_context,
+                    instrument_id=InstrumentId(request.instrument_id),
+                    instrument_code=instrument_code,
+                )
+                if any(item.payload_retained for item in factor_snapshots)
+                else {}
+            )
+        return factors, snapshot_ids
+
     def get_chart(self, request: MarketChartRequest) -> MarketChartView:
         """Return only bars visible in retained payloads at the chart cutoff."""
         instrument_id = request.instrument_id
@@ -461,6 +509,28 @@ class MarketChartQueryFacade:
         )
         as_of = now.astimezone(UTC)
         cutoff = as_of
+        if max(start_date, request.listed_on or start_date) > min(
+            end_date,
+            request.delisted_on - timedelta(days=1)
+            if request.delisted_on
+            else end_date,
+        ):
+            return MarketChartView(
+                instrument_id=instrument_id,
+                period=period,
+                adjustment=adjustment,
+                as_of=as_of,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+                timezone="Asia/Shanghai",
+                calendar_snapshot_ids=(),
+                source_snapshot_ids=(),
+                sources=(),
+                latest_price_date=None,
+                stale_reason=None,
+                missing_sessions=(),
+                bars=(),
+            )
         selected = self._select_snapshots(
             f"{asset_class}_daily",
             start_date,
@@ -502,44 +572,10 @@ class MarketChartQueryFacade:
             if any(item.payload_retained for item in selected)
             else ()
         )
-        factors: dict[str, AdjustmentFactor] = {}
-        if adjustment != "none":
-            self._market.assert_adjustment_allowed(
-                allow_experimental_data=allow_experimental_data
-            )
-            factor_snapshots = self._select_snapshots(
-                "adj_factor",
-                start_date,
-                end_date,
-                cutoff,
-                latest.source,
-                instrument_id=instrument_id,
-            )
-            queried_snapshot_ids.update(item.snapshot_id for item in factor_snapshots)
-            factor_context = PITQueryContext(
-                as_of=as_of,
-                knowledge_cutoff=cutoff,
-                publication_cutoff=cutoff,
-                source_snapshots=(
-                    DatasetSnapshot(
-                        dataset_id="adj_factor",
-                        dataset_version=factor_snapshots[0].schema_version,
-                        source_snapshot_ids=tuple(
-                            item.snapshot_id for item in factor_snapshots
-                        ),
-                        created_at=max(item.created_at for item in factor_snapshots),
-                    ),
-                ),
-            )
-            factors = (
-                self._bars.load_adjustment_factors(
-                    factor_context,
-                    instrument_id=InstrumentId(instrument_id),
-                    instrument_code=instrument_code,
-                )
-                if any(item.payload_retained for item in factor_snapshots)
-                else {}
-            )
+        factors, factor_ids = self._load_factors(
+            request, latest.source, cutoff, instrument_code
+        )
+        queried_snapshot_ids.update(factor_ids)
         suspensions, status_ids = self._load_suspensions(
             request, latest.source, cutoff, instrument_code
         )

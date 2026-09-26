@@ -758,3 +758,30 @@ def test_chart_calendar_authority_only_requires_active_lifetime(tmp_path: Path) 
     assert result.bars[0].partial is False
     assert result.missing_sessions == ()
     assert result.calendar_snapshot_ids == (calendar.snapshot_id,)
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("day", [9, 12])
+def test_chart_outside_lifecycle_returns_empty_without_calendar_query(
+    tmp_path: Path, day: int
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, day),
+            end_date=date(2026, 3, day),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+            listed_on=date(2026, 3, 10),
+            delisted_on=date(2026, 3, 11),
+        )
+    )
+    assert result.bars == ()
+    assert result.missing_sessions == ()
+    assert result.stale_reason is None
+    assert result.source_snapshot_ids == ()
+    assert result.calendar_snapshot_ids == ()
