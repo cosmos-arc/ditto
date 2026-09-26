@@ -119,10 +119,13 @@ describe("InstrumentChartView", () => {
 		};
 		expect(props.markers).toHaveLength(1);
 		expect(props.markers[0]).toMatchObject({ direction: "buy" });
-		// 定位与水位线都按 UTC 日锚定
+		// 定位与水位线都按 UTC 日锚定；下钻流保留源 run 的 as_of 水印（契约
+		// receive-trade-drill），非下钻流才回落到当前图表决策时间。
 		expect(props.initialFocusTime).toBe(Date.parse("2026-03-09T00:00:00Z") / 1000);
 		expect(props.asOf).not.toBeNull();
-		expect(props.asOf?.label).toContain("行情决策 2026-03-10T08:00:00Z");
+		expect(props.asOf?.time).toBe(Date.parse("2026-03-27T00:00:00Z") / 1000);
+		expect(props.asOf?.label).toContain("as_of 2026-03-27");
+		expect(props.asOf?.label).toContain("回测下钻 sys-fx-nav-001");
 	});
 
 	it("以蜡烛形态喂给图表 shell 并展示 Primary Answer 关键数字", async () => {
@@ -140,6 +143,8 @@ describe("InstrumentChartView", () => {
 		// mock 两根日 K（03-09/03-10），OHLCV 完整进入 view model
 		expect(props.series[0]!.bars).toHaveLength(2);
 		expect(props.series[0]!.bars[1]).toMatchObject({ open: 1744.6, close: 1750.2, volume: 3210000 });
+		const watermark = cockpitProps.at(-1) as { asOf: { label: string } | null };
+		expect(watermark.asOf?.label).toContain("行情决策 2026-03-10T08:00:00Z");
 
 		const scope = await screen.findByText(/2026-03-10 收盘/);
 		expect(scope.closest("[data-primary-answer]")).not.toBeNull();

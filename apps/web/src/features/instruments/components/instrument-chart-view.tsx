@@ -263,7 +263,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						</span>
 						<span className="font-data text-(--color-foreground-tertiary)">run {drill.runId}</span>
 						<span className="font-data text-(--color-foreground-tertiary)">as_of {drill.asOf || "—"}</span>
-						<span className="text-(--color-foreground-muted)">行情决策线以图表来源截止为准</span>
+						<span className="text-(--color-foreground-muted)">决策线为源 run as_of；K 线按当前图表来源截止</span>
 					</div>
 				)}
 
@@ -403,9 +403,10 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							markers={drillMarkers}
 							initialFocusTime={drillTime}
 							asOf={
-								query.data
-									? { time: Date.parse(query.data.as_of) / 1000, label: `行情决策 ${query.data.as_of}` }
-									: drillAsOf
+								drillAsOf ?? {
+									time: Date.parse(query.data.as_of) / 1000,
+									label: `行情决策 ${query.data.as_of}`,
+								}
 							}
 							showVolumePane
 							height={360}
