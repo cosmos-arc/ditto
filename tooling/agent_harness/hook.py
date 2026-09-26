@@ -1185,12 +1185,23 @@ def _has_collectable_tests(workspace: Path, owner: str) -> bool:
     try:
         returncode = process.wait(timeout=120)
     except BaseException:
-        # start_new_session makes the child its own group leader, immune to
-        # the terminal's Ctrl-C; reap the whole tree on timeout or interrupt
-        # (mirrors the formatter cleanup) so nothing leaks into the gate.
+        # start_new_session detaches the child from the terminal's Ctrl-C;
+        # reap the whole tree on timeout or interrupt (same cross-platform
+        # strategy as the formatter: killpg on POSIX, taskkill /T on Windows)
+        # so nothing leaks into the gate.
         try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                subprocess.run(
+                    ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=0.5,
+                    check=False,
+                )
+                process.kill()
+        except (ProcessLookupError, OSError):
             pass
         process.wait()
         if isinstance(sys.exc_info()[1], subprocess.TimeoutExpired):
