@@ -241,34 +241,49 @@ class _PayloadDatasetReader(PITDatasetReader):
         return pl.concat(frames, how="diagonal_relaxed")
 
 
-def _reject_empty_revision_overlap(
+def _reject_superseded_revision_rows(
     frame: pl.DataFrame,
     context: PITQueryContext,
     snapshot_reader: ProviderSnapshotReader,
     instrument_code: str | Callable[[date], str | None],
 ) -> None:
+    """
+    Fail closed when the newest in-scope observation drops a visible day.
+
+    A newer retained revision that covers a day for this instrument's scope
+    — an empty verified observation, or a nonempty shard with the same
+    request parameters whose payload omits the instrument — supersedes the
+    older shard's row for that day; the row must not survive as visible
+    evidence. Authority per covered day is the newest cutoff-visible
+    observation, so an even-newer shard that re-supplies the row keeps it
+    visible.
+    """
     retained = {
         snapshot_id: snapshot_reader.get_snapshot(snapshot_id)
         for dataset in context.source_snapshots
         for snapshot_id in dataset.source_snapshot_ids
     }
-    empty_revisions = [
-        (
-            item,
-            {
-                key.removeprefix("source_ticker=")
-                for key in item.canonical_asset.partition_keys
-                if key.startswith("source_ticker=")
-            },
-        )
-        for item in retained.values()
+    scopes = {
+        snapshot_id: {
+            key.removeprefix("source_ticker=")
+            for key in item.canonical_asset.partition_keys
+            if key.startswith("source_ticker=")
+        }
+        for snapshot_id, item in retained.items()
         if item is not None
-        and item.row_count == 0
-        and item.created_at <= context.knowledge_cutoff
-    ]
-    if not empty_revisions:
-        return
-    for row in frame.select("event_time", "source_snapshot_id").to_dicts():
+    }
+    observed_at = {
+        snapshot_id: snapshot_observed_by(item, context.knowledge_cutoff)
+        for snapshot_id, item in retained.items()
+        if item is not None
+    }
+    rows = frame.select("event_time", "source_snapshot_id").to_dicts()
+    present_days: dict[str, set[str]] = {}
+    for row in rows:
+        present_days.setdefault(str(row["source_snapshot_id"]), set()).add(
+            cast(datetime, row["event_time"]).astimezone(_SHANGHAI).strftime("%Y%m%d")
+        )
+    for row in rows:
         prior = retained.get(str(row["source_snapshot_id"]))
         if prior is None:
             continue
@@ -277,20 +292,40 @@ def _reject_empty_revision_overlap(
         ticker = (
             instrument_code(trade_day) if callable(instrument_code) else instrument_code
         )
-        if any(
-            (not tickers or ticker in tickers)
-            and item.dataset_id == prior.dataset_id
-            and item.source == prior.source
-            and item.request_start.replace("-", "")
-            <= day
-            <= item.request_end.replace("-", "")
-            and snapshot_observed_by(item, context.knowledge_cutoff)
-            > snapshot_observed_by(prior, context.knowledge_cutoff)
-            for item, tickers in empty_revisions
+        authority = max(
+            (
+                item
+                for item in retained.values()
+                if item is not None
+                and item.snapshot_id != prior.snapshot_id
+                and item.created_at <= context.knowledge_cutoff
+                and (not scopes[item.snapshot_id] or ticker in scopes[item.snapshot_id])
+                and item.dataset_id == prior.dataset_id
+                and item.source == prior.source
+                # A nonempty payload only speaks for its own request universe;
+                # its omission of this instrument is evidence only under the
+                # same request semantics. An empty verified observation is
+                # request-independent "no data" for its covered scope.
+                and (
+                    item.row_count == 0
+                    or item.request_parameters_hash == prior.request_parameters_hash
+                )
+                and item.request_start.replace("-", "")
+                <= day
+                <= item.request_end.replace("-", "")
+                and observed_at[item.snapshot_id] > observed_at[prior.snapshot_id]
+            ),
+            key=lambda item: observed_at[item.snapshot_id],
+            default=None,
+        )
+        if authority is not None and day not in present_days.get(
+            authority.snapshot_id, ()
         ):
             raise _source_error(
                 "TECHNICAL_SOURCE_REVISION_CONFLICT",
-                "visible row overlaps newer empty revision",
+                "visible row overlaps newer empty revision"
+                if authority.row_count == 0
+                else "newer overlapping revision omits the instrument day",
                 snapshot_id=prior.snapshot_id,
             )
 
@@ -343,7 +378,9 @@ def _instrument_rows(
         selected = selected.filter(pl.all_horizontal(ticker_filters))
     if id_filter is not None:
         selected = selected.filter(id_filter)
-    _reject_empty_revision_overlap(selected, context, snapshot_reader, instrument_code)
+    _reject_superseded_revision_rows(
+        selected, context, snapshot_reader, instrument_code
+    )
     return selected
 
 

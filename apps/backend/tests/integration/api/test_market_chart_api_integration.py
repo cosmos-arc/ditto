@@ -1596,6 +1596,90 @@ def test_chart_rejects_stale_rows_covered_by_newer_empty_shard(
 
 
 @pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["stock_daily", "adj_factor", "stock_status"])
+def test_chart_rejects_stale_rows_omitted_by_newer_overlapping_shard(
+    tmp_path: Path, dataset: str
+) -> None:
+    """A newer nonempty shard that covers the day for another instrument only
+    is fresh evidence this instrument's row was removed; it must not survive."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    prior = chart._snapshots.list_snapshots(dataset_id=dataset)[0]
+    day = "2026-03-11" if dataset == "stock_status" else "2026-03-09"
+    if dataset == "stock_daily":
+        payload = pl.DataFrame(
+            {
+                "source_ticker": ["OTHER.SH"],
+                "event_time": [datetime(2026, 3, 9, 7, tzinfo=UTC)],
+                "open": [1.0],
+                "high": [1.0],
+                "low": [1.0],
+                "close": [1.0],
+                "volume": [1.0],
+                "amount": [1.0],
+            }
+        )
+    elif dataset == "adj_factor":
+        payload = pl.DataFrame(
+            {
+                "source_ticker": ["OTHER.SH"],
+                "trade_date": [day],
+                "adj_factor": [1.0],
+            }
+        )
+    else:
+        payload = pl.DataFrame(
+            {
+                "source_ticker": ["OTHER.SH"],
+                "trade_date": [day],
+                "is_suspended": [False],
+            }
+        )
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    artifact = store.retain_payload(
+        dataset_id=dataset, source="tushare", payload=payload
+    )
+    newer = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id=dataset,
+            source="tushare",
+            request_start=day,
+            request_end=day,
+            schema_version=prior.schema_version,
+            checksum=artifact.checksum,
+            canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
+            request_parameters_hash=prior.request_parameters_hash,
+            response_metadata=(),
+            license_record_id=prior.license_record_id,
+            row_count=artifact.row_count,
+            payload_uri=artifact.uri,
+            payload_retained=True,
+            created_at=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        )
+    )
+    reader = cast(
+        ProviderSnapshotReader, _Snapshots((*chart._snapshots.list_snapshots(), newer))
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    with pytest.raises(
+        AppQueryError, match="newer overlapping revision omits the instrument day"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="weekly",
+                adjustment="qfq" if dataset == "adj_factor" else "none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
 @pytest.mark.parametrize("ticker", ["600519.SH", "OTHER.SH"])
 def test_shared_source_empty_revision_respects_ticker_scope(
     tmp_path: Path, ticker: str
