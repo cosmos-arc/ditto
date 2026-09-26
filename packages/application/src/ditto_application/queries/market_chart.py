@@ -209,7 +209,14 @@ def _chart_rows(
             and day not in suspensions
         ]
         complete_calendar = calendar_has_complete_authority(
-            calendar, period_start.isoformat(), period_end.isoformat()
+            calendar,
+            max(period_start, request.listed_on or period_start).isoformat(),
+            min(
+                period_end,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else period_end,
+            ).isoformat(),
         )
         partial = (
             not complete_calendar
@@ -537,8 +544,16 @@ class MarketChartQueryFacade:
             request, latest.source, cutoff, instrument_code
         )
         queried_snapshot_ids.update(status_ids)
-        first_period_start = _period_bounds(start_date, period)[0]
-        last_period_end = _period_bounds(end_date, period)[1]
+        first_period_start = max(
+            _period_bounds(start_date, period)[0],
+            request.listed_on or _period_bounds(start_date, period)[0],
+        )
+        last_period_end = min(
+            _period_bounds(end_date, period)[1],
+            request.delisted_on - timedelta(days=1)
+            if request.delisted_on
+            else _period_bounds(end_date, period)[1],
+        )
         try:
             calendar = retained_calendar_window(
                 snapshots=self._snapshots,
@@ -552,7 +567,9 @@ class MarketChartQueryFacade:
                 "retained chart calendar is unavailable at cutoff"
             ) from error
         if not calendar_has_complete_authority(
-            calendar, first_period_start.isoformat(), end_date.isoformat()
+            calendar,
+            first_period_start.isoformat(),
+            min(end_date, last_period_end).isoformat(),
         ):
             raise AppQueryError("retained chart calendar has incomplete authority")
         result, missing, latest_price_date = _chart_rows(

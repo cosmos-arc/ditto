@@ -713,3 +713,48 @@ def test_daily_date_only_price_is_invisible_before_close(
     )
     assert after_close.bars[0].close == 99.0
     assert after_close.bars[0].partial is False
+
+
+@pytest.mark.pit
+def test_chart_calendar_authority_only_requires_active_lifetime(tmp_path: Path) -> None:
+    chart, _, metadata = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    calendar = _snapshot(
+        store,
+        "calendar",
+        pl.DataFrame(
+            {
+                "trade_date": ["2026-03-10"],
+                "is_open": [True],
+            }
+        ),
+        datetime(2026, 3, 9, 7, tzinfo=UTC),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                calendar if item.dataset_id == "calendar" else item
+                for item in chart._snapshots.list_snapshots()
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 15),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+            listed_on=date(2026, 3, 10),
+            delisted_on=date(2026, 3, 11),
+        )
+    )
+    assert result.bars[0].first_trade_date == "2026-03-10"
+    assert result.bars[0].partial is False
+    assert result.missing_sessions == ()
+    assert result.calendar_snapshot_ids == (calendar.snapshot_id,)
