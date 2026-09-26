@@ -189,7 +189,21 @@ def _chart_rows(
         ).append((day, bar))
     if request.adjustment != "none" and any(day not in factors for day in by_day):
         raise AppQueryError("exact adjustment factor missing for a chart price day")
-    baseline = factors[max(by_day)].value if by_day and factors else 1.0
+    baseline_day = max(
+        (
+            day
+            for day in factors
+            if day
+            <= min(
+                request.end_date,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else request.end_date,
+            ).isoformat()
+        ),
+        default=None,
+    )
+    baseline = factors[baseline_day].value if baseline_day else 1.0
 
     def multiplier(day: str) -> float:
         if request.adjustment == "none":
@@ -257,7 +271,11 @@ def _chart_rows(
         )
         contributing_factors = (
             [factors[day] for day, _ in group]
-            + ([factors[max(by_day)]] if request.adjustment == "qfq" else [])
+            + (
+                [factors[baseline_day]]
+                if request.adjustment == "qfq" and baseline_day
+                else []
+            )
             if request.adjustment != "none"
             else []
         )

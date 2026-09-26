@@ -1005,3 +1005,49 @@ def test_chart_future_range_uses_only_cutoff_calendar(
         assert result.bars == ()
         assert result.calendar_snapshot_ids == ()
         assert result.source_snapshot_ids == ()
+
+
+@pytest.mark.pit
+def test_chart_qfq_uses_visible_factor_even_when_its_price_is_missing(
+    tmp_path: Path,
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    observed = datetime(2026, 3, 11, 8, tzinfo=UTC)
+    baseline = _snapshot(
+        FilesystemProviderPayloadStore(tmp_path),
+        "adj_factor",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "trade_date": ["2026-03-11"],
+                "adj_factor": [2.0],
+                "available_at": [observed],
+                "published_at": [observed],
+            }
+        ),
+        observed,
+    )
+    baseline = replace(baseline, request_start="2026-03-11", request_end="2026-03-11")
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), baseline)),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="qfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        )
+    )
+    assert result.bars[0].close == pytest.approx(10.2 / 2.0)
+    assert result.missing_sessions == ("2026-03-11",)
+    assert baseline.snapshot_id in result.bars[0].source_snapshot_ids
+    assert result.bars[0].available_at == observed
