@@ -820,3 +820,56 @@ def test_chart_closed_only_window_preserves_calendar_without_ingestion_failure(
     assert result.stale_reason is None
     assert result.calendar_snapshot_ids
     assert result.source_snapshot_ids == ()
+
+
+@pytest.mark.pit
+def test_chart_aggregate_carries_suspension_observation_clocks(tmp_path: Path) -> None:
+    chart, price, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    status = _snapshot(
+        FilesystemProviderPayloadStore(tmp_path),
+        "stock_status",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "trade_date": ["2026-03-11"],
+                "is_suspended": [True],
+                "available_at": [datetime(2026, 3, 12, 8, tzinfo=UTC)],
+                "published_at": [datetime(2026, 3, 12, 7, tzinfo=UTC)],
+            }
+        ),
+        datetime(2026, 3, 12, 8, tzinfo=UTC),
+    )
+    chart._snapshots = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(
+                    item
+                    for item in chart._snapshots.list_snapshots()
+                    if item.dataset_id != "stock_status"
+                ),
+                status,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        chart._snapshots, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+            delisted_on=date(2026, 3, 12),
+        )
+    )
+    bar = result.bars[0]
+    assert bar.partial is False
+    assert set(bar.source_snapshot_ids) == {price.snapshot_id, status.snapshot_id}
+    assert bar.available_at == status.created_at
+    assert bar.published_at == datetime(2026, 3, 12, 7, tzinfo=UTC)

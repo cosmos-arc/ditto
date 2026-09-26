@@ -39,6 +39,12 @@ class AdjustmentFactor(NamedTuple):
     published_at: datetime
 
 
+class SuspensionEvidence(NamedTuple):
+    snapshot_id: str
+    available_at: datetime
+    published_at: datetime
+
+
 def _source_error(code: str, reason: str, **details: object) -> AppQueryError:
     return AppQueryError(
         f"technical analysis source failed closed: {reason}",
@@ -499,7 +505,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         *,
         instrument_id: InstrumentId,
         instrument_code: Callable[[date], str | None],
-    ) -> dict[str, str]:
+    ) -> dict[str, SuspensionEvidence]:
         """Return exact visible full-day suspension evidence; unknown stays a gap."""
         frame = self._query.query(dataset_id="stock_status", context=context)
         selected = _instrument_rows(
@@ -531,7 +537,11 @@ class ProviderPayloadTechnicalAnalysisSource:
             ):
                 rows[day] = row
         return {
-            day: str(row["source_snapshot_id"])
+            day: SuspensionEvidence(
+                str(row["source_snapshot_id"]),
+                cast(datetime, row["available_at"]),
+                cast(datetime, row["published_at"]),
+            )
             for day, row in rows.items()
             if row["is_suspended"] is True
             and row.get("suspend_timing") in (None, "", "09:30-15:00")

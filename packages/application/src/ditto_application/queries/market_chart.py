@@ -27,6 +27,7 @@ from ditto_application.queries.retained_calendar import (
 from ditto_application.queries.technical_analysis_source import (
     AdjustmentFactor,
     ProviderPayloadTechnicalAnalysisSource,
+    SuspensionEvidence,
 )
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -119,7 +120,7 @@ def _chart_rows(
     request: MarketChartRequest,
     as_of: datetime,
     factors: dict[str, AdjustmentFactor],
-    suspensions: dict[str, str],
+    suspensions: dict[str, SuspensionEvidence],
 ) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
     """Select visible sessions, then aggregate complete or partial periods."""
     days = set(calendar.days)
@@ -208,6 +209,14 @@ def _chart_rows(
             ).isoformat()
             and day not in suspensions
         ]
+        contributing_suspensions = [
+            evidence
+            for day, evidence in suspensions.items()
+            if day in visible_days
+            and day not in by_day
+            and _period_key(date.fromisoformat(day), request.period)
+            == _period_key(date.fromisoformat(first_day), request.period)
+        ]
         complete_calendar = calendar_has_complete_authority(
             calendar,
             max(period_start, request.listed_on or period_start).isoformat(),
@@ -244,6 +253,7 @@ def _chart_rows(
                 source_snapshot_ids=tuple(
                     sorted(
                         {bar.source_snapshot_id for _, bar in group}
+                        | {item.snapshot_id for item in contributing_suspensions}
                         | (
                             {factors[day].snapshot_id for day, _ in group}
                             if request.adjustment != "none"
@@ -253,6 +263,7 @@ def _chart_rows(
                 ),
                 available_at=max(
                     [bar.knowledge_at for _, bar in group]
+                    + [item.available_at for item in contributing_suspensions]
                     + (
                         [factors[day].available_at for day, _ in group]
                         if request.adjustment != "none"
@@ -261,6 +272,7 @@ def _chart_rows(
                 ),
                 published_at=max(
                     [bar.publication_at for _, bar in group]
+                    + [item.published_at for item in contributing_suspensions]
                     + (
                         [factors[day].published_at for day, _ in group]
                         if request.adjustment != "none"
@@ -377,8 +389,8 @@ class MarketChartQueryFacade:
         source: str,
         cutoff: datetime,
         instrument_code: Callable[[date], str | None],
-    ) -> tuple[dict[str, str], tuple[str, ...]]:
-        suspensions: dict[str, str] = {}
+    ) -> tuple[dict[str, SuspensionEvidence], tuple[str, ...]]:
+        suspensions: dict[str, SuspensionEvidence] = {}
         snapshot_ids: tuple[str, ...] = ()
         if (
             request.asset_class == "stock"
