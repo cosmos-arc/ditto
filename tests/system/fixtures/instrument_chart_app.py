@@ -100,6 +100,71 @@ def _adj_frame(instrument_id: int) -> pl.DataFrame:
     return pl.DataFrame(rows)
 
 
+def _seed_retained_charts(
+    payload_store: FilesystemProviderPayloadStore,
+    snapshot_store: SQLiteProviderSnapshotStore,
+    license_store: SQLiteDatasetLicenseStore,
+) -> None:
+    # Chart candles and adjustment use the same retained provider evidence as
+    # production, rather than the unversioned market read model above.
+    for dataset, frames in (
+        ("etf_daily", [_bars_frame(ETF_ID, 4.0), _bars_frame(ETF_NO_NAV_ID, 3.0)]),
+        ("stock_daily", [_bars_frame(STOCK_ID, 1500.0)]),
+        ("adj_factor", [_adj_frame(STOCK_ID)]),
+    ):
+        frame = pl.concat(frames).with_columns(
+            pl.when(pl.col("instrument_id") == ETF_ID)
+            .then(pl.lit("510300.SH"))
+            .when(pl.col("instrument_id") == ETF_NO_NAV_ID)
+            .then(pl.lit("159915.SZ"))
+            .otherwise(pl.lit("600519.SH"))
+            .alias("source_ticker"),
+            pl.col("trade_date").alias("event_time"),
+        )
+        license_record = DatasetLicenseRecord.create(
+            DatasetLicenseDraft(
+                dataset_id=dataset,
+                source="tushare",
+                terms_version="isolated-test-v1",
+                effective_from=date(2026, 1, 1),
+                effective_to=None,
+                local_cache="allowed",
+                derivative_compute="allowed",
+                display="allowed",
+                redistribution="prohibited",
+                notes="isolated recorded acceptance data",
+                reviewed_by="fixture",
+                reviewed_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
+            )
+        )
+        license_store.append_license(license_record)
+        artifact = payload_store.retain_payload(
+            dataset_id=dataset, source="tushare", payload=frame
+        )
+        snapshot_store.append_snapshot(
+            ProviderSnapshot.create(
+                ProviderSnapshotDraft(
+                    dataset_id=dataset,
+                    source="tushare",
+                    request_start=_TRADING_DAYS[0].isoformat(),
+                    request_end=_TRADING_DAYS[-1].isoformat(),
+                    schema_version=f"fixture.{dataset}.v1",
+                    checksum=artifact.checksum,
+                    canonical_asset=DataAssetRef(
+                        dataset_id=dataset, namespace="market"
+                    ),
+                    request_parameters_hash=f"fixture:{dataset}:instrument-chart",
+                    response_metadata=(("fixture", "instrument-chart"),),
+                    license_record_id=license_record.record_id,
+                    row_count=artifact.row_count,
+                    payload_uri=artifact.uri,
+                    payload_retained=True,
+                    created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
+                )
+            )
+        )
+
+
 def _seed(root: Path) -> None:
     create_fresh_runtime(root / "state")
     pool = SQLitePool(str(root / "state/metadata/metadata.sqlite"))
@@ -252,8 +317,12 @@ def _seed(root: Path) -> None:
         OnDuplicate.ERROR.value,
         year=2026,
     )
-    # ETF 候选比较的评价窗口只认 cutoff 可见的保留日历快照，这里把同一批
-    # 跟踪交易日注册成 calendar 数据集的 retained payload。
+    payload_store = FilesystemProviderPayloadStore(root / "state")
+    snapshot_store = SQLiteProviderSnapshotStore(client)
+    _seed_retained_charts(
+        payload_store, snapshot_store, SQLiteDatasetLicenseStore(client)
+    )
+    # ETF candidate comparison and chart use the same retained calendar.
     calendar_license = DatasetLicenseRecord.create(
         DatasetLicenseDraft(
             dataset_id="calendar",
@@ -286,12 +355,12 @@ def _seed(root: Path) -> None:
         calendar_days.append(day_cursor.isoformat())
         calendar_open.append(day_cursor.isoformat() in open_days)
         day_cursor += timedelta(days=1)
-    artifact = FilesystemProviderPayloadStore(root / "state").retain_payload(
+    artifact = payload_store.retain_payload(
         dataset_id="calendar",
         source="recorded",
         payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
     )
-    SQLiteProviderSnapshotStore(client).append_snapshot(
+    snapshot_store.append_snapshot(
         ProviderSnapshot.create(
             ProviderSnapshotDraft(
                 dataset_id="calendar",

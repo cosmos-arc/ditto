@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 40a2f1ad577008afe450d282bae2b65a29a07153f9818a112e32db8d00eb61b7
+ * Schema SHA-256: 1fe22f4ed58d204e327384e55293c7d30e7843b822d45694c42948bb32cf5f2d
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2425,6 +2425,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/market/chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Chart
+         * @description Read exact retained price and calendar evidence for the chart.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["market_post_chart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/market/context": {
         parameters: {
             query?: never;
@@ -4783,6 +4805,13 @@ export interface components {
         APIResponse_ManualHistoryResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["ManualHistoryResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+        };
+        /** APIResponse[MarketChartResponse] */
+        APIResponse_MarketChartResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["MarketChartResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
         };
@@ -13234,6 +13263,112 @@ export interface components {
              * @description 交易日期
              */
             trade_date: string;
+        };
+        /** MarketChartBarResponse */
+        MarketChartBarResponse: {
+            /** Amount */
+            amount: number;
+            /**
+             * Available At
+             * Format: date-time
+             */
+            available_at: string;
+            /** Close */
+            close: number;
+            /** First Trade Date */
+            first_trade_date: string;
+            /** High */
+            high: number;
+            /** Last Trade Date */
+            last_trade_date: string;
+            /** Low */
+            low: number;
+            /** Open */
+            open: number;
+            /** Partial */
+            partial: boolean;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Trade Date */
+            trade_date: string;
+            /** Volume */
+            volume: number;
+        };
+        /**
+         * MarketChartQuery
+         * @description Chart read with a server-owned decision cutoff and retained sources.
+         */
+        MarketChartQuery: {
+            /** @default none */
+            adjustment: components["schemas"]["Adjustment"];
+            /**
+             * Allow Experimental Data
+             * @default false
+             */
+            allow_experimental_data: boolean;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /**
+             * Period
+             * @default daily
+             * @enum {string}
+             */
+            period: "daily" | "weekly" | "monthly";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
+        /** MarketChartResponse */
+        MarketChartResponse: {
+            /** Adjustment */
+            adjustment: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Bars */
+            bars: components["schemas"]["MarketChartBarResponse"][];
+            /** Calendar Snapshot Ids */
+            calendar_snapshot_ids: string[];
+            /** Instrument Id */
+            instrument_id: number;
+            /**
+             * Knowledge Cutoff
+             * Format: date-time
+             */
+            knowledge_cutoff: string;
+            /** Latest Price Date */
+            latest_price_date: string | null;
+            /** Missing Sessions */
+            missing_sessions: string[];
+            /** Period */
+            period: string;
+            /**
+             * Publication Cutoff
+             * Format: date-time
+             */
+            publication_cutoff: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Sources */
+            sources: string[];
+            /** Stale Reason */
+            stale_reason: string | null;
+            /** Timezone */
+            timezone: string;
         };
         /**
          * MarketContextDriverResponse
@@ -27385,6 +27520,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_Bar__"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    market_post_chart: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketChartQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_MarketChartResponse_"];
                 };
             };
             /** @description Bad request */

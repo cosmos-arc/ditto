@@ -39,6 +39,12 @@ export type CockpitBar = {
 	readonly open?: number | null;
 	readonly high?: number | null;
 	readonly low?: number | null;
+	readonly sourceSnapshotIds?: readonly string[];
+	readonly firstTradeDate?: string;
+	readonly lastTradeDate?: string;
+	readonly availableAt?: string;
+	readonly publishedAt?: string;
+	readonly partial?: boolean;
 };
 
 /** 涨跌方向（CN 默认红涨绿跌，颜色映射经 chart 层 token，不在此耦合）。 */
@@ -142,63 +148,8 @@ export function toCandleSeriesData(bars: readonly CockpitBar[]): CandlePoint[] {
 		});
 }
 
-/** 展示周期：日线原样；周/月按 ISO 周（周一）与自然月聚合。 */
+/** 服务端图表周期。 */
 export type BarPeriod = "daily" | "weekly" | "monthly";
-
-function periodKey(unixSeconds: number, period: BarPeriod): { key: string; bucketStart: number } {
-	const date = new Date(unixSeconds * 1000);
-	if (period === "weekly") {
-		const weekday = (date.getUTCDay() + 6) % 7; // 周一为一周起点
-		const monday = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - weekday) / 1000;
-		return { key: `w${monday}`, bucketStart: monday };
-	}
-	if (period === "monthly") {
-		const monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1) / 1000;
-		return { key: `m${monthStart}`, bucketStart: monthStart };
-	}
-	return { key: `d${unixSeconds}`, bucketStart: unixSeconds };
-}
-
-/**
- * OHLCV 周期重采样（语义对齐后端 technical_analysis `_weekly()`）：
- * open 取首根、high/max、low/min、close 取末根、volume 求和；
- * 桶内任一成分缺失 close 时该桶以「已有数据聚合」为准，不插值。
- */
-export function resampleBars(bars: readonly CockpitBar[], period: BarPeriod): CockpitBar[] {
-	if (period === "daily") {
-		return [...bars].sort((a, b) => a.time - b.time);
-	}
-	const sorted = [...bars].sort((a, b) => a.time - b.time);
-	const buckets = new Map<
-		string,
-		{ start: number; open?: number; high?: number; low?: number; close: number | null; volume: number | null }
-	>();
-	for (const bar of sorted) {
-		const { key, bucketStart } = periodKey(bar.time, period);
-		const bucket = buckets.get(key) ?? { start: bucketStart, close: null, volume: null };
-		if (bar.close !== null) {
-			const open = bar.open ?? bar.close;
-			const high = bar.high ?? Math.max(open, bar.close);
-			const low = bar.low ?? Math.min(open, bar.close);
-			bucket.open = bucket.open ?? open;
-			bucket.high = bucket.high === undefined ? high : Math.max(bucket.high, high);
-			bucket.low = bucket.low === undefined ? low : Math.min(bucket.low, low);
-			bucket.close = bar.close;
-			bucket.volume = (bucket.volume ?? 0) + (bar.volume ?? 0);
-		}
-		buckets.set(key, bucket);
-	}
-	return [...buckets.values()]
-		.sort((a, b) => a.start - b.start)
-		.map((bucket) => ({
-			time: bucket.start,
-			open: bucket.open ?? null,
-			high: bucket.high ?? null,
-			low: bucket.low ?? null,
-			close: bucket.close,
-			volume: bucket.volume,
-		}));
-}
 
 export type FreshnessSegment = {
 	readonly bucket: FreshnessBucket;
@@ -273,7 +224,11 @@ export function toHistogramSeriesData(
 /** 导出物携带的 PIT 身份（裁决 #208-4：完整 snapshot id，不截断唯一修订标识）。 */
 export type ChartExportIdentity = {
 	readonly asOf?: number | null;
+	readonly asOfIso?: string | null;
 	readonly snapshotId?: string | null;
+	readonly calendarSnapshotIds?: string | null;
+	readonly adjustment?: string | null;
+	readonly period?: string | null;
 	readonly knowledgeCutoff?: string | null;
 	readonly publicationCutoff?: string | null;
 	readonly dataSourceName: string;
@@ -305,8 +260,8 @@ export function formatExportTime(unixSeconds: number): string {
 export function buildPngFooterLines(identity: ChartExportIdentity): [string, string] {
 	const orDash = (value: string | null | undefined) => value || "—";
 	return [
-		`as_of ${identity.asOf != null ? formatExportTime(identity.asOf) : "—"} · snapshot ${orDash(identity.snapshotId)}`,
-		`cutoff k=${orDash(identity.knowledgeCutoff)} p=${orDash(identity.publicationCutoff)} · source ${identity.dataSourceName} · exported ${new Date(identity.exportedAtMs).toISOString()} · v${identity.productVersion}`,
+		`as_of ${identity.asOfIso ?? (identity.asOf != null ? formatExportTime(identity.asOf) : "—")} · snapshot ${orDash(identity.snapshotId)}`,
+		`cutoff k=${orDash(identity.knowledgeCutoff)} p=${orDash(identity.publicationCutoff)} · source ${identity.dataSourceName} · calendar ${orDash(identity.calendarSnapshotIds)} · adjustment ${orDash(identity.adjustment)} · period ${orDash(identity.period)} · exported ${new Date(identity.exportedAtMs).toISOString()} · v${identity.productVersion}`,
 	];
 }
 
@@ -347,8 +302,9 @@ export function toCsvExport(
 		for (const bar of entry.bars) times.add(bar.time);
 	}
 	const withOhlc = seriesById.map((entry) => entry.bars.some((bar) => bar.open !== undefined));
+	const hasChartSources = volume.some((bar) => bar.sourceSnapshotIds !== undefined);
 	const metadata = [
-		identity.asOf != null ? formatExportTime(identity.asOf) : "",
+		identity.asOfIso ?? (identity.asOf != null ? formatExportTime(identity.asOf) : ""),
 		identity.snapshotId ?? "",
 		identity.knowledgeCutoff ?? "",
 		identity.publicationCutoff ?? "",
@@ -364,6 +320,19 @@ export function toCsvExport(
 				: [`close_${entry.id}`],
 		),
 		"volume",
+		...(hasChartSources
+			? [
+					"first_trade_date",
+					"last_trade_date",
+					"available_at",
+					"published_at",
+					"partial",
+					"bar_source_snapshot_ids",
+					"calendar_snapshot_ids",
+					"adjustment",
+					"period",
+				]
+			: []),
 		...CSV_METADATA_COLUMNS,
 	];
 	const rows = [...times]
@@ -378,6 +347,22 @@ export function toCsvExport(
 				return [bar?.open ?? "", bar?.high ?? "", bar?.low ?? "", bar?.close ?? ""];
 			}),
 			volumeByTime.get(time) ?? "",
+			...(hasChartSources
+				? (() => {
+						const bar = volume.find((item) => item.time === time);
+						return [
+							bar?.firstTradeDate ?? "",
+							bar?.lastTradeDate ?? "",
+							bar?.availableAt ?? "",
+							bar?.publishedAt ?? "",
+							bar?.partial === undefined ? "" : String(bar.partial),
+							bar?.sourceSnapshotIds?.join("|") ?? "",
+							identity.calendarSnapshotIds ?? "",
+							identity.adjustment ?? "",
+							identity.period ?? "",
+						];
+					})()
+				: []),
 			...metadata,
 		]);
 	return [header, ...rows].map((row) => row.map((cell) => csvCell(cell)).join(",")).join("\n");

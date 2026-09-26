@@ -137,6 +137,30 @@ class MarketQueryFacade:
             limit=limit,
         )
 
+    def assert_bars_allowed(
+        self,
+        *,
+        asset_class: str,
+        instrument_id: int,
+        allow_experimental_data: bool,
+    ) -> None:
+        """Apply the same maturity gate to source-bound chart reads."""
+        self._assert_market_bars_allowed(
+            asset_class,
+            instrument_ids=[instrument_id],
+            allow_experimental_data=allow_experimental_data,
+        )
+
+    def assert_adjustment_allowed(self, *, allow_experimental_data: bool) -> None:
+        """Apply the catalog maturity gate to chart adjustment factors."""
+        blocked = blocked_catalog_datasets(
+            ("adj_factor",),
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
+        )
+        if blocked:
+            raise AppQueryError("adj_factor requires experimental dataset maturity")
+
     def get_constituents(
         self,
         index_id: int,

@@ -119,7 +119,11 @@ export type CockpitMarker = {
 
 export type ChartCockpitIdentity = {
 	readonly dataSourceName: string;
+	readonly asOfIso?: string | null;
 	readonly snapshotId?: string | null;
+	readonly calendarSnapshotIds?: string | null;
+	readonly adjustment?: string | null;
+	readonly period?: string | null;
 	readonly knowledgeCutoff?: string | null;
 	readonly publicationCutoff?: string | null;
 };
@@ -231,7 +235,11 @@ function exportIdentity(
 	}
 	return {
 		asOf: asOf?.time ?? null,
+		asOfIso: identity.asOfIso ?? null,
 		snapshotId: identity.snapshotId ?? null,
+		calendarSnapshotIds: identity.calendarSnapshotIds ?? null,
+		adjustment: identity.adjustment ?? null,
+		period: identity.period ?? null,
 		knowledgeCutoff: identity.knowledgeCutoff ?? null,
 		publicationCutoff: identity.publicationCutoff ?? null,
 		dataSourceName: identity.dataSourceName,

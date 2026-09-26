@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 function requiredEnvironment(name: string): string {
 	const value = process.env[name]?.trim();
@@ -47,8 +48,9 @@ test.describe
 			const answer = page.locator("[data-primary-answer]");
 			await expect(answer).toBeVisible();
 			await expect(answer).toContainText(/收盘/);
-			// partial：断口范围标注（fixture 挖空 6 个交易日 → 单处缺口）
-			await expect(page.getByText(/缺口 .+ →/)).toBeVisible();
+			// Calendar sessions missing from retained prices remain explicit.
+			await expect(page.getByTestId(`chart-gaps-${ETF_ID}`)).toContainText("缺失交易日");
+			await expect(page.getByText(/来源 tushare · 快照/)).toBeVisible();
 
 			// 指标开关（日线周期下可用）：MACD+RSI 副图让 pane 数从 2（价格+量）变 4
 			const host2 = page.locator(`[data-chart-interaction-contract="instrument-candles-${ETF_ID}"]`);
@@ -68,12 +70,27 @@ test.describe
 			await expect(page.getByTestId("indicator-toggle-rsi")).toBeChecked();
 			await expect(page.getByTestId("indicator-toggle-nav")).toBeChecked();
 
-			// 周期切周线：本地重采样，指标仅日线（开关禁用并说明）
+			// Weekly OHLCV and partial status come from the server calendar.
 			await page.getByRole("button", { name: "周" }).click();
 			await expect(host).toHaveAttribute("aria-label", /周K 线/);
 			await expect(host2).toHaveAttribute("data-chart-panes", "2");
 			await expect(page.getByTestId("indicator-toggle-rsi")).toBeDisabled();
 			await expect(page.getByText("指标叠加仅日线周期")).toBeVisible();
+			const [csvDownload] = await Promise.all([
+				page.waitForEvent("download"),
+				page.getByTestId(`chart-export-csv-instrument-candles-${ETF_ID}`).click(),
+			]);
+			const csv = await readFile(await csvDownload.path(), "utf8");
+			expect(csv).toContain("calendar_snapshot_ids");
+			expect(csv).toContain("bar_source_snapshot_ids");
+			expect(csv).toContain("snapshot:tushare:etf_daily:");
+			expect(csv).toContain("knowledge_cutoff");
+			expect(csv).toContain("weekly");
+			const [pngDownload] = await Promise.all([
+				page.waitForEvent("download"),
+				page.getByTestId(`chart-export-png-instrument-candles-${ETF_ID}`).click(),
+			]);
+			expect(pngDownload.suggestedFilename()).toMatch(/\.png$/);
 
 			// ETF 复权未接线：切换禁用并给出原因
 			await expect(page.getByRole("button", { name: "前复权" })).toBeDisabled();
@@ -210,7 +227,7 @@ test.describe
 			await expect(review.getByLabel("复盘账户")).toHaveValue(`manual:${accountId}`);
 		});
 
-		test("stocks stay fail-closed until the explicit experimental opt-in, then adjust locally", async ({
+		test("stocks stay fail-closed until the explicit experimental opt-in, then use retained factors", async ({
 			page,
 		}) => {
 			const browserErrors = captureBrowserErrors(page);
@@ -228,7 +245,7 @@ test.describe
 			const rawClose = (await answer.locator("[data-answer-metric]").first().innerText()).trim();
 			const rawScope = (await answer.locator("[data-answer-scope]").innerText()).trim();
 
-			// 前复权（本地因子自算）：最新收盘锚定不变（最新因子即基准），
+			// 前复权（服务端保留因子）：最新收盘锚定不变（最新因子即基准），
 			// 7 月前历史价格整体下修 → 区间低值改变。
 			await page.getByRole("button", { name: "前复权" }).click();
 			await expect(page.getByText(/复权：qfq/)).toBeVisible();
@@ -238,10 +255,10 @@ test.describe
 				.not.toBe(rawScope);
 
 			await expectNoSeriousAccessibilityViolations(page);
-			// fail-closed 成熟度门控按设计返回 400，浏览器会把该传输行记入
+			// fail-closed 成熟度门控按设计返回 422，浏览器会把该传输行记入
 			// console error（与 outage.spec 对 net::ERR 的处理同 convention）；
 			// 语义已由 experimental-disabled 面板断言，这里只要求无其他错误。
-			const unexpected = browserErrors.filter((line) => !line.includes("status of 400"));
+			const unexpected = browserErrors.filter((line) => !line.includes("status of 422"));
 			expect(unexpected).toEqual([]);
 		});
 	});

@@ -9,7 +9,6 @@ import {
 	freshnessBucket,
 	lastNonNullClose,
 	mergedGapRanges,
-	resampleBars,
 	splitByFreshness,
 	toCandleSeriesData,
 	toCsvExport,
@@ -134,66 +133,6 @@ describe("toCandleSeriesData", () => {
 	});
 });
 
-describe("resampleBars", () => {
-	const day = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
-	// 2026-09-07 是周一；09-09（三）与 09-10（四）同周，09-14（一）开新周。
-	const bars: CockpitBar[] = [
-		{ time: day("2026-09-07"), open: 10, high: 11, low: 9, close: 10.5, volume: 100 },
-		{ time: day("2026-09-09"), open: 10.5, high: 12, low: 10, close: 11.5, volume: 140 },
-		{ time: day("2026-09-10"), open: 11.5, high: 11.8, low: 10.8, close: 11, volume: 60 },
-		{ time: day("2026-09-14"), open: 11, high: 11.2, low: 10.5, close: 10.8, volume: 80 },
-	];
-
-	it("keeps daily bars untouched but ordered", () => {
-		expect(resampleBars([...bars].reverse(), "daily").map((bar) => bar.time)).toEqual(bars.map((bar) => bar.time));
-	});
-
-	it("rolls weekly buckets with first-open/max-high/min-low/last-close/sum-volume", () => {
-		expect(resampleBars(bars, "weekly")).toEqual([
-			{
-				time: day("2026-09-07"),
-				open: 10,
-				high: 12,
-				low: 9,
-				close: 11,
-				volume: 300,
-			},
-			{
-				time: day("2026-09-14"),
-				open: 11,
-				high: 11.2,
-				low: 10.5,
-				close: 10.8,
-				volume: 80,
-			},
-		]);
-	});
-
-	it("rolls monthly buckets from the first calendar day", () => {
-		expect(resampleBars(bars, "monthly")).toEqual([
-			{
-				time: day("2026-09-01"),
-				open: 10,
-				high: 12,
-				low: 9,
-				close: 10.8,
-				volume: 380,
-			},
-		]);
-	});
-
-	it("skips gap bars so missing days do not fabricate buckets", () => {
-		const withGap: CockpitBar[] = [
-			{ time: day("2026-09-07"), open: 10, high: 10, low: 10, close: 10, volume: 5 },
-			{ time: day("2026-09-08"), close: null, volume: null },
-			{ time: day("2026-09-09"), open: 10, high: 13, low: 10, close: 12, volume: 7 },
-		];
-		expect(resampleBars(withGap, "weekly")).toEqual([
-			{ time: day("2026-09-07"), open: 10, high: 13, low: 10, close: 12, volume: 12 },
-		]);
-	});
-});
-
 describe("lastNonNullClose", () => {
 	it("returns the newest bar with a close, scanning backwards", () => {
 		const bars: CockpitBar[] = [
@@ -225,6 +164,64 @@ describe("findGapRanges", () => {
 });
 
 describe("toCsvExport", () => {
+	it("retains each market bar's price, calendar, and cutoff evidence", () => {
+		const csv = toCsvExport(
+			[
+				{
+					id: "ohlc",
+					bars: [
+						{
+							time: Date.parse("2026-03-10T00:00:00Z") / 1000,
+							open: 10,
+							high: 11,
+							low: 9,
+							close: 10.5,
+							volume: 100,
+							firstTradeDate: "2026-03-09",
+							lastTradeDate: "2026-03-10",
+							availableAt: "2026-03-10T08:00:00Z",
+							publishedAt: "2026-03-10T07:00:00Z",
+							partial: true,
+							sourceSnapshotIds: ["price-full", "factor-full"],
+						},
+					],
+				},
+			],
+			{
+				asOf: Date.parse("2026-03-10T08:00:00Z") / 1000,
+				snapshotId: "price-full,factor-full",
+				calendarSnapshotIds: "calendar-full",
+				adjustment: "qfq",
+				period: "weekly",
+				knowledgeCutoff: "2026-03-10T08:00:00Z",
+				publicationCutoff: "2026-03-10T07:00:00Z",
+				dataSourceName: "tushare",
+				productVersion: "test",
+				exportedAtMs: 0,
+			},
+		);
+		expect(csv).toContain(
+			"first_trade_date,last_trade_date,available_at,published_at,partial,bar_source_snapshot_ids,calendar_snapshot_ids,adjustment,period",
+		);
+		expect(csv).toContain(
+			"2026-03-09,2026-03-10,2026-03-10T08:00:00Z,2026-03-10T07:00:00Z,true,price-full|factor-full,calendar-full,qfq,weekly",
+		);
+		expect(csv).toContain("price-full,factor-full");
+		const footer = buildPngFooterLines({
+			asOf: 0,
+			snapshotId: "price-full,factor-full",
+			calendarSnapshotIds: "calendar-full",
+			adjustment: "qfq",
+			period: "weekly",
+			knowledgeCutoff: "k",
+			publicationCutoff: "p",
+			dataSourceName: "tushare",
+			productVersion: "test",
+			exportedAtMs: 0,
+		});
+		expect(footer.join(" ")).toContain("calendar calendar-full · adjustment qfq · period weekly");
+	});
+
 	it("emits gap rows as empty cells and carries full PIT identity columns", () => {
 		const csv = toCsvExport(
 			[

@@ -26,8 +26,8 @@ vi.mock("@/components/chart", () => ({
 }));
 
 // lightweight-charts / fancy-canvas 在 jsdom 中产生大量未处理错误；图表内部
-// 行为由 cockpit 组件测试覆盖，这里在 barrel 层同步 mock 组件（视图的重采样
-// 从 chart-data 叶模块导入，保持真实实现），只断言本视图喂养的外部合同。
+// 行为由 cockpit 组件测试覆盖，这里在 barrel 层同步 mock 组件，
+// 只断言服务端图表结果喂养的外部合同。
 const cockpitProps: unknown[] = [];
 
 function createQueryClient(): QueryClient {
@@ -110,7 +110,7 @@ describe("InstrumentChartView", () => {
 		// 定位与水位线都按 UTC 日锚定
 		expect(props.initialFocusTime).toBe(Date.parse("2026-03-09T00:00:00Z") / 1000);
 		expect(props.asOf).not.toBeNull();
-		expect(props.asOf?.label).toContain("回测下钻 sys-fx-nav-001");
+		expect(props.asOf?.label).toContain("行情决策 2026-03-10T08:00:00Z");
 	});
 
 	it("以蜡烛形态喂给图表 shell 并展示 Primary Answer 关键数字", async () => {
@@ -134,16 +134,18 @@ describe("InstrumentChartView", () => {
 		expect(screen.getByText("1750.20")).toBeInTheDocument();
 		expect(screen.getByText(/\+3\.90/)).toBeInTheDocument();
 		expect(screen.getByText(/1732\.10–1768\.80/)).toBeInTheDocument();
-		expect(screen.getByText(/快照标识未由接口提供/)).toBeInTheDocument();
+		expect(screen.getByText(/快照 bars-exact-1/)).toBeInTheDocument();
+		expect(screen.getByText(/价格可得 2026-03-10T08:00:00Z/)).toBeInTheDocument();
 	});
 
-	it("周线切换把日 K 聚合为周桶", async () => {
+	it("周线切换消费服务端周桶与 partial", async () => {
 		const user = userEvent.setup();
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await screen.findByTestId("cockpit-stub");
 		await user.click(screen.getByRole("button", { name: "周" }));
 		const props = cockpitProps.at(-1) as { series: Array<{ bars: unknown[] }> };
 		expect(props.series[0]!.bars).toHaveLength(1);
+		expect(await screen.findByText("部分周期不完整")).toBeInTheDocument();
 	});
 
 	it("复权切换触发重新取数（查询键携带 adjustment）", async () => {
@@ -154,10 +156,10 @@ describe("InstrumentChartView", () => {
 		await screen.findByText(/复权：qfq · experimental：关/);
 	});
 
-	it("陈旧数据（距今远超阈值）展示 stale 徽标与延迟天数", async () => {
+	it("休市后旧价格日不被浏览器自然日误判为 stale", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await screen.findByTestId("cockpit-stub");
-		expect(await screen.findByText(/数据延迟 \d+ 天/)).toBeInTheDocument();
+		expect(screen.queryByText(/最新价格日/)).not.toBeInTheDocument();
 	});
 
 	it("指标开关把 MA overlay 与 MACD/RSI 副图喂给图表 shell，并持久化选择", async () => {

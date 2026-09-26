@@ -406,6 +406,61 @@ class ProviderPayloadTechnicalAnalysisSource:
         ).sort("event_time")
         return _bars(selected)
 
+    def load_adjustment_factors(
+        self,
+        context: PITQueryContext,
+        *,
+        instrument_id: InstrumentId,
+        instrument_code: str,
+    ) -> dict[str, tuple[float, str, datetime, datetime]]:
+        """Read exact visible adjustment factors without a latest-store fallback."""
+        frame = self._query.query(dataset_id="adj_factor", context=context)
+        selected = _instrument_rows(
+            frame, instrument_id=instrument_id, instrument_code=instrument_code
+        ).sort("event_time")
+        factor_column = _column(
+            selected, ("adj_factor", "adjustment_factor"), field="adjustment factor"
+        )
+        factors: dict[str, tuple[float, str, datetime, datetime]] = {}
+        for row in selected.to_dicts():
+            try:
+                factor = float(row[cast(str, factor_column)])
+            except (TypeError, ValueError) as error:
+                raise _source_error(
+                    "TECHNICAL_SOURCE_VALUE_INVALID", "adjustment factor invalid"
+                ) from error
+            if not isfinite(factor) or factor <= 0:
+                raise _source_error(
+                    "TECHNICAL_SOURCE_VALUE_INVALID", "adjustment factor invalid"
+                )
+            day = (
+                cast(datetime, row["event_time"])
+                .astimezone(_SHANGHAI)
+                .date()
+                .isoformat()
+            )
+            snapshot_id = str(row["source_snapshot_id"])
+            snapshot = self._snapshot_reader.get_snapshot(snapshot_id)
+            if snapshot is None:
+                raise _source_error(
+                    "TECHNICAL_SOURCE_LINEAGE_MISMATCH", "adjustment snapshot missing"
+                )
+            prior = factors.get(day)
+            prior_snapshot = (
+                self._snapshot_reader.get_snapshot(prior[1]) if prior else None
+            )
+            if (
+                prior_snapshot is None
+                or snapshot.created_at > prior_snapshot.created_at
+            ):
+                factors[day] = (
+                    factor,
+                    snapshot_id,
+                    cast(datetime, row["available_at"]),
+                    cast(datetime, row["published_at"]),
+                )
+        return factors
+
     def load_paper_market(
         self,
         context: PITQueryContext,

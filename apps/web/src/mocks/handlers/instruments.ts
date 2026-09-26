@@ -106,6 +106,71 @@ export const instrumentsHandlers: RequestHandler[] = [
 		});
 	}),
 
+	http.post("/api/v1/market/chart", async ({ request }) => {
+		const body = (await request.json()) as { instrument_id: number; period: string; adjustment: string };
+		const daily = [
+			{
+				trade_date: "2026-03-09",
+				first_trade_date: "2026-03-09",
+				last_trade_date: "2026-03-09",
+				open: 1752,
+				high: 1760,
+				low: 1732.1,
+				close: 1746.3,
+				volume: 3140000,
+				amount: 5490000000,
+			},
+			{
+				trade_date: "2026-03-10",
+				first_trade_date: "2026-03-10",
+				last_trade_date: "2026-03-10",
+				open: 1744.6,
+				high: 1768.8,
+				low: 1738.4,
+				close: 1750.2,
+				volume: 3210000,
+				amount: 5632000000,
+			},
+		];
+		const weekly = [
+			{
+				trade_date: "2026-03-10",
+				first_trade_date: "2026-03-09",
+				last_trade_date: "2026-03-10",
+				open: 1752,
+				high: 1768.8,
+				low: 1732.1,
+				close: 1750.2,
+				volume: 6350000,
+				amount: 11122000000,
+			},
+		];
+		return HttpResponse.json({
+			data: {
+				instrument_id: body.instrument_id,
+				period: body.period,
+				adjustment: body.adjustment,
+				as_of: "2026-03-10T08:00:00Z",
+				knowledge_cutoff: "2026-03-10T08:00:00Z",
+				publication_cutoff: "2026-03-10T08:00:00Z",
+				timezone: "Asia/Shanghai",
+				calendar_snapshot_ids: ["calendar-exact-1"],
+				source_snapshot_ids: ["bars-exact-1"],
+				sources: ["tushare"],
+				latest_price_date: "2026-03-10",
+				stale_reason: null,
+				missing_sessions: [],
+				bars: (body.period === "daily" ? daily : weekly).map((bar) => ({
+					...bar,
+					source_snapshot_ids: ["bars-exact-1"],
+					available_at: "2026-03-10T08:00:00Z",
+					published_at: "2026-03-10T08:00:00Z",
+					partial: body.period !== "daily",
+				})),
+			},
+		});
+	}),
+
 	http.post("/api/v1/market/indicator-series", async ({ request }) => {
 		const body = (await request.json()) as { indicators?: string[]; ma_windows?: number[] };
 		const trade_dates = ["2026-03-09", "2026-03-10"];
