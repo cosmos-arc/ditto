@@ -31,8 +31,8 @@ const ADJUSTMENT_OPTIONS: ReadonlyArray<{ readonly value: BarAdjustment; readonl
 ];
 
 function dateDaysAgo(days: number): string {
-	const date = new Date();
-	date.setDate(date.getDate() - days);
+	const date = new Date(Date.now() + 8 * 60 * 60 * 1000);
+	date.setUTCDate(date.getUTCDate() - days);
 	return date.toISOString().slice(0, 10);
 }
 
@@ -87,7 +87,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
 	const [startDate, setStartDate] = useState(() => dateDaysAgo(365));
-	const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+	const [endDate, setEndDate] = useState(() => dateDaysAgo(0));
 	const [toggles, setToggles] = useState<IndicatorToggles>(() => readIndicatorToggles());
 	const updateToggle = (key: keyof IndicatorToggles, value: boolean) => {
 		setToggles((previous) => {
@@ -161,6 +161,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 		};
 	}, [isEtf, navPoints, toggles.nav]);
 	const navUnavailable = isEtf && toggles.nav && !navQuery.isLoading && navPoints.length === 0;
+	const overlayShown = indicatorOverlaysList.length > 0 || indicatorSubPaneList.length > 0 || navOverlay !== null;
 
 	const experimentalBlocked =
 		query.isError && String((query.error as Error | null)?.message ?? "").includes("experimental");
@@ -312,6 +313,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							净值数据不可得
 						</span>
 					)}
+					{overlayShown && (
+						<span className="text-xs text-(--color-foreground-muted)">叠加线来源未绑定；CSV 仅含 K 线</span>
+					)}
 				</div>
 
 				{answer && (
@@ -401,7 +405,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							showVolumePane
 							height={360}
 							identity={{
-								dataSourceName: query.data?.sources.join(", ") ?? "",
+								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}`,
 								asOfIso: query.data?.as_of ?? null,
 								snapshotId: query.data?.source_snapshot_ids.join(",") ?? null,
 								calendarSnapshotIds: query.data?.calendar_snapshot_ids.join(",") ?? null,

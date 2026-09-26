@@ -51,6 +51,15 @@ test.describe
 			// Calendar sessions missing from retained prices remain explicit.
 			await expect(page.getByTestId(`chart-gaps-${ETF_ID}`)).toContainText("缺失交易日");
 			await expect(page.getByText(/来源 tushare · 快照/)).toBeVisible();
+			const sentinelResponse = await page.request.post(`${apiOrigin}/api/v1/market/chart`, {
+				headers: { "X-Ditto-API-Contract-Version": "v1" },
+				data: { instrument_id: ETF_ID, start_date: "2026-01-05", end_date: "2026-03-08", period: "daily", adjustment: "none" },
+			});
+			expect(sentinelResponse.status()).toBe(200);
+			const sentinel = (await sentinelResponse.json()).data as { bars: Array<{ high: number }>; missing_sessions: string[] };
+			expect(sentinel.missing_sessions).toContain("2026-03-04");
+			expect(sentinel.missing_sessions).not.toContain("2026-03-07");
+			expect(Math.max(...sentinel.bars.map((bar) => bar.high))).toBeLessThan(1_000_000);
 
 			// 指标开关（日线周期下可用）：MACD+RSI 副图让 pane 数从 2（价格+量）变 4
 			const host2 = page.locator(`[data-chart-interaction-contract="instrument-candles-${ETF_ID}"]`);
@@ -76,6 +85,10 @@ test.describe
 			await expect(host2).toHaveAttribute("data-chart-panes", "2");
 			await expect(page.getByTestId("indicator-toggle-rsi")).toBeDisabled();
 			await expect(page.getByText("指标叠加仅日线周期")).toBeVisible();
+			await expect(page.getByText("部分周期不完整")).toBeVisible();
+			await expect(page.getByTestId(`chart-period-instrument-candles-${ETF_ID}`)).toContainText(
+				"区间 2026-05-11 → 2026-05-15",
+			);
 			const [csvDownload] = await Promise.all([
 				page.waitForEvent("download"),
 				page.getByTestId(`chart-export-csv-instrument-candles-${ETF_ID}`).click(),

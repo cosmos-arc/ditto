@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, time
 from math import isfinite
-from typing import cast
+from typing import NamedTuple, cast
 from zoneinfo import ZoneInfo
 
 import polars as pl
@@ -28,6 +28,13 @@ __all__ = ["ProviderPayloadTechnicalAnalysisSource"]
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _COMPACT_DATE_LENGTH = 8
+
+
+class AdjustmentFactor(NamedTuple):
+    value: float
+    snapshot_id: str
+    available_at: datetime
+    published_at: datetime
 
 
 def _source_error(code: str, reason: str, **details: object) -> AppQueryError:
@@ -412,7 +419,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         *,
         instrument_id: InstrumentId,
         instrument_code: str,
-    ) -> dict[str, tuple[float, str, datetime, datetime]]:
+    ) -> dict[str, AdjustmentFactor]:
         """Read exact visible adjustment factors without a latest-store fallback."""
         frame = self._query.query(dataset_id="adj_factor", context=context)
         selected = _instrument_rows(
@@ -421,7 +428,7 @@ class ProviderPayloadTechnicalAnalysisSource:
         factor_column = _column(
             selected, ("adj_factor", "adjustment_factor"), field="adjustment factor"
         )
-        factors: dict[str, tuple[float, str, datetime, datetime]] = {}
+        factors: dict[str, AdjustmentFactor] = {}
         for row in selected.to_dicts():
             try:
                 factor = float(row[cast(str, factor_column)])
@@ -447,13 +454,13 @@ class ProviderPayloadTechnicalAnalysisSource:
                 )
             prior = factors.get(day)
             prior_snapshot = (
-                self._snapshot_reader.get_snapshot(prior[1]) if prior else None
+                self._snapshot_reader.get_snapshot(prior.snapshot_id) if prior else None
             )
             if (
                 prior_snapshot is None
                 or snapshot.created_at > prior_snapshot.created_at
             ):
-                factors[day] = (
+                factors[day] = AdjustmentFactor(
                     factor,
                     snapshot_id,
                     cast(datetime, row["available_at"]),

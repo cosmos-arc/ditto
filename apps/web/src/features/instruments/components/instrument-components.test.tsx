@@ -78,6 +78,17 @@ describe("InstrumentOverview", () => {
 });
 
 describe("InstrumentChartView", () => {
+	it("默认日期使用上海交易日而非 UTC 日", () => {
+		const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-09-25T16:30:00Z"));
+		try {
+			render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+			expect(screen.getByLabelText("截至日期")).toHaveValue("2026-09-26");
+			expect(screen.getByLabelText("开始日期")).toHaveValue("2025-09-26");
+		} finally {
+			clock.mockRestore();
+		}
+	});
+
 	it("渲染行情图表区域与工具栏", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("行情图表")).resolves.toBeInTheDocument();
@@ -176,6 +187,8 @@ describe("InstrumentChartView", () => {
 		const props = await waitForCockpit(
 			(next) => (next.overlays ?? []).length === 3 && (next.subPanes ?? []).length === 2,
 		);
+		expect(props.identity?.dataSourceName).toContain("叠加线来源未绑定");
+		expect(screen.getByText("叠加线来源未绑定；CSV 仅含 K 线")).toBeInTheDocument();
 		const overlayIds = (props.overlays as Array<{ id: string }>).map((overlay) => overlay.id);
 		expect(overlayIds).toEqual(["ma_5", "ma_20", "ma_60"]);
 		const paneIds = (props.subPanes as Array<{ id: string }>).map((pane) => pane.id);
@@ -199,12 +212,16 @@ describe("InstrumentChartView", () => {
 });
 
 function waitForCockpit(
-	predicate: (props: { overlays?: unknown[]; subPanes?: unknown[] }) => boolean,
-): Promise<{ overlays?: unknown[]; subPanes?: unknown[] }> {
+	predicate: (props: { overlays?: unknown[]; subPanes?: unknown[]; identity?: { dataSourceName: string } }) => boolean,
+): Promise<{ overlays?: unknown[]; subPanes?: unknown[]; identity?: { dataSourceName: string } }> {
 	return new Promise((resolve, reject) => {
 		const started = Date.now();
 		const tick = () => {
-			const props = cockpitProps.at(-1) as { overlays?: unknown[]; subPanes?: unknown[] };
+			const props = cockpitProps.at(-1) as {
+				overlays?: unknown[];
+				subPanes?: unknown[];
+				identity?: { dataSourceName: string };
+			};
 			if (props && predicate(props)) {
 				resolve(props);
 				return;

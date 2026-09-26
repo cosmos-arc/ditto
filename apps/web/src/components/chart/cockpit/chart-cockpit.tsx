@@ -302,6 +302,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	const [readoutTime, setReadoutTime] = useState<number | null>(null);
 	const [selection, setSelection] = useState<{ readonly from: number; readonly to: number } | null>(null);
 	const activeReadout = readoutTime === null ? initialReadout : readoutAtIndex(readoutIndex, readoutTime);
+	const activePriceBar = activeReadout && series[0]?.bars.find((bar) => bar.time === activeReadout.time);
 	// 新鲜度时变的「当前时刻」：注入 nowMs（测试）固定，否则随 30s 心跳推进，
 	// 使 live→expired 分档在会话中随数据老化刷新。
 	const [effectiveNowMs, setEffectiveNowMs] = useState(() => nowMs ?? Date.now());
@@ -789,6 +790,12 @@ export function ChartCockpit(props: ChartCockpitProps) {
 					<span className="tabular-nums">
 						{formatReadoutTime(activeReadout.time)}
 						{activeReadout.volume !== null && ` · vol ${activeReadout.volume}`}
+					</span>
+				)}
+				{activePriceBar?.firstTradeDate && activePriceBar.lastTradeDate && (
+					<span className="tabular-nums" data-testid={`chart-period-${chartId}`}>
+						区间 {activePriceBar.firstTradeDate} → {activePriceBar.lastTradeDate}
+						{activePriceBar.partial && " · 未完成"}
 					</span>
 				)}
 				{asOf && (

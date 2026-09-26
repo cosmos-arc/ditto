@@ -22,6 +22,7 @@ from ditto_application.queries.retained_calendar import (
     retained_calendar_window,
 )
 from ditto_application.queries.technical_analysis_source import (
+    AdjustmentFactor,
     ProviderPayloadTechnicalAnalysisSource,
 )
 
@@ -113,7 +114,7 @@ def _chart_rows(
     calendar: RetainedCalendarWindow,
     request: MarketChartRequest,
     as_of: datetime,
-    factors: dict[str, tuple[float, str, datetime, datetime]],
+    factors: dict[str, AdjustmentFactor],
 ) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
     """Select visible sessions, then aggregate complete or partial periods."""
     days = set(calendar.days)
@@ -160,12 +161,12 @@ def _chart_rows(
         ).append((day, bar))
     if request.adjustment != "none" and any(day not in factors for day in by_day):
         raise AppQueryError("exact adjustment factor missing for a chart price day")
-    baseline = factors[max(by_day)][0] if by_day and factors else 1.0
+    baseline = factors[max(by_day)].value if by_day and factors else 1.0
 
     def multiplier(day: str) -> float:
         if request.adjustment == "none":
             return 1.0
-        factor = factors[day][0]
+        factor = factors[day].value
         return factor / baseline if request.adjustment == "qfq" else factor
 
     result: list[MarketChartBar] = []
@@ -212,7 +213,7 @@ def _chart_rows(
                     sorted(
                         {bar.source_snapshot_id for _, bar in group}
                         | (
-                            {factors[day][1] for day, _ in group}
+                            {factors[day].snapshot_id for day, _ in group}
                             if request.adjustment != "none"
                             else set()
                         )
@@ -221,7 +222,7 @@ def _chart_rows(
                 available_at=max(
                     [bar.knowledge_at for _, bar in group]
                     + (
-                        [factors[day][2] for day, _ in group]
+                        [factors[day].available_at for day, _ in group]
                         if request.adjustment != "none"
                         else []
                     )
@@ -229,7 +230,7 @@ def _chart_rows(
                 published_at=max(
                     [bar.publication_at for _, bar in group]
                     + (
-                        [factors[day][3] for day, _ in group]
+                        [factors[day].published_at for day, _ in group]
                         if request.adjustment != "none"
                         else []
                     )
@@ -352,7 +353,7 @@ class MarketChartQueryFacade:
             instrument_id=InstrumentId(instrument_id),
             instrument_code=instrument_code,
         )
-        factors: dict[str, tuple[float, str, datetime, datetime]] = {}
+        factors: dict[str, AdjustmentFactor] = {}
         if adjustment != "none":
             self._market.assert_adjustment_allowed(
                 allow_experimental_data=allow_experimental_data

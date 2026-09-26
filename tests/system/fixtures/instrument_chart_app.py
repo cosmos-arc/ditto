@@ -121,6 +121,31 @@ def _seed_retained_charts(
             .alias("source_ticker"),
             pl.col("trade_date").alias("event_time"),
         )
+        if dataset == "etf_daily":
+            # Same trading date as a deliberate gap, but unknowable at the
+            # browser decision cutoff. PIT must hide this extreme value.
+            frame = pl.concat(
+                [
+                    frame,
+                    pl.DataFrame(
+                        {
+                            "instrument_id": [ETF_ID],
+                            "trade_date": ["2026-03-04"],
+                            "event_time": ["2026-03-04"],
+                            "source_ticker": ["510300.SH"],
+                            "open": [999_999.0],
+                            "high": [1_000_000.0],
+                            "low": [999_998.0],
+                            "close": [999_999.0],
+                            "volume": [1.0],
+                            "amount": [999_999.0],
+                            "available_at": ["2099-01-01T00:00:00Z"],
+                            "published_at": ["2099-01-01T00:00:00Z"],
+                        }
+                    ),
+                ],
+                how="diagonal_relaxed",
+            )
         license_record = DatasetLicenseRecord.create(
             DatasetLicenseDraft(
                 dataset_id=dataset,

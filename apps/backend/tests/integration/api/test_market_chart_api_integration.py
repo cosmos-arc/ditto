@@ -30,6 +30,8 @@ from ditto_data.catalog.source_snapshot import (
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+pytestmark = pytest.mark.integration
+
 
 class _Snapshots:
     def __init__(self, values: tuple[ProviderSnapshot, ...]) -> None:
