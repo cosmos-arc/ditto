@@ -212,7 +212,15 @@ def _chart_rows(
         contributing_suspensions = [
             evidence
             for day, evidence in suspensions.items()
-            if day in visible_days
+            if day in calendar.days
+            and max(period_start, request.listed_on or period_start).isoformat()
+            <= day
+            <= min(
+                period_end,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else period_end,
+            ).isoformat()
             and day not in by_day
             and _period_key(date.fromisoformat(day), request.period)
             == _period_key(date.fromisoformat(first_day), request.period)

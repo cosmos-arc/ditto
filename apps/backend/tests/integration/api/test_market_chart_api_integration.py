@@ -823,7 +823,10 @@ def test_chart_closed_only_window_preserves_calendar_without_ingestion_failure(
 
 
 @pytest.mark.pit
-def test_chart_aggregate_carries_suspension_observation_clocks(tmp_path: Path) -> None:
+@pytest.mark.parametrize("end_day", [10, 11])
+def test_chart_aggregate_carries_suspension_observation_clocks(
+    tmp_path: Path, end_day: int
+) -> None:
     chart, price, _ = _chart(tmp_path, poisoned=False, suspended=True)
     status = _snapshot(
         FilesystemProviderPayloadStore(tmp_path),
@@ -860,7 +863,7 @@ def test_chart_aggregate_carries_suspension_observation_clocks(tmp_path: Path) -
             instrument_id=1000001,
             asset_class="stock",
             start_date=date(2026, 3, 9),
-            end_date=date(2026, 3, 11),
+            end_date=date(2026, 3, end_day),
             period="weekly",
             adjustment="none",
             allow_experimental_data=False,
