@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from math import isfinite
@@ -210,10 +210,20 @@ class CandidateSpec:
             _freeze_mapping(self.parameters, "parameters"),
         )
 
+    # Identity is fixed at freeze time; memoized because readers re-derive this
+    # hash on every view reconstruction (json+sha256 dominated scheduler reads).
+    _parameter_hash_cache: ContentHash | None = field(
+        init=False, repr=False, compare=False, default=None
+    )
+
     @property
     def parameter_hash(self) -> ContentHash:
         """Return the canonical content identity of the frozen parameters."""
-        return candidate_parameter_hash(self.parameters)
+        cached = self._parameter_hash_cache
+        if cached is None:
+            cached = candidate_parameter_hash(self.parameters)
+            object.__setattr__(self, "_parameter_hash_cache", cached)
+        return cached
 
 
 @dataclass(frozen=True, slots=True)
