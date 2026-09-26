@@ -780,3 +780,16 @@ def test_single_package_local_checks_and_cross_package_escalation() -> None:
     assert verification_commands(
         "backend", [path, "packages/kernel/src/ditto_kernel/errors.py"]
     ) == [["task", "check"]]
+
+
+def test_non_python_file_in_a_second_package_keeps_the_cross_package_gate() -> None:
+    paths = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "packages/data/src/ditto_data/scripts/schema.sql",
+    ]
+    commands = verification_commands(classify_diff(paths), paths)
+
+    assert [" ".join(command) for command in commands] == [
+        "task check",
+        "task pit",
+    ]

@@ -1109,10 +1109,12 @@ def _backend_test_commands(
 
 
 def _backend_source_commands(paths: Sequence[str]) -> list[list[str]]:
+    # Ownership spans every backend-area path, not only Python: a schema.sql or
+    # fixture in another package must keep the push on the cross-package gate.
     owners = {
         "/".join(path.split("/")[:2])
         for path in paths
-        if path.endswith(".py") and path.startswith(("packages/", "apps/backend/"))
+        if path.startswith(("packages/", "apps/backend/"))
     }
     # CI keeps high-risk scopes on the full gate (ci.required_jobs); the local
     # ladder only adds the PIT suite, so pushes do not double-pay the full check.
