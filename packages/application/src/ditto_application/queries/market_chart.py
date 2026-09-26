@@ -245,6 +245,14 @@ def _chart_rows(
         return factor / baseline if request.adjustment == "qfq" else factor
 
     result: list[MarketChartBar] = []
+    # queried_snapshot_ids is fixed for the whole request; resolve the
+    # absence-evidence candidates once instead of rescanning the catalog
+    # for every candle.
+    absence_sources = [
+        item
+        for item in snapshots.list_snapshots()
+        if item.snapshot_id in queried_snapshot_ids
+    ]
     for group in grouped.values():
         first_day, first = group[0]
         last_day, last = group[-1]
@@ -314,9 +322,8 @@ def _chart_rows(
         )
         absence_snapshot_ids = {
             item.snapshot_id
-            for item in snapshots.list_snapshots()
-            if item.snapshot_id in queried_snapshot_ids
-            and any(
+            for item in absence_sources
+            if any(
                 period_start.isoformat() <= day <= period_end.isoformat()
                 and _snapshot_range(item.request_start)
                 <= day.replace("-", "")
