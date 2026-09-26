@@ -129,6 +129,26 @@ def _snapshot_observed_at(
     return snapshot_observed_by(snapshot, cutoff)
 
 
+def _observed_at_reader(
+    snapshots: ProviderSnapshotReader, as_of: datetime
+) -> Callable[[str], datetime]:
+    """
+    Resolve each snapshot's observation time once per request.
+
+    Candles share the same contributing snapshot set, so resolving per bar
+    and per candle would re-read every snapshot from the reader thousands
+    of times on a long daily range.
+    """
+    resolved: dict[str, datetime] = {}
+
+    def observed_at(snapshot_id: str) -> datetime:
+        if snapshot_id not in resolved:
+            resolved[snapshot_id] = _snapshot_observed_at(snapshots, snapshot_id, as_of)
+        return resolved[snapshot_id]
+
+    return observed_at
+
+
 def _chart_rows(
     raw: tuple[TechnicalBar, ...],
     snapshots: ProviderSnapshotReader,
@@ -140,6 +160,7 @@ def _chart_rows(
 ) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
     """Select visible sessions, then aggregate complete or partial periods."""
     as_of = request.now.astimezone(UTC)
+    snapshot_observed_at = _observed_at_reader(snapshots, as_of)
     days = set(calendar.days)
     by_day: dict[str, TechnicalBar] = {}
     for bar in raw:
@@ -165,9 +186,9 @@ def _chart_rows(
                 else "chart bar is outside the retained trading calendar"
             )
         previous = by_day.get(day)
-        if previous is None or _snapshot_observed_at(
-            snapshots, bar.source_snapshot_id, as_of
-        ) > _snapshot_observed_at(snapshots, previous.source_snapshot_id, as_of):
+        if previous is None or snapshot_observed_at(
+            bar.source_snapshot_id
+        ) > snapshot_observed_at(previous.source_snapshot_id):
             by_day[day] = bar
     visible_days = [
         day
@@ -336,7 +357,7 @@ def _chart_rows(
                 available_at=max(
                     [bar.knowledge_at for _, bar in group]
                     + [
-                        _snapshot_observed_at(snapshots, item, as_of)
+                        snapshot_observed_at(item)
                         for item in bar_snapshot_ids | calendar_ids
                     ]
                     + [item.available_at for item in contributing_suspensions]
