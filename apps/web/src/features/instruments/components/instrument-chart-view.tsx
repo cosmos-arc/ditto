@@ -344,6 +344,16 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 								价格可得 {latestBar.available_at} · 发布 {latestBar.published_at}
 							</span>
 						)}
+						{partial && (
+							<span data-state="bars-partial" className="text-xs">
+								部分周期不完整
+							</span>
+						)}
+					</div>
+				)}
+
+				{(stale || missingSessions.length > 0) && (
+					<div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 px-3 py-2.5 text-sm">
 						{stale && (
 							<span className="inline-flex items-center gap-1.5 text-xs text-(--color-foreground-tertiary)">
 								<StaleIndicator isStale />
@@ -358,11 +368,6 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 								data-state="bars-partial"
 							>
 								缺失交易日 {missingSessions.join("、")}
-							</span>
-						)}
-						{partial && (
-							<span data-state="bars-partial" className="text-xs">
-								部分周期不完整
 							</span>
 						)}
 					</div>

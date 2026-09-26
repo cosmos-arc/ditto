@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { instrumentsHandlers } from "@/mocks/handlers/instruments";
@@ -147,6 +148,40 @@ describe("InstrumentChartView", () => {
 		expect(screen.getByText(/1732\.10–1768\.80/)).toBeInTheDocument();
 		expect(screen.getByText(/快照 bars-exact-1/)).toBeInTheDocument();
 		expect(screen.getByText(/价格可得 2026-03-10T08:00:00Z/)).toBeInTheDocument();
+	});
+
+	it.each([true, false])("空行情仍独立显示缺口状态：%s", async (gap) => {
+		server.use(
+			http.post("/api/v1/market/chart", () =>
+				HttpResponse.json({
+					data: {
+						instrument_id: 1000001,
+						period: "daily",
+						adjustment: "none",
+						as_of: "2026-03-10T08:00:00Z",
+						knowledge_cutoff: "2026-03-10T08:00:00Z",
+						publication_cutoff: "2026-03-10T08:00:00Z",
+						timezone: "Asia/Shanghai",
+						calendar_snapshot_ids: ["calendar-exact-1"],
+						source_snapshot_ids: [],
+						sources: [],
+						latest_price_date: null,
+						stale_reason: gap ? "no_visible_price" : null,
+						missing_sessions: gap ? ["2026-03-10"] : [],
+						bars: [],
+					},
+				}),
+			),
+		);
+		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByText(/所选日期范围没有可见行情/);
+		if (gap) {
+			expect(screen.getByText(/当前没有可见价格/)).toBeInTheDocument();
+			expect(screen.getByText("缺失交易日 2026-03-10")).toBeInTheDocument();
+		} else {
+			expect(screen.queryByText(/当前没有可见价格/)).not.toBeInTheDocument();
+			expect(screen.queryByTestId("chart-gaps-1000001")).not.toBeInTheDocument();
+		}
 	});
 
 	it("周线切换消费服务端周桶与 partial", async () => {
