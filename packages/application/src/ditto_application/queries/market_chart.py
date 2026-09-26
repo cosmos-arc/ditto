@@ -255,14 +255,16 @@ def _chart_rows(
                 else True
             )
         )
+        contributing_factors = (
+            [factors[day] for day, _ in group]
+            + ([factors[max(by_day)]] if request.adjustment == "qfq" else [])
+            if request.adjustment != "none"
+            else []
+        )
         bar_snapshot_ids = (
             {bar.source_snapshot_id for _, bar in group}
             | {item.snapshot_id for item in contributing_suspensions}
-            | (
-                {factors[day].snapshot_id for day, _ in group}
-                if request.adjustment != "none"
-                else set()
-            )
+            | {item.snapshot_id for item in contributing_factors}
         )
         calendar_ids = {
             snapshot_id
@@ -295,20 +297,12 @@ def _chart_rows(
                         for item in bar_snapshot_ids | calendar_ids
                     ]
                     + [item.available_at for item in contributing_suspensions]
-                    + (
-                        [factors[day].available_at for day, _ in group]
-                        if request.adjustment != "none"
-                        else []
-                    )
+                    + [item.available_at for item in contributing_factors]
                 ),
                 published_at=max(
                     [bar.publication_at for _, bar in group]
                     + [item.published_at for item in contributing_suspensions]
-                    + (
-                        [factors[day].published_at for day, _ in group]
-                        if request.adjustment != "none"
-                        else []
-                    )
+                    + [item.published_at for item in contributing_factors]
                 ),
                 partial=partial,
             )
@@ -691,13 +685,12 @@ class MarketChartQueryFacade:
         queried_snapshot_ids.update(status_ids)
         result, missing, latest_price_date = _chart_rows(
             raw,
-            selected,
+            self._snapshots,
             calendar,
             request,
             as_of,
             factors,
             suspensions,
-            self._snapshots,
         )
         stale_reason = (
             "no_visible_price"

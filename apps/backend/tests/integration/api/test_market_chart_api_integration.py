@@ -916,3 +916,64 @@ def test_chart_availability_includes_late_snapshot_observation(
     )
     assert result.bars[0].available_at == observed
     assert result.bars[0].published_at < observed
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("adjustment", ["qfq", "hfq"])
+def test_chart_qfq_earlier_bar_carries_late_baseline_factor(
+    tmp_path: Path, adjustment: str
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    observed = datetime(2026, 3, 12, 8, tzinfo=UTC)
+    baseline = _snapshot(
+        FilesystemProviderPayloadStore(tmp_path),
+        "adj_factor",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "trade_date": ["2026-03-10"],
+                "adj_factor": [1.2],
+                "available_at": [observed],
+                "published_at": [observed],
+            }
+        ),
+        observed,
+    )
+    baseline = replace(baseline, request_start="2026-03-10", request_end="2026-03-10")
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(
+                    replace(item, request_start="2026-03-09", request_end="2026-03-09")
+                    if item.dataset_id == "adj_factor"
+                    else item
+                    for item in chart._snapshots.list_snapshots()
+                ),
+                baseline,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment=adjustment,
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+        )
+    )
+    earlier = result.bars[0]
+    if adjustment == "qfq":
+        assert baseline.snapshot_id in earlier.source_snapshot_ids
+        assert earlier.available_at == observed
+        assert earlier.published_at == observed
+    else:
+        assert baseline.snapshot_id not in earlier.source_snapshot_ids
+        assert earlier.available_at < observed
