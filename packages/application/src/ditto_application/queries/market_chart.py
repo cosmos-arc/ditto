@@ -610,14 +610,16 @@ class MarketChartQueryFacade:
         )
         as_of = now.astimezone(UTC)
         cutoff = as_of
-        end_date = min(end_date, as_of.astimezone(_SHANGHAI).date())
-        request = replace(request, end_date=end_date)
-        if max(start_date, request.listed_on or start_date) > min(
+        start_date = max(start_date, request.listed_on or start_date)
+        end_date = min(
             end_date,
+            as_of.astimezone(_SHANGHAI).date(),
             request.delisted_on - timedelta(days=1)
             if request.delisted_on
             else end_date,
-        ):
+        )
+        request = replace(request, start_date=start_date, end_date=end_date)
+        if start_date > end_date:
             return MarketChartView(
                 instrument_id=instrument_id,
                 period=period,

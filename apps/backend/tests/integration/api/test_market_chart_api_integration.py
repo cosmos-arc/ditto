@@ -1174,3 +1174,46 @@ def test_chart_fallback_prices_use_independent_factor_and_status_sources(
     assert {
         item.snapshot_id for item in reader.list_snapshots(dataset_id="stock_status")
     } <= set(result.source_snapshot_ids)
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["stock_daily", "adj_factor", "stock_status"])
+@pytest.mark.parametrize("outside_day", [9, 11])
+def test_chart_ignores_conflicting_shards_outside_active_lifetime(
+    tmp_path: Path, dataset: str, outside_day: int
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    original = chart._snapshots.list_snapshots(dataset_id=dataset)[0]
+    outside = replace(
+        original,
+        snapshot_id="outside-lifetime-shard",
+        request_start=f"2026-03-{outside_day:02}",
+        request_end=f"2026-03-{outside_day:02}",
+        source="fuyao",
+        schema_version=f"{dataset}.v2",
+        created_at=datetime(2026, 3, 10, 8, tzinfo=UTC),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), outside)),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="qfq" if dataset == "adj_factor" else "none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+            listed_on=date(2026, 3, 10),
+            delisted_on=date(2026, 3, 11),
+        )
+    )
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-10"]
+    assert outside.snapshot_id not in result.source_snapshot_ids
+    assert result.missing_sessions == ()
