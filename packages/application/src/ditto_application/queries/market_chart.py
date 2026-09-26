@@ -492,6 +492,9 @@ class MarketChartQueryFacade:
             )
             if not status_snapshots:
                 return {}, ()
+            instrument_code = self._instrument_code(
+                request, status_snapshots[0].source, cutoff, calendar
+            )
             snapshot_ids = tuple(item.snapshot_id for item in status_snapshots)
             status_context = PITQueryContext(
                 as_of=cutoff,
@@ -512,9 +515,7 @@ class MarketChartQueryFacade:
                 suspensions = self._bars.load_suspensions(
                     status_context,
                     instrument_id=InstrumentId(request.instrument_id),
-                    instrument_code=self._instrument_code(
-                        request, status_snapshots[0].source, cutoff, calendar
-                    ),
+                    instrument_code=instrument_code,
                 )
         return suspensions, snapshot_ids
 
@@ -537,6 +538,9 @@ class MarketChartQueryFacade:
                 cutoff,
                 instrument_id=request.instrument_id,
             )
+            instrument_code = self._instrument_code(
+                request, factor_snapshots[0].source, cutoff, calendar
+            )
             snapshot_ids = tuple(item.snapshot_id for item in factor_snapshots)
             factor_context = PITQueryContext(
                 as_of=cutoff,
@@ -557,9 +561,7 @@ class MarketChartQueryFacade:
                 self._bars.load_adjustment_factors(
                     factor_context,
                     instrument_id=InstrumentId(request.instrument_id),
-                    instrument_code=self._instrument_code(
-                        request, factor_snapshots[0].source, cutoff, calendar
-                    ),
+                    instrument_code=instrument_code,
                 )
                 if any(item.payload_retained for item in factor_snapshots)
                 else {}

@@ -1369,3 +1369,52 @@ def test_chart_partial_candle_carries_late_empty_revision_evidence(
     assert result.missing_sessions == ("2026-03-11",)
     assert empty.snapshot_id in result.bars[0].source_snapshot_ids
     assert result.bars[0].available_at == observed
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["adj_factor", "stock_status"])
+def test_chart_empty_auxiliary_evidence_still_requires_effective_mapping(
+    tmp_path: Path, dataset: str
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True, price_source="fuyao")
+    original = chart._snapshots.list_snapshots(dataset_id=dataset)[0]
+    empty = replace(
+        original,
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                empty if item.snapshot_id == original.snapshot_id else item
+                for item in chart._snapshots.list_snapshots()
+            )
+        ),
+    )
+    metadata = cast(
+        MetadataQueryFacade,
+        SimpleNamespace(
+            get_source_ticker=lambda *args, **kwargs: (
+                None
+                if kwargs["source"] == "tushare" and kwargs["asof"] == "2026-03-11"
+                else "600519.SH"
+            ),
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, chart._payloads, metadata, chart._market)
+    with pytest.raises(AppQueryError, match="ticker mapping is unavailable"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="qfq" if dataset == "adj_factor" else "none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+            )
+        )
