@@ -1130,32 +1130,46 @@ def _is_package_manifest(path: str) -> bool:
 
 @lru_cache(maxsize=64)
 def _has_collectable_tests(workspace: Path, owner: str) -> bool:
-    """The scoped target must yield at least one pytest item.
+    """The scoped fast-test target must yield at least one pytest item.
 
-    Filename and git heuristics miss fixture-only modules; only collection
-    itself knows what pytest can run (exit 5 = nothing collected). Probe
-    failures and timeouts fall back to the full gate; cached per process so
-    one push pays each owner's collection at most once.
+    The probe goes through scripts/test.py --fast so the marker expression,
+    keyring isolation, and pytest options stay owned by one authority and
+    match the emitted ``task test -- --fast`` command exactly (exit 5 =
+    nothing selected, including marker-deselected or fixture-only modules).
+    Probe failures and timeouts fall back to the full gate; cached per
+    process so one push pays each owner's collection at most once.
     """
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             [
                 "uv",
                 "run",
                 "--no-sync",
-                "pytest",
+                "python",
+                "scripts/test.py",
+                "--fast",
                 "--collect-only",
-                "-q",
                 f"{owner}/tests",
             ],
             cwd=workspace,
-            timeout=120,
-            capture_output=True,
-            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
-    except (OSError, subprocess.SubprocessError):
+    except OSError:
         return False
-    return result.returncode == 0
+    try:
+        returncode = process.wait(timeout=120)
+    except subprocess.TimeoutExpired:
+        # start_new_session makes the child its own group leader; kill the
+        # whole tree so a hung import cannot leak collectors into the gate.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+        return False
+    return returncode == 0
 
 
 def _backend_source_commands(
