@@ -161,6 +161,14 @@ class MarketQueryFacade:
         if blocked:
             raise AppQueryError("adj_factor requires experimental dataset maturity")
 
+    def allows_suspension_evidence(self, *, allow_experimental_data: bool) -> bool:
+        """Unknown or unpromoted status must not suppress chart gaps."""
+        return not blocked_catalog_datasets(
+            ("stock_status",),
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
+        )
+
     def get_constituents(
         self,
         index_id: int,

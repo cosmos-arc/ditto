@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -27,6 +28,7 @@ from ditto_data.catalog.source_snapshot import (
     ProviderSnapshotDraft,
     ProviderSnapshotReader,
 )
+from ditto_data.services.market_service import MarketService
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -193,6 +195,7 @@ def _chart(
         SimpleNamespace(
             assert_bars_allowed=lambda **kwargs: None,
             assert_adjustment_allowed=lambda **kwargs: None,
+            allows_suspension_evidence=lambda **kwargs: True,
         ),
     )
     return (
@@ -444,3 +447,110 @@ def test_chart_preserves_queried_lineage_when_no_visible_price(tmp_path: Path) -
     assert result.missing_sessions == ("2026-03-11",)
     assert result.source_snapshot_ids == (snapshot.snapshot_id,)
     assert result.sources == ("tushare",)
+
+
+@pytest.mark.pit
+def test_chart_does_not_use_unapproved_status_to_hide_gaps(tmp_path: Path) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    # Use the real catalog gate: stock_status is experimental independently of prices.
+    market = MarketQueryFacade(cast(MarketService, SimpleNamespace()))
+    chart._market = cast(
+        MarketQueryFacade,
+        SimpleNamespace(
+            assert_bars_allowed=lambda **kwargs: None,
+            allows_suspension_evidence=market.allows_suspension_evidence,
+        ),
+    )
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 9),
+        end_date=date(2026, 3, 11),
+        period="daily",
+        adjustment="none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+    )
+    assert chart.get_chart(request).missing_sessions == ("2026-03-11",)
+    assert (
+        chart.get_chart(
+            MarketChartRequest(**{**vars(request), "allow_experimental_data": True})
+        ).missing_sessions
+        == ()
+    )
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize(
+    "revision", ["omitted", "other_request", "reobserved", "empty"]
+)
+def test_chart_snapshot_authority_is_bound_to_exact_request(
+    tmp_path: Path, revision: str
+) -> None:
+    chart, original, metadata = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    observed = datetime(2026, 3, 10, 8, tzinfo=UTC)
+    newer = _snapshot(
+        store,
+        "stock_daily",
+        pl.DataFrame(
+            {
+                "source_ticker": [
+                    "OTHER.SH" if revision == "other_request" else "600519.SH"
+                ],
+                "trade_date": ["2026-03-09"],
+                "open": [99.0],
+                "high": [100.0],
+                "low": [98.0],
+                "close": [99.0],
+                "volume": [10.0],
+                "amount": [100.0],
+            }
+        ),
+        observed,
+    )
+    if revision == "other_request":
+        newer = replace(newer, request_parameters_hash="sha256:other-ticker-request")
+    if revision == "empty":
+        newer = replace(
+            newer,
+            row_count=0,
+            payload_retained=False,
+            payload_uri=None,
+            response_metadata=(
+                ("snapshot_layer", "verified_empty_provider_observation"),
+            ),
+        )
+    values = tuple(chart._snapshots.list_snapshots())
+    if revision == "reobserved":
+        original = replace(
+            original, observations=(datetime(2026, 3, 11, 7, tzinfo=UTC),)
+        )
+        values = tuple(
+            original if item.snapshot_id == original.snapshot_id else item
+            for item in values
+        )
+    reader = cast(ProviderSnapshotReader, _Snapshots((*values, newer)))
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    if revision == "omitted":
+        assert [bar.close for bar in result.bars] == [99.0]
+        assert result.missing_sessions == ("2026-03-10",)
+    elif revision == "empty":
+        assert result.bars == ()
+        assert result.stale_reason == "no_visible_price"
+        assert result.source_snapshot_ids == (newer.snapshot_id,)
+    else:
+        assert [bar.close for bar in result.bars] == [10.2, 10.8]
+        assert result.missing_sessions == ()

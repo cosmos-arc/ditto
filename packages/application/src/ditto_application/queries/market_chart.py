@@ -22,6 +22,7 @@ from ditto_application.queries.retained_calendar import (
     RetainedCalendarWindow,
     calendar_has_complete_authority,
     retained_calendar_window,
+    snapshot_observed_by,
 )
 from ditto_application.queries.technical_analysis_source import (
     AdjustmentFactor,
@@ -143,11 +144,9 @@ def _chart_rows(
         if day not in days:
             raise AppQueryError("chart bar is outside the retained trading calendar")
         previous = by_day.get(day)
-        if (
-            previous is None
-            or observed[bar.source_snapshot_id].created_at
-            > observed[previous.source_snapshot_id].created_at
-        ):
+        if previous is None or snapshot_observed_by(
+            observed[bar.source_snapshot_id], as_of
+        ) > snapshot_observed_by(observed[previous.source_snapshot_id], as_of):
             by_day[day] = bar
     coverage_start = min(_snapshot_range(item.request_start) for item in selected)
     visible_days = [
@@ -299,9 +298,7 @@ class MarketChartQueryFacade:
         candidates = [
             item
             for item in self._snapshots.list_snapshots(dataset_id=dataset_id)
-            if item.payload_retained
-            and item.payload_uri
-            and item.created_at <= cutoff
+            if item.created_at <= cutoff
             and (source is None or item.source == source)
             and _snapshot_range(item.request_start) <= end_date.strftime("%Y%m%d")
             and _snapshot_range(item.request_end) >= start_date.strftime("%Y%m%d")
@@ -310,13 +307,30 @@ class MarketChartQueryFacade:
             raise AppQueryError(
                 f"retained chart {dataset_id} snapshots are unavailable at cutoff"
             )
-        latest = max(candidates, key=lambda item: item.created_at)
-        return tuple(
-            item
-            for item in candidates
-            if item.schema_version == latest.schema_version
-            and item.source == latest.source
-        )
+        latest = max(candidates, key=lambda item: snapshot_observed_by(item, cutoff))
+        revisions: dict[tuple[str, str, str], ProviderSnapshot] = {}
+        for item in candidates:
+            if (
+                item.schema_version != latest.schema_version
+                or item.source != latest.source
+            ):
+                continue
+            key = (item.request_start, item.request_end, item.request_parameters_hash)
+            prior = revisions.get(key)
+            if prior is None or snapshot_observed_by(
+                item, cutoff
+            ) > snapshot_observed_by(prior, cutoff):
+                revisions[key] = item
+        for item in revisions.values():
+            if not (item.payload_retained and item.payload_uri) and not (
+                item.row_count == 0
+                and dict(item.response_metadata).get("snapshot_layer")
+                == "verified_empty_provider_observation"
+            ):
+                raise AppQueryError(
+                    "authoritative chart revision has no retained payload"
+                )
+        return tuple(revisions.values())
 
     def _load_suspensions(
         self,
@@ -327,16 +341,20 @@ class MarketChartQueryFacade:
     ) -> tuple[dict[str, str], tuple[str, ...]]:
         suspensions: dict[str, str] = {}
         snapshot_ids: tuple[str, ...] = ()
-        if request.asset_class == "stock" and any(
-            item.payload_retained
-            and item.payload_uri
-            and item.created_at <= cutoff
-            and item.source == source
-            and _snapshot_range(item.request_start)
-            <= request.end_date.strftime("%Y%m%d")
-            and _snapshot_range(item.request_end)
-            >= request.start_date.strftime("%Y%m%d")
-            for item in self._snapshots.list_snapshots(dataset_id="stock_status")
+        if (
+            request.asset_class == "stock"
+            and self._market.allows_suspension_evidence(
+                allow_experimental_data=request.allow_experimental_data
+            )
+            and any(
+                item.created_at <= cutoff
+                and item.source == source
+                and _snapshot_range(item.request_start)
+                <= request.end_date.strftime("%Y%m%d")
+                and _snapshot_range(item.request_end)
+                >= request.start_date.strftime("%Y%m%d")
+                for item in self._snapshots.list_snapshots(dataset_id="stock_status")
+            )
         ):
             status_snapshots = self._select_snapshots(
                 "stock_status", request.start_date, request.end_date, cutoff, source
@@ -357,11 +375,12 @@ class MarketChartQueryFacade:
                     ),
                 ),
             )
-            suspensions = self._bars.load_suspensions(
-                status_context,
-                instrument_id=InstrumentId(request.instrument_id),
-                instrument_code=instrument_code,
-            )
+            if any(item.payload_retained for item in status_snapshots):
+                suspensions = self._bars.load_suspensions(
+                    status_context,
+                    instrument_id=InstrumentId(request.instrument_id),
+                    instrument_code=instrument_code,
+                )
         return suspensions, snapshot_ids
 
     def get_chart(self, request: MarketChartRequest) -> MarketChartView:
@@ -424,10 +443,14 @@ class MarketChartQueryFacade:
                 ),
             ),
         )
-        raw = self._bars.load(
-            context,
-            instrument_id=InstrumentId(instrument_id),
-            instrument_code=instrument_code,
+        raw = (
+            self._bars.load(
+                context,
+                instrument_id=InstrumentId(instrument_id),
+                instrument_code=instrument_code,
+            )
+            if any(item.payload_retained for item in selected)
+            else ()
         )
         factors: dict[str, AdjustmentFactor] = {}
         if adjustment != "none":
@@ -453,10 +476,14 @@ class MarketChartQueryFacade:
                     ),
                 ),
             )
-            factors = self._bars.load_adjustment_factors(
-                factor_context,
-                instrument_id=InstrumentId(instrument_id),
-                instrument_code=instrument_code,
+            factors = (
+                self._bars.load_adjustment_factors(
+                    factor_context,
+                    instrument_id=InstrumentId(instrument_id),
+                    instrument_code=instrument_code,
+                )
+                if any(item.payload_retained for item in factor_snapshots)
+                else {}
             )
         suspensions, status_ids = self._load_suspensions(
             request, latest.source, cutoff, instrument_code

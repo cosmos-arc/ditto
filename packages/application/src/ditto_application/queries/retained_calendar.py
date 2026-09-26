@@ -41,7 +41,7 @@ def calendar_has_single_source(
     return len(sources) == 1 and None not in sources
 
 
-def _observed_by(snapshot: ProviderSnapshot, cutoff: datetime) -> datetime:
+def snapshot_observed_by(snapshot: ProviderSnapshot, cutoff: datetime) -> datetime:
     """
     Latest observation event this snapshot had actually received by the cutoff.
 
@@ -145,7 +145,7 @@ def retained_calendar_window(
             for snapshot in snapshots.list_snapshots(dataset_id="calendar")
             if snapshot.payload_retained and snapshot.created_at <= cutoff
         ),
-        key=lambda item: (_observed_by(item, cutoff), item.snapshot_id),
+        key=lambda item: (snapshot_observed_by(item, cutoff), item.snapshot_id),
     )
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")

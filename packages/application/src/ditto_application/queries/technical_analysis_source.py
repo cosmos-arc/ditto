@@ -24,6 +24,7 @@ from ditto_kernel.identity import InstrumentId
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.paper_contracts import PaperMarketSnapshotInput
+from ditto_application.queries.retained_calendar import snapshot_observed_by
 
 __all__ = ["ProviderPayloadTechnicalAnalysisSource"]
 
@@ -188,6 +189,16 @@ class _PayloadDatasetReader(PITDatasetReader):
         frames: list[pl.DataFrame] = []
         for snapshot_id in snapshot.source_snapshot_ids:
             provider_snapshot = self._snapshot_reader.get_snapshot(snapshot_id)
+            if (
+                provider_snapshot is not None
+                and provider_snapshot.snapshot_id == snapshot_id
+                and provider_snapshot.dataset_id == snapshot.dataset_id
+                and provider_snapshot.schema_version == snapshot.dataset_version
+                and provider_snapshot.row_count == 0
+                and dict(provider_snapshot.response_metadata).get("snapshot_layer")
+                == "verified_empty_provider_observation"
+            ):
+                continue
             if (
                 provider_snapshot is None
                 or provider_snapshot.snapshot_id != snapshot_id
@@ -469,10 +480,9 @@ class ProviderPayloadTechnicalAnalysisSource:
             prior_snapshot = (
                 self._snapshot_reader.get_snapshot(prior.snapshot_id) if prior else None
             )
-            if (
-                prior_snapshot is None
-                or snapshot.created_at > prior_snapshot.created_at
-            ):
+            if prior_snapshot is None or snapshot_observed_by(
+                snapshot, context.as_of
+            ) > snapshot_observed_by(prior_snapshot, context.as_of):
                 factors[day] = AdjustmentFactor(
                     factor,
                     snapshot_id,
@@ -513,7 +523,9 @@ class ProviderPayloadTechnicalAnalysisSource:
                 else None
             )
             if snapshot is not None and (
-                prior is None or snapshot.created_at > prior.created_at
+                prior is None
+                or snapshot_observed_by(snapshot, context.as_of)
+                > snapshot_observed_by(prior, context.as_of)
             ):
                 rows[day] = row
         return {
