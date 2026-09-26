@@ -1116,6 +1116,11 @@ def _backend_source_commands(paths: Sequence[str]) -> list[list[str]]:
         for path in paths
         if path.startswith(("packages/", "apps/backend/"))
     }
+    # config/ and scripts/ classify as backend material but own no package test
+    # suite (arch-check exercises them), so they always keep the full gate —
+    # matching ci.required_jobs, which also escalates them to every job.
+    if any(path.startswith(("config/", "scripts/")) for path in paths):
+        return [["task", "check"]]
     # CI keeps high-risk scopes on the full gate (ci.required_jobs); the local
     # ladder only adds the PIT suite, so pushes do not double-pay the full check.
     if len(owners) != 1:

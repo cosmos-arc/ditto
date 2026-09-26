@@ -793,3 +793,22 @@ def test_non_python_file_in_a_second_package_keeps_the_cross_package_gate() -> N
         "task check",
         "task pit",
     ]
+
+
+def test_repo_level_backend_paths_keep_the_full_check() -> None:
+    with_scripts = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "scripts/architecture/check_architecture_smells.py",
+    ]
+    assert [
+        " ".join(command)
+        for command in verification_commands(classify_diff(with_scripts), with_scripts)
+    ] == ["task check", "task pit"]
+
+    for path in (
+        "scripts/architecture/check_architecture_smells.py",
+        "config/logging.yaml",
+    ):
+        assert verification_commands(classify_diff([path]), [path]) == [
+            ["task", "check"]
+        ]
