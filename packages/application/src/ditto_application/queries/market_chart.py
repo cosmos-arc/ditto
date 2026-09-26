@@ -404,10 +404,7 @@ class MarketChartQueryFacade:
         latest = max(candidates, key=lambda item: snapshot_observed_by(item, cutoff))
         revisions: dict[tuple[str, str, str], ProviderSnapshot] = {}
         for item in candidates:
-            if (
-                item.schema_version != latest.schema_version
-                or item.source != latest.source
-            ):
+            if item.source != latest.source:
                 continue
             key = (item.request_start, item.request_end, item.request_parameters_hash)
             prior = revisions.get(key)
@@ -415,6 +412,8 @@ class MarketChartQueryFacade:
                 item, cutoff
             ) > snapshot_observed_by(prior, cutoff):
                 revisions[key] = item
+        if len({item.schema_version for item in revisions.values()}) > 1:
+            raise AppQueryError("retained chart shards have incompatible schemas")
         for item in revisions.values():
             if not (item.payload_retained and item.payload_uri) and not (
                 item.row_count == 0

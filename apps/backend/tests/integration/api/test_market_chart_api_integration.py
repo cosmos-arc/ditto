@@ -1051,3 +1051,49 @@ def test_chart_qfq_uses_visible_factor_even_when_its_price_is_missing(
     assert result.missing_sessions == ("2026-03-11",)
     assert baseline.snapshot_id in result.bars[0].source_snapshot_ids
     assert result.bars[0].available_at == observed
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["stock_daily", "adj_factor", "stock_status"])
+def test_chart_mixed_schema_shards_fail_explicitly_instead_of_false_gaps(
+    tmp_path: Path, dataset: str
+) -> None:
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    original = chart._snapshots.list_snapshots(dataset_id=dataset)[0]
+    older = replace(original, request_start="2026-03-09", request_end="2026-03-09")
+    newer = replace(
+        original,
+        snapshot_id="new-schema-shard",
+        schema_version=f"{dataset}.v2",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+        created_at=datetime(2026, 3, 10, 8, tzinfo=UTC),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(
+                    older if item.snapshot_id == original.snapshot_id else item
+                    for item in chart._snapshots.list_snapshots()
+                ),
+                newer,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    with pytest.raises(AppQueryError, match="incompatible schemas"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="qfq" if dataset == "adj_factor" else "none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            )
+        )
