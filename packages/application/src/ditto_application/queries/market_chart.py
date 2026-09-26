@@ -324,8 +324,9 @@ class MarketChartQueryFacade:
         source: str,
         cutoff: datetime,
         instrument_code: Callable[[date], str | None],
-    ) -> dict[str, str]:
+    ) -> tuple[dict[str, str], tuple[str, ...]]:
         suspensions: dict[str, str] = {}
+        snapshot_ids: tuple[str, ...] = ()
         if request.asset_class == "stock" and any(
             item.payload_retained
             and item.payload_uri
@@ -340,6 +341,7 @@ class MarketChartQueryFacade:
             status_snapshots = self._select_snapshots(
                 "stock_status", request.start_date, request.end_date, cutoff, source
             )
+            snapshot_ids = tuple(item.snapshot_id for item in status_snapshots)
             status_context = PITQueryContext(
                 as_of=cutoff,
                 knowledge_cutoff=cutoff,
@@ -360,7 +362,7 @@ class MarketChartQueryFacade:
                 instrument_id=InstrumentId(request.instrument_id),
                 instrument_code=instrument_code,
             )
-        return suspensions
+        return suspensions, snapshot_ids
 
     def get_chart(self, request: MarketChartRequest) -> MarketChartView:
         """Return only bars visible in retained payloads at the chart cutoff."""
@@ -398,6 +400,7 @@ class MarketChartQueryFacade:
             f"{asset_class}_daily", start_date, end_date, cutoff
         )
         latest = max(selected, key=lambda item: item.created_at)
+        queried_snapshot_ids = {item.snapshot_id for item in selected}
 
         @cache
         def instrument_code(day: date) -> str | None:
@@ -434,6 +437,7 @@ class MarketChartQueryFacade:
             factor_snapshots = self._select_snapshots(
                 "adj_factor", start_date, end_date, cutoff, latest.source
             )
+            queried_snapshot_ids.update(item.snapshot_id for item in factor_snapshots)
             factor_context = PITQueryContext(
                 as_of=as_of,
                 knowledge_cutoff=cutoff,
@@ -454,9 +458,10 @@ class MarketChartQueryFacade:
                 instrument_id=InstrumentId(instrument_id),
                 instrument_code=instrument_code,
             )
-        suspensions = self._load_suspensions(
+        suspensions, status_ids = self._load_suspensions(
             request, latest.source, cutoff, instrument_code
         )
+        queried_snapshot_ids.update(status_ids)
         first_period_start = _period_bounds(start_date, period)[0]
         last_period_end = _period_bounds(end_date, period)[1]
         try:
@@ -505,34 +510,8 @@ class MarketChartQueryFacade:
             publication_cutoff=cutoff,
             timezone="Asia/Shanghai",
             calendar_snapshot_ids=used_calendar_ids,
-            source_snapshot_ids=tuple(
-                sorted(
-                    {
-                        source_id
-                        for bar in result
-                        for source_id in bar.source_snapshot_ids
-                    }
-                    | {
-                        snapshot_id
-                        for day, snapshot_id in suspensions.items()
-                        if start_date.isoformat() <= day <= end_date.isoformat()
-                    }
-                )
-            ),
-            sources=tuple(
-                sorted(
-                    {
-                        item.source
-                        for item in selected
-                        if item.snapshot_id
-                        in {
-                            source_id
-                            for bar in result
-                            for source_id in bar.source_snapshot_ids
-                        }
-                    }
-                )
-            ),
+            source_snapshot_ids=tuple(sorted(queried_snapshot_ids)),
+            sources=tuple(sorted({item.source for item in selected})),
             latest_price_date=latest_price_date,
             stale_reason=stale_reason,
             missing_sessions=missing,

@@ -422,3 +422,25 @@ def test_chart_maps_prices_and_factors_at_each_effective_date(tmp_path: Path) ->
     )
     assert [bar.trade_date for bar in result.bars] == ["2026-03-09", "2026-03-10"]
     assert result.missing_sessions == ()
+
+
+@pytest.mark.pit
+def test_chart_preserves_queried_lineage_when_no_visible_price(tmp_path: Path) -> None:
+    chart, snapshot, _ = _chart(tmp_path)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 11),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert result.bars == ()
+    assert result.stale_reason == "no_visible_price"
+    assert result.missing_sessions == ("2026-03-11",)
+    assert result.source_snapshot_ids == (snapshot.snapshot_id,)
+    assert result.sources == ("tushare",)
