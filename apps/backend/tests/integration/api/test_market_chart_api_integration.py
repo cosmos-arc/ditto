@@ -1477,7 +1477,8 @@ def test_chart_daily_scoped_shards_batch_identity_resolution(tmp_path: Path) -> 
 
 @pytest.mark.pit
 def test_chart_rejects_hybrid_calendar_authority(tmp_path: Path) -> None:
-    chart, _, store = _chart(tmp_path, poisoned=False)
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
     fallback = _snapshot(
         store,
         "calendar",
