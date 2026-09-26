@@ -10,6 +10,7 @@ import json
 import sqlite3
 from collections.abc import Mapping
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 from typing import cast
 
@@ -119,6 +120,175 @@ def _json_object(payload: str, field: str) -> dict[str, object]:
     return cast("dict[str, object]", decoded)
 
 
+# Content-addressed validation caches (issue #312): each key spans every column
+# the verification consumes, so a cache hit proves this exact row content was
+# fully validated (hash agreement + relational agreement) before. Any drift —
+# payload bytes, hash column, or relational columns — produces a new key and
+# revalidates from scratch, preserving the fail-closed read contract. Values
+# are frozen value objects, safe to share across reads and databases.
+@lru_cache(maxsize=4096)
+def _validated_fold_spec(
+    row_key: tuple[
+        str,
+        str,
+        str,
+        int,
+        str,
+        str | None,
+        str | None,
+        str,
+        str,
+        int,
+        int,
+        bytes,
+        str,
+    ],
+) -> FoldPersistenceSpec:
+    (
+        experiment_id,
+        candidate_id,
+        fold_id,
+        ordinal,
+        fold_role,
+        train_start,
+        train_end,
+        test_start,
+        test_end,
+        purge_sessions,
+        embargo_sessions,
+        payload,
+        payload_hash_hex,
+    ) = row_key
+    actual_hash = hashlib.sha256(payload).hexdigest()
+    if actual_hash != payload_hash_hex:
+        raise _integrity(
+            "fold canonical payload hash mismatch",
+            "fold_payload_hash_mismatch",
+            fold_id=fold_id,
+        )
+    key = FoldKey(
+        ExperimentId(experiment_id), CandidateId(candidate_id), FoldId(fold_id)
+    )
+    # A tampered row with only one train boundary must fail closed instead of
+    # silently reading as a window-less fold (both are written together or not
+    # at all, so a half-present pair is always relational drift; the schema
+    # CHECK is the first layer, this guards corrupted files and foreign writers).
+    if (train_start is None) != (train_end is None):
+        raise _integrity(
+            "fold train window endpoints must be present or absent together",
+            "fold_train_window_endpoint_mismatch",
+            fold_id=fold_id,
+        )
+    if train_start is None or train_end is None:
+        train_window = None
+    else:
+        train_window = DateWindow(
+            date.fromisoformat(train_start), date.fromisoformat(train_end)
+        )
+    spec = FoldPersistenceSpec(
+        key=key,
+        ordinal=ordinal,
+        fold_role=FoldRole(fold_role),
+        train_window=train_window,
+        test_window=DateWindow(
+            date.fromisoformat(test_start), date.fromisoformat(test_end)
+        ),
+        purge_sessions=purge_sessions,
+        embargo_sessions=embargo_sessions,
+        canonical_payload=payload,
+        payload_hash=ContentHash(payload_hash_hex),
+    )
+    expected = FoldPersistenceSpec.create(
+        key=spec.key,
+        ordinal=spec.ordinal,
+        fold_role=spec.fold_role,
+        train_window=spec.train_window,
+        test_window=spec.test_window,
+        purge_sessions=spec.purge_sessions,
+        embargo_sessions=spec.embargo_sessions,
+    )
+    if expected.canonical_payload != spec.canonical_payload:
+        raise _integrity(
+            "fold payload disagrees with its relational fields",
+            "fold_relation_payload_mismatch",
+            fold_id=fold_id,
+        )
+    return spec
+
+
+@lru_cache(maxsize=8192)
+def _validated_candidate(
+    row_key: tuple[str, str, int, int, str, str],
+) -> CandidateSpec:
+    (
+        _experiment_id,
+        candidate_id,
+        ordinal,
+        is_baseline,
+        parameters_json,
+        parameters_hash,
+    ) = row_key
+    parameters = _json_object(parameters_json, "parameters_json")
+    try:
+        candidate = CandidateSpec(
+            candidate_id=CandidateId(candidate_id),
+            ordinal=ordinal,
+            is_baseline=bool(is_baseline),
+            parameters=cast("Mapping[str, FrozenValue]", parameters),
+        )
+    except ExperimentSpecError as exc:
+        raise _integrity(
+            "persisted candidate parameters are invalid",
+            "persisted_candidate_parameters_invalid",
+            candidate_id=candidate_id,
+        ) from exc
+    encoded = encode_candidate_parameters(candidate.parameters)
+    if str(encoded.content_hash) != parameters_hash:
+        raise _integrity(
+            "candidate parameter hash mismatch",
+            "candidate_parameter_hash_mismatch",
+            candidate_id=candidate_id,
+        )
+    return candidate
+
+
+@lru_cache(maxsize=64)
+def _decoded_launch_spec(
+    row_key: tuple[str, bytes, str, int, str, str, str, int],
+) -> ExperimentLaunchSpec:
+    (
+        experiment_id,
+        payload,
+        launch_hash,
+        schema_version,
+        strategy_version,
+        strategy_spec_hash,
+        snapshot_id,
+        created_at_epoch_us,
+    ) = row_key
+    spec = decode_launch_spec(payload, ContentHash(launch_hash))
+    canonical_launch = encode_launch_spec(spec)
+    if schema_version != canonical_launch.schema_version:
+        raise _integrity(
+            "relational launch schema version disagrees with its payload",
+            "launch_schema_version_mismatch",
+            experiment_id=experiment_id,
+        )
+    if (
+        str(spec.experiment_id) != experiment_id
+        or str(spec.strategy_version) != strategy_version
+        or str(spec.strategy_spec_hash) != strategy_spec_hash
+        or str(spec.snapshot_id) != snapshot_id
+        or epoch_us(spec.created_at) != created_at_epoch_us
+    ):
+        raise _integrity(
+            "launch payload disagrees with immutable relational fields",
+            "launch_projection_drift",
+            experiment_id=experiment_id,
+        )
+    return spec
+
+
 class SQLiteExperimentReader:
     """Read approved experiment records without exposing SQLite rows."""
 
@@ -163,29 +333,18 @@ class SQLiteExperimentReader:
         )
         if row is None:
             return None
-        spec = decode_launch_spec(
-            row["launch_spec_json"].encode("utf-8"),
-            ContentHash(row["launch_spec_hash"]),
+        spec = _decoded_launch_spec(
+            (
+                str(experiment_id),
+                row["launch_spec_json"].encode("utf-8"),
+                row["launch_spec_hash"],
+                row["launch_spec_schema_version"],
+                row["strategy_version"],
+                row["strategy_spec_hash"],
+                row["snapshot_id"],
+                row["created_at_epoch_us"],
+            )
         )
-        canonical_launch = encode_launch_spec(spec)
-        if row["launch_spec_schema_version"] != canonical_launch.schema_version:
-            raise _integrity(
-                "relational launch schema version disagrees with its payload",
-                "launch_schema_version_mismatch",
-                experiment_id=str(experiment_id),
-            )
-        if (
-            spec.experiment_id != experiment_id
-            or str(spec.strategy_version) != row["strategy_version"]
-            or str(spec.strategy_spec_hash) != row["strategy_spec_hash"]
-            or str(spec.snapshot_id) != row["snapshot_id"]
-            or epoch_us(spec.created_at) != row["created_at_epoch_us"]
-        ):
-            raise _integrity(
-                "launch payload disagrees with immutable relational fields",
-                "launch_projection_drift",
-                experiment_id=str(experiment_id),
-            )
         creation = self._one(
             """
             SELECT * FROM experiment_status_event
@@ -286,28 +445,18 @@ class SQLiteExperimentReader:
         )
         candidates: list[CandidateSpec] = []
         for row in rows:
-            parameters = _json_object(row["parameters_json"], "parameters_json")
-            try:
-                candidate = CandidateSpec(
-                    candidate_id=CandidateId(row["candidate_id"]),
-                    ordinal=row["ordinal"],
-                    is_baseline=bool(row["is_baseline"]),
-                    parameters=cast("Mapping[str, FrozenValue]", parameters),
+            candidates.append(
+                _validated_candidate(
+                    (
+                        str(experiment_id),
+                        row["candidate_id"],
+                        row["ordinal"],
+                        row["is_baseline"],
+                        row["parameters_json"],
+                        row["parameters_hash"],
+                    )
                 )
-            except ExperimentSpecError as exc:
-                raise _integrity(
-                    "persisted candidate parameters are invalid",
-                    "persisted_candidate_parameters_invalid",
-                    candidate_id=row["candidate_id"],
-                ) from exc
-            encoded = encode_candidate_parameters(candidate.parameters)
-            if str(encoded.content_hash) != row["parameters_hash"]:
-                raise _integrity(
-                    "candidate parameter hash mismatch",
-                    "candidate_parameter_hash_mismatch",
-                    candidate_id=row["candidate_id"],
-                )
-            candidates.append(candidate)
+            )
         return tuple(candidates)
 
     def get_fold(self, key: FoldKey) -> FoldView | None:
@@ -355,58 +504,25 @@ class SQLiteExperimentReader:
 
     @staticmethod
     def _fold_view(row: sqlite3.Row) -> FoldView:
-        payload = row["fold_spec_json"].encode("utf-8")
-        actual_hash = hashlib.sha256(payload).hexdigest()
-        if actual_hash != row["fold_spec_hash"]:
-            raise _integrity(
-                "fold canonical payload hash mismatch",
-                "fold_payload_hash_mismatch",
-                fold_id=row["fold_id"],
-            )
-        key = FoldKey(
-            ExperimentId(row["experiment_id"]),
-            CandidateId(row["candidate_id"]),
-            FoldId(row["fold_id"]),
-        )
-        train_window = (
-            None
-            if row["train_start"] is None
-            else DateWindow(
-                date.fromisoformat(row["train_start"]),
-                date.fromisoformat(row["train_end"]),
+        spec = _validated_fold_spec(
+            (
+                row["experiment_id"],
+                row["candidate_id"],
+                row["fold_id"],
+                row["ordinal"],
+                row["fold_role"],
+                row["train_start"],
+                row["train_end"],
+                row["test_start"],
+                row["test_end"],
+                row["purge_sessions"],
+                row["embargo_sessions"],
+                row["fold_spec_json"].encode("utf-8"),
+                row["fold_spec_hash"],
             )
         )
-        spec = FoldPersistenceSpec(
-            key=key,
-            ordinal=row["ordinal"],
-            fold_role=FoldRole(row["fold_role"]),
-            train_window=train_window,
-            test_window=DateWindow(
-                date.fromisoformat(row["test_start"]),
-                date.fromisoformat(row["test_end"]),
-            ),
-            purge_sessions=row["purge_sessions"],
-            embargo_sessions=row["embargo_sessions"],
-            canonical_payload=payload,
-            payload_hash=ContentHash(row["fold_spec_hash"]),
-        )
-        expected = FoldPersistenceSpec.create(
-            key=spec.key,
-            ordinal=spec.ordinal,
-            fold_role=spec.fold_role,
-            train_window=spec.train_window,
-            test_window=spec.test_window,
-            purge_sessions=spec.purge_sessions,
-            embargo_sessions=spec.embargo_sessions,
-        )
-        if expected.canonical_payload != spec.canonical_payload:
-            raise _integrity(
-                "fold payload disagrees with its relational fields",
-                "fold_relation_payload_mismatch",
-                fold_id=row["fold_id"],
-            )
         projection = FoldProjection(
-            key=key,
+            key=spec.key,
             status=ExperimentStatus(row["status"]),
             claim_owner_token=row["claim_owner_token"],
             created_at=_dt(row["created_at_epoch_us"]),
