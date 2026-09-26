@@ -412,7 +412,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							height={360}
 							identity={{
 								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}`,
-								asOfIso: query.data?.as_of ?? null,
+								// Exports share the plotted watermark clock: in drill
+								// mode that is the source run's as_of.
+								asOfIso: drill?.asOf ?? query.data?.as_of ?? null,
 								snapshotId: query.data?.source_snapshot_ids.join(",") ?? null,
 								calendarSnapshotIds: query.data?.calendar_snapshot_ids.join(",") ?? null,
 								missingSessions,

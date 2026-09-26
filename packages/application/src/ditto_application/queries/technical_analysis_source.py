@@ -381,14 +381,27 @@ def _instrument_rows(
     primary identity; the internal ID is a cross-check when the optional
     enriched column exists. Requiring agreement keeps a corrected mapping
     from mixing rows of two different instruments into one price series.
+
+    ``window`` filters the frame before ticker resolution: whole-artifact
+    lineage was already validated in the reader, and resolving the effective
+    ticker for every row of a multi-year shard would degrade the batched
+    mapping lookup into one point query per out-of-window day.
     """
     selected = frame
+    if window is not None and not frame.is_empty():
+        selected = selected.filter(
+            pl.col("event_time")
+            .dt.convert_time_zone(_SHANGHAI.key)
+            .dt.date()
+            .is_between(window[0], window[1])
+        )
+    frame_for_tickers = selected
     expected = (
         pl.Series(
             "expected_ticker",
             [
                 instrument_code(cast(datetime, value).astimezone(_SHANGHAI).date())
-                for value in frame["event_time"]
+                for value in frame_for_tickers["event_time"]
             ],
             dtype=pl.String,
         )
@@ -398,7 +411,7 @@ def _instrument_rows(
     ticker_filters = [
         pl.col(column).cast(pl.String) == expected
         for column in ("source_ticker", "instrument_code", "ts_code", "ticker")
-        if column in frame.columns
+        if column in frame_for_tickers.columns
     ]
     id_filter = (
         pl.col("instrument_id").cast(pl.Int64, strict=False) == int(instrument_id)

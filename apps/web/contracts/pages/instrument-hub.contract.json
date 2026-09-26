@@ -275,7 +275,7 @@
   "liveData": {
     "readPaths": [
       "/api/v1/metadata/instruments/{instrument_id}",
-      "/api/v1/market/bars"
+      "/api/v1/market/chart"
     ],
     "writePaths": [],
     "mockFallback": false
@@ -287,7 +287,7 @@
       "affectedSlots": [
         "main"
       ],
-      "expectedBehavior": "requeries non-experimental unadjusted bars for one positive numeric instrument id and keeps missing snapshot identity visible"
+      "expectedBehavior": "requeries the source-bound chart for one positive numeric instrument id over the new range and keeps cutoff, snapshot lineage, and missing sessions visible"
     },
     {
       "id": "select-bars-period",
@@ -295,7 +295,7 @@
       "affectedSlots": [
         "main"
       ],
-      "expectedBehavior": "resamples fetched daily candles to weekly or monthly buckets locally without refetching and keeps gaps uninterpolated"
+      "expectedBehavior": "requeries the chart with daily/weekly/monthly period so the server produces the calendar-bound buckets and keeps gaps uninterpolated; indicator overlays stay daily-only"
     },
     {
       "id": "select-bars-adjustment",

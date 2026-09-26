@@ -648,11 +648,24 @@ class MarketChartQueryFacade:
                 ),
             )
             if any(item.payload_retained for item in status_snapshots):
+                # Suspension evidence bounds the aggregated periods' expected
+                # sessions, which span the natural period and lifecycle
+                # bounds rather than the raw request dates.
+                period_start = _period_bounds(request.start_date, request.period)[0]
+                period_end = _period_bounds(request.end_date, request.period)[1]
                 suspensions = self._bars.load_suspensions(
                     status_context,
                     instrument_id=InstrumentId(request.instrument_id),
                     instrument_code=instrument_code,
-                    window=(request.start_date, request.end_date),
+                    window=(
+                        period_start,
+                        min(
+                            period_end,
+                            request.delisted_on - timedelta(days=1)
+                            if request.delisted_on
+                            else period_end,
+                        ),
+                    ),
                 )
         return suspensions, snapshot_ids
 
