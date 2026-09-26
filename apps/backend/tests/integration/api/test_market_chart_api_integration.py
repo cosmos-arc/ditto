@@ -603,3 +603,113 @@ def test_chart_reports_sessions_before_retained_price_coverage(tmp_path: Path) -
     assert result.missing_sessions == ("2026-03-09",)
     assert result.latest_price_date == "2026-03-10"
     assert result.source_snapshot_ids == (shard.snapshot_id,)
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("dataset", ["stock_daily", "adj_factor", "stock_status"])
+def test_chart_ignores_unrelated_ticker_schema_authority(
+    tmp_path: Path, dataset: str
+) -> None:
+    chart, _, metadata = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    other = _snapshot(
+        store,
+        dataset,
+        pl.DataFrame(
+            {
+                "source_ticker": ["OTHER.SH"],
+                "trade_date": ["2026-03-09"],
+                "open": [99.0],
+                "high": [100.0],
+                "low": [98.0],
+                "close": [99.0],
+                "volume": [10.0],
+                "amount": [100.0],
+                "adj_factor": [99.0],
+                "is_suspended": [True],
+            }
+        ),
+        datetime(2026, 3, 10, 8, tzinfo=UTC),
+    )
+    other = replace(
+        other,
+        schema_version=f"{dataset}.v2",
+        canonical_asset=DataAssetRef(
+            dataset_id=dataset,
+            namespace="market",
+            partition_keys=("source_ticker=OTHER.SH",),
+        ),
+    )
+    reader = cast(
+        ProviderSnapshotReader, _Snapshots((*chart._snapshots.list_snapshots(), other))
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="qfq" if dataset == "adj_factor" else "none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-09", "2026-03-10"]
+    assert other.snapshot_id not in result.source_snapshot_ids
+    assert result.missing_sessions == ()
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("trade_day", ["2026-03-10", "20260310", date(2026, 3, 10)])
+def test_daily_date_only_price_is_invisible_before_close(
+    tmp_path: Path, trade_day: str | date
+) -> None:
+    chart, original, metadata = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    intraday = _snapshot(
+        store,
+        "stock_daily",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "trade_date": [trade_day],
+                "open": [99.0],
+                "high": [100.0],
+                "low": [98.0],
+                "close": [99.0],
+                "volume": [10.0],
+                "amount": [100.0],
+            }
+        ),
+        datetime(2026, 3, 10, 5, tzinfo=UTC),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            tuple(
+                intraday if item.snapshot_id == original.snapshot_id else item
+                for item in chart._snapshots.list_snapshots()
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 10),
+        end_date=date(2026, 3, 10),
+        period="daily",
+        adjustment="none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 10, 6, tzinfo=UTC),
+    )
+    assert chart.get_chart(request).bars == ()
+    after_close = chart.get_chart(
+        MarketChartRequest(
+            **{**vars(request), "now": datetime(2026, 3, 10, 8, tzinfo=UTC)}
+        )
+    )
+    assert after_close.bars[0].close == 99.0
+    assert after_close.bars[0].partial is False

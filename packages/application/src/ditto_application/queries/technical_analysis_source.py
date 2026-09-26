@@ -79,9 +79,11 @@ def _parse_datetime(value: object, *, fallback: datetime | None) -> datetime:
         normalized = value.strip()
         try:
             if len(normalized) == _COMPACT_DATE_LENGTH and normalized.isdigit():
-                parsed = datetime.strptime(normalized, "%Y%m%d")
+                parsed = datetime.strptime(normalized, "%Y%m%d").replace(hour=15)
             else:
                 parsed = datetime.fromisoformat(normalized)
+                if normalized == parsed.date().isoformat():
+                    parsed = parsed.replace(hour=15)
         except ValueError as exc:
             raise _source_error(
                 "TECHNICAL_SOURCE_TIME_INVALID",

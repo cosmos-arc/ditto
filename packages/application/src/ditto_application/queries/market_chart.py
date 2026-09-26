@@ -266,6 +266,27 @@ def _chart_rows(
     return tuple(result), missing, max(by_day, default=None)
 
 
+def _snapshot_matches_instrument(
+    item: ProviderSnapshot,
+    start_date: date,
+    end_date: date,
+    ticker_at: Callable[[str, date], str | None],
+) -> bool:
+    tickers = {
+        key.removeprefix("source_ticker=")
+        for key in item.canonical_asset.partition_keys
+        if key.startswith("source_ticker=")
+    }
+    if not tickers:
+        return True  # Market-wide requests are filtered at the row boundary.
+    first = max(start_date, date.fromisoformat(item.request_start))
+    last = min(end_date, date.fromisoformat(item.request_end))
+    return any(
+        ticker_at(item.source, first + timedelta(days=offset)) in tickers
+        for offset in range((last - first).days + 1)
+    )
+
+
 class MarketChartQueryFacade:
     """Read exact retained bars and calendar under one server-owned cutoff."""
 
@@ -291,7 +312,18 @@ class MarketChartQueryFacade:
         end_date: date,
         cutoff: datetime,
         source: str | None = None,
+        *,
+        instrument_id: int,
     ) -> tuple[ProviderSnapshot, ...]:
+        @cache
+        def ticker_at(source_name: str, day: date) -> str | None:
+            return self._metadata.get_source_ticker(
+                instrument_id,
+                source=source_name,
+                asof=day.isoformat(),
+                cutoff=cutoff.isoformat(),
+            )
+
         candidates = [
             item
             for item in self._snapshots.list_snapshots(dataset_id=dataset_id)
@@ -299,8 +331,11 @@ class MarketChartQueryFacade:
             and (source is None or item.source == source)
             and _snapshot_range(item.request_start) <= end_date.strftime("%Y%m%d")
             and _snapshot_range(item.request_end) >= start_date.strftime("%Y%m%d")
+            and _snapshot_matches_instrument(item, start_date, end_date, ticker_at)
         ]
         if not candidates:
+            if dataset_id == "stock_status":
+                return ()
             raise AppQueryError(
                 f"retained chart {dataset_id} snapshots are unavailable at cutoff"
             )
@@ -354,8 +389,15 @@ class MarketChartQueryFacade:
             )
         ):
             status_snapshots = self._select_snapshots(
-                "stock_status", request.start_date, request.end_date, cutoff, source
+                "stock_status",
+                request.start_date,
+                request.end_date,
+                cutoff,
+                source,
+                instrument_id=request.instrument_id,
             )
+            if not status_snapshots:
+                return {}, ()
             snapshot_ids = tuple(item.snapshot_id for item in status_snapshots)
             status_context = PITQueryContext(
                 as_of=cutoff,
@@ -413,7 +455,11 @@ class MarketChartQueryFacade:
         as_of = now.astimezone(UTC)
         cutoff = as_of
         selected = self._select_snapshots(
-            f"{asset_class}_daily", start_date, end_date, cutoff
+            f"{asset_class}_daily",
+            start_date,
+            end_date,
+            cutoff,
+            instrument_id=instrument_id,
         )
         latest = max(selected, key=lambda item: item.created_at)
         queried_snapshot_ids = {item.snapshot_id for item in selected}
@@ -455,7 +501,12 @@ class MarketChartQueryFacade:
                 allow_experimental_data=allow_experimental_data
             )
             factor_snapshots = self._select_snapshots(
-                "adj_factor", start_date, end_date, cutoff, latest.source
+                "adj_factor",
+                start_date,
+                end_date,
+                cutoff,
+                latest.source,
+                instrument_id=instrument_id,
             )
             queried_snapshot_ids.update(item.snapshot_id for item in factor_snapshots)
             factor_context = PITQueryContext(
