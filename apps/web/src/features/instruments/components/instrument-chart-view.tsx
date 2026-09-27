@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChartCockpit, type CockpitMarker, type CockpitOverlay } from "@/components/chart";
-import type { BarPeriod } from "@/components/chart/cockpit/chart-data";
+import type { BarPeriod, CockpitBar } from "@/components/chart/cockpit/chart-data";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain";
 import { ErrorState } from "@/lib/error-boundary";
@@ -8,7 +8,6 @@ import { StaleIndicator } from "@/lib/stale-indicator";
 import type { OverlayKind } from "../api/indicator-overlays";
 import type { BarAdjustment } from "../api/instrument-workspace";
 import { useEtfNav, useIndicatorSeries, useInstrumentChart, useInstrumentDetail } from "../hooks";
-import type { CockpitBar } from "@/components/chart/cockpit/chart-data";
 import { BAR_PERIOD_OPTIONS, primaryAnswerFromBars, toCockpitBars, tradeDateToUnix } from "../lib/chart-mapping";
 import {
 	type IndicatorToggles,
