@@ -74,7 +74,8 @@ def build_pytest_command() -> list[str]:
         cmd.extend(
             [
                 "-m",
-                "not slow and not integration and not snapshot and not sandbox_live",
+                "not slow and not integration and not snapshot and not sandbox_live"
+                " and not capacity",
                 "--no-cov",
                 "-q",
             ]
