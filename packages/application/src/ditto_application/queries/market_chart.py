@@ -634,9 +634,9 @@ class MarketChartQueryFacade:
         request: MarketChartRequest,
         cutoff: datetime,
         calendar: RetainedCalendarWindow,
-    ) -> tuple[dict[str, SuspensionEvidence], tuple[str, ...]]:
+    ) -> tuple[dict[str, SuspensionEvidence], tuple[ProviderSnapshot, ...]]:
         suspensions: dict[str, SuspensionEvidence] = {}
-        snapshot_ids: tuple[str, ...] = ()
+        status_snapshots: tuple[ProviderSnapshot, ...] = ()
         if request.asset_class == "stock" and self._market.allows_suspension_evidence(
             allow_experimental_data=request.allow_experimental_data
         ):
@@ -664,11 +664,10 @@ class MarketChartQueryFacade:
                 consumable_days=consumable_days,
             )
             if not status_snapshots:
-                return {}, ()
+                return {}, status_snapshots
             instrument_code = self._instrument_code(
                 request, status_snapshots[0].source, cutoff, calendar, consumable_days
             )
-            snapshot_ids = tuple(item.snapshot_id for item in status_snapshots)
             status_context = PITQueryContext(
                 as_of=cutoff,
                 knowledge_cutoff=cutoff,
@@ -691,15 +690,15 @@ class MarketChartQueryFacade:
                     instrument_code=instrument_code,
                     window=(period_start, period_end),
                 )
-        return suspensions, snapshot_ids
+        return suspensions, status_snapshots
 
     def _load_factors(
         self,
         request: MarketChartRequest,
         cutoff: datetime,
         calendar: RetainedCalendarWindow,
-    ) -> tuple[dict[str, AdjustmentFactor], tuple[str, ...]]:
-        snapshot_ids: tuple[str, ...] = ()
+    ) -> tuple[dict[str, AdjustmentFactor], tuple[ProviderSnapshot, ...]]:
+        factor_snapshots: tuple[ProviderSnapshot, ...] = ()
         factors: dict[str, AdjustmentFactor] = {}
         if request.adjustment != "none":
             self._market.assert_adjustment_allowed(
@@ -719,7 +718,6 @@ class MarketChartQueryFacade:
             instrument_code = self._instrument_code(
                 request, factor_snapshots[0].source, cutoff, calendar, consumable_days
             )
-            snapshot_ids = tuple(item.snapshot_id for item in factor_snapshots)
             factor_context = PITQueryContext(
                 as_of=cutoff,
                 knowledge_cutoff=cutoff,
@@ -745,7 +743,7 @@ class MarketChartQueryFacade:
                 if any(item.payload_retained for item in factor_snapshots)
                 else {}
             )
-        return factors, snapshot_ids
+        return factors, factor_snapshots
 
     def _load_calendar(
         self, request: MarketChartRequest, cutoff: datetime
@@ -907,7 +905,7 @@ class MarketChartQueryFacade:
         # suspension has no readable bar, so its dates leave price authority
         # coverage and an irrelevant price poll scoped to that day cannot
         # turn a complete candle into a mixed-source rejection.
-        suspensions, status_ids = self._load_suspensions(request, cutoff, calendar)
+        suspensions, status_shards = self._load_suspensions(request, cutoff, calendar)
         price_consumable_days = consumable_days - suspensions.keys()
         if not price_consumable_days:
             # Every consumable session is a full-day suspension: no price bar
@@ -922,16 +920,8 @@ class MarketChartQueryFacade:
                 publication_cutoff=cutoff,
                 timezone="Asia/Shanghai",
                 calendar_snapshot_ids=used_calendar_ids,
-                source_snapshot_ids=status_ids,
-                sources=tuple(
-                    sorted(
-                        {
-                            item.source
-                            for item in self._snapshots.list_snapshots()
-                            if item.snapshot_id in status_ids
-                        }
-                    )
-                ),
+                source_snapshot_ids=tuple(item.snapshot_id for item in status_shards),
+                sources=tuple(sorted({item.source for item in status_shards})),
                 latest_price_date=None,
                 stale_reason=None,
                 missing_sessions=(),
@@ -975,22 +965,17 @@ class MarketChartQueryFacade:
             if any(item.payload_retained for item in selected)
             else ()
         )
-        factors, factor_ids = self._load_factors(request, cutoff, calendar)
-        queried_snapshot_ids.update(factor_ids)
-        queried_snapshot_ids.update(status_ids)
-        price_dataset = f"{asset_class}_daily"
+        factors, factor_shards = self._load_factors(request, cutoff, calendar)
+        queried_snapshot_ids.update(item.snapshot_id for item in factor_shards)
+        queried_snapshot_ids.update(item.snapshot_id for item in status_shards)
         result, missing, latest_price_date = _chart_rows(
             raw,
             _SnapshotIndex(
                 observed_at=_observed_at_reader(self._snapshots, as_of),
-                # Only price-dataset shards can evidence a missing price
-                # session; factor/status shards neither prove price absence
-                # nor necessarily contributed to the candle.
-                absence_sources=tuple(
-                    item
-                    for item in self._snapshots.list_snapshots(dataset_id=price_dataset)
-                    if item.snapshot_id in queried_snapshot_ids
-                ),
+                # Only the selected price shards can evidence a missing
+                # price session; factor/status shards neither prove price
+                # absence nor necessarily contributed to the candle.
+                absence_sources=selected,
             ),
             calendar,
             request,
@@ -1019,8 +1004,7 @@ class MarketChartQueryFacade:
                 sorted(
                     {
                         item.source
-                        for item in self._snapshots.list_snapshots()
-                        if item.snapshot_id in queried_snapshot_ids
+                        for item in (*selected, *factor_shards, *status_shards)
                     }
                 )
             ),

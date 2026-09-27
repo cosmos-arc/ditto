@@ -159,6 +159,15 @@ describe("ChartCockpit DOM 合同", () => {
 		expect(watermark.paneViews()[0]?.renderer()).not.toBeNull();
 	});
 
+	it("suppresses the observation-age badge when as_of is a decision clock", () => {
+		const staleCutoff = { time: Date.UTC(2020, 0, 1) / 1000, label: "行情决策" };
+		renderCockpit({ asOf: staleCutoff });
+		expect(document.querySelector("[data-testid=stale-indicator]")).not.toBeNull();
+		cleanup();
+		renderCockpit({ asOf: staleCutoff, asOfIsDecisionClock: true });
+		expect(document.querySelector("[data-testid=stale-indicator]")).toBeNull();
+	});
+
 	it("keeps an out-of-range cutoff at the chart edge without snapping to a candle", () => {
 		const timeToIndex = vi.fn();
 		const watermark = new AsOfWatermark({

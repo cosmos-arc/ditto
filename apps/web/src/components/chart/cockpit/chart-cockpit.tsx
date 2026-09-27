@@ -145,6 +145,9 @@ export type ChartCockpitProps = {
 	/** 初始定位（Unix 秒）：优先于 fitContent，把该时点滚到可视区中心（下钻定位）。 */
 	readonly initialFocusTime?: number | null;
 	readonly asOf?: { readonly time: number; readonly label?: string } | null;
+	/** as_of 是服务端决策时钟而非数据观测新鲜度时置 true：不渲染
+	 * 观测年龄徽标，陈旧状态由页面面板按 stale_reason 表达。 */
+	readonly asOfIsDecisionClock?: boolean;
 	/** 实时数据透明度时变（live 1.0 → expired 0.25）；默认关闭，EOD 图表只用水位线 + stale 徽标。 */
 	readonly freshnessFade?: boolean;
 	readonly timeVisible?: boolean;
@@ -273,6 +276,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		markers = EMPTY_MARKERS,
 		initialFocusTime = null,
 		asOf = null,
+		asOfIsDecisionClock = false,
 		freshnessFade = false,
 		timeVisible = false,
 		height = 320,
@@ -802,7 +806,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				)}
 				{asOf && (
 					<span className="inline-flex items-center gap-1.5">
-						<StaleIndicator isStale={stale} />
+						{!asOfIsDecisionClock && <StaleIndicator isStale={stale} />}
 						<span className="tabular-nums">as_of {formatReadoutTime(asOf.time)}</span>
 					</span>
 				)}

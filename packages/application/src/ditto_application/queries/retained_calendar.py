@@ -188,6 +188,7 @@ def retained_calendar_window(
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
     authorship: dict[str, tuple[bool, str]] = {}
+    authorship_observed: dict[str, datetime] = {}
     revision_gaps: set[str] = set()
     shard_sources: dict[str, str] = {}
     read_payloads: dict[str, pl.DataFrame] = {}
@@ -216,8 +217,20 @@ def retained_calendar_window(
         revision_gaps.update(
             _revision_gaps(snapshot, states, authorship, first_day, last_day)
         )
+        observed = snapshot_observed_by(snapshot, cutoff)
         for day, is_open in states.items():
+            # Equal observation timestamps do not establish revision order;
+            # a conflicting tie has no PIT authority and fails closed.
+            if (
+                day in authorship_observed
+                and authorship_observed[day] == observed
+                and authorship[day][0] != is_open
+            ):
+                raise RetainedCalendarAbsent(
+                    "retained calendar revisions tie with conflicting states"
+                )
             authorship[day] = (is_open, snapshot.snapshot_id)
+            authorship_observed[day] = observed
             revision_gaps.discard(day)
     days = sorted(day for day, state in authorship.items() if state[0])
     if not days and (not allow_closed_window or not authorship):

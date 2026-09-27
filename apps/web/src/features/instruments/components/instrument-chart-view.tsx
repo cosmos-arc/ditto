@@ -408,6 +408,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 									label: `行情决策 ${query.data.as_of}`,
 								}
 							}
+							// as_of 是服务端决策时钟，不是数据观测新鲜度；
+							// 陈旧状态由外层面板按 stale_reason 表达。
+							asOfIsDecisionClock
 							showVolumePane
 							height={360}
 							identity={{

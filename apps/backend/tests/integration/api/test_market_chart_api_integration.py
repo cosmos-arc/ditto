@@ -2357,6 +2357,54 @@ def test_chart_selects_status_shards_across_the_natural_period(tmp_path: Path) -
 
 
 @pytest.mark.pit
+def test_chart_rejects_tied_conflicting_calendar_revisions(tmp_path: Path) -> None:
+    """Equal observation timestamps do not establish revision order; two
+    calendar revisions tied on observation and conflicting on a day's open
+    state have no PIT authority and fail closed."""
+    from ditto_application.queries.retained_calendar import RetainedCalendarAbsent
+
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    tied = replace(
+        calendar_only,
+        snapshot_id="tied-calendar",
+        row_count=1,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=datetime(2026, 3, 9, 7, tzinfo=UTC),
+        observations=(),
+    )
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    tied_frame = pl.DataFrame({"trade_date": ["2026-03-10"], "is_open": [False]})
+    tied_artifact = store.retain_payload(
+        dataset_id="calendar", source="tushare", payload=tied_frame
+    )
+    tied = replace(
+        tied,
+        row_count=tied_artifact.row_count,
+        checksum=tied_artifact.checksum,
+        payload_uri=tied_artifact.uri,
+        payload_retained=True,
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, tied)),
+    )
+    from ditto_application.queries.retained_calendar import retained_calendar_window
+
+    with pytest.raises(RetainedCalendarAbsent, match="tie with conflicting"):
+        retained_calendar_window(
+            snapshots=reader,
+            payloads=store,
+            cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            first_day="2026-03-09",
+            last_day="2026-03-11",
+            allow_closed_window=True,
+        )
+
+
+@pytest.mark.pit
 def test_chart_absence_lineage_uses_price_snapshots_only(tmp_path: Path) -> None:
     """A missing price session must not attach factor/status shards as
     absence evidence: only price-dataset shards can prove price absence."""
