@@ -58,12 +58,14 @@ Registry 配置测试通过近端 `conftest.py` 临时安装现有 keyring 包�
 检查默认排除它们；存量超标用例按等价重复清单流程治理（#321），不阻塞存量。
 
 时长证据常驻：pytest addopts 自带 `--durations=10`；治理入口
-`task analyze-slow-tests`。pytest-timeout 全局 600s 兜底防挂死（pyproject `timeout`），
+`task analyze-slow-tests`（覆盖全部测试根，已打 `slow`/`capacity` 标记的用例走慢车道不计入；
+未打标的超标用例——含存量——使命令 exit 1，即待治理清单，按本节与 #321 流程处置）。pytest-timeout 全局 600s 兜底防挂死（pyproject `timeout`），
 合法慢测试靠标记进慢车道表达，不以调大全局超时掩盖；疑似挂死先单独复现并排查资源
 争用，不直接加超时或重试。
 
-测试必须可并行：默认 `-n auto --dist loadfile`，禁止用例间顺序依赖；确需串行的打
-`serial`。SQLite 测试按 worker 隔离：用 `worker_id` fixture 加 `tmp_path` 给每 worker
+测试必须可并行：默认 `-n auto --dist loadfile`（同文件聚组），禁止用例间顺序依赖；
+跨文件互斥的用例打 `serial`——该标记在 CI 分片的两车道结构中生效，本地复现串行用
+`-n 0`（如 `uv run --no-sync pytest <path> -q -n 0`）。SQLite 测试按 worker 隔离：用 `worker_id` fixture 加 `tmp_path` 给每 worker
 （必要时每用例）独立 DB 文件，禁止多 worker 共享同一 DB 路径。贵重一次性构建的
 fixture 升 `scope="session"`（xdist 下为每 worker 一次），可变状态保持 function 级。
 

@@ -9,6 +9,22 @@ from pathlib import Path
 UNIT_TEST_THRESHOLD = 0.5
 INTEGRATION_TEST_THRESHOLD = 5.0
 _MIN_PARTS = 3
+_PACKAGES = [
+    "kernel",
+    "platform",
+    "data",
+    "features",
+    "strategy",
+    "portfolio",
+    "risk",
+    "execution",
+    "backtest",
+    "analysis",
+    "application",
+    "agent",
+]
+# 已打 slow/capacity 标记的用例走慢车道，不计入超标
+_MARKER_EXCLUSION = "-m", "not slow and not capacity"
 
 
 def get_durations(test_path: str, count: int = 50) -> dict:
@@ -23,6 +39,7 @@ def get_durations(test_path: str, count: int = 50) -> dict:
     cmd = [
         "pytest",
         test_path,
+        *_MARKER_EXCLUSION,
         "--durations",
         str(count),
         "--quiet",
@@ -63,21 +80,10 @@ def analyze_slow_tests() -> None:
     # 分析单元测试
     print("[*] 分析单元测试...")
     unit_durations = {}
-    for package in [
-        "kernel",
-        "platform",
-        "data",
-        "features",
-        "strategy",
-        "portfolio",
-        "risk",
-        "execution",
-        "backtest",
-        "analysis",
-        "application",
-        "apps",
+    for path in [
+        *(f"packages/{package}/tests/unit" for package in _PACKAGES),
+        "apps/backend/tests/unit",
     ]:
-        path = f"packages/{package}/tests/unit"
         unit_durations.update(get_durations(path, count=50))
 
     slow_unit_tests = {
@@ -89,21 +95,10 @@ def analyze_slow_tests() -> None:
     # 分析集成测试
     print("[*] 分析集成测试...")
     integration_durations = {}
-    for package in [
-        "kernel",
-        "platform",
-        "data",
-        "features",
-        "strategy",
-        "portfolio",
-        "risk",
-        "execution",
-        "backtest",
-        "analysis",
-        "application",
-        "apps",
+    for path in [
+        *(f"packages/{package}/tests/integration" for package in _PACKAGES),
+        "apps/backend/tests/integration",
     ]:
-        path = f"packages/{package}/tests/integration"
         integration_durations.update(get_durations(path, count=50))
 
     slow_integration_tests = {
