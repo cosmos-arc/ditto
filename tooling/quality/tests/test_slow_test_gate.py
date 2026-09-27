@@ -206,7 +206,7 @@ def test_new_tests_at_head_matches_directory_scope_by_prefix() -> None:
     }
     base = {("packages/application/tests/unit/test_a.py", "test_kept")}
     assert gate.new_tests_at_head(files, collected, base) == {
-        "packages/application/tests": {"test_new"}
+        "packages/application/tests/unit/test_a.py": {"test_new"}
     }
 
 
@@ -233,8 +233,10 @@ class _Script:
         self.raw_marked = raw_marked
         self.base_cases: set[tuple[str, str]] = base_cases or set()
 
-    def changed_test_files(self, base: str, root: Path) -> dict[str, str]:
-        return self.files
+    def changed_test_files(
+        self, base: str, root: Path
+    ) -> tuple[dict[str, str] | None, dict[str, str]]:
+        return self.files, {}
 
     def resolve_base(self, base: str, root: Path) -> str:
         return "base0000"

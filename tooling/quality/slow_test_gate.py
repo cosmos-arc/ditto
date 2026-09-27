@@ -349,8 +349,16 @@ def gate_scope(name_status: Mapping[str, str]) -> dict[str, str] | None:
     return scope
 
 
-def changed_test_files(base: str, root: Path) -> dict[str, str]:
-    """Map the gate scope (changed test modules + owner test dirs) to base paths."""
+def changed_test_files(
+    base: str, root: Path
+) -> tuple[dict[str, str] | None, dict[str, str]]:
+    """
+    Gate scope and test-module renames for the head-vs-base diff.
+
+    Deletions count: removing a conftest that suppressed collection exposes
+    cases at HEAD. Renames of test modules are returned separately so the
+    whole-suite mode can still subtract legacy identities at the old path.
+    """
     raw = subprocess.run(  # noqa: S603 - git 固定参数
         [
             _GIT,
@@ -360,7 +368,7 @@ def changed_test_files(base: str, root: Path) -> dict[str, str]:
             "--name-status",
             "-z",
             "-M",
-            "--diff-filter=ACMR",
+            "--diff-filter=ACMRD",
             f"{base}..HEAD",
         ],
         capture_output=True,
@@ -368,7 +376,14 @@ def changed_test_files(base: str, root: Path) -> dict[str, str]:
         check=True,
     ).stdout
     mapping = parse_name_status(raw)
-    return gate_scope(mapping)
+    renames = {
+        head: base_path
+        for head, base_path in mapping.items()
+        if head != base_path
+        and Path(head).name.startswith("test_")
+        and head.endswith(".py")
+    }
+    return gate_scope(mapping), renames
 
 
 def new_tests_at_head(
@@ -390,16 +405,22 @@ def new_tests_at_head(
             return True
         return scope_path.endswith("/tests") and path.startswith(scope_path + "/")
 
+    # 结果按收集产出的具体文件路径键控（junit/标记/托管路径判定均用具体路径）；
+    # 目录范围条目的基线侧同样按前缀聚合到具体基线文件。
     result: dict[str, set[str]] = {}
-    for head_path, base_path in files.items():
-        base_ids = {case for file, case in base_cases if _matches(file, base_path)}
-        cases = {
-            case
-            for file, case in collected_cases
-            if _matches(file, head_path) and case not in base_ids
+    for file, case in collected_cases:
+        entry = next(((hp, bp) for hp, bp in files.items() if _matches(file, hp)), None)
+        if entry is None:
+            continue  # 范围外（scoped 模式）的收集用例不参与差集
+        _, base_path = entry
+        base_names = {
+            base_case
+            for base_file, base_case in base_cases
+            if _matches(base_file, base_path)
         }
-        if cases:
-            result[head_path] = cases
+        if case in base_names:
+            continue
+        result.setdefault(file, set()).add(case)
     return result
 
 
@@ -515,7 +536,8 @@ def main(argv: list[str] | None = None) -> int:
 
     root = Path(args.root)
     base_sha = resolve_base(args.base, root)
-    files = changed_test_files(base_sha, root)
+    scope, renames = changed_test_files(base_sha, root)
+    files = scope
     if files is not None and not files:
         print("[slow-test-gate] no changed test files or touched owners; pass")
         return 0
@@ -524,7 +546,7 @@ def main(argv: list[str] | None = None) -> int:
         raw_collected = collect_ids(None)
         collected_cases = _case_set(raw_collected)
         base_cases = collect_base_ids(base_sha, None, root)
-        files = {file: file for file, _ in collected_cases}
+        files = {file: renames.get(file, file) for file, _ in collected_cases}
     else:
         raw_collected = collect_ids(sorted(files))
         collected_cases = _case_set(raw_collected)
