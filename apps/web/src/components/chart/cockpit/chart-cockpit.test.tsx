@@ -210,7 +210,7 @@ describe("ChartCockpit DOM 合同", () => {
 					mediaSize: { width: 300, height: 120 },
 				});
 			},
-		} as Parameters<NonNullable<typeof renderer>>[0]);
+		} as never);
 		expect(drawnX).toBe(299);
 	});
 
