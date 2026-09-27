@@ -110,7 +110,7 @@ def _bare_name(display: str) -> str:
     return segment.rsplit("::", 1)[-1]
 
 
-def _normalize_node(raw: str) -> tuple[str, str] | None:
+def normalize_node(raw: str) -> tuple[str, str] | None:
     """
     Normalize a collected node id to (file, qualified name).
 
@@ -217,7 +217,7 @@ def collect_ids(
         line = raw.strip()
         if not line or line.startswith(("=", "!", " ")):
             continue
-        if _normalize_node(line) is None:
+        if normalize_node(line) is None:
             continue
         collected.add(line)
     return collected
@@ -365,7 +365,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     raw_collected = collect_ids(sorted(files))
-    node_of = {raw: _normalize_node(raw) for raw in raw_collected}
+    node_of = {raw: normalize_node(raw) for raw in raw_collected}
     total_by_node = Counter(node for node in node_of.values() if node)
     collected = set(total_by_node)
     new_tests = new_tests_at_head(base_sha, files, collected, root)
@@ -383,7 +383,7 @@ def main(argv: list[str] | None = None) -> int:
     durations = parse_junit(junit_paths, root)
     raw_marked = collect_ids(sorted(files), _EXEMPT_MARKER_EXPR)
     marked_by_node = Counter(
-        _normalize_node(raw) for raw in raw_marked if _normalize_node(raw)
+        normalize_node(raw) for raw in raw_marked if normalize_node(raw)
     )
     # A test escapes via slow/capacity only when every parameter case is marked.
     exempt = {

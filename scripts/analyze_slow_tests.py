@@ -1,163 +1,131 @@
 #!/usr/bin/env python
-"""分析慢速测试并报告超过阈值的测试"""
+"""分析慢速测试并报告超过阈值的测试（收集驱动）。
 
+不再手工枚举测试根：一次全量运行（排除 slow/capacity/sandbox_live 标记，
+null keyring 隔离个人凭证）解析 junit 证据；阈值、junit 解析与节点归一化
+复用 tooling.quality.slow_test_gate 的单一权威实现。unit/integration 预算
+优先按标记判定，未打标时按测试文件的路径层级兜底。
+"""
+
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-# 性能阈值（秒）
-UNIT_TEST_THRESHOLD = 0.5
-INTEGRATION_TEST_THRESHOLD = 5.0
-_MIN_PARTS = 3
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from tooling.quality.slow_test_gate import (
+    INTEGRATION_THRESHOLD,
+    UNIT_THRESHOLD,
+    collect_ids,
+    normalize_node,
+    parse_junit,
+    threshold_for,
+)
+
+_EXCLUSION = "not slow and not capacity and not sandbox_live"
 
 
-def get_durations(test_path: str, count: int = 50) -> dict:
-    """运行 pytest 并获取耗时数据
-
-    如果测试路径不存在，返回空字典
-    """
-    # 检查路径是否存在
-    if not Path(test_path).exists():
-        return {}
-
-    cmd = [
-        "pytest",
-        test_path,
-        "--durations",
-        str(count),
-        "--quiet",
-        "--tb=no",
-        "-v",
-    ]
-
-    result = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        encoding="utf-8",  # 明确指定编码
-        errors="replace",  # 替换无法解码的字符
+def _run_suite(junit: Path) -> None:
+    """Run the whole suite once with marker exclusion into a junit report."""
+    env = dict(os.environ, PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring")
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "--tb=no",
+            "-o",
+            "addopts=",
+            "-n",
+            "auto",
+            "--dist",
+            "loadfile",
+            "-p",
+            "no:cacheprovider",
+            "-m",
+            _EXCLUSION,
+            f"--junitxml={junit}",
+        ],
         check=False,
+        env=env,
     )
 
-    # 解析输出
-    durations = {}
-    for line in result.stdout.split("\n"):
-        if "s setup" in line or "s call" in line:
-            # 格式: "2.34s call     tests/unit/test_foo.py::test_bar"
-            parts = line.split()
-            if len(parts) >= _MIN_PARTS:
-                duration_str = parts[0].rstrip("s")
-                test_name = parts[2]
-                try:
-                    duration = float(duration_str)
-                    durations[test_name] = duration
-                except ValueError:
-                    continue
 
-    return durations
-
-
-def analyze_slow_tests() -> None:
-    """分析慢速测试并生成报告"""
-
-    # 分析单元测试
-    print("[*] 分析单元测试...")
-    unit_durations = {}
-    for package in [
-        "kernel",
-        "platform",
-        "data",
-        "features",
-        "strategy",
-        "portfolio",
-        "risk",
-        "execution",
-        "backtest",
-        "analysis",
-        "application",
-        "apps",
-    ]:
-        path = f"packages/{package}/tests/unit"
-        unit_durations.update(get_durations(path, count=50))
-
-    slow_unit_tests = {
-        name: duration
-        for name, duration in unit_durations.items()
-        if duration > UNIT_TEST_THRESHOLD
+def _marked_nodes(marker: str) -> set[tuple[str, str]]:
+    return {
+        node
+        for raw in collect_ids(None, marker)
+        if (node := normalize_node(raw)) is not None
     }
 
-    # 分析集成测试
-    print("[*] 分析集成测试...")
-    integration_durations = {}
-    for package in [
-        "kernel",
-        "platform",
-        "data",
-        "features",
-        "strategy",
-        "portfolio",
-        "risk",
-        "execution",
-        "backtest",
-        "analysis",
-        "application",
-        "apps",
-    ]:
-        path = f"packages/{package}/tests/integration"
-        integration_durations.update(get_durations(path, count=50))
 
-    slow_integration_tests = {
-        name: duration
-        for name, duration in integration_durations.items()
-        if duration > INTEGRATION_TEST_THRESHOLD
-    }
+def _budget(
+    file: str,
+    name: str,
+    unit_nodes: set[tuple[str, str]],
+    integration_nodes: set[tuple[str, str]],
+) -> float:
+    if (file, name) in unit_nodes:
+        return UNIT_THRESHOLD
+    if (file, name) in integration_nodes:
+        return INTEGRATION_THRESHOLD
+    return threshold_for(file)
 
-    # 生成报告
+
+def analyze_slow_tests() -> int:
+    """Run the suite and report tests above their budget; 0 when compliant."""
+    with tempfile.TemporaryDirectory() as td:
+        junit = Path(td) / "junit.xml"
+        _run_suite(junit)
+        durations = parse_junit([junit], Path.cwd())
+
+    print("[*] 收集标记身份...")
+    unit_nodes = _marked_nodes("unit")
+    integration_nodes = _marked_nodes("integration")
+
+    slow_unit: list[tuple[float, str]] = []
+    slow_integration: list[tuple[float, str]] = []
+    for file, by_name in sorted(durations.items()):
+        for name, seconds in by_name.items():
+            limit = _budget(file, name, unit_nodes, integration_nodes)
+            if seconds <= limit:
+                continue
+            entry = (seconds, f"{file}::{name}")
+            target = slow_unit if limit == UNIT_THRESHOLD else slow_integration
+            target.append(entry)
+
     print("\n" + "=" * 60)
-    print("慢速测试报告")
+    print("慢速测试报告(已排除 slow/capacity/sandbox_live 标记)")
     print("=" * 60)
 
-    if slow_unit_tests:
-        msg = (
-            f"\n[!] 单元测试超过 {UNIT_TEST_THRESHOLD}s 阈值 "
-            f"({len(slow_unit_tests)} 个):"
-        )
-        print(msg)
-        for name, duration in sorted(
-            slow_unit_tests.items(),
-            key=lambda x: -x[1],
-        ):
-            print(f"  {duration:.2f}s - {name}")
-    else:
-        msg = f"\n[OK] 所有单元测试符合性能要求 (<{UNIT_TEST_THRESHOLD}s)"
-        print(msg)
+    def _report(items: list[tuple[float, str]], label: str, limit: float) -> None:
+        if items:
+            print(f"\n[!] {label}超过 {limit}s 阈值 ({len(items)} 个):")
+            for seconds, node in sorted(items, reverse=True):
+                print(f"  {seconds:.2f}s - {node}")
+        else:
+            print(f"\n[OK] 所有{label}符合性能要求 (<{limit}s)")
 
-    if slow_integration_tests:
-        msg = (
-            f"\n[!] 集成测试超过 {INTEGRATION_TEST_THRESHOLD}s 阈值 "
-            f"({len(slow_integration_tests)} 个):"
-        )
-        print(msg)
-        for name, duration in sorted(
-            slow_integration_tests.items(),
-            key=lambda x: -x[1],
-        ):
-            print(f"  {duration:.2f}s - {name}")
-    else:
-        msg = f"\n[OK] 所有集成测试符合性能要求 (<{INTEGRATION_TEST_THRESHOLD}s)"
-        print(msg)
+    _report(slow_unit, "单元测试", UNIT_THRESHOLD)
+    _report(slow_integration, "集成测试", INTEGRATION_THRESHOLD)
 
-    # 返回退出码
-    if slow_unit_tests or slow_integration_tests:
+    if slow_unit or slow_integration:
         print("\n[建议] 修复建议:")
         print("  - 检查是否有未 mock 的外部依赖")
         print("  - 检查是否有真实的 time.sleep()")
         print("  - 检查是否有重复的 fixture 初始化")
-        sys.exit(1)
-    else:
-        print("\n[SUCCESS] 所有测试性能良好!")
-        sys.exit(0)
+        print("  - 确属慢的测试打 @pytest.mark.slow / capacity 进慢车道")
+        return 1
+    print("\n[SUCCESS] 所有测试性能良好!")
+    return 0
+
+
+def main() -> int:
+    return analyze_slow_tests()
 
 
 if __name__ == "__main__":
-    analyze_slow_tests()
+    raise SystemExit(main())

@@ -64,18 +64,18 @@ class TestUnrelated:
     assert gate.test_names(source) == {"BaseTests.test_slow", "TestChild.test_slow"}
 
 
-def test_normalize_node_isolates_parameter_suffix_first() -> None:
-    assert gate._normalize_node(
+def testnormalize_node_isolates_parameter_suffix_first() -> None:
+    assert gate.normalize_node(
         "x/tests/unit/a.py::TestSubject::test_m[slow::case]"
     ) == (
         "x/tests/unit/a.py",
         "TestSubject.test_m",
     )
-    assert gate._normalize_node("x/tests/unit/a.py::test_plain") == (
+    assert gate.normalize_node("x/tests/unit/a.py::test_plain") == (
         "x/tests/unit/a.py",
         "test_plain",
     )
-    assert gate._normalize_node("warning: some noisy line") is None
+    assert gate.normalize_node("warning: some noisy line") is None
 
 
 def test_parse_junit_keeps_class_identity_and_merges_params(tmp_path: Path) -> None:
