@@ -198,6 +198,22 @@ def _qfq_baseline_day(
     return anchor_day
 
 
+def _status_window(request: MarketChartRequest) -> tuple[date, date]:
+    """
+    The natural-period window suspension authority spans.
+
+    A weekly or monthly request ending mid-period still consumes later
+    sessions when deciding candle completeness, clipped by delisting.
+    """
+    period_start = _period_bounds(request.start_date, request.period)[0]
+    natural_end = _period_bounds(request.end_date, request.period)[1]
+    period_end = min(
+        natural_end,
+        request.delisted_on - timedelta(days=1) if request.delisted_on else natural_end,
+    )
+    return period_start, period_end
+
+
 def _tied_price_conflicts(
     observed_at: Callable[[str], datetime], bar: TechnicalBar, previous: TechnicalBar
 ) -> bool:
@@ -746,13 +762,7 @@ class MarketChartQueryFacade:
             # requested dates still join, and validate ticker identity over
             # that window so a cutoff-visible mapping gap on a post-request
             # suspension day fails closed instead of silently dropping rows.
-            period_start = _period_bounds(request.start_date, request.period)[0]
-            period_end = min(
-                _period_bounds(request.end_date, request.period)[1],
-                request.delisted_on - timedelta(days=1)
-                if request.delisted_on
-                else _period_bounds(request.end_date, request.period)[1],
-            )
+            period_start, period_end = _status_window(request)
             consumable_days = _consumable_sessions(
                 calendar, period_start, period_end, cutoff
             )
@@ -880,23 +890,23 @@ class MarketChartQueryFacade:
         calendar: RetainedCalendarWindow,
         consumable_days: frozenset[str],
         suspensions: dict[str, SuspensionEvidence],
+        window: tuple[date, date],
     ) -> None:
         """
         Fail closed when retained price rows contradict full-day suspensions.
 
-        When every consumable session is suspended, price selection is
-        skipped for authority purposes, but a retained nonempty price
-        artifact covering those sessions still contradicts the status
-        authority: its rows are loaded over the collapsed exact-request
-        revisions and run through the same suspension-conflict guard the
-        normal path uses. Absence-only polls carry no rows and stay outside
-        price authority, so they cannot turn this into a mixed-source
-        rejection. No eager ticker mapping is demanded — identity resolves
-        lazily per row.
+        Runs over the same natural-period window as the suspension authority,
+        so a price row on a post-request suspended session — which the
+        truncated candle's completeness decision still consumes — reaches the
+        suspension-conflict guard. Absence-only polls carry no rows and stay
+        outside price authority, so they cannot turn this into a mixed-source
+        rejection. No eager ticker mapping is demanded; identity resolves
+        lazily per row and per provider source.
         """
         suspended = consumable_days & suspensions.keys()
         if not suspended:
             return
+        validation_request = replace(request, start_date=window[0], end_date=window[1])
         dataset = f"{request.asset_class}_daily"
         sorted_suspended = sorted(day.replace("-", "") for day in suspended)
         # Mirror selection's instrument-scope filter with a non-raising
@@ -907,7 +917,7 @@ class MarketChartQueryFacade:
             partial(
                 self._metadata.get_source_tickers,
                 request.instrument_id,
-                asofs=_date_keys(request.start_date, request.end_date),
+                asofs=_date_keys(window[0], window[1]),
                 cutoff=cutoff.isoformat(),
             )
         )
@@ -946,12 +956,12 @@ class MarketChartQueryFacade:
             # Identity resolves per provider: one source's mapping must not
             # silently filter another source's contradictory rows.
             instrument_code = self._instrument_code(
-                request,
+                validation_request,
                 source,
                 cutoff,
                 calendar,
                 frozenset(),
-                window=(request.start_date, request.end_date),
+                window=window,
             )
             context = PITQueryContext(
                 as_of=cutoff,
@@ -970,12 +980,12 @@ class MarketChartQueryFacade:
                 context,
                 instrument_id=InstrumentId(request.instrument_id),
                 instrument_code=instrument_code,
-                window=(request.start_date, request.end_date),
+                window=window,
             )
             _visible_bars(
                 raw,
                 calendar,
-                request,
+                validation_request,
                 suspensions,
                 _observed_at_reader(self._snapshots, cutoff),
             )
@@ -1067,6 +1077,14 @@ class MarketChartQueryFacade:
                     if first_period_start.isoformat()
                     <= day
                     <= last_period_end.isoformat()
+                }
+                | {
+                    calendar.gap_sources[day]
+                    for day in calendar.revision_gaps
+                    if first_period_start.isoformat()
+                    <= day
+                    <= last_period_end.isoformat()
+                    and day in calendar.gap_sources
                 }
             )
         )
@@ -1183,15 +1201,22 @@ class MarketChartQueryFacade:
         # suspension has no readable bar, so its dates leave price authority
         # coverage and an irrelevant price poll scoped to that day cannot
         # turn a complete candle into a mixed-source rejection.
+        status_window = _status_window(request)
         suspensions, status_shards = self._load_suspensions(request, cutoff, calendar)
         price_consumable_days = consumable_days - suspensions.keys()
         # A retained nonempty price artifact over suspended sessions still
         # contradicts the status authority in any window — mixed or fully
         # suspended — because a shard scoped only to the suspended day never
         # joins price selection; its rows route through the
-        # suspension-conflict guard here.
+        # suspension-conflict guard here, over the same natural-period
+        # window the suspension authority itself consumes.
         self._reject_suspended_price_conflicts(
-            request, cutoff, calendar, consumable_days, suspensions
+            request,
+            cutoff,
+            calendar,
+            _consumable_sessions(calendar, *status_window, cutoff),
+            suspensions,
+            status_window,
         )
         if not price_consumable_days:
             # Every consumable session is a full-day suspension: no price bar

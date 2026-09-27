@@ -591,6 +591,33 @@ def _bars(frame: pl.DataFrame) -> tuple[TechnicalBar, ...]:
     )
 
 
+def _apply_same_snapshot_status_row(
+    rows: dict[str, dict[str, object]],
+    day: str,
+    row: dict[str, object],
+    previous: dict[str, object],
+) -> None:
+    """Fold a duplicate same-day row from one snapshot by its PIT times."""
+    available_at = cast(datetime, row["available_at"])
+    prior_available = cast(datetime, previous["available_at"])
+    if available_at > prior_available:
+        # The later knowledge revision corrects the earlier row.
+        rows[day] = row
+        return
+    if _is_full_day_suspension_row(row) != _is_full_day_suspension_row(previous):
+        raise _source_error(
+            "TECHNICAL_SOURCE_REVISION_CONFLICT",
+            "contradictory same-snapshot status rows",
+            day=day,
+        )
+    if cast(datetime, row["published_at"]) != cast(datetime, previous["published_at"]):
+        raise _source_error(
+            "TECHNICAL_SOURCE_REVISION_CONFLICT",
+            "tied same-snapshot status rows",
+            day=day,
+        )
+
+
 class ProviderPayloadTechnicalAnalysisSource:
     """Load technical bars through common PIT filters and exact artifacts."""
 
@@ -779,27 +806,33 @@ class ProviderPayloadTechnicalAnalysisSource:
             ):
                 rows[day] = row
             elif observed == snapshot_observed_by(prior, context.as_of):
+                if str(row["source_snapshot_id"]) == str(
+                    previous["source_snapshot_id"]
+                ):
+                    # stock_status permits duplicate day rows in one
+                    # snapshot; the latest visible knowledge time wins and
+                    # an equal-time tie with differing publication leaves
+                    # the lineage order-dependent, so it fails closed.
+                    _apply_same_snapshot_status_row(rows, day, row, previous)
+                    continue
                 if _is_full_day_suspension_row(row) != _is_full_day_suspension_row(
                     previous
                 ):
-                    # Same authoritative snapshot with contradictory same-day
-                    # rows: keep-first would silently hide the suspension.
+                    # Same observation with contradictory same-day states:
+                    # keep-first would silently hide the suspension.
                     raise _source_error(
                         "TECHNICAL_SOURCE_REVISION_CONFLICT",
                         "contradictory same-snapshot status rows",
                         day=day,
                     )
-                if str(row["source_snapshot_id"]) != str(
-                    previous["source_snapshot_id"]
-                ):
-                    # Distinct tied suspension authorities leave the chosen
-                    # snapshot lineage and its availability/publication
-                    # timestamps order-dependent even when the states agree.
-                    raise _source_error(
-                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
-                        "tied suspension revisions conflict for a chart session",
-                        day=day,
-                    )
+                # Distinct tied suspension authorities leave the chosen
+                # snapshot lineage and its availability/publication
+                # timestamps order-dependent even when the states agree.
+                raise _source_error(
+                    "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                    "tied suspension revisions conflict for a chart session",
+                    day=day,
+                )
         return {
             day: SuspensionEvidence(
                 str(row["source_snapshot_id"]),

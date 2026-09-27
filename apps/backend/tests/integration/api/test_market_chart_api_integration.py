@@ -3573,6 +3573,211 @@ def test_chart_rejects_mixed_calendar_schema_versions(tmp_path: Path) -> None:
 
 
 @pytest.mark.pit
+def test_chart_validates_suspension_conflicts_across_natural_period(
+    tmp_path: Path,
+) -> None:
+    """A retained price on a post-request suspended session — inside the
+    natural period the truncated candle's completeness still consumes —
+    fails closed, not only prices on requested dates."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    later = datetime(2026, 3, 13, 7, tzinfo=UTC)
+    post_request_suspension = replace(
+        _snapshot(
+            store,
+            "stock_status",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-12"],
+                    "is_suspended": [True],
+                    "available_at": [later],
+                    "published_at": [later],
+                }
+            ),
+            later,
+        ),
+        request_start="2026-03-12",
+        request_end="2026-03-12",
+    )
+    suspended_day_price = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-12"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            later,
+        ),
+        request_start="2026-03-12",
+        request_end="2026-03-12",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(),
+                post_request_suspension,
+                suspended_day_price,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="chart price conflicts with retained full-day suspension"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="weekly",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_resolves_same_snapshot_status_rows_by_knowledge_time(
+    tmp_path: Path,
+) -> None:
+    """Duplicate same-day status rows in one snapshot resolve by their PIT
+    knowledge time; an equal-knowledge tie with differing publication fails
+    closed instead of depending on payload order."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
+    earlier = datetime(2026, 3, 11, 7, tzinfo=UTC)
+    later = datetime(2026, 3, 11, 9, tzinfo=UTC)
+
+    def _status_frame(available: list[datetime], published: list[datetime]):
+        return pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH", "600519.SH"],
+                "trade_date": ["2026-03-11", "2026-03-11"],
+                "is_suspended": [True, True],
+                "available_at": available,
+                "published_at": published,
+            }
+        )
+
+    revision_status = replace(
+        _snapshot(
+            store,
+            "stock_status",
+            _status_frame([earlier, later], [visible, visible]),
+            visible,
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-15",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, revision_status)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    # The newer knowledge revision carries the candle's availability.
+    assert result.bars[0].available_at == later
+
+    tied_status = replace(
+        _snapshot(
+            store,
+            "stock_status",
+            _status_frame([later, later], [earlier, visible]),
+            visible,
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-15",
+    )
+    tied_reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, tied_status)),
+    )
+    tied_chart = MarketChartQueryFacade(
+        tied_reader, store, chart._metadata, chart._market
+    )
+    with pytest.raises(AppQueryError, match="tied same-snapshot status rows"):
+        tied_chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="weekly",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_includes_revision_gap_snapshot_in_lineage(tmp_path: Path) -> None:
+    """The verified-empty calendar revision that gaps a post-request session
+    and forces the truncated candle partial appears in the chart lineage."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    gap_empty = replace(
+        calendar_only,
+        snapshot_id="gap-empty-calendar",
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        observations=(),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, gap_empty)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+        )
+    )
+    assert result.bars[0].partial is True
+    assert gap_empty.snapshot_id in result.calendar_snapshot_ids
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_peer_omission(tmp_path: Path) -> None:
     """A same-observation shard with different bounds that omits the
     instrument day leaves the presence decision unresolved; the row fails

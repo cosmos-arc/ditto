@@ -27,6 +27,7 @@ class RetainedCalendar(NamedTuple):
     authority: dict[str, str]
     shard_sources: dict[str, str]
     revision_gaps: frozenset[str]
+    gap_sources: dict[str, str]
 
 
 def calendar_has_single_source(
@@ -65,6 +66,7 @@ class RetainedCalendarWindow(NamedTuple):
     authority: dict[str, str]
     shard_sources: dict[str, str]
     revision_gaps: frozenset[str]
+    gap_sources: dict[str, str]
 
 
 def calendar_has_complete_authority(
@@ -114,7 +116,8 @@ def _revision_gaps(
     authorship: dict[str, tuple[bool, str]],
     first_day: str,
     last_day: str,
-) -> set[str]:
+) -> dict[str, str]:
+    """Days this shard supersedes into gaps, mapped to the shard itself."""
     intervals = [(min(states), max(states))] if states else []
     request_start = getattr(snapshot, "request_start", None)
     request_end = getattr(snapshot, "request_end", None)
@@ -123,14 +126,14 @@ def _revision_gaps(
         end = min(last_day, request_end)
         if start <= end:
             intervals.append((start, end))
-    gaps: set[str] = set()
+    gaps: dict[str, str] = {}
     for start, end in intervals:
         day = date.fromisoformat(start)
         final = date.fromisoformat(end)
         while day <= final:
             iso = day.isoformat()
             if iso not in states and iso in authorship:
-                gaps.add(iso)
+                gaps[iso] = snapshot.snapshot_id
             day += timedelta(days=1)
     return gaps
 
@@ -202,6 +205,7 @@ class _CalendarFold:
     authorship: dict[str, tuple[bool, str]] = field(default_factory=dict)
     authorship_observed: dict[str, datetime] = field(default_factory=dict)
     revision_gaps: set[str] = field(default_factory=set)
+    gap_sources: dict[str, str] = field(default_factory=dict)
     shard_sources: dict[str, str] = field(default_factory=dict)
     read_payloads: dict[str, pl.DataFrame] = field(default_factory=dict)
 
@@ -291,9 +295,11 @@ def _combine_retained_shards(
     plans = _calendar_plans(shards, payloads, fold, first_day, last_day, cutoff)
     _reject_tied_omissions(plans, first_day, last_day)
     for snapshot, observed, states in plans:
-        fold.revision_gaps.update(
-            _revision_gaps(snapshot, states, fold.authorship, first_day, last_day)
+        new_gaps = _revision_gaps(
+            snapshot, states, fold.authorship, first_day, last_day
         )
+        fold.revision_gaps.update(new_gaps)
+        fold.gap_sources.update(new_gaps)
         for day, is_open in states.items():
             prior = fold.authorship.get(day)
             if prior is not None and fold.authorship_observed.get(day) == observed:
@@ -308,6 +314,7 @@ def _combine_retained_shards(
             fold.authorship[day] = (is_open, snapshot.snapshot_id)
             fold.authorship_observed[day] = observed
             fold.revision_gaps.discard(day)
+            fold.gap_sources.pop(day, None)
 
 
 def _apply_empty_observations(
@@ -336,6 +343,7 @@ def _apply_empty_observations(
                 )
             if fold.authorship_observed[day] < observed:
                 fold.revision_gaps.add(day)
+                fold.gap_sources[day] = snapshot.snapshot_id
 
 
 def retained_calendar_window(
@@ -400,6 +408,7 @@ def retained_calendar_window(
         {day: state[1] for day, state in authorship.items()},
         fold.shard_sources,
         frozenset(fold.revision_gaps),
+        fold.gap_sources,
     )
 
 
@@ -435,4 +444,5 @@ def retained_trading_days(
         window.authority,
         window.shard_sources,
         window.revision_gaps,
+        window.gap_sources,
     )
