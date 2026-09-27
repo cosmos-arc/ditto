@@ -12,6 +12,5 @@ export {
 	type CockpitSeriesSpec,
 	type CockpitSubPane,
 	type CockpitSubPaneSeries,
-	resampleBars,
 } from "./cockpit";
 export { LineChart } from "./line-chart";

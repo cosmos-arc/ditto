@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, date, datetime, time
 from math import isfinite
-from typing import cast
+from typing import NamedTuple, cast
 from zoneinfo import ZoneInfo
 
 import polars as pl
@@ -23,11 +24,33 @@ from ditto_kernel.identity import InstrumentId
 
 from ditto_application.exceptions import AppQueryError
 from ditto_application.paper_contracts import PaperMarketSnapshotInput
+from ditto_application.queries.retained_calendar import snapshot_observed_by
 
 __all__ = ["ProviderPayloadTechnicalAnalysisSource"]
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _COMPACT_DATE_LENGTH = 8
+
+
+class AdjustmentFactor(NamedTuple):
+    value: float
+    snapshot_id: str
+    available_at: datetime
+    published_at: datetime
+
+
+class SuspensionEvidence(NamedTuple):
+    snapshot_id: str
+    available_at: datetime
+    published_at: datetime
+
+
+def _is_full_day_suspension_row(row: dict[str, object]) -> bool:
+    return row["is_suspended"] is True and row.get("suspend_timing") in (
+        None,
+        "",
+        "09:30-15:00",
+    )
 
 
 def _source_error(code: str, reason: str, **details: object) -> AppQueryError:
@@ -70,9 +93,11 @@ def _parse_datetime(value: object, *, fallback: datetime | None) -> datetime:
         normalized = value.strip()
         try:
             if len(normalized) == _COMPACT_DATE_LENGTH and normalized.isdigit():
-                parsed = datetime.strptime(normalized, "%Y%m%d")
+                parsed = datetime.strptime(normalized, "%Y%m%d").replace(hour=15)
             else:
                 parsed = datetime.fromisoformat(normalized)
+                if normalized == parsed.date().isoformat():
+                    parsed = parsed.replace(hour=15)
         except ValueError as exc:
             raise _source_error(
                 "TECHNICAL_SOURCE_TIME_INVALID",
@@ -181,6 +206,16 @@ class _PayloadDatasetReader(PITDatasetReader):
         for snapshot_id in snapshot.source_snapshot_ids:
             provider_snapshot = self._snapshot_reader.get_snapshot(snapshot_id)
             if (
+                provider_snapshot is not None
+                and provider_snapshot.snapshot_id == snapshot_id
+                and provider_snapshot.dataset_id == snapshot.dataset_id
+                and provider_snapshot.schema_version == snapshot.dataset_version
+                and provider_snapshot.row_count == 0
+                and dict(provider_snapshot.response_metadata).get("snapshot_layer")
+                == "verified_empty_provider_observation"
+            ):
+                continue
+            if (
                 provider_snapshot is None
                 or provider_snapshot.snapshot_id != snapshot_id
                 or provider_snapshot.dataset_id != snapshot.dataset_id
@@ -200,12 +235,12 @@ class _PayloadDatasetReader(PITDatasetReader):
                 row_count=provider_snapshot.row_count,
                 uri=provider_snapshot.payload_uri,
             )
-            frames.append(
-                _normalize(
-                    provider_snapshot,
-                    self._payload_reader.read_payload(artifact),
-                )
+            normalized = _normalize(
+                provider_snapshot,
+                self._payload_reader.read_payload(artifact),
             )
+            _reject_rows_outside_request_bounds(provider_snapshot, normalized)
+            frames.append(normalized)
         if not frames:
             raise _source_error(
                 "TECHNICAL_SOURCE_PAYLOAD_UNAVAILABLE",
@@ -214,11 +249,163 @@ class _PayloadDatasetReader(PITDatasetReader):
         return pl.concat(frames, how="diagonal_relaxed")
 
 
+def _reject_rows_outside_request_bounds(
+    snapshot: ProviderSnapshot, frame: pl.DataFrame
+) -> None:
+    """
+    Reject payload rows outside their own snapshot's request bounds.
+
+    Such a row was never covered by that observation; exposing it would
+    bypass the per-day revision and absence checks keyed on the bounds.
+    """
+    start = snapshot.request_start.replace("-", "")
+    end = snapshot.request_end.replace("-", "")
+    for value in frame["event_time"]:
+        day = cast(datetime, value).astimezone(_SHANGHAI).strftime("%Y%m%d")
+        if not start <= day <= end:
+            raise _source_error(
+                "TECHNICAL_SOURCE_LINEAGE_MISMATCH",
+                "payload_row_outside_request_bounds",
+                snapshot_id=snapshot.snapshot_id,
+                day=day,
+            )
+
+
+def _overlapping_revisions(
+    retained: dict[str, ProviderSnapshot | None],
+    scopes: dict[str, set[str]],
+    observed_at: dict[str, datetime],
+    prior: ProviderSnapshot,
+    ticker: str | None,
+    day: str,
+    cutoff: datetime,
+) -> list[ProviderSnapshot]:
+    """
+    Revisions whose scope covers the instrument day at or after the prior.
+
+    Equal-time peers are authorities too: a same-observation shard omitting
+    the day leaves the presence decision unresolved, so ties join the
+    candidate set instead of silently letting the prior row win.
+    """
+    return [
+        item
+        for item in retained.values()
+        if item is not None
+        and item.snapshot_id != prior.snapshot_id
+        and item.created_at <= cutoff
+        and (not scopes[item.snapshot_id] or ticker in scopes[item.snapshot_id])
+        and item.dataset_id == prior.dataset_id
+        and item.source == prior.source
+        # Production hashes request bounds into request_parameters_hash,
+        # so a differing-bounds refresh never shares the prior hash;
+        # authority is judged by covered day and partition scope only.
+        and item.request_start.replace("-", "")
+        <= day
+        <= item.request_end.replace("-", "")
+        and observed_at[item.snapshot_id] >= observed_at[prior.snapshot_id]
+    ]
+
+
+def _reject_superseded_revision_rows(
+    frame: pl.DataFrame,
+    context: PITQueryContext,
+    snapshot_reader: ProviderSnapshotReader,
+    instrument_code: str | Callable[[date], str | None],
+    *,
+    window: tuple[date, date] | None = None,
+) -> None:
+    """
+    Fail closed when the newest in-scope observation drops a visible day.
+
+    A newer retained revision that covers a day for this instrument's scope
+    — an empty verified observation, or a nonempty shard with the same
+    request parameters whose payload omits the instrument — supersedes the
+    older shard's row for that day; the row must not survive as visible
+    evidence. Authority per covered day is the newest cutoff-visible
+    observation, so an even-newer shard that re-supplies the row keeps it
+    visible. Revisions tied at that newest observation have no PIT order:
+    when they disagree on the day's presence the conflict fails closed
+    instead of letting snapshot ordering pick. Rows outside the requested
+    chart window are never exposed, so only ``window`` (when given) bounds
+    the check.
+    """
+    retained = {
+        snapshot_id: snapshot_reader.get_snapshot(snapshot_id)
+        for dataset in context.source_snapshots
+        for snapshot_id in dataset.source_snapshot_ids
+    }
+    scopes = {
+        snapshot_id: {
+            key.removeprefix("source_ticker=")
+            for key in item.canonical_asset.partition_keys
+            if key.startswith("source_ticker=")
+        }
+        for snapshot_id, item in retained.items()
+        if item is not None
+    }
+    observed_at = {
+        snapshot_id: snapshot_observed_by(item, context.knowledge_cutoff)
+        for snapshot_id, item in retained.items()
+        if item is not None
+    }
+    rows = frame.select("event_time", "source_snapshot_id").to_dicts()
+    present_days: dict[str, set[str]] = {}
+    for row in rows:
+        present_days.setdefault(str(row["source_snapshot_id"]), set()).add(
+            cast(datetime, row["event_time"]).astimezone(_SHANGHAI).strftime("%Y%m%d")
+        )
+    for row in rows:
+        prior = retained.get(str(row["source_snapshot_id"]))
+        if prior is None:
+            continue
+        trade_day = cast(datetime, row["event_time"]).astimezone(_SHANGHAI).date()
+        if window is not None and not window[0] <= trade_day <= window[1]:
+            continue
+        day = trade_day.strftime("%Y%m%d")
+        ticker = (
+            instrument_code(trade_day) if callable(instrument_code) else instrument_code
+        )
+        candidates = _overlapping_revisions(
+            retained, scopes, observed_at, prior, ticker, day, context.knowledge_cutoff
+        )
+        if not candidates:
+            continue
+        newest = max(observed_at[item.snapshot_id] for item in candidates)
+        authorities = [
+            item for item in candidates if observed_at[item.snapshot_id] == newest
+        ]
+        supplied = {
+            day in present_days.get(item.snapshot_id, ()) for item in authorities
+        }
+        if len(supplied) > 1:
+            raise _source_error(
+                "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                "tied newest revisions disagree on the instrument day",
+                snapshot_id=prior.snapshot_id,
+            )
+        authority = authorities[0]
+        if day not in present_days.get(authority.snapshot_id, ()):
+            if authority.row_count == 0:
+                detail = "visible row overlaps newer empty revision"
+            elif observed_at[authority.snapshot_id] == observed_at[prior.snapshot_id]:
+                detail = "tied overlapping revision omits the instrument day"
+            else:
+                detail = "newer overlapping revision omits the instrument day"
+            raise _source_error(
+                "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                detail,
+                snapshot_id=prior.snapshot_id,
+            )
+
+
 def _instrument_rows(
     frame: pl.DataFrame,
     *,
+    context: PITQueryContext,
+    snapshot_reader: ProviderSnapshotReader,
     instrument_id: InstrumentId,
-    instrument_code: str,
+    instrument_code: str | Callable[[date], str | None],
+    window: tuple[date, date] | None = None,
 ) -> pl.DataFrame:
     """
     Select rows for exactly one instrument.
@@ -227,12 +414,37 @@ def _instrument_rows(
     primary identity; the internal ID is a cross-check when the optional
     enriched column exists. Requiring agreement keeps a corrected mapping
     from mixing rows of two different instruments into one price series.
+
+    ``window`` filters the frame before ticker resolution: whole-artifact
+    lineage was already validated in the reader, and resolving the effective
+    ticker for every row of a multi-year shard would degrade the batched
+    mapping lookup into one point query per out-of-window day.
     """
     selected = frame
+    if window is not None and not frame.is_empty():
+        selected = selected.filter(
+            pl.col("event_time")
+            .dt.convert_time_zone(_SHANGHAI.key)
+            .dt.date()
+            .is_between(window[0], window[1])
+        )
+    frame_for_tickers = selected
+    expected = (
+        pl.Series(
+            "expected_ticker",
+            [
+                instrument_code(cast(datetime, value).astimezone(_SHANGHAI).date())
+                for value in frame_for_tickers["event_time"]
+            ],
+            dtype=pl.String,
+        )
+        if callable(instrument_code)
+        else instrument_code
+    )
     ticker_filters = [
-        pl.col(column).cast(pl.String) == instrument_code
+        pl.col(column).cast(pl.String) == expected
         for column in ("source_ticker", "instrument_code", "ts_code", "ticker")
-        if column in frame.columns
+        if column in frame_for_tickers.columns
     ]
     id_filter = (
         pl.col("instrument_id").cast(pl.Int64, strict=False) == int(instrument_id)
@@ -244,10 +456,13 @@ def _instrument_rows(
             "TECHNICAL_SOURCE_IDENTITY_REQUIRED",
             "instrument_identity_column_missing",
         )
-    for item in ticker_filters:
-        selected = selected.filter(item)
+    if ticker_filters:
+        selected = selected.filter(pl.all_horizontal(ticker_filters))
     if id_filter is not None:
         selected = selected.filter(id_filter)
+    _reject_superseded_revision_rows(
+        selected, context, snapshot_reader, instrument_code, window=window
+    )
     return selected
 
 
@@ -274,7 +489,7 @@ def _values(
             values.append(default)
         else:
             try:
-                values.append(float(item))
+                value = float(item)
             except (TypeError, ValueError) as exc:
                 raise _source_error(
                     "TECHNICAL_SOURCE_VALUE_INVALID",
@@ -282,6 +497,13 @@ def _values(
                     field=field,
                     value_type=type(item).__name__,
                 ) from exc
+            if not isfinite(value):
+                raise _source_error(
+                    "TECHNICAL_SOURCE_VALUE_INVALID",
+                    "numeric_value_not_finite",
+                    field=field,
+                )
+            values.append(value)
     return values
 
 
@@ -369,6 +591,33 @@ def _bars(frame: pl.DataFrame) -> tuple[TechnicalBar, ...]:
     )
 
 
+def _apply_same_snapshot_status_row(
+    rows: dict[str, dict[str, object]],
+    day: str,
+    row: dict[str, object],
+    previous: dict[str, object],
+) -> None:
+    """Fold a duplicate same-day row from one snapshot by its PIT times."""
+    available_at = cast(datetime, row["available_at"])
+    prior_available = cast(datetime, previous["available_at"])
+    if available_at > prior_available:
+        # The later knowledge revision corrects the earlier row.
+        rows[day] = row
+        return
+    if _is_full_day_suspension_row(row) != _is_full_day_suspension_row(previous):
+        raise _source_error(
+            "TECHNICAL_SOURCE_REVISION_CONFLICT",
+            "contradictory same-snapshot status rows",
+            day=day,
+        )
+    if cast(datetime, row["published_at"]) != cast(datetime, previous["published_at"]):
+        raise _source_error(
+            "TECHNICAL_SOURCE_REVISION_CONFLICT",
+            "tied same-snapshot status rows",
+            day=day,
+        )
+
+
 class ProviderPayloadTechnicalAnalysisSource:
     """Load technical bars through common PIT filters and exact artifacts."""
 
@@ -391,9 +640,15 @@ class ProviderPayloadTechnicalAnalysisSource:
         context: PITQueryContext,
         *,
         instrument_id: InstrumentId,
-        instrument_code: str,
+        instrument_code: str | Callable[[date], str | None],
+        window: tuple[date, date] | None = None,
     ) -> tuple[TechnicalBar, ...]:
-        """Return ordered bars for exactly one requested instrument."""
+        """
+        Return ordered bars for exactly one requested instrument.
+
+        ``window`` bounds the revision-conflict check to rows the caller can
+        expose; rows outside it are still returned for the caller's own bounds.
+        """
         frames = tuple(
             self._query.query(dataset_id=item.dataset_id, context=context)
             for item in context.source_snapshots
@@ -401,10 +656,192 @@ class ProviderPayloadTechnicalAnalysisSource:
         combined = pl.concat(frames, how="diagonal_relaxed")
         selected = _instrument_rows(
             combined,
+            context=context,
+            snapshot_reader=self._snapshot_reader,
             instrument_id=instrument_id,
             instrument_code=instrument_code,
+            window=window,
         ).sort("event_time")
         return _bars(selected)
+
+    def load_adjustment_factors(
+        self,
+        context: PITQueryContext,
+        *,
+        instrument_id: InstrumentId,
+        instrument_code: str | Callable[[date], str | None],
+        window: tuple[date, date] | None = None,
+    ) -> dict[str, AdjustmentFactor]:
+        """Read exact visible adjustment factors without a latest-store fallback."""
+        frame = self._query.query(dataset_id="adj_factor", context=context)
+        selected = _instrument_rows(
+            frame,
+            context=context,
+            snapshot_reader=self._snapshot_reader,
+            instrument_id=instrument_id,
+            instrument_code=instrument_code,
+            window=window,
+        ).sort("event_time")
+        factor_column = _column(
+            selected, ("adj_factor", "adjustment_factor"), field="adjustment factor"
+        )
+        factors: dict[str, AdjustmentFactor] = {}
+        for row in selected.to_dicts():
+            try:
+                factor = float(row[cast(str, factor_column)])
+            except (TypeError, ValueError) as error:
+                raise _source_error(
+                    "TECHNICAL_SOURCE_VALUE_INVALID", "adjustment factor invalid"
+                ) from error
+            if not isfinite(factor) or factor <= 0:
+                raise _source_error(
+                    "TECHNICAL_SOURCE_VALUE_INVALID", "adjustment factor invalid"
+                )
+            day = (
+                cast(datetime, row["event_time"])
+                .astimezone(_SHANGHAI)
+                .date()
+                .isoformat()
+            )
+            snapshot_id = str(row["source_snapshot_id"])
+            snapshot = self._snapshot_reader.get_snapshot(snapshot_id)
+            if snapshot is None:
+                raise _source_error(
+                    "TECHNICAL_SOURCE_LINEAGE_MISMATCH", "adjustment snapshot missing"
+                )
+            prior = factors.get(day)
+            prior_snapshot = (
+                self._snapshot_reader.get_snapshot(prior.snapshot_id) if prior else None
+            )
+            observed = snapshot_observed_by(snapshot, context.as_of)
+            if (
+                prior is None
+                or prior_snapshot is None
+                or observed > snapshot_observed_by(prior_snapshot, context.as_of)
+            ):
+                factors[day] = AdjustmentFactor(
+                    factor,
+                    snapshot_id,
+                    cast(datetime, row["available_at"]),
+                    cast(datetime, row["published_at"]),
+                )
+            elif observed == snapshot_observed_by(prior_snapshot, context.as_of):
+                # Same authoritative artifact may carry multiple revisions of
+                # one day (the dataset key includes knowledge_date); the
+                # latest visible knowledge time wins and equal-time rows
+                # must agree instead of depending on payload order.
+                available_at = cast(datetime, row["available_at"])
+                if available_at > prior.available_at:
+                    factors[day] = AdjustmentFactor(
+                        factor,
+                        snapshot_id,
+                        available_at,
+                        cast(datetime, row["published_at"]),
+                    )
+                elif available_at == prior.available_at and factor != prior.value:
+                    raise _source_error(
+                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                        "contradictory same-snapshot factor rows",
+                        day=day,
+                    )
+                elif (
+                    available_at == prior.available_at
+                    and snapshot_id != prior.snapshot_id
+                ):
+                    # Distinct tied factor authorities with equal row
+                    # knowledge leave the chosen snapshot lineage and its
+                    # publication time order-dependent even when the values
+                    # agree.
+                    raise _source_error(
+                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                        "tied factor revisions conflict for a chart session",
+                        day=day,
+                    )
+        return factors
+
+    def load_suspensions(
+        self,
+        context: PITQueryContext,
+        *,
+        instrument_id: InstrumentId,
+        instrument_code: Callable[[date], str | None],
+        window: tuple[date, date] | None = None,
+    ) -> dict[str, SuspensionEvidence]:
+        """Return exact visible full-day suspension evidence; unknown stays a gap."""
+        frame = self._query.query(dataset_id="stock_status", context=context)
+        selected = _instrument_rows(
+            frame,
+            context=context,
+            snapshot_reader=self._snapshot_reader,
+            instrument_id=instrument_id,
+            instrument_code=instrument_code,
+            window=window,
+        )
+        if "is_suspended" not in selected.columns:
+            return {}
+        rows: dict[str, dict[str, object]] = {}
+        for row in selected.to_dicts():
+            day = (
+                cast(datetime, row["event_time"])
+                .astimezone(_SHANGHAI)
+                .date()
+                .isoformat()
+            )
+            snapshot = self._snapshot_reader.get_snapshot(
+                str(row["source_snapshot_id"])
+            )
+            previous = rows.get(day)
+            prior = (
+                self._snapshot_reader.get_snapshot(str(previous["source_snapshot_id"]))
+                if previous
+                else None
+            )
+            if snapshot is None:
+                continue
+            observed = snapshot_observed_by(snapshot, context.as_of)
+            if (
+                previous is None
+                or prior is None
+                or observed > snapshot_observed_by(prior, context.as_of)
+            ):
+                rows[day] = row
+            elif observed == snapshot_observed_by(prior, context.as_of):
+                if str(row["source_snapshot_id"]) == str(
+                    previous["source_snapshot_id"]
+                ):
+                    # stock_status permits duplicate day rows in one
+                    # snapshot; the latest visible knowledge time wins and
+                    # an equal-time tie with differing publication leaves
+                    # the lineage order-dependent, so it fails closed.
+                    _apply_same_snapshot_status_row(rows, day, row, previous)
+                    continue
+                if _is_full_day_suspension_row(row) != _is_full_day_suspension_row(
+                    previous
+                ):
+                    # Same observation with contradictory same-day states:
+                    # keep-first would silently hide the suspension.
+                    raise _source_error(
+                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                        "contradictory same-snapshot status rows",
+                        day=day,
+                    )
+                # Distinct tied suspension authorities leave the chosen
+                # snapshot lineage and its availability/publication
+                # timestamps order-dependent even when the states agree.
+                raise _source_error(
+                    "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                    "tied suspension revisions conflict for a chart session",
+                    day=day,
+                )
+        return {
+            day: SuspensionEvidence(
+                str(row["source_snapshot_id"]),
+                cast(datetime, row["available_at"]),
+                cast(datetime, row["published_at"]),
+            )
+            for day, row in rows.items()
+            if _is_full_day_suspension_row(row)
+        }
 
     def load_paper_market(
         self,

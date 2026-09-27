@@ -26,6 +26,12 @@ export function toCockpitBars(bars: readonly InstrumentBar[]): CockpitBar[] {
 			low: bar.low,
 			close: bar.close,
 			volume: bar.volume,
+			sourceSnapshotIds: bar.source_snapshot_ids,
+			firstTradeDate: bar.first_trade_date,
+			lastTradeDate: bar.last_trade_date,
+			availableAt: bar.available_at,
+			publishedAt: bar.published_at,
+			partial: bar.partial,
 		}));
 }
 
@@ -59,39 +65,6 @@ export function primaryAnswerFromBars(bars: readonly CockpitBar[]): ChartPrimary
 		windowHigh: Math.max(...highs),
 		direction: change === null || change === 0 ? "flat" : change > 0 ? "up" : "down",
 	};
-}
-
-/** 最近一根 bar 距今天数（UTC 口径），用于数据级陈旧判定。 */
-export function barsAgeDays(bars: readonly CockpitBar[], nowMs: number): number | null {
-	const last = lastBar(bars);
-	if (!last) return null;
-	return Math.floor((nowMs - last.time * 1000) / 86_400_000);
-}
-
-function nextWeekdayUnix(unixSeconds: number): number {
-	const date = new Date(unixSeconds * 1000);
-	let add = 1;
-	if (date.getUTCDay() === 5) add = 3;
-	else if (date.getUTCDay() === 6) add = 2;
-	return unixSeconds + add * 86_400;
-}
-
-/**
- * 日历缺口：日线序列中缺失的交易日区间（API Bar 合同不携带 null OHLC，
- * 缺失日即缺席行）。仅跳过周末；缺失 ≥1 个交易日即视为断口。
- */
-export function findCalendarGaps(bars: readonly CockpitBar[]): Array<{ from: number; to: number }> {
-	const sorted = [...bars].sort((a, b) => a.time - b.time);
-	const gaps: Array<{ from: number; to: number }> = [];
-	for (let index = 1; index < sorted.length; index += 1) {
-		const previous = sorted[index - 1];
-		const current = sorted[index];
-		if (previous === undefined || current === undefined) continue;
-		if (current.time > nextWeekdayUnix(previous.time)) {
-			gaps.push({ from: previous.time, to: current.time });
-		}
-	}
-	return gaps;
 }
 
 function lastBar(bars: readonly CockpitBar[]): CockpitBar | null {

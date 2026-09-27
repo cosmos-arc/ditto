@@ -41,6 +41,9 @@ def _next_trading_day(
 ) -> str:
     """Return the first open session after the signal day, cutoff-bound."""
     try:
+        # Shared A-share schedule view: the paper flow serves instruments
+        # across exchanges, so per-instrument exchange scoping waits until
+        # per-exchange calendar ingestion registers scoped shards.
         calendar = retained_trading_days(
             snapshots=snapshots, payloads=payloads, cutoff=cutoff, first_day=signal_date
         )

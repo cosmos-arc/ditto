@@ -6,9 +6,11 @@ import {
 	type Logical,
 	type LogicalRange,
 	type MouseEventParams,
+	type PaneAttachedParameter,
 	type Time,
 } from "lightweight-charts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AsOfWatermark } from "./as-of-watermark";
 import { ChartCockpit, type CockpitSeriesSpec } from "./chart-cockpit";
 import { broadcastCrosshairTime, joinRangeGroup } from "./cockpit-link";
 
@@ -130,6 +132,154 @@ describe("ChartCockpit DOM 合同", () => {
 		expect(host).toHaveAttribute("data-chart-affordances", "crosshair tooltip zoom-pan linked-time-range");
 		expect(host).toHaveAttribute("data-chart-linked-time-range", "spec-range");
 		expect(host).toHaveAttribute("tabindex", "0");
+	});
+
+	it("maps an intraday cutoff to the nearest plotted coordinate", () => {
+		const timeToIndex = vi.fn(() => 1);
+		const logicalToCoordinate = vi.fn(() => 42);
+		const watermark = new AsOfWatermark({
+			time: 250 as Time,
+			label: "exact cutoff 250",
+			lineColor: "red",
+			labelColor: "white",
+		});
+		watermark.attached({
+			chart: {
+				timeScale: () => ({
+					timeToCoordinate: () => null,
+					timeToIndex,
+					logicalToCoordinate,
+				}),
+			},
+			requestUpdate: vi.fn(),
+		} as unknown as PaneAttachedParameter<Time>);
+		watermark.updateAllViews();
+		expect(timeToIndex).toHaveBeenCalledWith(250, true);
+		expect(logicalToCoordinate).toHaveBeenCalledWith(1);
+		expect(watermark.paneViews()[0]?.renderer()).not.toBeNull();
+	});
+
+	it("suppresses the observation-age badge when as_of is a decision clock", () => {
+		const staleCutoff = { time: Date.UTC(2020, 0, 1) / 1000, label: "行情决策" };
+		renderCockpit({ asOf: staleCutoff });
+		expect(document.querySelector("[data-testid=stale-indicator]")).not.toBeNull();
+		cleanup();
+		renderCockpit({ asOf: staleCutoff, asOfIsDecisionClock: true });
+		expect(document.querySelector("[data-testid=stale-indicator]")).toBeNull();
+	});
+
+	it("keeps an out-of-range cutoff at the chart edge without snapping to a candle", () => {
+		const timeToIndex = vi.fn();
+		const watermark = new AsOfWatermark({
+			// 2026-03-27T18:00Z, past the plotted range ending at 200
+			time: 1_778_810_400 as Time,
+			label: "cutoff past data",
+			lineColor: "red",
+			labelColor: "white",
+		});
+		watermark.attached({
+			chart: {
+				timeScale: () => ({
+					timeToCoordinate: () => null,
+					timeToIndex,
+					logicalToCoordinate: vi.fn(() => 42),
+					getVisibleRange: () => ({ from: 100 as Time, to: 200 as Time }),
+				}),
+			},
+			requestUpdate: vi.fn(),
+		} as unknown as PaneAttachedParameter<Time>);
+		watermark.updateAllViews();
+		expect(timeToIndex).not.toHaveBeenCalled();
+		const renderer = watermark.paneViews()[0]?.renderer();
+		expect(renderer).not.toBeNull();
+		let drawnX = -1;
+		renderer?.draw({
+			useMediaCoordinateSpace: (
+				cb: (scope: { context: CanvasRenderingContext2D; mediaSize: { width: number; height: number } }) => void,
+			) => {
+				const ctx = {
+					save: vi.fn(),
+					restore: vi.fn(),
+					strokeStyle: "",
+					lineWidth: 0,
+					setLineDash: vi.fn(),
+					beginPath: vi.fn(),
+					moveTo: vi.fn((x: number) => {
+						drawnX = x;
+					}),
+					lineTo: vi.fn(),
+					stroke: vi.fn(),
+					font: "",
+					measureText: vi.fn(() => ({ width: 10 })),
+					fillStyle: "",
+					fillText: vi.fn(),
+				};
+				cb({
+					context: ctx as unknown as CanvasRenderingContext2D,
+					mediaSize: { width: 300, height: 120 },
+				});
+			},
+		} as never);
+		expect(drawnX).toBe(299);
+	});
+
+	it("keeps a next-session Shanghai cutoff at the edge despite sharing the UTC day", () => {
+		const timeToIndex = vi.fn();
+		// Visible range ends at UTC day 20000 +100s; the cutoff sits at
+		// 17:00 UTC of the same day, which is already the next session day
+		// in Asia/Shanghai (01:00). UTC-day comparison would snap it onto
+		// the last candle; the session-day comparison keeps it at the edge.
+		const day = 86_400 * 20_000;
+		const watermark = new AsOfWatermark({
+			time: (day + 61_200) as Time,
+			label: "shanghai next-day cutoff",
+			lineColor: "red",
+			labelColor: "white",
+		});
+		watermark.attached({
+			chart: {
+				timeScale: () => ({
+					timeToCoordinate: () => null,
+					timeToIndex,
+					logicalToCoordinate: vi.fn(() => 42),
+					getVisibleRange: () => ({ from: (day - 86_400) as Time, to: (day + 100) as Time }),
+				}),
+			},
+			requestUpdate: vi.fn(),
+		} as unknown as PaneAttachedParameter<Time>);
+		watermark.updateAllViews();
+		expect(timeToIndex).not.toHaveBeenCalled();
+		const renderer = watermark.paneViews()[0]?.renderer();
+		expect(renderer).not.toBeNull();
+		let drawnX = -1;
+		renderer?.draw({
+			useMediaCoordinateSpace: (
+				cb: (scope: { context: CanvasRenderingContext2D; mediaSize: { width: number; height: number } }) => void,
+			) => {
+				const ctx = {
+					save: vi.fn(),
+					restore: vi.fn(),
+					strokeStyle: "",
+					lineWidth: 0,
+					setLineDash: vi.fn(),
+					beginPath: vi.fn(),
+					moveTo: vi.fn((x: number) => {
+						drawnX = x;
+					}),
+					lineTo: vi.fn(),
+					stroke: vi.fn(),
+					font: "",
+					measureText: vi.fn(() => ({ width: 10 })),
+					fillStyle: "",
+					fillText: vi.fn(),
+				};
+				cb({
+					context: ctx as unknown as CanvasRenderingContext2D,
+					mediaSize: { width: 300, height: 120 },
+				});
+			},
+		} as never);
+		expect(drawnX).toBe(299);
 	});
 
 	it("marks the as_of watermark on the host element", () => {
@@ -507,7 +657,7 @@ describe("ChartCockpit 导出", () => {
 		const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
 		const text = await blob.text();
 		expect(text.split("\n")[0]).toBe(
-			"time,close_close,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version",
+			"time,close_close,volume,as_of,snapshot_id,knowledge_cutoff,publication_cutoff,data_source,exported_at,product_version,missing_sessions",
 		);
 		expect(text).toContain("snap-full-id");
 		expect(URL.revokeObjectURL).toHaveBeenCalled();

@@ -560,7 +560,7 @@ def test_newer_calendar_revision_with_hole_degrades_tracking(tmp_path: Path) -> 
 def test_daily_calendar_revision_beyond_asof_still_overlays_history(
     tmp_path: Path,
 ) -> None:
-    """Daily shards record only their ingestion day but cover a full year."""
+    """A daily re-observation of the annual chunk still overlays history."""
     days = []
     day = date(2026, 9, 30)
     while len(days) < 253:
@@ -576,8 +576,8 @@ def test_daily_calendar_revision_beyond_asof_still_overlays_history(
             (
                 "snapshot:recorded:calendar:daily-revision",
                 "recorded",
-                "2026-10-01",
-                "2026-10-01",
+                revision_days[0],
+                revision_days[-1],
                 revision_days,
                 revision_flags,
             )

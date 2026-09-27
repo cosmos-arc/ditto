@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -280,36 +281,22 @@ class InstrumentReader:
             source: 数据源标识符
             asof: Point-in-Time 日期
             cutoff: 知识截止时刻；提供时按 backward as-of join 只使用该时刻
-                已记录的映射行。区间闭合（effective_to）与后继映射行是同一次
-                变更写入的：后继行在 cutoff 之后才记录时，前驱行的闭合同样
-                不可知，仍按开放区间解析；无后继行的闭合知识时间不可推断，
-                维持生效区间过滤（fail closed）
+                已记录的映射行。created_at 与 cutoff 的亚秒部分在 SQLite
+                datetime() 比较中被丢弃，同秒内先后不可排序：与 cutoff
+                同秒记录的行按尚未可知处理，后继同秒记录视为闭合未知，
+                秒粒度 fail closed。区间闭合（effective_to）与后继映射行
+                是同一次变更写入的：后继行在 cutoff 之后才记录时，前驱行
+                的闭合同样不可知，仍按开放区间解析；无后继行的闭合知识
+                时间不可推断，维持生效区间过滤（fail closed）
 
         Returns:
             source_ticker 或 None（未找到时）
 
         """
         if asof and cutoff is not None:
-            row = self._client.fetchone(
-                """SELECT m.source_ticker FROM instrument_mapping m
-                WHERE m.instrument_id = ? AND m.source = ?
-                  AND m.effective_from <= ?
-                  AND datetime(m.created_at) <= datetime(?)
-                  AND (
-                      m.effective_to IS NULL
-                      OR m.effective_to > ?
-                      OR EXISTS (
-                          SELECT 1 FROM instrument_mapping s
-                          WHERE s.instrument_id = m.instrument_id
-                            AND s.source = m.source
-                            AND s.effective_from = m.effective_to
-                            AND datetime(s.created_at) > datetime(?)
-                      )
-                  )
-                ORDER BY m.effective_from DESC
-                LIMIT 1""",
-                [instrument_id, source, asof, cutoff, asof, cutoff],
-            )
+            return self.get_source_tickers(
+                instrument_id, source=source, asofs=[asof], cutoff=cutoff
+            ).get(asof)
         elif asof:
             row = self._client.fetchone(
                 """SELECT source_ticker FROM instrument_mapping
@@ -331,6 +318,105 @@ class InstrumentReader:
             )
 
         return cast(str, row["source_ticker"]) if row else None
+
+    def get_source_tickers(
+        self,
+        instrument_id: int,
+        *,
+        source: str,
+        asofs: list[str],
+        cutoff: str,
+    ) -> dict[str, str | None]:
+        """
+        Resolve daily identities in one query using the point lookup's PIT rule.
+
+        Equal ``effective_from`` mappings with distinct tickers have no PIT
+        order, so they fail closed instead of letting SQLite pick by index
+        or insertion order.
+        """
+        if not asofs:
+            return {}
+        rows = self._client.fetchall(
+            """SELECT d.value AS day, (
+                SELECT m.source_ticker FROM instrument_mapping m
+                WHERE m.instrument_id = ? AND m.source = ?
+                  AND m.effective_from <= d.value
+                  AND datetime(m.created_at) < datetime(?)
+                  AND (
+                      m.effective_to IS NULL
+                      OR m.effective_to > d.value
+                      OR EXISTS (
+                          SELECT 1 FROM instrument_mapping s
+                          WHERE s.instrument_id = m.instrument_id
+                            AND s.source = m.source
+                            AND s.effective_from = m.effective_to
+                            AND datetime(s.created_at) >= datetime(?)
+                      )
+                  )
+                ORDER BY m.effective_from DESC
+                LIMIT 1
+            ) AS source_ticker, (
+                SELECT COUNT(DISTINCT t.source_ticker) FROM instrument_mapping t
+                WHERE t.instrument_id = ? AND t.source = ?
+                  AND t.effective_from <= d.value
+                  AND datetime(t.created_at) < datetime(?)
+                  AND (
+                      t.effective_to IS NULL
+                      OR t.effective_to > d.value
+                      OR EXISTS (
+                          SELECT 1 FROM instrument_mapping s
+                          WHERE s.instrument_id = t.instrument_id
+                            AND s.source = t.source
+                            AND s.effective_from = t.effective_to
+                            AND datetime(s.created_at) >= datetime(?)
+                      )
+                  )
+                  AND t.effective_from = (
+                      SELECT MAX(x.effective_from) FROM instrument_mapping x
+                      WHERE x.instrument_id = ? AND x.source = ?
+                        AND x.effective_from <= d.value
+                        AND datetime(x.created_at) < datetime(?)
+                        AND (
+                            x.effective_to IS NULL
+                            OR x.effective_to > d.value
+                            OR EXISTS (
+                                SELECT 1 FROM instrument_mapping s2
+                                WHERE s2.instrument_id = x.instrument_id
+                                  AND s2.source = x.source
+                                  AND s2.effective_from = x.effective_to
+                                  AND datetime(s2.created_at) >= datetime(?)
+                            )
+                        )
+                  )
+            ) AS tied_variants FROM json_each(?) d""",
+            [
+                instrument_id,
+                source,
+                cutoff,
+                cutoff,
+                instrument_id,
+                source,
+                cutoff,
+                cutoff,
+                instrument_id,
+                source,
+                cutoff,
+                cutoff,
+                json.dumps(asofs),
+            ],
+        )
+        conflicts = sorted(
+            str(row["day"]) for row in rows if int(row["tied_variants"]) > 1
+        )
+        if conflicts:
+            raise ValueError(
+                "instrument ticker mappings conflict at one effective date: "
+                + ", ".join(conflicts)
+            )
+        return {
+            cast(str, row["day"]): cast(str | None, row["source_ticker"])
+            for row in rows
+        }
 
     def find_securities(self, query: SecurityQuery) -> pl.DataFrame:
         """

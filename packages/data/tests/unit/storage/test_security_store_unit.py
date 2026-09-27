@@ -330,6 +330,68 @@ class TestInstrumentReader:
             == "001872.SZ"
         )
 
+    @pytest.mark.pit
+    @pytest.mark.parametrize(
+        "recorded_at", ["2026-09-01 08:00:00", "2026-09-01 08:00:00.750"]
+    )
+    def test_get_source_ticker_fails_closed_within_cutoff_second(
+        self, recorded_at: str
+    ) -> None:
+        """A mapping recorded in the cutoff's own second stays invisible.
+
+        SQLite datetime() drops subseconds, so rows inside one second cannot
+        be ordered against the cutoff; the whole second resolves fail closed
+        (CURRENT_TIMESTAMP also truncates writes to the second start, so
+        knowability within the second is unprovable in both directions).
+        """
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '000022', 'Old Code', 'SZSE', 'stock', '1990-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker,
+             effective_from, effective_to, created_at)
+            VALUES (100000001, 'tushare', '000022.SZ', '1990-01-01', NULL,
+                    '2026-01-01 00:00:00')
+        """)
+        self.client.commit()
+        self.client.execute(
+            """
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from, created_at)
+            VALUES (?, 'tushare', '001872.SZ', '2026-06-01', ?)
+            """,
+            [100000001, recorded_at],
+        )
+        self.client.execute("""
+            UPDATE instrument_mapping
+            SET effective_to = '2026-06-01'
+            WHERE instrument_id = 100000001 AND source_ticker = '000022.SZ'
+        """)
+        self.client.commit()
+
+        # Inside the rename's second the rename is not provably knowable and
+        # its closure is unknown: the prior ticker still resolves.
+        assert (
+            self.reader.get_source_ticker(
+                100000001,
+                "tushare",
+                asof="2026-09-02",
+                cutoff="2026-09-01T08:00:00.500Z",
+            )
+            == "000022.SZ"
+        )
+        # One second later the rename is visible and the predecessor closed.
+        assert (
+            self.reader.get_source_ticker(
+                100000001, "tushare", asof="2026-09-02", cutoff="2026-09-01T08:00:01Z"
+            )
+            == "001872.SZ"
+        )
+
     def test_get_source_ticker_closure_without_successor_stays_fail_closed(
         self,
     ) -> None:

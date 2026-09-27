@@ -75,6 +75,8 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
 
+from tests.system.fixtures.retained_payload import retain_fixture_payload
+
 if os.environ.get("DITTO_ENVIRONMENT") != "testing":
     raise RuntimeError("backtest nav fixture requires testing mode")
 _root = Path(os.environ["DITTO_ACCEPTANCE_DATA_ROOT"]).resolve()
@@ -320,12 +322,55 @@ def _seed_market() -> dict[InstrumentId, pl.DataFrame]:
     seeded = store.read("market/etf/bars").with_columns(
         pl.col("trade_date").cast(pl.String),
     )
+    _retain_chart_evidence(client, seeded)
+    client.commit()
+    pool.close_all()
     return {
         instrument_id: seeded.filter(
             pl.col("instrument_id") == int(instrument_id),
         ).drop("instrument_id")
         for instrument_id in frames
     }
+
+
+def _retain_chart_evidence(client: SQLiteClient, prices: pl.DataFrame) -> None:
+    """Allow drill-down to read the seeded prices through the chart PIT path."""
+    observed = datetime.now(UTC)
+    retain_fixture_payload(
+        client,
+        _state,
+        dataset_id="etf_daily",
+        source="tushare",
+        payload=prices.with_columns(
+            pl.col("trade_date").alias("event_time"),
+            pl.col("instrument_id")
+            .replace_strict(
+                {
+                    UNIVERSE_IDS[0]: "510300.SH",
+                    UNIVERSE_IDS[1]: "510500.SH",
+                    BENCH_ID: "159919.SZ",
+                }
+            )
+            .alias("source_ticker"),
+        ),
+        created_at=observed,
+    )
+    dates = pl.date_range(
+        date(2025, 1, 1), date.today() + timedelta(days=31), eager=True
+    )
+    retain_fixture_payload(
+        client,
+        _state,
+        dataset_id="calendar",
+        source="recorded",
+        payload=pl.DataFrame(
+            {
+                "trade_date": dates.dt.to_string("%Y-%m-%d"),
+                "is_open": dates.dt.weekday() <= 5,
+            }
+        ),
+        created_at=observed,
+    )
 
 
 def _persist_run(

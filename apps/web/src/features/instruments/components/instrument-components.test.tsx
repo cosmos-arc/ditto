@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { instrumentsHandlers } from "@/mocks/handlers/instruments";
@@ -26,8 +27,8 @@ vi.mock("@/components/chart", () => ({
 }));
 
 // lightweight-charts / fancy-canvas 在 jsdom 中产生大量未处理错误；图表内部
-// 行为由 cockpit 组件测试覆盖，这里在 barrel 层同步 mock 组件（视图的重采样
-// 从 chart-data 叶模块导入，保持真实实现），只断言本视图喂养的外部合同。
+// 行为由 cockpit 组件测试覆盖，这里在 barrel 层同步 mock 组件，
+// 只断言服务端图表结果喂养的外部合同。
 const cockpitProps: unknown[] = [];
 
 function createQueryClient(): QueryClient {
@@ -78,6 +79,17 @@ describe("InstrumentOverview", () => {
 });
 
 describe("InstrumentChartView", () => {
+	it("默认日期使用上海交易日而非 UTC 日", () => {
+		const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-09-25T16:30:00Z"));
+		try {
+			render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+			expect(screen.getByLabelText("截至日期")).toHaveValue("2026-09-26");
+			expect(screen.getByLabelText("开始日期")).toHaveValue("2025-09-26");
+		} finally {
+			clock.mockRestore();
+		}
+	});
+
 	it("渲染行情图表区域与工具栏", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await expect(screen.findByText("行情图表")).resolves.toBeInTheDocument();
@@ -107,9 +119,12 @@ describe("InstrumentChartView", () => {
 		};
 		expect(props.markers).toHaveLength(1);
 		expect(props.markers[0]).toMatchObject({ direction: "buy" });
-		// 定位与水位线都按 UTC 日锚定
+		// 定位与水位线都按 UTC 日锚定；下钻流保留源 run 的 as_of 水印（契约
+		// receive-trade-drill），非下钻流才回落到当前图表决策时间。
 		expect(props.initialFocusTime).toBe(Date.parse("2026-03-09T00:00:00Z") / 1000);
 		expect(props.asOf).not.toBeNull();
+		expect(props.asOf?.time).toBe(Date.parse("2026-03-27T00:00:00Z") / 1000);
+		expect(props.asOf?.label).toContain("as_of 2026-03-27");
 		expect(props.asOf?.label).toContain("回测下钻 sys-fx-nav-001");
 	});
 
@@ -128,22 +143,61 @@ describe("InstrumentChartView", () => {
 		// mock 两根日 K（03-09/03-10），OHLCV 完整进入 view model
 		expect(props.series[0]!.bars).toHaveLength(2);
 		expect(props.series[0]!.bars[1]).toMatchObject({ open: 1744.6, close: 1750.2, volume: 3210000 });
+		const watermark = cockpitProps.at(-1) as { asOf: { label: string } | null };
+		expect(watermark.asOf?.label).toContain("行情决策 2026-03-10T08:00:00Z");
 
 		const scope = await screen.findByText(/2026-03-10 收盘/);
 		expect(scope.closest("[data-primary-answer]")).not.toBeNull();
 		expect(screen.getByText("1750.20")).toBeInTheDocument();
 		expect(screen.getByText(/\+3\.90/)).toBeInTheDocument();
 		expect(screen.getByText(/1732\.10–1768\.80/)).toBeInTheDocument();
-		expect(screen.getByText(/快照标识未由接口提供/)).toBeInTheDocument();
+		expect(screen.getByText(/快照 bars-exact-1/)).toBeInTheDocument();
+		expect(screen.getByText(/价格可得 2026-03-10T08:00:00Z/)).toBeInTheDocument();
 	});
 
-	it("周线切换把日 K 聚合为周桶", async () => {
+	it.each([true, false])("空行情仍独立显示缺口状态：%s", async (gap) => {
+		server.use(
+			http.post("/api/v1/market/chart", () =>
+				HttpResponse.json({
+					data: {
+						instrument_id: 1000001,
+						period: "daily",
+						adjustment: "none",
+						as_of: "2026-03-10T08:00:00Z",
+						knowledge_cutoff: "2026-03-10T08:00:00Z",
+						publication_cutoff: "2026-03-10T08:00:00Z",
+						timezone: "Asia/Shanghai",
+						calendar_snapshot_ids: ["calendar-exact-1"],
+						source_snapshot_ids: [],
+						sources: [],
+						latest_price_date: null,
+						stale_reason: gap ? "no_visible_price" : null,
+						missing_sessions: gap ? ["2026-03-10"] : [],
+						bars: [],
+					},
+				}),
+			),
+		);
+		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByText(/所选日期范围没有可见行情/);
+		expect(screen.getByTestId("cockpit-stub")).toBeInTheDocument();
+		if (gap) {
+			expect(screen.getByText(/当前没有可见价格/)).toBeInTheDocument();
+			expect(screen.getByText("缺失交易日 2026-03-10")).toBeInTheDocument();
+		} else {
+			expect(screen.queryByText(/当前没有可见价格/)).not.toBeInTheDocument();
+			expect(screen.queryByTestId("chart-gaps-1000001")).not.toBeInTheDocument();
+		}
+	});
+
+	it("周线切换消费服务端周桶与 partial", async () => {
 		const user = userEvent.setup();
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await screen.findByTestId("cockpit-stub");
 		await user.click(screen.getByRole("button", { name: "周" }));
 		const props = cockpitProps.at(-1) as { series: Array<{ bars: unknown[] }> };
 		expect(props.series[0]!.bars).toHaveLength(1);
+		expect(await screen.findByText("部分周期不完整")).toBeInTheDocument();
 	});
 
 	it("复权切换触发重新取数（查询键携带 adjustment）", async () => {
@@ -154,10 +208,10 @@ describe("InstrumentChartView", () => {
 		await screen.findByText(/复权：qfq · experimental：关/);
 	});
 
-	it("陈旧数据（距今远超阈值）展示 stale 徽标与延迟天数", async () => {
+	it("休市后旧价格日不被浏览器自然日误判为 stale", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await screen.findByTestId("cockpit-stub");
-		expect(await screen.findByText(/数据延迟 \d+ 天/)).toBeInTheDocument();
+		expect(screen.queryByText(/最新价格日/)).not.toBeInTheDocument();
 	});
 
 	it("指标开关把 MA overlay 与 MACD/RSI 副图喂给图表 shell，并持久化选择", async () => {
@@ -174,6 +228,8 @@ describe("InstrumentChartView", () => {
 		const props = await waitForCockpit(
 			(next) => (next.overlays ?? []).length === 3 && (next.subPanes ?? []).length === 2,
 		);
+		expect(props.identity?.dataSourceName).toContain("叠加线来源未绑定");
+		expect(screen.getByText("叠加线来源未绑定；CSV 仅含 K 线")).toBeInTheDocument();
 		const overlayIds = (props.overlays as Array<{ id: string }>).map((overlay) => overlay.id);
 		expect(overlayIds).toEqual(["ma_5", "ma_20", "ma_60"]);
 		const paneIds = (props.subPanes as Array<{ id: string }>).map((pane) => pane.id);
@@ -197,12 +253,16 @@ describe("InstrumentChartView", () => {
 });
 
 function waitForCockpit(
-	predicate: (props: { overlays?: unknown[]; subPanes?: unknown[] }) => boolean,
-): Promise<{ overlays?: unknown[]; subPanes?: unknown[] }> {
+	predicate: (props: { overlays?: unknown[]; subPanes?: unknown[]; identity?: { dataSourceName: string } }) => boolean,
+): Promise<{ overlays?: unknown[]; subPanes?: unknown[]; identity?: { dataSourceName: string } }> {
 	return new Promise((resolve, reject) => {
 		const started = Date.now();
 		const tick = () => {
-			const props = cockpitProps.at(-1) as { overlays?: unknown[]; subPanes?: unknown[] };
+			const props = cockpitProps.at(-1) as {
+				overlays?: unknown[];
+				subPanes?: unknown[];
+				identity?: { dataSourceName: string };
+			};
 			if (props && predicate(props)) {
 				resolve(props);
 				return;

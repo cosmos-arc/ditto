@@ -119,7 +119,12 @@ export type CockpitMarker = {
 
 export type ChartCockpitIdentity = {
 	readonly dataSourceName: string;
+	readonly asOfIso?: string | null;
 	readonly snapshotId?: string | null;
+	readonly calendarSnapshotIds?: string | null;
+	readonly missingSessions?: readonly string[];
+	readonly adjustment?: string | null;
+	readonly period?: string | null;
 	readonly knowledgeCutoff?: string | null;
 	readonly publicationCutoff?: string | null;
 };
@@ -140,6 +145,9 @@ export type ChartCockpitProps = {
 	/** 初始定位（Unix 秒）：优先于 fitContent，把该时点滚到可视区中心（下钻定位）。 */
 	readonly initialFocusTime?: number | null;
 	readonly asOf?: { readonly time: number; readonly label?: string } | null;
+	/** as_of 是服务端决策时钟而非数据观测新鲜度时置 true：不渲染
+	 * 观测年龄徽标，陈旧状态由页面面板按 stale_reason 表达。 */
+	readonly asOfIsDecisionClock?: boolean;
 	/** 实时数据透明度时变（live 1.0 → expired 0.25）；默认关闭，EOD 图表只用水位线 + stale 徽标。 */
 	readonly freshnessFade?: boolean;
 	readonly timeVisible?: boolean;
@@ -231,7 +239,12 @@ function exportIdentity(
 	}
 	return {
 		asOf: asOf?.time ?? null,
+		asOfIso: identity.asOfIso ?? null,
 		snapshotId: identity.snapshotId ?? null,
+		calendarSnapshotIds: identity.calendarSnapshotIds ?? null,
+		missingSessions: identity.missingSessions ?? [],
+		adjustment: identity.adjustment ?? null,
+		period: identity.period ?? null,
 		knowledgeCutoff: identity.knowledgeCutoff ?? null,
 		publicationCutoff: identity.publicationCutoff ?? null,
 		dataSourceName: identity.dataSourceName,
@@ -263,6 +276,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		markers = EMPTY_MARKERS,
 		initialFocusTime = null,
 		asOf = null,
+		asOfIsDecisionClock = false,
 		freshnessFade = false,
 		timeVisible = false,
 		height = 320,
@@ -294,6 +308,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	const [readoutTime, setReadoutTime] = useState<number | null>(null);
 	const [selection, setSelection] = useState<{ readonly from: number; readonly to: number } | null>(null);
 	const activeReadout = readoutTime === null ? initialReadout : readoutAtIndex(readoutIndex, readoutTime);
+	const activePriceBar = activeReadout && series[0]?.bars.find((bar) => bar.time === activeReadout.time);
 	// 新鲜度时变的「当前时刻」：注入 nowMs（测试）固定，否则随 30s 心跳推进，
 	// 使 live→expired 分档在会话中随数据老化刷新。
 	const [effectiveNowMs, setEffectiveNowMs] = useState(() => nowMs ?? Date.now());
@@ -783,9 +798,15 @@ export function ChartCockpit(props: ChartCockpitProps) {
 						{activeReadout.volume !== null && ` · vol ${activeReadout.volume}`}
 					</span>
 				)}
+				{activePriceBar?.firstTradeDate && activePriceBar.lastTradeDate && (
+					<span className="tabular-nums" data-testid={`chart-period-${chartId}`}>
+						区间 {activePriceBar.firstTradeDate} → {activePriceBar.lastTradeDate}
+						{activePriceBar.partial && " · 未完成"}
+					</span>
+				)}
 				{asOf && (
 					<span className="inline-flex items-center gap-1.5">
-						<StaleIndicator isStale={stale} />
+						{!asOfIsDecisionClock && <StaleIndicator isStale={stale} />}
 						<span className="tabular-nums">as_of {formatReadoutTime(asOf.time)}</span>
 					</span>
 				)}

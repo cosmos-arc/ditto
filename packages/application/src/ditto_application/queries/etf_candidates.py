@@ -290,6 +290,9 @@ class ETFCandidateQuery:
         if self._snapshots is None or self._payloads is None:
             raise AppQueryError("ETF evaluation calendar is absent at the cutoff")
         try:
+            # Shared A-share schedule view: a candidate set spans SSE and
+            # SZSE instruments, so per-instrument exchange scoping waits
+            # until per-exchange calendar ingestion registers scoped shards.
             return retained_calendar_window(
                 snapshots=self._snapshots,
                 payloads=self._payloads,
