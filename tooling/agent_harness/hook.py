@@ -1236,20 +1236,24 @@ def _backend_source_commands(
         for path in paths
     ):
         return [["task", "check"]]
-    # CI keeps high-risk scopes on the full gate (ci.required_jobs); the local
-    # ladder only adds the PIT suite, so pushes do not double-pay the full check.
-    if len(owners) != 1:
+    # Cross-package backend scopes run the shared package gate plus each
+    # owner's fast tests instead of the full check (#322); contract, root,
+    # unknown and cross-stack escalation is decided in verification_commands
+    # before this branch, and CI keeps high-risk scopes on the full gate
+    # (ci.required_jobs) so pushes do not double-pay the full check.
+    if not owners:
         return [["task", "check"]]
-    owner = next(iter(owners))
     workspace = root if root is not None else git_root(Path.cwd())
-    if not _has_collectable_tests(workspace, owner):
-        return [["task", "check"]]
-    return [
+    commands: list[list[str]] = [
         ["task", "lint"],
         ["task", "fmt-check"],
         ["task", "type-all"],
-        ["task", "test", "--", "--fast", f"{owner}/tests"],
     ]
+    for owner in sorted(owners):
+        if not _has_collectable_tests(workspace, owner):
+            return [["task", "check"]]
+        commands.append(["task", "test", "--", "--fast", f"{owner}/tests"])
+    return commands
 
 
 def verification_commands(

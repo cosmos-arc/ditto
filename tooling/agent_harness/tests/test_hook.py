@@ -772,17 +772,26 @@ if __name__ == "__main__":
     unittest.main()
 
 
-def test_single_package_local_checks_and_cross_package_escalation() -> None:
+def test_single_and_cross_package_local_checks_share_the_package_gate() -> None:
     path = "packages/platform/src/ditto_platform/foundation/logging.py"
     commands = verification_commands("backend", [path])
     assert ["task", "test", "--", "--fast", "packages/platform/tests"] in commands
     assert ["task", "type-all"] in commands
-    assert verification_commands(
-        "backend", [path, "packages/kernel/src/ditto_kernel/errors.py"]
-    ) == [["task", "check"]]
+    assert [
+        " ".join(command)
+        for command in verification_commands(
+            "backend", [path, "packages/kernel/src/ditto_kernel/errors.py"]
+        )
+    ] == [
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast packages/kernel/tests",
+        "task test -- --fast packages/platform/tests",
+    ]
 
 
-def test_non_python_file_in_a_second_package_keeps_the_cross_package_gate() -> None:
+def test_non_python_file_in_a_second_package_widens_the_owner_scope() -> None:
     paths = [
         "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
         "packages/data/src/ditto_data/scripts/schema.sql",
@@ -790,9 +799,86 @@ def test_non_python_file_in_a_second_package_keeps_the_cross_package_gate() -> N
     commands = verification_commands(classify_diff(paths), paths)
 
     assert [" ".join(command) for command in commands] == [
-        "task check",
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast packages/data/tests",
+        "task test -- --fast packages/strategy/tests",
         "task pit",
     ]
+
+
+def test_cross_owner_high_risk_keeps_local_pit_and_drops_full_check() -> None:
+    paths = [
+        "packages/application/src/ditto_application/processes/paper_account/service.py",
+        "packages/execution/src/ditto_execution/orders/splitter.py",
+    ]
+    commands = [
+        " ".join(command)
+        for command in verification_commands(classify_diff(paths), paths)
+    ]
+
+    assert commands == [
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast packages/application/tests",
+        "task test -- --fast packages/execution/tests",
+        "task pit",
+    ]
+
+
+def test_application_source_with_backend_tests_runs_both_owner_scopes() -> None:
+    paths = [
+        "packages/application/src/ditto_application/processes/paper_account/service.py",
+        "apps/backend/tests/integration/api/test_paper_flow.py",
+    ]
+    commands = [
+        " ".join(command)
+        for command in verification_commands(classify_diff(paths), paths)
+    ]
+
+    assert commands == [
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast apps/backend/tests",
+        "task test -- --fast packages/application/tests",
+        "task pit",
+    ]
+
+
+def test_backend_routes_stay_on_the_contract_full_gate_across_owners() -> None:
+    paths = [
+        "packages/application/src/ditto_application/processes/paper_account/service.py",
+        "apps/backend/src/ditto_apps/api/routes/paper/routes.py",
+    ]
+    commands = [
+        " ".join(command)
+        for command in verification_commands(classify_diff(paths), paths)
+    ]
+
+    assert commands == [
+        "task check",
+        "task test-system",
+        "task pit",
+    ]
+
+
+def test_contract_mixed_into_cross_owner_still_escalates_to_full_gate() -> None:
+    paths = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "packages/data/src/ditto_data/scripts/schema.sql",
+        "contracts/openapi/v1.json",
+    ]
+    commands = [
+        " ".join(command)
+        for command in verification_commands(classify_diff(paths), paths)
+    ]
+
+    assert commands[:1] == ["task check"]
+    assert "task test-system" in commands
+    assert "task pit" in commands
 
 
 def test_repo_level_backend_paths_keep_the_full_check() -> None:
