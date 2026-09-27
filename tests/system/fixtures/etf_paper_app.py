@@ -106,6 +106,7 @@ def _snapshot(
     visible: datetime,
     frame: pl.DataFrame,
     license_record: DatasetLicenseRecord,
+    request_end: date | None = None,
 ) -> ProviderSnapshot:
     artifact = payloads.retain_payload(
         dataset_id=dataset, source=_SOURCE, payload=frame
@@ -115,7 +116,7 @@ def _snapshot(
             dataset_id=dataset,
             source=_SOURCE,
             request_start=day.isoformat(),
-            request_end=day.isoformat(),
+            request_end=(request_end or day).isoformat(),
             schema_version=f"fixture.{dataset}.v1",
             checksum=artifact.checksum,
             canonical_asset=DataAssetRef(dataset_id=dataset, namespace="market"),
@@ -397,6 +398,9 @@ def _seed() -> dict[str, str]:
                 }
             ),
             license_record=calendar_license,
+            # Calendar payloads never carry rows outside their declared
+            # request window; the three-session span is requested as such.
+            request_end=date(2026, 9, 3),
         )
     finally:
         pool.close_all()
