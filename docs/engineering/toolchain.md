@@ -79,6 +79,65 @@ release-cohort 注册链、copied-library source provenance SPDX、release input
 并增加 6 秒慢探测反例；生产实现和全部超时不变。该发现解释了已捕获样本，
 不扩大为所有历史计时失败的根因，也不据此默认降低测试并发。
 
+### 2026-09-27 验证阶梯与分片基线（[Issue 318](https://github.com/cosmos-arc/ditto/issues/318)）
+
+测量条件：分支 `perf/318-verify-baseline` @ `b7d2e8ee`（origin/main，#316 后）、macOS
+ARM64、uv 热缓存、无并行负载；长链条顺序执行避免争用，每命令单次实测。阶梯各级耗时
+为组件之和（命令构成与 pre-push 分级一致）。
+
+组件实测：
+
+| 组件 | 命令 | 实测 |
+| --- | --- | ---: |
+| Ruff lint | `task lint` | 0.2s |
+| Ruff format 检查 | `task fmt-check` | 0.1s |
+| 类型（全仓） | `task type-all` | 40.6s |
+| 类型（仅测试） | `task type -- --tests` | 22.6s |
+| skills 验证 | `task harness-validate` | 1.2s |
+| Web 全检 | `task check-web` | 135.6s |
+| fast 测试 kernel | `task test -- --fast packages/kernel/tests` | 4.3s |
+| fast 测试 application | `task test -- --fast packages/application/tests` | 191.3s |
+| fast 测试 backend | `task test -- --fast apps/backend/tests` | 129.6s |
+| PIT 专项（串行） | `task pit` | 59.6s |
+| 系统测试 | `task test-system` | 377.4s |
+| 全量门 | `task check` | 507.1s |
+| 单个测试文件 | `pytest <file> -q` | 2.6s |
+| collection 探针 | `--fast --collect-only` | kernel 3.2s / application 22.0s |
+
+阶梯各档合计（组件相加，probe 按 owner 计入仅测试文件档）：
+
+| 档位 | 合计 |
+| --- | ---: |
+| 纯 docs | ≈0（无命令） |
+| skills | 1.2s |
+| 纯 web | 135.6s |
+| 仅测试文件 | ≈25s（application owner 约 +22s probe） |
+| 单包后端 kernel / application | 45s / 232s |
+| 单包高危 application | 292s |
+| 跨包 / root / unknown（`task check`） | 507s |
+| 跨栈/契约再叠加 `test-system` | 884s |
+| 最高组合（check + test-system + pit） | 944s ≈ 15.7min |
+
+观察：#322 跨包包级化落地后，典型 ETF 跨包高危推送（application + backend + pit）
+估算约 422s（四件套一次 + 两 owner fast + pit），对照现行 944s；`task type-all`
+40.6s 为全仓检查，单包档也整付（记录观察，本票不改）。
+
+CI 侧（9 次成功全量 PR + 3 次后端 squash push，2026-09-27 取样）：
+
+- PR 全量 wall 778–831s（如 [run 36301251107](https://github.com/cosmos-arc/ditto/actions/runs/36301251107)）；
+  关键路径 = backend-shards 最慢片 510–536s → Backend tests and coverage 242s；
+  backend-capacity 已独立（196s）；macOS smoke ~584s 并行不在关键路径。
+- 分片失衡：9/9 次运行最快片 320–340s vs 最慢片 510–536s（比值 1.42–1.64）。
+  均衡分片后关键路径预计可省约 150–190s；是否做时长感知分片由后续票裁决。
+- push 到 main 已收窄：ci.py 对 push 信任 PR 已验证的等价内容，仅补跑跨平台冒烟
+  与常驻安全检查。#313/#310/#311 三次后端 squash push（runs
+  [36276650225](https://github.com/cosmos-arc/ditto/actions/runs/36276650225)、
+  [36275553446](https://github.com/cosmos-arc/ditto/actions/runs/36275553446)、
+  [36263324989](https://github.com/cosmos-arc/ditto/actions/runs/36263324989)）均只执行
+  Repository policy / Platform smoke / Security 组，backend-shards、backend-tests、
+  web 与契约检查不再重跑。2026-09-18 诊断中"push 到 main 一律全量 16 分钟"的描述
+  不再成立。
+
 ## 本次本机证据
 
 2026-09-07 在同一 macOS ARM64 主机上比较迁移前后 Bun 效率。两侧均为独立临时 worktree、Bun 1.3.14、独立空安装缓存；冷安装执行一次 `bun ci --frozen-lockfile`，热安装立即用同一缓存重复执行。常用根检查在已准备环境上分别执行各自的 `web-type` 入口。
