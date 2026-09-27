@@ -317,7 +317,11 @@ def _chart_rows(
         ).append((day, bar))
     if request.adjustment != "none" and any(day not in factors for day in by_day):
         raise AppQueryError("exact adjustment factor missing for a chart price day")
-    baseline_day = _qfq_baseline_day(request, set(calendar.days), as_of, factors)
+    # A full-day suspension has no price bar, so it cannot anchor the QFQ
+    # baseline; factor authority already excludes suspended sessions.
+    baseline_day = _qfq_baseline_day(
+        request, set(calendar.days) - suspensions.keys(), as_of, factors
+    )
     baseline = factors[baseline_day].value if baseline_day else 1.0
 
     def multiplier(day: str) -> float:
@@ -802,6 +806,7 @@ class MarketChartQueryFacade:
         request: MarketChartRequest,
         cutoff: datetime,
         calendar: RetainedCalendarWindow,
+        suspensions: dict[str, SuspensionEvidence],
     ) -> tuple[dict[str, AdjustmentFactor], tuple[ProviderSnapshot, ...]]:
         factor_snapshots: tuple[ProviderSnapshot, ...] = ()
         factors: dict[str, AdjustmentFactor] = {}
@@ -809,8 +814,15 @@ class MarketChartQueryFacade:
             self._market.assert_adjustment_allowed(
                 allow_experimental_data=request.allow_experimental_data
             )
-            consumable_days = _consumable_sessions(
-                calendar, request.start_date, request.end_date, cutoff
+            # Factors are consumed only for dates with price bars, so a
+            # shard scoped solely to a suspended session — from another
+            # source or schema — cannot join factor authority, mirroring
+            # price authority.
+            consumable_days = (
+                _consumable_sessions(
+                    calendar, request.start_date, request.end_date, cutoff
+                )
+                - suspensions.keys()
             )
             factor_snapshots = self._select_snapshots(
                 "adj_factor",
@@ -881,6 +893,22 @@ class MarketChartQueryFacade:
             return
         dataset = f"{request.asset_class}_daily"
         sorted_suspended = sorted(day.replace("-", "") for day in suspended)
+        # Mirror selection's instrument-scope filter with a non-raising
+        # resolver: ticker-scoped backfill shards for unrelated instruments
+        # cover the dates but prove nothing about this one, and loading
+        # their payloads would fail the request on foreign schemas.
+        tickers_for = cache(
+            partial(
+                self._metadata.get_source_tickers,
+                request.instrument_id,
+                asofs=_date_keys(request.start_date, request.end_date),
+                cutoff=cutoff.isoformat(),
+            )
+        )
+
+        def ticker_at(source_name: str, day: date) -> str | None:
+            return tickers_for(source=source_name).get(day.isoformat())
+
         candidates = [
             item
             for item in self._snapshots.list_snapshots(dataset_id=dataset)
@@ -898,6 +926,7 @@ class MarketChartQueryFacade:
                 _snapshot_range(item.request_start),
                 _snapshot_range(item.request_end),
             )
+            and _snapshot_matches_instrument(item, sorted_suspended, ticker_at)
         ]
         if not candidates:
             return
@@ -1170,7 +1199,9 @@ class MarketChartQueryFacade:
             if any(item.payload_retained for item in selected)
             else ()
         )
-        factors, factor_shards = self._load_factors(request, cutoff, calendar)
+        factors, factor_shards = self._load_factors(
+            request, cutoff, calendar, suspensions
+        )
         _require_price_source_factor_basis(adjustment, latest, factor_shards)
         queried_snapshot_ids.update(item.snapshot_id for item in factor_shards)
         queried_snapshot_ids.update(item.snapshot_id for item in status_shards)

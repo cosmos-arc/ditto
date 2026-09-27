@@ -2901,6 +2901,30 @@ def test_chart_calendar_scope_matches_instrument_exchange(tmp_path: Path) -> Non
     assert result.missing_sessions == ()
     assert szse_marked.snapshot_id in result.calendar_snapshot_ids
 
+    # The default shared-schedule view (exchange=None) consumes only unmarked
+    # shards, so multi-instrument consumers never mix in scoped evidence.
+    from ditto_application.queries.retained_calendar import (
+        RetainedCalendarAbsent,
+        retained_calendar_window,
+    )
+
+    shared_view = retained_calendar_window(
+        snapshots=chart._snapshots,
+        payloads=store,
+        cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        first_day="2026-03-09",
+        last_day="2026-03-10",
+    )
+    assert shared_view.days == ["2026-03-09", "2026-03-10"]
+    with pytest.raises(RetainedCalendarAbsent, match="absent or future"):
+        retained_calendar_window(
+            snapshots=sse_only._snapshots,
+            payloads=store,
+            cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            first_day="2026-03-09",
+            last_day="2026-03-10",
+        )
+
 
 @pytest.mark.pit
 def test_chart_rejects_tied_exact_request_schema_revisions(tmp_path: Path) -> None:
@@ -3035,6 +3059,185 @@ def test_chart_rejects_price_rows_when_all_sessions_suspended(
     reader = cast(
         ProviderSnapshotReader,
         _Snapshots((*chart._snapshots.list_snapshots(), suspended_day_price)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="chart price conflicts with retained full-day suspension"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 11),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_tied_peer_omission(tmp_path: Path) -> None:
+    """A same-observation shard with different bounds that omits the
+    instrument day leaves the presence decision unresolved; the row fails
+    closed instead of surviving on its own snapshot's say-so."""
+    chart, prior, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    tied_omitting = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["OTHER.SH"],
+                    "trade_date": ["2026-03-10"],
+                    "open": [9.0],
+                    "high": [9.5],
+                    "low": [8.5],
+                    "close": [9.2],
+                    "volume": [10.0],
+                    "amount": [92.0],
+                }
+            ),
+            prior.created_at,
+        ),
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), tied_omitting)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="tied overlapping revision omits the instrument day"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_hfq_ignores_suspended_day_factor_shards(tmp_path: Path) -> None:
+    """A factor shard scoped only to a full-day suspension never joins factor
+    authority: HFQ consumes factors for price dates, so a foreign suspended-
+    day factor poll cannot 422 the valid price chart."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    suspended_day_factor = replace(
+        _snapshot(
+            store,
+            "adj_factor",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "published_at": [datetime(2026, 3, 10, 7, tzinfo=UTC)],
+                    "available_at": [datetime(2026, 3, 10, 7, tzinfo=UTC)],
+                    "adj_factor": [7.0],
+                }
+            ),
+            datetime(2026, 3, 10, 7, tzinfo=UTC),
+            source="fuyao",
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), suspended_day_factor)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="hfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-09", "2026-03-10"]
+    assert [bar.close for bar in result.bars] == pytest.approx([10.2, 11.88])
+    assert suspended_day_factor.snapshot_id not in result.source_snapshot_ids
+
+
+@pytest.mark.pit
+def test_chart_suspended_price_validation_scopes_to_instrument(
+    tmp_path: Path,
+) -> None:
+    """The all-suspension contradiction scan filters candidates by instrument
+    scope: an unrelated ticker-scoped shard covering the suspended date is
+    neither loaded nor able to fail the request on its own payload issues."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    suspended_day_price = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            datetime(2026, 3, 11, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    unrelated = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["999999.SH"],
+                    # Outside the shard's own bounds on purpose: loading this
+                    # unrelated payload would fail the request on lineage.
+                    "trade_date": ["2026-03-20"],
+                    "open": [1.0],
+                    "high": [1.5],
+                    "low": [0.5],
+                    "close": [1.2],
+                    "volume": [10.0],
+                    "amount": [12.0],
+                }
+            ),
+            datetime(2026, 3, 11, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+        canonical_asset=replace(
+            DataAssetRef(dataset_id="stock_daily", namespace="market"),
+            partition_keys=("source_ticker=999999.SH",),
+        ),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (*chart._snapshots.list_snapshots(), suspended_day_price, unrelated)
+        ),
     )
     chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
     with pytest.raises(

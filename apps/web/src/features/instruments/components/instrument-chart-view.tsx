@@ -131,14 +131,44 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	const navQuery = useEtfNav(id, { startDate, endDate });
 
 	const bars = useMemo(() => (query.data ? toCockpitBars(query.data.bars) : []), [query.data]);
-	// 日频缺失会话补 whitespace 点：chart engine 只对 close === null 的 bar
-	// 渲染断口，服务端 missing_sessions 若不合并会相邻连线（合同：缺口不插值）。
+	// 缺失会话补 whitespace 点：chart engine 只对 close === null 的 bar 渲染
+	// 断口，服务端 missing_sessions 若不合并会相邻连线（合同：缺口不插值）。
+	// 日频按天补点；周/月频只在整桶无 bar 时补一个点，桶内有 bar 的缺口由
+	// 服务端 partial 语义表达，客户端不能再拆 candle。
 	const displayBars = useMemo(() => {
-		if (period !== "daily" || !query.data) return bars;
-		const present = new Set(bars.map((bar) => bar.time));
-		const holes: CockpitBar[] = query.data.missing_sessions
-			.filter((day) => !present.has(tradeDateToUnix(day)))
-			.map((day) => ({ time: tradeDateToUnix(day), close: null, volume: null }));
+		if (!query.data) return bars;
+		const missing = query.data.missing_sessions;
+		if (missing.length === 0) return bars;
+		if (period === "daily") {
+			const present = new Set(bars.map((bar) => bar.time));
+			const holes: CockpitBar[] = missing
+				.filter((day) => !present.has(tradeDateToUnix(day)))
+				.map((day) => ({ time: tradeDateToUnix(day), close: null, volume: null }));
+			return [...bars, ...holes].sort((left, right) => left.time - right.time);
+		}
+		const bucketOf = (unix: number): string => {
+			const date = new Date(unix * 1000);
+			if (period === "weekly") {
+				const monday = new Date(date);
+				monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+				return `w${monday.getUTCFullYear()}-${monday.getUTCMonth() + 1}-${monday.getUTCDate()}`;
+			}
+			return `m${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
+		};
+		const populated = new Set(bars.map((bar) => bucketOf(bar.time)));
+		const emptyBuckets = new Map<string, number>();
+		for (const day of missing) {
+			const time = tradeDateToUnix(day);
+			const bucket = bucketOf(time);
+			if (populated.has(bucket)) continue;
+			const current = emptyBuckets.get(bucket);
+			if (current === undefined || time > current) emptyBuckets.set(bucket, time);
+		}
+		const holes: CockpitBar[] = [...emptyBuckets.values()].map((time) => ({
+			time,
+			close: null,
+			volume: null,
+		}));
 		return [...bars, ...holes].sort((left, right) => left.time - right.time);
 	}, [bars, period, query.data]);
 	const answer = useMemo(() => primaryAnswerFromBars(bars), [bars]);

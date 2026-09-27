@@ -427,6 +427,10 @@ class LiveETFPaperExecutionFacts:
         start = date.fromisoformat(trade_date)
         horizon = (start + timedelta(days=30)).isoformat()
         try:
+            # Shared A-share schedule view: Paper settlement serves
+            # instruments across exchanges, so per-instrument exchange
+            # scoping waits until per-exchange calendar ingestion registers
+            # scoped shards.
             calendar = retained_trading_days(
                 snapshots=self._snapshots,
                 payloads=self._payloads,

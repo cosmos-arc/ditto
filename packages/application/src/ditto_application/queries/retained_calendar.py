@@ -150,8 +150,15 @@ def _calendar_exchange_scope(snapshot: ProviderSnapshot) -> str | None:
     return None
 
 
-def _calendar_serves_exchange(snapshot: ProviderSnapshot, exchange: str) -> bool:
-    """Whether a calendar shard may serve a chart of the given exchange."""
+def _calendar_serves_exchange(snapshot: ProviderSnapshot, exchange: str | None) -> bool:
+    """
+    Whether a calendar shard may serve a consumer of the given exchange.
+
+    An unmarked shard is the shared A-share schedule and serves every
+    consumer. An explicitly scoped shard serves only a consumer requesting
+    that exchange; the shared view (``exchange=None``) therefore never
+    mixes scoped shards in.
+    """
     scope = _calendar_exchange_scope(snapshot)
     return scope is None or scope == exchange
 
@@ -275,7 +282,7 @@ def retained_calendar_window(
     first_day: str,
     last_day: str,
     allow_closed_window: bool = False,
-    exchange: str = "SSE",
+    exchange: str | None = None,
 ) -> RetainedCalendarWindow:
     """
     Combine cutoff-visible retained calendar shards into one window.
@@ -293,9 +300,15 @@ def retained_calendar_window(
     silently serving the superseded calendar. A yet-newer retained shard
     re-covers the day and clears the gap. Retained shards are combined
     before empty observations so a tie between them is detected regardless
-    of content-derived snapshot ID ordering. Calendar shards without an
-    exchange partition serve every exchange (the shared A-share contract);
-    an explicit ``exchange=`` partition must match the requested exchange.
+    of content-derived snapshot ID ordering.
+
+    ``exchange`` scopes shard selection. Calendar shards without an exchange
+    partition are the shared A-share schedule (coordinated sessions across
+    SSE/SZSE/BSE); the default ``exchange=None`` shared view consumes only
+    those unmarked shards, and an explicit exchange additionally accepts a
+    matching ``exchange=`` partition — a mismatched explicit scope never
+    serves another exchange. Multi-instrument consumers stay on the shared
+    view until per-exchange ingestion registers scoped shards.
     """
     ordered = sorted(
         (
@@ -332,6 +345,7 @@ def retained_trading_days(
     payloads: ProviderPayloadReader,
     cutoff: datetime,
     first_day: str,
+    exchange: str | None = None,
 ) -> RetainedCalendar:
     """
     Return open sessions composed from calendar shards covering first_day.
@@ -340,6 +354,8 @@ def retained_trading_days(
     payloads visible at the cutoff are used; shards that cannot cover the
     requested date (for example a re-observed prior-year chunk) never win by
     recency alone. The first eligible session supplies the authority identity.
+    ``exchange`` follows the shared-schedule contract of
+    ``retained_calendar_window``.
     """
     window = retained_calendar_window(
         snapshots=snapshots,
@@ -347,6 +363,7 @@ def retained_trading_days(
         cutoff=cutoff,
         first_day=first_day,
         last_day="9999-12-31",
+        exchange=exchange,
     )
     return RetainedCalendar(
         window.days,

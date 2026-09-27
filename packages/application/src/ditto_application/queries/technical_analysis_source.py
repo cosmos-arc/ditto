@@ -271,7 +271,7 @@ def _reject_rows_outside_request_bounds(
             )
 
 
-def _newer_overlapping_revisions(
+def _overlapping_revisions(
     retained: dict[str, ProviderSnapshot | None],
     scopes: dict[str, set[str]],
     observed_at: dict[str, datetime],
@@ -280,7 +280,13 @@ def _newer_overlapping_revisions(
     day: str,
     cutoff: datetime,
 ) -> list[ProviderSnapshot]:
-    """Newer cutoff-visible revisions whose scope covers the instrument day."""
+    """
+    Revisions whose scope covers the instrument day at or after the prior.
+
+    Equal-time peers are authorities too: a same-observation shard omitting
+    the day leaves the presence decision unresolved, so ties join the
+    candidate set instead of silently letting the prior row win.
+    """
     return [
         item
         for item in retained.values()
@@ -296,7 +302,7 @@ def _newer_overlapping_revisions(
         and item.request_start.replace("-", "")
         <= day
         <= item.request_end.replace("-", "")
-        and observed_at[item.snapshot_id] > observed_at[prior.snapshot_id]
+        and observed_at[item.snapshot_id] >= observed_at[prior.snapshot_id]
     ]
 
 
@@ -359,7 +365,7 @@ def _reject_superseded_revision_rows(
         ticker = (
             instrument_code(trade_day) if callable(instrument_code) else instrument_code
         )
-        candidates = _newer_overlapping_revisions(
+        candidates = _overlapping_revisions(
             retained, scopes, observed_at, prior, ticker, day, context.knowledge_cutoff
         )
         if not candidates:
@@ -379,11 +385,15 @@ def _reject_superseded_revision_rows(
             )
         authority = authorities[0]
         if day not in present_days.get(authority.snapshot_id, ()):
+            if authority.row_count == 0:
+                detail = "visible row overlaps newer empty revision"
+            elif observed_at[authority.snapshot_id] == observed_at[prior.snapshot_id]:
+                detail = "tied overlapping revision omits the instrument day"
+            else:
+                detail = "newer overlapping revision omits the instrument day"
             raise _source_error(
                 "TECHNICAL_SOURCE_REVISION_CONFLICT",
-                "visible row overlaps newer empty revision"
-                if authority.row_count == 0
-                else "newer overlapping revision omits the instrument day",
+                detail,
                 snapshot_id=prior.snapshot_id,
             )
 
