@@ -6,7 +6,11 @@ import os
 import subprocess
 from pathlib import Path
 
-from tooling.agent_harness.hook import classify_diff, verification_commands
+from tooling.agent_harness.hook import (
+    _PYTEST_NO_TESTS_COLLECTED,
+    classify_diff,
+    verification_commands,
+)
 
 
 def push_commands(
@@ -68,7 +72,18 @@ def main() -> int:
         environment.pop(name, None)
     for command in commands:
         print("pre-push:", " ".join(command), flush=True)
-        subprocess.run(command, cwd=root, env=environment, check=True)
+        result = subprocess.run(command, cwd=root, env=environment, check=False)
+        if result.returncode == _PYTEST_NO_TESTS_COLLECTED and command[:2] == [
+            "task",
+            "test",
+        ]:
+            # fast 车道无可选用例（pytest exit 5）：fail-closed 升级全量检查
+            fallback = ["task", "check"]
+            print("pre-push:", " ".join(fallback), flush=True)
+            subprocess.run(fallback, cwd=root, env=environment, check=True)
+            continue
+        if result.returncode != 0:
+            raise SystemExit(result.returncode)
     return 0
 
 

@@ -53,9 +53,11 @@ Registry 配置测试通过近端 `conftest.py` 临时安装现有 keyring 包�
 
 ## 测试时长治理
 
-单条用例时长预算：单测 <0.5s、集成 <5s（与 `task analyze-slow-tests` 同阈值）。新用例超
-预算必须打 `slow`（容量类打 `capacity` 进独立慢车道）标记，`task test -- --fast` 与包级
-检查默认排除它们；存量超标用例按等价重复清单流程治理（#321），不阻塞存量。
+单条用例时长预算：单测 <0.5s、集成 <5s（与 `task analyze-slow-tests` 同阈值）。预算是
+**分类阈值**：新用例由 CI 时长门禁（#320）在 PR 侧强制超标打标，存量超标按打标治理票
+与等价重复清单流程处置（#321）。fast 车道（`task test -- --fast`）另带 **10s/用例硬顶
+超时**兜住异常用例（挂死/失控）——硬顶只杀真异常，0.5s 附近的边界人群由门禁治理而非
+本地误杀。
 
 时长证据常驻：pytest addopts 自带 `--durations=10`；治理入口
 `task analyze-slow-tests`（覆盖全部测试根，已打 `slow`/`capacity` 标记的用例走慢车道不计入；

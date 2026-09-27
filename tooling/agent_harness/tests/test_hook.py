@@ -786,8 +786,7 @@ def test_single_and_cross_package_local_checks_share_the_package_gate() -> None:
         "task lint",
         "task fmt-check",
         "task type-all",
-        "task test -- --fast packages/kernel/tests",
-        "task test -- --fast packages/platform/tests",
+        "task test -- --fast packages/kernel/tests packages/platform/tests",
     ]
 
 
@@ -802,8 +801,7 @@ def test_non_python_file_in_a_second_package_widens_the_owner_scope() -> None:
         "task lint",
         "task fmt-check",
         "task type-all",
-        "task test -- --fast packages/data/tests",
-        "task test -- --fast packages/strategy/tests",
+        "task test -- --fast packages/data/tests packages/strategy/tests",
         "task pit",
     ]
 
@@ -822,8 +820,7 @@ def test_cross_owner_high_risk_keeps_local_pit_and_drops_full_check() -> None:
         "task lint",
         "task fmt-check",
         "task type-all",
-        "task test -- --fast packages/application/tests",
-        "task test -- --fast packages/execution/tests",
+        "task test -- --fast packages/application/tests packages/execution/tests",
         "task pit",
     ]
 
@@ -842,8 +839,7 @@ def test_application_source_with_backend_tests_runs_both_owner_scopes() -> None:
         "task lint",
         "task fmt-check",
         "task type-all",
-        "task test -- --fast apps/backend/tests",
-        "task test -- --fast packages/application/tests",
+        "task test -- --fast apps/backend/tests packages/application/tests",
         "task pit",
     ]
 
