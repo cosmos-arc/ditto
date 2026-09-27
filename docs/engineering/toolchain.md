@@ -102,7 +102,7 @@ ARM64、uv 热缓存、无并行负载；长链条顺序执行避免争用，每
 | 系统测试 | `task test-system` | 377.4s |
 | 全量门 | `task check` | 507.1s |
 | 单个测试文件 | `pytest <file> -q` | 2.6s |
-| collection 探针 | `--fast --collect-only` | kernel 3.2s / application 22.0s |
+| collection 探针（仅源码档执行） | `--fast --collect-only` | kernel 3.2s / application 22.0s |
 
 阶梯各档合计（组件相加，probe 按 owner 计入仅测试文件档）：
 
@@ -110,16 +110,16 @@ ARM64、uv 热缓存、无并行负载；长链条顺序执行避免争用，每
 | --- | ---: |
 | 纯 docs | ≈0（无命令） |
 | skills | 1.2s |
-| 纯 web | 135.6s |
-| 仅测试文件 | ≈25s（application owner 约 +22s probe） |
-| 单包后端 kernel / application | 45s / 232s |
-| 单包高危 application | 292s |
+| 纯 web（不含 web-input 路径） | 135.6s；触及 specs/prototype 等输入路径时另加 `task web-prototype`（未实测） |
+| 仅测试文件 | ≈25s（该档不执行 collection 探针） |
+| 单包后端 kernel / application（含探针） | 48s / 254s |
+| 单包高危 application（含探针） | 314s |
 | 跨包 / root / unknown（`task check`） | 507s |
 | 跨栈/契约再叠加 `test-system` | 884s |
 | 最高组合（check + test-system + pit） | 944s ≈ 15.7min |
 
 观察：#322 跨包包级化落地后，典型 ETF 跨包高危推送（application + backend + pit）
-估算约 422s（四件套一次 + 两 owner fast + pit），对照现行 944s；`task type-all`
+估算约 444s（探针 + 四件套一次 + 两 owner fast + pit），对照现行 944s；`task type-all`
 40.6s 为全仓检查，单包档也整付（记录观察，本票不改）。
 
 CI 侧（9 次成功全量 PR + 3 次后端 squash push，2026-09-27 取样）：
@@ -127,15 +127,17 @@ CI 侧（9 次成功全量 PR + 3 次后端 squash push，2026-09-27 取样）�
 - PR 全量 wall 778–831s（如 [run 36301251107](https://github.com/cosmos-arc/ditto/actions/runs/36301251107)）；
   关键路径 = backend-shards 最慢片 510–536s → Backend tests and coverage 242s；
   backend-capacity 已独立（196s）；macOS smoke ~584s 并行不在关键路径。
-- 分片失衡：9/9 次运行最快片 320–340s vs 最慢片 510–536s（比值 1.42–1.64）。
-  均衡分片后关键路径预计可省约 150–190s；是否做时长感知分片由后续票裁决。
+- 分片失衡：9/9 次运行均失衡，跨运行汇总最快片 320–340s、最慢片 510–536s；单次运行内
+  最慢/最快比值为 1.42–1.64（如 367s vs 521s、320s vs 526s）。均衡分片后关键路径预计可省
+  约 150–190s；是否做时长感知分片由后续票裁决。
 - push 到 main 已收窄：ci.py 对 push 信任 PR 已验证的等价内容，仅补跑跨平台冒烟
   与常驻安全检查。#313/#310/#311 三次后端 squash push（runs
   [36276650225](https://github.com/cosmos-arc/ditto/actions/runs/36276650225)、
   [36275553446](https://github.com/cosmos-arc/ditto/actions/runs/36275553446)、
   [36263324989](https://github.com/cosmos-arc/ditto/actions/runs/36263324989)）均只执行
-  Repository policy / Platform smoke / Security 组，backend-shards、backend-tests、
-  web 与契约检查不再重跑。2026-09-18 诊断中"push 到 main 一律全量 16 分钟"的描述
+  Repository policy / Platform smoke / Security 组，backend-shards、backend-tests、web
+  覆盖率/构建/原型/系统测试等专属 job 不再重跑；平台冒烟内的轻量门（macOS `check-web`、
+  Windows `web-type`/`type-all`）在 push 事件仍会重跑。2026-09-18 诊断中"push 到 main 一律全量 16 分钟"的描述
   不再成立。
 
 ## 本次本机证据
