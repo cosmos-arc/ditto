@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -148,6 +149,38 @@ def parse_junit(paths: list[Path], root: Path) -> dict[str, dict[str, float]]:
 _COLLECT_TIMEOUT_SECONDS = 120
 
 
+class _CollectTimeout(RuntimeError):
+    """The collection subprocess (and its process group) was killed."""
+
+
+def _run_collect(
+    command: list[str], env: dict[str, str], cwd: Path | None
+) -> subprocess.CompletedProcess[str]:
+    """Run collection in its own session and kill the whole tree on timeout."""
+    proc = subprocess.Popen(  # noqa: S603 - venv 内固定 pytest 参数
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        cwd=cwd,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=_COLLECT_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        if hasattr(os, "killpg"):
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        else:
+            proc.kill()
+        proc.communicate()
+        raise _CollectTimeout from None
+    return subprocess.CompletedProcess(command, proc.returncode, stdout, stderr)
+
+
 def collect_ids(
     changed_files: Sequence[str] | None,
     marker_expr: str | None = None,
@@ -189,16 +222,8 @@ def collect_ids(
         **(extra_env or {}),
     )
     try:
-        result = subprocess.run(  # noqa: S603 - venv 内固定 pytest 参数
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=env,
-            cwd=cwd,
-            timeout=_COLLECT_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as error:
+        result = _run_collect(command, env, cwd)
+    except _CollectTimeout as error:
         message = f"collect-only timed out after {_COLLECT_TIMEOUT_SECONDS}s"
         raise SystemExit(message) from error
     # pytest 9 exits 1 (execution short-circuited) or 2 (internal) for
@@ -356,7 +381,19 @@ def _owner_of(path: str) -> str | None:
     return None
 
 
-def gate_scope(name_status: Mapping[str, str]) -> dict[str, str] | None:
+def deleted_paths(raw: str) -> set[str]:
+    """Paths removed outright (status D) in a ``-z --name-status`` stream."""
+    fields = raw.split("\0")
+    return {
+        fields[index + 1]
+        for index, status in enumerate(fields)
+        if status == "D" and index + 1 < len(fields)
+    }
+
+
+def gate_scope(
+    name_status: Mapping[str, str], deleted: set[str] = frozenset()
+) -> dict[str, str] | None:
     """
     Gate scope for the head-vs-base collection diff; None = whole suite.
 
@@ -375,7 +412,11 @@ def gate_scope(name_status: Mapping[str, str]) -> dict[str, str] | None:
             owner = _owner_of(path)
             if owner is not None:
                 owners.add(owner)
-        if Path(head).name.startswith("test_") and head.endswith(".py"):
+        if (
+            Path(head).name.startswith("test_")
+            and head.endswith(".py")
+            and head not in deleted  # 删除的文件无 head 身份，其 owner 目录已覆盖
+        ):
             scope[head] = base_path
     for owner in sorted(owners):
         scope.setdefault(f"{owner}/tests", f"{owner}/tests")
@@ -409,6 +450,7 @@ def changed_test_files(
         check=True,
     ).stdout
     mapping = parse_name_status(raw)
+    deleted = deleted_paths(raw)
     renames = {
         head: base_path
         for head, base_path in mapping.items()
@@ -416,7 +458,7 @@ def changed_test_files(
         and Path(head).name.startswith("test_")
         and head.endswith(".py")
     }
-    return gate_scope(mapping), renames
+    return gate_scope(mapping, deleted), renames
 
 
 def new_tests_at_head(
