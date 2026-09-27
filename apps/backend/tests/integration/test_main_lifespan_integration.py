@@ -22,6 +22,7 @@ from fastapi import FastAPI
 class TestLifespanContainerSettings:
     """Lifespan 集成性质用例：真实容器设置装配。"""
 
+    @pytest.mark.slow  # CI 实测超集成预算(2026-09-27 CI 9-13s), 进慢车道
     @pytest.mark.asyncio
     async def test_uses_container_data_store_settings(self, tmp_path, monkeypatch):
         """Lifespan should initialize with container-owned settings."""
