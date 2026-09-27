@@ -186,10 +186,7 @@ describe("ChartCockpit DOM 合同", () => {
 		let drawnX = -1;
 		renderer?.draw({
 			useMediaCoordinateSpace: (
-				cb: (scope: {
-					context: CanvasRenderingContext2D;
-					mediaSize: { width: number; height: number };
-				}) => void,
+				cb: (scope: { context: CanvasRenderingContext2D; mediaSize: { width: number; height: number } }) => void,
 			) => {
 				const ctx = {
 					save: vi.fn(),
