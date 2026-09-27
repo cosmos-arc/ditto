@@ -337,14 +337,9 @@ def _reject_superseded_revision_rows(
                 and (not scopes[item.snapshot_id] or ticker in scopes[item.snapshot_id])
                 and item.dataset_id == prior.dataset_id
                 and item.source == prior.source
-                # A nonempty payload only speaks for its own request universe;
-                # its omission of this instrument is evidence only under the
-                # same request semantics. An empty verified observation is
-                # request-independent "no data" for its covered scope.
-                and (
-                    item.row_count == 0
-                    or item.request_parameters_hash == prior.request_parameters_hash
-                )
+                # Production hashes request bounds into request_parameters_hash,
+                # so a differing-bounds refresh never shares the prior hash;
+                # authority is judged by covered day and partition scope only.
                 and item.request_start.replace("-", "")
                 <= day
                 <= item.request_end.replace("-", "")
@@ -456,7 +451,7 @@ def _values(
             values.append(default)
         else:
             try:
-                values.append(float(item))
+                value = float(item)
             except (TypeError, ValueError) as exc:
                 raise _source_error(
                     "TECHNICAL_SOURCE_VALUE_INVALID",
@@ -464,6 +459,13 @@ def _values(
                     field=field,
                     value_type=type(item).__name__,
                 ) from exc
+            if not isfinite(value):
+                raise _source_error(
+                    "TECHNICAL_SOURCE_VALUE_INVALID",
+                    "numeric_value_not_finite",
+                    field=field,
+                )
+            values.append(value)
     return values
 
 
@@ -646,15 +648,35 @@ class ProviderPayloadTechnicalAnalysisSource:
             prior_snapshot = (
                 self._snapshot_reader.get_snapshot(prior.snapshot_id) if prior else None
             )
-            if prior_snapshot is None or snapshot_observed_by(
-                snapshot, context.as_of
-            ) > snapshot_observed_by(prior_snapshot, context.as_of):
+            observed = snapshot_observed_by(snapshot, context.as_of)
+            if prior_snapshot is None or observed > snapshot_observed_by(
+                prior_snapshot, context.as_of
+            ):
                 factors[day] = AdjustmentFactor(
                     factor,
                     snapshot_id,
                     cast(datetime, row["available_at"]),
                     cast(datetime, row["published_at"]),
                 )
+            elif observed == snapshot_observed_by(prior_snapshot, context.as_of):
+                # Same authoritative artifact may carry multiple revisions of
+                # one day (the dataset key includes knowledge_date); the
+                # latest visible knowledge time wins and equal-time rows
+                # must agree instead of depending on payload order.
+                available_at = cast(datetime, row["available_at"])
+                if available_at > prior.available_at:
+                    factors[day] = AdjustmentFactor(
+                        factor,
+                        snapshot_id,
+                        available_at,
+                        cast(datetime, row["published_at"]),
+                    )
+                elif available_at == prior.available_at and factor != prior.value:
+                    raise _source_error(
+                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                        "contradictory same-snapshot factor rows",
+                        day=day,
+                    )
         return factors
 
     def load_suspensions(

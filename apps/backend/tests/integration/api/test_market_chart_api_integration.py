@@ -159,12 +159,12 @@ def _chart(
         {
             "source_ticker": [
                 "OLD.SH" if renamed and day == "2026-03-09" else "600519.SH"
-                for day in ["2026-03-09", "2026-03-10", "2026-03-12"]
+                for day in ["2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12"]
             ],
-            "trade_date": ["2026-03-09", "2026-03-10", "2026-03-12"],
-            "published_at": [visible, visible, visible + timedelta(days=2)],
-            "available_at": [visible, visible, visible + timedelta(days=2)],
-            "adj_factor": [1.0, 1.1, 99.0],
+            "trade_date": ["2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12"],
+            "published_at": [visible, visible, visible, visible + timedelta(days=2)],
+            "available_at": [visible, visible, visible, visible + timedelta(days=2)],
+            "adj_factor": [1.0, 1.1, 1.0, 99.0],
         }
     )
     factor_snapshot = _snapshot(store, "adj_factor", factors, visible)
@@ -278,7 +278,9 @@ def test_chart_adjustment_uses_visible_exact_factors(tmp_path: Path) -> None:
         period="weekly",
         adjustment="qfq",
         allow_experimental_data=False,
-        now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+        # 16:00 Shanghai on 03-11: 03-10's T+1 knowledge time (03-11 15:00)
+        # has passed, so the QFQ anchor is 03-10.
+        now=datetime(2026, 3, 11, 8, tzinfo=UTC),
     )
     adjusted = chart.get_chart(base)
     assert adjusted.bars[0].open == pytest.approx(10 / 1.1)
@@ -457,7 +459,7 @@ def test_chart_preserves_queried_lineage_when_no_visible_price(tmp_path: Path) -
             period="daily",
             adjustment="none",
             allow_experimental_data=False,
-            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            now=datetime(2026, 3, 12, 8, tzinfo=UTC),
         )
     )
     assert result.bars == ()
@@ -487,7 +489,7 @@ def test_chart_does_not_use_unapproved_status_to_hide_gaps(tmp_path: Path) -> No
         period="daily",
         adjustment="none",
         allow_experimental_data=False,
-        now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        now=datetime(2026, 3, 12, 8, tzinfo=UTC),
     )
     assert chart.get_chart(request).missing_sessions == ("2026-03-11",)
     assert (
@@ -550,18 +552,27 @@ def test_chart_snapshot_authority_is_bound_to_exact_request(
         )
     reader = cast(ProviderSnapshotReader, _Snapshots((*values, newer)))
     chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
-    result = chart.get_chart(
-        MarketChartRequest(
-            instrument_id=1000001,
-            asset_class="stock",
-            start_date=date(2026, 3, 9),
-            end_date=date(2026, 3, 10),
-            period="daily",
-            adjustment="none",
-            allow_experimental_data=False,
-            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
-        )
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 9),
+        end_date=date(2026, 3, 10),
+        period="daily",
+        adjustment="none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 11, 8, tzinfo=UTC),
     )
+    if revision == "other_request":
+        # Production hashes request bounds into request_parameters_hash, so a
+        # market-wide refresh with differing request identity (here: a
+        # different hash whose payload omits this instrument) is omission
+        # evidence and fails closed rather than leaving the stale row visible.
+        with pytest.raises(
+            AppQueryError, match="newer overlapping revision omits the instrument day"
+        ):
+            chart.get_chart(request)
+        return
+    result = chart.get_chart(request)
     if revision == "omitted":
         assert [bar.close for bar in result.bars] == [99.0]
         assert result.missing_sessions == ("2026-03-10",)
@@ -681,7 +692,7 @@ def test_chart_ignores_unrelated_ticker_schema_authority(
 
 @pytest.mark.pit
 @pytest.mark.parametrize("trade_day", ["2026-03-10", "20260310", date(2026, 3, 10)])
-def test_daily_date_only_price_is_invisible_before_close(
+def test_daily_date_only_price_is_invisible_before_knowledge_time(
     tmp_path: Path, trade_day: str | date
 ) -> None:
     chart, original, metadata = _chart(tmp_path, poisoned=False)
@@ -724,13 +735,13 @@ def test_daily_date_only_price_is_invisible_before_close(
         now=datetime(2026, 3, 10, 6, tzinfo=UTC),
     )
     assert chart.get_chart(request).bars == ()
-    after_close = chart.get_chart(
+    after_knowledge = chart.get_chart(
         MarketChartRequest(
-            **{**vars(request), "now": datetime(2026, 3, 10, 8, tzinfo=UTC)}
+            **{**vars(request), "now": datetime(2026, 3, 11, 8, tzinfo=UTC)}
         )
     )
-    assert after_close.bars[0].close == 99.0
-    assert after_close.bars[0].partial is False
+    assert after_knowledge.bars[0].close == 99.0
+    assert after_knowledge.bars[0].partial is False
 
 
 @pytest.mark.pit
@@ -1734,8 +1745,10 @@ def test_chart_returns_empty_before_first_session_close_without_snapshots(
     assert result.missing_sessions == ()
     assert result.source_snapshot_ids == ()
     assert result.calendar_snapshot_ids != ()
+    # Once 03-11's T+1 knowledge time (03-12 15:00 Shanghai) has passed, the
+    # session's bar is knowable and the missing retained snapshot fails closed.
     with pytest.raises(AppQueryError, match="snapshots are unavailable at cutoff"):
-        chart.get_chart(replace(request, now=datetime(2026, 3, 11, 8, tzinfo=UTC)))
+        chart.get_chart(replace(request, now=datetime(2026, 3, 12, 8, tzinfo=UTC)))
 
 
 @pytest.mark.pit
@@ -1842,7 +1855,7 @@ def test_chart_ignores_unclosed_session_scoped_shards_in_source_authority(
             period="daily",
             adjustment="none",
             allow_experimental_data=False,
-            now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+            now=datetime(2026, 3, 12, 6, tzinfo=UTC),
         )
     )
     assert [bar.close for bar in result.bars] == [10.8]
@@ -1883,7 +1896,7 @@ def test_chart_skips_unclosed_sessions_in_ticker_validation(
             period="daily",
             adjustment="none",
             allow_experimental_data=False,
-            now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+            now=datetime(2026, 3, 12, 6, tzinfo=UTC),
         )
     )
     assert [bar.close for bar in result.bars] == [10.8]
@@ -1949,7 +1962,7 @@ def test_chart_matches_shard_partitions_on_consumable_sessions_only(
             period="daily",
             adjustment="none",
             allow_experimental_data=False,
-            now=datetime(2026, 3, 11, 6, tzinfo=UTC),
+            now=datetime(2026, 3, 12, 6, tzinfo=UTC),
         )
     )
     assert [bar.close for bar in result.bars] == [10.8]
@@ -1971,13 +1984,13 @@ def test_chart_partial_candle_waits_for_missing_session_close(tmp_path: Path) ->
             period="weekly",
             adjustment="none",
             allow_experimental_data=False,
-            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            now=datetime(2026, 3, 12, 8, tzinfo=UTC),
         )
     )
     assert [bar.close for bar in result.bars] == [10.8]
     assert result.missing_sessions == ("2026-03-11",)
     assert result.bars[0].partial is True
-    assert result.bars[0].available_at == datetime(2026, 3, 11, 7, tzinfo=UTC)
+    assert result.bars[0].available_at == datetime(2026, 3, 12, 7, tzinfo=UTC)
 
 
 @pytest.mark.pit
@@ -2014,18 +2027,23 @@ def test_chart_qfq_baseline_ignores_closed_day_factors(tmp_path: Path) -> None:
         ),
     )
     chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
-    result = chart.get_chart(
-        MarketChartRequest(
-            instrument_id=1000001,
-            asset_class="stock",
-            start_date=date(2026, 3, 9),
-            end_date=date(2026, 3, 14),
-            period="daily",
-            adjustment="qfq",
-            allow_experimental_data=False,
-            now=datetime(2026, 3, 15, 1, tzinfo=UTC),
-        )
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 9),
+        end_date=date(2026, 3, 14),
+        period="daily",
+        adjustment="qfq",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 15, 1, tzinfo=UTC),
     )
+    # The anchor is 03-13 (latest mature open session); no factor covers it,
+    # so QFQ fails closed instead of scaling against a stale baseline.
+    with pytest.raises(
+        AppQueryError, match="factor missing for the chart anchor session"
+    ):
+        chart.get_chart(request)
+    result = chart.get_chart(replace(request, end_date=date(2026, 3, 10)))
     assert [bar.close for bar in result.bars] == [10.2 / 1.1, 10.8]
 
 
@@ -2182,34 +2200,29 @@ def test_chart_absence_lineage_respects_effective_ticker(tmp_path: Path) -> None
         request_start="2026-03-09",
         request_end="2026-03-09",
     )
-    old_ticker_shard = replace(
-        _snapshot(
-            store,
-            "stock_daily",
-            pl.DataFrame(
-                {
-                    "source_ticker": ["600519.SH"],
-                    "trade_date": ["2026-03-08"],
-                    "open": [1.0],
-                    "high": [1.0],
-                    "low": [1.0],
-                    "close": [1.0],
-                    "volume": [1.0],
-                    "amount": [1.0],
-                }
-            ),
-            datetime(2026, 3, 10, 9, tzinfo=UTC),
-        ),
-        request_start="2026-03-08",
-        request_end="2026-03-15",
-        # Different request semantics: the old-ticker shard is selected for
-        # lineage but is not a same-request omission authority.
-        request_parameters_hash="sha256:old-ticker-request",
-        canonical_asset=DataAssetRef(
+    old_ticker_empty = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
             dataset_id="stock_daily",
-            namespace="market",
-            partition_keys=("source_ticker=600519.SH",),
-        ),
+            source="tushare",
+            request_start="2026-03-10",
+            request_end="2026-03-15",
+            schema_version="stock_daily.v1",
+            checksum="sha256:old-ticker-empty",
+            canonical_asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=("source_ticker=600519.SH",),
+            ),
+            request_parameters_hash="sha256:market-chart-test",
+            response_metadata=(
+                ("snapshot_layer", "verified_empty_provider_observation"),
+            ),
+            license_record_id="license:tushare:stock_daily:test",
+            row_count=0,
+            payload_uri=None,
+            payload_retained=False,
+            created_at=datetime(2026, 3, 10, 9, tzinfo=UTC),
+        )
     )
     reader = cast(
         ProviderSnapshotReader,
@@ -2217,7 +2230,7 @@ def test_chart_absence_lineage_respects_effective_ticker(tmp_path: Path) -> None
             (
                 *chart._snapshots.list_snapshots(dataset_id="calendar"),
                 bar_shard,
-                old_ticker_shard,
+                old_ticker_empty,
             )
         ),
     )
@@ -2231,12 +2244,13 @@ def test_chart_absence_lineage_respects_effective_ticker(tmp_path: Path) -> None
             period="daily",
             adjustment="none",
             allow_experimental_data=False,
-            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            now=datetime(2026, 3, 12, 6, tzinfo=UTC),
         )
     )
     assert [bar.close for bar in result.bars] == [10.2]
     assert result.bars[0].source_snapshot_ids == (bar_shard.snapshot_id,)
     assert result.bars[0].available_at == datetime(2026, 3, 10, 7, tzinfo=UTC)
+    assert result.missing_sessions == ("2026-03-10",)
 
 
 @pytest.mark.pit
@@ -2285,6 +2299,185 @@ def test_chart_fails_closed_on_contradictory_same_snapshot_status_rows(
                 adjustment="none",
                 allow_experimental_data=False,
                 now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_resolves_same_snapshot_factor_revisions_by_knowledge_time(
+    tmp_path: Path,
+) -> None:
+    """Repeated same-day factor rows inside one snapshot follow the latest
+    visible knowledge time; equal-time rows must agree instead of depending
+    on payload order."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fixture_snapshots = chart._snapshots.list_snapshots()
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    revised = replace(
+        _snapshot(
+            store,
+            "adj_factor",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH", "600519.SH"],
+                    "trade_date": ["2026-03-09", "2026-03-09"],
+                    "adj_factor": [1.0, 1.5],
+                    "available_at": [
+                        datetime(2026, 3, 10, 7, tzinfo=UTC),
+                        datetime(2026, 3, 10, 8, tzinfo=UTC),
+                    ],
+                    "published_at": [
+                        datetime(2026, 3, 10, 7, tzinfo=UTC),
+                        datetime(2026, 3, 10, 8, tzinfo=UTC),
+                    ],
+                }
+            ),
+            datetime(2026, 3, 10, 9, tzinfo=UTC),
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
+    contradictory = replace(
+        revised,
+        checksum="sha256:contradictory-factors",
+        payload_uri=None,
+        payload_retained=False,
+        row_count=0,
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="stock_daily"),
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                *(
+                    item
+                    for item in fixture_snapshots
+                    if item.dataset_id == "adj_factor"
+                ),
+                revised,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="qfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        )
+    )
+    assert [bar.close for bar in result.bars] == [10.2 * 1.5 / 1.1, 10.8]
+    revised_payload = store.retain_payload(
+        dataset_id="adj_factor",
+        source="tushare",
+        payload=pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH", "600519.SH"],
+                "trade_date": ["2026-03-09", "2026-03-09"],
+                "adj_factor": [1.0, 1.5],
+                "available_at": [
+                    datetime(2026, 3, 10, 7, tzinfo=UTC),
+                    datetime(2026, 3, 10, 7, tzinfo=UTC),
+                ],
+                "published_at": [
+                    datetime(2026, 3, 10, 7, tzinfo=UTC),
+                    datetime(2026, 3, 10, 7, tzinfo=UTC),
+                ],
+            }
+        ),
+    )
+    contradictory = replace(
+        revised,
+        checksum=revised_payload.checksum,
+        payload_uri=revised_payload.uri,
+        payload_retained=True,
+        row_count=revised_payload.row_count,
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="stock_daily"),
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                *(
+                    item
+                    for item in fixture_snapshots
+                    if item.dataset_id == "adj_factor"
+                ),
+                contradictory,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="contradictory same-snapshot factor rows"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="qfq",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_non_finite_ohlc_rows(tmp_path: Path) -> None:
+    """NaN or infinite payload values must fail closed before they surface in
+    required numeric chart fields."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    poisoned = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-10"],
+                    "open": [10.0],
+                    "high": [float("nan")],
+                    "low": [9.5],
+                    "close": [10.8],
+                    "volume": [10.0],
+                    "amount": [100.0],
+                }
+            ),
+            datetime(2026, 3, 10, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                poisoned,
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="numeric_value_not_finite"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 10),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 8, tzinfo=UTC),
             )
         )
 

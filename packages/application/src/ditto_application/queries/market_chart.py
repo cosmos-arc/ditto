@@ -157,6 +157,45 @@ class _SnapshotIndex(NamedTuple):
     absence_sources: tuple[ProviderSnapshot, ...]
 
 
+def _qfq_baseline_day(
+    request: MarketChartRequest,
+    days: set[str],
+    as_of: datetime,
+    factors: dict[str, AdjustmentFactor],
+) -> str | None:
+    """
+    Resolve the QFQ baseline as the anchor session's own factor.
+
+    The anchor is the latest eligible open session, not merely the latest
+    factor date: a corporate action on the anchor session rescales every
+    earlier candle, so its factor must be covered or we fail closed instead
+    of silently scaling against a stale baseline. Non-QFQ charts have no
+    baseline.
+    """
+    if request.adjustment != "qfq":
+        return None
+    anchor_day = max(
+        (
+            day
+            for day in days
+            if day
+            <= min(
+                request.end_date,
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else request.end_date,
+            ).isoformat()
+            and _daily_knowledge_at(date.fromisoformat(day)) <= as_of
+        ),
+        default=None,
+    )
+    if anchor_day is None or anchor_day not in factors:
+        raise AppQueryError(
+            "exact adjustment factor missing for the chart anchor session"
+        )
+    return anchor_day
+
+
 def _chart_rows(
     raw: tuple[TechnicalBar, ...],
     index: _SnapshotIndex,
@@ -218,10 +257,7 @@ def _chart_rows(
         for day in visible_days
         if day not in by_day
         and day not in suspensions
-        and datetime.combine(date.fromisoformat(day), time(15), _SHANGHAI).astimezone(
-            UTC
-        )
-        <= as_of
+        and _daily_knowledge_at(date.fromisoformat(day)) <= as_of
     )
     grouped: dict[tuple[int, int], list[tuple[str, TechnicalBar]]] = {}
     for day, bar in sorted(by_day.items()):
@@ -230,23 +266,7 @@ def _chart_rows(
         ).append((day, bar))
     if request.adjustment != "none" and any(day not in factors for day in by_day):
         raise AppQueryError("exact adjustment factor missing for a chart price day")
-    baseline_day = max(
-        (
-            day
-            for day in factors
-            # A factor dated on a retained closed day cannot anchor a chart
-            # price; it must not rescale the visible candles as the baseline.
-            if day in days
-            and day
-            <= min(
-                request.end_date,
-                request.delisted_on - timedelta(days=1)
-                if request.delisted_on
-                else request.end_date,
-            ).isoformat()
-        ),
-        default=None,
-    )
+    baseline_day = _qfq_baseline_day(request, days, as_of, factors)
     baseline = factors[baseline_day].value if baseline_day else 1.0
 
     def multiplier(day: str) -> float:
@@ -306,10 +326,7 @@ def _chart_rows(
             not complete_calendar
             or any(day not in by_day for day in expected)
             or (
-                datetime.combine(
-                    date.fromisoformat(expected[-1]), time(15), _SHANGHAI
-                ).astimezone(UTC)
-                > as_of
+                _daily_knowledge_at(date.fromisoformat(expected[-1])) > as_of
                 if expected
                 else True
             )
@@ -378,11 +395,9 @@ def _chart_rows(
                     + [item.available_at for item in contributing_suspensions]
                     + [item.available_at for item in contributing_factors]
                     # A missing session's effect on this candle is knowable
-                    # no earlier than its close.
+                    # no earlier than its T+1 knowledge time.
                     + [
-                        datetime.combine(
-                            date.fromisoformat(day), time(15), _SHANGHAI
-                        ).astimezone(UTC)
+                        _daily_knowledge_at(date.fromisoformat(day))
                         for day in missing
                         if period_start.isoformat() <= day <= period_end.isoformat()
                     ]
@@ -443,23 +458,33 @@ def _snapshot_matches_instrument(
     )
 
 
+def _daily_knowledge_at(day: date) -> datetime:
+    """
+    Retained daily datasets are knowable at T+1 15:00 Asia/Shanghai.
+
+    The provider contract stamps knowledge_date = trade_date + 1, so a
+    session becomes consumable (and its absence mature) only after that
+    knowledge time, not at the market close.
+    """
+    return datetime.combine(day + timedelta(days=1), time(15), _SHANGHAI).astimezone(
+        UTC
+    )
+
+
 def _consumable_sessions(
     calendar: RetainedCalendarWindow, start_date: date, end_date: date, as_of: datetime
 ) -> frozenset[str]:
     """
-    Open sessions in the clipped window whose close has passed by as_of.
+    Open sessions in the clipped window whose knowledge time passed as_of.
 
-    A session that has not closed yet has no knowable daily bar, so shards
-    scoped to it cannot contribute consumable evidence at this cutoff.
+    A session whose daily bar is not yet knowable cannot consume evidence at
+    this cutoff.
     """
     return frozenset(
         day
         for day in calendar.days
         if start_date.isoformat() <= day <= end_date.isoformat()
-        and datetime.combine(date.fromisoformat(day), time(15), _SHANGHAI).astimezone(
-            UTC
-        )
-        <= as_of
+        and _daily_knowledge_at(date.fromisoformat(day)) <= as_of
     )
 
 
