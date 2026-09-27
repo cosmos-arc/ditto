@@ -25,46 +25,7 @@ def test_threshold_follows_test_layer() -> None:
     )
 
 
-def test_test_names_collects_class_qualified_ids() -> None:
-    source = """
-def helper(): ...
-
-def test_module(): ...
-
-async def test_async(): ...
-
-class TestSubject:
-    def test_method(self): ...
-    def utility(self): ...
-
-class TestOuter:
-    class TestInner:
-        def test_nested(self): ...
-"""
-    assert gate.test_names(source) == {
-        "test_module",
-        "test_async",
-        "TestSubject.test_method",
-        "TestOuter.TestInner.test_nested",
-    }
-
-
-def test_test_names_expands_same_module_inheritance() -> None:
-    source = """
-class BaseTests:
-    def test_slow(self): ...
-    def utility(self): ...
-
-class TestChild(BaseTests):
-    pass
-
-class TestUnrelated:
-    pass
-"""
-    assert gate.test_names(source) == {"BaseTests.test_slow", "TestChild.test_slow"}
-
-
-def testnormalize_node_isolates_parameter_suffix_first() -> None:
+def test_normalize_node_isolates_parameter_suffix_first() -> None:
     assert gate.normalize_node(
         "x/tests/unit/a.py::TestSubject::test_m[slow::case]"
     ) == (
@@ -115,39 +76,29 @@ def test_parse_name_status_maps_renames_to_base_path() -> None:
     }
 
 
-def test_new_tests_at_head_ignores_base_of_non_test_rename() -> None:
+def test_new_tests_at_head_subtracts_base_collection_identities() -> None:
+    files = {"x/tests/unit/test_new.py": "x/tests/unit/test_old.py"}
+    collected = {
+        ("x/tests/unit/test_new.py", "test_kept"),
+        ("x/tests/unit/test_new.py", "TestActivated.test_slow"),
+        ("x/tests/unit/test_new.py", "TestChild.test_inherited"),
+    }
+    base_ids = {
+        ("x/tests/unit/test_old.py", "test_kept"),
+        ("x/tests/unit/test_old.py", "TestChild.test_inherited"),
+    }
+    assert gate.new_tests_at_head(files, collected, base_ids) == {
+        "x/tests/unit/test_new.py": {"TestActivated.test_slow"}
+    }
+
+
+def test_new_tests_at_head_counts_non_test_rename_as_fully_new() -> None:
     files = {"x/tests/unit/test_helpers.py": "x/tests/unit/helpers.py"}
     collected = {("x/tests/unit/test_helpers.py", "test_activated")}
-    base_source = "def test_activated(): ...  # 非测试文件的既有函数"
-    new = gate.new_tests_at_head(
-        "base", files, collected, Path(), show=lambda b, p, r: base_source
-    )
-    assert new == {"x/tests/unit/test_helpers.py": {"test_activated"}}
-
-
-def test_new_tests_at_head_subtracts_test_rename_base() -> None:
-    files = {"x/tests/unit/test_new.py": "x/tests/unit/test_old.py"}
-    collected = {("x/tests/unit/test_new.py", "test_kept")}
-    base_source = "def test_kept(): ...\n"
-    new = gate.new_tests_at_head(
-        "base", files, collected, Path(), show=lambda b, p, r: base_source
-    )
-    assert new == {}
-
-
-def test_new_tests_at_head_subtracts_inherited_base_identities() -> None:
-    files = {"x/tests/unit/test_new.py": "x/tests/unit/test_old.py"}
-    collected = {("x/tests/unit/test_new.py", "TestChild.test_slow")}
-    base_source = (
-        "class BaseTests:\n"
-        "    def test_slow(self): ...\n\n"
-        "class TestChild(BaseTests):\n"
-        "    pass\n"
-    )
-    new = gate.new_tests_at_head(
-        "base", files, collected, Path(), show=lambda b, p, r: base_source
-    )
-    assert new == {}
+    base_ids = set()  # 基线收集对非测试路径收集不到任何身份
+    assert gate.new_tests_at_head(files, collected, base_ids) == {
+        "x/tests/unit/test_helpers.py": {"test_activated"}
+    }
 
 
 def test_find_violations_blocks_only_new_unmarked_over_threshold() -> None:
@@ -214,11 +165,13 @@ class _Script:
         new_names: dict[str, set[str]],
         raw_all: set[str],
         raw_marked: set[str],
+        base_ids: set[tuple[str, str]] | None = None,
     ) -> None:
         self.files = files
         self.new_names = new_names
         self.raw_all = raw_all
         self.raw_marked = raw_marked
+        self.base_ids: set[tuple[str, str]] = base_ids or set()
 
     def changed_test_files(self, base: str, root: Path) -> dict[str, str]:
         return self.files
@@ -227,19 +180,18 @@ class _Script:
         return "base0000"
 
     def collect_ids(
-        self, changed_files: list[str] | None, marker_expr: str | None = None
+        self,
+        changed_files: list[str] | None,
+        marker_expr: str | None = None,
+        *,
+        cwd: Path | None = None,
     ) -> set[str]:
         return set(self.raw_marked) if marker_expr else set(self.raw_all)
 
-    def new_tests_at_head(
-        self,
-        base: str,
-        files: dict[str, str],
-        collected: set[tuple[str, str]],
-        root: Path,
-        show=gate._git_show,
-    ) -> dict[str, set[str]]:
-        return self.new_names
+    def collect_base_ids(
+        self, base: str, base_paths, root: Path
+    ) -> set[tuple[str, str]]:
+        return self.base_ids
 
 
 def _run_main(
@@ -253,7 +205,7 @@ def _run_main(
     monkeypatch.setattr(gate, "resolve_base", script.resolve_base)
     monkeypatch.setattr(gate, "changed_test_files", script.changed_test_files)
     monkeypatch.setattr(gate, "collect_ids", script.collect_ids)
-    monkeypatch.setattr(gate, "new_tests_at_head", script.new_tests_at_head)
+    monkeypatch.setattr(gate, "collect_base_ids", script.collect_base_ids)
     return gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path)])
 
 

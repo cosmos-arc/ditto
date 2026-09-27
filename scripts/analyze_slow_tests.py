@@ -27,10 +27,10 @@ from tooling.quality.slow_test_gate import (
 _EXCLUSION = "not slow and not capacity and not sandbox_live"
 
 
-def _run_suite(junit: Path) -> None:
+def _run_suite(junit: Path) -> int:
     """Run the whole suite once with marker exclusion into a junit report."""
     env = dict(os.environ, PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring")
-    subprocess.run(
+    return subprocess.run(
         [
             sys.executable,
             "-m",
@@ -51,7 +51,7 @@ def _run_suite(junit: Path) -> None:
         ],
         check=False,
         env=env,
-    )
+    ).returncode
 
 
 def _marked_nodes(marker: str) -> set[tuple[str, str]]:
@@ -79,7 +79,13 @@ def analyze_slow_tests() -> int:
     """Run the suite and report tests above their budget; 0 when compliant."""
     with tempfile.TemporaryDirectory() as td:
         junit = Path(td) / "junit.xml"
-        _run_suite(junit)
+        exit_code = _run_suite(junit)
+        if exit_code not in (0, 1) or not junit.is_file():
+            # 0/1 = 完整跑完（含失败）；其他退出码或缺失报告 = 证据不完整，fail closed
+            print(
+                f"[analyze-slow-tests] FAIL: 套件未完整运行 (pytest exit {exit_code})"
+            )
+            return 2
         durations = parse_junit([junit], Path.cwd())
 
     print("[*] 收集标记身份...")
