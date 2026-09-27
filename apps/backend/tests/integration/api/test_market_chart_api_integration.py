@@ -1289,19 +1289,28 @@ def test_chart_missing_effective_ticker_mapping_fails_instead_of_false_gap(
     chart = MarketChartQueryFacade(
         chart._snapshots, chart._payloads, metadata, chart._market
     )
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 9),
+        end_date=date(2026, 3, 11),
+        period="daily",
+        adjustment="qfq" if dataset == "adj_factor" else "none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+    )
+    if dataset == "stock_daily" and not has_row:
+        # The only rowless price day is the full-day suspension 03-11; it
+        # left price authority, so no price-source mapping is required and
+        # the chart resolves the nonsuspended sessions.
+        result = chart.get_chart(request)
+        assert [bar.trade_date for bar in result.bars] == [
+            "2026-03-09",
+            "2026-03-10",
+        ]
+        return
     with pytest.raises(AppQueryError, match="ticker mapping is unavailable"):
-        chart.get_chart(
-            MarketChartRequest(
-                instrument_id=1000001,
-                asset_class="stock",
-                start_date=date(2026, 3, 9),
-                end_date=date(2026, 3, 11),
-                period="daily",
-                adjustment="qfq" if dataset == "adj_factor" else "none",
-                allow_experimental_data=False,
-                now=datetime(2026, 3, 12, 8, tzinfo=UTC),
-            )
-        )
+        chart.get_chart(request)
 
 
 @pytest.mark.pit
@@ -2354,6 +2363,111 @@ def test_chart_selects_status_shards_across_the_natural_period(tmp_path: Path) -
     assert result.bars[0].partial is False
     assert result.missing_sessions == ()
     assert day_scoped_suspension.snapshot_id in result.bars[0].source_snapshot_ids
+
+
+@pytest.mark.pit
+def test_chart_rejects_tied_retained_and_empty_calendar(tmp_path: Path) -> None:
+    """A verified-empty calendar observation tied on its effective timestamp
+    with a retained shard has no PIT order; the ambiguity fails closed."""
+    from ditto_application.queries.retained_calendar import (
+        RetainedCalendarAbsent,
+        retained_calendar_window,
+    )
+
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    tied_empty = replace(
+        calendar_only,
+        snapshot_id="tied-empty-calendar",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=calendar_only.created_at,
+        observations=(),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, tied_empty)),
+    )
+    with pytest.raises(RetainedCalendarAbsent, match="tie with an empty"):
+        retained_calendar_window(
+            snapshots=reader,
+            payloads=chart._payloads,
+            cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            first_day="2026-03-09",
+            last_day="2026-03-11",
+            allow_closed_window=True,
+        )
+
+
+@pytest.mark.pit
+def test_chart_skips_suspended_days_in_price_ticker_validation(
+    tmp_path: Path,
+) -> None:
+    """A suspended session removed from price authority needs no price-source
+    ticker; the eager price validation must use the price-consumable set."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True, price_source="fuyao")
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: (
+                None
+                if kwargs["asof"] == "2026-03-11" and kwargs["source"] == "fuyao"
+                else "600519.SH"
+            ),
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "stock", "list_date": "2001-08-27"}
+                if instrument_id == 1000001
+                else None
+            ),
+        ),
+    )
+    chart = MarketChartQueryFacade(
+        chart._snapshots, chart._payloads, metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    # 2026-03-11 is a full-day suspension with no price mapping; the chart
+    # still resolves its nonsuspended sessions without demanding its ticker.
+    assert [bar.trade_date for bar in result.bars] == [
+        "2026-03-09",
+        "2026-03-10",
+    ]
+    assert result.missing_sessions == ()
+
+
+@pytest.mark.pit
+def test_chart_hfq_requires_price_source_factor_basis(tmp_path: Path) -> None:
+    """HFQ multiplies the provider's absolute factor; a factor shard from a
+    different provider applies a different normalization and fails closed."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, price_source="fuyao")
+    with pytest.raises(AppQueryError, match="hfq factors require"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="hfq",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            )
+        )
 
 
 @pytest.mark.pit

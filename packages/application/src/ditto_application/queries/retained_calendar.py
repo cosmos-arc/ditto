@@ -150,6 +150,28 @@ def _empty_observation_gaps(
     return gaps
 
 
+def _reject_tied_empty_observation(
+    snapshot: ProviderSnapshot,
+    authorship: dict[str, tuple[bool, str]],
+    authorship_observed: dict[str, datetime],
+    first_day: str,
+    last_day: str,
+    cutoff: datetime,
+) -> None:
+    """
+    Reject a tied retained/empty calendar ambiguity.
+
+    A retained shard and a tied empty observation covering the same day have
+    no PIT order; whether the gap lands depends on snapshot_id sorting.
+    """
+    observed = snapshot_observed_by(snapshot, cutoff)
+    for day in _empty_observation_gaps(snapshot, authorship, first_day, last_day):
+        if authorship_observed.get(day) == observed:
+            raise RetainedCalendarAbsent(
+                "retained calendar revisions tie with an empty observation"
+            )
+
+
 def retained_calendar_window(
     *,
     snapshots: ProviderSnapshotReader,
@@ -194,6 +216,9 @@ def retained_calendar_window(
     read_payloads: dict[str, pl.DataFrame] = {}
     for snapshot in ordered:
         if not snapshot.payload_retained:
+            _reject_tied_empty_observation(
+                snapshot, authorship, authorship_observed, first_day, last_day, cutoff
+            )
             revision_gaps.update(
                 _empty_observation_gaps(snapshot, authorship, first_day, last_day)
             )

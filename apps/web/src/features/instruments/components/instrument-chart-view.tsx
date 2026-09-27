@@ -8,6 +8,7 @@ import { StaleIndicator } from "@/lib/stale-indicator";
 import type { OverlayKind } from "../api/indicator-overlays";
 import type { BarAdjustment } from "../api/instrument-workspace";
 import { useEtfNav, useIndicatorSeries, useInstrumentChart, useInstrumentDetail } from "../hooks";
+import type { CockpitBar } from "@/components/chart/cockpit/chart-data";
 import { BAR_PERIOD_OPTIONS, primaryAnswerFromBars, toCockpitBars, tradeDateToUnix } from "../lib/chart-mapping";
 import {
 	type IndicatorToggles,
@@ -131,7 +132,16 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 	const navQuery = useEtfNav(id, { startDate, endDate });
 
 	const bars = useMemo(() => (query.data ? toCockpitBars(query.data.bars) : []), [query.data]);
-	const displayBars = bars;
+	// 日频缺失会话补 whitespace 点：chart engine 只对 close === null 的 bar
+	// 渲染断口，服务端 missing_sessions 若不合并会相邻连线（合同：缺口不插值）。
+	const displayBars = useMemo(() => {
+		if (period !== "daily" || !query.data) return bars;
+		const present = new Set(bars.map((bar) => bar.time));
+		const holes: CockpitBar[] = query.data.missing_sessions
+			.filter((day) => !present.has(tradeDateToUnix(day)))
+			.map((day) => ({ time: tradeDateToUnix(day), close: null, volume: null }));
+		return [...bars, ...holes].sort((left, right) => left.time - right.time);
+	}, [bars, period, query.data]);
 	const answer = useMemo(() => primaryAnswerFromBars(bars), [bars]);
 	const latestBar = query.data?.bars.at(-1);
 	const stale = query.data?.stale_reason != null;

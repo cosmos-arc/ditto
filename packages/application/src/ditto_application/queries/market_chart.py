@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from bisect import bisect_left, bisect_right
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
@@ -210,6 +211,25 @@ def _tied_price_conflicts(
         and bar.source_snapshot_id != previous.source_snapshot_id
         and (bar.close, bar.open) != (previous.close, previous.open)
     )
+
+
+def _require_price_source_factor_basis(
+    adjustment: str,
+    price_source_snapshot: ProviderSnapshot,
+    factor_shards: tuple[ProviderSnapshot, ...],
+) -> None:
+    """
+    Reject factor shards that change the HFQ normalization basis.
+
+    HFQ multiplies the provider's absolute factor, so a factor shard from
+    another provider applies a different normalization basis; QFQ ratios stay
+    within the factor dataset's own single-source selection and keep the
+    fallback-source contract.
+    """
+    if adjustment == "hfq" and any(
+        item.source != price_source_snapshot.source for item in factor_shards
+    ):
+        raise AppQueryError("hfq factors require the price source basis")
 
 
 def _visible_bars(
@@ -450,6 +470,19 @@ def _date_keys(start: date, end: date) -> list[str]:
     ]
 
 
+def _window_hits(sorted_days: list[str], start: str, end: str) -> bool:
+    """Whether any sorted compact day falls inside [start, end]."""
+    index = bisect_left(sorted_days, start)
+    return index < len(sorted_days) and sorted_days[index] <= end
+
+
+def _window_days(sorted_days: list[str], start: str, end: str) -> list[str]:
+    """Sorted compact days inside [start, end] (inclusive)."""
+    lo = bisect_left(sorted_days, start)
+    hi = bisect_right(sorted_days, end)
+    return sorted_days[lo:hi]
+
+
 def _absence_scope_matches(
     item: ProviderSnapshot, day: str, ticker: Callable[[date], str | None]
 ) -> bool:
@@ -463,14 +496,15 @@ def _absence_scope_matches(
 
 def _snapshot_matches_instrument(
     item: ProviderSnapshot,
-    days: frozenset[str],
+    sorted_days: list[str],
     ticker_at: Callable[[str, date], str | None],
 ) -> bool:
     """
     Match the partition ticker on consumable sessions only.
 
     A rename visible only on an unclosed day must not admit or require
-    mapping for the shard.
+    mapping for the shard. Sessions are bisected to the shard's own
+    request window so scoped shards never walk the full consumable set.
     """
     tickers = {
         key.removeprefix("source_ticker=")
@@ -480,11 +514,12 @@ def _snapshot_matches_instrument(
     if not tickers:
         return True  # Market-wide requests are filtered at the row boundary.
     return any(
-        _snapshot_range(item.request_start)
-        <= day.replace("-", "")
-        <= _snapshot_range(item.request_end)
-        and ticker_at(item.source, date.fromisoformat(day)) in tickers
-        for day in days
+        ticker_at(item.source, date.fromisoformat(day)) in tickers
+        for day in _window_days(
+            sorted_days,
+            _snapshot_range(item.request_start),
+            _snapshot_range(item.request_end),
+        )
     )
 
 
@@ -569,7 +604,9 @@ class MarketChartQueryFacade:
             for day in consumable_days
             if start_date.isoformat() <= day <= end_date.isoformat()
         )
-        consumable_window_days = frozenset(
+        # Sorted compact sessions let each candidate's bounds intersect the
+        # consumable set in O(log n) instead of rescanning every session.
+        sorted_window_days = sorted(
             day.replace("-", "") for day in consumable_window_iso
         )
         candidates = [
@@ -578,13 +615,12 @@ class MarketChartQueryFacade:
             if item.created_at <= cutoff
             and _snapshot_range(item.request_start) <= end_date.strftime("%Y%m%d")
             and _snapshot_range(item.request_end) >= start_date.strftime("%Y%m%d")
-            and any(
-                _snapshot_range(item.request_start)
-                <= day
-                <= _snapshot_range(item.request_end)
-                for day in consumable_window_days
+            and _window_hits(
+                sorted_window_days,
+                _snapshot_range(item.request_start),
+                _snapshot_range(item.request_end),
             )
-            and _snapshot_matches_instrument(item, consumable_window_iso, ticker_at)
+            and _snapshot_matches_instrument(item, sorted_window_days, ticker_at)
         ]
         if not candidates:
             if dataset_id == "stock_status":
@@ -969,7 +1005,7 @@ class MarketChartQueryFacade:
         queried_snapshot_ids = {item.snapshot_id for item in selected}
 
         instrument_code = self._instrument_code(
-            request, latest.source, cutoff, calendar, consumable_days
+            request, latest.source, cutoff, calendar, price_consumable_days
         )
 
         context = PITQueryContext(
@@ -996,6 +1032,7 @@ class MarketChartQueryFacade:
             else ()
         )
         factors, factor_shards = self._load_factors(request, cutoff, calendar)
+        _require_price_source_factor_basis(adjustment, latest, factor_shards)
         queried_snapshot_ids.update(item.snapshot_id for item in factor_shards)
         queried_snapshot_ids.update(item.snapshot_id for item in status_shards)
         result, missing, latest_price_date = _chart_rows(
