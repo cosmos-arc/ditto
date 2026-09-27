@@ -141,6 +141,21 @@ def test_marked_class_exemption_does_not_leak_to_other_class() -> None:
     ]
 
 
+def test_unit_marker_beats_e2e_path_budget() -> None:
+    new_tests = {"x/tests/e2e/reporter.py": {"test_unit_marked_helper"}}
+    durations = {"x/tests/e2e/reporter.py": {"test_unit_marked_helper": 1.5}}
+    unit_nodes = {("x/tests/e2e/reporter.py", "test_unit_marked_helper")}
+    violations = gate.find_violations(new_tests, durations, set(), unit_nodes, set())
+    assert violations == [
+        (
+            "x/tests/e2e/reporter.py",
+            "test_unit_marked_helper",
+            1.5,
+            gate.UNIT_THRESHOLD,
+        ),
+    ]
+
+
 def test_integration_paths_get_integration_threshold() -> None:
     new_tests = {"x/tests/integration/f.py": {"test_flow"}}
     durations = {"x/tests/integration/f.py": {"test_flow": 6.0}}

@@ -33,10 +33,29 @@ _GIT = shutil.which("git") or "git"
 
 
 def threshold_for(path: str) -> float:
-    """Return the duration budget for a test file by layer."""
+    """Return the path-fallback duration budget for a test file by layer."""
     if "/tests/integration/" in path or "/tests/e2e/" in path:
         return INTEGRATION_THRESHOLD
     return UNIT_THRESHOLD
+
+
+def layer_budget(
+    file: str,
+    name: str,
+    unit_nodes: set[tuple[str, str]],
+    integration_nodes: set[tuple[str, str]],
+) -> float:
+    """
+    Return the budget for one identity: markers first, path fallback.
+
+    Shared authority: a ``unit``-marked helper under ``tests/e2e`` gets the
+    unit budget here and in the analyzer alike.
+    """
+    if (file, name) in unit_nodes:
+        return UNIT_THRESHOLD
+    if (file, name) in integration_nodes:
+        return INTEGRATION_THRESHOLD
+    return threshold_for(file)
 
 
 def _bare_name(display: str) -> str:
@@ -162,6 +181,11 @@ def collect_ids(
     return collected
 
 
+def _node_set(raw_ids: set[str]) -> set[tuple[str, str]]:
+    """Normalize a raw collect result into (file, qualified name) pairs."""
+    return {node for raw in raw_ids if (node := normalize_node(raw))}
+
+
 def collect_base_ids(
     base: str, base_paths: Sequence[str], root: Path
 ) -> set[tuple[str, str]]:
@@ -197,6 +221,8 @@ def find_violations(
     new_tests: Mapping[str, set[str]],
     durations: Mapping[str, Mapping[str, float]],
     exempt: set[tuple[str, str]],
+    unit_nodes: set[tuple[str, str]] | None = None,
+    integration_nodes: set[tuple[str, str]] | None = None,
 ) -> list[tuple[str, str, float, float]]:
     """Return over-threshold new tests as tuples, slowest first."""
     violations: list[tuple[str, str, float, float]] = []
@@ -207,7 +233,9 @@ def find_violations(
             measured = durations.get(file, {}).get(name)
             if measured is None:
                 continue
-            limit = threshold_for(file)
+            limit = layer_budget(
+                file, name, unit_nodes or set(), integration_nodes or set()
+            )
             if measured > limit:
                 violations.append((file, name, measured, limit))
     return sorted(violations, key=lambda item: -item[2])
@@ -295,6 +323,29 @@ def new_tests_at_head(
     return result
 
 
+def _collect_layers(
+    files: Mapping[str, str], total_by_node: Counter[tuple[str, str]]
+) -> dict[str, set[tuple[str, str]]]:
+    """
+    Collect marker layers: exemption (slow/capacity) and budget overrides.
+
+    A test escapes via slow/capacity only when every parameter case is marked.
+    """
+    marked_by_node = Counter(
+        node
+        for raw in collect_ids(sorted(files), _EXEMPT_MARKER_EXPR)
+        if (node := normalize_node(raw))
+    )
+    exempt = {
+        node
+        for node, count in total_by_node.items()
+        if marked_by_node.get(node, 0) == count
+    }
+    unit = _node_set(collect_ids(sorted(files), "unit"))
+    integration = _node_set(collect_ids(sorted(files), "integration"))
+    return {"exempt": exempt, "unit": unit, "integration": integration}
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the gate; exit 0 when compliant, 1 when blocking or unevaluable."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -333,29 +384,23 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     durations = parse_junit(junit_paths, root)
-    raw_marked = collect_ids(sorted(files), _EXEMPT_MARKER_EXPR)
-    marked_by_node = Counter(
-        node for raw in raw_marked if (node := normalize_node(raw))
+    layers = _collect_layers(files, total_by_node)
+    violations = find_violations(
+        new_tests, durations, layers["exempt"], layers["unit"], layers["integration"]
     )
-    # A test escapes via slow/capacity only when every parameter case is marked.
-    exempt = {
-        node
-        for node, count in total_by_node.items()
-        if marked_by_node.get(node, 0) == count
-    }
-    violations = find_violations(new_tests, durations, exempt)
 
     marked_new = [
         (file, name)
         for file, names in new_tests.items()
         for name in names
-        if (file, name) in exempt
+        if (file, name) in layers["exempt"]
     ]
     ungated = [
         (file, name)
         for file, names in new_tests.items()
         for name in names
-        if durations.get(file, {}).get(name) is None and (file, name) not in exempt
+        if durations.get(file, {}).get(name) is None
+        and (file, name) not in layers["exempt"]
     ]
     total_new = sum(len(names) for names in new_tests.values())
     evaluated = total_new - len(ungated) - len(marked_new)

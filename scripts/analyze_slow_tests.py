@@ -19,9 +19,9 @@ from tooling.quality.slow_test_gate import (
     INTEGRATION_THRESHOLD,
     UNIT_THRESHOLD,
     collect_ids,
+    layer_budget,
     normalize_node,
     parse_junit,
-    threshold_for,
 )
 
 _EXCLUSION = "not slow and not capacity and not sandbox_live"
@@ -37,6 +37,7 @@ def _run_suite(junit: Path) -> int:
             "pytest",
             "-q",
             "--tb=no",
+            "--import-mode=importlib",
             "-o",
             "addopts=",
             "-n",
@@ -62,19 +63,6 @@ def _marked_nodes(marker: str) -> set[tuple[str, str]]:
     }
 
 
-def _budget(
-    file: str,
-    name: str,
-    unit_nodes: set[tuple[str, str]],
-    integration_nodes: set[tuple[str, str]],
-) -> float:
-    if (file, name) in unit_nodes:
-        return UNIT_THRESHOLD
-    if (file, name) in integration_nodes:
-        return INTEGRATION_THRESHOLD
-    return threshold_for(file)
-
-
 def analyze_slow_tests() -> int:
     """Run the suite and report tests above their budget; 0 when compliant."""
     with tempfile.TemporaryDirectory() as td:
@@ -96,7 +84,7 @@ def analyze_slow_tests() -> int:
     slow_integration: list[tuple[float, str]] = []
     for file, by_name in sorted(durations.items()):
         for name, seconds in by_name.items():
-            limit = _budget(file, name, unit_nodes, integration_nodes)
+            limit = layer_budget(file, name, unit_nodes, integration_nodes)
             if seconds <= limit:
                 continue
             entry = (seconds, f"{file}::{name}")
