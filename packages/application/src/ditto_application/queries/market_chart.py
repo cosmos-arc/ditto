@@ -931,42 +931,48 @@ class MarketChartQueryFacade:
         if not candidates:
             return
         selected = self._collapse_revisions(candidates, cutoff)
-        if not any(item.payload_retained for item in selected):
-            return
-        instrument_code = self._instrument_code(
-            request,
-            selected[0].source,
-            cutoff,
-            calendar,
-            frozenset(),
-            window=(request.start_date, request.end_date),
-        )
-        context = PITQueryContext(
-            as_of=cutoff,
-            knowledge_cutoff=cutoff,
-            publication_cutoff=cutoff,
-            source_snapshots=(
-                DatasetSnapshot(
-                    dataset_id=dataset,
-                    dataset_version=selected[0].schema_version,
-                    source_snapshot_ids=tuple(item.snapshot_id for item in selected),
-                    created_at=max(item.created_at for item in selected),
+        by_source: dict[str, list[ProviderSnapshot]] = {}
+        for item in selected:
+            by_source.setdefault(item.source, []).append(item)
+        for source, group in by_source.items():
+            if not any(item.payload_retained for item in group):
+                continue
+            # Identity resolves per provider: one source's mapping must not
+            # silently filter another source's contradictory rows.
+            instrument_code = self._instrument_code(
+                request,
+                source,
+                cutoff,
+                calendar,
+                frozenset(),
+                window=(request.start_date, request.end_date),
+            )
+            context = PITQueryContext(
+                as_of=cutoff,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+                source_snapshots=(
+                    DatasetSnapshot(
+                        dataset_id=dataset,
+                        dataset_version=group[0].schema_version,
+                        source_snapshot_ids=tuple(item.snapshot_id for item in group),
+                        created_at=max(item.created_at for item in group),
+                    ),
                 ),
-            ),
-        )
-        raw = self._bars.load(
-            context,
-            instrument_id=InstrumentId(request.instrument_id),
-            instrument_code=instrument_code,
-            window=(request.start_date, request.end_date),
-        )
-        _visible_bars(
-            raw,
-            calendar,
-            request,
-            suspensions,
-            _observed_at_reader(self._snapshots, cutoff),
-        )
+            )
+            raw = self._bars.load(
+                context,
+                instrument_id=InstrumentId(request.instrument_id),
+                instrument_code=instrument_code,
+                window=(request.start_date, request.end_date),
+            )
+            _visible_bars(
+                raw,
+                calendar,
+                request,
+                suspensions,
+                _observed_at_reader(self._snapshots, cutoff),
+            )
 
     def _load_visible_factors(
         self,

@@ -3362,6 +3362,100 @@ def test_chart_empty_price_absence_skips_factor_requirements(tmp_path: Path) -> 
 
 
 @pytest.mark.pit
+def test_chart_suspended_validation_resolves_per_source_identity(
+    tmp_path: Path,
+) -> None:
+    """The all-suspension contradiction scan resolves ticker identity per
+    provider, so a foreign-source price row on the suspended session is
+    detected under its own mapping instead of being filtered by the first
+    shard's source."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    tushare_empty = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            datetime(2026, 3, 11, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    fuyao_price = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    # Fuyao carries its own ticker namespace, so the
+                    # tushare-based resolver would silently drop this row.
+                    "source_ticker": ["600519_FY"],
+                    "trade_date": ["2026-03-11"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            datetime(2026, 3, 11, 7, tzinfo=UTC),
+            source="fuyao",
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), tushare_empty, fuyao_price)),
+    )
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: (
+                "600519_FY" if kwargs["source"] == "fuyao" else "600519.SH"
+            ),
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "stock", "list_date": "2001-08-27"}
+                if instrument_id == 1000001
+                else None
+            ),
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="chart price conflicts with retained full-day suspension"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 11),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_peer_omission(tmp_path: Path) -> None:
     """A same-observation shard with different bounds that omits the
     instrument day leaves the presence decision unresolved; the row fails
