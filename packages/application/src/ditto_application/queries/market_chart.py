@@ -968,6 +968,30 @@ class MarketChartQueryFacade:
             _observed_at_reader(self._snapshots, cutoff),
         )
 
+    def _load_visible_factors(
+        self,
+        request: MarketChartRequest,
+        cutoff: datetime,
+        calendar: RetainedCalendarWindow,
+        suspensions: dict[str, SuspensionEvidence],
+        latest: ProviderSnapshot,
+        raw: tuple[TechnicalBar, ...],
+    ) -> tuple[
+        dict[str, AdjustmentFactor], tuple[ProviderSnapshot, ...], MarketChartRequest
+    ]:
+        """
+        Load adjustment factors only when price bars are visible.
+
+        Authoritative price absence leaves nothing to adjust, so the empty
+        result never demands factor evidence or a QFQ anchor factor — the
+        same behavior as adjustment="none" and the all-suspended branch.
+        """
+        if raw:
+            factors, shards = self._load_factors(request, cutoff, calendar, suspensions)
+            _require_price_source_factor_basis(request.adjustment, latest, shards)
+            return factors, shards, request
+        return {}, (), replace(request, adjustment="none")
+
     def _load_calendar(
         self, request: MarketChartRequest, cutoff: datetime
     ) -> tuple[RetainedCalendarWindow, tuple[str, ...]]:
@@ -1202,10 +1226,9 @@ class MarketChartQueryFacade:
             if any(item.payload_retained for item in selected)
             else ()
         )
-        factors, factor_shards = self._load_factors(
-            request, cutoff, calendar, suspensions
+        factors, factor_shards, factor_request = self._load_visible_factors(
+            request, cutoff, calendar, suspensions, latest, raw
         )
-        _require_price_source_factor_basis(adjustment, latest, factor_shards)
         queried_snapshot_ids.update(item.snapshot_id for item in factor_shards)
         queried_snapshot_ids.update(item.snapshot_id for item in status_shards)
         result, missing, latest_price_date = _chart_rows(
@@ -1218,7 +1241,7 @@ class MarketChartQueryFacade:
                 absence_sources=selected,
             ),
             calendar,
-            request,
+            factor_request,
             factors,
             suspensions,
             instrument_code,

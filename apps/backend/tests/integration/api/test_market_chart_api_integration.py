@@ -3181,6 +3181,100 @@ def test_chart_rejects_tied_factor_authorities_with_agreeing_values(
 
 
 @pytest.mark.pit
+def test_chart_rejects_tied_suspension_authorities(tmp_path: Path) -> None:
+    """Distinct equal-observation status shards marking the same day
+    suspended are ambiguous even when the states agree: the chosen
+    suspension snapshot lineage and its timestamps would depend on catalog
+    order."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    status_only = fixture[[i.dataset_id for i in fixture].index("stock_status")]
+    twin = replace(
+        _snapshot(
+            store,
+            "stock_status",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "is_suspended": [True],
+                    "available_at": [status_only.created_at],
+                    "published_at": [status_only.created_at],
+                }
+            ),
+            status_only.created_at,
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, twin)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="tied suspension revisions conflict"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_empty_price_absence_skips_factor_requirements(tmp_path: Path) -> None:
+    """Authoritative price absence returns the no-visible-price result even
+    under QFQ: with no price value to adjust, factor evidence and the QFQ
+    anchor are not demanded, matching the adjustment="none" path."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fixture = chart._snapshots.list_snapshots()
+
+    def _as_verified_empty(item: ProviderSnapshot) -> ProviderSnapshot:
+        return replace(
+            item,
+            row_count=0,
+            payload_retained=False,
+            payload_uri=None,
+            response_metadata=(
+                ("snapshot_layer", "verified_empty_provider_observation"),
+            ),
+        )
+
+    values = tuple(
+        _as_verified_empty(item)
+        if item.dataset_id in {"stock_daily", "adj_factor"}
+        else item
+        for item in fixture
+    )
+    reader = cast(ProviderSnapshotReader, _Snapshots(values))
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="qfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+        )
+    )
+    assert result.bars == ()
+    assert result.stale_reason == "no_visible_price"
+    assert result.missing_sessions == ("2026-03-09", "2026-03-10")
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_peer_omission(tmp_path: Path) -> None:
     """A same-observation shard with different bounds that omits the
     instrument day leaves the presence decision unresolved; the row fails

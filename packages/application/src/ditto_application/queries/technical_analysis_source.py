@@ -778,18 +778,28 @@ class ProviderPayloadTechnicalAnalysisSource:
                 or observed > snapshot_observed_by(prior, context.as_of)
             ):
                 rows[day] = row
-            elif observed == snapshot_observed_by(
-                prior, context.as_of
-            ) and _is_full_day_suspension_row(row) != _is_full_day_suspension_row(
-                previous
-            ):
-                # Same authoritative snapshot with contradictory same-day
-                # rows: keep-first would silently hide the suspension.
-                raise _source_error(
-                    "TECHNICAL_SOURCE_REVISION_CONFLICT",
-                    "contradictory same-snapshot status rows",
-                    day=day,
-                )
+            elif observed == snapshot_observed_by(prior, context.as_of):
+                if _is_full_day_suspension_row(row) != _is_full_day_suspension_row(
+                    previous
+                ):
+                    # Same authoritative snapshot with contradictory same-day
+                    # rows: keep-first would silently hide the suspension.
+                    raise _source_error(
+                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                        "contradictory same-snapshot status rows",
+                        day=day,
+                    )
+                if str(row["source_snapshot_id"]) != str(
+                    previous["source_snapshot_id"]
+                ):
+                    # Distinct tied suspension authorities leave the chosen
+                    # snapshot lineage and its availability/publication
+                    # timestamps order-dependent even when the states agree.
+                    raise _source_error(
+                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                        "tied suspension revisions conflict for a chart session",
+                        day=day,
+                    )
         return {
             day: SuspensionEvidence(
                 str(row["source_snapshot_id"]),
