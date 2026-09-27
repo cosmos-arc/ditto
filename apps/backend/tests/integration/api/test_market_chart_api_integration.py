@@ -2770,6 +2770,93 @@ def test_chart_rejects_tied_agreeing_calendar_authorities(tmp_path: Path) -> Non
 
 
 @pytest.mark.pit
+def test_chart_rejects_tied_calendar_omissions(tmp_path: Path) -> None:
+    """A shard that omits a covered day while a same-observation peer
+    supplies it has no PIT order; the omission gap must not depend on
+    which content-derived snapshot ID folds first."""
+    from ditto_application.queries.retained_calendar import (
+        RetainedCalendarAbsent,
+        retained_calendar_window,
+    )
+
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    # "aaa-..." sorts before the supplying twin, exercising the previously
+    # missed leg where the omitting shard folds first.
+    omitting = replace(
+        _snapshot(
+            store,
+            "calendar",
+            pl.DataFrame({"trade_date": ["2026-03-09"], "is_open": [True]}),
+            calendar_only.created_at,
+        ),
+        snapshot_id="aaa-calendar-omitting",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(item for item in fixture if item.dataset_id != "calendar"),
+                calendar_only,
+                omitting,
+            )
+        ),
+    )
+    with pytest.raises(RetainedCalendarAbsent, match="tie with an omitted session"):
+        retained_calendar_window(
+            snapshots=reader,
+            payloads=store,
+            cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            first_day="2026-03-09",
+            last_day="2026-03-11",
+            allow_closed_window=True,
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_calendar_rows_outside_snapshot_bounds(
+    tmp_path: Path,
+) -> None:
+    """A calendar payload row outside its snapshot's request bounds was
+    never covered by that observation and fails closed before folding."""
+    from ditto_application.queries.retained_calendar import (
+        RetainedCalendarAbsent,
+        retained_calendar_window,
+    )
+
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    out_of_bounds = replace(
+        calendar_only,
+        snapshot_id="out-of-bounds-calendar",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(item for item in fixture if item.dataset_id != "calendar"),
+                out_of_bounds,
+            )
+        ),
+    )
+    with pytest.raises(RetainedCalendarAbsent, match="outside snapshot request bounds"):
+        retained_calendar_window(
+            snapshots=reader,
+            payloads=store,
+            cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            first_day="2026-03-09",
+            last_day="2026-03-11",
+            allow_closed_window=True,
+        )
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_newest_revisions_disagreeing_on_presence(
     tmp_path: Path,
 ) -> None:
@@ -3471,6 +3558,10 @@ def test_chart_rejects_tied_conflicting_calendar_revisions(tmp_path: Path) -> No
         payload_uri=None,
         created_at=datetime(2026, 3, 9, 7, tzinfo=UTC),
         observations=(),
+        # Scoped to the conflicting day so the tie stays a pure state
+        # conflict; wider bounds would also tie on omitted sessions.
+        request_start="2026-03-10",
+        request_end="2026-03-10",
     )
     store = cast(FilesystemProviderPayloadStore, chart._payloads)
     tied_frame = pl.DataFrame({"trade_date": ["2026-03-10"], "is_open": [False]})

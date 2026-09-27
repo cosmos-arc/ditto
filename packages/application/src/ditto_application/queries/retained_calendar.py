@@ -84,16 +84,28 @@ def calendar_has_complete_authority(
 
 
 def _calendar_states(
-    frame: pl.DataFrame, first_day: str, last_day: str
+    frame: pl.DataFrame, snapshot: ProviderSnapshot, first_day: str, last_day: str
 ) -> dict[str, bool]:
-    """Map every scheduled session in the interval to its open state."""
+    """
+    Map every scheduled session in the interval to its open state.
+
+    A payload row outside its own snapshot's request bounds was never
+    covered by that observation; folding it would let the calendar claim
+    authority beyond its declared window, so it fails closed like the
+    technical payload reader.
+    """
     if "trade_date" not in frame.columns or "is_open" not in frame.columns:
         raise RetainedCalendarAbsent("retained calendar is malformed")
-    return {
-        str(value): is_open is True
-        for value, is_open in zip(frame["trade_date"], frame["is_open"], strict=True)
-        if first_day <= str(value) <= last_day
-    }
+    states: dict[str, bool] = {}
+    for value, is_open in zip(frame["trade_date"], frame["is_open"], strict=True):
+        day = str(value)
+        if not snapshot.request_start <= day <= snapshot.request_end:
+            raise RetainedCalendarAbsent(
+                "calendar payload row outside snapshot request bounds"
+            )
+        if first_day <= day <= last_day:
+            states[day] = is_open is True
+    return states
 
 
 def _revision_gaps(
@@ -194,21 +206,16 @@ class _CalendarFold:
     read_payloads: dict[str, pl.DataFrame] = field(default_factory=dict)
 
 
-def _combine_retained_shards(
+def _calendar_plans(
     shards: list[ProviderSnapshot],
     payloads: ProviderPayloadReader,
     fold: _CalendarFold,
     first_day: str,
     last_day: str,
     cutoff: datetime,
-) -> None:
-    """
-    Fold retained shards oldest-to-newest into per-day authority.
-
-    Equal observation timestamps do not establish revision order: distinct
-    tied shards leave either the day's state or its credited authority
-    snapshot dependent on ID ordering, so both ties fail closed.
-    """
+) -> list[tuple[ProviderSnapshot, datetime, dict[str, bool]]]:
+    """Read each retained shard once into (snapshot, observed, states)."""
+    plans: list[tuple[ProviderSnapshot, datetime, dict[str, bool]]] = []
     for snapshot in shards:
         if snapshot.payload_uri is None:
             raise RetainedCalendarAbsent("retained calendar is absent or future")
@@ -225,11 +232,68 @@ def _combine_retained_shards(
                 )
             )
             fold.read_payloads[snapshot.checksum] = frame
-        states = _calendar_states(frame, first_day, last_day)
+        states = _calendar_states(frame, snapshot, first_day, last_day)
+        plans.append((snapshot, snapshot_observed_by(snapshot, cutoff), states))
+    return plans
+
+
+def _reject_tied_omissions(
+    plans: list[tuple[ProviderSnapshot, datetime, dict[str, bool]]],
+    first_day: str,
+    last_day: str,
+) -> None:
+    """
+    Fail closed when tied shards disagree by omission.
+
+    A shard whose request bounds cover a day it omits, while a
+    same-observation peer supplies that day, has no PIT order: the gap
+    would depend on which content-derived snapshot ID folds first.
+    """
+    supplied_at: dict[str, set[datetime]] = {}
+    for _, observed, states in plans:
+        for day in states:
+            supplied_at.setdefault(day, set()).add(observed)
+    for snapshot, observed, states in plans:
+        start = max(first_day, snapshot.request_start)
+        end = min(last_day, snapshot.request_end)
+        day = date.fromisoformat(start)
+        final = date.fromisoformat(end)
+        while day <= final:
+            iso = day.isoformat()
+            if (
+                iso not in states
+                and iso in supplied_at
+                and observed in supplied_at[iso]
+            ):
+                raise RetainedCalendarAbsent(
+                    "retained calendar revisions tie with an omitted session"
+                )
+            day += timedelta(days=1)
+
+
+def _combine_retained_shards(
+    shards: list[ProviderSnapshot],
+    payloads: ProviderPayloadReader,
+    fold: _CalendarFold,
+    first_day: str,
+    last_day: str,
+    cutoff: datetime,
+) -> None:
+    """
+    Fold retained shards oldest-to-newest into per-day authority.
+
+    Equal observation timestamps do not establish revision order: distinct
+    tied shards leave either the day's state, its credited authority
+    snapshot, or its omission gap dependent on ID ordering, so tied
+    conflicting states, tied distinct authorities, and tied
+    supply-versus-omission decisions all fail closed.
+    """
+    plans = _calendar_plans(shards, payloads, fold, first_day, last_day, cutoff)
+    _reject_tied_omissions(plans, first_day, last_day)
+    for snapshot, observed, states in plans:
         fold.revision_gaps.update(
             _revision_gaps(snapshot, states, fold.authorship, first_day, last_day)
         )
-        observed = snapshot_observed_by(snapshot, cutoff)
         for day, is_open in states.items():
             prior = fold.authorship.get(day)
             if prior is not None and fold.authorship_observed.get(day) == observed:

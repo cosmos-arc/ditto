@@ -92,6 +92,8 @@ def _facts() -> tuple[LiveETFPaperExecutionFacts, MagicMock, MagicMock]:
         checksum="a" * 32,
         row_count=4,
         source="tushare",
+        request_start="2026-09-01",
+        request_end="2026-09-04",
     )
     snapshots.list_snapshots.return_value = (calendar_snapshot,)
     payloads = MagicMock()
@@ -284,6 +286,8 @@ def test_etf_paper_settlement_uses_calendar_evidence_visible_at_cutoff() -> None
         checksum="b" * 32,
         row_count=4,
         source="tushare",
+        request_start="2026-09-01",
+        request_end="2026-09-04",
     )
     snapshots.list_snapshots.return_value = (visible, later)
     resolved = facts.resolve(
@@ -325,8 +329,18 @@ def test_etf_paper_settlement_rejects_only_consumed_mixed_calendar_sources() -> 
     snapshots.list_snapshots.return_value = (primary, secondary)
     payloads = cast(MagicMock, facts._payloads)
     primary_frame = payloads.read_payload.return_value
+    # The newer foreign shard authors the session after the trade date while
+    # the primary still authors the trade date itself — a mixed consumed
+    # window with no omission hole inside either shard's bounds.
+    secondary.request_start = "2026-09-03"
+    secondary.request_end = "2026-09-04"
     payloads.read_payload.side_effect = lambda artifact: (
-        pl.DataFrame({"trade_date": [date(2026, 9, 3)], "is_open": [True]})
+        pl.DataFrame(
+            {
+                "trade_date": [date(2026, 9, 3), date(2026, 9, 4)],
+                "is_open": [True, True],
+            }
+        )
         if artifact.checksum == secondary.checksum
         else primary_frame
     )
@@ -339,6 +353,10 @@ def test_etf_paper_settlement_rejects_only_consumed_mixed_calendar_sources() -> 
         if artifact.checksum == secondary.checksum
         else primary_frame
     )
+    # The foreign shard now sits wholly outside the consumed window — its
+    # bounds and payload cover only the later session.
+    secondary.request_start = "2026-09-04"
+    secondary.request_end = "2026-09-04"
     assert facts._settlement_date("2026-09-02", 1, EXECUTION) == "2026-09-03"
 
 

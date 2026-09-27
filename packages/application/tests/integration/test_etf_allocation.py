@@ -569,6 +569,8 @@ def test_paper_handoff_fact_admission_excludes_future_publication() -> None:
             checksum="a" * 32,
             row_count=3,
             source="tushare",
+            request_start="2026-09-02",
+            request_end="2026-09-03",
         ),
     )
     payloads = MagicMock()
