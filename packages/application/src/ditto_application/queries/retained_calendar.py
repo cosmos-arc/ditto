@@ -94,7 +94,10 @@ def _calendar_states(
     A payload row outside its own snapshot's request bounds was never
     covered by that observation; folding it would let the calendar claim
     authority beyond its declared window, so it fails closed like the
-    technical payload reader.
+    technical payload reader. A consumed ``is_open`` that is not an actual
+    Boolean is malformed evidence: silently coercing it to closed would let
+    an all-malformed window pass as authoritatively closed under
+    ``allow_closed_window=True``.
     """
     if "trade_date" not in frame.columns or "is_open" not in frame.columns:
         raise RetainedCalendarAbsent("retained calendar is malformed")
@@ -106,7 +109,9 @@ def _calendar_states(
                 "calendar payload row outside snapshot request bounds"
             )
         if first_day <= day <= last_day:
-            states[day] = is_open is True
+            if is_open is not True and is_open is not False:
+                raise RetainedCalendarAbsent("calendar is_open state is not a boolean")
+            states[day] = is_open
     return states
 
 

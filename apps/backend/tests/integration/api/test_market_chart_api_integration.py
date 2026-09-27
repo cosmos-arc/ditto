@@ -2617,6 +2617,140 @@ def test_chart_rejects_tied_price_value_conflicts_beyond_open_close(
         )
 
 
+def _duplicate_row_chart(
+    tmp_path: Path,
+    rows: list[dict[str, object]],
+) -> MarketChartQueryFacade:
+    """One stock_daily snapshot whose payload repeats the same session."""
+    chart, prior, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = tuple(
+        item
+        for item in chart._snapshots.list_snapshots()
+        if item.dataset_id != "stock_daily"
+    )
+    duplicate = _snapshot(
+        store,
+        "stock_daily",
+        pl.DataFrame(rows),
+        prior.created_at,
+    )
+    reader = cast(ProviderSnapshotReader, _Snapshots((*fixture, duplicate)))
+    return MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+
+
+def _duplicate_row(
+    *,
+    close: float = 10.2,
+    available_at: datetime,
+    published_at: datetime | None = None,
+) -> dict[str, object]:
+    return {
+        "source_ticker": "600519.SH",
+        "trade_date": "2026-03-09",
+        "event_time": datetime(2026, 3, 9, 7, tzinfo=UTC),
+        "published_at": published_at or available_at,
+        "available_at": available_at,
+        "open": 10.0,
+        "high": 10.5,
+        "low": 9.5,
+        "close": close,
+        "volume": 100.0,
+        "amount": 1020.0,
+    }
+
+
+@pytest.mark.pit
+def test_chart_resolves_same_snapshot_duplicate_rows_by_pit_stamps(
+    tmp_path: Path,
+) -> None:
+    """Two rows for one session inside a single snapshot share its observation
+    event; the row with the later availability/publication stamps wins
+    regardless of payload order."""
+    later = datetime(2026, 3, 11, 7, tzinfo=UTC)
+    chart = _duplicate_row_chart(
+        tmp_path,
+        # The later-stamped row appears first; keeping whichever row appears
+        # first would be payload-order dependent.
+        [
+            _duplicate_row(close=10.5, available_at=later),
+            _duplicate_row(
+                close=10.2, available_at=datetime(2026, 3, 10, 7, tzinfo=UTC)
+            ),
+        ],
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 9),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    assert result.bars[0].close == 10.5
+    assert result.bars[0].available_at == later
+
+
+@pytest.mark.pit
+def test_chart_rejects_same_snapshot_duplicates_tied_with_conflicting_payloads(
+    tmp_path: Path,
+) -> None:
+    """Duplicate rows with equal PIT stamps and differing payloads have no
+    revision order inside one snapshot; the chart fails closed."""
+    visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
+    chart = _duplicate_row_chart(
+        tmp_path,
+        [
+            _duplicate_row(close=10.2, available_at=visible),
+            _duplicate_row(close=10.5, available_at=visible),
+        ],
+    )
+    with pytest.raises(AppQueryError, match="duplicate price rows tie"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 9),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_accepts_identical_same_snapshot_duplicate_rows(tmp_path: Path) -> None:
+    """Fully agreeing duplicate rows are order-independent; one bar serves."""
+    visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
+    chart = _duplicate_row_chart(
+        tmp_path,
+        [
+            _duplicate_row(close=10.2, available_at=visible),
+            _duplicate_row(close=10.2, available_at=visible),
+        ],
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 9),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    assert len(result.bars) == 1
+    assert result.bars[0].close == 10.2
+
+
 @pytest.mark.pit
 def test_chart_fails_closed_on_missing_ticker_across_suspension_window(
     tmp_path: Path,

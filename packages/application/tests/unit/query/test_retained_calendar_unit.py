@@ -10,6 +10,7 @@ import pytest
 from ditto_application.exceptions import AppProcessError
 from ditto_application.queries.etf_paper_handoff_facts import _next_trading_day
 from ditto_application.queries.retained_calendar import (
+    RetainedCalendarAbsent,
     retained_calendar_window,
     retained_trading_days,
 )
@@ -258,4 +259,29 @@ def test_paper_handoff_rejects_mixed_source_next_session() -> None:
             payloads=payloads,
             cutoff=datetime(2026, 9, 2, 2, tzinfo=UTC),
             signal_date="2026-09-02",
+        )
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("malformed_state", [None, 1, "true"])
+def test_calendar_rejects_non_boolean_is_open(malformed_state: object) -> None:
+    """A consumed is_open that is not an actual Boolean is malformed evidence;
+    coercing it to closed would let an all-malformed window pass as
+    authoritatively closed under allow_closed_window=True."""
+    shard = _shard(
+        "snapshot:recorded:calendar:malformed",
+        created_at=datetime(2026, 9, 2, tzinfo=UTC),
+        days=["2026-09-02"],
+        flags=cast("list[bool]", [malformed_state]),
+    )
+    snapshots, payloads = _readers([shard])
+
+    with pytest.raises(RetainedCalendarAbsent, match="not a boolean"):
+        retained_calendar_window(
+            snapshots=snapshots,
+            payloads=payloads,
+            cutoff=datetime(2026, 9, 3, tzinfo=UTC),
+            first_day="2026-09-02",
+            last_day="2026-09-02",
+            allow_closed_window=True,
         )

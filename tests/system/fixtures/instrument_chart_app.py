@@ -6,6 +6,7 @@ import importlib
 import os
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import polars as pl
 from ditto_apps.registry.fresh_runtime import create_fresh_runtime
@@ -303,9 +304,12 @@ def _seed(root: Path) -> None:
     _seed_retained_charts(client, root / "state")
     # ETF candidate comparison and chart use the same retained calendar.
     open_days = {day.isoformat() for day in tracking_days}
-    # 页面默认研究日期是"今天"：把已排期交易日延伸到今天，日历才覆盖研究日。
+    # 页面默认研究日期/截至日期按交易所时区的"今天"（上海比 UTC 早 8 小时，
+    # UTC 傍晚运行时上海已滚到次日）；日历必须覆盖服务端按上海日期钳制后的
+    # end_date 才有完整权威，否则图表 fail closed。
+    today = datetime.now(ZoneInfo("Asia/Shanghai")).date()
     cursor = tracking_days[-1] + timedelta(days=1)
-    while cursor <= date.today():
+    while cursor <= today:
         if cursor.weekday() < 5:
             open_days.add(cursor.isoformat())
         cursor += timedelta(days=1)
@@ -313,7 +317,7 @@ def _seed(root: Path) -> None:
     calendar_days: list[str] = []
     calendar_open: list[bool] = []
     day_cursor = tracking_days[0]
-    while day_cursor <= date.today():
+    while day_cursor <= today:
         calendar_days.append(day_cursor.isoformat())
         calendar_open.append(day_cursor.isoformat() in open_days)
         day_cursor += timedelta(days=1)

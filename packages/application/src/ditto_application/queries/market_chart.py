@@ -230,6 +230,11 @@ def _tied_price_conflicts(
     )
 
 
+def _row_pit_stamps(bar: TechnicalBar) -> tuple[datetime, datetime]:
+    """Availability then publication clocks order same-snapshot duplicate rows."""
+    return bar.knowledge_at, bar.publication_at
+
+
 def _require_price_source_factor_basis(
     adjustment: str,
     price_source_snapshot: ProviderSnapshot,
@@ -288,6 +293,16 @@ def _visible_bars(
             by_day[day] = bar
         elif _tied_price_conflicts(observed_at, bar, previous):
             raise AppQueryError("tied price revisions conflict for a chart session")
+        elif bar.source_snapshot_id == previous.source_snapshot_id:
+            # Duplicate rows inside one snapshot share its observation event;
+            # their own PIT stamps are the only revision order they carry, and
+            # a full stamp tie over differing payloads has no order at all.
+            if _row_pit_stamps(bar) > _row_pit_stamps(previous):
+                by_day[day] = bar
+            elif _row_pit_stamps(bar) == _row_pit_stamps(previous) and bar != previous:
+                raise AppQueryError(
+                    "duplicate price rows tie with conflicting payloads"
+                )
     return by_day
 
 
