@@ -2846,25 +2846,13 @@ def test_chart_rejects_tied_newest_revisions_disagreeing_on_presence(
 
 @pytest.mark.pit
 def test_chart_calendar_scope_matches_instrument_exchange(tmp_path: Path) -> None:
-    """Calendar evidence is exchange-scoped: an SZSE chart must not derive
-    sessions from the default SSE registration, and succeeds once an
-    exchange-marked calendar shard exists."""
+    """Calendar evidence is exchange-scoped: the unmarked production
+    registration is the shared A-share calendar valid across exchanges,
+    while an explicit exchange= partition serves only that exchange."""
     chart, _, metadata = _chart(tmp_path, poisoned=False)
     store = cast(FilesystemProviderPayloadStore, chart._payloads)
     fixture = chart._snapshots.list_snapshots()
     calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
-    szse_calendar = replace(
-        calendar_only,
-        snapshot_id="szse-calendar",
-        canonical_asset=replace(
-            calendar_only.canonical_asset, partition_keys=("exchange=SZSE",)
-        ),
-    )
-    szse_reader = cast(
-        ProviderSnapshotReader,
-        _Snapshots((*fixture, szse_calendar)),
-    )
-    szse_chart = MarketChartQueryFacade(szse_reader, store, metadata, chart._market)
     request = MarketChartRequest(
         instrument_id=1000001,
         asset_class="stock",
@@ -2876,14 +2864,42 @@ def test_chart_calendar_scope_matches_instrument_exchange(tmp_path: Path) -> Non
         now=datetime(2026, 3, 12, 9, tzinfo=UTC),
         exchange="SZSE",
     )
-    # Without an SZSE calendar shard the SSE-only evidence fails closed
-    # instead of silently serving SSE sessions to an SZSE instrument.
+    # The unmarked production calendar serves every exchange by the shared
+    # A-share contract, so an SZSE chart still derives its sessions.
+    shared = chart.get_chart(request)
+    assert [bar.trade_date for bar in shared.bars] == ["2026-03-09", "2026-03-10"]
+    assert shared.missing_sessions == ()
+
+    def _marked_exchange(scope: str) -> ProviderSnapshot:
+        return replace(
+            calendar_only,
+            snapshot_id=f"{scope.lower()}-marked-calendar",
+            canonical_asset=replace(
+                calendar_only.canonical_asset, partition_keys=(f"exchange={scope}",)
+            ),
+        )
+
+    others = tuple(item for item in fixture if item.dataset_id != "calendar")
+    sse_only = MarketChartQueryFacade(
+        cast(ProviderSnapshotReader, _Snapshots((*others, _marked_exchange("SSE")))),
+        store,
+        metadata,
+        chart._market,
+    )
+    # An explicitly SSE-scoped calendar never serves an SZSE chart.
     with pytest.raises(AppQueryError, match="retained chart calendar is unavailable"):
-        chart.get_chart(request)
-    result = szse_chart.get_chart(request)
+        sse_only.get_chart(request)
+    szse_marked = _marked_exchange("SZSE")
+    szse_only = MarketChartQueryFacade(
+        cast(ProviderSnapshotReader, _Snapshots((*others, szse_marked))),
+        store,
+        metadata,
+        chart._market,
+    )
+    result = szse_only.get_chart(request)
     assert [bar.trade_date for bar in result.bars] == ["2026-03-09", "2026-03-10"]
     assert result.missing_sessions == ()
-    assert szse_calendar.snapshot_id in result.calendar_snapshot_ids
+    assert szse_marked.snapshot_id in result.calendar_snapshot_ids
 
 
 @pytest.mark.pit

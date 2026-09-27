@@ -132,20 +132,28 @@ def _is_verified_empty_observation(snapshot: ProviderSnapshot) -> bool:
     )
 
 
-def _calendar_exchange_scope(snapshot: ProviderSnapshot) -> str:
+def _calendar_exchange_scope(snapshot: ProviderSnapshot) -> str | None:
     """
     Resolve a calendar shard's exchange scope.
 
-    Production registers the calendar through the Tushare adapter whose
-    exchange parameter defaults to SSE and stamps no exchange partition,
-    so an unmarked shard is SSE by the registration contract; an explicit
-    ``exchange=`` partition scopes later per-exchange registrations.
+    Production registers one calendar through the Tushare adapter without an
+    exchange partition; by the A-share contract that unmarked shard is the
+    shared session schedule (coordinated holidays) valid across
+    SSE/SZSE/BSE. An explicit ``exchange=`` partition scopes a shard to that
+    exchange, and a mismatched explicit scope never serves another
+    exchange's chart.
     """
     asset = cast("DataAssetRef | None", getattr(snapshot, "canonical_asset", None))
     for key in asset.partition_keys if asset is not None else ():
         if key.startswith("exchange="):
             return key.removeprefix("exchange=")
-    return "SSE"
+    return None
+
+
+def _calendar_serves_exchange(snapshot: ProviderSnapshot, exchange: str) -> bool:
+    """Whether a calendar shard may serve a chart of the given exchange."""
+    scope = _calendar_exchange_scope(snapshot)
+    return scope is None or scope == exchange
 
 
 def _empty_observation_gaps(
@@ -285,7 +293,9 @@ def retained_calendar_window(
     silently serving the superseded calendar. A yet-newer retained shard
     re-covers the day and clears the gap. Retained shards are combined
     before empty observations so a tie between them is detected regardless
-    of content-derived snapshot ID ordering.
+    of content-derived snapshot ID ordering. Calendar shards without an
+    exchange partition serve every exchange (the shared A-share contract);
+    an explicit ``exchange=`` partition must match the requested exchange.
     """
     ordered = sorted(
         (
@@ -293,7 +303,7 @@ def retained_calendar_window(
             for snapshot in snapshots.list_snapshots(dataset_id="calendar")
             if snapshot.created_at <= cutoff
             and (snapshot.payload_retained or _is_verified_empty_observation(snapshot))
-            and _calendar_exchange_scope(snapshot) == exchange
+            and _calendar_serves_exchange(snapshot, exchange)
         ),
         key=lambda item: (snapshot_observed_by(item, cutoff), item.snapshot_id),
     )

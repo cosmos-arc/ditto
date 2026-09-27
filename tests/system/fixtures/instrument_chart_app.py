@@ -325,19 +325,6 @@ def _seed(root: Path) -> None:
         payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
         created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
     )
-    # The no-NAV ETF is SZSE-listed, and calendar evidence is exchange-scoped:
-    # an unmarked shard is SSE by the registration contract, so the SZSE
-    # chart needs its own exchange-marked calendar shard.
-    retain_fixture_payload(
-        client,
-        root / "state",
-        dataset_id="calendar",
-        source="recorded",
-        payload=pl.DataFrame({"trade_date": calendar_days, "is_open": calendar_open}),
-        created_at=datetime(2026, 5, 21, 9, tzinfo=UTC),
-        partition_keys=("exchange=SZSE",),
-        schema_version="fixture.calendar.szse.v1",
-    )
     client.commit()
     pool.close_all()
 

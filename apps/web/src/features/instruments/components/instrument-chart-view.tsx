@@ -424,9 +424,11 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							height={360}
 							identity={{
 								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}`,
-								// Exports share the plotted watermark clock: in drill
-								// mode that is the source run's as_of.
-								asOfIso: drill?.asOf ?? query.data?.as_of ?? null,
+								// Exports carry the actual chart cutoff: the bars
+								// always come from the server's current decision
+								// clock, so a drill timestamp would claim a
+								// historical as_of for current-cutoff data.
+								asOfIso: query.data?.as_of ?? null,
 								snapshotId: query.data?.source_snapshot_ids.join(",") ?? null,
 								calendarSnapshotIds: query.data?.calendar_snapshot_ids.join(",") ?? null,
 								missingSessions,
