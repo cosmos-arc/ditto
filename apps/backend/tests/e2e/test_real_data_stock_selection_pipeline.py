@@ -440,6 +440,7 @@ def _persisted_strategy_evidence_ids(
 
 @pytest.mark.e2e
 @pytest.mark.integration
+@pytest.mark.timeout(1800)  # module fixture 五次 120s provider 调用记在首个用例头上
 class TestTushareCatalogBackedStockSelectionRealFetch:
     """Phase 2: Tushare catalog-backed stock_selection 真实数据验证。"""
 
