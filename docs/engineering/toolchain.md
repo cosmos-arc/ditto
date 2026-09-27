@@ -111,7 +111,7 @@ ARM64、uv 热缓存、无并行负载；长链条顺序执行避免争用，每
 | 纯 docs | ≈0（无命令） |
 | skills | 1.2s |
 | 纯 web（不含 web-input 路径） | 135.6s；触及 specs/prototype 等输入路径时另加 `task web-prototype`（未实测） |
-| 仅测试文件 | ≈25s（该档不执行 collection 探针） |
+| 仅测试文件（单文件样本） | ≈25s（该档不执行 collection 探针；删除测试或改动非 py 夹具时按 owner 目录整跑，时长升至该包套件量级） |
 | 单包后端 kernel / application（含探针） | 48s / 254s |
 | 单包高危 application（含探针） | 314s |
 | 跨包 / root / unknown（`task check`） | 507s |
