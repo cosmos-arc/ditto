@@ -369,11 +369,12 @@ def gate_scope(name_status: Mapping[str, str]) -> dict[str, str] | None:
     scope: dict[str, str] = {}
     owners: set[str] = set()
     for head, base_path in name_status.items():
-        if "/tests/" not in head and not head.endswith("/tests"):
-            return None
-        owner = _owner_of(head)
-        if owner is not None:
-            owners.add(owner)
+        for path in (head, base_path):
+            if "/tests/" not in path and not path.endswith("/tests"):
+                return None  # 任一侧在 tests 外（生产/跨界改名/删除）→ 整仓差集
+            owner = _owner_of(path)
+            if owner is not None:
+                owners.add(owner)
         if Path(head).name.startswith("test_") and head.endswith(".py"):
             scope[head] = base_path
     for owner in sorted(owners):

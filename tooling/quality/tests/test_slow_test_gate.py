@@ -197,6 +197,19 @@ def test_gate_scope_owner_dir_for_conftest_changes() -> None:
     }
 
 
+def test_gate_scope_covers_both_sides_of_a_rename() -> None:
+    mapping = {"packages/data/tests/conftest.py": "packages/strategy/tests/conftest.py"}
+    assert gate.gate_scope(mapping) == {
+        "packages/data/tests": "packages/data/tests",
+        "packages/strategy/tests": "packages/strategy/tests",
+    }
+
+
+def test_gate_scope_whole_suite_when_rename_crosses_out_of_tests() -> None:
+    mapping = {"packages/data/tests/conftest.py": "packages/data/src/help.py"}
+    assert gate.gate_scope(mapping) is None
+
+
 def test_new_tests_at_head_matches_directory_scope_by_prefix() -> None:
     files = {"packages/application/tests": "packages/application/tests"}
     collected = {
