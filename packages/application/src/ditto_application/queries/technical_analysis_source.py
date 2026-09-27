@@ -271,6 +271,35 @@ def _reject_rows_outside_request_bounds(
             )
 
 
+def _newer_overlapping_revisions(
+    retained: dict[str, ProviderSnapshot | None],
+    scopes: dict[str, set[str]],
+    observed_at: dict[str, datetime],
+    prior: ProviderSnapshot,
+    ticker: str | None,
+    day: str,
+    cutoff: datetime,
+) -> list[ProviderSnapshot]:
+    """Newer cutoff-visible revisions whose scope covers the instrument day."""
+    return [
+        item
+        for item in retained.values()
+        if item is not None
+        and item.snapshot_id != prior.snapshot_id
+        and item.created_at <= cutoff
+        and (not scopes[item.snapshot_id] or ticker in scopes[item.snapshot_id])
+        and item.dataset_id == prior.dataset_id
+        and item.source == prior.source
+        # Production hashes request bounds into request_parameters_hash,
+        # so a differing-bounds refresh never shares the prior hash;
+        # authority is judged by covered day and partition scope only.
+        and item.request_start.replace("-", "")
+        <= day
+        <= item.request_end.replace("-", "")
+        and observed_at[item.snapshot_id] > observed_at[prior.snapshot_id]
+    ]
+
+
 def _reject_superseded_revision_rows(
     frame: pl.DataFrame,
     context: PITQueryContext,
@@ -288,8 +317,11 @@ def _reject_superseded_revision_rows(
     older shard's row for that day; the row must not survive as visible
     evidence. Authority per covered day is the newest cutoff-visible
     observation, so an even-newer shard that re-supplies the row keeps it
-    visible. Rows outside the requested chart window are never exposed, so
-    only ``window`` (when given) bounds the check.
+    visible. Revisions tied at that newest observation have no PIT order:
+    when they disagree on the day's presence the conflict fails closed
+    instead of letting snapshot ordering pick. Rows outside the requested
+    chart window are never exposed, so only ``window`` (when given) bounds
+    the check.
     """
     retained = {
         snapshot_id: snapshot_reader.get_snapshot(snapshot_id)
@@ -327,30 +359,26 @@ def _reject_superseded_revision_rows(
         ticker = (
             instrument_code(trade_day) if callable(instrument_code) else instrument_code
         )
-        authority = max(
-            (
-                item
-                for item in retained.values()
-                if item is not None
-                and item.snapshot_id != prior.snapshot_id
-                and item.created_at <= context.knowledge_cutoff
-                and (not scopes[item.snapshot_id] or ticker in scopes[item.snapshot_id])
-                and item.dataset_id == prior.dataset_id
-                and item.source == prior.source
-                # Production hashes request bounds into request_parameters_hash,
-                # so a differing-bounds refresh never shares the prior hash;
-                # authority is judged by covered day and partition scope only.
-                and item.request_start.replace("-", "")
-                <= day
-                <= item.request_end.replace("-", "")
-                and observed_at[item.snapshot_id] > observed_at[prior.snapshot_id]
-            ),
-            key=lambda item: observed_at[item.snapshot_id],
-            default=None,
+        candidates = _newer_overlapping_revisions(
+            retained, scopes, observed_at, prior, ticker, day, context.knowledge_cutoff
         )
-        if authority is not None and day not in present_days.get(
-            authority.snapshot_id, ()
-        ):
+        if not candidates:
+            continue
+        newest = max(observed_at[item.snapshot_id] for item in candidates)
+        authorities = [
+            item for item in candidates if observed_at[item.snapshot_id] == newest
+        ]
+        supplied = {
+            day in present_days.get(item.snapshot_id, ()) for item in authorities
+        }
+        if len(supplied) > 1:
+            raise _source_error(
+                "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                "tied newest revisions disagree on the instrument day",
+                snapshot_id=prior.snapshot_id,
+            )
+        authority = authorities[0]
+        if day not in present_days.get(authority.snapshot_id, ()):
             raise _source_error(
                 "TECHNICAL_SOURCE_REVISION_CONFLICT",
                 "visible row overlaps newer empty revision"

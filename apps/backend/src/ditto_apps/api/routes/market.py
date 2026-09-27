@@ -88,6 +88,10 @@ async def post_chart(
                 listed_on=date.fromisoformat(str(instrument["list_date"]))
                 if instrument.get("list_date")
                 else None,
+                # The calendar dataset is keyed by exchange; a non-SSE chart
+                # must derive sessions from matching calendar evidence, not
+                # from the SSE default registration.
+                exchange=str(instrument.get("exchange") or "SSE"),
             ),
         )
     except (AppQueryError, ValueError) as error:

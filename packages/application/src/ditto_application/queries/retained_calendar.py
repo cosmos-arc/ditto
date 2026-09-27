@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import polars as pl
+from ditto_data.catalog import DataAssetRef
 from ditto_data.catalog.provider_payload import (
     ProviderPayloadArtifact,
     ProviderPayloadReader,
@@ -130,6 +132,22 @@ def _is_verified_empty_observation(snapshot: ProviderSnapshot) -> bool:
     )
 
 
+def _calendar_exchange_scope(snapshot: ProviderSnapshot) -> str:
+    """
+    Resolve a calendar shard's exchange scope.
+
+    Production registers the calendar through the Tushare adapter whose
+    exchange parameter defaults to SSE and stamps no exchange partition,
+    so an unmarked shard is SSE by the registration contract; an explicit
+    ``exchange=`` partition scopes later per-exchange registrations.
+    """
+    asset = cast("DataAssetRef | None", getattr(snapshot, "canonical_asset", None))
+    for key in asset.partition_keys if asset is not None else ():
+        if key.startswith("exchange="):
+            return key.removeprefix("exchange=")
+    return "SSE"
+
+
 def _empty_observation_gaps(
     snapshot: ProviderSnapshot,
     authorship: dict[str, tuple[bool, str]],
@@ -150,26 +168,95 @@ def _empty_observation_gaps(
     return gaps
 
 
-def _reject_tied_empty_observation(
-    snapshot: ProviderSnapshot,
-    authorship: dict[str, tuple[bool, str]],
-    authorship_observed: dict[str, datetime],
+@dataclass
+class _CalendarFold:
+    """Mutable per-window calendar combination state."""
+
+    authorship: dict[str, tuple[bool, str]] = field(default_factory=dict)
+    authorship_observed: dict[str, datetime] = field(default_factory=dict)
+    revision_gaps: set[str] = field(default_factory=set)
+    shard_sources: dict[str, str] = field(default_factory=dict)
+    read_payloads: dict[str, pl.DataFrame] = field(default_factory=dict)
+
+
+def _combine_retained_shards(
+    shards: list[ProviderSnapshot],
+    payloads: ProviderPayloadReader,
+    fold: _CalendarFold,
     first_day: str,
     last_day: str,
     cutoff: datetime,
 ) -> None:
     """
-    Reject a tied retained/empty calendar ambiguity.
+    Fold retained shards oldest-to-newest into per-day authority.
 
-    A retained shard and a tied empty observation covering the same day have
-    no PIT order; whether the gap lands depends on snapshot_id sorting.
+    Equal observation timestamps do not establish revision order: distinct
+    tied shards leave either the day's state or its credited authority
+    snapshot dependent on ID ordering, so both ties fail closed.
     """
-    observed = snapshot_observed_by(snapshot, cutoff)
-    for day in _empty_observation_gaps(snapshot, authorship, first_day, last_day):
-        if authorship_observed.get(day) == observed:
-            raise RetainedCalendarAbsent(
-                "retained calendar revisions tie with an empty observation"
+    for snapshot in shards:
+        if snapshot.payload_uri is None:
+            raise RetainedCalendarAbsent("retained calendar is absent or future")
+        fold.shard_sources[snapshot.snapshot_id] = snapshot.source
+        frame = fold.read_payloads.get(snapshot.checksum)
+        if frame is None:
+            frame = payloads.read_payload(
+                ProviderPayloadArtifact(
+                    dataset_id=snapshot.dataset_id,
+                    source=snapshot.source,
+                    checksum=snapshot.checksum,
+                    row_count=snapshot.row_count,
+                    uri=snapshot.payload_uri,
+                )
             )
+            fold.read_payloads[snapshot.checksum] = frame
+        states = _calendar_states(frame, first_day, last_day)
+        fold.revision_gaps.update(
+            _revision_gaps(snapshot, states, fold.authorship, first_day, last_day)
+        )
+        observed = snapshot_observed_by(snapshot, cutoff)
+        for day, is_open in states.items():
+            prior = fold.authorship.get(day)
+            if prior is not None and fold.authorship_observed.get(day) == observed:
+                if prior[0] != is_open:
+                    raise RetainedCalendarAbsent(
+                        "retained calendar revisions tie with conflicting states"
+                    )
+                if prior[1] != snapshot.snapshot_id:
+                    raise RetainedCalendarAbsent(
+                        "retained calendar revisions tie with ambiguous authority"
+                    )
+            fold.authorship[day] = (is_open, snapshot.snapshot_id)
+            fold.authorship_observed[day] = observed
+            fold.revision_gaps.discard(day)
+
+
+def _apply_empty_observations(
+    empties: list[ProviderSnapshot],
+    fold: _CalendarFold,
+    first_day: str,
+    last_day: str,
+    cutoff: datetime,
+) -> None:
+    """
+    Apply verified-empty observations after retained shards.
+
+    Running empties against the final retained authority keeps tie rejection
+    independent of content-derived snapshot ID ordering. A tie between an
+    empty observation and the day's retained authority has no PIT order; a
+    strictly newer empty observation supersedes the day into a revision gap.
+    """
+    for snapshot in empties:
+        observed = snapshot_observed_by(snapshot, cutoff)
+        for day in _empty_observation_gaps(
+            snapshot, fold.authorship, first_day, last_day
+        ):
+            if fold.authorship_observed[day] == observed:
+                raise RetainedCalendarAbsent(
+                    "retained calendar revisions tie with an empty observation"
+                )
+            if fold.authorship_observed[day] < observed:
+                fold.revision_gaps.add(day)
 
 
 def retained_calendar_window(
@@ -180,6 +267,7 @@ def retained_calendar_window(
     first_day: str,
     last_day: str,
     allow_closed_window: bool = False,
+    exchange: str = "SSE",
 ) -> RetainedCalendarWindow:
     """
     Combine cutoff-visible retained calendar shards into one window.
@@ -192,10 +280,12 @@ def retained_calendar_window(
     by the caller over the sessions a window actually consumes.
 
     A newer verified-empty calendar observation carries no payload but is
-    still revision evidence: every already-authored day it covers becomes a
-    revision gap, so the affected interval fails closed instead of silently
-    serving the superseded calendar. A yet-newer retained shard re-covers
-    the day and clears the gap.
+    still revision evidence: every already-authored day it supersedes
+    becomes a revision gap, so the affected interval fails closed instead of
+    silently serving the superseded calendar. A yet-newer retained shard
+    re-covers the day and clears the gap. Retained shards are combined
+    before empty observations so a tie between them is detected regardless
+    of content-derived snapshot ID ordering.
     """
     ordered = sorted(
         (
@@ -203,68 +293,26 @@ def retained_calendar_window(
             for snapshot in snapshots.list_snapshots(dataset_id="calendar")
             if snapshot.created_at <= cutoff
             and (snapshot.payload_retained or _is_verified_empty_observation(snapshot))
+            and _calendar_exchange_scope(snapshot) == exchange
         ),
         key=lambda item: (snapshot_observed_by(item, cutoff), item.snapshot_id),
     )
     shards = [item for item in ordered if item.payload_retained]
     if not shards:
         raise RetainedCalendarAbsent("retained calendar is absent or future")
-    authorship: dict[str, tuple[bool, str]] = {}
-    authorship_observed: dict[str, datetime] = {}
-    revision_gaps: set[str] = set()
-    shard_sources: dict[str, str] = {}
-    read_payloads: dict[str, pl.DataFrame] = {}
-    for snapshot in ordered:
-        if not snapshot.payload_retained:
-            _reject_tied_empty_observation(
-                snapshot, authorship, authorship_observed, first_day, last_day, cutoff
-            )
-            revision_gaps.update(
-                _empty_observation_gaps(snapshot, authorship, first_day, last_day)
-            )
-            continue
-        if snapshot.payload_uri is None:
-            raise RetainedCalendarAbsent("retained calendar is absent or future")
-        shard_sources[snapshot.snapshot_id] = snapshot.source
-        frame = read_payloads.get(snapshot.checksum)
-        if frame is None:
-            frame = payloads.read_payload(
-                ProviderPayloadArtifact(
-                    dataset_id=snapshot.dataset_id,
-                    source=snapshot.source,
-                    checksum=snapshot.checksum,
-                    row_count=snapshot.row_count,
-                    uri=snapshot.payload_uri,
-                )
-            )
-            read_payloads[snapshot.checksum] = frame
-        states = _calendar_states(frame, first_day, last_day)
-        revision_gaps.update(
-            _revision_gaps(snapshot, states, authorship, first_day, last_day)
-        )
-        observed = snapshot_observed_by(snapshot, cutoff)
-        for day, is_open in states.items():
-            # Equal observation timestamps do not establish revision order;
-            # a conflicting tie has no PIT authority and fails closed.
-            if (
-                day in authorship_observed
-                and authorship_observed[day] == observed
-                and authorship[day][0] != is_open
-            ):
-                raise RetainedCalendarAbsent(
-                    "retained calendar revisions tie with conflicting states"
-                )
-            authorship[day] = (is_open, snapshot.snapshot_id)
-            authorship_observed[day] = observed
-            revision_gaps.discard(day)
+    empties = [item for item in ordered if not item.payload_retained]
+    fold = _CalendarFold()
+    _combine_retained_shards(shards, payloads, fold, first_day, last_day, cutoff)
+    _apply_empty_observations(empties, fold, first_day, last_day, cutoff)
+    authorship = fold.authorship
     days = sorted(day for day, state in authorship.items() if state[0])
     if not days and (not allow_closed_window or not authorship):
         raise RetainedCalendarAbsent("retained calendar is malformed")
     return RetainedCalendarWindow(
         days,
         {day: state[1] for day, state in authorship.items()},
-        shard_sources,
-        frozenset(revision_gaps),
+        fold.shard_sources,
+        frozenset(fold.revision_gaps),
     )
 
 

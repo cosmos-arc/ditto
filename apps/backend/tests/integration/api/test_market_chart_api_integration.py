@@ -2684,6 +2684,209 @@ def test_chart_fails_closed_on_missing_ticker_across_suspension_window(
 
 
 @pytest.mark.pit
+def test_chart_rejects_tied_empty_calendar_regardless_of_sort_order(
+    tmp_path: Path,
+) -> None:
+    """A tied empty observation must fail closed even when its content-derived
+    snapshot ID sorts before the retained shard it ties with."""
+    from ditto_application.queries.retained_calendar import (
+        RetainedCalendarAbsent,
+        retained_calendar_window,
+    )
+
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    retained = replace(calendar_only, snapshot_id="zzz-retained-calendar")
+    # "aaa-..." sorts before "zzz-...", so the empty observation is processed
+    # first under (observed, snapshot_id) ordering — the previously missed leg.
+    tied_empty = replace(
+        calendar_only,
+        snapshot_id="aaa-tied-empty",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+        row_count=0,
+        payload_retained=False,
+        payload_uri=None,
+        created_at=calendar_only.created_at,
+        observations=(),
+        response_metadata=(("snapshot_layer", "verified_empty_provider_observation"),),
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(item for item in fixture if item.dataset_id != "calendar"),
+                retained,
+                tied_empty,
+            )
+        ),
+    )
+    with pytest.raises(RetainedCalendarAbsent, match="tie with an empty"):
+        retained_calendar_window(
+            snapshots=reader,
+            payloads=chart._payloads,
+            cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            first_day="2026-03-09",
+            last_day="2026-03-11",
+            allow_closed_window=True,
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_tied_agreeing_calendar_authorities(tmp_path: Path) -> None:
+    """Equal-time calendar shards that agree on a day's state still leave the
+    credited authority snapshot dependent on ID ordering; distinct tied
+    authorities fail closed."""
+    from ditto_application.queries.retained_calendar import (
+        RetainedCalendarAbsent,
+        retained_calendar_window,
+    )
+
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    twin_a = replace(calendar_only, snapshot_id="zzz-calendar-a")
+    twin_b = replace(calendar_only, snapshot_id="zzz-calendar-b")
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *(item for item in fixture if item.dataset_id != "calendar"),
+                twin_a,
+                twin_b,
+            )
+        ),
+    )
+    with pytest.raises(RetainedCalendarAbsent, match="tie with ambiguous"):
+        retained_calendar_window(
+            snapshots=reader,
+            payloads=chart._payloads,
+            cutoff=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            first_day="2026-03-09",
+            last_day="2026-03-11",
+            allow_closed_window=True,
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_tied_newest_revisions_disagreeing_on_presence(
+    tmp_path: Path,
+) -> None:
+    """Two newer overlapping shards tied at the newest observation, one
+    supplying the instrument day and one omitting it, have no PIT authority
+    order; the presence disagreement fails closed."""
+    chart, _, metadata = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    observed = datetime(2026, 3, 10, 8, tzinfo=UTC)
+    supply = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [11.0],
+                    "high": [12.0],
+                    "low": [10.5],
+                    "close": [11.5],
+                    "volume": [10.0],
+                    "amount": [115.0],
+                }
+            ),
+            observed,
+        ),
+        # A distinct request identity keeps the supplying shard selected
+        # beside the prior; sharing the fixture's hash would collapse the
+        # prior away at selection and leave nothing to conflict with.
+        request_parameters_hash="sha256:supply-request",
+    )
+    omit = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["OTHER.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [99.0],
+                    "high": [100.0],
+                    "low": [98.0],
+                    "close": [99.0],
+                    "volume": [10.0],
+                    "amount": [100.0],
+                }
+            ),
+            observed,
+        ),
+        request_parameters_hash="sha256:other-ticker-request",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), supply, omit)),
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="tied newest revisions disagree on the instrument day"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_calendar_scope_matches_instrument_exchange(tmp_path: Path) -> None:
+    """Calendar evidence is exchange-scoped: an SZSE chart must not derive
+    sessions from the default SSE registration, and succeeds once an
+    exchange-marked calendar shard exists."""
+    chart, _, metadata = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    szse_calendar = replace(
+        calendar_only,
+        snapshot_id="szse-calendar",
+        canonical_asset=replace(
+            calendar_only.canonical_asset, partition_keys=("exchange=SZSE",)
+        ),
+    )
+    szse_reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, szse_calendar)),
+    )
+    szse_chart = MarketChartQueryFacade(szse_reader, store, metadata, chart._market)
+    request = MarketChartRequest(
+        instrument_id=1000001,
+        asset_class="stock",
+        start_date=date(2026, 3, 9),
+        end_date=date(2026, 3, 10),
+        period="daily",
+        adjustment="none",
+        allow_experimental_data=False,
+        now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        exchange="SZSE",
+    )
+    # Without an SZSE calendar shard the SSE-only evidence fails closed
+    # instead of silently serving SSE sessions to an SZSE instrument.
+    with pytest.raises(AppQueryError, match="retained chart calendar is unavailable"):
+        chart.get_chart(request)
+    result = szse_chart.get_chart(request)
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-09", "2026-03-10"]
+    assert result.missing_sessions == ()
+    assert szse_calendar.snapshot_id in result.calendar_snapshot_ids
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_conflicting_calendar_revisions(tmp_path: Path) -> None:
     """Equal observation timestamps do not establish revision order; two
     calendar revisions tied on observation and conflicting on a day's open

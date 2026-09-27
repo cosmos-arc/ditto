@@ -51,6 +51,7 @@ class MarketChartRequest:
     now: datetime
     listed_on: date | None = None
     delisted_on: date | None = None
+    exchange: str = "SSE"
 
 
 @dataclass(frozen=True)
@@ -885,6 +886,7 @@ class MarketChartQueryFacade:
                 first_day=first_period_start.isoformat(),
                 last_day=last_period_end.isoformat(),
                 allow_closed_window=True,
+                exchange=request.exchange,
             )
         except RetainedCalendarAbsent as error:
             raise AppQueryError(

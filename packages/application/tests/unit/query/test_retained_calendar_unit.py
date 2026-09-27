@@ -13,6 +13,7 @@ from ditto_application.queries.retained_calendar import (
     retained_calendar_window,
     retained_trading_days,
 )
+from ditto_data.catalog import DataAssetRef
 from ditto_data.catalog.provider_payload import ProviderPayloadReader
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 
@@ -45,6 +46,7 @@ def _shard(
         row_count=len(days),
         request_start=days[0],
         request_end=days[-1],
+        canonical_asset=DataAssetRef(dataset_id="calendar", namespace="market"),
         _days=days,
         _flags=flags or [True] * len(days),
     )
