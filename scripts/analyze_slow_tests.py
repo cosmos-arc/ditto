@@ -83,6 +83,9 @@ def analyze_slow_tests() -> None:
     for path in [
         *(f"packages/{package}/tests/unit" for package in _PACKAGES),
         "apps/backend/tests/unit",
+        "apps/backend/tests/registry",
+        "apps/backend/tests/contract",
+        "apps/backend/tests/scripts",
     ]:
         unit_durations.update(get_durations(path, count=50))
 
@@ -98,6 +101,7 @@ def analyze_slow_tests() -> None:
     for path in [
         *(f"packages/{package}/tests/integration" for package in _PACKAGES),
         "apps/backend/tests/integration",
+        "apps/backend/tests/e2e",
     ]:
         integration_durations.update(get_durations(path, count=50))
 

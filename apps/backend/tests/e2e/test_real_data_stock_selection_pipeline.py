@@ -471,6 +471,7 @@ class TestTushareCatalogBackedStockSelectionRealFetch:
             assert status.catalog_row_count is not None
             assert status.catalog_row_count > 1_000
 
+    @pytest.mark.timeout(1800)  # 两次 600s 子进程串行；全局 600s 兜底对整条用例误杀
     def test_tushare_catalog_backed_stock_selection_to_signal_package_via_eod(
         self,
         tushare_stock_selection_context: TushareStockSelectionContext,
