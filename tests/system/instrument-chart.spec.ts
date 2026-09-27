@@ -264,14 +264,21 @@ test.describe
 			await expect(host).toBeVisible();
 			const answer = page.locator("[data-primary-answer]");
 			await expect(answer).toBeVisible();
-			const rawClose = (await answer.locator("[data-answer-metric]").first().innerText()).trim();
 			const rawScope = (await answer.locator("[data-answer-scope]").innerText()).trim();
 
+			// 种子日历延伸到今天，但保留因子只到最后一个交易日（2026-05-15）；
+			// QFQ 锚点要求最新成熟开市日有因子覆盖，截至日期先收到数据末日内。
+			await page.getByLabel("截至日期").fill("2026-05-15");
+			await expect(answer.locator("[data-answer-metric]").first()).toBeVisible();
+			const anchoredClose = (
+				await answer.locator("[data-answer-metric]").first().innerText()
+			).trim();
+
 			// 前复权（服务端保留因子）：最新收盘锚定不变（最新因子即基准），
-			// 7 月前历史价格整体下修 → 区间低值改变。
+			// 3 月前历史价格整体下修 → 区间低值改变。
 			await page.getByRole("button", { name: "前复权" }).click();
 			await expect(page.getByText(/复权：qfq/)).toBeVisible();
-			await expect(answer.locator("[data-answer-metric]").first()).toHaveText(rawClose);
+			await expect(answer.locator("[data-answer-metric]").first()).toHaveText(anchoredClose);
 			await expect
 				.poll(async () => (await answer.locator("[data-answer-scope]").innerText()).trim())
 				.not.toBe(rawScope);
