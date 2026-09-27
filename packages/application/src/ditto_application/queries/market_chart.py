@@ -807,6 +807,7 @@ class MarketChartQueryFacade:
         cutoff: datetime,
         calendar: RetainedCalendarWindow,
         suspensions: dict[str, SuspensionEvidence],
+        priced_days: frozenset[str],
     ) -> tuple[dict[str, AdjustmentFactor], tuple[ProviderSnapshot, ...]]:
         factor_snapshots: tuple[ProviderSnapshot, ...] = ()
         factors: dict[str, AdjustmentFactor] = {}
@@ -815,15 +816,20 @@ class MarketChartQueryFacade:
                 allow_experimental_data=request.allow_experimental_data
             )
             # Factors are consumed only for dates with price bars, so a
-            # shard scoped solely to a suspended session — from another
-            # source or schema — cannot join factor authority, mirroring
-            # price authority.
-            consumable_days = (
-                _consumable_sessions(
-                    calendar, request.start_date, request.end_date, cutoff
+            # shard scoped solely to a suspended or authoritatively missing
+            # session — from another source or schema — cannot join factor
+            # authority, mirroring price authority. QFQ additionally needs
+            # the anchor session's factor, so its authority spans the
+            # nonsuspended consumable sessions.
+            if request.adjustment == "hfq":
+                consumable_days = priced_days
+            else:
+                consumable_days = (
+                    _consumable_sessions(
+                        calendar, request.start_date, request.end_date, cutoff
+                    )
+                    - suspensions.keys()
                 )
-                - suspensions.keys()
-            )
             factor_snapshots = self._select_snapshots(
                 "adj_factor",
                 request.start_date,
@@ -993,7 +999,12 @@ class MarketChartQueryFacade:
         same behavior as adjustment="none" and the all-suspended branch.
         """
         if raw:
-            factors, shards = self._load_factors(request, cutoff, calendar, suspensions)
+            priced_days = frozenset(
+                bar.occurred_at.astimezone(_SHANGHAI).date().isoformat() for bar in raw
+            )
+            factors, shards = self._load_factors(
+                request, cutoff, calendar, suspensions, priced_days
+            )
             _require_price_source_factor_basis(request.adjustment, latest, shards)
             return factors, shards, request
         return {}, (), replace(request, adjustment="none")
@@ -1035,6 +1046,19 @@ class MarketChartQueryFacade:
             calendar, first_period_start.isoformat(), last_period_end.isoformat()
         ):
             raise AppQueryError("retained chart calendar has incompatible sources")
+        used_versions: set[str] = set()
+        for day, snapshot_id in calendar.authority.items():
+            if not (
+                first_period_start.isoformat() <= day <= last_period_end.isoformat()
+            ):
+                continue
+            snapshot = self._snapshots.get_snapshot(snapshot_id)
+            if snapshot is not None:
+                used_versions.add(snapshot.schema_version)
+        if len(used_versions) > 1:
+            # Same-source shards under different calendar contracts cannot
+            # define one window's expected sessions and completeness.
+            raise AppQueryError("retained chart calendar mixes schema versions")
         used_calendar_ids = tuple(
             sorted(
                 {

@@ -3456,6 +3456,123 @@ def test_chart_suspended_validation_resolves_per_source_identity(
 
 
 @pytest.mark.pit
+def test_chart_hfq_factor_authority_is_limited_to_priced_sessions(
+    tmp_path: Path,
+) -> None:
+    """HFQ consumes factors only for sessions with visible price bars, so a
+    factor shard scoped to an authoritatively missing session — foreign
+    source or schema — cannot 422 the valid priced chart."""
+    chart, original, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    monday_only = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            datetime(2026, 3, 10, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
+    values = tuple(
+        monday_only if item.snapshot_id == original.snapshot_id else item
+        for item in chart._snapshots.list_snapshots()
+    )
+    fuyao_factor = replace(
+        _snapshot(
+            store,
+            "adj_factor",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-10"],
+                    "published_at": [datetime(2026, 3, 10, 7, tzinfo=UTC)],
+                    "available_at": [datetime(2026, 3, 10, 7, tzinfo=UTC)],
+                    "adj_factor": [2.0],
+                }
+            ),
+            datetime(2026, 3, 10, 7, tzinfo=UTC),
+            source="fuyao",
+        ),
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*values, fuyao_factor)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="daily",
+            adjustment="hfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-09"]
+    assert [bar.close for bar in result.bars] == pytest.approx([10.2])
+    assert result.missing_sessions == ("2026-03-10",)
+    assert fuyao_factor.snapshot_id not in result.source_snapshot_ids
+
+
+@pytest.mark.pit
+def test_chart_rejects_mixed_calendar_schema_versions(tmp_path: Path) -> None:
+    """Same-source calendar shards under different schema versions cannot
+    define one chart window's expected sessions and completeness."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    calendar_only = fixture[[i.dataset_id for i in fixture].index("calendar")]
+    v2_refresh = replace(
+        _snapshot(
+            store,
+            "calendar",
+            pl.DataFrame({"trade_date": ["2026-03-10"], "is_open": [True]}),
+            calendar_only.created_at + timedelta(hours=1),
+        ),
+        schema_version="calendar.v2",
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, v2_refresh)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="retained chart calendar mixes schema versions"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_peer_omission(tmp_path: Path) -> None:
     """A same-observation shard with different bounds that omits the
     instrument day leaves the presence decision unresolved; the row fails
