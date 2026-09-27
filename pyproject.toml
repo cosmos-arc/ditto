@@ -430,6 +430,9 @@ log_cli = true
 log_cli_level = "INFO"
 asyncio_mode = "strict"
 
+# pytest-timeout 兜底防挂死；合法慢测试打 slow/capacity 标记进慢车道，不调大此值
+timeout = 600
+
 addopts = [
     "-ra",
     "-v",
