@@ -22,7 +22,7 @@ from typing import Any
 
 import orjson
 import pytest
-from ditto_analysis.errors import ExperimentSpecError
+from ditto_analysis.errors import ExperimentIntegrityError, ExperimentSpecError
 from ditto_analysis.experiments import (
     AttemptId,
     BacktestRunId,
@@ -927,6 +927,87 @@ def test_get_launch_spec_rejects_relational_schema_version_drift(
         reader.get_launch_spec(ExperimentId("experiment-1"))
 
     assert exc_info.value.details["reason_code"] == "launch_schema_version_mismatch"
+
+
+def test_cached_launch_read_revalidates_after_relational_drift(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    assert reader.get_launch_spec(ExperimentId("experiment-1")) == _launch()
+    connection = database.get_connection()
+    connection.execute("DROP TRIGGER trg_experiment_guard_update")
+    connection.execute(
+        "UPDATE experiment SET strategy_version=? WHERE experiment_id=?",
+        ("strategy@drifted", "experiment-1"),
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        reader.get_launch_spec(ExperimentId("experiment-1"))
+
+    assert exc_info.value.details["reason_code"] == "launch_projection_drift"
+
+
+def test_cached_fold_read_revalidates_after_relational_drift(
+    tmp_path: Path,
+) -> None:
+    database, reader, writer, api = _store(tmp_path)
+    _create_experiment(writer, api)
+    fold = _add_fold(writer, api)
+    assert reader.get_fold(fold.key).spec == fold
+    connection = database.get_connection()
+    connection.execute("DROP TRIGGER trg_experiment_fold_guard_update")
+    connection.execute(
+        "UPDATE experiment_fold SET purge_sessions=9 "
+        "WHERE experiment_id=? AND candidate_id=? AND fold_id=?",
+        (
+            str(fold.key.experiment_id),
+            str(fold.key.candidate_id),
+            str(fold.key.fold_id),
+        ),
+    )
+    connection.commit()
+
+    with pytest.raises(api.ExperimentIntegrityError) as exc_info:
+        reader.get_fold(fold.key)
+
+    assert exc_info.value.details["reason_code"] == "fold_relation_payload_mismatch"
+
+
+def test_fold_with_a_single_train_boundary_fails_closed() -> None:
+    import hashlib
+
+    from ditto_analysis.storage.sqlite.experiments.reader import (
+        _validated_fold_spec,
+    )
+
+    # The schema CHECK is the first layer against half-present windows; the
+    # cached validator is the second, so probe it directly with a row shape
+    # that only a corrupted file or a foreign writer could produce. Payload
+    # and hash stay self-consistent so the drift is purely relational.
+    with pytest.raises(ExperimentIntegrityError) as exc_info:
+        _validated_fold_spec(
+            (
+                "experiment-1",
+                "candidate-1",
+                "fold-1-1",
+                1,
+                "exploration",
+                "2020-01-01",
+                None,
+                "2025-01-01",
+                "2025-01-31",
+                2,
+                1,
+                b"{}",
+                hashlib.sha256(b"{}").hexdigest(),
+            )
+        )
+
+    assert (
+        exc_info.value.details["reason_code"] == "fold_train_window_endpoint_mismatch"
+    )
 
 
 def test_get_launch_spec_requires_exact_revision_zero_creation_event(

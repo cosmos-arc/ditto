@@ -361,7 +361,10 @@ class DiffClassificationTests(unittest.TestCase):
 
         assert level == "high-risk"
         assert commands == [
-            "task check",
+            "task lint",
+            "task fmt-check",
+            "task type-all",
+            "task test -- --fast packages/strategy/tests",
             "task pit",
         ]
 
@@ -371,15 +374,15 @@ class DiffClassificationTests(unittest.TestCase):
         fixtures = {
             "packages/application/src/ditto_application/commands/trade.py": (
                 "high-risk",
-                ("check", "task pit"),
+                ("--fast packages/application/tests", "task pit"),
             ),
             "packages/application/src/ditto_application/queries/factor_ic_report.py": (
                 "high-risk",
-                ("check", "task pit"),
+                ("--fast packages/application/tests", "task pit"),
             ),
             "apps/backend/src/ditto_apps/jobs/flows/backtest.py": (
                 "high-risk",
-                ("check", "task pit"),
+                ("--fast apps/backend/tests", "task pit"),
             ),
             "apps/backend/src/ditto_apps/api/routes/trade_command_routes.py": (
                 "contract-high-risk",
@@ -777,3 +780,120 @@ def test_single_package_local_checks_and_cross_package_escalation() -> None:
     assert verification_commands(
         "backend", [path, "packages/kernel/src/ditto_kernel/errors.py"]
     ) == [["task", "check"]]
+
+
+def test_non_python_file_in_a_second_package_keeps_the_cross_package_gate() -> None:
+    paths = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "packages/data/src/ditto_data/scripts/schema.sql",
+    ]
+    commands = verification_commands(classify_diff(paths), paths)
+
+    assert [" ".join(command) for command in commands] == [
+        "task check",
+        "task pit",
+    ]
+
+
+def test_repo_level_backend_paths_keep_the_full_check() -> None:
+    with_scripts = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "scripts/architecture/check_architecture_smells.py",
+    ]
+    assert [
+        " ".join(command)
+        for command in verification_commands(classify_diff(with_scripts), with_scripts)
+    ] == ["task check", "task pit"]
+
+    for path in (
+        "scripts/architecture/check_architecture_smells.py",
+        "config/logging.yaml",
+    ):
+        assert verification_commands(classify_diff([path]), [path]) == [
+            ["task", "check"]
+        ]
+
+    with_repo_prose = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "scripts/README.md",
+    ]
+    assert [
+        " ".join(command)
+        for command in verification_commands(
+            classify_diff(with_repo_prose), with_repo_prose
+        )
+    ] == [
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast packages/strategy/tests",
+        "task pit",
+    ]
+
+
+def test_prose_in_a_second_package_does_not_widen_the_scope() -> None:
+    paths = [
+        "packages/strategy/src/ditto_strategy/alpha/pipeline.py",
+        "packages/data/README.md",
+    ]
+    commands = [
+        " ".join(command)
+        for command in verification_commands(classify_diff(paths), paths)
+    ]
+
+    assert commands == [
+        "task lint",
+        "task fmt-check",
+        "task type-all",
+        "task test -- --fast packages/strategy/tests",
+        "task pit",
+    ]
+
+
+def test_package_manifest_changes_keep_the_full_check() -> None:
+    high_risk_manifest = ["packages/backtest/pyproject.toml"]
+    assert verification_commands(
+        classify_diff(high_risk_manifest), high_risk_manifest
+    ) == [["task", "check"], ["task", "pit"]]
+
+    backend_manifest = ["packages/platform/pyproject.toml"]
+    assert verification_commands(classify_diff(backend_manifest), backend_manifest) == [
+        ["task", "check"]
+    ]
+
+
+def test_removed_package_falls_back_to_the_full_check() -> None:
+    paths = ["packages/backtest/src/ditto_backtest/pipeline.py"]
+    with tempfile.TemporaryDirectory() as directory:
+        commands = verification_commands(
+            classify_diff(paths), paths, root=Path(directory)
+        )
+
+    assert commands == [["task", "check"], ["task", "pit"]]
+
+
+def test_untracked_leftovers_do_not_keep_the_scoped_test_target() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        _initialize_repository(root)
+        _commit_file(root, "packages/backtest/src/ditto_backtest/pipeline.py", "x\n")
+        _commit_file(
+            root, "packages/backtest/tests/test_unit.py", "def test_unit(): pass\n"
+        )
+        _commit_file(root, "packages/backtest/tests/conftest.py", "# fixtures only\n")
+        (root / "packages/backtest/tests/test_unit.py").unlink()
+        subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+        subprocess.run(
+            ["git", "commit", "-qm", "remove tracked tests"], cwd=root, check=True
+        )
+        cache = root / "packages/backtest/tests/__pycache__"
+        cache.mkdir(parents=True)
+        (cache / "test_unit.cpython-313.pyc").write_bytes(b"leftover")
+
+        paths = [
+            "packages/backtest/src/ditto_backtest/pipeline.py",
+            "packages/backtest/tests/test_unit.py",
+        ]
+        commands = verification_commands("high-risk", paths, root=root)
+
+    assert commands == [["task", "check"], ["task", "pit"]]
