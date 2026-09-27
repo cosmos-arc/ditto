@@ -55,6 +55,30 @@ def _run_suite(junit: Path) -> int:
     ).returncode
 
 
+def _collect_over_budget(
+    durations: dict[str, dict[str, float]],
+    unit_by_file: dict[str, set[str]],
+    integration_by_file: dict[str, set[str]],
+) -> tuple[list[tuple[float, str]], list[tuple[float, str]]]:
+    """Split measured cases into over-budget unit and integration lists."""
+    slow_unit: list[tuple[float, str]] = []
+    slow_integration: list[tuple[float, str]] = []
+    for file, by_case in sorted(durations.items()):
+        for case, seconds in by_case.items():
+            limit = layer_budget(
+                file,
+                case,
+                unit_by_file.get(file, set()),
+                integration_by_file.get(file, set()),
+            )
+            if seconds <= limit:
+                continue
+            entry = (seconds, f"{file}::{case}")
+            target = slow_unit if limit == UNIT_THRESHOLD else slow_integration
+            target.append(entry)
+    return slow_unit, slow_integration
+
+
 def analyze_slow_tests() -> int:
     """Run the suite and report tests above their budget; 0 when compliant."""
     with tempfile.TemporaryDirectory() as td:
@@ -70,21 +94,16 @@ def analyze_slow_tests() -> int:
 
     print("[*] 收集标记身份...")
     raw_all = collect_ids(None)
-    unit_functions = all_marked_functions(raw_all, collect_ids(None, "unit"))
-    integration_functions = all_marked_functions(
-        raw_all, collect_ids(None, "integration")
-    )
+    unit_by_file: dict[str, set[str]] = {}
+    integration_by_file: dict[str, set[str]] = {}
+    for file, name in all_marked_functions(raw_all, collect_ids(None, "unit")):
+        unit_by_file.setdefault(file, set()).add(name)
+    for file, name in all_marked_functions(raw_all, collect_ids(None, "integration")):
+        integration_by_file.setdefault(file, set()).add(name)
 
-    slow_unit: list[tuple[float, str]] = []
-    slow_integration: list[tuple[float, str]] = []
-    for file, by_case in sorted(durations.items()):
-        for case, seconds in by_case.items():
-            limit = layer_budget(file, case, unit_functions, integration_functions)
-            if seconds <= limit:
-                continue
-            entry = (seconds, f"{file}::{case}")
-            target = slow_unit if limit == UNIT_THRESHOLD else slow_integration
-            target.append(entry)
+    slow_unit, slow_integration = _collect_over_budget(
+        durations, unit_by_file, integration_by_file
+    )
 
     print("\n" + "=" * 60)
     print("慢速测试报告(已排除 slow/capacity/sandbox_live 标记)")

@@ -179,6 +179,21 @@ def test_unit_marker_beats_e2e_path_budget() -> None:
     ]
 
 
+def test_gate_scope_pulls_owner_dirs_for_production_changes() -> None:
+    seeds = "packages/application/src/ditto_application/seeds.py"
+    kernel_test = "packages/kernel/tests/unit/test_unchanged.py"
+    name_status = {
+        seeds: seeds,
+        kernel_test: kernel_test,
+        "docs/README.md": "docs/README.md",
+    }
+    assert gate.gate_scope(name_status) == {
+        kernel_test: kernel_test,
+        "packages/application/tests": "packages/application/tests",
+        "packages/kernel/tests": "packages/kernel/tests",
+    }
+
+
 def test_is_managed_test_path_distinguishes_blind_spots() -> None:
     assert gate._is_managed_test_path("packages/kernel/tests/unit/test_a.py")
     assert gate._is_managed_test_path("apps/backend/tests/e2e/test_b.py")

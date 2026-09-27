@@ -32,6 +32,7 @@ _EXEMPT_MARKER_EXPR = "slow or capacity"
 _DUAL_PATH_COUNT = 2
 _SINGLE_PATH_COUNT = 1
 _GIT = shutil.which("git") or "git"
+_MIN_PACKAGE_PATH_SLASHES = 2
 _MANAGED_TEST_PREFIXES = ("packages/", "apps/")
 
 
@@ -56,10 +57,10 @@ def layer_budget(
     """
     Return the budget for one case: function-level markers first.
 
-    ``unit_functions``/``integration_functions`` hold function identities
-    whose every collected case carries the marker; markers beat the path
-    fallback so a ``unit``-marked helper under ``tests/e2e`` gets the unit
-    budget here and in the analyzer alike.
+    ``unit_functions``/``integration_functions`` hold bare function names for
+    THIS file whose every collected case carries the marker; markers beat
+    the path fallback so a ``unit``-marked helper under ``tests/e2e`` gets
+    the unit budget here and in the analyzer alike.
     """
     name = function_of(case)
     if name in unit_functions:
@@ -179,8 +180,10 @@ def collect_ids(
     result = subprocess.run(  # noqa: S603 - venv 内固定 pytest 参数
         command, capture_output=True, text=True, check=False, env=env, cwd=cwd
     )
-    # 2 = collection errors (tolerated on request); 5 = nothing collected
-    accepted = (0, 2, 5) if tolerate_collection_errors else (0, 5)
+    # pytest 9 exits 1 (execution short-circuited) or 2 (internal) for
+    # collection errors under --continue-on-collection-errors; 5 = nothing
+    # collected. Tolerated mode accepts the partial identities.
+    accepted = (0, 1, 2, 5) if tolerate_collection_errors else (0, 5)
     if result.returncode not in accepted:
         message = f"collect-only failed ({result.returncode})"
         raise SystemExit(f"{message}:\n{result.stdout}\n{result.stderr}")
@@ -203,16 +206,21 @@ def collect_base_ids(
 
     Collection semantics (inheritance, ``__test__``, parametrization) resolve
     exactly as they did at base. Only paths that were themselves test
-    modules are collected — an explicitly passed file collects its
-    ``test_*`` functions regardless of its name, which would wrongly shelter
-    tests activated by a rename away from a non-test helper.
+    modules or whole ``tests`` directories (owner scope) are collected —
+    an explicitly passed file collects its ``test_*`` functions regardless
+    of its name, which would wrongly shelter tests activated by a rename
+    away from a non-test helper.
     """
-    test_named = [
+    collectable = [
         path
         for path in sorted(set(base_paths))
-        if Path(path).name.startswith("test_") and path.endswith(".py") and "/" in path
+        if (
+            path.endswith("/tests")
+            or (Path(path).name.startswith("test_") and path.endswith(".py"))
+        )
+        and "/" in path
     ]
-    if not test_named:
+    if not collectable:
         return set()
     with tempfile.TemporaryDirectory() as td:
         worktree = Path(td) / "base"
@@ -223,7 +231,11 @@ def collect_base_ids(
             check=True,
         )
         try:
-            existing = [path for path in test_named if (worktree / path).is_file()]
+            existing = [
+                path
+                for path in collectable
+                if (worktree / path).is_file() or (worktree / path).is_dir()
+            ]
             raw = collect_ids(existing, cwd=worktree, tolerate_collection_errors=True)
         finally:
             subprocess.run(  # noqa: S603 - git 固定参数
@@ -296,8 +308,39 @@ def resolve_base(base: str, root: Path) -> str:
     ).stdout.strip()
 
 
+def _owner_of(path: str) -> str | None:
+    """Backend owner of a path (``packages/<pkg>`` or ``apps/backend``)."""
+    if path.startswith("packages/") and path.count("/") >= _MIN_PACKAGE_PATH_SLASHES:
+        return "/".join(path.split("/")[:2])
+    if path.startswith("apps/backend"):
+        return "apps/backend"
+    return None
+
+
+def gate_scope(name_status: Mapping[str, str]) -> dict[str, str]:
+    """
+    Changed test files plus whole test dirs of touched backend owners.
+
+    Production or conftest changes can create pytest cases in unchanged
+    test modules (parametrization over production enums, generate_tests
+    hooks), so every touched backend owner's whole ``tests`` directory
+    enters the head-vs-base collection diff.
+    """
+    scope: dict[str, str] = {}
+    owners: set[str] = set()
+    for head, base_path in name_status.items():
+        owner = _owner_of(head)
+        if owner is not None:
+            owners.add(owner)
+        if Path(head).name.startswith("test_") and head.endswith(".py"):
+            scope[head] = base_path
+    for owner in sorted(owners):
+        scope.setdefault(f"{owner}/tests", f"{owner}/tests")
+    return scope
+
+
 def changed_test_files(base: str, root: Path) -> dict[str, str]:
-    """Map changed test modules to their base path (rename-aware)."""
+    """Map the gate scope (changed test modules + owner test dirs) to base paths."""
     raw = subprocess.run(  # noqa: S603 - git 固定参数
         [
             _GIT,
@@ -315,11 +358,7 @@ def changed_test_files(base: str, root: Path) -> dict[str, str]:
         check=True,
     ).stdout
     mapping = parse_name_status(raw)
-    return {
-        head: base_path
-        for head, base_path in mapping.items()
-        if Path(head).name.startswith("test_") and head.endswith(".py")
-    }
+    return gate_scope(mapping)
 
 
 def new_tests_at_head(
