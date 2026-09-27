@@ -2357,6 +2357,142 @@ def test_chart_selects_status_shards_across_the_natural_period(tmp_path: Path) -
 
 
 @pytest.mark.pit
+def test_chart_absence_lineage_uses_price_snapshots_only(tmp_path: Path) -> None:
+    """A missing price session must not attach factor/status shards as
+    absence evidence: only price-dataset shards can prove price absence."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    bar_shard = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [10.0],
+                    "high": [11.0],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1020.0],
+                }
+            ),
+            datetime(2026, 3, 10, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
+    factor_shard = replace(
+        _snapshot(
+            store,
+            "adj_factor",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"] * 2,
+                    "trade_date": ["2026-03-10", "2026-03-11"],
+                    "adj_factor": [1.1, 1.1],
+                }
+            ),
+            datetime(2026, 3, 12, 8, tzinfo=UTC),
+        ),
+        request_start="2026-03-10",
+        request_end="2026-03-11",
+    )
+    fixture_factor = chart._snapshots.list_snapshots(dataset_id="adj_factor")[0]
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                bar_shard,
+                fixture_factor,
+                factor_shard,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="weekly",
+            adjustment="hfq",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        )
+    )
+    # 03-10/03-11 are mature sessions without price rows. The factor shards
+    # cover those days by request bounds but can never evidence price
+    # absence: the weekly candle lineage keeps the price shard plus the
+    # hfq-contributing factor only.
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-09"]
+    assert set(result.bars[0].source_snapshot_ids) == {
+        bar_shard.snapshot_id,
+        fixture_factor.snapshot_id,
+    }
+    assert result.missing_sessions == ("2026-03-10", "2026-03-11")
+
+
+@pytest.mark.pit
+def test_chart_excludes_suspended_days_from_price_authority(tmp_path: Path) -> None:
+    """A price poll scoped only to a full-day suspended session cannot turn
+    a complete candle into a mixed-source rejection."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    fuyao_empty = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="stock_daily",
+            source="fuyao",
+            request_start="2026-03-11",
+            request_end="2026-03-11",
+            schema_version="stock_daily.v1",
+            checksum="sha256:fuyao-suspended-day",
+            canonical_asset=DataAssetRef(
+                dataset_id="stock_daily",
+                namespace="market",
+                partition_keys=("source_ticker=600519.SH",),
+            ),
+            request_parameters_hash="sha256:market-chart-test",
+            response_metadata=(
+                ("snapshot_layer", "verified_empty_provider_observation"),
+            ),
+            license_record_id="license:fuyao:test",
+            row_count=0,
+            payload_uri=None,
+            payload_retained=False,
+            created_at=datetime(2026, 3, 12, 8, tzinfo=UTC),
+        )
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), fuyao_empty)),
+    )
+    chart = MarketChartQueryFacade(
+        reader, chart._payloads, chart._metadata, chart._market
+    )
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 11),
+            period="daily",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+        )
+    )
+    assert [bar.trade_date for bar in result.bars] == [
+        "2026-03-09",
+        "2026-03-10",
+    ]
+    assert result.missing_sessions == ()
+    assert result.sources == ("tushare",)
+
+
+@pytest.mark.pit
 def test_chart_resolves_same_snapshot_factor_revisions_by_knowledge_time(
     tmp_path: Path,
 ) -> None:

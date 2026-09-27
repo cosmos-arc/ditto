@@ -903,13 +903,47 @@ class MarketChartQueryFacade:
             instrument_id=instrument_id,
             allow_experimental_data=allow_experimental_data,
         )
+        # Authoritative suspensions load before price selection: a full-day
+        # suspension has no readable bar, so its dates leave price authority
+        # coverage and an irrelevant price poll scoped to that day cannot
+        # turn a complete candle into a mixed-source rejection.
+        suspensions, status_ids = self._load_suspensions(request, cutoff, calendar)
+        price_consumable_days = consumable_days - suspensions.keys()
+        if not price_consumable_days:
+            # Every consumable session is a full-day suspension: no price bar
+            # is knowable or required, and the suspension evidence carries
+            # the lineage.
+            return MarketChartView(
+                instrument_id=instrument_id,
+                period=period,
+                adjustment=adjustment,
+                as_of=as_of,
+                knowledge_cutoff=cutoff,
+                publication_cutoff=cutoff,
+                timezone="Asia/Shanghai",
+                calendar_snapshot_ids=used_calendar_ids,
+                source_snapshot_ids=status_ids,
+                sources=tuple(
+                    sorted(
+                        {
+                            item.source
+                            for item in self._snapshots.list_snapshots()
+                            if item.snapshot_id in status_ids
+                        }
+                    )
+                ),
+                latest_price_date=None,
+                stale_reason=None,
+                missing_sessions=(),
+                bars=(),
+            )
         selected = self._select_snapshots(
             f"{asset_class}_daily",
             start_date,
             end_date,
             cutoff,
             instrument_id=instrument_id,
-            consumable_days=consumable_days,
+            consumable_days=price_consumable_days,
         )
         latest = max(selected, key=lambda item: item.created_at)
         queried_snapshot_ids = {item.snapshot_id for item in selected}
@@ -943,15 +977,18 @@ class MarketChartQueryFacade:
         )
         factors, factor_ids = self._load_factors(request, cutoff, calendar)
         queried_snapshot_ids.update(factor_ids)
-        suspensions, status_ids = self._load_suspensions(request, cutoff, calendar)
         queried_snapshot_ids.update(status_ids)
+        price_dataset = f"{asset_class}_daily"
         result, missing, latest_price_date = _chart_rows(
             raw,
             _SnapshotIndex(
                 observed_at=_observed_at_reader(self._snapshots, as_of),
+                # Only price-dataset shards can evidence a missing price
+                # session; factor/status shards neither prove price absence
+                # nor necessarily contributed to the candle.
                 absence_sources=tuple(
                     item
-                    for item in self._snapshots.list_snapshots()
+                    for item in self._snapshots.list_snapshots(dataset_id=price_dataset)
                     if item.snapshot_id in queried_snapshot_ids
                 ),
             ),
