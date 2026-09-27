@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -33,6 +34,9 @@ __all__ = [
 ]
 
 _SHA256_HEX_LENGTH = 64
+# C-level full match: this constructor is on the hot read path (every persisted
+# view reconstruction), where a per-character Python loop dominated profiling.
+_SHA256_HEX_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 
 def _identity_error(identity_name: str, value: object) -> ExperimentIdentityError:
@@ -116,7 +120,7 @@ class ContentHash:
         if (
             not isinstance(raw_value, str)
             or len(raw_value) != _SHA256_HEX_LENGTH
-            or any(character not in "0123456789abcdef" for character in raw_value)
+            or _SHA256_HEX_PATTERN.fullmatch(raw_value) is None
         ):
             raise ExperimentIdentityError(
                 "content hash must be a lowercase SHA-256 hex digest",

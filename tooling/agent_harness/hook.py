@@ -15,6 +15,7 @@ import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from types import FrameType
 from typing import Any
@@ -881,6 +882,7 @@ _CONTRACT_PREFIXES = (
     "apps/web/scripts/gen-api",
 )
 _BACKEND_TEST_PREFIX = ("apps", "backend", "tests")
+_PACKAGE_ROOT_DEPTH = 2  # "packages/<name>/" before the manifest filename
 
 
 def _path_classes(paths: Sequence[str], *, root: Path | None = None) -> set[str]:
@@ -1108,17 +1110,140 @@ def _backend_test_commands(
     return commands
 
 
+def _backend_owner(path: str) -> str | None:
+    """Package owner of a backend-area path; prose and repo-level paths have none."""
+    if _path_categories(path) == {"docs"}:
+        return None
+    for prefix in ("packages/", "apps/backend/"):
+        if path.startswith(prefix):
+            return "/".join(path.split("/")[:2])
+    return None
+
+
+def _is_package_manifest(path: str) -> bool:
+    return (
+        path.startswith(("packages/", "apps/backend/"))
+        and path.count("/") == _PACKAGE_ROOT_DEPTH
+        and path.rsplit("/", 1)[1] == "pyproject.toml"
+    )
+
+
+def _sanitized_probe_environment() -> dict[str, str] | None:
+    """Strip Git's exported repository selectors, as pre-push does for commands.
+
+    During push-range selection those variables are still set; a collection
+    subprocess must not inherit a foreign GIT_DIR/GIT_INDEX_FILE. Also keeps
+    the Taskfile policy of never auto-downloading interpreters. Returns None
+    when sanitization cannot be proven so the probe can fail closed.
+    """
+    environment = {**os.environ, "UV_PYTHON_DOWNLOADS": "never"}
+    try:
+        exported = subprocess.run(
+            ["git", "rev-parse", "--local-env-vars"],
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if exported.returncode != 0:
+        return None
+    for name in exported.stdout.splitlines():
+        environment.pop(name, None)
+    return environment
+
+
+@lru_cache(maxsize=64)
+def _has_collectable_tests(workspace: Path, owner: str) -> bool:
+    """The scoped fast-test target must yield at least one pytest item.
+
+    The probe goes through scripts/test.py --fast so the marker expression,
+    keyring isolation, and pytest options stay owned by one authority and
+    match the emitted ``task test -- --fast`` command exactly (exit 5 =
+    nothing selected, including marker-deselected or fixture-only modules).
+    Probe failures and timeouts fall back to the full gate; cached per
+    process so one push pays each owner's collection at most once.
+    """
+    environment = _sanitized_probe_environment()
+    if environment is None:
+        return False
+    try:
+        process = subprocess.Popen(
+            [
+                "uv",
+                "run",
+                "--no-sync",
+                "python",
+                "scripts/test.py",
+                "--fast",
+                "--collect-only",
+                f"{owner}/tests",
+            ],
+            cwd=workspace,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=environment,
+            start_new_session=True,
+        )
+    except OSError:
+        return False
+    try:
+        returncode = process.wait(timeout=120)
+    except BaseException:
+        # start_new_session detaches the child from the terminal's Ctrl-C;
+        # reap the whole tree on timeout or interrupt (same cross-platform
+        # strategy as the formatter: killpg on POSIX, taskkill /T on Windows)
+        # so nothing leaks into the gate.
+        try:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                try:
+                    subprocess.run(
+                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=0.5,
+                        check=False,
+                    )
+                except subprocess.TimeoutExpired:
+                    pass
+                process.kill()
+        except (ProcessLookupError, OSError):
+            pass
+        process.wait()
+        if isinstance(sys.exc_info()[1], subprocess.TimeoutExpired):
+            return False
+        raise
+    return returncode == 0
+
+
 def _backend_source_commands(
-    paths: Sequence[str], *, high_risk: bool
+    paths: Sequence[str], *, root: Path | None = None
 ) -> list[list[str]]:
-    owners = {
-        "/".join(path.split("/")[:2])
+    # Ownership spans every material backend-area path, not only Python: a
+    # schema.sql or fixture in another package must keep the cross-package
+    # gate, while ordinary prose never widens the scope on its own.
+    owners = {owner for owner in map(_backend_owner, paths) if owner is not None}
+    # Package manifests and repo-level config/scripts are backend material
+    # without an own fast-test scope (toolchain-check, arch-check and uv-lock
+    # state), and ci.required_jobs escalates them the same way. Ordinary
+    # prose stays excluded, mirroring _backend_owner.
+    if any(
+        (path.startswith(("config/", "scripts/")) or _is_package_manifest(path))
+        and _path_categories(path) != {"docs"}
         for path in paths
-        if path.endswith(".py") and path.startswith(("packages/", "apps/backend/"))
-    }
-    if high_risk or len(owners) != 1:
+    ):
+        return [["task", "check"]]
+    # CI keeps high-risk scopes on the full gate (ci.required_jobs); the local
+    # ladder only adds the PIT suite, so pushes do not double-pay the full check.
+    if len(owners) != 1:
         return [["task", "check"]]
     owner = next(iter(owners))
+    workspace = root if root is not None else git_root(Path.cwd())
+    if not _has_collectable_tests(workspace, owner):
+        return [["task", "check"]]
     return [
         ["task", "lint"],
         ["task", "fmt-check"],
@@ -1159,9 +1284,7 @@ def verification_commands(
     elif "web" in active_classes:
         commands.append(["task", "check-web"])
     elif active_classes & {"backend", "high-risk"}:
-        commands.extend(
-            _backend_source_commands(paths, high_risk="high-risk" in active_classes)
-        )
+        commands.extend(_backend_source_commands(paths, root=root))
 
     if needs_system:
         commands.append(["task", "test-system"])
