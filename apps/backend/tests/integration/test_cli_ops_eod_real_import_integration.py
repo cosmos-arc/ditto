@@ -10,6 +10,7 @@ import pytest
 
 
 @pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
+@pytest.mark.slow  # 真实 import 进程实测 5.3s 超集成预算, 进慢车道
 def test_run_eod_never_enters_prefect_engine_in_real_import_process() -> None:
     """真实 Prefect import 下，CLI 也只调用未装饰 pipeline runner。"""
     script = dedent(
