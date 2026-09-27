@@ -51,6 +51,28 @@ Registry 配置测试通过近端 `conftest.py` 临时安装现有 keyring 包�
 本机完整验收通过根 `task check` 编排；不要另起同一套后端和 Web 门禁并行抢占
 资源。集中出现交互测试超时时，先单独复现并排查资源争用，不直接增加超时或重试次数。
 
+## 测试时长治理
+
+单条用例时长预算：单测 <0.5s、集成 <5s（与 `task analyze-slow-tests` 同阈值）。新用例超
+预算必须打 `slow`（容量类打 `capacity` 进独立慢车道）标记，`task test -- --fast` 与包级
+检查默认排除它们；存量超标用例按等价重复清单流程治理（#321），不阻塞存量。
+
+时长证据常驻：pytest addopts 自带 `--durations=10`；治理入口
+`task analyze-slow-tests`。pytest-timeout 全局 600s 兜底防挂死（pyproject `timeout`），
+合法慢测试靠标记进慢车道表达，不以调大全局超时掩盖；疑似挂死先单独复现并排查资源
+争用，不直接加超时或重试。
+
+测试必须可并行：默认 `-n auto --dist loadfile`，禁止用例间顺序依赖；确需串行的打
+`serial`。SQLite 测试按 worker 隔离：用 `worker_id` fixture 加 `tmp_path` 给每 worker
+（必要时每用例）独立 DB 文件，禁止多 worker 共享同一 DB 路径。贵重一次性构建的
+fixture 升 `scope="session"`（xdist 下为每 worker 一次），可变状态保持 function 级。
+
+固定 sleep 是 flake 工厂：等待外部条件用条件轮询加总超时，不写裸等待。Polars 自带
+线程池，与 xdist 叠加时留意超订阅：疑似时实测 worker 数与 `POLARS_MAX_THREADS`
+组合，不凭感觉调整。
+
+阶梯档级耗时预算与实测基线见[工具链文档](toolchain.md)的 CI 时长基线小节（#318）。
+
 ## 常用命令
 
 ```bash
