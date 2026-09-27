@@ -62,7 +62,7 @@ def test_new_test_names_distinguishes_classes() -> None:
     }
 
 
-def test_parse_junit_keys_by_bare_name_and_merges_classes(tmp_path: Path) -> None:
+def test_parse_junit_keeps_class_identity_and_merges_params(tmp_path: Path) -> None:
     module = tmp_path / "x/tests/unit/a.py"
     module.parent.mkdir(parents=True)
     module.write_text("", encoding="utf-8")
@@ -84,7 +84,8 @@ def test_parse_junit_keys_by_bare_name_and_merges_classes(tmp_path: Path) -> Non
         "x/tests/unit/a.py": {
             "test_fast": 0.10,
             "test_slow": 0.60,
-            "test_m": 0.90,
+            "TestSubject.test_m": 0.20,
+            "TestOther.test_m": 0.90,
         },
     }
 
@@ -96,6 +97,26 @@ def test_parse_name_status_maps_renames_to_base_path() -> None:
         "mod/test_b.py": "mod/test_b.py",
         "added.py": "added.py",
     }
+
+
+def test_new_tests_at_head_ignores_base_of_non_test_rename() -> None:
+    files = {"x/tests/unit/test_helpers.py": "x/tests/unit/helpers.py"}
+    collected = {("x/tests/unit/test_helpers.py", "test_activated")}
+    base_source = "def test_activated(): ...  # 非测试文件的既有函数"
+    new = gate.new_tests_at_head(
+        "base", files, collected, Path(), show=lambda b, p, r: base_source
+    )
+    assert new == {"x/tests/unit/test_helpers.py": {"test_activated"}}
+
+
+def test_new_tests_at_head_subtracts_test_rename_base() -> None:
+    files = {"x/tests/unit/test_new.py": "x/tests/unit/test_old.py"}
+    collected = {("x/tests/unit/test_new.py", "test_kept")}
+    base_source = "def test_kept(): ...\n"
+    new = gate.new_tests_at_head(
+        "base", files, collected, Path(), show=lambda b, p, r: base_source
+    )
+    assert new == {}
 
 
 def test_find_violations_blocks_only_new_unmarked_over_threshold() -> None:
@@ -117,12 +138,24 @@ def test_find_violations_blocks_only_new_unmarked_over_threshold() -> None:
     ]
 
 
-def test_find_violations_bridges_class_identity_by_bare_name() -> None:
+def test_legacy_class_duration_never_blocks_new_same_name_class() -> None:
     new_tests = {"x/tests/unit/a.py": {"TestB.test_valid"}}
-    durations = {"x/tests/unit/a.py": {"test_valid": 2.0}}
-    violations = gate.find_violations(new_tests, durations, set())
+    durations = {
+        "x/tests/unit/a.py": {
+            "TestA.test_valid": 2.0,
+            "TestB.test_valid": 0.1,
+        }
+    }
+    assert gate.find_violations(new_tests, durations, set()) == []
+
+
+def test_marked_class_exemption_does_not_leak_to_other_class() -> None:
+    new_tests = {"x/tests/unit/a.py": {"TestOther.test_marked"}}
+    durations = {"x/tests/unit/a.py": {"TestOther.test_marked": 9.0}}
+    exempt = {("x/tests/unit/a.py", "TestSubject.test_marked")}
+    violations = gate.find_violations(new_tests, durations, exempt)
     assert violations == [
-        ("x/tests/unit/a.py", "TestB.test_valid", 2.0, gate.UNIT_THRESHOLD),
+        ("x/tests/unit/a.py", "TestOther.test_marked", 9.0, gate.UNIT_THRESHOLD),
     ]
 
 
@@ -157,13 +190,20 @@ class _Script:
     def changed_test_files(self, base: str, root: Path) -> dict[str, str]:
         return self.files
 
+    def collect_ids(
+        self, changed_files: list[str], marker_expr: str | None = None
+    ) -> set[tuple[str, str]]:
+        return set(self.marked) if marker_expr else set()
+
     def new_tests_at_head(
-        self, base: str, files: dict[str, str], root: Path
+        self,
+        base: str,
+        files: dict[str, str],
+        collected: set[tuple[str, str]],
+        root: Path,
+        show=gate._git_show,
     ) -> dict[str, set[str]]:
         return self.new_names
-
-    def run_collect(self, changed_files: list[str]) -> set[tuple[str, str]]:
-        return self.marked
 
 
 def _run_main(
@@ -175,8 +215,8 @@ def _run_main(
         module.write_text("", encoding="utf-8")
         (tmp_path / "junit-0-0.xml").write_text(junit, encoding="utf-8")
     monkeypatch.setattr(gate, "changed_test_files", script.changed_test_files)
+    monkeypatch.setattr(gate, "collect_ids", script.collect_ids)
     monkeypatch.setattr(gate, "new_tests_at_head", script.new_tests_at_head)
-    monkeypatch.setattr(gate, "run_collect", script.run_collect)
     return gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path)])
 
 

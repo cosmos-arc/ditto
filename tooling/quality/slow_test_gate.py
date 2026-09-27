@@ -1,11 +1,12 @@
 """
 Block new tests exceeding duration thresholds unless marked slow/capacity.
 
-Durations come from shard junit XML artifacts, so no second pytest run is needed.
-"New" means a class-qualified test (``Class.method`` or bare function) present in
-a changed test file at HEAD but absent at the merge base, with renames resolved
-to their original path. Existing tests are exempt by design; a legitimately slow
-new test escapes via ``@pytest.mark.slow``/``@pytest.mark.capacity``.
+Durations come from shard junit XML artifacts, so no second pytest run is
+needed. Identity is class-qualified (``Class.method`` or bare function) and
+rename-aware: head identities come from pytest collection (so inherited
+tests are seen), the base set from lexical AST of the original path, and
+junit keys from the classname class chain. A legitimately slow new test
+escapes via ``@pytest.mark.slow``/``@pytest.mark.capacity``.
 """
 
 from __future__ import annotations
@@ -17,15 +18,15 @@ import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 UNIT_THRESHOLD = 0.5
 INTEGRATION_THRESHOLD = 5.0
 _EXEMPT_MARKER_EXPR = "slow or capacity"
-_GIT = shutil.which("git") or "git"
 _DUAL_PATH_COUNT = 2
 _SINGLE_PATH_COUNT = 1
+_GIT = shutil.which("git") or "git"
 
 
 def threshold_for(path: str) -> float:
@@ -105,13 +106,11 @@ def _module_path(
 
 def parse_junit(paths: list[Path], root: Path) -> dict[str, dict[str, float]]:
     """
-    Map file path -> bare test name -> slowest observed duration.
+    Map file path -> qualified test name -> slowest observed duration.
 
-    junit identity is (module, bare name); class chains are absent from the
-    ``name`` attribute on this pytest version, so same-named methods across
-    classes max-merge into one entry. That is conservative for gating: a slow
-    new ``TestB.test_valid`` surfaces even when legacy ``TestA.test_valid``
-    shares the name.
+    The qualified name keeps the class chain from ``classname``, so a legacy
+    ``TestA.test_valid`` can never lend its duration to a new
+    ``TestB.test_valid``; parametrized cases of one method max-merge.
     """
     durations: dict[str, dict[str, float]] = {}
     cache: dict[str, str | None] = {}
@@ -130,43 +129,43 @@ def parse_junit(paths: list[Path], root: Path) -> dict[str, dict[str, float]]:
             module = _module_path(classname, root, cache)
             if module is None:
                 continue
-            key = _bare_name(name)
+            consumed = len(Path(module).with_suffix("").parts)
+            classes = classname.split(".")[consumed:]
+            qualname = ".".join([*classes, _bare_name(name)])
             by_name = durations.setdefault(module, {})
-            by_name[key] = max(by_name.get(key, 0.0), seconds)
+            by_name[qualname] = max(by_name.get(qualname, 0.0), seconds)
     return durations
 
 
-def run_collect(changed_files: list[str]) -> set[tuple[str, str]]:
-    """Collect (file, qualified name) pairs marked slow or capacity in files."""
+def collect_ids(
+    changed_files: Sequence[str], marker_expr: str | None = None
+) -> set[tuple[str, str]]:
+    """Collect (file, qualified name) pairs from pytest, optionally filtered."""
     if not changed_files:
         return set()
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "--collect-only",
+        "-q",
+        "--import-mode=importlib",
+        "-o",
+        "addopts=",
+        "-p",
+        "no:cacheprovider",
+    ]
+    if marker_expr is not None:
+        command += ["-m", marker_expr]
     env = dict(os.environ, PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring")
     result = subprocess.run(  # noqa: S603 - venv 内固定 pytest 参数
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "--collect-only",
-            "-q",
-            "--import-mode=importlib",
-            "-o",
-            "addopts=",
-            "-p",
-            "no:cacheprovider",
-            "-m",
-            _EXEMPT_MARKER_EXPR,
-            *changed_files,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        env=env,
+        [*command, *changed_files], capture_output=True, text=True, check=False, env=env
     )
-    # 5 = nothing collected for this marker expression
+    # 5 = nothing collected (e.g. marker expression matches nothing)
     if result.returncode not in (0, 5):
         message = f"collect-only failed ({result.returncode})"
         raise SystemExit(f"{message}:\n{result.stdout}\n{result.stderr}")
-    exempt: set[tuple[str, str]] = set()
+    collected: set[tuple[str, str]] = set()
     for raw in result.stdout.splitlines():
         line = raw.strip()
         if "::" not in line or line.startswith(("=", "!", " ")):
@@ -174,10 +173,8 @@ def run_collect(changed_files: list[str]) -> set[tuple[str, str]]:
         file_part, *rest = line.split("::")
         if not file_part.endswith(".py") or not rest:
             continue
-        qualified = ".".join(_bare_name(segment) for segment in rest)
-        exempt.add((file_part, qualified))
-        exempt.add((file_part, _bare_name(qualified)))
-    return exempt
+        collected.add((file_part, ".".join(_bare_name(segment) for segment in rest)))
+    return collected
 
 
 def find_violations(
@@ -189,10 +186,9 @@ def find_violations(
     violations: list[tuple[str, str, float, float]] = []
     for file, names in new_tests.items():
         for name in names:
-            bare = name.rsplit(".", 1)[-1]
-            if (file, name) in exempt or (file, bare) in exempt:
+            if (file, name) in exempt:
                 continue
-            measured = durations.get(file, {}).get(bare)
+            measured = durations.get(file, {}).get(name)
             if measured is None:
                 continue
             limit = threshold_for(file)
@@ -254,23 +250,44 @@ def changed_test_files(base: str, root: Path) -> dict[str, str]:
     }
 
 
+def _git_show(base: str, path: str, root: Path) -> str | None:
+    """Return the base revision content of a path, or None when absent."""
+    return (
+        subprocess.run(  # noqa: S603 - git 固定参数
+            [_GIT, "-C", str(root), "show", f"{base}:{path}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout
+        or None
+    )
+
+
 def new_tests_at_head(
-    base: str, files: Mapping[str, str], root: Path
+    base: str,
+    files: Mapping[str, str],
+    collected: set[tuple[str, str]],
+    root: Path,
+    show: Callable[[str, str, Path], str | None] = _git_show,
 ) -> dict[str, set[str]]:
-    """Map each changed test file to its qualified names absent at base."""
+    """
+    Map each changed test file to collected identities absent at base.
+
+    Head identities come from pytest collection (inherited tests included);
+    the base set is the lexical AST of the original path, and only when that
+    path was itself a test module — a rename from a non-test helper counts
+    as fully new. Base under-counts inherited identities, so the diff can
+    only over-block, never miss.
+    """
     result: dict[str, set[str]] = {}
     for head_path, base_path in files.items():
-        base_source = (
-            subprocess.run(  # noqa: S603 - git 固定参数
-                [_GIT, "-C", str(root), "show", f"{base}:{base_path}"],
-                capture_output=True,
-                text=True,
-                check=False,
-            ).stdout
-            or None
-        )
-        head_source = (root / head_path).read_text(encoding="utf-8")
-        names = new_test_names(base_source, head_source)
+        base_source: str | None = None
+        if Path(base_path).name.startswith("test_") and base_path.endswith(".py"):
+            base_source = show(base, base_path, root)
+        base_names = test_names(base_source or "")
+        names = {
+            qualname for file, qualname in collected if file == head_path
+        } - base_names
         if names:
             result[head_path] = names
     return result
@@ -294,7 +311,8 @@ def main(argv: list[str] | None = None) -> int:
         print("[slow-test-gate] no changed test files; pass")
         return 0
 
-    new_tests = new_tests_at_head(args.base, files, root)
+    collected = collect_ids(sorted(files))
+    new_tests = new_tests_at_head(args.base, files, collected, root)
     if not new_tests:
         count = len(files)
         print(f"[slow-test-gate] {count} file(s) changed, no new tests; pass")
@@ -307,7 +325,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     durations = parse_junit(junit_paths, root)
-    exempt = run_collect(sorted(files))
+    exempt = collect_ids(sorted(files), _EXEMPT_MARKER_EXPR)
     violations = find_violations(new_tests, durations, exempt)
 
     total_new = sum(len(names) for names in new_tests.values())
@@ -315,8 +333,7 @@ def main(argv: list[str] | None = None) -> int:
         (file, name)
         for file, names in new_tests.items()
         for name in names
-        if durations.get(file, {}).get(name.rsplit(".", 1)[-1]) is None
-        and (file, name) not in exempt
+        if durations.get(file, {}).get(name) is None and (file, name) not in exempt
     ]
     evaluated = total_new - len(ungated)
     if ungated:
