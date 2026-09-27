@@ -2521,6 +2521,169 @@ def test_chart_rejects_tied_conflicting_price_revisions(tmp_path: Path) -> None:
 
 
 @pytest.mark.pit
+def test_chart_rejects_tied_exact_request_revisions(tmp_path: Path) -> None:
+    """Two cutoff-visible snapshots with the same source, request bounds, and
+    parameter hash but different checksums have no PIT revision order when
+    their observation timestamps tie; the per-key collapse must fail closed
+    instead of letting catalog iteration pick the winning payload."""
+    chart, prior, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    twin = _snapshot(
+        store,
+        "stock_daily",
+        pl.DataFrame(
+            {
+                "source_ticker": ["600519.SH"],
+                "trade_date": ["2026-03-09"],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.5],
+                "close": [10.3],
+                "volume": [100.0],
+                "amount": [1000.0],
+            }
+        ),
+        prior.created_at,
+    )
+    fixture = chart._snapshots.list_snapshots()
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, twin)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="tied exact-request"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_tied_price_value_conflicts_beyond_open_close(
+    tmp_path: Path,
+) -> None:
+    """Tied price shards that agree on open and close but disagree on high,
+    low, volume, or turnover still have no PIT order; any differing
+    chart-contributing value fails closed."""
+    chart, prior, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    twin = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [10.0],
+                    "high": [10.6],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            prior.created_at,
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
+    fixture = chart._snapshots.list_snapshots()
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, twin)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="tied price revisions conflict"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 9),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_fails_closed_on_missing_ticker_across_suspension_window(
+    tmp_path: Path,
+) -> None:
+    """Status authority spans the natural period, so a cutoff-visible ticker
+    gap on a post-request suspension day must fail closed instead of letting
+    row filtering silently drop the suspension behind an unexplained partial
+    candle."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    day_scoped_suspension = replace(
+        _snapshot(
+            store,
+            "stock_status",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "is_suspended": [True],
+                }
+            ),
+            datetime(2026, 3, 12, 8, tzinfo=UTC),
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="stock_daily"),
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                day_scoped_suspension,
+            )
+        ),
+    )
+    metadata = cast(
+        MetadataQueryFacade,
+        _ChartMetadata(
+            get_source_ticker=lambda *args, **kwargs: (
+                None if kwargs["asof"] == "2026-03-11" else "600519.SH"
+            ),
+            get_instrument=lambda instrument_id: (
+                {"asset_class": "stock", "list_date": "2001-08-27"}
+                if instrument_id == 1000001
+                else None
+            ),
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, metadata, chart._market)
+    with pytest.raises(AppQueryError, match="effective chart ticker mapping"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="weekly",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+                delisted_on=date(2026, 3, 12),
+            )
+        )
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_conflicting_calendar_revisions(tmp_path: Path) -> None:
     """Equal observation timestamps do not establish revision order; two
     calendar revisions tied on observation and conflicting on a day's open

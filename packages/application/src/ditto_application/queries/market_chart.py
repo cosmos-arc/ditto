@@ -203,13 +203,29 @@ def _tied_price_conflicts(
     """
     Equal observation timestamps do not establish revision order.
 
-    Conflicting prices from different shards then depend on catalog ordering
-    rather than PIT evidence and must fail closed.
+    Any differing chart-contributing value from different shards then
+    depends on catalog ordering rather than PIT evidence and must fail
+    closed.
     """
     return (
         observed_at(bar.source_snapshot_id) == observed_at(previous.source_snapshot_id)
         and bar.source_snapshot_id != previous.source_snapshot_id
-        and (bar.close, bar.open) != (previous.close, previous.open)
+        and (
+            bar.open,
+            bar.high,
+            bar.low,
+            bar.close,
+            bar.volume,
+            bar.turnover,
+        )
+        != (
+            previous.open,
+            previous.high,
+            previous.low,
+            previous.close,
+            previous.volume,
+            previous.turnover,
+        )
     )
 
 
@@ -571,6 +587,35 @@ class MarketChartQueryFacade:
             snapshot_reader=snapshots, payload_reader=payloads
         )
 
+    def _collapse_revisions(
+        self, candidates: list[ProviderSnapshot], cutoff: datetime
+    ) -> tuple[ProviderSnapshot, ...]:
+        """
+        Keep each exact-request key's newest observed revision.
+
+        Tied observation with different content has no PIT revision order;
+        catalog iteration must not pick the winning payload.
+        """
+        revisions: dict[tuple[str, str, str, str], ProviderSnapshot] = {}
+        for item in candidates:
+            key = (
+                item.source,
+                item.request_start,
+                item.request_end,
+                item.request_parameters_hash,
+            )
+            prior = revisions.get(key)
+            if prior is None:
+                revisions[key] = item
+                continue
+            item_observed = snapshot_observed_by(item, cutoff)
+            prior_observed = snapshot_observed_by(prior, cutoff)
+            if item_observed == prior_observed and item.checksum != prior.checksum:
+                raise AppQueryError("tied exact-request chart revisions conflict")
+            if item_observed > prior_observed:
+                revisions[key] = item
+        return tuple(revisions.values())
+
     def _select_snapshots(
         self,
         dataset_id: str,
@@ -628,24 +673,12 @@ class MarketChartQueryFacade:
             raise AppQueryError(
                 f"retained chart {dataset_id} snapshots are unavailable at cutoff"
             )
-        revisions: dict[tuple[str, str, str, str], ProviderSnapshot] = {}
-        for item in candidates:
-            key = (
-                item.source,
-                item.request_start,
-                item.request_end,
-                item.request_parameters_hash,
-            )
-            prior = revisions.get(key)
-            if prior is None or snapshot_observed_by(
-                item, cutoff
-            ) > snapshot_observed_by(prior, cutoff):
-                revisions[key] = item
-        if len({item.source for item in revisions.values()}) > 1:
+        selected = self._collapse_revisions(candidates, cutoff)
+        if len({item.source for item in selected}) > 1:
             raise AppQueryError("retained chart shards have incompatible sources")
-        if len({item.schema_version for item in revisions.values()}) > 1:
+        if len({item.schema_version for item in selected}) > 1:
             raise AppQueryError("retained chart shards have incompatible schemas")
-        for item in revisions.values():
+        for item in selected:
             if not (item.payload_retained and item.payload_uri) and not (
                 item.row_count == 0
                 and dict(item.response_metadata).get("snapshot_layer")
@@ -654,7 +687,7 @@ class MarketChartQueryFacade:
                 raise AppQueryError(
                     "authoritative chart revision has no retained payload"
                 )
-        return tuple(revisions.values())
+        return selected
 
     def _instrument_code(
         self,
@@ -663,6 +696,8 @@ class MarketChartQueryFacade:
         cutoff: datetime,
         calendar: RetainedCalendarWindow,
         consumable_days: frozenset[str],
+        *,
+        window: tuple[date, date],
     ) -> Callable[[date], str | None]:
         identities = self._metadata.get_source_tickers(
             request.instrument_id,
@@ -684,7 +719,10 @@ class MarketChartQueryFacade:
                     cutoff=cutoff.isoformat(),
                 )
             )
-            if request.start_date <= day <= request.end_date:
+            # Fail closed exactly over the authority window the caller reads:
+            # a silent None outside the raw request dates would let row
+            # filtering drop evidence the chart still consumes.
+            if window[0] <= day <= window[1]:
                 return _require_chart_ticker(value)
             return value
 
@@ -710,7 +748,9 @@ class MarketChartQueryFacade:
             # sessions, which span the natural period and lifecycle bounds
             # rather than the raw request dates; select status authority over
             # that same window so day-scoped suspension shards beyond the
-            # requested dates still join.
+            # requested dates still join, and validate ticker identity over
+            # that window so a cutoff-visible mapping gap on a post-request
+            # suspension day fails closed instead of silently dropping rows.
             period_start = _period_bounds(request.start_date, request.period)[0]
             period_end = min(
                 _period_bounds(request.end_date, request.period)[1],
@@ -732,7 +772,15 @@ class MarketChartQueryFacade:
             if not status_snapshots:
                 return {}, status_snapshots
             instrument_code = self._instrument_code(
-                request, status_snapshots[0].source, cutoff, calendar, consumable_days
+                request,
+                status_snapshots[0].source,
+                cutoff,
+                calendar,
+                consumable_days,
+                window=(
+                    max(period_start, request.listed_on or period_start),
+                    period_end,
+                ),
             )
             status_context = PITQueryContext(
                 as_of=cutoff,
@@ -782,7 +830,12 @@ class MarketChartQueryFacade:
                 consumable_days=consumable_days,
             )
             instrument_code = self._instrument_code(
-                request, factor_snapshots[0].source, cutoff, calendar, consumable_days
+                request,
+                factor_snapshots[0].source,
+                cutoff,
+                calendar,
+                consumable_days,
+                window=(request.start_date, request.end_date),
             )
             factor_context = PITQueryContext(
                 as_of=cutoff,
@@ -1005,7 +1058,12 @@ class MarketChartQueryFacade:
         queried_snapshot_ids = {item.snapshot_id for item in selected}
 
         instrument_code = self._instrument_code(
-            request, latest.source, cutoff, calendar, price_consumable_days
+            request,
+            latest.source,
+            cutoff,
+            calendar,
+            price_consumable_days,
+            window=(start_date, end_date),
         )
 
         context = PITQueryContext(
