@@ -327,7 +327,13 @@ class InstrumentReader:
         asofs: list[str],
         cutoff: str,
     ) -> dict[str, str | None]:
-        """Resolve daily identities in one query using the point lookup's PIT rule."""
+        """
+        Resolve daily identities in one query using the point lookup's PIT rule.
+
+        Equal ``effective_from`` mappings with distinct tickers have no PIT
+        order, so they fail closed instead of letting SQLite pick by index
+        or insertion order.
+        """
         if not asofs:
             return {}
         rows = self._client.fetchall(
@@ -349,9 +355,64 @@ class InstrumentReader:
                   )
                 ORDER BY m.effective_from DESC
                 LIMIT 1
-            ) AS source_ticker FROM json_each(?) d""",
-            [instrument_id, source, cutoff, cutoff, json.dumps(asofs)],
+            ) AS source_ticker, (
+                SELECT COUNT(DISTINCT t.source_ticker) FROM instrument_mapping t
+                WHERE t.instrument_id = ? AND t.source = ?
+                  AND t.effective_from <= d.value
+                  AND datetime(t.created_at) < datetime(?)
+                  AND (
+                      t.effective_to IS NULL
+                      OR t.effective_to > d.value
+                      OR EXISTS (
+                          SELECT 1 FROM instrument_mapping s
+                          WHERE s.instrument_id = t.instrument_id
+                            AND s.source = t.source
+                            AND s.effective_from = t.effective_to
+                            AND datetime(s.created_at) >= datetime(?)
+                      )
+                  )
+                  AND t.effective_from = (
+                      SELECT MAX(x.effective_from) FROM instrument_mapping x
+                      WHERE x.instrument_id = ? AND x.source = ?
+                        AND x.effective_from <= d.value
+                        AND datetime(x.created_at) < datetime(?)
+                        AND (
+                            x.effective_to IS NULL
+                            OR x.effective_to > d.value
+                            OR EXISTS (
+                                SELECT 1 FROM instrument_mapping s2
+                                WHERE s2.instrument_id = x.instrument_id
+                                  AND s2.source = x.source
+                                  AND s2.effective_from = x.effective_to
+                                  AND datetime(s2.created_at) >= datetime(?)
+                            )
+                        )
+                  )
+            ) AS tied_variants FROM json_each(?) d""",
+            [
+                instrument_id,
+                source,
+                cutoff,
+                cutoff,
+                instrument_id,
+                source,
+                cutoff,
+                cutoff,
+                instrument_id,
+                source,
+                cutoff,
+                cutoff,
+                json.dumps(asofs),
+            ],
         )
+        conflicts = sorted(
+            str(row["day"]) for row in rows if int(row["tied_variants"]) > 1
+        )
+        if conflicts:
+            raise ValueError(
+                "instrument ticker mappings conflict at one effective date: "
+                + ", ".join(conflicts)
+            )
         return {
             cast(str, row["day"]): cast(str | None, row["source_ticker"])
             for row in rows

@@ -454,3 +454,32 @@ class TestInstrumentReaderWriterIntegration:
             1, source="tushare", asofs=days, cutoff="2026-03-13T08:00:00Z"
         ) == dict(zip(days, [None, "OLD.SH", "NEW.SH", "NEW.SH"], strict=True))
         assert len(calls) == 2
+
+    def test_batch_tickers_fail_closed_on_tied_effective_mappings(
+        self, reader: InstrumentReader, client: SQLiteClient
+    ) -> None:
+        """Two cutoff-visible mappings at one effective date with distinct
+        tickers have no PIT order; the batch resolver fails closed instead
+        of letting SQLite pick by index order."""
+        client.execute("ALTER TABLE instrument_mapping ADD COLUMN created_at TEXT")
+        client.execute(
+            "INSERT INTO instrument (instrument_id, ticker, exchange, asset_class) "
+            "VALUES (1, 'TIED', 'SSE', 'stock')"
+        )
+        client.execute(
+            "INSERT INTO instrument_mapping "
+            "(instrument_id, source, source_ticker, effective_from, created_at) "
+            "VALUES (1, 'tushare', 'OLD.SH', '2020-01-01', '2020-01-01')"
+        )
+        client.execute(
+            "INSERT INTO instrument_mapping "
+            "(instrument_id, source, source_ticker, effective_from, created_at) "
+            "VALUES (1, 'tushare', 'OTHER.SH', '2020-01-01', '2020-01-02')"
+        )
+        with pytest.raises(ValueError, match="conflict at one effective date"):
+            reader.get_source_tickers(
+                1,
+                source="tushare",
+                asofs=["2026-03-09"],
+                cutoff="2026-03-11T08:00:00Z",
+            )

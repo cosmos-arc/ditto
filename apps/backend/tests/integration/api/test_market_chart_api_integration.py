@@ -3079,6 +3079,108 @@ def test_chart_rejects_price_rows_when_all_sessions_suspended(
 
 
 @pytest.mark.pit
+def test_chart_rejects_suspended_day_scoped_prices_in_mixed_window(
+    tmp_path: Path,
+) -> None:
+    """A price shard scoped only to a suspended session contradicts the
+    status authority in a mixed window too, not only when every session is
+    suspended."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    suspended_day_price = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            datetime(2026, 3, 11, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), suspended_day_price)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="chart price conflicts with retained full-day suspension"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_tied_factor_authorities_with_agreeing_values(
+    tmp_path: Path,
+) -> None:
+    """Distinct equal-observation factor shards with equal row knowledge are
+    ambiguous even when the factor values agree: the chosen snapshot lineage
+    and publication time would depend on catalog ordering."""
+    chart, prior, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    visible = datetime(2026, 3, 10, 7, tzinfo=UTC)
+    twin = replace(
+        _snapshot(
+            store,
+            "adj_factor",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-10"],
+                    "published_at": [visible],
+                    "available_at": [visible],
+                    # Matches the fixture's 2026-03-10 factor exactly.
+                    "adj_factor": [1.1],
+                }
+            ),
+            visible,
+        ),
+        request_start="2026-03-10",
+        request_end="2026-03-10",
+    )
+    assert prior.created_at == visible
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), twin)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="tied factor revisions conflict"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="qfq",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 11, 8, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_peer_omission(tmp_path: Path) -> None:
     """A same-observation shard with different bounds that omits the
     instrument day leaves the presence decision unresolved; the row fails

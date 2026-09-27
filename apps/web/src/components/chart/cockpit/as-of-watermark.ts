@@ -36,6 +36,19 @@ function utcDay(time: Time): number | null {
 	return null;
 }
 
+/** A 股会话时区（Asia/Shanghai，无夏令时）相对 UTC 的秒偏移。 */
+const SESSION_UTC_OFFSET_SECONDS = 8 * 3_600;
+
+/**
+ * 交易所时区下的会话日（unix 秒）：会话日期是上海自然日，本地 00:00–08:00
+ * 的 cutoff 在 UTC 下仍属前一日，必须按会话日比较才不会被归到最后一个
+ * 已画会话上。Business-day 时间本身就是日期值，无需偏移。
+ */
+function sessionDay(time: Time): number | null {
+	if (typeof time !== "number") return utcDay(time);
+	return Math.floor((time + SESSION_UTC_OFFSET_SECONDS) / 86_400) * 86_400;
+}
+
 export class AsOfWatermark implements IPanePrimitive<Time> {
 	private options: AsOfWatermarkOptions;
 	private chart: IChartApiBase<Time> | null = null;
@@ -77,11 +90,11 @@ export class AsOfWatermark implements IPanePrimitive<Time> {
 			// session snapping stays only for an intraday cutoff on the
 			// plotted session at the range edge.
 			const time = this.options.time;
-			const day = utcDay(time);
+			const day = sessionDay(time);
 			const scaleWithRange = scale as { getVisibleRange?: () => { from: Time; to: Time } };
 			const range = scaleWithRange.getVisibleRange?.() ?? null;
-			const to = range ? utcDay(range.to) : null;
-			const from = range ? utcDay(range.from) : null;
+			const to = range ? sessionDay(range.to) : null;
+			const from = range ? sessionDay(range.from) : null;
 			const beyondRight = typeof time === "number" && range && time > (range.to as number) && day !== to;
 			const beyondLeft = typeof time === "number" && range && time < (range.from as number) && day !== from;
 			if (beyondRight) {

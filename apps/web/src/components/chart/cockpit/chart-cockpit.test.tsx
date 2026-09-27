@@ -223,6 +223,65 @@ describe("ChartCockpit DOM 合同", () => {
 		expect(drawnX).toBe(299);
 	});
 
+	it("keeps a next-session Shanghai cutoff at the edge despite sharing the UTC day", () => {
+		const timeToIndex = vi.fn();
+		// Visible range ends at UTC day 20000 +100s; the cutoff sits at
+		// 17:00 UTC of the same day, which is already the next session day
+		// in Asia/Shanghai (01:00). UTC-day comparison would snap it onto
+		// the last candle; the session-day comparison keeps it at the edge.
+		const day = 86_400 * 20_000;
+		const watermark = new AsOfWatermark({
+			time: (day + 61_200) as Time,
+			label: "shanghai next-day cutoff",
+			lineColor: "red",
+			labelColor: "white",
+		});
+		watermark.attached({
+			chart: {
+				timeScale: () => ({
+					timeToCoordinate: () => null,
+					timeToIndex,
+					logicalToCoordinate: vi.fn(() => 42),
+					getVisibleRange: () => ({ from: (day - 86_400) as Time, to: (day + 100) as Time }),
+				}),
+			},
+			requestUpdate: vi.fn(),
+		} as unknown as PaneAttachedParameter<Time>);
+		watermark.updateAllViews();
+		expect(timeToIndex).not.toHaveBeenCalled();
+		const renderer = watermark.paneViews()[0]?.renderer();
+		expect(renderer).not.toBeNull();
+		let drawnX = -1;
+		renderer?.draw({
+			useMediaCoordinateSpace: (
+				cb: (scope: { context: CanvasRenderingContext2D; mediaSize: { width: number; height: number } }) => void,
+			) => {
+				const ctx = {
+					save: vi.fn(),
+					restore: vi.fn(),
+					strokeStyle: "",
+					lineWidth: 0,
+					setLineDash: vi.fn(),
+					beginPath: vi.fn(),
+					moveTo: vi.fn((x: number) => {
+						drawnX = x;
+					}),
+					lineTo: vi.fn(),
+					stroke: vi.fn(),
+					font: "",
+					measureText: vi.fn(() => ({ width: 10 })),
+					fillStyle: "",
+					fillText: vi.fn(),
+				};
+				cb({
+					context: ctx as unknown as CanvasRenderingContext2D,
+					mediaSize: { width: 300, height: 120 },
+				});
+			},
+		} as never);
+		expect(drawnX).toBe(299);
+	});
+
 	it("marks the as_of watermark on the host element", () => {
 		renderCockpit({ asOf: { time: 250 } });
 		expect(screen.getByLabelText("演示收盘价图表（fixture）")).toHaveAttribute("data-chart-as-of", "250");

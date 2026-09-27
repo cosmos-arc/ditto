@@ -1131,15 +1131,18 @@ class MarketChartQueryFacade:
         # turn a complete candle into a mixed-source rejection.
         suspensions, status_shards = self._load_suspensions(request, cutoff, calendar)
         price_consumable_days = consumable_days - suspensions.keys()
+        # A retained nonempty price artifact over suspended sessions still
+        # contradicts the status authority in any window — mixed or fully
+        # suspended — because a shard scoped only to the suspended day never
+        # joins price selection; its rows route through the
+        # suspension-conflict guard here.
+        self._reject_suspended_price_conflicts(
+            request, cutoff, calendar, consumable_days, suspensions
+        )
         if not price_consumable_days:
             # Every consumable session is a full-day suspension: no price bar
             # is knowable or required, and the suspension evidence carries
-            # the lineage. A retained nonempty price artifact over those
-            # sessions still contradicts the status authority, so its rows
-            # route through the suspension-conflict guard first.
-            self._reject_suspended_price_conflicts(
-                request, cutoff, calendar, consumable_days, suspensions
-            )
+            # the lineage.
             return MarketChartView(
                 instrument_id=instrument_id,
                 period=period,

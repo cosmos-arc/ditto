@@ -717,6 +717,19 @@ class ProviderPayloadTechnicalAnalysisSource:
                         "contradictory same-snapshot factor rows",
                         day=day,
                     )
+                elif (
+                    available_at == prior.available_at
+                    and snapshot_id != prior.snapshot_id
+                ):
+                    # Distinct tied factor authorities with equal row
+                    # knowledge leave the chosen snapshot lineage and its
+                    # publication time order-dependent even when the values
+                    # agree.
+                    raise _source_error(
+                        "TECHNICAL_SOURCE_REVISION_CONFLICT",
+                        "tied factor revisions conflict for a chart session",
+                        day=day,
+                    )
         return factors
 
     def load_suspensions(
