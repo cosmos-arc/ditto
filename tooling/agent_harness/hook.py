@@ -15,6 +15,7 @@ import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from types import FrameType
 from typing import Any
@@ -1154,6 +1155,40 @@ def _sanitized_probe_environment() -> dict[str, str] | None:
     return environment
 
 
+_FAST_COLLECT_EXPR = (
+    "not slow and not integration and not snapshot and not sandbox_live"
+    " and not capacity"
+)
+
+
+@lru_cache(maxsize=64)
+def _owner_fast_coverage(owners: tuple[str, ...]) -> bool:
+    """Whether every owner contributes at least one fast-lane case.
+
+    One combined collection over all owner test dirs; any owner with zero
+    selected cases keeps the cross-package gate (its fast verification would
+    otherwise be silently skipped by the combined invocation).
+    """
+    try:
+        from tooling.quality.slow_test_gate import (  # noqa: PLC0415 - 脚本直跑无 repo root
+            collect_ids,
+        )
+    except (SystemExit, ImportError):
+        return False
+    try:
+        raw = collect_ids([f"{owner}/tests" for owner in owners], _FAST_COLLECT_EXPR)
+    except SystemExit:
+        return False
+    files = {line.split("::", 1)[0] for line in raw}
+    return all(
+        any(
+            file == owner + "/tests" or file.startswith(owner + "/tests/")
+            for file in files
+        )
+        for owner in owners
+    )
+
+
 def _backend_source_commands(
     paths: Sequence[str], *, root: Path | None = None
 ) -> list[list[str]]:
@@ -1186,9 +1221,11 @@ def _backend_source_commands(
     for owner in sorted(owners):
         tests_dir = workspace / owner / "tests"
         if not tests_dir.is_dir() or not any(tests_dir.rglob("test_*.py")):
-            # 无可跑测试范围（如整包删除）时保持 fail-closed 全量；收集错误
-            # 则由测试命令自身暴露（不再独立预探测）。
+            # 无可跑测试范围（如整包删除）时保持 fail-closed 全量。
             return [["task", "check"]]
+    if not _owner_fast_coverage(tuple(sorted(owners))):
+        # 某 owner 的测试全部被 fast 表达式排除：合并调用会静默跳过它，升级全量。
+        return [["task", "check"]]
     return [
         ["task", "lint"],
         ["task", "fmt-check"],
