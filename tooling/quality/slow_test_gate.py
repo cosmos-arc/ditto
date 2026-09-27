@@ -127,6 +127,9 @@ def parse_junit(paths: list[Path], root: Path) -> dict[str, dict[str, float]]:
             time_attr = case.get("time")
             if not classname or not name or time_attr is None:
                 continue
+            if case.find("skipped") is not None:
+                # 未执行的用例不构成时长证据（fail closed：托管路径缺证据即拦）
+                continue
             try:
                 seconds = float(time_attr)
             except ValueError:
@@ -199,7 +202,7 @@ def collect_ids(
 
 
 def collect_base_ids(
-    base: str, base_paths: Sequence[str], root: Path
+    base: str, base_paths: Sequence[str] | None, root: Path
 ) -> set[tuple[str, str]]:
     """
     Collect pytest case identities at the base revision inside a worktree.
@@ -213,14 +216,16 @@ def collect_base_ids(
     """
     collectable = [
         path
-        for path in sorted(set(base_paths))
+        for path in sorted(set(base_paths or []))
         if (
             path.endswith("/tests")
             or (Path(path).name.startswith("test_") and path.endswith(".py"))
         )
         and "/" in path
     ]
-    if not collectable:
+    if base_paths is None:
+        collectable = []
+    if not collectable and base_paths is not None:
         return set()
     with tempfile.TemporaryDirectory() as td:
         worktree = Path(td) / "base"
@@ -236,6 +241,8 @@ def collect_base_ids(
                 for path in collectable
                 if (worktree / path).is_file() or (worktree / path).is_dir()
             ]
+            if not existing and base_paths is not None:
+                return set()
             raw = collect_ids(existing, cwd=worktree, tolerate_collection_errors=True)
         finally:
             subprocess.run(  # noqa: S603 - git 固定参数
@@ -317,18 +324,21 @@ def _owner_of(path: str) -> str | None:
     return None
 
 
-def gate_scope(name_status: Mapping[str, str]) -> dict[str, str]:
+def gate_scope(name_status: Mapping[str, str]) -> dict[str, str] | None:
     """
-    Changed test files plus whole test dirs of touched backend owners.
+    Gate scope for the head-vs-base collection diff; None = whole suite.
 
-    Production or conftest changes can create pytest cases in unchanged
-    test modules (parametrization over production enums, generate_tests
-    hooks), so every touched backend owner's whole ``tests`` directory
-    enters the head-vs-base collection diff.
+    Changed test files and conftests bring their owner's whole ``tests``
+    directory into the diff; any change outside a tests directory (i.e.
+    production code) can parametrize tests in ANY package — such changes
+    diff the entire collected suite so cross-package generated cases
+    (e.g. a strategy seed spec consumed by application tests) are seen.
     """
     scope: dict[str, str] = {}
     owners: set[str] = set()
     for head, base_path in name_status.items():
+        if "/tests/" not in head and not head.endswith("/tests"):
+            return None
         owner = _owner_of(head)
         if owner is not None:
             owners.add(owner)
@@ -374,13 +384,19 @@ def new_tests_at_head(
     cases resolve exactly; base identities are matched at each file's base
     (renamed) path.
     """
+
+    def _matches(path: str, scope_path: str) -> bool:
+        if path == scope_path:
+            return True
+        return scope_path.endswith("/tests") and path.startswith(scope_path + "/")
+
     result: dict[str, set[str]] = {}
     for head_path, base_path in files.items():
-        base_ids = {case for file, case in base_cases if file == base_path}
+        base_ids = {case for file, case in base_cases if _matches(file, base_path)}
         cases = {
             case
             for file, case in collected_cases
-            if file == head_path and case not in base_ids
+            if _matches(file, head_path) and case not in base_ids
         }
         if cases:
             result[head_path] = cases
@@ -500,13 +516,19 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.root)
     base_sha = resolve_base(args.base, root)
     files = changed_test_files(base_sha, root)
-    if not files:
-        print("[slow-test-gate] no changed test files; pass")
+    if files is not None and not files:
+        print("[slow-test-gate] no changed test files or touched owners; pass")
         return 0
 
-    raw_collected = collect_ids(sorted(files))
-    collected_cases = _case_set(raw_collected)
-    base_cases = collect_base_ids(base_sha, files.values(), root)
+    if files is None:
+        raw_collected = collect_ids(None)
+        collected_cases = _case_set(raw_collected)
+        base_cases = collect_base_ids(base_sha, None, root)
+        files = {file: file for file, _ in collected_cases}
+    else:
+        raw_collected = collect_ids(sorted(files))
+        collected_cases = _case_set(raw_collected)
+        base_cases = collect_base_ids(base_sha, files.values(), root)
     new_cases = new_tests_at_head(files, collected_cases, base_cases)
     if not new_cases:
         count = len(files)

@@ -116,6 +116,7 @@ class _ShellWord(str):
     redirect: bool = False
 
 
+_PYTEST_NO_TESTS_COLLECTED = 5
 _SHELL_WORDS = re.compile(
     r"""(?:[^\s;&|<>"'\\]|\\.|"(?:[^"\\]|\\.)*"|'[^']*')+|&&|\|\||<<-?|>>?|[<;&|\n]"""
 )
@@ -1268,6 +1269,31 @@ def run_verification(
         )
         transcript = f"$ {shlex.join(command)}\nexit code: {result.returncode}"
         transcripts.append(transcript)
+        if result.returncode == _PYTEST_NO_TESTS_COLLECTED and command[:2] == [
+            "task",
+            "test",
+        ]:
+            # fast 车道无可选用例（pytest exit 5）：fail-closed 升级全量检查
+            fallback = ["task", "check"]
+            print(f"$ {shlex.join(fallback)}", flush=True)
+            fallback_result = subprocess.run(
+                fallback,
+                cwd=root,
+                check=False,
+                env={
+                    **os.environ,
+                    "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
+                    "_TYPER_FORCE_DISABLE_TERMINAL": "1",
+                },
+            )
+            transcripts.append(
+                f"$ {shlex.join(fallback)}\nexit code: {fallback_result.returncode}"
+            )
+            if fallback_result.returncode != 0:
+                return VerificationResult(
+                    False, "\n\n".join(transcripts)[-MAX_FEEDBACK:]
+                )
+            continue
         if result.returncode != 0:
             return VerificationResult(False, "\n\n".join(transcripts)[-MAX_FEEDBACK:])
     return VerificationResult(True, "\n\n".join(transcripts)[-MAX_FEEDBACK:])

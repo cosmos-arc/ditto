@@ -179,7 +179,7 @@ def test_unit_marker_beats_e2e_path_budget() -> None:
     ]
 
 
-def test_gate_scope_pulls_owner_dirs_for_production_changes() -> None:
+def test_gate_scope_whole_suite_for_production_changes() -> None:
     seeds = "packages/application/src/ditto_application/seeds.py"
     kernel_test = "packages/kernel/tests/unit/test_unchanged.py"
     name_status = {
@@ -187,10 +187,26 @@ def test_gate_scope_pulls_owner_dirs_for_production_changes() -> None:
         kernel_test: kernel_test,
         "docs/README.md": "docs/README.md",
     }
-    assert gate.gate_scope(name_status) == {
-        kernel_test: kernel_test,
-        "packages/application/tests": "packages/application/tests",
-        "packages/kernel/tests": "packages/kernel/tests",
+    assert gate.gate_scope(name_status) is None
+
+
+def test_gate_scope_owner_dir_for_conftest_changes() -> None:
+    conftest = "packages/strategy/tests/conftest.py"
+    assert gate.gate_scope({conftest: conftest}) == {
+        "packages/strategy/tests": "packages/strategy/tests"
+    }
+
+
+def test_new_tests_at_head_matches_directory_scope_by_prefix() -> None:
+    files = {"packages/application/tests": "packages/application/tests"}
+    collected = {
+        ("packages/application/tests/unit/test_a.py", "test_new"),
+        ("packages/application/tests/unit/test_a.py", "test_kept"),
+        ("packages/kernel/tests/unit/test_b.py", "test_kernel"),
+    }
+    base = {("packages/application/tests/unit/test_a.py", "test_kept")}
+    assert gate.new_tests_at_head(files, collected, base) == {
+        "packages/application/tests": {"test_new"}
     }
 
 
