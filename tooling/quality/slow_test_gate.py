@@ -620,8 +620,9 @@ def main(argv: list[str] | None = None) -> int:
         print("[slow-test-gate] no changed test files or touched owners; pass")
         return 0
 
+    head_targets: list[str] | None = None
     if files is None:
-        raw_collected = collect_ids(None)
+        raw_collected = collect_ids(None, cwd=root)
         collected_cases = _case_set(raw_collected)
         base_cases = collect_base_ids(base_sha, None, root)
         files = {file: renames.get(file, file) for file, _ in collected_cases}
@@ -629,12 +630,12 @@ def main(argv: list[str] | None = None) -> int:
         head_targets = [
             path
             for path in sorted(files)
-            if not path.endswith("/tests") or Path(path).is_dir()
+            if not path.endswith("/tests") or (root / path).is_dir()
         ]
         if not head_targets:
             print("[slow-test-gate] no head test targets exist; pass")
             return 0
-        raw_collected = collect_ids(head_targets)
+        raw_collected = collect_ids(head_targets, cwd=root)
         collected_cases = _case_set(raw_collected)
         base_cases = collect_base_ids(base_sha, files.values(), root)
     new_cases = new_tests_at_head(files, collected_cases, base_cases)
@@ -650,13 +651,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     durations = parse_junit(junit_paths, root)
-    raw_slow_marked = collect_ids(sorted(files), _EXEMPT_MARKER_EXPR)
+    marker_targets = head_targets if head_targets is not None else None
+    raw_slow_marked = collect_ids(marker_targets, _EXEMPT_MARKER_EXPR, cwd=root)
     exempt_functions = all_marked_functions(raw_collected, raw_slow_marked)
     unit_functions = all_marked_functions(
-        raw_collected, collect_ids(sorted(files), "unit")
+        raw_collected, collect_ids(marker_targets, "unit", cwd=root)
     )
     integration_functions = all_marked_functions(
-        raw_collected, collect_ids(sorted(files), "integration")
+        raw_collected, collect_ids(marker_targets, "integration", cwd=root)
     )
     unit_by_file: dict[str, set[str]] = {}
     integration_by_file: dict[str, set[str]] = {}
