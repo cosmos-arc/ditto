@@ -145,12 +145,16 @@ def parse_junit(paths: list[Path], root: Path) -> dict[str, dict[str, float]]:
     return durations
 
 
+_COLLECT_TIMEOUT_SECONDS = 120
+
+
 def collect_ids(
     changed_files: Sequence[str] | None,
     marker_expr: str | None = None,
     *,
     cwd: Path | None = None,
     tolerate_collection_errors: bool = False,
+    extra_env: Mapping[str, str] | None = None,
 ) -> set[str]:
     """
     Collect raw node ids from pytest, optionally filtered by a marker.
@@ -179,10 +183,24 @@ def collect_ids(
         command.append("--continue-on-collection-errors")
     if changed_files:
         command += list(changed_files)
-    env = dict(os.environ, PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring")
-    result = subprocess.run(  # noqa: S603 - venv 内固定 pytest 参数
-        command, capture_output=True, text=True, check=False, env=env, cwd=cwd
+    env = dict(
+        os.environ,
+        PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring",
+        **(extra_env or {}),
     )
+    try:
+        result = subprocess.run(  # noqa: S603 - venv 内固定 pytest 参数
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+            cwd=cwd,
+            timeout=_COLLECT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        message = f"collect-only timed out after {_COLLECT_TIMEOUT_SECONDS}s"
+        raise SystemExit(message) from error
     # pytest 9 exits 1 (execution short-circuited) or 2 (internal) for
     # collection errors under --continue-on-collection-errors; 5 = nothing
     # collected. Tolerated mode accepts the partial identities.
@@ -243,7 +261,21 @@ def collect_base_ids(
             ]
             if not existing and base_paths is not None:
                 return set()
-            raw = collect_ids(existing, cwd=worktree, tolerate_collection_errors=True)
+            # editable 安装会把 import 劫持到 HEAD 检出——PYTHONPATH 前插
+            # worktree 的 src 目录，基线收集解析到基线源码（含参数化定义）。
+            src_dirs = [
+                *sorted(worktree.glob("packages/*/src")),
+                worktree / "apps/backend/src",
+            ]
+            prepend = os.pathsep.join(str(p) for p in src_dirs)
+            existing_path = os.environ.get("PYTHONPATH", "")
+            combined = prepend + (os.pathsep + existing_path if existing_path else "")
+            raw = collect_ids(
+                existing,
+                cwd=worktree,
+                tolerate_collection_errors=True,
+                extra_env={"PYTHONPATH": combined},
+            )
         finally:
             subprocess.run(  # noqa: S603 - git 固定参数
                 [_GIT, "-C", str(root), "worktree", "remove", "--force", str(worktree)],
@@ -413,10 +445,13 @@ def new_tests_at_head(
         if entry is None:
             continue  # 范围外（scoped 模式）的收集用例不参与差集
         _, base_path = entry
+        # 目录范围条目是恒等映射：基线侧只与同路径的具体文件比对，
+        # 其他基线模块的同名用例不得为新用例提供庇护。
+        candidate_files = {file} if base_path.endswith("/tests") else {base_path}
         base_names = {
             base_case
             for base_file, base_case in base_cases
-            if _matches(base_file, base_path)
+            if base_file in candidate_files
         }
         if case in base_names:
             continue
