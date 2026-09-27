@@ -40,4 +40,6 @@ Ditto 是面向个人全栈量化投资者的本地优先 A 股与 ETF 量化决
 
 日常调研、小修复和文档调整在当前目录处理；大型迭代用独立分支和 worktree。contract、lockfile、migration 和 generator 配置由 integrator 单写；各 worktree 隔离端口及 state/cache/log/browser 输出。
 
-不在 main 直接 commit/push，不 force push，不提交 secrets。
+不在 main 直接 commit/push，不 force push，不提交 secrets。PR 合并由用户手动确认执行：
+agent 默认只推进到可合并状态（评审落单、线程处理、适用门通过）并报告等待，仅当用户
+当次明确指示时才代为合并，一次授权不外推到后续 PR。
