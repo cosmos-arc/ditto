@@ -18,9 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from tooling.quality.slow_test_gate import (
     INTEGRATION_THRESHOLD,
     UNIT_THRESHOLD,
+    all_marked_functions,
     collect_ids,
     layer_budget,
-    normalize_node,
     parse_junit,
 )
 
@@ -55,14 +55,6 @@ def _run_suite(junit: Path) -> int:
     ).returncode
 
 
-def _marked_nodes(marker: str) -> set[tuple[str, str]]:
-    return {
-        node
-        for raw in collect_ids(None, marker)
-        if (node := normalize_node(raw)) is not None
-    }
-
-
 def analyze_slow_tests() -> int:
     """Run the suite and report tests above their budget; 0 when compliant."""
     with tempfile.TemporaryDirectory() as td:
@@ -77,17 +69,20 @@ def analyze_slow_tests() -> int:
         durations = parse_junit([junit], Path.cwd())
 
     print("[*] 收集标记身份...")
-    unit_nodes = _marked_nodes("unit")
-    integration_nodes = _marked_nodes("integration")
+    raw_all = collect_ids(None)
+    unit_functions = all_marked_functions(raw_all, collect_ids(None, "unit"))
+    integration_functions = all_marked_functions(
+        raw_all, collect_ids(None, "integration")
+    )
 
     slow_unit: list[tuple[float, str]] = []
     slow_integration: list[tuple[float, str]] = []
-    for file, by_name in sorted(durations.items()):
-        for name, seconds in by_name.items():
-            limit = layer_budget(file, name, unit_nodes, integration_nodes)
+    for file, by_case in sorted(durations.items()):
+        for case, seconds in by_case.items():
+            limit = layer_budget(file, case, unit_functions, integration_functions)
             if seconds <= limit:
                 continue
-            entry = (seconds, f"{file}::{name}")
+            entry = (seconds, f"{file}::{case}")
             target = slow_unit if limit == UNIT_THRESHOLD else slow_integration
             target.append(entry)
 
