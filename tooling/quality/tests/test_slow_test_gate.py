@@ -49,17 +49,33 @@ class TestOuter:
     }
 
 
-def test_new_test_names_distinguishes_classes() -> None:
-    base = "class TestA:\n    def test_valid(self): ...\n"
-    head = (
-        "class TestA:\n    def test_valid(self): ...\n\n"
-        "class TestB:\n    def test_valid(self): ...\n"
+def test_test_names_expands_same_module_inheritance() -> None:
+    source = """
+class BaseTests:
+    def test_slow(self): ...
+    def utility(self): ...
+
+class TestChild(BaseTests):
+    pass
+
+class TestUnrelated:
+    pass
+"""
+    assert gate.test_names(source) == {"BaseTests.test_slow", "TestChild.test_slow"}
+
+
+def test_normalize_node_isolates_parameter_suffix_first() -> None:
+    assert gate._normalize_node(
+        "x/tests/unit/a.py::TestSubject::test_m[slow::case]"
+    ) == (
+        "x/tests/unit/a.py",
+        "TestSubject.test_m",
     )
-    assert gate.new_test_names(base, head) == {"TestB.test_valid"}
-    assert gate.new_test_names(None, head) == {
-        "TestA.test_valid",
-        "TestB.test_valid",
-    }
+    assert gate._normalize_node("x/tests/unit/a.py::test_plain") == (
+        "x/tests/unit/a.py",
+        "test_plain",
+    )
+    assert gate._normalize_node("warning: some noisy line") is None
 
 
 def test_parse_junit_keeps_class_identity_and_merges_params(tmp_path: Path) -> None:
@@ -113,6 +129,21 @@ def test_new_tests_at_head_subtracts_test_rename_base() -> None:
     files = {"x/tests/unit/test_new.py": "x/tests/unit/test_old.py"}
     collected = {("x/tests/unit/test_new.py", "test_kept")}
     base_source = "def test_kept(): ...\n"
+    new = gate.new_tests_at_head(
+        "base", files, collected, Path(), show=lambda b, p, r: base_source
+    )
+    assert new == {}
+
+
+def test_new_tests_at_head_subtracts_inherited_base_identities() -> None:
+    files = {"x/tests/unit/test_new.py": "x/tests/unit/test_old.py"}
+    collected = {("x/tests/unit/test_new.py", "TestChild.test_slow")}
+    base_source = (
+        "class BaseTests:\n"
+        "    def test_slow(self): ...\n\n"
+        "class TestChild(BaseTests):\n"
+        "    pass\n"
+    )
     new = gate.new_tests_at_head(
         "base", files, collected, Path(), show=lambda b, p, r: base_source
     )
@@ -175,25 +206,30 @@ def test_new_tests_absent_from_junit_are_noted_not_blocked() -> None:
 
 
 class _Script:
-    """Replace the git/collect subprocess layers with canned fixtures."""
+    """Replace the git/collect subprocess layers with canned raw fixtures."""
 
     def __init__(
         self,
         files: dict[str, str],
         new_names: dict[str, set[str]],
-        marked: set[tuple[str, str]],
+        raw_all: set[str],
+        raw_marked: set[str],
     ) -> None:
         self.files = files
         self.new_names = new_names
-        self.marked = marked
+        self.raw_all = raw_all
+        self.raw_marked = raw_marked
 
     def changed_test_files(self, base: str, root: Path) -> dict[str, str]:
         return self.files
 
+    def resolve_base(self, base: str, root: Path) -> str:
+        return "base0000"
+
     def collect_ids(
-        self, changed_files: list[str], marker_expr: str | None = None
-    ) -> set[tuple[str, str]]:
-        return set(self.marked) if marker_expr else set()
+        self, changed_files: list[str] | None, marker_expr: str | None = None
+    ) -> set[str]:
+        return set(self.raw_marked) if marker_expr else set(self.raw_all)
 
     def new_tests_at_head(
         self,
@@ -214,26 +250,42 @@ def _run_main(
         module.parent.mkdir(parents=True, exist_ok=True)
         module.write_text("", encoding="utf-8")
         (tmp_path / "junit-0-0.xml").write_text(junit, encoding="utf-8")
+    monkeypatch.setattr(gate, "resolve_base", script.resolve_base)
     monkeypatch.setattr(gate, "changed_test_files", script.changed_test_files)
     monkeypatch.setattr(gate, "collect_ids", script.collect_ids)
     monkeypatch.setattr(gate, "new_tests_at_head", script.new_tests_at_head)
     return gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path)])
 
 
+def _raw(pair_id: str) -> set[str]:
+    return {f"x/tests/unit/a.py::{pair_id}"}
+
+
 def _files() -> dict[str, str]:
     return {"x/tests/unit/a.py": "x/tests/unit/a.py"}
+
+
+def _script(
+    new_names: dict[str, set[str]],
+    marked: set[str] | None = None,
+    raw_all: set[str] | None = None,
+) -> _Script:
+    derived = {
+        rid for names in new_names.values() for name in names for rid in _raw(name)
+    }
+    return _Script(_files(), new_names, raw_all or derived, marked or set())
 
 
 def test_exit_zero_when_no_changed_test_files(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    assert _run_main(monkeypatch, _Script({}, {}, set()), tmp_path, None) == 0
+    assert _run_main(monkeypatch, _Script({}, {}, set(), set()), tmp_path, None) == 0
 
 
 def test_exit_zero_when_new_tests_within_threshold(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    script = _Script(_files(), {"x/tests/unit/a.py": {"test_ok"}}, set())
+    script = _script({"x/tests/unit/a.py": {"test_ok"}})
     junit = """<testsuite>
     <testcase classname="x.tests.unit.a" name="test_ok" time="0.20"/>
     </testsuite>"""
@@ -243,7 +295,7 @@ def test_exit_zero_when_new_tests_within_threshold(
 def test_exit_one_when_new_test_exceeds_threshold(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    script = _Script(_files(), {"x/tests/unit/a.py": {"test_bad"}}, set())
+    script = _script({"x/tests/unit/a.py": {"test_bad"}})
     junit = """<testsuite>
     <testcase classname="x.tests.unit.a" name="test_bad" time="1.50"/>
     </testsuite>"""
@@ -253,38 +305,52 @@ def test_exit_one_when_new_test_exceeds_threshold(
 def test_exit_one_when_new_class_test_exceeds_threshold(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    script = _Script(_files(), {"x/tests/unit/a.py": {"TestSubject.test_bad"}}, set())
+    script = _script({"x/tests/unit/a.py": {"TestSubject.test_bad"}})
     junit = """<testsuite>
     <testcase classname="x.tests.unit.a.TestSubject" name="test_bad" time="1.50"/>
     </testsuite>"""
     assert _run_main(monkeypatch, script, tmp_path, junit) == 1
 
 
-def test_exit_zero_when_over_threshold_new_test_is_marked(
+def test_exit_zero_when_every_parameter_case_is_marked(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    script = _Script(
-        _files(),
-        {"x/tests/unit/a.py": {"TestSubject.test_marked"}},
-        {("x/tests/unit/a.py", "TestSubject.test_marked")},
+    script = _script(
+        {"x/tests/unit/a.py": {"test_marked"}},
+        marked=_raw("test_marked[case]"),
     )
     junit = """<testsuite>
-    <testcase classname="x.tests.unit.a.TestSubject" name="test_marked" time="9.00"/>
+    <testcase classname="x.tests.unit.a" name="test_marked[case]" time="9.00"/>
     </testsuite>"""
     assert _run_main(monkeypatch, script, tmp_path, junit) == 0
+
+
+def test_exit_one_when_only_some_parameter_cases_are_marked(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    script = _script(
+        {"x/tests/unit/a.py": {"test_partial"}},
+        marked=_raw("test_partial[marked]"),
+        raw_all={*_raw("test_partial[marked]"), *_raw("test_partial[unmarked]")},
+    )
+    junit = """<testsuite>
+    <testcase classname="x.tests.unit.a" name="test_partial[marked]" time="0.10"/>
+    <testcase classname="x.tests.unit.a" name="test_partial[unmarked]" time="9.00"/>
+    </testsuite>"""
+    assert _run_main(monkeypatch, script, tmp_path, junit) == 1
 
 
 def test_exit_one_when_junit_missing_but_new_tests_exist(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    script = _Script(_files(), {"x/tests/unit/a.py": {"test_any"}}, set())
+    script = _script({"x/tests/unit/a.py": {"test_any"}})
     assert _run_main(monkeypatch, script, tmp_path, None) == 1
 
 
 def test_existing_over_threshold_tests_do_not_block(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    script = _Script(_files(), {"x/tests/unit/a.py": {"test_new_ok"}}, set())
+    script = _script({"x/tests/unit/a.py": {"test_new_ok"}})
     junit = """<testsuite>
     <testcase classname="x.tests.unit.a" name="test_new_ok" time="0.10"/>
     <testcase classname="x.tests.unit.a" name="test_legacy" time="60.00"/>
