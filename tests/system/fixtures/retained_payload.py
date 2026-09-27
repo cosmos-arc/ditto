@@ -21,6 +21,8 @@ def retain_fixture_payload(
     source: str,
     payload: pl.DataFrame,
     created_at: datetime,
+    partition_keys: tuple[str, ...] = (),
+    schema_version: str | None = None,
 ) -> None:
     dates = payload.get_column("trade_date").cast(pl.String).to_list()
     start, end = min(dates), max(dates)
@@ -51,9 +53,16 @@ def retain_fixture_payload(
                 source=source,
                 request_start=start,
                 request_end=end,
-                schema_version=f"fixture.{dataset_id}.v1",
+                # Snapshot identity is content-derived without the asset ref,
+                # so an exchange-scoped twin of the same payload needs an
+                # explicit schema version to stay a distinct snapshot.
+                schema_version=schema_version or f"fixture.{dataset_id}.v1",
                 checksum=artifact.checksum,
-                canonical_asset=DataAssetRef(dataset_id=dataset_id, namespace="market"),
+                canonical_asset=DataAssetRef(
+                    dataset_id=dataset_id,
+                    namespace="market",
+                    partition_keys=partition_keys,
+                ),
                 request_parameters_hash=f"fixture:{dataset_id}:recorded",
                 response_metadata=(("fixture", "isolated-recorded"),),
                 license_record_id=license_record.record_id,
