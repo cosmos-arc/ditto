@@ -649,8 +649,10 @@ class ProviderPayloadTechnicalAnalysisSource:
                 self._snapshot_reader.get_snapshot(prior.snapshot_id) if prior else None
             )
             observed = snapshot_observed_by(snapshot, context.as_of)
-            if prior_snapshot is None or observed > snapshot_observed_by(
-                prior_snapshot, context.as_of
+            if (
+                prior is None
+                or prior_snapshot is None
+                or observed > snapshot_observed_by(prior_snapshot, context.as_of)
             ):
                 factors[day] = AdjustmentFactor(
                     factor,
