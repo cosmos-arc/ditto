@@ -204,29 +204,13 @@ def _tied_price_conflicts(
     """
     Equal observation timestamps do not establish revision order.
 
-    Any differing chart-contributing value from different shards then
-    depends on catalog ordering rather than PIT evidence and must fail
-    closed.
+    Distinct tied shards for one session leave the chosen bar lineage and
+    its knowledge/publication metadata dependent on catalog ordering even
+    when the numeric values agree, so any distinct tie fails closed.
     """
     return (
         observed_at(bar.source_snapshot_id) == observed_at(previous.source_snapshot_id)
         and bar.source_snapshot_id != previous.source_snapshot_id
-        and (
-            bar.open,
-            bar.high,
-            bar.low,
-            bar.close,
-            bar.volume,
-            bar.turnover,
-        )
-        != (
-            previous.open,
-            previous.high,
-            previous.low,
-            previous.close,
-            previous.volume,
-            previous.turnover,
-        )
     )
 
 
@@ -594,8 +578,11 @@ class MarketChartQueryFacade:
         """
         Keep each exact-request key's newest observed revision.
 
-        Tied observation with different content has no PIT revision order;
-        catalog iteration must not pick the winning payload.
+        Tied observation with a distinct snapshot has no PIT revision order;
+        catalog iteration must not pick the winning payload. Snapshot
+        identity covers source, dataset, bounds, schema version, and
+        checksum, so a distinct tied ID always hides a content or schema
+        difference even when the payload checksum alone matches.
         """
         revisions: dict[tuple[str, str, str, str], ProviderSnapshot] = {}
         for item in candidates:
@@ -611,7 +598,10 @@ class MarketChartQueryFacade:
                 continue
             item_observed = snapshot_observed_by(item, cutoff)
             prior_observed = snapshot_observed_by(prior, cutoff)
-            if item_observed == prior_observed and item.checksum != prior.checksum:
+            if (
+                item_observed == prior_observed
+                and item.snapshot_id != prior.snapshot_id
+            ):
                 raise AppQueryError("tied exact-request chart revisions conflict")
             if item_observed > prior_observed:
                 revisions[key] = item
@@ -865,6 +855,90 @@ class MarketChartQueryFacade:
             )
         return factors, factor_snapshots
 
+    def _reject_suspended_price_conflicts(
+        self,
+        request: MarketChartRequest,
+        cutoff: datetime,
+        calendar: RetainedCalendarWindow,
+        consumable_days: frozenset[str],
+        suspensions: dict[str, SuspensionEvidence],
+    ) -> None:
+        """
+        Fail closed when retained price rows contradict full-day suspensions.
+
+        When every consumable session is suspended, price selection is
+        skipped for authority purposes, but a retained nonempty price
+        artifact covering those sessions still contradicts the status
+        authority: its rows are loaded over the collapsed exact-request
+        revisions and run through the same suspension-conflict guard the
+        normal path uses. Absence-only polls carry no rows and stay outside
+        price authority, so they cannot turn this into a mixed-source
+        rejection. No eager ticker mapping is demanded — identity resolves
+        lazily per row.
+        """
+        suspended = consumable_days & suspensions.keys()
+        if not suspended:
+            return
+        dataset = f"{request.asset_class}_daily"
+        sorted_suspended = sorted(day.replace("-", "") for day in suspended)
+        candidates = [
+            item
+            for item in self._snapshots.list_snapshots(dataset_id=dataset)
+            if item.created_at <= cutoff
+            and (
+                item.payload_retained
+                or (
+                    item.row_count == 0
+                    and dict(item.response_metadata).get("snapshot_layer")
+                    == "verified_empty_provider_observation"
+                )
+            )
+            and _window_hits(
+                sorted_suspended,
+                _snapshot_range(item.request_start),
+                _snapshot_range(item.request_end),
+            )
+        ]
+        if not candidates:
+            return
+        selected = self._collapse_revisions(candidates, cutoff)
+        if not any(item.payload_retained for item in selected):
+            return
+        instrument_code = self._instrument_code(
+            request,
+            selected[0].source,
+            cutoff,
+            calendar,
+            frozenset(),
+            window=(request.start_date, request.end_date),
+        )
+        context = PITQueryContext(
+            as_of=cutoff,
+            knowledge_cutoff=cutoff,
+            publication_cutoff=cutoff,
+            source_snapshots=(
+                DatasetSnapshot(
+                    dataset_id=dataset,
+                    dataset_version=selected[0].schema_version,
+                    source_snapshot_ids=tuple(item.snapshot_id for item in selected),
+                    created_at=max(item.created_at for item in selected),
+                ),
+            ),
+        )
+        raw = self._bars.load(
+            context,
+            instrument_id=InstrumentId(request.instrument_id),
+            instrument_code=instrument_code,
+            window=(request.start_date, request.end_date),
+        )
+        _visible_bars(
+            raw,
+            calendar,
+            request,
+            suspensions,
+            _observed_at_reader(self._snapshots, cutoff),
+        )
+
     def _load_calendar(
         self, request: MarketChartRequest, cutoff: datetime
     ) -> tuple[RetainedCalendarWindow, tuple[str, ...]]:
@@ -1031,7 +1105,12 @@ class MarketChartQueryFacade:
         if not price_consumable_days:
             # Every consumable session is a full-day suspension: no price bar
             # is knowable or required, and the suspension evidence carries
-            # the lineage.
+            # the lineage. A retained nonempty price artifact over those
+            # sessions still contradicts the status authority, so its rows
+            # route through the suspension-conflict guard first.
+            self._reject_suspended_price_conflicts(
+                request, cutoff, calendar, consumable_days, suspensions
+            )
             return MarketChartView(
                 instrument_id=instrument_id,
                 period=period,

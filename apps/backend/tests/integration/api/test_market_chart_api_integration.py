@@ -2887,6 +2887,158 @@ def test_chart_calendar_scope_matches_instrument_exchange(tmp_path: Path) -> Non
 
 
 @pytest.mark.pit
+def test_chart_rejects_tied_exact_request_schema_revisions(tmp_path: Path) -> None:
+    """The same payload captured under two schema versions at one observation
+    time is a distinct tied snapshot identity; the collapse fails closed so
+    the dataset version and lineage cannot depend on ID ordering."""
+    chart, prior, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    twin = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            prior.created_at,
+        ),
+        schema_version="stock_daily.v2",
+        snapshot_id="snapshot:tushare:stock_daily:sha256:schema-version-twin",
+    )
+    fixture = chart._snapshots.list_snapshots()
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, twin)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="tied exact-request"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 10),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_tied_price_authorities_with_agreeing_values(
+    tmp_path: Path,
+) -> None:
+    """Distinct equal-time shards for one session are ambiguous even when
+    their values agree: the chosen bar lineage and availability metadata
+    would depend on catalog ordering, so the tie fails closed."""
+    chart, prior, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    twin = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            prior.created_at,
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
+    fixture = chart._snapshots.list_snapshots()
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, twin)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="tied price revisions conflict"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 9),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
+def test_chart_rejects_price_rows_when_all_sessions_suspended(
+    tmp_path: Path,
+) -> None:
+    """When every consumable session is a full-day suspension, a retained
+    price row over those sessions still contradicts the status authority and
+    fails closed instead of being suppressed by the empty-view early return."""
+    chart, _, _ = _chart(tmp_path, poisoned=False, suspended=True)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    suspended_day_price = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "open": [10.0],
+                    "high": [10.5],
+                    "low": [9.5],
+                    "close": [10.2],
+                    "volume": [100.0],
+                    "amount": [1000.0],
+                }
+            ),
+            datetime(2026, 3, 11, 7, tzinfo=UTC),
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*chart._snapshots.list_snapshots(), suspended_day_price)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(
+        AppQueryError, match="chart price conflicts with retained full-day suspension"
+    ):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 11),
+                end_date=date(2026, 3, 11),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_conflicting_calendar_revisions(tmp_path: Path) -> None:
     """Equal observation timestamps do not establish revision order; two
     calendar revisions tied on observation and conflicting on a day's open
