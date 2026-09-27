@@ -2,9 +2,10 @@
 Block new tests exceeding duration thresholds unless marked slow/capacity.
 
 Durations come from shard junit XML artifacts, so no second pytest run is needed.
-"New" means a test function present in a changed test file at HEAD but absent at
-the merge base (AST name diff). Existing tests are exempt by design; a legitimately
-slow new test escapes via ``@pytest.mark.slow``/``@pytest.mark.capacity``.
+"New" means a class-qualified test (``Class.method`` or bare function) present in
+a changed test file at HEAD but absent at the merge base, with renames resolved
+to their original path. Existing tests are exempt by design; a legitimately slow
+new test escapes via ``@pytest.mark.slow``/``@pytest.mark.capacity``.
 """
 
 from __future__ import annotations
@@ -23,6 +24,8 @@ UNIT_THRESHOLD = 0.5
 INTEGRATION_THRESHOLD = 5.0
 _EXEMPT_MARKER_EXPR = "slow or capacity"
 _GIT = shutil.which("git") or "git"
+_DUAL_PATH_COUNT = 2
+_SINGLE_PATH_COUNT = 1
 
 
 def threshold_for(path: str) -> float:
@@ -32,44 +35,89 @@ def threshold_for(path: str) -> float:
     return UNIT_THRESHOLD
 
 
+class _TestCollector(ast.NodeVisitor):
+    """Collect class-qualified test names (``Class.method`` or bare ``name``)."""
+
+    def __init__(self) -> None:
+        self.names: set[str] = set()
+        self._classes: list[str] = []
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self._classes.append(node.name)
+        self.generic_visit(node)
+        self._classes.pop()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._record(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._record(node)
+
+    def _record(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        if node.name.startswith("test_"):
+            self.names.add(".".join([*self._classes, node.name]))
+
+
 def test_names(source: str) -> set[str]:
-    """Collect every ``test_*`` function or method name in a module source."""
+    """Collect class-qualified ``test_*`` names from module source."""
     try:
         tree = ast.parse(source)
     except SyntaxError:
         return set()
-    names: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(
-            node, (ast.FunctionDef, ast.AsyncFunctionDef)
-        ) and node.name.startswith("test_"):
-            names.add(node.name)
-    return names
+    collector = _TestCollector()
+    collector.visit(tree)
+    return collector.names
 
 
 def new_test_names(base_source: str | None, head_source: str) -> set[str]:
-    """Diff test names between base and head sources; absent base means all new."""
+    """Diff qualified names between base and head; absent base means all new."""
     return test_names(head_source) - test_names(base_source or "")
 
 
-def _base_name(junit_name: str) -> str:
-    """Reduce a junit display name to its bare test function name."""
-    bare = junit_name.split("[", 1)[0]
-    return bare.rsplit("::", 1)[-1]
+def _bare_name(display: str) -> str:
+    """Reduce a junit/collect display name to its bare final identifier."""
+    segment = display.split("[", 1)[0]
+    return segment.rsplit("::", 1)[-1]
 
 
-def parse_junit(paths: list[Path]) -> dict[str, dict[str, float]]:
+def _module_path(
+    classname: str, root: Path, cache: dict[str, str | None]
+) -> str | None:
     """
-    Map file path -> test name -> slowest observed duration in seconds.
+    Resolve the longest dotted junit-classname prefix that exists as a file.
 
-    junit classnames are rootdir-relative dotted module names (e.g.
-    ``tooling.quality.tests.test_x``); tests live outside ``src/`` layouts,
-    so dots-to-slashes reproduces the repository path exactly.
+    junit classnames append the class chain after the module name
+    (``pkg.tests.unit.test_x.TestSubject``), so only a prefix that exists on
+    disk is the module; the remainder is the class chain.
+    """
+    if classname in cache:
+        return cache[classname]
+    parts = classname.split(".")
+    resolved = None
+    for index in range(len(parts), 0, -1):
+        candidate = Path("/".join(parts[:index]) + ".py")
+        if (root / candidate).is_file():
+            resolved = str(candidate)
+            break
+    cache[classname] = resolved
+    return resolved
+
+
+def parse_junit(paths: list[Path], root: Path) -> dict[str, dict[str, float]]:
+    """
+    Map file path -> bare test name -> slowest observed duration.
+
+    junit identity is (module, bare name); class chains are absent from the
+    ``name`` attribute on this pytest version, so same-named methods across
+    classes max-merge into one entry. That is conservative for gating: a slow
+    new ``TestB.test_valid`` surfaces even when legacy ``TestA.test_valid``
+    shares the name.
     """
     durations: dict[str, dict[str, float]] = {}
+    cache: dict[str, str | None] = {}
     for path in paths:
-        root = ET.parse(path).getroot()  # noqa: S314 - junit 来自本仓 CI 工件
-        for case in root.iter("testcase"):
+        xml_root = ET.parse(path).getroot()  # noqa: S314 - junit 来自本仓 CI 工件
+        for case in xml_root.iter("testcase"):
             classname = case.get("classname")
             name = case.get("name")
             time_attr = case.get("time")
@@ -79,15 +127,17 @@ def parse_junit(paths: list[Path]) -> dict[str, dict[str, float]]:
                 seconds = float(time_attr)
             except ValueError:
                 continue
-            file_path = classname.replace(".", "/") + ".py"
-            by_name = durations.setdefault(file_path, {})
-            key = _base_name(name)
+            module = _module_path(classname, root, cache)
+            if module is None:
+                continue
+            key = _bare_name(name)
+            by_name = durations.setdefault(module, {})
             by_name[key] = max(by_name.get(key, 0.0), seconds)
     return durations
 
 
 def run_collect(changed_files: list[str]) -> set[tuple[str, str]]:
-    """Collect (file, test name) pairs marked slow or capacity in changed files."""
+    """Collect (file, qualified name) pairs marked slow or capacity in files."""
     if not changed_files:
         return set()
     env = dict(os.environ, PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring")
@@ -98,6 +148,7 @@ def run_collect(changed_files: list[str]) -> set[tuple[str, str]]:
             "pytest",
             "--collect-only",
             "-q",
+            "--import-mode=importlib",
             "-o",
             "addopts=",
             "-p",
@@ -123,7 +174,9 @@ def run_collect(changed_files: list[str]) -> set[tuple[str, str]]:
         file_part, *rest = line.split("::")
         if not file_part.endswith(".py") or not rest:
             continue
-        exempt.add((file_part, _base_name(rest[-1])))
+        qualified = ".".join(_bare_name(segment) for segment in rest)
+        exempt.add((file_part, qualified))
+        exempt.add((file_part, _bare_name(qualified)))
     return exempt
 
 
@@ -136,9 +189,10 @@ def find_violations(
     violations: list[tuple[str, str, float, float]] = []
     for file, names in new_tests.items():
         for name in names:
-            if (file, name) in exempt:
+            bare = name.rsplit(".", 1)[-1]
+            if (file, name) in exempt or (file, bare) in exempt:
                 continue
-            measured = durations.get(file, {}).get(name)
+            measured = durations.get(file, {}).get(bare)
             if measured is None:
                 continue
             limit = threshold_for(file)
@@ -147,21 +201,44 @@ def find_violations(
     return sorted(violations, key=lambda item: -item[2])
 
 
-def changed_test_files(base: str, root: Path) -> list[str]:
-    """List added/changed/renamed test modules between base and HEAD."""
+def parse_name_status(raw: str) -> dict[str, str]:
+    """Parse ``git diff -z --name-status -M`` into head path -> base path."""
+    fields = raw.split("\0")
+    mapping: dict[str, str] = {}
+    index = 0
+    while index < len(fields):
+        status = fields[index]
+        if not status:
+            index += 1
+            continue
+        dual = status.startswith(("R", "C"))
+        span = _DUAL_PATH_COUNT + 1 if dual else _SINGLE_PATH_COUNT + 1
+        entries = fields[index + 1 : index + span]
+        if dual and len(entries) == _DUAL_PATH_COUNT:
+            mapping[entries[1]] = entries[0]
+        elif not dual and len(entries) == _SINGLE_PATH_COUNT:
+            mapping[entries[0]] = entries[0]
+        index += span
+    return mapping
+
+
+def changed_test_files(base: str, root: Path) -> dict[str, str]:
+    """Map changed test modules to their base path (rename-aware)."""
     merge_base = subprocess.run(  # noqa: S603 - git 固定参数
         [_GIT, "-C", str(root), "merge-base", "HEAD", base],
         capture_output=True,
         text=True,
         check=True,
     ).stdout.strip()
-    diff = subprocess.run(  # noqa: S603 - git 固定参数
+    raw = subprocess.run(  # noqa: S603 - git 固定参数
         [
             _GIT,
             "-C",
             str(root),
             "diff",
-            "--name-only",
+            "--name-status",
+            "-z",
+            "-M",
             "--diff-filter=ACMR",
             f"{merge_base}..HEAD",
         ],
@@ -169,30 +246,33 @@ def changed_test_files(base: str, root: Path) -> list[str]:
         text=True,
         check=True,
     ).stdout
-    return sorted(
-        line
-        for line in diff.splitlines()
-        if Path(line).name.startswith("test_") and line.endswith(".py")
-    )
+    mapping = parse_name_status(raw)
+    return {
+        head: base_path
+        for head, base_path in mapping.items()
+        if Path(head).name.startswith("test_") and head.endswith(".py")
+    }
 
 
-def new_tests_at_head(base: str, files: list[str], root: Path) -> dict[str, set[str]]:
-    """Map each changed test file to its test names that do not exist at base."""
+def new_tests_at_head(
+    base: str, files: Mapping[str, str], root: Path
+) -> dict[str, set[str]]:
+    """Map each changed test file to its qualified names absent at base."""
     result: dict[str, set[str]] = {}
-    for file in files:
+    for head_path, base_path in files.items():
         base_source = (
             subprocess.run(  # noqa: S603 - git 固定参数
-                [_GIT, "-C", str(root), "show", f"{base}:{file}"],
+                [_GIT, "-C", str(root), "show", f"{base}:{base_path}"],
                 capture_output=True,
                 text=True,
                 check=False,
             ).stdout
             or None
         )
-        head_source = (root / file).read_text(encoding="utf-8")
+        head_source = (root / head_path).read_text(encoding="utf-8")
         names = new_test_names(base_source, head_source)
         if names:
-            result[file] = names
+            result[head_path] = names
     return result
 
 
@@ -226,8 +306,8 @@ def main(argv: list[str] | None = None) -> int:
         print("[slow-test-gate] cannot evaluate new tests without shard evidence")
         return 1
 
-    durations = parse_junit(junit_paths)
-    exempt = run_collect(files)
+    durations = parse_junit(junit_paths, root)
+    exempt = run_collect(sorted(files))
     violations = find_violations(new_tests, durations, exempt)
 
     total_new = sum(len(names) for names in new_tests.values())
@@ -235,7 +315,8 @@ def main(argv: list[str] | None = None) -> int:
         (file, name)
         for file, names in new_tests.items()
         for name in names
-        if durations.get(file, {}).get(name) is None and (file, name) not in exempt
+        if durations.get(file, {}).get(name.rsplit(".", 1)[-1]) is None
+        and (file, name) not in exempt
     ]
     evaluated = total_new - len(ungated)
     if ungated:
