@@ -196,18 +196,30 @@ def _qfq_baseline_day(
     return anchor_day
 
 
-def _chart_rows(
+def _tied_price_conflicts(
+    observed_at: Callable[[str], datetime], bar: TechnicalBar, previous: TechnicalBar
+) -> bool:
+    """
+    Equal observation timestamps do not establish revision order.
+
+    Conflicting prices from different shards then depend on catalog ordering
+    rather than PIT evidence and must fail closed.
+    """
+    return (
+        observed_at(bar.source_snapshot_id) == observed_at(previous.source_snapshot_id)
+        and bar.source_snapshot_id != previous.source_snapshot_id
+        and (bar.close, bar.open) != (previous.close, previous.open)
+    )
+
+
+def _visible_bars(
     raw: tuple[TechnicalBar, ...],
-    index: _SnapshotIndex,
     calendar: RetainedCalendarWindow,
     request: MarketChartRequest,
-    factors: dict[str, AdjustmentFactor],
     suspensions: dict[str, SuspensionEvidence],
-    ticker: Callable[[date], str | None],
-) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
-    """Select visible sessions, then aggregate complete or partial periods."""
-    as_of = request.now.astimezone(UTC)
-    snapshot_observed_at = index.observed_at
+    observed_at: Callable[[str], datetime],
+) -> dict[str, TechnicalBar]:
+    """Pick each session's newest observed bar inside the clipped window."""
     days = set(calendar.days)
     by_day: dict[str, TechnicalBar] = {}
     for bar in raw:
@@ -233,10 +245,28 @@ def _chart_rows(
                 else "chart bar is outside the retained trading calendar"
             )
         previous = by_day.get(day)
-        if previous is None or snapshot_observed_at(
-            bar.source_snapshot_id
-        ) > snapshot_observed_at(previous.source_snapshot_id):
+        if previous is None or observed_at(bar.source_snapshot_id) > observed_at(
+            previous.source_snapshot_id
+        ):
             by_day[day] = bar
+        elif _tied_price_conflicts(observed_at, bar, previous):
+            raise AppQueryError("tied price revisions conflict for a chart session")
+    return by_day
+
+
+def _chart_rows(
+    raw: tuple[TechnicalBar, ...],
+    index: _SnapshotIndex,
+    calendar: RetainedCalendarWindow,
+    request: MarketChartRequest,
+    factors: dict[str, AdjustmentFactor],
+    suspensions: dict[str, SuspensionEvidence],
+    ticker: Callable[[date], str | None],
+) -> tuple[tuple[MarketChartBar, ...], tuple[str, ...], str | None]:
+    """Select visible sessions, then aggregate complete or partial periods."""
+    as_of = request.now.astimezone(UTC)
+    snapshot_observed_at = index.observed_at
+    by_day = _visible_bars(raw, calendar, request, suspensions, snapshot_observed_at)
     visible_days = [
         day
         for day in calendar.days
@@ -266,7 +296,7 @@ def _chart_rows(
         ).append((day, bar))
     if request.adjustment != "none" and any(day not in factors for day in by_day):
         raise AppQueryError("exact adjustment factor missing for a chart price day")
-    baseline_day = _qfq_baseline_day(request, days, as_of, factors)
+    baseline_day = _qfq_baseline_day(request, set(calendar.days), as_of, factors)
     baseline = factors[baseline_day].value if baseline_day else 1.0
 
     def multiplier(day: str) -> float:

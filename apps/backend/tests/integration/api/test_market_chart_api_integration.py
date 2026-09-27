@@ -2357,6 +2357,56 @@ def test_chart_selects_status_shards_across_the_natural_period(tmp_path: Path) -
 
 
 @pytest.mark.pit
+def test_chart_rejects_tied_conflicting_price_revisions(tmp_path: Path) -> None:
+    """Two overlapping shards with equal observation timestamps and
+    conflicting prices have no PIT revision order; the chart fails closed
+    instead of letting catalog ordering pick the OHLC."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    fixture = chart._snapshots.list_snapshots()
+    prior = fixture[[i.dataset_id for i in fixture].index("stock_daily")]
+    twin = replace(
+        _snapshot(
+            store,
+            "stock_daily",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-09"],
+                    "open": [20.0],
+                    "high": [21.0],
+                    "low": [19.5],
+                    "close": [20.2],
+                    "volume": [100.0],
+                    "amount": [2020.0],
+                }
+            ),
+            prior.created_at,
+        ),
+        request_start="2026-03-09",
+        request_end="2026-03-09",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots((*fixture, twin)),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    with pytest.raises(AppQueryError, match="tied price revisions conflict"):
+        chart.get_chart(
+            MarketChartRequest(
+                instrument_id=1000001,
+                asset_class="stock",
+                start_date=date(2026, 3, 9),
+                end_date=date(2026, 3, 9),
+                period="daily",
+                adjustment="none",
+                allow_experimental_data=False,
+                now=datetime(2026, 3, 12, 9, tzinfo=UTC),
+            )
+        )
+
+
+@pytest.mark.pit
 def test_chart_rejects_tied_conflicting_calendar_revisions(tmp_path: Path) -> None:
     """Equal observation timestamps do not establish revision order; two
     calendar revisions tied on observation and conflicting on a day's open
