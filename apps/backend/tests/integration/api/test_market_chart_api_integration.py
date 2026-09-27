@@ -2304,6 +2304,59 @@ def test_chart_fails_closed_on_contradictory_same_snapshot_status_rows(
 
 
 @pytest.mark.pit
+def test_chart_selects_status_shards_across_the_natural_period(tmp_path: Path) -> None:
+    """A weekly request ending mid-period must still see day-scoped suspension
+    shards beyond its requested dates: completeness spans the natural period,
+    so candle state must not depend on shard partitioning."""
+    chart, _, _ = _chart(tmp_path, poisoned=False)
+    store = cast(FilesystemProviderPayloadStore, chart._payloads)
+    day_scoped_suspension = replace(
+        _snapshot(
+            store,
+            "stock_status",
+            pl.DataFrame(
+                {
+                    "source_ticker": ["600519.SH"],
+                    "trade_date": ["2026-03-11"],
+                    "is_suspended": [True],
+                }
+            ),
+            datetime(2026, 3, 12, 8, tzinfo=UTC),
+        ),
+        request_start="2026-03-11",
+        request_end="2026-03-11",
+    )
+    reader = cast(
+        ProviderSnapshotReader,
+        _Snapshots(
+            (
+                *chart._snapshots.list_snapshots(dataset_id="stock_daily"),
+                *chart._snapshots.list_snapshots(dataset_id="calendar"),
+                day_scoped_suspension,
+            )
+        ),
+    )
+    chart = MarketChartQueryFacade(reader, store, chart._metadata, chart._market)
+    result = chart.get_chart(
+        MarketChartRequest(
+            instrument_id=1000001,
+            asset_class="stock",
+            start_date=date(2026, 3, 9),
+            end_date=date(2026, 3, 10),
+            period="weekly",
+            adjustment="none",
+            allow_experimental_data=False,
+            now=datetime(2026, 3, 16, 8, tzinfo=UTC),
+            delisted_on=date(2026, 3, 12),
+        )
+    )
+    assert [bar.trade_date for bar in result.bars] == ["2026-03-10"]
+    assert result.bars[0].partial is False
+    assert result.missing_sessions == ()
+    assert day_scoped_suspension.snapshot_id in result.bars[0].source_snapshot_ids
+
+
+@pytest.mark.pit
 def test_chart_resolves_same_snapshot_factor_revisions_by_knowledge_time(
     tmp_path: Path,
 ) -> None:

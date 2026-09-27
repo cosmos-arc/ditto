@@ -159,6 +159,64 @@ describe("ChartCockpit DOM 合同", () => {
 		expect(watermark.paneViews()[0]?.renderer()).not.toBeNull();
 	});
 
+	it("keeps an out-of-range cutoff at the chart edge without snapping to a candle", () => {
+		const timeToIndex = vi.fn();
+		const watermark = new AsOfWatermark({
+			// 2026-03-27T18:00Z, past the plotted range ending at 200
+			time: 1_778_810_400 as Time,
+			label: "cutoff past data",
+			lineColor: "red",
+			labelColor: "white",
+		});
+		watermark.attached({
+			chart: {
+				timeScale: () => ({
+					timeToCoordinate: () => null,
+					timeToIndex,
+					logicalToCoordinate: vi.fn(() => 42),
+					getVisibleRange: () => ({ from: 100 as Time, to: 200 as Time }),
+				}),
+			},
+			requestUpdate: vi.fn(),
+		} as unknown as PaneAttachedParameter<Time>);
+		watermark.updateAllViews();
+		expect(timeToIndex).not.toHaveBeenCalled();
+		const renderer = watermark.paneViews()[0]?.renderer();
+		expect(renderer).not.toBeNull();
+		let drawnX = -1;
+		renderer?.draw({
+			useMediaCoordinateSpace: (
+				cb: (scope: {
+					context: CanvasRenderingContext2D;
+					mediaSize: { width: number; height: number };
+				}) => void,
+			) => {
+				const ctx = {
+					save: vi.fn(),
+					restore: vi.fn(),
+					strokeStyle: "",
+					lineWidth: 0,
+					setLineDash: vi.fn(),
+					beginPath: vi.fn(),
+					moveTo: vi.fn((x: number) => {
+						drawnX = x;
+					}),
+					lineTo: vi.fn(),
+					stroke: vi.fn(),
+					font: "",
+					measureText: vi.fn(() => ({ width: 10 })),
+					fillStyle: "",
+					fillText: vi.fn(),
+				};
+				cb({
+					context: ctx as unknown as CanvasRenderingContext2D,
+					mediaSize: { width: 300, height: 120 },
+				});
+			},
+		} as Parameters<NonNullable<typeof renderer>>[0]);
+		expect(drawnX).toBe(299);
+	});
+
 	it("marks the as_of watermark on the host element", () => {
 		renderCockpit({ asOf: { time: 250 } });
 		expect(screen.getByLabelText("演示收盘价图表（fixture）")).toHaveAttribute("data-chart-as-of", "250");

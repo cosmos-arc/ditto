@@ -640,13 +640,25 @@ class MarketChartQueryFacade:
         if request.asset_class == "stock" and self._market.allows_suspension_evidence(
             allow_experimental_data=request.allow_experimental_data
         ):
+            # Suspension evidence bounds the aggregated periods' expected
+            # sessions, which span the natural period and lifecycle bounds
+            # rather than the raw request dates; select status authority over
+            # that same window so day-scoped suspension shards beyond the
+            # requested dates still join.
+            period_start = _period_bounds(request.start_date, request.period)[0]
+            period_end = min(
+                _period_bounds(request.end_date, request.period)[1],
+                request.delisted_on - timedelta(days=1)
+                if request.delisted_on
+                else _period_bounds(request.end_date, request.period)[1],
+            )
             consumable_days = _consumable_sessions(
-                calendar, request.start_date, request.end_date, cutoff
+                calendar, period_start, period_end, cutoff
             )
             status_snapshots = self._select_snapshots(
                 "stock_status",
-                request.start_date,
-                request.end_date,
+                period_start,
+                period_end,
                 cutoff,
                 instrument_id=request.instrument_id,
                 consumable_days=consumable_days,
@@ -673,24 +685,11 @@ class MarketChartQueryFacade:
                 ),
             )
             if any(item.payload_retained for item in status_snapshots):
-                # Suspension evidence bounds the aggregated periods' expected
-                # sessions, which span the natural period and lifecycle
-                # bounds rather than the raw request dates.
-                period_start = _period_bounds(request.start_date, request.period)[0]
-                period_end = _period_bounds(request.end_date, request.period)[1]
                 suspensions = self._bars.load_suspensions(
                     status_context,
                     instrument_id=InstrumentId(request.instrument_id),
                     instrument_code=instrument_code,
-                    window=(
-                        period_start,
-                        min(
-                            period_end,
-                            request.delisted_on - timedelta(days=1)
-                            if request.delisted_on
-                            else period_end,
-                        ),
-                    ),
+                    window=(period_start, period_end),
                 )
         return suspensions, snapshot_ids
 
