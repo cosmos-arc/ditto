@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from typing import cast
 
+import pytest
 from ditto_apps.openapi_contract import create_openapi_app
 from fastapi.testclient import TestClient
 
 
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_invalid_contract_header_preserves_v1_error_envelope() -> None:
     """Contract assertions must preserve the runtime v1 error envelope."""
     app = create_openapi_app()

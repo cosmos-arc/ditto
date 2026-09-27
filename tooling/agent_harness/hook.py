@@ -117,6 +117,7 @@ class _ShellWord(str):
     redirect: bool = False
 
 
+_PYTEST_NO_TESTS_COLLECTED = 5
 _SHELL_WORDS = re.compile(
     r"""(?:[^\s;&|<>"'\\]|\\.|"(?:[^"\\]|\\.)*"|'[^']*')+|&&|\|\||<<-?|>>?|[<;&|\n]"""
 )
@@ -1154,69 +1155,38 @@ def _sanitized_probe_environment() -> dict[str, str] | None:
     return environment
 
 
-@lru_cache(maxsize=64)
-def _has_collectable_tests(workspace: Path, owner: str) -> bool:
-    """The scoped fast-test target must yield at least one pytest item.
+_FAST_COLLECT_EXPR = (
+    "not slow and not integration and not snapshot and not sandbox_live"
+    " and not capacity"
+)
 
-    The probe goes through scripts/test.py --fast so the marker expression,
-    keyring isolation, and pytest options stay owned by one authority and
-    match the emitted ``task test -- --fast`` command exactly (exit 5 =
-    nothing selected, including marker-deselected or fixture-only modules).
-    Probe failures and timeouts fall back to the full gate; cached per
-    process so one push pays each owner's collection at most once.
+
+@lru_cache(maxsize=64)
+def _owner_fast_coverage(owners: tuple[str, ...]) -> bool:
+    """Whether every owner contributes at least one fast-lane case.
+
+    One combined collection over all owner test dirs; any owner with zero
+    selected cases keeps the cross-package gate (its fast verification would
+    otherwise be silently skipped by the combined invocation).
     """
-    environment = _sanitized_probe_environment()
-    if environment is None:
-        return False
     try:
-        process = subprocess.Popen(
-            [
-                "uv",
-                "run",
-                "--no-sync",
-                "python",
-                "scripts/test.py",
-                "--fast",
-                "--collect-only",
-                f"{owner}/tests",
-            ],
-            cwd=workspace,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=environment,
-            start_new_session=True,
+        from tooling.quality.slow_test_gate import (  # noqa: PLC0415 - 脚本直跑无 repo root
+            collect_ids,
         )
-    except OSError:
+    except (SystemExit, ImportError):
         return False
     try:
-        returncode = process.wait(timeout=120)
-    except BaseException:
-        # start_new_session detaches the child from the terminal's Ctrl-C;
-        # reap the whole tree on timeout or interrupt (same cross-platform
-        # strategy as the formatter: killpg on POSIX, taskkill /T on Windows)
-        # so nothing leaks into the gate.
-        try:
-            if os.name == "posix":
-                os.killpg(process.pid, signal.SIGKILL)
-            else:
-                try:
-                    subprocess.run(
-                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        timeout=0.5,
-                        check=False,
-                    )
-                except subprocess.TimeoutExpired:
-                    pass
-                process.kill()
-        except (ProcessLookupError, OSError):
-            pass
-        process.wait()
-        if isinstance(sys.exc_info()[1], subprocess.TimeoutExpired):
-            return False
-        raise
-    return returncode == 0
+        raw = collect_ids([f"{owner}/tests" for owner in owners], _FAST_COLLECT_EXPR)
+    except SystemExit:
+        return False
+    files = {line.split("::", 1)[0] for line in raw}
+    return all(
+        any(
+            file == owner + "/tests" or file.startswith(owner + "/tests/")
+            for file in files
+        )
+        for owner in owners
+    )
 
 
 def _backend_source_commands(
@@ -1236,24 +1206,38 @@ def _backend_source_commands(
         for path in paths
     ):
         return [["task", "check"]]
-    # Cross-package backend scopes run the shared package gate plus each
-    # owner's fast tests instead of the full check (#322); contract, root,
-    # unknown and cross-stack escalation is decided in verification_commands
-    # before this branch, and CI keeps high-risk scopes on the full gate
-    # (ci.required_jobs) so pushes do not double-pay the full check.
+    # Backend scopes run the shared package gate plus ONE combined fast-test
+    # invocation over every owner (#322/#331): a single xdist pool beats
+    # per-owner runs, and the fast lane carries a 10s per-case hard timeout
+    # against runaway cases (the 0.5s budget itself is enforced by the
+    # duration gate and the analyzer).
+    # Collection failures surface directly from the test command; contract,
+    # root, unknown and cross-stack escalation is decided in
+    # verification_commands before this branch, and CI keeps high-risk
+    # scopes on the full gate (ci.required_jobs).
     if not owners:
         return [["task", "check"]]
     workspace = root if root is not None else git_root(Path.cwd())
-    commands: list[list[str]] = [
+    for owner in sorted(owners):
+        tests_dir = workspace / owner / "tests"
+        if not tests_dir.is_dir() or not any(tests_dir.rglob("test_*.py")):
+            # 无可跑测试范围（如整包删除）时保持 fail-closed 全量。
+            return [["task", "check"]]
+    if not _owner_fast_coverage(tuple(sorted(owners))):
+        # 某 owner 的测试全部被 fast 表达式排除：合并调用会静默跳过它，升级全量。
+        return [["task", "check"]]
+    return [
         ["task", "lint"],
         ["task", "fmt-check"],
         ["task", "type-all"],
+        [
+            "task",
+            "test",
+            "--",
+            "--fast",
+            *[f"{owner}/tests" for owner in sorted(owners)],
+        ],
     ]
-    for owner in sorted(owners):
-        if not _has_collectable_tests(workspace, owner):
-            return [["task", "check"]]
-        commands.append(["task", "test", "--", "--fast", f"{owner}/tests"])
-    return commands
 
 
 def verification_commands(
@@ -1322,6 +1306,31 @@ def run_verification(
         )
         transcript = f"$ {shlex.join(command)}\nexit code: {result.returncode}"
         transcripts.append(transcript)
+        if result.returncode == _PYTEST_NO_TESTS_COLLECTED and command[:2] == [
+            "task",
+            "test",
+        ]:
+            # fast 车道无可选用例（pytest exit 5）：fail-closed 升级全量检查
+            fallback = ["task", "check"]
+            print(f"$ {shlex.join(fallback)}", flush=True)
+            fallback_result = subprocess.run(
+                fallback,
+                cwd=root,
+                check=False,
+                env={
+                    **os.environ,
+                    "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
+                    "_TYPER_FORCE_DISABLE_TERMINAL": "1",
+                },
+            )
+            transcripts.append(
+                f"$ {shlex.join(fallback)}\nexit code: {fallback_result.returncode}"
+            )
+            if fallback_result.returncode != 0:
+                return VerificationResult(
+                    False, "\n\n".join(transcripts)[-MAX_FEEDBACK:]
+                )
+            continue
         if result.returncode != 0:
             return VerificationResult(False, "\n\n".join(transcripts)[-MAX_FEEDBACK:])
     return VerificationResult(True, "\n\n".join(transcripts)[-MAX_FEEDBACK:])

@@ -70,12 +70,15 @@ def build_pytest_command() -> list[str]:
         # 集成测试：串行（排除 snapshot）
         cmd.extend(["-m", "integration and not snapshot", "-n", "0"])
     elif has_fast:
-        # 快速测试：跳过 slow/integration/snapshot 和物理容器验收
+        # 快速测试：跳过 slow/integration/snapshot 和物理容器验收；
+        # 10s/用例硬顶超时兜住异常用例(挂死/失控)——0.5s 分类阈值由时长门禁
+        # 与 analyze-slow-tests 治理,硬顶只杀真异常,不误杀边界人群
         cmd.extend(
             [
                 "-m",
                 "not slow and not integration and not snapshot and not sandbox_live"
                 " and not capacity",
+                "--timeout=10",
                 "--no-cov",
                 "-q",
             ]
