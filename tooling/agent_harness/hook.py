@@ -15,7 +15,6 @@ import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from functools import lru_cache
 from pathlib import Path
 from types import FrameType
 from typing import Any
@@ -1154,71 +1153,6 @@ def _sanitized_probe_environment() -> dict[str, str] | None:
     return environment
 
 
-@lru_cache(maxsize=64)
-def _has_collectable_tests(workspace: Path, owner: str) -> bool:
-    """The scoped fast-test target must yield at least one pytest item.
-
-    The probe goes through scripts/test.py --fast so the marker expression,
-    keyring isolation, and pytest options stay owned by one authority and
-    match the emitted ``task test -- --fast`` command exactly (exit 5 =
-    nothing selected, including marker-deselected or fixture-only modules).
-    Probe failures and timeouts fall back to the full gate; cached per
-    process so one push pays each owner's collection at most once.
-    """
-    environment = _sanitized_probe_environment()
-    if environment is None:
-        return False
-    try:
-        process = subprocess.Popen(
-            [
-                "uv",
-                "run",
-                "--no-sync",
-                "python",
-                "scripts/test.py",
-                "--fast",
-                "--collect-only",
-                f"{owner}/tests",
-            ],
-            cwd=workspace,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=environment,
-            start_new_session=True,
-        )
-    except OSError:
-        return False
-    try:
-        returncode = process.wait(timeout=120)
-    except BaseException:
-        # start_new_session detaches the child from the terminal's Ctrl-C;
-        # reap the whole tree on timeout or interrupt (same cross-platform
-        # strategy as the formatter: killpg on POSIX, taskkill /T on Windows)
-        # so nothing leaks into the gate.
-        try:
-            if os.name == "posix":
-                os.killpg(process.pid, signal.SIGKILL)
-            else:
-                try:
-                    subprocess.run(
-                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        timeout=0.5,
-                        check=False,
-                    )
-                except subprocess.TimeoutExpired:
-                    pass
-                process.kill()
-        except (ProcessLookupError, OSError):
-            pass
-        process.wait()
-        if isinstance(sys.exc_info()[1], subprocess.TimeoutExpired):
-            return False
-        raise
-    return returncode == 0
-
-
 def _backend_source_commands(
     paths: Sequence[str], *, root: Path | None = None
 ) -> list[list[str]]:
@@ -1236,24 +1170,36 @@ def _backend_source_commands(
         for path in paths
     ):
         return [["task", "check"]]
-    # Cross-package backend scopes run the shared package gate plus each
-    # owner's fast tests instead of the full check (#322); contract, root,
-    # unknown and cross-stack escalation is decided in verification_commands
-    # before this branch, and CI keeps high-risk scopes on the full gate
-    # (ci.required_jobs) so pushes do not double-pay the full check.
+    # Backend scopes run the shared package gate plus ONE combined fast-test
+    # invocation over every owner (#322/#331): a single xdist pool beats
+    # per-owner runs, and the fast lane carries a 10s per-case hard timeout
+    # against runaway cases (the 0.5s budget itself is enforced by the
+    # duration gate and the analyzer).
+    # Collection failures surface directly from the test command; contract,
+    # root, unknown and cross-stack escalation is decided in
+    # verification_commands before this branch, and CI keeps high-risk
+    # scopes on the full gate (ci.required_jobs).
     if not owners:
         return [["task", "check"]]
     workspace = root if root is not None else git_root(Path.cwd())
-    commands: list[list[str]] = [
+    for owner in sorted(owners):
+        tests_dir = workspace / owner / "tests"
+        if not tests_dir.is_dir() or not any(tests_dir.rglob("test_*.py")):
+            # 无可跑测试范围（如整包删除）时保持 fail-closed 全量；收集错误
+            # 则由测试命令自身暴露（不再独立预探测）。
+            return [["task", "check"]]
+    return [
         ["task", "lint"],
         ["task", "fmt-check"],
         ["task", "type-all"],
+        [
+            "task",
+            "test",
+            "--",
+            "--fast",
+            *[f"{owner}/tests" for owner in sorted(owners)],
+        ],
     ]
-    for owner in sorted(owners):
-        if not _has_collectable_tests(workspace, owner):
-            return [["task", "check"]]
-        commands.append(["task", "test", "--", "--fast", f"{owner}/tests"])
-    return commands
 
 
 def verification_commands(

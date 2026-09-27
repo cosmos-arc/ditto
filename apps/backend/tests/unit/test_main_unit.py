@@ -255,6 +255,7 @@ class TestTestLogsEndpoint:
 class TestLifespan:
     """Tests for application lifespan dependency resolution."""
 
+    @pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
     @pytest.mark.asyncio
     async def test_uses_container_data_store_settings(self, tmp_path, monkeypatch):
         """Lifespan should initialize with container-owned settings."""

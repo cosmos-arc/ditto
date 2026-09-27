@@ -211,6 +211,7 @@ def test_runner_falls_back_to_exact_child_when_process_group_signal_is_denied(
 
 
 @pytest.mark.parametrize("probe_delay_seconds", [0, 6])
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_runner_enforces_wall_timeout_and_removes_the_exact_container(
     tmp_path: Path,
     probe_delay_seconds: float,
@@ -232,6 +233,7 @@ def test_runner_enforces_wall_timeout_and_removes_the_exact_container(
 
 
 @pytest.mark.parametrize("probe_delay_seconds", [0, 6])
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_runner_timeout_is_not_extended_by_orphaned_output_pipes(
     tmp_path: Path,
     probe_delay_seconds: float,

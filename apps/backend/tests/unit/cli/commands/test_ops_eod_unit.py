@@ -6,6 +6,7 @@ import subprocess
 import sys
 from textwrap import dedent
 
+import pytest
 from ditto_apps.cli.commands.ops import app
 from typer.testing import CliRunner
 
@@ -108,6 +109,7 @@ def test_run_eod_requires_explicit_strategy_and_account() -> None:
     assert "--strategy-id" in result.output
 
 
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_run_eod_never_enters_prefect_engine_in_real_import_process() -> None:
     """真实 Prefect import 下，CLI 也只调用未装饰 pipeline runner。"""
     script = dedent(

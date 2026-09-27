@@ -2154,6 +2154,7 @@ def test_enqueue_event_durably_reconstructs_confirmed_preflight() -> None:
     }
 
 
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_full_500_instrument_96_month_event_fits_one_mib_without_protocol_copy() -> (
     None
 ):

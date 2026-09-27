@@ -57,6 +57,7 @@ def _public_operations(schema: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_static_openapi_matches_canonical_runtime_contract() -> None:
     """Static OpenAPI is exactly the exporter's runtime projection."""
     expected = exporter.canonical_runtime_openapi_bytes()
@@ -65,6 +66,7 @@ def test_static_openapi_matches_canonical_runtime_contract() -> None:
     assert _DEBUG_PATH not in exporter.runtime_openapi_schema()["paths"]
 
 
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_exporter_writes_canonical_bytes_through_real_entrypoint(
     tmp_path: Path,
 ) -> None:
@@ -100,6 +102,7 @@ def test_exporter_failure_preserves_old_file_and_cleans_temp(
     assert list(tmp_path.glob(f".{output_path.name}.*.tmp")) == []
 
 
+@pytest.mark.integration  # 集成性质(真入口/容器/子进程/重数据), 2026-09-27 分层归位
 def test_factory_debug_surface_is_explicit_and_environment_independent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
