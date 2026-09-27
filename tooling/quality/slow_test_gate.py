@@ -626,7 +626,15 @@ def main(argv: list[str] | None = None) -> int:
         base_cases = collect_base_ids(base_sha, None, root)
         files = {file: renames.get(file, file) for file, _ in collected_cases}
     else:
-        raw_collected = collect_ids(sorted(files))
+        head_targets = [
+            path
+            for path in sorted(files)
+            if not path.endswith("/tests") or Path(path).is_dir()
+        ]
+        if not head_targets:
+            print("[slow-test-gate] no head test targets exist; pass")
+            return 0
+        raw_collected = collect_ids(head_targets)
         collected_cases = _case_set(raw_collected)
         base_cases = collect_base_ids(base_sha, files.values(), root)
     new_cases = new_tests_at_head(files, collected_cases, base_cases)
