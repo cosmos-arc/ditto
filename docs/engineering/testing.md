@@ -56,8 +56,31 @@ CI 失败先读取失败 job 日志，记录 SHA、命令和失败原因；确�
 文件名子串不参与判定；测试上的显式标记保留并叠加。近端 conftest 不得修改外国
 owner 的标记或收集（历史上的四个按路径加标钩子已移除）；conftest 里的 `pytestmark`
 从不生效，层级声明放测试模块。`integration` 目录附带 `serial` 是继承自旧钩子的
-blanket 资源策略，待串行审计（#226）按真实资源逐组解除——解除入口在 layering
-规则，不在各包 conftest。
+blanket 资源策略，串行审计（#226）已开始按真实资源逐树解除——解除入口是 layering
+规则里的 `_SERIAL_OPT_OUT_TREES` 登记表（整组件前缀匹配），不在各包 conftest；
+登记只去掉层级附带的 `serial`，`integration` 层级保留，显式 `@pytest.mark.serial`
+照常叠加（树内单文件回退口）。
+
+**串行审计（#226）现状**：审计维度 = 共享 DB/文件/工作区、端口、线程/进程、全局
+init、外部资源；结论必须来自实际证据（fixture/路径/进程审计 + 配对并行对照），
+不来自"连续绿"。CI 分片的六个 shard 与 capacity 慢道各自跑在独立 GitHub runner
+（独立检出/文件系统），跨 runner 不存在可共享的写路径——`serial` 从来只约束单
+runner 内的 xdist worker。各 integration 树处置：
+
+| 树 | 资源审计结论 | 处置 |
+| --- | --- | --- |
+| `packages/data/tests/integration` | 每例独立 DB（`:memory:`/`tmp_path`/`mkstemp`），schema.sql 只读模板按 worker 复用，无端口/子进程/跨例全局 init；触网用例无 token 即 skip | **已解除**（试点，2026-09） |
+| `apps/backend/tests/integration` | session 级 Prefect test harness（真实子进程/端口）、全局 observability init、env 覆盖 | 保留串行；解除需先按 worker 隔离 Prefect harness，另立票 |
+| `packages/application` | 无 session fixture、无端口/子进程；207 例中绝大多数 `tmp_path` | 候选下一批：逐文件核对非 tmp 用例后解除 |
+| `packages/backtest` | 806 行 conftest 全 function 级 fixture，parquet 数据走 `tmp_path` | 候选下一批：核对 engine loop fixture 无跨例泄漏后解除 |
+| `packages/platform` | 无 conftest；observability 集成测试触全局 init | 候选下一批：核对 init/reset 配对后解除 |
+| `packages/analysis` / `packages/strategy` | 全 `tmp_path`、无 conftest/session fixture | 候选下一批（体量小，随邻居一起解除） |
+
+CPU/内存容量型慢测试与串行策略分开：它们打 `slow`/`capacity` 进慢道，不是保留
+`serial` 的理由。旧"4 片/-n2/<5min"目标仅作历史参考。**恢复策略**：任何可复现的
+并发故障，先给受影响文件加显式 `@pytest.mark.serial` 立即恢复隔离并保留复现，
+再决定是否撤登记表条目；若故障证明的是跨 runner 作用域问题，不得以恢复旧 blanket
+标记宣称解决——互斥必须在正确作用域实现。
 
 **fast 车道按资源/旅程选择，不按层级**：表达式（`not slow and not serial and not
 e2e and not snapshot and not sandbox_live and not capacity`）单源维护于

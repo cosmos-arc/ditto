@@ -17,6 +17,9 @@ _TREE_FILES = {
     "packages/alpha/tests/integration/test_b.py": (
         "def test_two():\n    assert True\n"
     ),
+    "packages/data/tests/integration/test_g.py": (
+        "def test_seven():\n    assert True\n"
+    ),
     "packages/beta/tests/unit/deep/test_c.py": ("def test_three():\n    assert True\n"),
     "apps/backend/tests/contract/test_d.py": ("def test_four():\n    assert True\n"),
     "apps/backend/tests/e2e/test_e.py": "def test_five():\n    assert True\n",
@@ -29,8 +32,12 @@ def test_layer_markers_follow_directory_components() -> None:
     assert layer_markers_for(
         Path("/repo/packages/data/tests/unit/storage/test_x.py"), repo
     ) == ("unit",)
+    # data 树经 #226 审计解除层级 serial；未审计 owner 仍保留。
     assert layer_markers_for(
         Path("/repo/packages/data/tests/integration/test_x.py"), repo
+    ) == ("integration",)
+    assert layer_markers_for(
+        Path("/repo/packages/kernel/tests/integration/test_x.py"), repo
     ) == (
         "integration",
         "serial",
@@ -155,6 +162,7 @@ def test_same_nodeid_marks_stable_across_entries(tmp_path: Path) -> None:
     expected = {
         "packages/alpha/tests/unit/test_a.py": {"unit"},
         "packages/alpha/tests/integration/test_b.py": {"integration", "serial"},
+        "packages/data/tests/integration/test_g.py": {"integration"},
         "packages/beta/tests/unit/deep/test_c.py": {"unit"},
         "apps/backend/tests/contract/test_d.py": {"integration"},
         "apps/backend/tests/e2e/test_e.py": {"e2e"},
@@ -170,3 +178,82 @@ def test_same_nodeid_marks_stable_across_entries(tmp_path: Path) -> None:
         assert shared, name
         for nodeid in shared:
             assert dump[nodeid] == reference[nodeid], (name, nodeid)
+
+
+def test_serial_audit_opt_out_is_component_exact() -> None:
+    """#226：审计登记树解除层级 serial，边界外一律保留。"""
+    repo = Path("/repo")
+    assert layer_markers_for(
+        Path("/repo/packages/data/tests/integration/test_x.py"), repo
+    ) == ("integration",)
+    assert layer_markers_for(
+        Path("/repo/packages/data/tests/integration/runtime/storage/test_x.py"), repo
+    ) == ("integration",)
+    # 近邻名不匹配层级规则本身（组件精确），树前缀更无从谈起。
+    assert layer_markers_for(
+        Path("/repo/packages/data/tests/integration-x/test_x.py"), repo
+    ) == ("unit",)
+    assert layer_markers_for(
+        Path("/repo/packages/data-x/tests/integration/test_x.py"), repo
+    ) == ("integration", "serial")
+    assert layer_markers_for(
+        Path("/repo/packages/analysis/tests/integration/test_x.py"), repo
+    ) == ("integration", "serial")
+    # 混合 unit/integration 路径不在被审计树内，保守保留 serial。
+    assert layer_markers_for(
+        Path("/repo/packages/data/tests/unit/integration/test_x.py"), repo
+    ) == ("integration", "serial")
+
+
+def test_real_repo_serial_audit_lifts_only_the_data_tree() -> None:
+    """钉死真实仓库：只有 data 的 integration 树解除，其余 owner 全保留。"""
+    files = sorted(
+        {
+            *REPO_ROOT.glob("packages/*/tests/integration/**/test_*.py"),
+            *REPO_ROOT.glob("apps/*/tests/integration/**/test_*.py"),
+        },
+    )
+    assert files
+    lifted: set[str] = set()
+    serial_owners: set[str] = set()
+    for path in files:
+        markers = layer_markers_for(path, REPO_ROOT)
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        owner = relative.split("/", 2)[1]
+        assert markers in {("integration",), ("integration", "serial")}, relative
+        if relative.startswith("packages/data/tests/integration/"):
+            assert markers == ("integration",), relative
+            lifted.add(owner)
+        else:
+            assert markers == ("integration", "serial"), relative
+            serial_owners.add(owner)
+    assert lifted == {"data"}
+    assert {
+        "analysis",
+        "application",
+        "backtest",
+        "platform",
+        "strategy",
+    } <= serial_owners
+
+
+def test_explicit_serial_marker_survives_the_opt_out(tmp_path: Path) -> None:
+    """审计树内显式 @pytest.mark.serial 仍生效：树级回退口（#226 恢复策略）。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _make_tree(root)
+    escape = root / "packages/data/tests/integration/test_opt_in.py"
+    escape.write_text(
+        "import pytest\n\n"
+        "@pytest.mark.serial\n"
+        "def test_opted_back_in():\n    assert True\n",
+        encoding="utf-8",
+    )
+    dump = _collect(root, [], tmp_path / "escape.json")
+    marks = next(
+        collected
+        for nodeid, collected in dump.items()
+        if nodeid.startswith("packages/data/tests/integration/test_opt_in.py::")
+    )
+    assert "integration" in marks
+    assert "serial" in marks
