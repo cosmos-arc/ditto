@@ -9,27 +9,28 @@ but the conftest registers it as an import bracket on the layering plugin
 (``register_import_bracket``): applied while backend unit test modules
 import, restored for everything else (#330 B1).
 
-``sys.modules`` caching would still let a merged entry import
-``ditto_apps.jobs.*`` with the real decorators (integration tree sorts
-before ``unit``) and hand unit tests the cached modules; the first
-:func:`apply` therefore evicts those modules once so the next unit-scope
-import rebuilds them under the mock.
+``sys.modules`` caching means whichever scope imports ``ditto_apps.jobs.*``
+first fixes that module's decoration for the whole process: a single-process
+merged entry that collects the integration tree before ``unit`` hands unit
+tests real-decorated modules (and vice versa). CI shard lanes never mix the
+two scopes in one process (serial integration lane vs parallel lane), and
+each entry in isolation decorates consistently. Serving both decorations in
+one process needs per-scope import isolation — deferred to the D1 backend
+jobs pilot (#330); eviction-based fixes are not viable: evicting on either
+transition breaks the opposite scope, and evicting on both breaks
+``mocker.patch`` identity for runtime patching (verified by reproduction).
 """
 
 from __future__ import annotations
 
-import sys
 from typing import Any
 from unittest.mock import Mock
 
 import prefect.flows
 import prefect.tasks
 
-_JOBS_PACKAGE = "ditto_apps.jobs"
 # [(flow, task) originals] — one entry while the mock is installed.
 _saved: list[tuple[Any, Any]] = []
-# One-shot marker: jobs modules were evicted for this process already.
-_evicted: list[None] = []
 
 
 class MockTask:
@@ -102,33 +103,9 @@ def apply() -> None:
     """Swap Prefect's decorators for the unit-test stand-ins (idempotent)."""
     if _saved:
         return
-    _evict_jobs_modules_cached_with_real_decorators()
     _saved.append((prefect.flows.flow, prefect.tasks.task))
     prefect.flows.flow = _mock_flow_decorator
     prefect.tasks.task = _mock_task_decorator
-
-
-def _evict_jobs_modules_cached_with_real_decorators() -> None:
-    """
-    Drop jobs modules imported before the first apply so unit reimports mock.
-
-    In a merged collection the integration tree (sorted before ``unit``)
-    imports ``ditto_apps.jobs.*`` with the real decorators; ``sys.modules``
-    would then hand unit tests the cached real Flow/Task objects no matter
-    what the bracket does. Evicting them once, at the first apply, makes the
-    next (unit-scope) import rebuild them under the mock; references already
-    bound inside integration modules keep the real objects.
-    """
-    if _evicted:
-        return
-    _evicted.append(None)
-    stale = [
-        name
-        for name in sys.modules
-        if name == _JOBS_PACKAGE or name.startswith(_JOBS_PACKAGE + ".")
-    ]
-    for name in stale:
-        del sys.modules[name]
 
 
 def restore() -> None:
