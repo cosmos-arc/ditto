@@ -10,6 +10,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from tooling.agent_harness.hook import classify_diff
+from tooling.agent_harness.impact_scope import (
+    is_backend_source_path,
+    is_web_source_path,
+)
 
 REQUIRED_JOBS = frozenset(
     {
@@ -44,13 +48,7 @@ def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
         return _ALWAYS | {"skill-validation"}
     if level in {"docs", "none"}:
         return set(_ALWAYS)
-    if level == "web" and all(
-        path.startswith(
-            ("apps/web/src/", "apps/web/tests/", "apps/web/prototype/", "docs/")
-        )
-        and path.endswith((".ts", ".tsx", ".css", ".md", ".rst"))
-        for path in paths
-    ):
+    if level == "web" and all(map(is_web_source_path, paths)):
         return _ALWAYS | {
             "web-quality",
             "web-prototype",
@@ -59,9 +57,7 @@ def required_jobs(paths: Sequence[str], *, full: bool = False) -> set[str]:
             "system-e2e",
         }
     if level in {"backend", "backend-tests"} and all(
-        path.endswith((".py", ".md", ".rst"))
-        and path.startswith(("packages/", "apps/backend/", "docs/"))
-        for path in paths
+        map(is_backend_source_path, paths)
     ):
         return _ALWAYS | {
             "backend-quality",
