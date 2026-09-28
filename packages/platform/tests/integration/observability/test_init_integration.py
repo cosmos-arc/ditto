@@ -120,15 +120,17 @@ class TestInit:
             log_level="WARNING",
             vm_endpoint=otlp_http_sink.metrics_endpoint,
         )
-        init(config, force=True)
+        # finally 内 shutdown：任何失败路径下 provider 关闭都发生在 sink
+        # fixture 拆除之前（sink 先拆会让末次导出撞上已关闭端点的退避）
+        try:
+            init(config, force=True)
+            assert _is_initialized() is True
 
-        assert _is_initialized() is True
-
-        # 记录真实数据点：空采集时 SDK 可不触发导出，记录后 shutdown 的
-        # 末次导出确定性携带数据（reader.shutdown join 完成前 POST 已落地）
-        Metrics.api_requests.add(1, {"endpoint": "/health"})
-
-        shutdown()
+            # 记录真实数据点：空采集时 SDK 可不触发导出，记录后 shutdown
+            # 的末次导出确定性携带数据（reader.shutdown join 前完成 POST）
+            Metrics.api_requests.add(1, {"endpoint": "/health"})
+        finally:
+            shutdown()
         assert otlp_http_sink.metrics_posts > 0, "生产 reader 关闭时应完成真实导出"
 
     def test_init_environment_alias_dev(self) -> None:

@@ -44,6 +44,29 @@ def _snapshot_otel_api_globals() -> dict[str, Any]:
     }
 
 
+def _detach_otel_api_globals() -> None:
+    """摘下当前 OTel API 全局（#348）.
+
+    setup 侧 reset 的 ``shutdown()`` 会关闭当时已安装的全局 provider——
+    先摘下再 reset，外来 provider 保持存活，teardown 恢复引用而非恢复
+    已死对象；同时把 metrics proxy 的累积 meter 列表换成新表，树内
+    ``set_meter_provider`` 的 on_set 绑定只作用于新表，不污染外来
+    proxy meter。trace 侧 ``ProxyTracer`` 的粘性绑定不可枚举，残留
+    窗口 = 外来被插桩代码在本树测试执行期间绑定测试 provider（当前
+    不存在该调用路径）。
+    """
+    import opentelemetry.metrics._internal as otel_metrics_internal
+    import opentelemetry.trace as otel_trace
+
+    otel_trace._TRACER_PROVIDER = None
+    otel_trace._TRACER_PROVIDER_SET_ONCE._done = False
+    otel_metrics_internal._METER_PROVIDER = None
+    otel_metrics_internal._METER_PROVIDER_SET_ONCE._done = False
+    metrics_proxy = otel_metrics_internal._PROXY_METER_PROVIDER
+    metrics_proxy._real_meter_provider = None
+    metrics_proxy._meters = []
+
+
 def _restore_otel_api_globals(snapshot: dict[str, Any]) -> None:
     """恢复 OTel API 进程级 provider 全局到快照值."""
     import opentelemetry.metrics._internal as otel_metrics_internal
@@ -68,6 +91,7 @@ def reset_observability_state() -> Iterator[None]:
     from ditto_platform.foundation import reset_for_testing
 
     snapshot = _snapshot_otel_api_globals()
+    _detach_otel_api_globals()
     reset_for_testing()
     yield
     reset_for_testing()
