@@ -11,3 +11,5 @@
 相较每次运行两栈全部检查，此决策缩短普通变更反馈；代价是必须维护分类器反例及完整回归。相较细粒度动态依赖推断，目前保留全后端测试以降低漏测风险。验证结果不作跨提交缓存，复用制品必须验证当前提交与契约身份。
 
 2026-09-28 补充（#340，[验证体系决议](https://github.com/cosmos-arc/ditto/issues/339#issuecomment-5861717841) 阶段 A）：本地 pre-push 只保留推送身份/范围核对与显式验证提示，pytest、全量类型、PIT 与 system 退出同步 push 路径；同一阶梯由送审前显式入口 `task verify-push` 执行，缺历史与模式异常在该计划内 fail-closed 为全量门。通用 0.5s/5s 时长阈值转为消费同次分片 junit 证据的报告，不再作为合并阻断；功能失败、挂死超时与产品性能合同仍由分片/capacity/PIT 阻断。轻量 push 通过不等于已通过完整验证，PR CI 权威门与 main 证据要求不变。
+
+2026-09-28 补充（#330 阶段 B1，同决议）：目录到测试层级的映射收敛为单一规则（`tooling/quality/pytest_layering.py`，经仓库根 conftest 注册，单文件/owner/全仓/分片入口一致），近端 conftest 不再修改外国 owner 的标记（旧路径钩子移除）；`integration` 目录附带 `serial` 的 blanket 资源策略保留至串行审计（#226）逐组解除。fast 车道表达式去层级化（按 slow/serial/e2e/snapshot/sandbox_live/capacity 资源维度单源选择），低成本真实集成可进入快速反馈；owner 覆盖探针消费同一常量。导入期全局替换（backend unit 的 Prefect mock）改为经 layering 插件注册的树作用域 bracket，跨 owner 全局 autouse 状态在 teardown 恢复。入口一致性以 `task entry-consistency` 逐 nodeid 核验；tooling 测试（含 tooling/release）统一进 `task tooling-test`。

@@ -207,6 +207,8 @@ unfixable = []
 [tool.ruff.lint.per-file-ignores]
 # SignalDelivery - 环境变量名（非实际密钥）是 Bandit S105 已知误报
 "apps/backend/src/ditto_apps/registry/infra/signal_delivery.py" = ["S105"]
+# Prefect 装饰器 mock 包装任意可调用，签名必然 Any（与 stub 文件同理）
+"apps/backend/src/ditto_apps/prefect_mock.py" = ["ANN401"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "apps/backend/src/ditto_apps/services/derived/research.py" = ["S608"]
 # ResearchDatasetExport - dataset_id is validated by _sanitize_table_name
@@ -424,6 +426,7 @@ markers = [
     "snapshot: Mark test that uses inline-snapshot (must run serially)",
     "pit: Mark test as Point-in-Time validation (no future data leak)",
     "sandbox_live: Physical OCI sandbox acceptance requiring the approved runtime",
+    "cli_test: CLI tests that disable observability auto-reset",
 ]
 
 log_cli = true

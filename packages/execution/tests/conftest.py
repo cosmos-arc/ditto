@@ -1,7 +1,6 @@
 """Pytest configuration for Execution tests."""
 
 from collections.abc import Generator
-from pathlib import Path
 
 import pytest
 from ditto_platform.foundation import (
@@ -10,26 +9,18 @@ from ditto_platform.foundation import (
     SQLiteClient,
     SQLitePool,
     init,
+    reset_for_testing,
 )
 
 
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Auto-mark tests based on their directory location."""
-    for item in items:
-        try:
-            rel_path = item.path.relative_to(Path(__file__).parent)
-            if "integration" in str(rel_path):
-                item.add_marker(pytest.mark.integration)
-                item.add_marker(pytest.mark.serial)
-            elif "unit" in str(rel_path):
-                item.add_marker(pytest.mark.unit)
-        except ValueError:
-            pass
-
-
 @pytest.fixture(autouse=True)
-def init_observability() -> None:
-    """Initialize observability in testing mode for all tests."""
+def init_observability() -> Generator[None]:
+    """Initialize observability in testing mode, restored after each test.
+
+    The teardown reset mirrors the data package: shared-process entries must
+    not leak an initialized global registry into other owners' tests
+    (#330 B1).
+    """
     config = ObservabilityConfig(
         environment=Environment.TESTING,
         pytest_running=True,
@@ -39,6 +30,8 @@ def init_observability() -> None:
         metrics_enabled=False,
     )
     init(config, force=True)
+    yield
+    reset_for_testing()
 
 
 @pytest.fixture
