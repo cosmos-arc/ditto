@@ -69,7 +69,7 @@ runner 内的 xdist worker。各 integration 树处置：
 
 | 树 | 资源审计结论 | 处置 |
 | --- | --- | --- |
-| `packages/data/tests/integration` | 每例独立 DB（`:memory:`/`tmp_path`/`mkstemp`），schema.sql 只读模板按 worker 复用，无端口/子进程/跨例全局 init；触网用例无 token 即 skip | **已解除**（试点，2026-09） |
+| `packages/data/tests/integration` | 每例独立 DB（`:memory:`/`tmp_path`/`mkstemp`），schema.sql 只读模板按 worker 复用，无端口/子进程/跨例全局 init；触网用例无 token 即 skip；唯一无门控的联网用例（tushare 无效 token 错误处理）已打 `slow` 退出 fast 车道 | **已解除**（试点，2026-09） |
 | `apps/backend/tests/integration` | session 级 Prefect test harness（真实子进程/端口）、全局 observability init、env 覆盖 | 保留串行；解除需先按 worker 隔离 Prefect harness，另立票 |
 | `packages/application` | 无 session fixture、无端口/子进程；207 例中绝大多数 `tmp_path` | 候选下一批：逐文件核对非 tmp 用例后解除 |
 | `packages/backtest` | 806 行 conftest 全 function 级 fixture，parquet 数据走 `tmp_path` | 候选下一批：核对 engine loop fixture 无跨例泄漏后解除 |

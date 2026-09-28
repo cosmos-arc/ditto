@@ -284,6 +284,10 @@ class TestTushareEndToEnd:
         # [REVIEW]
         assert elapsed_time > 0, "请求应该有耗时"
 
+    # 真实端点依赖（前置条件=网络连接正常）：串行审计解除 serial 后，本例是
+    # data 树唯一无 token 门控的联网用例；打 slow 使其退出 fast 车道（离线/
+    # 超时会破坏快速门封闭性），CI 分片并行道与 --integration 入口照常执行。
+    @pytest.mark.slow
     def test_error_handling_invalid_token(self) -> None:
         """集成测试：验证无效 token 的错误处理.
 
