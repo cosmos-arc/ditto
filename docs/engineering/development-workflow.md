@@ -50,7 +50,8 @@ diff -r /tmp/ditto-matt-skills/skills/engineering/implement /path/to/installed/i
    大型迭代使用独立 worktree 和 `codex/` 分支；main 上有用户成果时保留原件，
    只迁入任务明确要求的材料。
 2. 按[测试指南](testing.md)实现并验证。`check-changed` 观察 pending/staged/untracked；
-   pre-push 使用实际提交范围。只读检查无需为已有脏文件启动全库验证。
+   pre-push 只核对推送身份/范围并提示欠下的显式验证（#340），送审前用 `task verify-push`
+   对实际提交范围显式执行阶梯。只读检查无需为已有脏文件启动全库验证。
 3. 将本批实现提交在实施分支。固定比较基线和当前 HEAD，检查
    `git diff <base>...HEAD` 非空、`git log <base>..HEAD --oneline` 包含待交付实现；
    确认无遗漏的未提交实现后，按下文规则完成需求与规范两轴首审。

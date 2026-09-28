@@ -61,10 +61,11 @@ repos:
         require_serial: false
 
       # --------------------------------------------------------
-      # pytest (pre-push 阶段)
+      # pre-push 阶段：推送身份/范围核对 + 显式验证提示（#340）。
+      # 重型验证不进入同步 push 路径；送审前用 task verify-push。
       # --------------------------------------------------------
       - id: pytest-fast
-        name: verify changed scope
+        name: verify push identity and scope
         entry: uv run --no-sync python -m tooling.agent_harness.pre_push
         language: system
         pass_filenames: false

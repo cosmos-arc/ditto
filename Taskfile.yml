@@ -122,6 +122,13 @@ tasks:
       msg: Python environment is missing; run task python-install explicitly.
     cmds:
     - uv run --no-sync python tooling/agent_harness/hook.py --event check-changed {{.CLI_ARGS}}
+  verify-push:
+    desc: Run the explicit pre-review verification owed by the committed push range
+    preconditions:
+    - sh: 'test -f "{{.VENV_PYTHON}}"'
+      msg: Python environment is missing; run task python-install explicitly.
+    cmds:
+    - uv run --no-sync python -m tooling.agent_harness.pre_push --verify {{.CLI_ARGS}}
   toolchain-check:
     preconditions:
     - sh: 'test -f "{{.VENV_PYTHON}}"'

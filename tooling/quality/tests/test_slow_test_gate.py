@@ -271,7 +271,12 @@ class _Script:
 
 
 def _run_main(
-    monkeypatch: pytest.MonkeyPatch, script: _Script, tmp_path: Path, junit: str | None
+    monkeypatch: pytest.MonkeyPatch,
+    script: _Script,
+    tmp_path: Path,
+    junit: str | None,
+    *,
+    report: bool = False,
 ) -> int:
     if junit is not None:
         module = tmp_path / "x/tests/unit/a.py"
@@ -282,7 +287,10 @@ def _run_main(
     monkeypatch.setattr(gate, "changed_test_files", script.changed_test_files)
     monkeypatch.setattr(gate, "collect_ids", script.collect_ids)
     monkeypatch.setattr(gate, "collect_base_ids", script.collect_base_ids)
-    return gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path)])
+    arguments = ["--junit-glob", "junit-*.xml", "--root", str(tmp_path)]
+    if report:
+        arguments.append("--report")
+    return gate.main(arguments)
 
 
 def _raw(case_id: str) -> set[str]:
@@ -423,3 +431,40 @@ def test_existing_over_threshold_tests_do_not_block(
     <testcase classname="x.tests.unit.a" name="test_legacy" time="60.00"/>
     </testsuite>"""
     assert _run_main(monkeypatch, script, tmp_path, junit) == 0
+
+
+def test_report_mode_exits_zero_despite_violations(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    script = _script({"x/tests/unit/a.py": {"test_bad"}})
+    junit = f"""<testsuite>
+    {_junit("test_bad")}
+    </testsuite>"""
+    assert _run_main(monkeypatch, script, tmp_path, junit, report=True) == 0
+
+
+def test_report_mode_exits_zero_without_junit_evidence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    script = _script({"x/tests/unit/a.py": {"test_any"}})
+    assert _run_main(monkeypatch, script, tmp_path, None, report=True) == 0
+
+
+def test_report_mode_survives_collection_infra_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    script = _script({"x/tests/unit/a.py": {"test_any"}})
+
+    def _fail(*args: object, **kwargs: object) -> set[str]:
+        raise SystemExit("collect-only failed (1)")
+
+    monkeypatch.setattr(gate, "resolve_base", script.resolve_base)
+    monkeypatch.setattr(gate, "changed_test_files", script.changed_test_files)
+    monkeypatch.setattr(gate, "collect_ids", _fail)
+    monkeypatch.setattr(gate, "collect_base_ids", script.collect_base_ids)
+    assert (
+        gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path), "--report"])
+        == 0
+    )
+    with pytest.raises(SystemExit, match="collect-only failed"):
+        gate.main(["--junit-glob", "junit-*.xml", "--root", str(tmp_path)])

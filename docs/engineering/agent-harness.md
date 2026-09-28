@@ -190,15 +190,22 @@ validator 检查可发现 skill 与 registry 一致性、本地指令文件存�
 
 ### 推送范围验证
 
-pre-push 使用 pre-commit 选定的一组提交范围选择检查，覆盖已提交且工作区干净的变更；不以未提交差异代替推送范围。待推送提交必须是当前 HEAD，工作区必须干净，缺少基线历史时执行 `task check`。纯 Web 推送和文件删除同样进入范围选择。
+pre-push 只承担推送身份与范围核对（#340）：待推送提交必须是当前 HEAD，工作区必须干净，
+不以未提交差异冒充推送内容；随后按同一 changed-scope 分类打印本范围送审前**欠下的显式
+验证命令**，但不执行它们。pytest、全量类型、PIT 与 system 已退出同步 push 路径——普通
+小步推送快速通过，验证责任转移到送审前的 `task verify-push`（同一计划的显式执行入口，
+工作树为空时默认核对 HEAD 对 origin/main fork point）与权威 PR CI。纯 Web 推送和文件删除
+同样进入范围分类；缺少基线历史或模式异常时计划 fail-closed 为 `task check` 并说明原因，
+扩大的是显式验证范围，不把重测试暗中加回 push。
 
-检查子进程启动前按 [Git 官方说明](https://git-scm.com/docs/githooks#_description)
+显式执行的检查子进程启动前按 [Git 官方说明](https://git-scm.com/docs/githooks#_description)
 清除 `git rev-parse --local-env-vars` 列出的仓库环境变量。范围选择仍使用原推送上下文；
 测试创建临时仓库时不得继承 `GIT_DIR`、`GIT_INDEX_FILE` 等变量并误写当前仓库。
 
 常规使用单分支推送；上游 pre-commit 不承诺逐一验收一次 push 的所有 ref。本地结果只覆盖
-选定范围，合并/发布仍以目标提交上的 CI 与服务端规则为准。若未来明确要求所有 ref 在本地
-通过，须在 Git 原始 stdin 边界另行实现合同，不能仅从单组环境变量推断全覆盖。
+选定范围，合并/发布仍以目标提交上的 CI 与服务端规则为准；轻量 push 通过不等于已通过
+完整验证。若未来明确要求所有 ref 在本地通过，须在 Git 原始 stdin 边界另行实现合同，
+不能仅从单组环境变量推断全覆盖。
 
 本地与 CI 使用 gitleaks 8.30.1；staged 扫描与历史扫描的范围仍不同。远端 hook 版本 tag
 沿用 pre-commit 官方工作流；固定 SHA 是可独立选择的可重复性增强，不与版本升级混用。
