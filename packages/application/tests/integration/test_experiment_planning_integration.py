@@ -1244,6 +1244,9 @@ def _assert_exact_context_inputs_resolved(
     assert request.context_input_refs
 
 
+# 超集成预算（本机无 cov 串行 5.75s > 5s）：打 slow 进慢车道治理（#330 时长治理），
+# 同时保住串行审计解除后的 fast 车道安全边际（10s 硬顶）。
+@pytest.mark.slow
 def test_durable_execution_resolver_uses_only_exact_strategy_and_snapshot_identity(
     tmp_path: Path,
 ) -> None:

@@ -1519,6 +1519,7 @@ def _assert_persisted_selection_trace_provenance(
     )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "lane",
     golden_support.GOLDEN_LANES,

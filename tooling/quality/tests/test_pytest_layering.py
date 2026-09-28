@@ -181,13 +181,20 @@ def test_same_nodeid_marks_stable_across_entries(tmp_path: Path) -> None:
 
 
 def test_serial_audit_opt_out_is_component_exact() -> None:
-    """#226：审计登记树解除层级 serial，边界外一律保留。"""
+    """#226/#359：审计登记树解除层级 serial，边界外一律保留。"""
     repo = Path("/repo")
     assert layer_markers_for(
         Path("/repo/packages/data/tests/integration/test_x.py"), repo
     ) == ("integration",)
     assert layer_markers_for(
         Path("/repo/packages/data/tests/integration/runtime/storage/test_x.py"), repo
+    ) == ("integration",)
+    # 第二批登记（#359）：application 与 backtest 解除。
+    assert layer_markers_for(
+        Path("/repo/packages/application/tests/integration/process/test_x.py"), repo
+    ) == ("integration",)
+    assert layer_markers_for(
+        Path("/repo/packages/backtest/tests/integration/test_x.py"), repo
     ) == ("integration",)
     # 近邻名不匹配层级规则本身（组件精确），树前缀更无从谈起。
     assert layer_markers_for(
@@ -199,14 +206,17 @@ def test_serial_audit_opt_out_is_component_exact() -> None:
     assert layer_markers_for(
         Path("/repo/packages/analysis/tests/integration/test_x.py"), repo
     ) == ("integration", "serial")
+    assert layer_markers_for(
+        Path("/repo/packages/platform/tests/integration/test_x.py"), repo
+    ) == ("integration", "serial")
     # 混合 unit/integration 路径不在被审计树内，保守保留 serial。
     assert layer_markers_for(
         Path("/repo/packages/data/tests/unit/integration/test_x.py"), repo
     ) == ("integration", "serial")
 
 
-def test_real_repo_serial_audit_lifts_only_the_data_tree() -> None:
-    """钉死真实仓库：只有 data 的 integration 树解除，其余 owner 全保留。"""
+def test_real_repo_serial_audit_lifts_only_the_audited_trees() -> None:
+    """钉死真实仓库：只有登记树解除（data/application/backtest），其余保留。"""
     files = sorted(
         {
             *REPO_ROOT.glob("packages/*/tests/integration/**/test_*.py"),
@@ -221,20 +231,20 @@ def test_real_repo_serial_audit_lifts_only_the_data_tree() -> None:
         relative = path.relative_to(REPO_ROOT).as_posix()
         owner = relative.split("/", 2)[1]
         assert markers in {("integration",), ("integration", "serial")}, relative
-        if relative.startswith("packages/data/tests/integration/"):
+        if relative.startswith(
+            (
+                "packages/application/tests/integration/",
+                "packages/backtest/tests/integration/",
+                "packages/data/tests/integration/",
+            )
+        ):
             assert markers == ("integration",), relative
             lifted.add(owner)
         else:
             assert markers == ("integration", "serial"), relative
             serial_owners.add(owner)
-    assert lifted == {"data"}
-    assert {
-        "analysis",
-        "application",
-        "backtest",
-        "platform",
-        "strategy",
-    } <= serial_owners
+    assert lifted == {"application", "backtest", "data"}
+    assert {"analysis", "platform", "strategy"} <= serial_owners
 
 
 def test_explicit_serial_marker_survives_the_opt_out(tmp_path: Path) -> None:
