@@ -1,12 +1,14 @@
 """
 可观测性集成测试 Fixtures.
 
-提供内存 MetricReader 和相关的 pytest fixtures.
+提供内存 MetricReader 和相关的 pytest fixtures；每例前后重置 ditto 侧
+注册表状态并恢复 OTel API 进程级全局，保证状态不跨例、跨 owner 泄漏.
 """
 
 from __future__ import annotations
 
-import time
+from collections.abc import Iterator
+from typing import Any
 
 import pytest
 from opentelemetry.metrics import Meter
@@ -19,12 +21,81 @@ from opentelemetry.sdk.resources import Resource
 # pytestmark 声明从不生效，已删除该 no-op（#330 B1）。
 
 
+def _snapshot_otel_api_globals() -> dict[str, Any]:
+    """快照 OTel API 进程级 provider 全局（#348）.
+
+    ``set_tracer_provider``/``set_meter_provider`` 是 once-only 写且无公开
+    撤销入口；生产路径测试会写入真实全局。快照/恢复走 SDK 私有符号——
+    版本由 uv.lock 钉住，升级后若符号漂移会在此处响亮失败。trace 全局
+    在 ``opentelemetry.trace``，metrics 全局在 ``_internal`` 子模块，且
+    metrics 的 proxy 持有已绑定 meter 状态，需一并恢复。
+    """
+    import opentelemetry.metrics._internal as otel_metrics_internal
+    import opentelemetry.trace as otel_trace
+
+    metrics_proxy = otel_metrics_internal._PROXY_METER_PROVIDER
+    return {
+        "tracer_provider": otel_trace._TRACER_PROVIDER,
+        "tracer_set": otel_trace._TRACER_PROVIDER_SET_ONCE._done,
+        "meter_provider": otel_metrics_internal._METER_PROVIDER,
+        "meter_set": otel_metrics_internal._METER_PROVIDER_SET_ONCE._done,
+        "proxy_meter_provider": metrics_proxy._real_meter_provider,
+        "proxy_meters": list(metrics_proxy._meters),
+    }
+
+
+def _detach_otel_api_globals() -> None:
+    """摘下当前 OTel API 全局（#348）.
+
+    setup 侧 reset 的 ``shutdown()`` 会关闭当时已安装的全局 provider——
+    先摘下再 reset，外来 provider 保持存活，teardown 恢复引用而非恢复
+    已死对象；同时把 metrics proxy 的累积 meter 列表换成新表，树内
+    ``set_meter_provider`` 的 on_set 绑定只作用于新表，不污染外来
+    proxy meter。trace 侧 ``ProxyTracer`` 的粘性绑定不可枚举，残留
+    窗口 = 外来被插桩代码在本树测试执行期间绑定测试 provider（当前
+    不存在该调用路径）。
+    """
+    import opentelemetry.metrics._internal as otel_metrics_internal
+    import opentelemetry.trace as otel_trace
+
+    otel_trace._TRACER_PROVIDER = None
+    otel_trace._TRACER_PROVIDER_SET_ONCE._done = False
+    otel_metrics_internal._METER_PROVIDER = None
+    otel_metrics_internal._METER_PROVIDER_SET_ONCE._done = False
+    metrics_proxy = otel_metrics_internal._PROXY_METER_PROVIDER
+    metrics_proxy._real_meter_provider = None
+    metrics_proxy._meters = []
+
+
+def _restore_otel_api_globals(snapshot: dict[str, Any]) -> None:
+    """恢复 OTel API 进程级 provider 全局到快照值."""
+    import opentelemetry.metrics._internal as otel_metrics_internal
+    import opentelemetry.trace as otel_trace
+
+    otel_trace._TRACER_PROVIDER = snapshot["tracer_provider"]
+    otel_trace._TRACER_PROVIDER_SET_ONCE._done = snapshot["tracer_set"]
+    otel_metrics_internal._METER_PROVIDER = snapshot["meter_provider"]
+    otel_metrics_internal._METER_PROVIDER_SET_ONCE._done = snapshot["meter_set"]
+    metrics_proxy = otel_metrics_internal._PROXY_METER_PROVIDER
+    metrics_proxy._real_meter_provider = snapshot["proxy_meter_provider"]
+    metrics_proxy._meters = snapshot["proxy_meters"]
+
+
 @pytest.fixture(autouse=True)
-def reset_observability_state() -> None:
-    """在每个测试前重置观察性系统状态，避免测试隔离问题."""
+def reset_observability_state() -> Iterator[None]:
+    """每例前后重置可观测性状态并恢复 OTel API 全局.
+
+    只在测试前重置会让树内最后一条用例的脏状态泄漏给同进程后续 owner
+    的用例（串行道为单进程），因此 teardown 侧同样重置.
+    """
     from ditto_platform.foundation import reset_for_testing
 
+    snapshot = _snapshot_otel_api_globals()
+    _detach_otel_api_globals()
     reset_for_testing()
+    yield
+    reset_for_testing()
+    _restore_otel_api_globals(snapshot)
 
 
 class MetricReaderWrapper:
@@ -155,13 +226,3 @@ def metrics_exporter(metric_reader: InMemoryMetricReader) -> MetricReaderWrapper
         MetricReaderWrapper: 包装器实例
     """
     return MetricReaderWrapper(metric_reader)
-
-
-def wait_for_export() -> None:
-    """
-    等待指标导出完成.
-
-    InMemoryMetricReader 是同步的，指标立即可用.
-    但为了模拟真实导出场景，保留一小段延迟.
-    """
-    time.sleep(0.05)  # 短暂延迟
