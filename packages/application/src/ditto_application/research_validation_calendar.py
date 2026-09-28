@@ -8,7 +8,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
-from functools import lru_cache
 from itertools import pairwise
 from typing import Never, cast
 
@@ -85,7 +84,7 @@ class CalendarMonth:
         """Build a month identity from a validated exact date."""
         if type(value) is not date:
             _fail("SPEC_INVALID", "invalid_calendar_month_date")
-        return _calendar_month_from_date(value.year, value.month)
+        return cls(value.year, value.month)
 
     def next(self) -> CalendarMonth:
         """Return the following calendar month."""
@@ -96,12 +95,6 @@ class CalendarMonth:
     def __str__(self) -> str:
         """Return the canonical YYYY-MM representation."""
         return f"{self.year:04d}-{self.month:02d}"
-
-
-@lru_cache(maxsize=4096)
-def _calendar_month_from_date(year: int, month: int) -> CalendarMonth:
-    """Same-value month identities are interchangeable frozen values (#330 D1)."""
-    return CalendarMonth(year, month)
 
 
 class TradingCalendarDayStatus(StrEnum):
