@@ -161,20 +161,45 @@ def _dropped(name: str, dump: dict[str, list[str]], reference: set[str]) -> list
     return sorted(set(dump) - reference)
 
 
+def _missing_under_tree(
+    name: str, dump: dict[str, list[str]], reference: set[str], tree: str
+) -> list[str]:
+    """Reference nodeids under ``tree`` that the entry itself dropped."""
+    scoped = {nodeid for nodeid in reference if nodeid.startswith(tree + "/")}
+    return sorted(scoped - set(dump))
+
+
+def _pair_failures(
+    name: str, dump: dict[str, list[str]], reference: set[str], tree: str, against: str
+) -> list[str]:
+    """Both directions of membership between one tree entry and its reference."""
+    failures: list[str] = []
+    dropped = _dropped(name, dump, reference)
+    if dropped:
+        examples = ", ".join(dropped[:_EXAMPLES_LIMIT])
+        failures.append(
+            f"{name} collected {len(dropped)} nodeids the {against} dropped,"
+            + f" e.g. {examples}"
+        )
+    missing = _missing_under_tree(name, dump, reference, tree)
+    if missing:
+        examples = ", ".join(missing[:_EXAMPLES_LIMIT])
+        failures.append(
+            f"{name} dropped {len(missing)} of its own nodeids the {against}"
+            + f" collected, e.g. {examples}"
+        )
+    return failures
+
+
 def _membership_failures(dumps: dict[str, dict[str, list[str]]]) -> list[str]:
-    """No entry may drop a nodeid its reference entry collected."""
+    """No entry may drop a nodeid its reference entry collected, either way."""
     failures: list[str] = []
     full = dumps["full"]
     full_ids = set(full)
     for name, dump in sorted(dumps.items()):
         if name.startswith("owner:"):
-            dropped = _dropped(name, dump, full_ids)
-            if dropped:
-                examples = ", ".join(dropped[:_EXAMPLES_LIMIT])
-                failures.append(
-                    f"{name} collected {len(dropped)} nodeids the full entry"
-                    + f" dropped, e.g. {examples}"
-                )
+            tree = name.removeprefix("owner:")
+            failures.extend(_pair_failures(name, dump, full_ids, tree, "full entry"))
     shard_ids = set(dumps["shard"])
     expected_shard = {
         nodeid
@@ -202,13 +227,10 @@ def _membership_failures(dumps: dict[str, dict[str, list[str]]]) -> list[str]:
             if f"tooling:{name}/tests" in dumps
         }
         for name in sorted(in_combined):
-            dropped = _dropped(name, dumps[name], combined_ids)
-            if dropped:
-                examples = ", ".join(dropped[:_EXAMPLES_LIMIT])
-                failures.append(
-                    f"{name} collected {len(dropped)} nodeids the combined"
-                    + f" tooling entry dropped, e.g. {examples}"
-                )
+            tree = name.removeprefix("tooling:")
+            failures.extend(
+                _pair_failures(name, dumps[name], combined_ids, tree, "combined entry")
+            )
     return failures
 
 

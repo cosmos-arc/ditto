@@ -69,6 +69,24 @@ def pytest_collection_modifyitems(items):
     ]
 """
 
+# 反向缩集形态：钩子只在"本树单独跑"时 deselect 自己的 integration 项
+# （全仓入口因存在外国 item 而保留）——owner 成员关系必须双向核对。
+_DESELECT_OWN_ALPHA_CONFTEST = """\
+import pytest
+from pathlib import Path
+
+_ROOT = Path(__file__).parent
+
+
+def pytest_collection_modifyitems(items):
+    if all(_ROOT in item.path.parents for item in items):
+        items[:] = [
+            item
+            for item in items
+            if "integration" not in item.path.parts
+        ]
+"""
+
 
 def _make_tree(root: Path, *, alpha_conftest: str | None) -> None:
     (root / "conftest.py").write_text(_ROOT_CONFTEST, encoding="utf-8")
@@ -126,6 +144,24 @@ def test_checker_flags_a_near_conftest_silently_dropping_foreign_items(
     out = capsys.readouterr().out
     assert "membership failure" in out
     assert "owner:packages/beta/tests" in out
+
+
+def test_checker_flags_an_owner_entry_dropping_its_own_items(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """反向缩集：owner 单独入口丢自己、全仓保留——成员关系双向核对。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _make_tree(root, alpha_conftest=_DESELECT_OWN_ALPHA_CONFTEST)
+    _with_repo_on_pythonpath(monkeypatch)
+
+    code = entry_consistency.main(["--root", str(root)])
+
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "membership failure" in out
+    assert "dropped 1 of its own nodeids" in out
+    assert "owner:packages/alpha/tests" in out
 
 
 def test_marker_names_containing_and_survive_exclusion() -> None:
