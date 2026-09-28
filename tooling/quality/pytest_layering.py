@@ -16,8 +16,12 @@ the directory layer. Unclassified test trees (registry, benchmarks,
 ``tooling/*/tests``) default to ``unit``.
 
 ``integration`` directories also carry ``serial`` — the blanket resource
-policy inherited from the legacy hooks. It stays until the per-resource
-serial audit (#226) replaces it group by group; relax it there, not here.
+policy inherited from the legacy hooks. The per-resource serial audit (#226)
+lifts it tree by tree through the explicit registry below: an audited tree
+keeps the ``integration`` layer marker and loses only the layer-implied
+``serial``. Audit evidence and the disposition of every still-serial tree
+live in ``docs/engineering/testing.md``; a tree-specific relapse is contained
+by an explicit ``@pytest.mark.serial`` without touching the registry.
 
 This plugin is globally registered, so unlike a conftest hook its module
 hooks fire for every collected file regardless of path (pytest scopes
@@ -44,6 +48,18 @@ _LAYER_BY_COMPONENT: dict[str, tuple[str, ...]] = {
 }
 _DEFAULT_LAYER: tuple[str, ...] = ("unit",)
 
+# Serial-audit opt-out (#226): repo-relative integration trees whose blanket
+# ``serial`` was lifted after a resource audit — per-test tmp/:memory: state,
+# read-only immutable templates reused per worker, no ports, subprocesses or
+# cross-test global init. Entries are matched as whole path components, so a
+# sibling like ``integration-x`` never matches; new entries require the audit
+# record in docs/engineering/testing.md.
+_SERIAL_OPT_OUT_TREES: frozenset[str] = frozenset(
+    {
+        "packages/data/tests/integration",
+    }
+)
+
 # (scope tree, apply while a module under the scope imports, restore otherwise)
 _ImportBracket = tuple[Path, Callable[[], None], Callable[[], None]]
 _import_brackets: list[_ImportBracket] = []
@@ -62,6 +78,15 @@ def register_import_bracket(
     owners in merged entries included — imports with it restored.
     """
     _import_brackets.append((scope.resolve(), apply, restore))
+
+
+def _under_serial_opt_out(parts: tuple[str, ...]) -> bool:
+    """Match whole path components so sibling trees never match."""
+    for tree in _SERIAL_OPT_OUT_TREES:
+        components = tuple(tree.split("/"))
+        if parts[: len(components)] == components:
+            return True
+    return False
 
 
 def layer_markers_for(path: Path, root: Path) -> tuple[str, ...]:
@@ -83,6 +108,8 @@ def layer_markers_for(path: Path, root: Path) -> tuple[str, ...]:
             inner = parts[index + 1 :]
             for component, markers in _LAYER_BY_COMPONENT.items():
                 if component in inner:
+                    if "serial" in markers and _under_serial_opt_out(parts):
+                        return tuple(name for name in markers if name != "serial")
                     return markers
             break
     return _DEFAULT_LAYER
